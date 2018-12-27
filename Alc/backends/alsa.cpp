@@ -469,7 +469,7 @@ void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
 
 int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -556,7 +556,7 @@ int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
 
 int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -680,7 +680,7 @@ ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device = self->mDevice;
     device->DeviceName = name;
 
     return ALC_NO_ERROR;
@@ -688,7 +688,7 @@ ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
 
 ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     snd_pcm_format_t format{SND_PCM_FORMAT_UNKNOWN};
     switch(device->FmtType)
@@ -840,7 +840,7 @@ error:
 
 ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
     int (*thread_func)(ALCplaybackAlsa*){};
     snd_pcm_hw_params_t *hp{};
     snd_pcm_access_t access;
@@ -903,7 +903,7 @@ void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
 
 ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
     ClockLatency ret;
 
     ALCplaybackAlsa_lock(self);
@@ -970,7 +970,7 @@ void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
 
 ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     const char *driver{};
     if(name)
     {
@@ -1103,8 +1103,7 @@ ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
     }
     if(err < 0)
     {
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice, "Capture state failure: %s",
-                            snd_strerror(err));
+        aluHandleDisconnect(self->mDevice, "Capture state failure: %s", snd_strerror(err));
         return ALC_FALSE;
     }
 
@@ -1134,7 +1133,7 @@ void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
 
 ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     if(RingBuffer *ring{self->mRing.get()})
     {
@@ -1198,7 +1197,7 @@ ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALC
 
 ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     snd_pcm_sframes_t avail{0};
     if(device->Connected.load(std::memory_order_acquire) && self->mDoCapture)
@@ -1269,7 +1268,7 @@ ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
 
 ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
     ClockLatency ret;
 
     ALCcaptureAlsa_lock(self);
@@ -1338,15 +1337,13 @@ ALCbackend *AlsaBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
     {
         ALCplaybackAlsa *backend;
         NEW_OBJ(backend, ALCplaybackAlsa)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCcaptureAlsa *backend;
         NEW_OBJ(backend, ALCcaptureAlsa)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

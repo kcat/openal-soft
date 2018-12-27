@@ -246,7 +246,7 @@ void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
 
 FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -352,7 +352,7 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
 
 ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceName)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     HRESULT hr;
     if(PlaybackDevices.empty())
@@ -404,7 +404,7 @@ ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceNam
 
 ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     if(self->mNotifies)
         self->mNotifies->Release();
@@ -699,7 +699,7 @@ void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
 
 ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     HRESULT hr;
     if(CaptureDevices.empty())
@@ -868,8 +868,7 @@ ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
     if(FAILED(hr))
     {
         ERR("start failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice,
-                            "Failure starting capture: 0x%lx", hr);
+        aluHandleDisconnect(self->mDevice, "Failure starting capture: 0x%lx", hr);
         return ALC_FALSE;
     }
 
@@ -882,8 +881,7 @@ void ALCdsoundCapture_stop(ALCdsoundCapture *self)
     if(FAILED(hr))
     {
         ERR("stop failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice,
-                            "Failure stopping capture: 0x%lx", hr);
+        aluHandleDisconnect(self->mDevice, "Failure stopping capture: 0x%lx", hr);
     }
 }
 
@@ -1003,16 +1001,14 @@ ALCbackend *DSoundBackendFactory::createBackend(ALCdevice *device, ALCbackend_Ty
     {
         ALCdsoundPlayback *backend;
         NEW_OBJ(backend, ALCdsoundPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     if(type == ALCbackend_Capture)
     {
         ALCdsoundCapture *backend;
         NEW_OBJ(backend, ALCdsoundCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

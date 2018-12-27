@@ -697,7 +697,7 @@ void PulsePlayback_contextStateCallback(pa_context *context, void *pdata)
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Playback state failure");
+        aluHandleDisconnect(self->mDevice, "Playback state failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -708,7 +708,7 @@ void PulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Playback stream failure");
+        aluHandleDisconnect(self->mDevice, "Playback stream failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -769,7 +769,7 @@ void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_i
         } } },
         { DevFmtMono, { 1, {PA_CHANNEL_POSITION_MONO} } }
     }};
-    auto self = reinterpret_cast<PulsePlayback*>(pdata);
+    auto self = static_cast<PulsePlayback*>(pdata);
 
     if(eol)
     {
@@ -777,7 +777,7 @@ void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_i
         return;
     }
 
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     auto chanmap = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
         [info](const ChannelMap &chanmap) -> bool
         { return pa_channel_map_superset(&info->channel_map, &chanmap.map); }
@@ -803,7 +803,7 @@ void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_i
 
 void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
-    auto self = reinterpret_cast<PulsePlayback*>(pdata);
+    auto self = static_cast<PulsePlayback*>(pdata);
 
     if(eol)
     {
@@ -811,14 +811,14 @@ void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_i
         return;
     }
 
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     device->DeviceName = info->description;
 }
 
 
 void PulsePlayback_streamMovedCallback(pa_stream *stream, void *pdata)
 {
-    auto self = reinterpret_cast<PulsePlayback*>(pdata);
+    auto self = static_cast<PulsePlayback*>(pdata);
 
     self->device_name = pa_stream_get_device_name(stream);
 
@@ -932,7 +932,7 @@ ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
     }
     else
     {
-        ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+        ALCdevice *device{self->mDevice};
         device->DeviceName = dev_name;
     }
 
@@ -958,7 +958,7 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
         self->device_name.c_str(), PulsePlayback_sinkInfoCallback, self)};
     wait_for_operation(op, self->loop);
 
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
         PA_STREAM_AUTO_TIMING_UPDATE};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
@@ -1132,7 +1132,7 @@ ClockLatency PulsePlayback_getClockLatency(PulsePlayback *self)
     int neg, err;
 
     { palock_guard _{self->loop};
-        ret.ClockTime = GetDeviceClockTime(STATIC_CAST(ALCbackend,self)->mDevice);
+        ret.ClockTime = GetDeviceClockTime(self->mDevice);
         err = pa_stream_get_latency(self->stream, &latency, &neg);
     }
 
@@ -1320,22 +1320,22 @@ void PulseCapture_probeDevices(void)
 
 void PulseCapture_contextStateCallback(pa_context *context, void *pdata)
 {
-    auto self = reinterpret_cast<PulseCapture*>(pdata);
+    auto self = static_cast<PulseCapture*>(pdata);
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Capture state failure");
+        aluHandleDisconnect(self->mDevice, "Capture state failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
 
 void PulseCapture_streamStateCallback(pa_stream *stream, void *pdata)
 {
-    auto self = reinterpret_cast<PulseCapture*>(pdata);
+    auto self = static_cast<PulseCapture*>(pdata);
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Capture stream failure");
+        aluHandleDisconnect(self->mDevice, "Capture stream failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -1343,7 +1343,7 @@ void PulseCapture_streamStateCallback(pa_stream *stream, void *pdata)
 
 void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void *pdata)
 {
-    auto self = reinterpret_cast<PulseCapture*>(pdata);
+    auto self = static_cast<PulseCapture*>(pdata);
 
     if(eol)
     {
@@ -1351,14 +1351,14 @@ void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const pa_sourc
         return;
     }
 
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     device->DeviceName = info->description;
 }
 
 
 void PulseCapture_streamMovedCallback(pa_stream *stream, void *pdata)
 {
-    auto self = reinterpret_cast<PulseCapture*>(pdata);
+    auto self = static_cast<PulseCapture*>(pdata);
 
     self->device_name = pa_stream_get_device_name(stream);
 
@@ -1409,7 +1409,7 @@ pa_stream *PulseCapture_connectStream(const char *device_name,
 
 ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     const char *pulse_name{nullptr};
 
     if(name)
@@ -1555,7 +1555,7 @@ void PulseCapture_stop(PulseCapture *self)
 
 ALCenum PulseCapture_captureSamples(PulseCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     ALCuint todo{samples * static_cast<ALCuint>(pa_frame_size(&self->spec))};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
@@ -1609,7 +1609,7 @@ ALCenum PulseCapture_captureSamples(PulseCapture *self, ALCvoid *buffer, ALCuint
 
 ALCuint PulseCapture_availableSamples(PulseCapture *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
     size_t readable{self->cap_remain};
 
     if(device->Connected.load(std::memory_order_acquire))
@@ -1638,7 +1638,7 @@ ClockLatency PulseCapture_getClockLatency(PulseCapture *self)
     int neg, err;
 
     { palock_guard _{self->loop};
-        ret.ClockTime = GetDeviceClockTime(STATIC_CAST(ALCbackend,self)->mDevice);
+        ret.ClockTime = GetDeviceClockTime(self->mDevice);
         err = pa_stream_get_latency(self->stream, &latency, &neg);
     }
 
@@ -1757,15 +1757,13 @@ ALCbackend *PulseBackendFactory::createBackend(ALCdevice *device, ALCbackend_Typ
     {
         PulsePlayback *backend;
         NEW_OBJ(backend, PulsePlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         PulseCapture *backend;
         NEW_OBJ(backend, PulseCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

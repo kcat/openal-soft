@@ -125,7 +125,7 @@ void ALCwaveBackend_Destruct(ALCwaveBackend *self)
 
 int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
     althrd_setname(MIXER_THREAD_NAME);
@@ -234,7 +234,7 @@ ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
     device->DeviceName = name;
 
     return ALC_NO_ERROR;
@@ -242,7 +242,7 @@ ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
 
 ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     ALuint channels=0, bits=0, chanmask=0;
     int isbformat = 0;
     size_t val;
@@ -404,8 +404,7 @@ ALCbackend *WaveBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
     {
         ALCwaveBackend *backend;
         NEW_OBJ(backend, ALCwaveBackend)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

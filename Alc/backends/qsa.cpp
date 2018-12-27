@@ -194,8 +194,8 @@ DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
 FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 {
     PlaybackWrapper *self = static_cast<PlaybackWrapper*>(ptr);
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    qsa_data *data = self->ExtraData;
+    ALCdevice *device = self->mDevice;
+    qsa_data *data = self->ExtraData.get();
     snd_pcm_channel_status_t status;
     sched_param param;
     char* write_ptr;
@@ -282,7 +282,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 
 static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceName)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device = self->mDevice;
     int card, dev;
     int status;
 
@@ -342,7 +342,7 @@ static void qsa_close_playback(PlaybackWrapper *self)
 
 static ALCboolean qsa_reset_playback(PlaybackWrapper *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device = self->mDevice;
     qsa_data *data = self->ExtraData.get();
     int32_t format=-1;
 
@@ -676,7 +676,7 @@ DEFINE_ALCBACKEND_VTABLE(CaptureWrapper);
 
 static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device = self->mDevice;
     int card, dev;
     int format=-1;
     int status;
@@ -813,7 +813,7 @@ static void qsa_stop_capture(CaptureWrapper *self)
 
 static ALCuint qsa_available_samples(CaptureWrapper *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device = self->mDevice;
     qsa_data *data = self->ExtraData.get();
     snd_pcm_channel_status_t status;
     ALint frame_size = device->frameSizeFromFmt();
@@ -845,7 +845,7 @@ static ALCuint qsa_available_samples(CaptureWrapper *self)
 
 static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuint samples)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device = self->mDevice;
     qsa_data *data = self->ExtraData.get();
     char* read_ptr;
     snd_pcm_channel_status_t status;
@@ -1004,15 +1004,13 @@ ALCbackend *QSABackendFactory::createBackend(ALCdevice *device, ALCbackend_Type 
     {
         PlaybackWrapper *backend;
         NEW_OBJ(backend, PlaybackWrapper)(device);
-        if(!backend) return NULL;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         CaptureWrapper *backend;
         NEW_OBJ(backend, CaptureWrapper)(device);
-        if(!backend) return NULL;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return NULL;

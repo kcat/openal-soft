@@ -61,7 +61,7 @@ void ALCloopback_Destruct(ALCloopback *self)
 
 ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     device->DeviceName = name;
     return ALC_NO_ERROR;
@@ -69,7 +69,7 @@ ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
 
 ALCboolean ALCloopback_reset(ALCloopback *self)
 {
-    SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
+    SetDefaultWFXChannelOrder(self->mDevice);
     return ALC_TRUE;
 }
 
@@ -100,8 +100,7 @@ ALCbackend *LoopbackBackendFactory::createBackend(ALCdevice *device, ALCbackend_
     {
         ALCloopback *backend;
         NEW_OBJ(backend, ALCloopback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

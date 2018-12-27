@@ -83,7 +83,7 @@ void ALCnullBackend_Destruct(ALCnullBackend *self)
 
 int ALCnullBackend_mixerProc(ALCnullBackend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
     SetRTPriority();
@@ -130,14 +130,12 @@ int ALCnullBackend_mixerProc(ALCnullBackend *self)
 
 ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
 {
-    ALCdevice *device;
-
     if(!name)
         name = nullDevice;
     else if(strcmp(name, nullDevice) != 0)
         return ALC_INVALID_VALUE;
 
-    device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     device->DeviceName = name;
 
     return ALC_NO_ERROR;
@@ -145,7 +143,7 @@ ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
 
 ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
 {
-    SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
+    SetDefaultWFXChannelOrder(self->mDevice);
     return ALC_TRUE;
 }
 
@@ -199,8 +197,7 @@ ALCbackend *NullBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
     {
         ALCnullBackend *backend;
         NEW_OBJ(backend, ALCnullBackend)(device);
-        if(!backend) return NULL;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return NULL;

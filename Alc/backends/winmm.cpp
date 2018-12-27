@@ -196,7 +196,7 @@ void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT msg,
 
 FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -233,7 +233,7 @@ FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
 
 ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *deviceName)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     if(PlaybackDevices.empty())
         ProbePlaybackDevices();
@@ -288,7 +288,7 @@ retry_open:
 
 ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
                                   self->Format.nSamplesPerSec /
@@ -509,7 +509,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 
 ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     if(CaptureDevices.empty())
         ProbeCaptureDevices();
@@ -700,15 +700,13 @@ ALCbackend *WinMMBackendFactory::createBackend(ALCdevice *device, ALCbackend_Typ
     {
         ALCwinmmPlayback *backend;
         NEW_OBJ(backend, ALCwinmmPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCwinmmCapture *backend;
         NEW_OBJ(backend, ALCwinmmCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

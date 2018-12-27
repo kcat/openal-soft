@@ -208,7 +208,7 @@ void ALCjackPlayback_Destruct(ALCjackPlayback *self)
 int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 {
     auto self = static_cast<ALCjackPlayback*>(arg);
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     ALCjackPlayback_lock(self);
     device->UpdateSize = numframes;
@@ -582,8 +582,7 @@ ALCbackend *JackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
     {
         ALCjackPlayback *backend;
         NEW_OBJ(backend, ALCjackPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

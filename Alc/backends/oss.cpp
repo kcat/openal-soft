@@ -287,7 +287,7 @@ void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 
 int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -347,7 +347,7 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
 
 ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     const char *devname{DefaultPlayback};
     if(!name)
@@ -379,7 +379,7 @@ ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 
 ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     int numFragmentsLogSize;
     int log2FragmentSize;
     unsigned int periods;
@@ -461,7 +461,7 @@ ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
 
 ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     try {
         self->mMixData.resize(device->UpdateSize * device->frameSizeFromFmt());
@@ -587,7 +587,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 
 ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     const char *devname{DefaultCapture};
     if(!name)
@@ -797,15 +797,13 @@ ALCbackend *OSSBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type 
     {
         ALCplaybackOSS *backend;
         NEW_OBJ(backend, ALCplaybackOSS)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCcaptureOSS *backend;
         NEW_OBJ(backend, ALCcaptureOSS)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

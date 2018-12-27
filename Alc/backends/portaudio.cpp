@@ -179,10 +179,10 @@ int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *outputB
     unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
     const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
-    ALCportPlayback *self = static_cast<ALCportPlayback*>(userData);
+    auto self = static_cast<ALCportPlayback*>(userData);
 
     ALCportPlayback_lock(self);
-    aluMixData(STATIC_CAST(ALCbackend, self)->mDevice, outputBuffer, framesPerBuffer);
+    aluMixData(self->mDevice, outputBuffer, framesPerBuffer);
     ALCportPlayback_unlock(self);
     return 0;
 }
@@ -190,7 +190,7 @@ int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *outputB
 
 ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     PaError err;
 
     if(!name)
@@ -256,10 +256,9 @@ retry_open:
 
 ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    const PaStreamInfo *streamInfo;
+    ALCdevice *device{self->mDevice};
 
-    streamInfo = Pa_GetStreamInfo(self->Stream);
+    const PaStreamInfo *streamInfo{Pa_GetStreamInfo(self->Stream)};
     device->Frequency = streamInfo->sampleRate;
     device->UpdateSize = self->UpdateSize;
 
@@ -374,7 +373,7 @@ int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuff
 
 ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     ALuint samples, frame_size;
     PaError err;
 
@@ -509,15 +508,13 @@ ALCbackend *PortBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
     {
         ALCportPlayback *backend;
         NEW_OBJ(backend, ALCportPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCportCapture *backend;
         NEW_OBJ(backend, ALCportCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

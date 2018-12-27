@@ -85,7 +85,7 @@ DECLARE_THUNK(T, ALCbackend, ClockLatency, getClockLatency)                   \
 DECLARE_THUNK(T, ALCbackend, void, lock)                                      \
 DECLARE_THUNK(T, ALCbackend, void, unlock)                                    \
 static void T##_ALCbackend_Delete(void *ptr)                                  \
-{ T##_Delete(STATIC_UPCAST(T, ALCbackend, (ALCbackend*)ptr)); }               \
+{ T##_Delete(static_cast<T*>(static_cast<ALCbackend*>(ptr))); }               \
                                                                               \
 static const ALCbackendVtable T##_ALCbackend_vtable = {                       \
     T##_ALCbackend_Destruct,                                                  \

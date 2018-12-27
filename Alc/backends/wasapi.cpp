@@ -565,7 +565,7 @@ void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
 
 FORCE_ALIGN int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
     IAudioClient *client{self->mClient};
     IAudioRenderClient *render{self->mRender};
 
@@ -714,7 +714,7 @@ ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *deviceNam
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
             else
             {
-                ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+                ALCdevice *device{self->mDevice};
                 self->mDevId = iter->devid;
                 device->DeviceName = iter->name;
                 hr = S_OK;
@@ -754,8 +754,6 @@ ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *deviceNam
 
 HRESULT ALCwasapiPlayback::openProxy()
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, this)->mDevice;
-
     void *ptr;
     HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
     if(SUCCEEDED(hr))
@@ -772,8 +770,8 @@ HRESULT ALCwasapiPlayback::openProxy()
     if(SUCCEEDED(hr))
     {
         mClient = reinterpret_cast<IAudioClient*>(ptr);
-        if(device->DeviceName.empty())
-            device->DeviceName = get_device_name_and_guid(mMMDev).first;
+        if(mDevice->DeviceName.empty())
+            mDevice->DeviceName = get_device_name_and_guid(mMMDev).first;
     }
 
     if(FAILED(hr))
@@ -812,8 +810,6 @@ ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self)
 
 HRESULT ALCwasapiPlayback::resetProxy()
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, this)->mDevice};
-
     if(mClient)
         mClient->Release();
     mClient = nullptr;
@@ -844,39 +840,39 @@ HRESULT ALCwasapiPlayback::resetProxy()
     CoTaskMemFree(wfx);
     wfx = nullptr;
 
-    REFERENCE_TIME buf_time{ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
-                                      device->Frequency)};
+    REFERENCE_TIME buf_time{ScaleCeil(mDevice->UpdateSize*mDevice->NumUpdates, REFTIME_PER_SEC,
+                                      mDevice->Frequency)};
 
-    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
-        device->Frequency = OutputType.Format.nSamplesPerSec;
-    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+    if(!(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
+        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+    if(!(mDevice->Flags&DEVICE_CHANNELS_REQUEST))
     {
         if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-            device->FmtChans = DevFmtMono;
+            mDevice->FmtChans = DevFmtMono;
         else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-            device->FmtChans = DevFmtStereo;
+            mDevice->FmtChans = DevFmtStereo;
         else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-            device->FmtChans = DevFmtQuad;
+            mDevice->FmtChans = DevFmtQuad;
         else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-            device->FmtChans = DevFmtX51;
+            mDevice->FmtChans = DevFmtX51;
         else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1REAR)
-            device->FmtChans = DevFmtX51Rear;
+            mDevice->FmtChans = DevFmtX51Rear;
         else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-            device->FmtChans = DevFmtX61;
+            mDevice->FmtChans = DevFmtX61;
         else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
-            device->FmtChans = DevFmtX71;
+            mDevice->FmtChans = DevFmtX71;
         else
             ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
-    switch(device->FmtChans)
+    switch(mDevice->FmtChans)
     {
         case DevFmtMono:
             OutputType.Format.nChannels = 1;
             OutputType.dwChannelMask = MONO;
             break;
         case DevFmtAmbi3D:
-            device->FmtChans = DevFmtStereo;
+            mDevice->FmtChans = DevFmtStereo;
             /*fall-through*/
         case DevFmtStereo:
             OutputType.Format.nChannels = 2;
@@ -903,10 +899,10 @@ HRESULT ALCwasapiPlayback::resetProxy()
             OutputType.dwChannelMask = X7DOT1;
             break;
     }
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtByte:
-            device->FmtType = DevFmtUByte;
+            mDevice->FmtType = DevFmtUByte;
             /* fall-through */
         case DevFmtUByte:
             OutputType.Format.wBitsPerSample = 8;
@@ -914,7 +910,7 @@ HRESULT ALCwasapiPlayback::resetProxy()
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
             break;
         case DevFmtUShort:
-            device->FmtType = DevFmtShort;
+            mDevice->FmtType = DevFmtShort;
             /* fall-through */
         case DevFmtShort:
             OutputType.Format.wBitsPerSample = 16;
@@ -922,7 +918,7 @@ HRESULT ALCwasapiPlayback::resetProxy()
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
             break;
         case DevFmtUInt:
-            device->FmtType = DevFmtInt;
+            mDevice->FmtType = DevFmtInt;
             /* fall-through */
         case DevFmtInt:
             OutputType.Format.wBitsPerSample = 32;
@@ -935,7 +931,7 @@ HRESULT ALCwasapiPlayback::resetProxy()
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
             break;
     }
-    OutputType.Format.nSamplesPerSec = device->Frequency;
+    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
 
     OutputType.Format.nBlockAlign = OutputType.Format.nChannels *
                                     OutputType.Format.wBitsPerSample / 8;
@@ -964,25 +960,25 @@ HRESULT ALCwasapiPlayback::resetProxy()
         CoTaskMemFree(wfx);
         wfx = nullptr;
 
-        device->Frequency = OutputType.Format.nSamplesPerSec;
+        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
         if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-            device->FmtChans = DevFmtMono;
+            mDevice->FmtChans = DevFmtMono;
         else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-            device->FmtChans = DevFmtStereo;
+            mDevice->FmtChans = DevFmtStereo;
         else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-            device->FmtChans = DevFmtQuad;
+            mDevice->FmtChans = DevFmtQuad;
         else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-            device->FmtChans = DevFmtX51;
+            mDevice->FmtChans = DevFmtX51;
         else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1REAR)
-            device->FmtChans = DevFmtX51Rear;
+            mDevice->FmtChans = DevFmtX51Rear;
         else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-            device->FmtChans = DevFmtX61;
+            mDevice->FmtChans = DevFmtX61;
         else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
-            device->FmtChans = DevFmtX71;
+            mDevice->FmtChans = DevFmtX71;
         else
         {
             ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
-            device->FmtChans = DevFmtStereo;
+            mDevice->FmtChans = DevFmtStereo;
             OutputType.Format.nChannels = 2;
             OutputType.dwChannelMask = STEREO;
         }
@@ -990,26 +986,26 @@ HRESULT ALCwasapiPlayback::resetProxy()
         if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
         {
             if(OutputType.Format.wBitsPerSample == 8)
-                device->FmtType = DevFmtUByte;
+                mDevice->FmtType = DevFmtUByte;
             else if(OutputType.Format.wBitsPerSample == 16)
-                device->FmtType = DevFmtShort;
+                mDevice->FmtType = DevFmtShort;
             else if(OutputType.Format.wBitsPerSample == 32)
-                device->FmtType = DevFmtInt;
+                mDevice->FmtType = DevFmtInt;
             else
             {
-                device->FmtType = DevFmtShort;
+                mDevice->FmtType = DevFmtShort;
                 OutputType.Format.wBitsPerSample = 16;
             }
         }
         else if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
         {
-            device->FmtType = DevFmtFloat;
+            mDevice->FmtType = DevFmtFloat;
             OutputType.Format.wBitsPerSample = 32;
         }
         else
         {
             ERR("Unhandled format sub-type\n");
-            device->FmtType = DevFmtShort;
+            mDevice->FmtType = DevFmtShort;
             OutputType.Format.wBitsPerSample = 16;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         }
@@ -1018,11 +1014,10 @@ HRESULT ALCwasapiPlayback::resetProxy()
 
     EndpointFormFactor formfactor = UnknownFormFactor;
     get_device_formfactor(mMMDev, &formfactor);
-    device->IsHeadphones = (device->FmtChans == DevFmtStereo &&
-                            (formfactor == Headphones || formfactor == Headset)
-                           );
+    mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo &&
+        (formfactor == Headphones || formfactor == Headset));
 
-    SetDefaultWFXChannelOrder(device);
+    SetDefaultWFXChannelOrder(mDevice);
 
     hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                              buf_time, 0, &OutputType.Format, nullptr);
@@ -1037,10 +1032,10 @@ HRESULT ALCwasapiPlayback::resetProxy()
     hr = mClient->GetDevicePeriod(&min_per, nullptr);
     if(SUCCEEDED(hr))
     {
-        min_len = (UINT32)ScaleCeil(min_per, device->Frequency, REFTIME_PER_SEC);
+        min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
         /* Find the nearest multiple of the period size to the update size */
-        if(min_len < device->UpdateSize)
-            min_len *= maxu((device->UpdateSize + min_len/2) / min_len, 1u);
+        if(min_len < mDevice->UpdateSize)
+            min_len *= maxu((mDevice->UpdateSize + min_len/2) / min_len, 1u);
         hr = mClient->GetBufferSize(&buffer_len);
     }
     if(FAILED(hr))
@@ -1049,13 +1044,13 @@ HRESULT ALCwasapiPlayback::resetProxy()
         return hr;
     }
 
-    device->UpdateSize = min_len;
-    device->NumUpdates = buffer_len / device->UpdateSize;
-    if(device->NumUpdates <= 1)
+    mDevice->UpdateSize = min_len;
+    mDevice->NumUpdates = buffer_len / mDevice->UpdateSize;
+    if(mDevice->NumUpdates <= 1)
     {
         ERR("Audio client returned buffer_len < period*2; expect break up\n");
-        device->NumUpdates = 2;
-        device->UpdateSize = buffer_len / device->NumUpdates;
+        mDevice->NumUpdates = 2;
+        mDevice->UpdateSize = buffer_len / mDevice->NumUpdates;
     }
 
     hr = mClient->SetEventHandle(mNotifyEvent);
@@ -1143,7 +1138,7 @@ ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self)
     ClockLatency ret;
 
     ALCwasapiPlayback_lock(self);
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
     ret.ClockTime = GetDeviceClockTime(device);
     ret.Latency  = std::chrono::seconds{self->mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= device->Frequency;
@@ -1367,7 +1362,7 @@ ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *deviceName)
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
             else
             {
-                ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+                ALCdevice *device{self->mDevice};
                 self->mDevId = iter->devid;
                 device->DeviceName = iter->name;
                 hr = S_OK;
@@ -1425,8 +1420,6 @@ ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *deviceName)
 
 HRESULT ALCwasapiCapture::openProxy()
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, this)->mDevice};
-
     void *ptr;
     HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
                                   IID_IMMDeviceEnumerator, &ptr);
@@ -1444,8 +1437,8 @@ HRESULT ALCwasapiCapture::openProxy()
     if(SUCCEEDED(hr))
     {
         mClient = reinterpret_cast<IAudioClient*>(ptr);
-        if(device->DeviceName.empty())
-            device->DeviceName = get_device_name_and_guid(mMMDev).first;
+        if(mDevice->DeviceName.empty())
+            mDevice->DeviceName = get_device_name_and_guid(mMMDev).first;
     }
 
     if(FAILED(hr))
@@ -1471,8 +1464,6 @@ void ALCwasapiCapture::closeProxy()
 
 HRESULT ALCwasapiCapture::resetProxy()
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, this)->mDevice};
-
     if(mClient)
         mClient->Release();
     mClient = nullptr;
@@ -1486,16 +1477,16 @@ HRESULT ALCwasapiCapture::resetProxy()
     }
     mClient = reinterpret_cast<IAudioClient*>(ptr);
 
-    REFERENCE_TIME buf_time{ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
-                                      device->Frequency)};
+    REFERENCE_TIME buf_time{ScaleCeil(mDevice->UpdateSize*mDevice->NumUpdates, REFTIME_PER_SEC,
+                                      mDevice->Frequency)};
     // Make sure buffer is at least 100ms in size
     buf_time = maxu64(buf_time, REFTIME_PER_SEC/10);
-    device->UpdateSize = (ALuint)ScaleCeil(buf_time, device->Frequency, REFTIME_PER_SEC) /
-                         device->NumUpdates;
+    mDevice->UpdateSize = (ALuint)ScaleCeil(buf_time, mDevice->Frequency, REFTIME_PER_SEC) /
+                          mDevice->NumUpdates;
 
     WAVEFORMATEXTENSIBLE OutputType;
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-    switch(device->FmtChans)
+    switch(mDevice->FmtChans)
     {
         case DevFmtMono:
             OutputType.Format.nChannels = 1;
@@ -1529,7 +1520,7 @@ HRESULT ALCwasapiCapture::resetProxy()
         case DevFmtAmbi3D:
             return E_FAIL;
     }
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         /* NOTE: Signedness doesn't matter, the converter will handle it. */
         case DevFmtByte:
@@ -1553,7 +1544,7 @@ HRESULT ALCwasapiCapture::resetProxy()
             break;
     }
     OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-    OutputType.Format.nSamplesPerSec = device->Frequency;
+    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
 
     OutputType.Format.nBlockAlign = OutputType.Format.nChannels *
                                     OutputType.Format.wBitsPerSample / 8;
@@ -1579,8 +1570,8 @@ HRESULT ALCwasapiCapture::resetProxy()
              (wfx->nChannels == 2 && OutputType.Format.nChannels == 1)))
         {
             ERR("Failed to get matching format, wanted: %s %s %uhz, got: %d channel%s %d-bit %luhz\n",
-                DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-                device->Frequency, wfx->nChannels, (wfx->nChannels==1)?"":"s", wfx->wBitsPerSample,
+                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
+                mDevice->Frequency, wfx->nChannels, (wfx->nChannels==1)?"":"s", wfx->wBitsPerSample,
                 wfx->nSamplesPerSec);
             CoTaskMemFree(wfx);
             return E_FAIL;
@@ -1626,9 +1617,9 @@ HRESULT ALCwasapiCapture::resetProxy()
         return E_FAIL;
     }
 
-    if(device->FmtChans == DevFmtMono && OutputType.Format.nChannels == 2)
+    if(mDevice->FmtChans == DevFmtMono && OutputType.Format.nChannels == 2)
     {
-        mChannelConv = CreateChannelConverter(srcType, DevFmtStereo, device->FmtChans);
+        mChannelConv = CreateChannelConverter(srcType, DevFmtStereo, mDevice->FmtChans);
         if(!mChannelConv)
         {
             ERR("Failed to create %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
@@ -1640,9 +1631,9 @@ HRESULT ALCwasapiCapture::resetProxy()
          */
         srcType = DevFmtFloat;
     }
-    else if(device->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 1)
+    else if(mDevice->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 1)
     {
-        mChannelConv = CreateChannelConverter(srcType, DevFmtMono, device->FmtChans);
+        mChannelConv = CreateChannelConverter(srcType, DevFmtMono, mDevice->FmtChans);
         if(!mChannelConv)
         {
             ERR("Failed to create %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
@@ -1652,22 +1643,20 @@ HRESULT ALCwasapiCapture::resetProxy()
         srcType = DevFmtFloat;
     }
 
-    if(device->Frequency != OutputType.Format.nSamplesPerSec || device->FmtType != srcType)
+    if(mDevice->Frequency != OutputType.Format.nSamplesPerSec || mDevice->FmtType != srcType)
     {
-        mSampleConv = CreateSampleConverter(
-            srcType, device->FmtType, device->channelsFromFmt(), OutputType.Format.nSamplesPerSec,
-            device->Frequency, BSinc24Resampler
-        );
+        mSampleConv = CreateSampleConverter(srcType, mDevice->FmtType, mDevice->channelsFromFmt(),
+            OutputType.Format.nSamplesPerSec, mDevice->Frequency, BSinc24Resampler);
         if(!mSampleConv)
         {
             ERR("Failed to create converter for %s format, dst: %s %uhz, src: %s %luhz\n",
-                DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-                device->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
+                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
+                mDevice->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
             return E_FAIL;
         }
         TRACE("Created converter for %s format, dst: %s %uhz, src: %s %luhz\n",
-              DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-              device->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
+              DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
+              mDevice->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
     }
 
     hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -1686,8 +1675,8 @@ HRESULT ALCwasapiCapture::resetProxy()
         return hr;
     }
 
-    buffer_len = maxu(device->UpdateSize*device->NumUpdates, buffer_len);
-    mRing = CreateRingBuffer(buffer_len, device->frameSizeFromFmt(), false);
+    buffer_len = maxu(mDevice->UpdateSize*mDevice->NumUpdates, buffer_len);
+    mRing = CreateRingBuffer(buffer_len, mDevice->frameSizeFromFmt(), false);
     if(!mRing)
     {
         ERR("Failed to allocate capture ring buffer\n");
@@ -1875,15 +1864,13 @@ ALCbackend *WasapiBackendFactory::createBackend(ALCdevice *device, ALCbackend_Ty
     {
         ALCwasapiPlayback *backend;
         NEW_OBJ(backend, ALCwasapiPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCwasapiCapture *backend;
         NEW_OBJ(backend, ALCwasapiCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

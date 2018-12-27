@@ -313,7 +313,7 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
 
 static ALCenum ALCopenslPlayback_open(ALCopenslPlayback *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     SLresult result;
 
     if(!name)
@@ -365,7 +365,7 @@ static ALCenum ALCopenslPlayback_open(ALCopenslPlayback *self, const ALCchar *na
 
 static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq;
     SLDataLocator_OutputMix loc_outmix;
     SLDataSource audioSrc;
@@ -713,7 +713,7 @@ static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), v
 
 static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     SLDataLocator_AndroidSimpleBufferQueue loc_bq;
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLDataLocator_IODevice loc_dev;
@@ -892,8 +892,7 @@ static ALCboolean ALCopenslCapture_start(ALCopenslCapture *self)
     if(SL_RESULT_SUCCESS != result)
     {
         ALCopenslCapture_lock(self);
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice,
-                            "Failed to start capture: 0x%08x", result);
+        aluHandleDisconnect(self->mDevice, "Failed to start capture: 0x%08x", result);
         ALCopenslCapture_unlock(self);
         return ALC_FALSE;
     }
@@ -1003,15 +1002,13 @@ ALCbackend *OSLBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type 
     {
         ALCopenslPlayback *backend;
         NEW_OBJ(backend, ALCopenslPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCopenslCapture *backend;
         NEW_OBJ(backend, ALCopenslCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

@@ -92,16 +92,15 @@ static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
 
 static void ALCsdl2Backend_audioCallback(void *ptr, Uint8 *stream, int len)
 {
-    ALCsdl2Backend *self = static_cast<ALCsdl2Backend*>(ptr);
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    auto self = static_cast<ALCsdl2Backend*>(ptr);
 
     assert((len % self->frameSize) == 0);
-    aluMixData(device, stream, len / self->frameSize);
+    aluMixData(self->mDevice, stream, len / self->frameSize);
 }
 
 static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     SDL_AudioSpec want, have;
 
     SDL_zero(want);
@@ -179,7 +178,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 
 static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     device->Frequency = self->Frequency;
     device->FmtChans = self->FmtChans;
     device->FmtType = self->FmtType;
@@ -256,8 +255,7 @@ ALCbackend *SDL2BackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
     {
         ALCsdl2Backend *backend;
         NEW_OBJ(backend, ALCsdl2Backend)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

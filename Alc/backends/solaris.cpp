@@ -103,7 +103,7 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 
 static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -177,7 +177,7 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
         return ALC_INVALID_VALUE;
     }
 
-    device = STATIC_CAST(ALCbackend,self)->mDevice;
+    device = self->mDevice;
     device->DeviceName = name;
 
     return ALC_NO_ERROR;
@@ -185,7 +185,7 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
 
 static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     audio_info_t info;
     ALsizei frameSize;
     ALsizei numChannels;
@@ -326,8 +326,7 @@ ALCbackend *SolarisBackendFactory::createBackend(ALCdevice *device, ALCbackend_T
     {
         ALCsolarisBackend *backend;
         NEW_OBJ(backend, ALCsolarisBackend)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

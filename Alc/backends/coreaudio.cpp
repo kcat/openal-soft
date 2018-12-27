@@ -83,11 +83,10 @@ static OSStatus ALCcoreAudioPlayback_MixerProc(void *inRefCon,
   AudioUnitRenderActionFlags* UNUSED(ioActionFlags), const AudioTimeStamp* UNUSED(inTimeStamp),
   UInt32 UNUSED(inBusNumber), UInt32 UNUSED(inNumberFrames), AudioBufferList *ioData)
 {
-    ALCcoreAudioPlayback *self = static_cast<ALCcoreAudioPlayback*>(inRefCon);
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    auto self = static_cast<ALCcoreAudioPlayback*>(inRefCon);
 
     ALCcoreAudioPlayback_lock(self);
-    aluMixData(device, ioData->mBuffers[0].mData,
+    aluMixData(self->mDevice, ioData->mBuffers[0].mData,
                ioData->mBuffers[0].mDataByteSize / self->mFrameSize);
     ALCcoreAudioPlayback_unlock(self);
 
@@ -97,7 +96,7 @@ static OSStatus ALCcoreAudioPlayback_MixerProc(void *inRefCon,
 
 static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     AudioComponentDescription desc;
     AudioComponent comp;
     OSStatus err;
@@ -147,7 +146,7 @@ static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCch
 
 static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     AudioStreamBasicDescription streamFormat;
     AURenderCallbackStruct input;
     OSStatus err;
@@ -413,7 +412,7 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
 
 static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     AudioStreamBasicDescription requestedFormat;  // The application requested format
     AudioStreamBasicDescription hardwareFormat;   // The hardware format
     AudioStreamBasicDescription outputFormat;     // The AudioUnit output format
@@ -730,15 +729,13 @@ ALCbackend *CoreAudioBackendFactory::createBackend(ALCdevice *device, ALCbackend
     {
         ALCcoreAudioPlayback *backend;
         NEW_OBJ(backend, ALCcoreAudioPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         ALCcoreAudioCapture *backend;
         NEW_OBJ(backend, ALCcoreAudioCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

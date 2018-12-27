@@ -90,7 +90,7 @@ static void SndioPlayback_Destruct(SndioPlayback *self)
 
 static int SndioPlayback_mixerProc(SndioPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
     ALsizei frameSize;
     size_t wrote;
 
@@ -131,7 +131,7 @@ static int SndioPlayback_mixerProc(SndioPlayback *self)
 
 static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     if(!name)
         name = sndio_device;
@@ -151,7 +151,7 @@ static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
 
 static ALCboolean SndioPlayback_reset(SndioPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     sio_par par;
 
     sio_initpar(&par);
@@ -236,7 +236,7 @@ static ALCboolean SndioPlayback_reset(SndioPlayback *self)
 
 static ALCboolean SndioPlayback_start(SndioPlayback *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
 
     self->data_size = device->UpdateSize * device->frameSizeFromFmt();
     al_free(self->mix_data);
@@ -378,7 +378,7 @@ static int SndioCapture_recordProc(SndioCapture *self)
 
 static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALCdevice *device{self->mDevice};
     sio_par par;
 
     if(!name)
@@ -555,15 +555,13 @@ ALCbackend *SndIOBackendFactory::createBackend(ALCdevice *device, ALCbackend_Typ
     {
         SndioPlayback *backend;
         NEW_OBJ(backend, SndioPlayback)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
     if(type == ALCbackend_Capture)
     {
         SndioCapture *backend;
         NEW_OBJ(backend, SndioCapture)(device);
-        if(!backend) return nullptr;
-        return STATIC_CAST(ALCbackend, backend);
+        return backend;
     }
 
     return nullptr;

@@ -423,18 +423,18 @@ int verify_state(snd_pcm_t *handle)
 
 
 struct ALCplaybackAlsa final : public ALCbackend {
+    ALCplaybackAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
+
+    int mixerProc();
+    int mixerNoMMapProc();
+
     snd_pcm_t *mPcmHandle{nullptr};
 
     al::vector<char> mBuffer;
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
-
-    ALCplaybackAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self);
-int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self);
 
 void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
 void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self);
@@ -467,28 +467,26 @@ void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
 }
 
 
-int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
+int ALCplaybackAlsa::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    snd_pcm_uframes_t update_size{device->UpdateSize};
-    snd_pcm_uframes_t num_updates{device->NumUpdates};
-    while(!self->mKillNow.load(std::memory_order_acquire))
+    snd_pcm_uframes_t update_size{mDevice->UpdateSize};
+    snd_pcm_uframes_t num_updates{mDevice->NumUpdates};
+    while(!mKillNow.load(std::memory_order_acquire))
     {
-        int state{verify_state(self->mPcmHandle)};
+        int state{verify_state(mPcmHandle)};
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            ALCplaybackAlsa_lock(self);
-            aluHandleDisconnect(device, "Bad state: %s", snd_strerror(state));
-            ALCplaybackAlsa_unlock(self);
+            ALCplaybackAlsa_lock(this);
+            aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
+            ALCplaybackAlsa_unlock(this);
             break;
         }
 
-        snd_pcm_sframes_t avail{snd_pcm_avail_update(self->mPcmHandle)};
+        snd_pcm_sframes_t avail{snd_pcm_avail_update(mPcmHandle)};
         if(avail < 0)
         {
             ERR("available update failed: %s\n", snd_strerror(avail));
@@ -498,7 +496,7 @@ int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
         if((snd_pcm_uframes_t)avail > update_size*(num_updates+1))
         {
             WARN("available samples exceeds the buffer size\n");
-            snd_pcm_reset(self->mPcmHandle);
+            snd_pcm_reset(mPcmHandle);
             continue;
         }
 
@@ -507,28 +505,28 @@ int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
-                int err{snd_pcm_start(self->mPcmHandle)};
+                int err{snd_pcm_start(mPcmHandle)};
                 if(err < 0)
                 {
                     ERR("start failed: %s\n", snd_strerror(err));
                     continue;
                 }
             }
-            if(snd_pcm_wait(self->mPcmHandle, 1000) == 0)
+            if(snd_pcm_wait(mPcmHandle, 1000) == 0)
                 ERR("Wait timeout... buffer size too low?\n");
             continue;
         }
         avail -= avail%update_size;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
-        ALCplaybackAlsa_lock(self);
+        ALCplaybackAlsa_lock(this);
         while(avail > 0)
         {
             snd_pcm_uframes_t frames{static_cast<snd_pcm_uframes_t>(avail)};
 
             const snd_pcm_channel_area_t *areas{};
             snd_pcm_uframes_t offset{};
-            int err{snd_pcm_mmap_begin(self->mPcmHandle, &areas, &offset, &frames)};
+            int err{snd_pcm_mmap_begin(mPcmHandle, &areas, &offset, &frames)};
             if(err < 0)
             {
                 ERR("mmap begin error: %s\n", snd_strerror(err));
@@ -536,9 +534,9 @@ int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
             }
 
             char *WritePtr{(char*)areas->addr + (offset * areas->step / 8)};
-            aluMixData(device, WritePtr, frames);
+            aluMixData(mDevice, WritePtr, frames);
 
-            snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(self->mPcmHandle, offset, frames)};
+            snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
             if(commitres < 0 || (commitres-frames) != 0)
             {
                 ERR("mmap commit error: %s\n",
@@ -548,34 +546,32 @@ int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
 
             avail -= frames;
         }
-        ALCplaybackAlsa_unlock(self);
+        ALCplaybackAlsa_unlock(this);
     }
 
     return 0;
 }
 
-int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
+int ALCplaybackAlsa::mixerNoMMapProc()
 {
-    ALCdevice *device{self->mDevice};
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    snd_pcm_uframes_t update_size{device->UpdateSize};
-    snd_pcm_uframes_t num_updates{device->NumUpdates};
-    while(!self->mKillNow.load(std::memory_order_acquire))
+    snd_pcm_uframes_t update_size{mDevice->UpdateSize};
+    snd_pcm_uframes_t num_updates{mDevice->NumUpdates};
+    while(!mKillNow.load(std::memory_order_acquire))
     {
-        int state{verify_state(self->mPcmHandle)};
+        int state{verify_state(mPcmHandle)};
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            ALCplaybackAlsa_lock(self);
-            aluHandleDisconnect(device, "Bad state: %s", snd_strerror(state));
-            ALCplaybackAlsa_unlock(self);
+            ALCplaybackAlsa_lock(this);
+            aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
+            ALCplaybackAlsa_unlock(this);
             break;
         }
 
-        snd_pcm_sframes_t avail{snd_pcm_avail_update(self->mPcmHandle)};
+        snd_pcm_sframes_t avail{snd_pcm_avail_update(mPcmHandle)};
         if(avail < 0)
         {
             ERR("available update failed: %s\n", snd_strerror(avail));
@@ -585,7 +581,7 @@ int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
         if((snd_pcm_uframes_t)avail > update_size*num_updates)
         {
             WARN("available samples exceeds the buffer size\n");
-            snd_pcm_reset(self->mPcmHandle);
+            snd_pcm_reset(mPcmHandle);
             continue;
         }
 
@@ -593,26 +589,26 @@ int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
-                int err{snd_pcm_start(self->mPcmHandle)};
+                int err{snd_pcm_start(mPcmHandle)};
                 if(err < 0)
                 {
                     ERR("start failed: %s\n", snd_strerror(err));
                     continue;
                 }
             }
-            if(snd_pcm_wait(self->mPcmHandle, 1000) == 0)
+            if(snd_pcm_wait(mPcmHandle, 1000) == 0)
                 ERR("Wait timeout... buffer size too low?\n");
             continue;
         }
 
-        ALCplaybackAlsa_lock(self);
-        char *WritePtr{self->mBuffer.data()};
-        avail = snd_pcm_bytes_to_frames(self->mPcmHandle, self->mBuffer.size());
-        aluMixData(device, WritePtr, avail);
+        ALCplaybackAlsa_lock(this);
+        char *WritePtr{mBuffer.data()};
+        avail = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
+        aluMixData(mDevice, WritePtr, avail);
         while(avail > 0)
         {
-            int ret = snd_pcm_writei(self->mPcmHandle, WritePtr, avail);
-            switch (ret)
+            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr, avail)};
+            switch(ret)
             {
             case -EAGAIN:
                 continue;
@@ -621,26 +617,25 @@ int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
 #endif
             case -EPIPE:
             case -EINTR:
-                ret = snd_pcm_recover(self->mPcmHandle, ret, 1);
+                ret = snd_pcm_recover(mPcmHandle, ret, 1);
                 if(ret < 0)
                     avail = 0;
                 break;
             default:
-                if (ret >= 0)
+                if(ret >= 0)
                 {
-                    WritePtr += snd_pcm_frames_to_bytes(self->mPcmHandle, ret);
+                    WritePtr += snd_pcm_frames_to_bytes(mPcmHandle, ret);
                     avail -= ret;
                 }
                 break;
             }
-            if (ret < 0)
+            if(ret < 0)
             {
-                ret = snd_pcm_prepare(self->mPcmHandle);
-                if(ret < 0)
-                    break;
+                ret = snd_pcm_prepare(mPcmHandle);
+                if(ret < 0) break;
             }
         }
-        ALCplaybackAlsa_unlock(self);
+        ALCplaybackAlsa_unlock(this);
     }
 
     return 0;
@@ -841,7 +836,6 @@ error:
 ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
 {
     ALCdevice *device{self->mDevice};
-    int (*thread_func)(ALCplaybackAlsa*){};
     snd_pcm_hw_params_t *hp{};
     snd_pcm_access_t access;
     const char *funcerr;
@@ -853,13 +847,21 @@ ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
     /* retrieve configuration info */
     CHECK(snd_pcm_hw_params_get_access(hp, &access));
 #undef CHECK
+    if(0)
+    {
+    error:
+        ERR("%s failed: %s\n", funcerr, snd_strerror(err));
+        if(hp) snd_pcm_hw_params_free(hp);
+        return ALC_FALSE;
+    }
     snd_pcm_hw_params_free(hp);
     hp = nullptr;
 
+    int (ALCplaybackAlsa::*thread_func)(){};
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         self->mBuffer.resize(snd_pcm_frames_to_bytes(self->mPcmHandle, device->UpdateSize));
-        thread_func = ALCplaybackAlsa_mixerNoMMapProc;
+        thread_func = &ALCplaybackAlsa::mixerNoMMapProc;
     }
     else
     {
@@ -869,12 +871,12 @@ ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
             ERR("snd_pcm_prepare(data->mPcmHandle) failed: %s\n", snd_strerror(err));
             return ALC_FALSE;
         }
-        thread_func = ALCplaybackAlsa_mixerProc;
+        thread_func = &ALCplaybackAlsa::mixerProc;
     }
 
     try {
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread(thread_func, self);
+        self->mThread = std::thread{std::mem_fn(thread_func), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -883,11 +885,6 @@ ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
     catch(...) {
     }
     self->mBuffer.clear();
-    return ALC_FALSE;
-
-error:
-    ERR("%s failed: %s\n", funcerr, snd_strerror(err));
-    if(hp) snd_pcm_hw_params_free(hp);
     return ALC_FALSE;
 }
 
@@ -924,6 +921,8 @@ ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 
 
 struct ALCcaptureAlsa final : public ALCbackend {
+    ALCcaptureAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
+
     snd_pcm_t *mPcmHandle{nullptr};
 
     al::vector<char> mBuffer;
@@ -932,8 +931,6 @@ struct ALCcaptureAlsa final : public ALCbackend {
     RingBufferPtr mRing{nullptr};
 
     snd_pcm_sframes_t mLastAvail{0};
-
-    ALCcaptureAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);

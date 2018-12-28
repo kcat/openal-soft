@@ -43,6 +43,11 @@ static const ALCchar sndio_device[] = "SndIO Default";
 
 
 struct SndioPlayback final : public ALCbackend {
+    SndioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~SndioPlayback() override;
+
+    int mixerProc();
+
     sio_hdl *mSndHandle{nullptr};
 
     al::vector<ALubyte> mBuffer;
@@ -50,70 +55,65 @@ struct SndioPlayback final : public ALCbackend {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    SndioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+    static constexpr inline const char *CurrentPrefix() noexcept { return "SndioPlayback::"; }
 };
 
-static int SndioPlayback_mixerProc(SndioPlayback *self);
-
-static void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device);
-static void SndioPlayback_Destruct(SndioPlayback *self);
-static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name);
-static ALCboolean SndioPlayback_reset(SndioPlayback *self);
-static ALCboolean SndioPlayback_start(SndioPlayback *self);
-static void SndioPlayback_stop(SndioPlayback *self);
-static DECLARE_FORWARD2(SndioPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(SndioPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(SndioPlayback, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(SndioPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(SndioPlayback, ALCbackend, void, unlock)
+void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device);
+void SndioPlayback_Destruct(SndioPlayback *self);
+ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name);
+ALCboolean SndioPlayback_reset(SndioPlayback *self);
+ALCboolean SndioPlayback_start(SndioPlayback *self);
+void SndioPlayback_stop(SndioPlayback *self);
+DECLARE_FORWARD2(SndioPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(SndioPlayback, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(SndioPlayback, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(SndioPlayback, ALCbackend, void, lock)
+DECLARE_FORWARD(SndioPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(SndioPlayback)
 
 DEFINE_ALCBACKEND_VTABLE(SndioPlayback);
 
-
-static void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device)
+void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device)
 {
     new (self) SndioPlayback{device};
     SET_VTABLE2(SndioPlayback, ALCbackend, self);
 }
 
-static void SndioPlayback_Destruct(SndioPlayback *self)
-{
-    if(self->mSndHandle)
-        sio_close(self->mSndHandle);
-    self->mSndHandle = nullptr;
+void SndioPlayback_Destruct(SndioPlayback *self)
+{ self->~SndioPlayback(); }
 
-    self->~SndioPlayback();
+SndioPlayback::~SndioPlayback()
+{
+    if(mSndHandle)
+        sio_close(mSndHandle);
+    mSndHandle = nullptr;
 }
 
-
-static int SndioPlayback_mixerProc(SndioPlayback *self)
+int SndioPlayback::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const ALsizei frameSize{device->frameSizeFromFmt()};
+    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
 
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
-        auto WritePtr = static_cast<ALubyte*>(self->mBuffer.data());
-        size_t len{self->mBuffer.size()};
+        auto WritePtr = static_cast<ALubyte*>(mBuffer.data());
+        size_t len{mBuffer.size()};
 
-        SndioPlayback_lock(self);
-        aluMixData(device, WritePtr, len/frameSize);
-        SndioPlayback_unlock(self);
-        while(len > 0 && !self->mKillNow.load(std::memory_order_acquire))
+        SndioPlayback_lock(this);
+        aluMixData(mDevice, WritePtr, len/frameSize);
+        SndioPlayback_unlock(this);
+        while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
-            size_t wrote{sio_write(self->mSndHandle, WritePtr, len)};
+            size_t wrote{sio_write(mSndHandle, WritePtr, len)};
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
-                SndioPlayback_lock(self);
-                aluHandleDisconnect(device, "Failed to write playback samples");
-                SndioPlayback_unlock(self);
+                SndioPlayback_lock(this);
+                aluHandleDisconnect(mDevice, "Failed to write playback samples");
+                SndioPlayback_unlock(this);
                 break;
             }
 
@@ -126,7 +126,7 @@ static int SndioPlayback_mixerProc(SndioPlayback *self)
 }
 
 
-static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
+ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
 {
     ALCdevice *device{self->mDevice};
 
@@ -146,7 +146,7 @@ static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean SndioPlayback_reset(SndioPlayback *self)
+ALCboolean SndioPlayback_reset(SndioPlayback *self)
 {
     ALCdevice *device{self->mDevice};
     sio_par par;
@@ -234,7 +234,7 @@ static ALCboolean SndioPlayback_reset(SndioPlayback *self)
     return ALC_TRUE;
 }
 
-static ALCboolean SndioPlayback_start(SndioPlayback *self)
+ALCboolean SndioPlayback_start(SndioPlayback *self)
 {
     if(!sio_start(self->mSndHandle))
     {
@@ -244,7 +244,7 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
 
     try {
         self->mKillNow.store(false, std::memory_order_release);
-        self->mThread = std::thread(SndioPlayback_mixerProc, self);
+        self->mThread = std::thread{std::mem_fn(&SndioPlayback::mixerProc), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -256,7 +256,7 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
     return ALC_FALSE;
 }
 
-static void SndioPlayback_stop(SndioPlayback *self)
+void SndioPlayback_stop(SndioPlayback *self)
 {
     if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
@@ -268,6 +268,11 @@ static void SndioPlayback_stop(SndioPlayback *self)
 
 
 struct SndioCapture final : public ALCbackend {
+    SndioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~SndioCapture() override;
+
+    int recordProc();
+
     sio_hdl *mSndHandle{nullptr};
 
     RingBufferPtr mRing;
@@ -275,84 +280,75 @@ struct SndioCapture final : public ALCbackend {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    SndioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+    static constexpr inline const char *CurrentPrefix() noexcept { return "SndioCapture::"; }
 };
 
-static int SndioCapture_recordProc(SndioCapture *self);
-
-static void SndioCapture_Construct(SndioCapture *self, ALCdevice *device);
-static void SndioCapture_Destruct(SndioCapture *self);
-static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name);
-static DECLARE_FORWARD(SndioCapture, ALCbackend, ALCboolean, reset)
-static ALCboolean SndioCapture_start(SndioCapture *self);
-static void SndioCapture_stop(SndioCapture *self);
-static ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples);
-static ALCuint SndioCapture_availableSamples(SndioCapture *self);
-static DECLARE_FORWARD(SndioCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(SndioCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(SndioCapture, ALCbackend, void, unlock)
+void SndioCapture_Construct(SndioCapture *self, ALCdevice *device);
+void SndioCapture_Destruct(SndioCapture *self);
+ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name);
+DECLARE_FORWARD(SndioCapture, ALCbackend, ALCboolean, reset)
+ALCboolean SndioCapture_start(SndioCapture *self);
+void SndioCapture_stop(SndioCapture *self);
+ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples);
+ALCuint SndioCapture_availableSamples(SndioCapture *self);
+DECLARE_FORWARD(SndioCapture, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(SndioCapture, ALCbackend, void, lock)
+DECLARE_FORWARD(SndioCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(SndioCapture)
 
 DEFINE_ALCBACKEND_VTABLE(SndioCapture);
 
-
-static void SndioCapture_Construct(SndioCapture *self, ALCdevice *device)
+void SndioCapture_Construct(SndioCapture *self, ALCdevice *device)
 {
     new (self) SndioCapture{device};
     SET_VTABLE2(SndioCapture, ALCbackend, self);
 }
 
-static void SndioCapture_Destruct(SndioCapture *self)
-{
-    if(self->mSndHandle)
-        sio_close(self->mSndHandle);
-    self->mSndHandle = nullptr;
+void SndioCapture_Destruct(SndioCapture *self)
+{ self->~SndioCapture(); }
 
-    self->~SndioCapture();
+SndioCapture::~SndioCapture()
+{
+    if(mSndHandle)
+        sio_close(mSndHandle);
+    mSndHandle = nullptr;
 }
 
-
-static int SndioCapture_recordProc(SndioCapture *self)
+int SndioCapture::recordProc()
 {
-    ALCdevice *device{self->mDevice};
-    RingBuffer *ring{self->mRing.get()};
-
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    const ALsizei frameSize{device->frameSizeFromFmt()};
+    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
 
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
-        size_t total, todo;
-
-        auto data = ring->getWriteVector();
-        todo = data.first.len + data.second.len;
+        auto data = mRing->getWriteVector();
+        size_t todo{data.first.len + data.second.len};
         if(todo == 0)
         {
             static char junk[4096];
-            sio_read(self->mSndHandle, junk, minz(sizeof(junk)/frameSize, device->UpdateSize)*frameSize);
+            sio_read(mSndHandle, junk,
+                minz(sizeof(junk)/frameSize, mDevice->UpdateSize)*frameSize);
             continue;
         }
 
-        total = 0;
+        size_t total{0u};
         data.first.len  *= frameSize;
         data.second.len *= frameSize;
-        todo = minz(todo, device->UpdateSize) * frameSize;
+        todo = minz(todo, mDevice->UpdateSize) * frameSize;
         while(total < todo)
         {
-            size_t got;
-
             if(!data.first.len)
                 data.first = data.second;
 
-            got = sio_read(self->mSndHandle, data.first.buf, minz(todo-total, data.first.len));
+            size_t got{sio_read(mSndHandle, data.first.buf, minz(todo-total, data.first.len))};
             if(!got)
             {
-                SndioCapture_lock(self);
-                aluHandleDisconnect(device, "Failed to read capture samples");
-                SndioCapture_unlock(self);
+                SndioCapture_lock(this);
+                aluHandleDisconnect(mDevice, "Failed to read capture samples");
+                SndioCapture_unlock(this);
                 break;
             }
 
@@ -360,14 +356,14 @@ static int SndioCapture_recordProc(SndioCapture *self)
             data.first.len -= got;
             total += got;
         }
-        ring->writeAdvance(total / frameSize);
+        mRing->writeAdvance(total / frameSize);
     }
 
     return 0;
 }
 
 
-static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
+ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
 {
     ALCdevice *device{self->mDevice};
     sio_par par;
@@ -470,7 +466,7 @@ static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean SndioCapture_start(SndioCapture *self)
+ALCboolean SndioCapture_start(SndioCapture *self)
 {
     if(!sio_start(self->mSndHandle))
     {
@@ -480,7 +476,7 @@ static ALCboolean SndioCapture_start(SndioCapture *self)
 
     try {
         self->mKillNow.store(false, std::memory_order_release);
-        self->mThread = std::thread(SndioCapture_recordProc, self);
+        self->mThread = std::thread{std::mem_fn(&SndioCapture::recordProc), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -492,7 +488,7 @@ static ALCboolean SndioCapture_start(SndioCapture *self)
     return ALC_FALSE;
 }
 
-static void SndioCapture_stop(SndioCapture *self)
+void SndioCapture_stop(SndioCapture *self)
 {
     if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
@@ -502,14 +498,14 @@ static void SndioCapture_stop(SndioCapture *self)
         ERR("Error stopping device\n");
 }
 
-static ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples)
+ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples)
 {
     RingBuffer *ring{self->mRing.get()};
     ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint SndioCapture_availableSamples(SndioCapture *self)
+ALCuint SndioCapture_availableSamples(SndioCapture *self)
 {
     RingBuffer *ring{self->mRing.get()};
     return ring->readSpace();

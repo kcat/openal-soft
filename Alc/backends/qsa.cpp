@@ -171,9 +171,10 @@ void deviceList(int type, al::vector<DevMap> *devmap)
 
 /* Wrappers to use an old-style backend with the new interface. */
 struct PlaybackWrapper final : public ALCbackend {
-    std::unique_ptr<qsa_data> mExtraData;
-
     PlaybackWrapper(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~PlaybackWrapper() override;
+
+    std::unique_ptr<qsa_data> mExtraData;
 };
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device);
@@ -620,11 +621,12 @@ static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
 }
 
 static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
-{
-    if(self->mExtraData)
-        qsa_close_playback(self);
+{ self->~PlaybackWrapper(); }
 
-    self->~PlaybackWrapper();
+PlaybackWrapper::~PlaybackWrapper()
+{
+    if(mExtraData)
+        qsa_close_playback(this);
 }
 
 static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name)
@@ -654,9 +656,10 @@ static void PlaybackWrapper_stop(PlaybackWrapper *self)
 /***********/
 
 struct CaptureWrapper final : public ALCbackend {
-    std::unique_ptr<qsa_data> mExtraData;
-
     CaptureWrapper(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~CaptureWrapper() override;
+
+    std::unique_ptr<qsa_data> mExtraData;
 };
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device);
@@ -778,7 +781,7 @@ static void qsa_close_capture(CaptureWrapper *self)
 
     if (data->pcmHandle!=nullptr)
         snd_pcm_close(data->pcmHandle);
-    data->pcmHandle = nullptr
+    data->pcmHandle = nullptr;
 
     self->mExtraData = nullptr;
 }
@@ -921,11 +924,12 @@ static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
 }
 
 static void CaptureWrapper_Destruct(CaptureWrapper *self)
-{
-    if(self->mExtraData)
-        qsa_close_capture(self);
+{ self->~CaptureWrapper(); }
 
-    self->~CaptureWrapper();
+CaptureWrapper::~CaptureWrapper()
+{
+    if(mExtraData)
+        qsa_close_capture(this);
 }
 
 static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name)

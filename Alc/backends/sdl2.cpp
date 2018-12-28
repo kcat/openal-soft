@@ -33,13 +33,23 @@
 #include "compat.h"
 
 
+namespace {
+
 #ifdef _WIN32
 #define DEVNAME_PREFIX "OpenAL Soft on "
 #else
 #define DEVNAME_PREFIX ""
 #endif
 
+constexpr ALCchar defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
+
 struct ALCsdl2Backend final : public ALCbackend {
+    ALCsdl2Backend(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCsdl2Backend() override;
+
+    static void audioCallbackC(void *ptr, Uint8 *stream, int len);
+    void audioCallback(Uint8 *stream, int len);
+
     SDL_AudioDeviceID mDeviceID{0u};
     ALsizei mFrameSize{0};
 
@@ -47,58 +57,52 @@ struct ALCsdl2Backend final : public ALCbackend {
     DevFmtChannels mFmtChans{};
     DevFmtType     mFmtType{};
     ALuint mUpdateSize{0u};
-
-    ALCsdl2Backend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
-static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
-static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self);
-static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name);
-static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self);
-static ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self);
-static void ALCsdl2Backend_stop(ALCsdl2Backend *self);
-static DECLARE_FORWARD2(ALCsdl2Backend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, ClockLatency, getClockLatency)
-static void ALCsdl2Backend_lock(ALCsdl2Backend *self);
-static void ALCsdl2Backend_unlock(ALCsdl2Backend *self);
+void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
+void ALCsdl2Backend_Destruct(ALCsdl2Backend *self);
+ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name);
+ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self);
+ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self);
+void ALCsdl2Backend_stop(ALCsdl2Backend *self);
+DECLARE_FORWARD2(ALCsdl2Backend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, ClockLatency, getClockLatency)
+void ALCsdl2Backend_lock(ALCsdl2Backend *self);
+void ALCsdl2Backend_unlock(ALCsdl2Backend *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCsdl2Backend)
 
 DEFINE_ALCBACKEND_VTABLE(ALCsdl2Backend);
 
-static const ALCchar defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
-
-static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
+void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
 {
     new (self) ALCsdl2Backend{device};
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 }
 
-static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
-{
-    if(self->mDeviceID)
-        SDL_CloseAudioDevice(self->mDeviceID);
-    self->mDeviceID = 0;
+void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
+{ self->~ALCsdl2Backend(); }
 
-    self->~ALCsdl2Backend();
+ALCsdl2Backend::~ALCsdl2Backend()
+{
+    if(mDeviceID)
+        SDL_CloseAudioDevice(mDeviceID);
+    mDeviceID = 0;
 }
 
+void ALCsdl2Backend::audioCallbackC(void *ptr, Uint8 *stream, int len)
+{ static_cast<ALCsdl2Backend*>(ptr)->audioCallback(stream, len); }
 
-static void ALCsdl2Backend_audioCallback(void *ptr, Uint8 *stream, int len)
+void ALCsdl2Backend::audioCallback(Uint8 *stream, int len)
 {
-    auto self = static_cast<ALCsdl2Backend*>(ptr);
-
-    assert((len % self->mFrameSize) == 0);
-    aluMixData(self->mDevice, stream, len / self->mFrameSize);
+    assert((len % mFrameSize) == 0);
+    aluMixData(mDevice, stream, len / mFrameSize);
 }
 
-static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
+ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 {
     ALCdevice *device{self->mDevice};
-    SDL_AudioSpec want, have;
-
-    SDL_zero(want);
-    SDL_zero(have);
+    SDL_AudioSpec want{}, have{};
 
     want.freq = device->Frequency;
     switch(device->FmtType)
@@ -113,7 +117,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     }
     want.channels = (device->FmtChans == DevFmtMono) ? 1 : 2;
     want.samples = device->UpdateSize;
-    want.callback = ALCsdl2Backend_audioCallback;
+    want.callback = &ALCsdl2Backend::audioCallbackC;
     want.userdata = self;
 
     /* Passing nullptr to SDL_OpenAudioDevice opens a default, which isn't
@@ -170,7 +174,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
+ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
 {
     ALCdevice *device{self->mDevice};
     device->Frequency = self->mFrequency;
@@ -182,27 +186,28 @@ static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self)
+ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self)
 {
     SDL_PauseAudioDevice(self->mDeviceID, 0);
     return ALC_TRUE;
 }
 
-static void ALCsdl2Backend_stop(ALCsdl2Backend *self)
+void ALCsdl2Backend_stop(ALCsdl2Backend *self)
 {
     SDL_PauseAudioDevice(self->mDeviceID, 1);
 }
 
-static void ALCsdl2Backend_lock(ALCsdl2Backend *self)
+void ALCsdl2Backend_lock(ALCsdl2Backend *self)
 {
     SDL_LockAudioDevice(self->mDeviceID);
 }
 
-static void ALCsdl2Backend_unlock(ALCsdl2Backend *self)
+void ALCsdl2Backend_unlock(ALCsdl2Backend *self)
 {
     SDL_UnlockAudioDevice(self->mDeviceID);
 }
 
+} // namespace
 
 BackendFactory &SDL2BackendFactory::getFactory()
 {

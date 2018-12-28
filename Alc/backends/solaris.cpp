@@ -49,7 +49,17 @@
 
 namespace {
 
-struct ALCsolarisBackend final : public ALCbackend {
+constexpr ALCchar solaris_device[] = "Solaris Default";
+
+const char *solaris_driver = "/dev/audio";
+
+
+struct SolarisBackend final : public ALCbackend {
+    SolarisBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~SolarisBackend() override;
+
+    int mixerProc();
+
     int mFd{-1};
 
     al::vector<ALubyte> mBuffer;
@@ -57,74 +67,65 @@ struct ALCsolarisBackend final : public ALCbackend {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    ALCsolarisBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
+    static constexpr inline const char *CurrentPrefix() noexcept { return "SolarisBackend::"; }
 };
 
-static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self);
+void SolarisBackend_Construct(SolarisBackend *self, ALCdevice *device);
+void SolarisBackend_Destruct(SolarisBackend *self);
+ALCenum SolarisBackend_open(SolarisBackend *self, const ALCchar *name);
+ALCboolean SolarisBackend_reset(SolarisBackend *self);
+ALCboolean SolarisBackend_start(SolarisBackend *self);
+void SolarisBackend_stop(SolarisBackend *self);
+DECLARE_FORWARD2(SolarisBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(SolarisBackend, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(SolarisBackend, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(SolarisBackend, ALCbackend, void, lock)
+DECLARE_FORWARD(SolarisBackend, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(SolarisBackend)
 
-static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device);
-static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self);
-static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *name);
-static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self);
-static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self);
-static void ALCsolarisBackend_stop(ALCsolarisBackend *self);
-static DECLARE_FORWARD2(ALCsolarisBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCsolarisBackend)
+DEFINE_ALCBACKEND_VTABLE(SolarisBackend);
 
-DEFINE_ALCBACKEND_VTABLE(ALCsolarisBackend);
-
-
-static const ALCchar solaris_device[] = "Solaris Default";
-
-static const char *solaris_driver = "/dev/audio";
-
-
-static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device)
+void SolarisBackend_Construct(SolarisBackend *self, ALCdevice *device)
 {
-    new (self) ALCsolarisBackend{device};
-    SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
+    new (self) SolarisBackend{device};
+    SET_VTABLE2(SolarisBackend, ALCbackend, self);
 }
 
-static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
-{
-    if(self->mFd != -1)
-        close(self->mFd);
-    self->mFd = -1;
+void SolarisBackend_Destruct(SolarisBackend *self)
+{ self->~SolarisBackend(); }
 
-    self->~ALCsolarisBackend();
+SolarisBackend::~SolarisBackend()
+{
+    if(mFd != -1)
+        close(mFd);
+    mFd = -1;
 }
 
-
-static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
+int SolarisBackend::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const int frame_size{device->frameSizeFromFmt()};
+    const int frame_size{mDevice->frameSizeFromFmt()};
 
-    ALCsolarisBackend_lock(self);
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    SolarisBackend_lock(this);
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
-        pollitem.fd = self->mFd;
+        pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        ALCsolarisBackend_unlock(self);
+        SolarisBackend_unlock(this);
         int pret{poll(&pollitem, 1, 1000)};
-        ALCsolarisBackend_lock(self);
+        SolarisBackend_lock(this);
         if(pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            aluHandleDisconnect(device, "Failed to wait for playback buffer: %s", strerror(errno));
+            aluHandleDisconnect(mDevice, "Failed to wait for playback buffer: %s",
+                strerror(errno));
             break;
         }
         else if(pret == 0)
@@ -133,19 +134,19 @@ static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
             continue;
         }
 
-        ALubyte *write_ptr{self->mBuffer.data()};
-        size_t to_write{self->mBuffer.size()};
-        aluMixData(device, write_ptr, to_write/frame_size);
-        while(to_write > 0 && !self->mKillNow.load(std::memory_order_acquire))
+        ALubyte *write_ptr{mBuffer.data()};
+        size_t to_write{mBuffer.size()};
+        aluMixData(mDevice, write_ptr, to_write/frame_size);
+        while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
-            ssize_t wrote{write(self->mFd, write_ptr, to_write)};
+            ssize_t wrote{write(mFd, write_ptr, to_write)};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 ERR("write failed: %s\n", strerror(errno));
-                aluHandleDisconnect(device, "Failed to write playback samples: %s",
-                                    strerror(errno));
+                aluHandleDisconnect(mDevice, "Failed to write playback samples: %s",
+                    strerror(errno));
                 break;
             }
 
@@ -153,16 +154,14 @@ static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
             write_ptr += wrote;
         }
     }
-    ALCsolarisBackend_unlock(self);
+    SolarisBackend_unlock(this);
 
     return 0;
 }
 
 
-static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *name)
+ALCenum SolarisBackend_open(SolarisBackend *self, const ALCchar *name)
 {
-    ALCdevice *device;
-
     if(!name)
         name = solaris_device;
     else if(strcmp(name, solaris_device) != 0)
@@ -175,13 +174,13 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
         return ALC_INVALID_VALUE;
     }
 
-    device = self->mDevice;
+    ALCdevice *device{self->mDevice};
     device->DeviceName = name;
 
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
+ALCboolean SolarisBackend_reset(SolarisBackend *self)
 {
     ALCdevice *device{self->mDevice};
     audio_info_t info;
@@ -256,11 +255,11 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
+ALCboolean SolarisBackend_start(SolarisBackend *self)
 {
     try {
         self->mKillNow.store(false, std::memory_order_release);
-        self->mThread = std::thread(ALCsolarisBackend_mixerProc, self);
+        self->mThread = std::thread{std::mem_fn(&SolarisBackend::mixerProc), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -271,7 +270,7 @@ static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
     return ALC_FALSE;
 }
 
-static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
+void SolarisBackend_stop(SolarisBackend *self)
 {
     if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
@@ -322,8 +321,8 @@ ALCbackend *SolarisBackendFactory::createBackend(ALCdevice *device, ALCbackend_T
 {
     if(type == ALCbackend_Playback)
     {
-        ALCsolarisBackend *backend;
-        NEW_OBJ(backend, ALCsolarisBackend)(device);
+        SolarisBackend *backend;
+        NEW_OBJ(backend, SolarisBackend)(device);
         return backend;
     }
 

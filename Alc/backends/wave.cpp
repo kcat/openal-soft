@@ -78,7 +78,12 @@ void fwrite32le(ALuint val, FILE *f)
 }
 
 
-struct ALCwaveBackend final : public ALCbackend {
+struct WaveBackend final : public ALCbackend {
+    WaveBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~WaveBackend() override;
+
+    int mixerProc();
+
     FILE *mFile{nullptr};
     long mDataStart{-1};
 
@@ -87,81 +92,79 @@ struct ALCwaveBackend final : public ALCbackend {
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
 
-    ALCwaveBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
+    static constexpr inline const char *CurrentPrefix() noexcept { return "WaveBackend::"; }
 };
 
-int ALCwaveBackend_mixerProc(ALCwaveBackend *self);
+void WaveBackend_Construct(WaveBackend *self, ALCdevice *device);
+void WaveBackend_Destruct(WaveBackend *self);
+ALCenum WaveBackend_open(WaveBackend *self, const ALCchar *name);
+ALCboolean WaveBackend_reset(WaveBackend *self);
+ALCboolean WaveBackend_start(WaveBackend *self);
+void WaveBackend_stop(WaveBackend *self);
+DECLARE_FORWARD2(WaveBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(WaveBackend, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(WaveBackend, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(WaveBackend, ALCbackend, void, lock)
+DECLARE_FORWARD(WaveBackend, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(WaveBackend)
 
-void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device);
-void ALCwaveBackend_Destruct(ALCwaveBackend *self);
-ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name);
-ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self);
-ALCboolean ALCwaveBackend_start(ALCwaveBackend *self);
-void ALCwaveBackend_stop(ALCwaveBackend *self);
-DECLARE_FORWARD2(ALCwaveBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-DECLARE_FORWARD(ALCwaveBackend, ALCbackend, ALCuint, availableSamples)
-DECLARE_FORWARD(ALCwaveBackend, ALCbackend, ClockLatency, getClockLatency)
-DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, lock)
-DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCwaveBackend)
+DEFINE_ALCBACKEND_VTABLE(WaveBackend);
 
-DEFINE_ALCBACKEND_VTABLE(ALCwaveBackend);
-
-
-void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
+void WaveBackend_Construct(WaveBackend *self, ALCdevice *device)
 {
-    new (self) ALCwaveBackend{device};
-    SET_VTABLE2(ALCwaveBackend, ALCbackend, self);
+    new (self) WaveBackend{device};
+    SET_VTABLE2(WaveBackend, ALCbackend, self);
 }
 
-void ALCwaveBackend_Destruct(ALCwaveBackend *self)
-{
-    if(self->mFile)
-        fclose(self->mFile);
-    self->mFile = nullptr;
+void WaveBackend_Destruct(WaveBackend *self)
+{ self->~WaveBackend(); }
 
-    self->~ALCwaveBackend();
+WaveBackend::~WaveBackend()
+{
+    if(mFile)
+        fclose(mFile);
+    mFile = nullptr;
 }
 
-int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
+int WaveBackend::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-    const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
+    const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
 
     althrd_setname(MIXER_THREAD_NAME);
 
-    const ALsizei frameSize{device->frameSizeFromFmt()};
+    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
 
     ALint64 done{0};
     auto start = std::chrono::steady_clock::now();
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) * device->Frequency).count()};
-        if(avail-done < device->UpdateSize)
+        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) *
+            mDevice->Frequency).count()};
+        if(avail-done < mDevice->UpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= device->UpdateSize)
+        while(avail-done >= mDevice->UpdateSize)
         {
-            ALCwaveBackend_lock(self);
-            aluMixData(device, self->mBuffer.data(), device->UpdateSize);
-            ALCwaveBackend_unlock(self);
-            done += device->UpdateSize;
+            WaveBackend_lock(this);
+            aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize);
+            WaveBackend_unlock(this);
+            done += mDevice->UpdateSize;
 
             if(!IS_LITTLE_ENDIAN)
             {
-                const ALsizei bytesize{device->bytesFromFmt()};
+                const ALsizei bytesize{mDevice->bytesFromFmt()};
                 ALsizei i;
 
                 if(bytesize == 2)
                 {
-                    ALushort *samples = reinterpret_cast<ALushort*>(self->mBuffer.data());
-                    const auto len = static_cast<ALsizei>(self->mBuffer.size() / 2);
+                    ALushort *samples = reinterpret_cast<ALushort*>(mBuffer.data());
+                    const auto len = static_cast<ALsizei>(mBuffer.size() / 2);
                     for(i = 0;i < len;i++)
                     {
                         ALushort samp = samples[i];
@@ -170,8 +173,8 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
                 }
                 else if(bytesize == 4)
                 {
-                    ALuint *samples = reinterpret_cast<ALuint*>(self->mBuffer.data());
-                    const auto len = static_cast<ALsizei>(self->mBuffer.size() / 4);
+                    ALuint *samples = reinterpret_cast<ALuint*>(mBuffer.data());
+                    const auto len = static_cast<ALsizei>(mBuffer.size() / 4);
                     for(i = 0;i < len;i++)
                     {
                         ALuint samp = samples[i];
@@ -181,14 +184,14 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
                 }
             }
 
-            size_t fs{fwrite(self->mBuffer.data(), frameSize, device->UpdateSize, self->mFile)};
+            size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile)};
             (void)fs;
-            if(ferror(self->mFile))
+            if(ferror(mFile))
             {
                 ERR("Error writing to file\n");
-                ALCwaveBackend_lock(self);
-                aluHandleDisconnect(device, "Failed to write playback samples");
-                ALCwaveBackend_unlock(self);
+                WaveBackend_lock(this);
+                aluHandleDisconnect(mDevice, "Failed to write playback samples");
+                WaveBackend_unlock(this);
                 break;
             }
         }
@@ -198,11 +201,11 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= device->Frequency)
+        if(done >= mDevice->Frequency)
         {
-            seconds s{done/device->Frequency};
+            seconds s{done/mDevice->Frequency};
             start += s;
-            done -= device->Frequency*s.count();
+            done -= mDevice->Frequency*s.count();
         }
     }
 
@@ -210,7 +213,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 }
 
 
-ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
+ALCenum WaveBackend_open(WaveBackend *self, const ALCchar *name)
 {
     const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
     if(!fname[0]) return ALC_INVALID_VALUE;
@@ -240,7 +243,7 @@ ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
+ALCboolean WaveBackend_reset(WaveBackend *self)
 {
     ALCdevice *device{self->mDevice};
     ALuint channels=0, bits=0, chanmask=0;
@@ -344,11 +347,11 @@ ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     return ALC_TRUE;
 }
 
-ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
+ALCboolean WaveBackend_start(WaveBackend *self)
 {
     try {
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread(ALCwaveBackend_mixerProc, self);
+        self->mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -359,7 +362,7 @@ ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
     return ALC_FALSE;
 }
 
-void ALCwaveBackend_stop(ALCwaveBackend *self)
+void WaveBackend_stop(WaveBackend *self)
 {
     if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
@@ -402,8 +405,8 @@ ALCbackend *WaveBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type
 {
     if(type == ALCbackend_Playback)
     {
-        ALCwaveBackend *backend;
-        NEW_OBJ(backend, ALCwaveBackend)(device);
+        WaveBackend *backend;
+        NEW_OBJ(backend, WaveBackend)(device);
         return backend;
     }
 

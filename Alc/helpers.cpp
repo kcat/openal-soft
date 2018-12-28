@@ -361,7 +361,7 @@ void *GetSymbol(void *handle, const char *name)
 }
 
 
-void al_print(const char *type, const char *func, const char *fmt, ...)
+void al_print(const char *type, const char *prefix, const char *func, const char *fmt, ...)
 {
     char str[1024];
     va_list ap;
@@ -372,7 +372,7 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
     str[sizeof(str)-1] = 0;
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fprintf(gLogFile, "AL lib: %s %s: %ls", type, func, wstr.c_str());
+    fprintf(gLogFile, "AL lib: %s %s%s: %ls", type, prefix, func, wstr.c_str());
     fflush(gLogFile);
 }
 
@@ -588,12 +588,12 @@ void *GetSymbol(void *handle, const char *name)
 
 #endif /* HAVE_DLFCN_H */
 
-void al_print(const char *type, const char *func, const char *fmt, ...)
+void al_print(const char *type, const char *prefix, const char *func, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
-    fprintf(gLogFile, "AL lib: %s %s: ", type, func);
+    fprintf(gLogFile, "AL lib: %s %s%s: ", type, prefix, func);
     vfprintf(gLogFile, fmt, ap);
     va_end(ap);
 

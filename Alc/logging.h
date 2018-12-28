@@ -18,22 +18,20 @@
 #define DECL_FORMAT(x, y, z)
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 extern FILE *gLogFile;
 
+constexpr inline const char *CurrentPrefix() noexcept { return ""; }
 #if defined(__GNUC__) && !defined(_WIN32)
-#define AL_PRINT(T, MSG, ...) fprintf(gLogFile, "AL lib: %s %s: " MSG, T, __FUNCTION__ , ## __VA_ARGS__)
+#define AL_PRINT(T, MSG, ...) fprintf(gLogFile, "AL lib: %s %s%s: " MSG, T, CurrentPrefix(), __FUNCTION__ , ## __VA_ARGS__)
 #else
-void al_print(const char *type, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 3,4);
-#define AL_PRINT(T, ...) al_print((T), __FUNCTION__, __VA_ARGS__)
+void al_print(const char *type, const char *prefix, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 4,5);
+#define AL_PRINT(T, ...) al_print((T), CurrentPrefix(), __FUNCTION__, __VA_ARGS__)
 #endif
 
 #ifdef __ANDROID__
 #include <android/log.h>
-#define LOG_ANDROID(T, MSG, ...) __android_log_print(T, "openal", "AL lib: %s: " MSG, __FUNCTION__ , ## __VA_ARGS__)
+#define LOG_ANDROID(T, MSG, ...) __android_log_print(T, "openal", "AL lib: %s%s: " MSG, CurrentPrefix(), __FUNCTION__ , ## __VA_ARGS__)
 #else
 #define LOG_ANDROID(T, MSG, ...) ((void)0)
 #endif
@@ -69,9 +67,5 @@ extern LogLevel gLogLevel;
         AL_PRINT("(EE)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_ERROR, __VA_ARGS__);                              \
 } while(0)
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 #endif /* LOGGING_H */

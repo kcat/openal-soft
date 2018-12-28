@@ -242,7 +242,7 @@ int log2i(ALCuint x)
 
 
 struct ALCplaybackOSS final : public ALCbackend {
-    int fd{-1};
+    int mFd{-1};
 
     al::vector<ALubyte> mMixData;
 
@@ -277,9 +277,9 @@ void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
 
 void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 {
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
+    if(self->mFd != -1)
+        close(self->mFd);
+    self->mFd = -1;
 
     self->~ALCplaybackOSS();
 }
@@ -299,7 +299,7 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
           device->Connected.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
-        pollitem.fd = self->fd;
+        pollitem.fd = self->mFd;
         pollitem.events = POLLOUT;
 
         ALCplaybackOSS_unlock(self);
@@ -324,7 +324,7 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
         aluMixData(device, write_ptr, to_write/frame_size);
         while(to_write > 0 && !self->mKillNow.load())
         {
-            ssize_t wrote{write(self->fd, write_ptr, to_write)};
+            ssize_t wrote{write(self->mFd, write_ptr, to_write)};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -366,8 +366,8 @@ ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
         devname = iter->device_name.c_str();
     }
 
-    self->fd = open(devname, O_WRONLY);
-    if(self->fd == -1)
+    self->mFd = open(devname, O_WRONLY);
+    if(self->mFd == -1)
     {
         ERR("Could not open %s: %s\n", devname, strerror(errno));
         return ALC_INVALID_VALUE;
@@ -423,11 +423,11 @@ ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
 }
     /* Don't fail if SETFRAGMENT fails. We can handle just about anything
      * that's reported back via GETOSPACE */
-    ioctl(self->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_SETFMT, &ossFormat));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_CHANNELS, &numChannels));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_SPEED, &ossSpeed));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_GETOSPACE, &info));
+    ioctl(self->mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_SETFMT, &ossFormat));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_CHANNELS, &numChannels));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_SPEED, &ossSpeed));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_GETOSPACE, &info));
     if(0)
     {
     err:
@@ -484,7 +484,7 @@ void ALCplaybackOSS_stop(ALCplaybackOSS *self)
         return;
     self->mThread.join();
 
-    if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
+    if(ioctl(self->mFd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));
 
     self->mMixData.clear();
@@ -492,7 +492,7 @@ void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 
 
 struct ALCcaptureOSS final : public ALCbackend {
-    int fd{-1};
+    int mFd{-1};
 
     RingBufferPtr mRing{nullptr};
 
@@ -527,9 +527,9 @@ void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
 
 void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 {
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
+    if(self->mFd != -1)
+        close(self->mFd);
+    self->mFd = -1;
 
     self->~ALCcaptureOSS();
 }
@@ -547,7 +547,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
     while(!self->mKillNow.load())
     {
         pollfd pollitem{};
-        pollitem.fd = self->fd;
+        pollitem.fd = self->mFd;
         pollitem.events = POLLIN;
 
         int sret{poll(&pollitem, 1, 1000)};
@@ -568,7 +568,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
         auto vec = ring->getWriteVector();
         if(vec.first.len > 0)
         {
-            ssize_t amt{read(self->fd, vec.first.buf, vec.first.len*frame_size)};
+            ssize_t amt{read(self->mFd, vec.first.buf, vec.first.len*frame_size)};
             if(amt < 0)
             {
                 ERR("read failed: %s\n", strerror(errno));
@@ -606,8 +606,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         devname = iter->device_name.c_str();
     }
 
-    self->fd = open(devname, O_RDONLY);
-    if(self->fd == -1)
+    self->mFd = open(devname, O_RDONLY);
+    if(self->mFd == -1)
     {
         ERR("Could not open %s: %s\n", devname, strerror(errno));
         return ALC_INVALID_VALUE;
@@ -650,17 +650,17 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     err = #func;                                                              \
     goto err;                                                                 \
 }
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_SETFMT, &ossFormat));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_CHANNELS, &numChannels));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_SPEED, &ossSpeed));
-    CHECKERR(ioctl(self->fd, SNDCTL_DSP_GETISPACE, &info));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_SETFMT, &ossFormat));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_CHANNELS, &numChannels));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_SPEED, &ossSpeed));
+    CHECKERR(ioctl(self->mFd, SNDCTL_DSP_GETISPACE, &info));
     if(0)
     {
     err:
         ERR("%s failed: %s\n", err, strerror(errno));
-        close(self->fd);
-        self->fd = -1;
+        close(self->mFd);
+        self->mFd = -1;
         return ALC_INVALID_VALUE;
     }
 #undef CHECKERR
@@ -668,8 +668,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     if(device->channelsFromFmt() != numChannels)
     {
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
-        close(self->fd);
-        self->fd = -1;
+        close(self->mFd);
+        self->mFd = -1;
         return ALC_INVALID_VALUE;
     }
 
@@ -678,8 +678,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
          (ossFormat == AFMT_S16_NE && device->FmtType == DevFmtShort)))
     {
         ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(device->FmtType), ossFormat);
-        close(self->fd);
-        self->fd = -1;
+        close(self->mFd);
+        self->mFd = -1;
         return ALC_INVALID_VALUE;
     }
 
@@ -687,8 +687,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     if(!self->mRing)
     {
         ERR("Ring buffer create failed\n");
-        close(self->fd);
-        self->fd = -1;
+        close(self->mFd);
+        self->mFd = -1;
         return ALC_OUT_OF_MEMORY;
     }
 
@@ -718,7 +718,7 @@ void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 
     self->mThread.join();
 
-    if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
+    if(ioctl(self->mFd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 

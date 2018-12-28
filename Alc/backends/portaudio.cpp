@@ -131,9 +131,9 @@ bool pa_load(void)
 
 
 struct ALCportPlayback final : public ALCbackend {
-    PaStream *Stream{nullptr};
-    PaStreamParameters Params;
-    ALuint UpdateSize{0u};
+    PaStream *mStream{nullptr};
+    PaStreamParameters mParams{};
+    ALuint mUpdateSize{0u};
 
     ALCportPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
@@ -166,10 +166,10 @@ void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
 
 void ALCportPlayback_Destruct(ALCportPlayback *self)
 {
-    PaError err = self->Stream ? Pa_CloseStream(self->Stream) : paNoError;
+    PaError err = self->mStream ? Pa_CloseStream(self->mStream) : paNoError;
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-    self->Stream = nullptr;
+    self->mStream = nullptr;
 
     self->~ALCportPlayback();
 }
@@ -198,51 +198,51 @@ ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name)
     else if(strcmp(name, pa_device) != 0)
         return ALC_INVALID_VALUE;
 
-    self->UpdateSize = device->UpdateSize;
+    self->mUpdateSize = device->UpdateSize;
 
-    self->Params.device = -1;
-    if(!ConfigValueInt(nullptr, "port", "device", &self->Params.device) ||
-       self->Params.device < 0)
-        self->Params.device = Pa_GetDefaultOutputDevice();
-    self->Params.suggestedLatency = (device->UpdateSize*device->NumUpdates) /
+    self->mParams.device = -1;
+    if(!ConfigValueInt(nullptr, "port", "device", &self->mParams.device) ||
+       self->mParams.device < 0)
+        self->mParams.device = Pa_GetDefaultOutputDevice();
+    self->mParams.suggestedLatency = (device->UpdateSize*device->NumUpdates) /
                                     (float)device->Frequency;
-    self->Params.hostApiSpecificStreamInfo = nullptr;
+    self->mParams.hostApiSpecificStreamInfo = nullptr;
 
-    self->Params.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
+    self->mParams.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
 
     switch(device->FmtType)
     {
         case DevFmtByte:
-            self->Params.sampleFormat = paInt8;
+            self->mParams.sampleFormat = paInt8;
             break;
         case DevFmtUByte:
-            self->Params.sampleFormat = paUInt8;
+            self->mParams.sampleFormat = paUInt8;
             break;
         case DevFmtUShort:
             /* fall-through */
         case DevFmtShort:
-            self->Params.sampleFormat = paInt16;
+            self->mParams.sampleFormat = paInt16;
             break;
         case DevFmtUInt:
             /* fall-through */
         case DevFmtInt:
-            self->Params.sampleFormat = paInt32;
+            self->mParams.sampleFormat = paInt32;
             break;
         case DevFmtFloat:
-            self->Params.sampleFormat = paFloat32;
+            self->mParams.sampleFormat = paFloat32;
             break;
     }
 
 retry_open:
-    err = Pa_OpenStream(&self->Stream, nullptr, &self->Params,
+    err = Pa_OpenStream(&self->mStream, nullptr, &self->mParams,
         device->Frequency, device->UpdateSize, paNoFlag,
         ALCportPlayback_WriteCallback, self
     );
     if(err != paNoError)
     {
-        if(self->Params.sampleFormat == paFloat32)
+        if(self->mParams.sampleFormat == paFloat32)
         {
-            self->Params.sampleFormat = paInt16;
+            self->mParams.sampleFormat = paInt16;
             goto retry_open;
         }
         ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
@@ -258,33 +258,33 @@ ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
 {
     ALCdevice *device{self->mDevice};
 
-    const PaStreamInfo *streamInfo{Pa_GetStreamInfo(self->Stream)};
+    const PaStreamInfo *streamInfo{Pa_GetStreamInfo(self->mStream)};
     device->Frequency = streamInfo->sampleRate;
-    device->UpdateSize = self->UpdateSize;
+    device->UpdateSize = self->mUpdateSize;
 
-    if(self->Params.sampleFormat == paInt8)
+    if(self->mParams.sampleFormat == paInt8)
         device->FmtType = DevFmtByte;
-    else if(self->Params.sampleFormat == paUInt8)
+    else if(self->mParams.sampleFormat == paUInt8)
         device->FmtType = DevFmtUByte;
-    else if(self->Params.sampleFormat == paInt16)
+    else if(self->mParams.sampleFormat == paInt16)
         device->FmtType = DevFmtShort;
-    else if(self->Params.sampleFormat == paInt32)
+    else if(self->mParams.sampleFormat == paInt32)
         device->FmtType = DevFmtInt;
-    else if(self->Params.sampleFormat == paFloat32)
+    else if(self->mParams.sampleFormat == paFloat32)
         device->FmtType = DevFmtFloat;
     else
     {
-        ERR("Unexpected sample format: 0x%lx\n", self->Params.sampleFormat);
+        ERR("Unexpected sample format: 0x%lx\n", self->mParams.sampleFormat);
         return ALC_FALSE;
     }
 
-    if(self->Params.channelCount == 2)
+    if(self->mParams.channelCount == 2)
         device->FmtChans = DevFmtStereo;
-    else if(self->Params.channelCount == 1)
+    else if(self->mParams.channelCount == 1)
         device->FmtChans = DevFmtMono;
     else
     {
-        ERR("Unexpected channel count: %u\n", self->Params.channelCount);
+        ERR("Unexpected channel count: %u\n", self->mParams.channelCount);
         return ALC_FALSE;
     }
     SetDefaultChannelOrder(device);
@@ -294,31 +294,28 @@ ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
 
 ALCboolean ALCportPlayback_start(ALCportPlayback *self)
 {
-    PaError err;
-
-    err = Pa_StartStream(self->Stream);
+    PaError err{Pa_StartStream(self->mStream)};
     if(err != paNoError)
     {
         ERR("Pa_StartStream() returned an error: %s\n", Pa_GetErrorText(err));
         return ALC_FALSE;
     }
-
     return ALC_TRUE;
 }
 
 void ALCportPlayback_stop(ALCportPlayback *self)
 {
-    PaError err = Pa_StopStream(self->Stream);
+    PaError err{Pa_StopStream(self->mStream)};
     if(err != paNoError)
         ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
 
 
 struct ALCportCapture final : public ALCbackend {
-    PaStream *Stream{nullptr};
-    PaStreamParameters Params;
+    PaStream *mStream{nullptr};
+    PaStreamParameters mParams;
 
-    RingBufferPtr Ring{nullptr};
+    RingBufferPtr mRing{nullptr};
 
     ALCportCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
@@ -351,10 +348,10 @@ void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
 
 void ALCportCapture_Destruct(ALCportCapture *self)
 {
-    PaError err = self->Stream ? Pa_CloseStream(self->Stream) : paNoError;
+    PaError err = self->mStream ? Pa_CloseStream(self->mStream) : paNoError;
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-    self->Stream = nullptr;
+    self->mStream = nullptr;
 
     self->~ALCportCapture();
 }
@@ -365,7 +362,7 @@ int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuff
     const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
     auto self = static_cast<ALCportCapture*>(userData);
-    RingBuffer *ring{self->Ring.get()};
+    RingBuffer *ring{self->mRing.get()};
     ring->write(inputBuffer, framesPerBuffer);
     return 0;
 }
@@ -386,41 +383,41 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
     samples = maxu(samples, 100 * device->Frequency / 1000);
     frame_size = device->frameSizeFromFmt();
 
-    self->Ring = CreateRingBuffer(samples, frame_size, false);
-    if(!self->Ring) return ALC_INVALID_VALUE;
+    self->mRing = CreateRingBuffer(samples, frame_size, false);
+    if(!self->mRing) return ALC_INVALID_VALUE;
 
-    self->Params.device = -1;
-    if(!ConfigValueInt(nullptr, "port", "capture", &self->Params.device) ||
-       self->Params.device < 0)
-        self->Params.device = Pa_GetDefaultInputDevice();
-    self->Params.suggestedLatency = 0.0f;
-    self->Params.hostApiSpecificStreamInfo = nullptr;
+    self->mParams.device = -1;
+    if(!ConfigValueInt(nullptr, "port", "capture", &self->mParams.device) ||
+       self->mParams.device < 0)
+        self->mParams.device = Pa_GetDefaultInputDevice();
+    self->mParams.suggestedLatency = 0.0f;
+    self->mParams.hostApiSpecificStreamInfo = nullptr;
 
     switch(device->FmtType)
     {
         case DevFmtByte:
-            self->Params.sampleFormat = paInt8;
+            self->mParams.sampleFormat = paInt8;
             break;
         case DevFmtUByte:
-            self->Params.sampleFormat = paUInt8;
+            self->mParams.sampleFormat = paUInt8;
             break;
         case DevFmtShort:
-            self->Params.sampleFormat = paInt16;
+            self->mParams.sampleFormat = paInt16;
             break;
         case DevFmtInt:
-            self->Params.sampleFormat = paInt32;
+            self->mParams.sampleFormat = paInt32;
             break;
         case DevFmtFloat:
-            self->Params.sampleFormat = paFloat32;
+            self->mParams.sampleFormat = paFloat32;
             break;
         case DevFmtUInt:
         case DevFmtUShort:
             ERR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
             return ALC_INVALID_VALUE;
     }
-    self->Params.channelCount = device->channelsFromFmt();
+    self->mParams.channelCount = device->channelsFromFmt();
 
-    err = Pa_OpenStream(&self->Stream, &self->Params, nullptr,
+    err = Pa_OpenStream(&self->mStream, &self->mParams, nullptr,
         device->Frequency, paFramesPerBufferUnspecified, paNoFlag,
         ALCportCapture_ReadCallback, self
     );
@@ -437,7 +434,7 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
 
 ALCboolean ALCportCapture_start(ALCportCapture *self)
 {
-    PaError err = Pa_StartStream(self->Stream);
+    PaError err = Pa_StartStream(self->mStream);
     if(err != paNoError)
     {
         ERR("Error starting stream: %s\n", Pa_GetErrorText(err));
@@ -448,7 +445,7 @@ ALCboolean ALCportCapture_start(ALCportCapture *self)
 
 void ALCportCapture_stop(ALCportCapture *self)
 {
-    PaError err = Pa_StopStream(self->Stream);
+    PaError err = Pa_StopStream(self->mStream);
     if(err != paNoError)
         ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
@@ -456,13 +453,13 @@ void ALCportCapture_stop(ALCportCapture *self)
 
 ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
 {
-    RingBuffer *ring{self->Ring.get()};
+    RingBuffer *ring{self->mRing.get()};
     return ring->readSpace();
 }
 
 ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    RingBuffer *ring{self->Ring.get()};
+    RingBuffer *ring{self->mRing.get()};
     ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }

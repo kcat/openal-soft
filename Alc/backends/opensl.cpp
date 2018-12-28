@@ -38,6 +38,9 @@
 #include <SLES/OpenSLES_Android.h>
 #include <SLES/OpenSLES_AndroidConfiguration.h>
 
+
+namespace {
+
 /* Helper macros */
 #define VCALL(obj, func)  ((*(obj))->func((obj), EXTRACT_VCALL_ARGS
 #define VCALL0(obj, func)  ((*(obj))->func((obj) EXTRACT_VCALL_ARGS
@@ -135,6 +138,14 @@ static const char *res_str(SLresult result)
 
 
 struct ALCopenslPlayback final : public ALCbackend {
+    ALCopenslPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCopenslPlayback() override;
+
+    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context);
+    void process(SLAndroidSimpleBufferQueueItf bq);
+
+    int mixerProc();
+
     /* engine interfaces */
     SLObjectItf mEngineObj{nullptr};
     SLEngineItf mEngine{nullptr};
@@ -152,12 +163,7 @@ struct ALCopenslPlayback final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
-
-    ALCopenslPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf bq, void *context);
-static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self);
 
 static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *device);
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback *self);
@@ -182,30 +188,31 @@ static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *devi
 }
 
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
+{ self->~ALCopenslPlayback(); }
+
+ALCopenslPlayback::~ALCopenslPlayback()
 {
-    if(self->mBufferQueueObj != NULL)
-        VCALL0(self->mBufferQueueObj,Destroy)();
-    self->mBufferQueueObj = NULL;
+    if(mBufferQueueObj)
+        VCALL0(mBufferQueueObj,Destroy)();
+    mBufferQueueObj = nullptr;
 
-    if(self->mOutputMix)
-        VCALL0(self->mOutputMix,Destroy)();
-    self->mOutputMix = NULL;
+    if(mOutputMix)
+        VCALL0(mOutputMix,Destroy)();
+    mOutputMix = nullptr;
 
-    if(self->mEngineObj)
-        VCALL0(self->mEngineObj,Destroy)();
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
-
-    self->~ALCopenslPlayback();
+    if(mEngineObj)
+        VCALL0(mEngineObj,Destroy)();
+    mEngineObj = nullptr;
+    mEngine = nullptr;
 }
 
 
 /* this callback handler is called every time a buffer finishes playing */
-static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), void *context)
-{
-    auto self = static_cast<ALCopenslPlayback*>(context);
-    RingBuffer *ring{self->mRing.get()};
+void ALCopenslPlayback::processC(SLAndroidSimpleBufferQueueItf bq, void *context)
+{ static_cast<ALCopenslPlayback*>(context)->process(bq); }
 
+void ALCopenslPlayback::process(SLAndroidSimpleBufferQueueItf UNUSED(bq))
+{
     /* A note on the ringbuffer usage: The buffer queue seems to hold on to the
      * pointer passed to the Enqueue method, rather than copying the audio.
      * Consequently, the ringbuffer contains the audio that is currently queued
@@ -214,42 +221,35 @@ static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), 
      * available for writing again, and wake up the mixer thread to mix and
      * queue more audio.
      */
-    ring->readAdvance(1);
+    mRing->readAdvance(1);
 
-    self->mSem.post();
+    mSem.post();
 }
 
-
-static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
+int ALCopenslPlayback::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-    RingBuffer *ring{self->mRing.get()};
-    SLAndroidSimpleBufferQueueItf bufferQueue;
-    SLPlayItf player;
-    SLresult result;
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
-                                                       &bufferQueue);
+    SLPlayItf player;
+    SLAndroidSimpleBufferQueueItf bufferQueue;
+    SLresult result{VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+        &bufferQueue)};
     PRINTERR(result, "bufferQueue->GetInterface SL_IID_ANDROIDSIMPLEBUFFERQUEUE");
     if(SL_RESULT_SUCCESS == result)
     {
-        result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);
+        result = VCALL(mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);
         PRINTERR(result, "bufferQueue->GetInterface SL_IID_PLAY");
     }
 
-    ALCopenslPlayback_lock(self);
+    ALCopenslPlayback_lock(this);
     if(SL_RESULT_SUCCESS != result)
-        aluHandleDisconnect(device, "Failed to get playback buffer: 0x%08x", result);
+        aluHandleDisconnect(mDevice, "Failed to get playback buffer: 0x%08x", result);
 
-    while(SL_RESULT_SUCCESS == result && !self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    while(SL_RESULT_SUCCESS == result && !mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
-        size_t todo;
-
-        if(ring->writeSpace() == 0)
+        if(mRing->writeSpace() == 0)
         {
             SLuint32 state = 0;
 
@@ -262,26 +262,26 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
             }
             if(SL_RESULT_SUCCESS != result)
             {
-                aluHandleDisconnect(device, "Failed to start platback: 0x%08x", result);
+                aluHandleDisconnect(mDevice, "Failed to start platback: 0x%08x", result);
                 break;
             }
 
-            if(ring->writeSpace() == 0)
+            if(mRing->writeSpace() == 0)
             {
-                ALCopenslPlayback_unlock(self);
-                self->mSem.wait();
-                ALCopenslPlayback_lock(self);
+                ALCopenslPlayback_unlock(this);
+                mSem.wait();
+                ALCopenslPlayback_lock(this);
                 continue;
             }
         }
 
-        auto data = ring->getWriteVector();
-        aluMixData(device, data.first.buf, data.first.len*device->UpdateSize);
+        auto data = mRing->getWriteVector();
+        aluMixData(mDevice, data.first.buf, data.first.len*mDevice->UpdateSize);
         if(data.second.len > 0)
-            aluMixData(device, data.second.buf, data.second.len*device->UpdateSize);
+            aluMixData(mDevice, data.second.buf, data.second.len*mDevice->UpdateSize);
 
-        todo = data.first.len+data.second.len;
-        ring->writeAdvance(todo);
+        size_t todo{data.first.len + data.second.len};
+        mRing->writeAdvance(todo);
 
         for(size_t i{0};i < todo;i++)
         {
@@ -292,20 +292,19 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
                 data.second.len = 0;
             }
 
-            result = VCALL(bufferQueue,Enqueue)(data.first.buf,
-                device->UpdateSize*self->mFrameSize);
+            result = VCALL(bufferQueue,Enqueue)(data.first.buf, mDevice->UpdateSize*mFrameSize);
             PRINTERR(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
-                aluHandleDisconnect(device, "Failed to queue audio: 0x%08x", result);
+                aluHandleDisconnect(mDevice, "Failed to queue audio: 0x%08x", result);
                 break;
             }
 
             data.first.len--;
-            data.first.buf += device->UpdateSize*self->mFrameSize;
+            data.first.buf += mDevice->UpdateSize*mFrameSize;
         }
     }
-    ALCopenslPlayback_unlock(self);
+    ALCopenslPlayback_unlock(this);
 
     return 0;
 }
@@ -569,14 +568,13 @@ static ALCboolean ALCopenslPlayback_start(ALCopenslPlayback *self)
     if(SL_RESULT_SUCCESS != result)
         return ALC_FALSE;
 
-    result = VCALL(bufferQueue,RegisterCallback)(ALCopenslPlayback_process, self);
+    result = VCALL(bufferQueue,RegisterCallback)(&ALCopenslPlayback::processC, self);
     PRINTERR(result, "bufferQueue->RegisterCallback");
-    if(SL_RESULT_SUCCESS != result)
-        return ALC_FALSE;
+    if(SL_RESULT_SUCCESS != result) return ALC_FALSE;
 
     try {
         self->mKillNow.store(AL_FALSE);
-        self->mThread = std::thread(ALCopenslPlayback_mixerProc, self);
+        self->mThread = std::thread(std::mem_fn(&ALCopenslPlayback::mixerProc), self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -649,6 +647,12 @@ static ClockLatency ALCopenslPlayback_getClockLatency(ALCopenslPlayback *self)
 
 
 struct ALCopenslCapture final : public ALCbackend {
+    ALCopenslCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCopenslCapture() override;
+
+    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context);
+    void process(SLAndroidSimpleBufferQueueItf bq);
+
     /* engine interfaces */
     SLObjectItf mEngineObj{nullptr};
     SLEngineItf mEngine;
@@ -660,11 +664,7 @@ struct ALCopenslCapture final : public ALCbackend {
     ALCuint mSplOffset{0u};
 
     ALsizei mFrameSize{0};
-
-    ALCopenslCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf bq, void *context);
 
 static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device);
 static void ALCopenslCapture_Destruct(ALCopenslCapture *self);
@@ -688,26 +688,28 @@ static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device
 }
 
 static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
+{ self->~ALCopenslCapture(); }
+
+ALCopenslCapture::~ALCopenslCapture()
 {
-    if(self->mRecordObj != NULL)
-        VCALL0(self->mRecordObj,Destroy)();
-    self->mRecordObj = NULL;
+    if(mRecordObj)
+        VCALL0(mRecordObj,Destroy)();
+    mRecordObj = nullptr;
 
-    if(self->mEngineObj != NULL)
-        VCALL0(self->mEngineObj,Destroy)();
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
-
-    self->~ALCopenslCapture();
+    if(mEngineObj)
+        VCALL0(mEngineObj,Destroy)();
+    mEngineObj = nullptr;
+    mEngine = nullptr;
 }
 
 
-static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), void *context)
+void ALCopenslCapture::processC(SLAndroidSimpleBufferQueueItf bq, void *context)
+{ static_cast<ALCopenslCapture*>(context)->process(bq); }
+
+void ALCopenslCapture::process(SLAndroidSimpleBufferQueueItf UNUSED(bq))
 {
-    auto *self = static_cast<ALCopenslCapture*>(context);
-    RingBuffer *ring{self->mRing.get()};
     /* A new chunk has been written into the ring buffer, advance it. */
-    ring->writeAdvance(1);
+    mRing->writeAdvance(1);
 }
 
 
@@ -835,7 +837,7 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        result = VCALL(bufferQueue,RegisterCallback)(ALCopenslCapture_process, self);
+        result = VCALL(bufferQueue,RegisterCallback)(&ALCopenslCapture::processC, self);
         PRINTERR(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS == result)
@@ -978,6 +980,7 @@ static ALCuint ALCopenslCapture_availableSamples(ALCopenslCapture *self)
     return ring->readSpace() * device->UpdateSize;
 }
 
+} // namespace
 
 bool OSLBackendFactory::init() { return true; }
 

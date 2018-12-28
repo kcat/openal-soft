@@ -45,13 +45,13 @@ constexpr ALCchar nullDevice[] = "No Output";
 
 
 struct ALCnullBackend final : public ALCbackend {
+    ALCnullBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
+
+    int mixerProc();
+
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
-
-    ALCnullBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCnullBackend_mixerProc(ALCnullBackend *self);
 
 void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
 void ALCnullBackend_Destruct(ALCnullBackend *self);
@@ -76,39 +76,36 @@ void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 }
 
 void ALCnullBackend_Destruct(ALCnullBackend *self)
-{
-    self->~ALCnullBackend();
-}
+{ self->~ALCnullBackend(); }
 
 
-int ALCnullBackend_mixerProc(ALCnullBackend *self)
+int ALCnullBackend::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-    const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
+    const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
     ALint64 done{0};
     auto start = std::chrono::steady_clock::now();
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) * device->Frequency).count()};
-        if(avail-done < device->UpdateSize)
+        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) * mDevice->Frequency).count()};
+        if(avail-done < mDevice->UpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= device->UpdateSize)
+        while(avail-done >= mDevice->UpdateSize)
         {
-            ALCnullBackend_lock(self);
-            aluMixData(device, nullptr, device->UpdateSize);
-            ALCnullBackend_unlock(self);
-            done += device->UpdateSize;
+            ALCnullBackend_lock(this);
+            aluMixData(mDevice, nullptr, mDevice->UpdateSize);
+            ALCnullBackend_unlock(this);
+            done += mDevice->UpdateSize;
         }
 
         /* For every completed second, increment the start time and reduce the
@@ -116,11 +113,11 @@ int ALCnullBackend_mixerProc(ALCnullBackend *self)
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= device->Frequency)
+        if(done >= mDevice->Frequency)
         {
-            seconds s{done/device->Frequency};
+            seconds s{done/mDevice->Frequency};
             start += s;
-            done -= device->Frequency*s.count();
+            done -= mDevice->Frequency*s.count();
         }
     }
 
@@ -151,7 +148,7 @@ ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 {
     try {
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread(ALCnullBackend_mixerProc, self);
+        self->mThread = std::thread(std::mem_fn(&ALCnullBackend::mixerProc), self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {

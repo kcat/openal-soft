@@ -131,16 +131,19 @@ bool pa_load(void)
 
 
 struct ALCportPlayback final : public ALCbackend {
+    ALCportPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCportPlayback() override;
+
+    static int writeCallbackC(const void *inputBuffer, void *outputBuffer,
+        unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+        const PaStreamCallbackFlags statusFlags, void *userData);
+    int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags);
+
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
     ALuint mUpdateSize{0u};
-
-    ALCportPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCportPlayback_WriteCallback(const void *inputBuffer, void *outputBuffer,
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-    const PaStreamCallbackFlags statusFlags, void *userData);
 
 void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device);
 void ALCportPlayback_Destruct(ALCportPlayback *self);
@@ -165,25 +168,32 @@ void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
 }
 
 void ALCportPlayback_Destruct(ALCportPlayback *self)
+{ self->~ALCportPlayback(); }
+
+ALCportPlayback::~ALCportPlayback()
 {
-    PaError err = self->mStream ? Pa_CloseStream(self->mStream) : paNoError;
+    PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-    self->mStream = nullptr;
-
-    self->~ALCportPlayback();
+    mStream = nullptr;
 }
 
 
-int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *outputBuffer,
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
-    const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
+int ALCportPlayback::writeCallbackC(const void *inputBuffer, void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+    const PaStreamCallbackFlags statusFlags, void *userData)
 {
-    auto self = static_cast<ALCportPlayback*>(userData);
+    return static_cast<ALCportPlayback*>(userData)->writeCallback(inputBuffer, outputBuffer,
+        framesPerBuffer, timeInfo, statusFlags);
+}
 
-    ALCportPlayback_lock(self);
-    aluMixData(self->mDevice, outputBuffer, framesPerBuffer);
-    ALCportPlayback_unlock(self);
+int ALCportPlayback::writeCallback(const void* UNUSED(inputBuffer), void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* UNUSED(timeInfo),
+    const PaStreamCallbackFlags UNUSED(statusFlags))
+{
+    ALCportPlayback_lock(this);
+    aluMixData(mDevice, outputBuffer, framesPerBuffer);
+    ALCportPlayback_unlock(this);
     return 0;
 }
 
@@ -236,7 +246,7 @@ ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name)
 retry_open:
     err = Pa_OpenStream(&self->mStream, nullptr, &self->mParams,
         device->Frequency, device->UpdateSize, paNoFlag,
-        ALCportPlayback_WriteCallback, self
+        &ALCportPlayback::writeCallbackC, self
     );
     if(err != paNoError)
     {
@@ -312,17 +322,20 @@ void ALCportPlayback_stop(ALCportPlayback *self)
 
 
 struct ALCportCapture final : public ALCbackend {
+    ALCportCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCportCapture() override;
+
+    static int readCallbackC(const void *inputBuffer, void *outputBuffer,
+        unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+        const PaStreamCallbackFlags statusFlags, void *userData);
+    int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags);
+
     PaStream *mStream{nullptr};
     PaStreamParameters mParams;
 
     RingBufferPtr mRing{nullptr};
-
-    ALCportCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuffer,
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-    const PaStreamCallbackFlags statusFlags, void *userData);
 
 void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device);
 void ALCportCapture_Destruct(ALCportCapture *self);
@@ -347,23 +360,30 @@ void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
 }
 
 void ALCportCapture_Destruct(ALCportCapture *self)
+{ self->~ALCportCapture(); }
+
+ALCportCapture::~ALCportCapture()
 {
-    PaError err = self->mStream ? Pa_CloseStream(self->mStream) : paNoError;
+    PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-    self->mStream = nullptr;
-
-    self->~ALCportCapture();
+    mStream = nullptr;
 }
 
 
-int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuffer),
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
-    const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
+int ALCportCapture::readCallbackC(const void *inputBuffer, void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+    const PaStreamCallbackFlags statusFlags, void* userData)
 {
-    auto self = static_cast<ALCportCapture*>(userData);
-    RingBuffer *ring{self->mRing.get()};
-    ring->write(inputBuffer, framesPerBuffer);
+    return static_cast<ALCportCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
+        framesPerBuffer, timeInfo, statusFlags);
+}
+
+int ALCportCapture::readCallback(const void *inputBuffer, void *UNUSED(outputBuffer),
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
+    const PaStreamCallbackFlags UNUSED(statusFlags))
+{
+    mRing->write(inputBuffer, framesPerBuffer);
     return 0;
 }
 
@@ -419,7 +439,7 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
 
     err = Pa_OpenStream(&self->mStream, &self->mParams, nullptr,
         device->Frequency, paFramesPerBufferUnspecified, paNoFlag,
-        ALCportCapture_ReadCallback, self
+        &ALCportCapture::readCallbackC, self
     );
     if(err != paNoError)
     {

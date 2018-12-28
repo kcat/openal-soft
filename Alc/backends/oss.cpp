@@ -242,17 +242,18 @@ int log2i(ALCuint x)
 
 
 struct ALCplaybackOSS final : public ALCbackend {
+    ALCplaybackOSS(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCplaybackOSS() override;
+
+    int mixerProc();
+
     int mFd{-1};
 
     al::vector<ALubyte> mMixData;
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
-
-    ALCplaybackOSS(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self);
 
 void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
 void ALCplaybackOSS_Destruct(ALCplaybackOSS *self);
@@ -276,41 +277,40 @@ void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
 }
 
 void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
-{
-    if(self->mFd != -1)
-        close(self->mFd);
-    self->mFd = -1;
+{ self->~ALCplaybackOSS(); }
 
-    self->~ALCplaybackOSS();
+ALCplaybackOSS::~ALCplaybackOSS()
+{
+    if(mFd != -1)
+        close(mFd);
+    mFd = -1;
 }
 
 
-int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
+int ALCplaybackOSS::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const int frame_size{device->frameSizeFromFmt()};
+    const int frame_size{mDevice->frameSizeFromFmt()};
 
-    ALCplaybackOSS_lock(self);
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    ALCplaybackOSS_lock(this);
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
-        pollitem.fd = self->mFd;
+        pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        ALCplaybackOSS_unlock(self);
+        ALCplaybackOSS_unlock(this);
         int pret{poll(&pollitem, 1, 1000)};
-        ALCplaybackOSS_lock(self);
+        ALCplaybackOSS_lock(this);
         if(pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            aluHandleDisconnect(device, "Failed waiting for playback buffer: %s", strerror(errno));
+            aluHandleDisconnect(mDevice, "Failed waiting for playback buffer: %s", strerror(errno));
             break;
         }
         else if(pret == 0)
@@ -319,18 +319,18 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
             continue;
         }
 
-        ALubyte *write_ptr{self->mMixData.data()};
-        size_t to_write{self->mMixData.size()};
-        aluMixData(device, write_ptr, to_write/frame_size);
-        while(to_write > 0 && !self->mKillNow.load())
+        ALubyte *write_ptr{mMixData.data()};
+        size_t to_write{mMixData.size()};
+        aluMixData(mDevice, write_ptr, to_write/frame_size);
+        while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
-            ssize_t wrote{write(self->mFd, write_ptr, to_write)};
+            ssize_t wrote{write(mFd, write_ptr, to_write)};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 ERR("write failed: %s\n", strerror(errno));
-                aluHandleDisconnect(device, "Failed writing playback samples: %s",
+                aluHandleDisconnect(mDevice, "Failed writing playback samples: %s",
                                     strerror(errno));
                 break;
             }
@@ -339,7 +339,7 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
             write_ptr += wrote;
         }
     }
-    ALCplaybackOSS_unlock(self);
+    ALCplaybackOSS_unlock(this);
 
     return 0;
 }
@@ -467,7 +467,7 @@ ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
         self->mMixData.resize(device->UpdateSize * device->frameSizeFromFmt());
 
         self->mKillNow.store(AL_FALSE);
-        self->mThread = std::thread(ALCplaybackOSS_mixerProc, self);
+        self->mThread = std::thread{std::mem_fn(&ALCplaybackOSS::mixerProc), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -492,17 +492,18 @@ void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 
 
 struct ALCcaptureOSS final : public ALCbackend {
+    ALCcaptureOSS(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCcaptureOSS() override;
+
+    int recordProc();
+
     int mFd{-1};
 
     RingBufferPtr mRing{nullptr};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
-
-    ALCcaptureOSS(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCcaptureOSS_recordProc(ALCcaptureOSS *self);
 
 void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
 void ALCcaptureOSS_Destruct(ALCcaptureOSS *self);
@@ -526,28 +527,26 @@ void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
 }
 
 void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
-{
-    if(self->mFd != -1)
-        close(self->mFd);
-    self->mFd = -1;
+{ self->~ALCcaptureOSS(); }
 
-    self->~ALCcaptureOSS();
+ALCcaptureOSS::~ALCcaptureOSS()
+{
+    if(mFd != -1)
+        close(mFd);
+    mFd = -1;
 }
 
 
-int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
+int ALCcaptureOSS::recordProc()
 {
-    ALCdevice *device{self->mDevice};
-    RingBuffer *ring{self->mRing.get()};
-
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    const int frame_size{device->frameSizeFromFmt()};
-    while(!self->mKillNow.load())
+    const int frame_size{mDevice->frameSizeFromFmt()};
+    while(!mKillNow.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
-        pollitem.fd = self->mFd;
+        pollitem.fd = mFd;
         pollitem.events = POLLIN;
 
         int sret{poll(&pollitem, 1, 1000)};
@@ -556,7 +555,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            aluHandleDisconnect(device, "Failed to check capture samples: %s", strerror(errno));
+            aluHandleDisconnect(mDevice, "Failed to check capture samples: %s", strerror(errno));
             break;
         }
         else if(sret == 0)
@@ -565,19 +564,20 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
             continue;
         }
 
-        auto vec = ring->getWriteVector();
+        auto vec = mRing->getWriteVector();
         if(vec.first.len > 0)
         {
-            ssize_t amt{read(self->mFd, vec.first.buf, vec.first.len*frame_size)};
+            ssize_t amt{read(mFd, vec.first.buf, vec.first.len*frame_size)};
             if(amt < 0)
             {
                 ERR("read failed: %s\n", strerror(errno));
-                ALCcaptureOSS_lock(self);
-                aluHandleDisconnect(device, "Failed reading capture samples: %s", strerror(errno));
-                ALCcaptureOSS_unlock(self);
+                ALCcaptureOSS_lock(this);
+                aluHandleDisconnect(mDevice, "Failed reading capture samples: %s",
+                    strerror(errno));
+                ALCcaptureOSS_unlock(this);
                 break;
             }
-            ring->writeAdvance(amt/frame_size);
+            mRing->writeAdvance(amt/frame_size);
         }
     }
 
@@ -700,7 +700,7 @@ ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 {
     try {
         self->mKillNow.store(AL_FALSE);
-        self->mThread = std::thread(ALCcaptureOSS_recordProc, self);
+        self->mThread = std::thread{std::mem_fn(&ALCcaptureOSS::recordProc), self};
         return ALC_TRUE;
     }
     catch(std::exception& e) {

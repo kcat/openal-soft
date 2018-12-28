@@ -733,6 +733,27 @@ struct PulsePlayback final : public ALCbackend {
     PulsePlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
     ~PulsePlayback() override;
 
+    static void bufferAttrCallbackC(pa_stream *stream, void *pdata);
+    void bufferAttrCallback(pa_stream *stream);
+
+    static void contextStateCallbackC(pa_context *context, void *pdata);
+    void contextStateCallback(pa_context *context);
+
+    static void streamStateCallbackC(pa_stream *stream, void *pdata);
+    void streamStateCallback(pa_stream *stream);
+
+    static void streamWriteCallbackC(pa_stream *stream, size_t nbytes, void *pdata);
+    void streamWriteCallback(pa_stream *stream, size_t nbytes);
+
+    static void sinkInfoCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
+    void sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol);
+
+    static void sinkNameCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
+    void sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol);
+
+    static void streamMovedCallbackC(pa_stream *stream, void *pdata);
+    void streamMovedCallback(pa_stream *stream);
+
     std::string mDeviceName;
 
     pa_buffer_attr mAttr;
@@ -745,15 +766,9 @@ struct PulsePlayback final : public ALCbackend {
 
     ALuint mBufferSize{0u};
     ALuint mFrameSize{0u};
-};
 
-void PulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata);
-void PulsePlayback_contextStateCallback(pa_context *context, void *pdata);
-void PulsePlayback_streamStateCallback(pa_stream *stream, void *pdata);
-void PulsePlayback_streamWriteCallback(pa_stream *p, size_t nbytes, void *userdata);
-void PulsePlayback_sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
-void PulsePlayback_sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
-void PulsePlayback_streamMovedCallback(pa_stream *stream, void *pdata);
+    static constexpr inline const char *CurrentPrefix() noexcept { return "PulsePlayback::"; }
+};
 
 void PulsePlayback_Construct(PulsePlayback *self, ALCdevice *device);
 void PulsePlayback_Destruct(PulsePlayback *self);
@@ -792,64 +807,70 @@ PulsePlayback::~PulsePlayback()
 }
 
 
-void PulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata)
-{
-    auto self = static_cast<PulsePlayback*>(pdata);
+void PulsePlayback::bufferAttrCallbackC(pa_stream *stream, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->bufferAttrCallback(stream); }
 
+void PulsePlayback::bufferAttrCallback(pa_stream *stream)
+{
     /* FIXME: Update the device's UpdateSize (and/or NumUpdates) using the new
      * buffer attributes? Changing UpdateSize will change the ALC_REFRESH
      * property, which probably shouldn't change between device resets. But
      * leaving it alone means ALC_REFRESH will be off.
      */
-    self->mAttr = *(pa_stream_get_buffer_attr(stream));
-    TRACE("minreq=%d, tlength=%d, prebuf=%d\n", self->mAttr.minreq, self->mAttr.tlength,
-        self->mAttr.prebuf);
+    mAttr = *(pa_stream_get_buffer_attr(stream));
+    TRACE("minreq=%d, tlength=%d, prebuf=%d\n", mAttr.minreq, mAttr.tlength, mAttr.prebuf);
 
-    const ALuint num_periods{(self->mAttr.tlength + self->mAttr.minreq/2u) / self->mAttr.minreq};
-    self->mBufferSize = maxu(num_periods, 2u) * self->mAttr.minreq;
+    const ALuint num_periods{(mAttr.tlength + mAttr.minreq/2u) / mAttr.minreq};
+    mBufferSize = maxu(num_periods, 2u) * mAttr.minreq;
 }
 
-void PulsePlayback_contextStateCallback(pa_context *context, void *pdata)
+void PulsePlayback::contextStateCallbackC(pa_context *context, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->contextStateCallback(context); }
+
+void PulsePlayback::contextStateCallback(pa_context *context)
 {
-    auto self = static_cast<PulsePlayback*>(pdata);
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
-        aluHandleDisconnect(self->mDevice, "Playback state failure");
+        aluHandleDisconnect(mDevice, "Playback state failure");
     }
-    pa_threaded_mainloop_signal(self->mLoop, 0);
+    pa_threaded_mainloop_signal(mLoop, 0);
 }
 
-void PulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
+void PulsePlayback::streamStateCallbackC(pa_stream *stream, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->streamStateCallback(stream); }
+
+void PulsePlayback::streamStateCallback(pa_stream *stream)
 {
-    auto self = static_cast<PulsePlayback*>(pdata);
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(self->mDevice, "Playback stream failure");
+        aluHandleDisconnect(mDevice, "Playback stream failure");
     }
-    pa_threaded_mainloop_signal(self->mLoop, 0);
+    pa_threaded_mainloop_signal(mLoop, 0);
 }
 
-void PulsePlayback_streamWriteCallback(pa_stream *stream, size_t nbytes, void *pdata)
-{
-    auto self = static_cast<PulsePlayback*>(pdata);
-    ALCdevice *device{self->mDevice};
+void PulsePlayback::streamWriteCallbackC(pa_stream *stream, size_t nbytes, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->streamWriteCallback(stream, nbytes); }
 
+void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes)
+{
     /* Round down to the nearest period/minreq multiple if doing more than 1. */
-    const size_t frame_size{self->mFrameSize};
-    if(nbytes > self->mAttr.minreq)
-        nbytes -= nbytes%self->mAttr.minreq;
+    if(nbytes > mAttr.minreq)
+        nbytes -= nbytes%mAttr.minreq;
 
     void *buf{pa_xmalloc(nbytes)};
-    aluMixData(device, buf, nbytes/frame_size);
+    aluMixData(mDevice, buf, nbytes/mFrameSize);
 
     int ret{pa_stream_write(stream, buf, nbytes, pa_xfree, 0, PA_SEEK_RELATIVE)};
     if(UNLIKELY(ret != PA_OK))
         ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
 }
 
-void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
+void PulsePlayback::sinkInfoCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->sinkInfoCallback(context, info, eol); }
+
+void PulsePlayback::sinkInfoCallback(pa_context* UNUSED(context), const pa_sink_info *info, int eol)
 {
     struct ChannelMap {
         DevFmtChannels chans;
@@ -887,23 +908,21 @@ void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_i
         } } },
         { DevFmtMono, { 1, {PA_CHANNEL_POSITION_MONO} } }
     }};
-    auto self = static_cast<PulsePlayback*>(pdata);
 
     if(eol)
     {
-        pa_threaded_mainloop_signal(self->mLoop, 0);
+        pa_threaded_mainloop_signal(mLoop, 0);
         return;
     }
 
-    ALCdevice *device{self->mDevice};
     auto chanmap = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
         [info](const ChannelMap &chanmap) -> bool
         { return pa_channel_map_superset(&info->channel_map, &chanmap.map); }
     );
     if(chanmap != chanmaps.cend())
     {
-        if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
-            device->FmtChans = chanmap->chans;
+        if(!(mDevice->Flags&DEVICE_CHANNELS_REQUEST))
+            mDevice->FmtChans = chanmap->chans;
     }
     else
     {
@@ -914,33 +933,30 @@ void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_i
 
     if(info->active_port)
         TRACE("Active port: %s (%s)\n", info->active_port->name, info->active_port->description);
-    device->IsHeadphones = (info->active_port &&
-                            strcmp(info->active_port->name, "analog-output-headphones") == 0 &&
-                            device->FmtChans == DevFmtStereo);
+    mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo &&
+        info->active_port && strcmp(info->active_port->name, "analog-output-headphones") == 0);
 }
 
-void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
-{
-    auto self = static_cast<PulsePlayback*>(pdata);
+void PulsePlayback::sinkNameCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->sinkNameCallback(context, info, eol); }
 
+void PulsePlayback::sinkNameCallback(pa_context* UNUSED(context), const pa_sink_info *info, int eol)
+{
     if(eol)
     {
-        pa_threaded_mainloop_signal(self->mLoop, 0);
+        pa_threaded_mainloop_signal(mLoop, 0);
         return;
     }
-
-    ALCdevice *device{self->mDevice};
-    device->DeviceName = info->description;
+    mDevice->DeviceName = info->description;
 }
 
+void PulsePlayback::streamMovedCallbackC(pa_stream *stream, void *pdata)
+{ static_cast<PulsePlayback*>(pdata)->streamMovedCallback(stream); }
 
-void PulsePlayback_streamMovedCallback(pa_stream *stream, void *pdata)
+void PulsePlayback::streamMovedCallback(pa_stream *stream)
 {
-    auto self = static_cast<PulsePlayback*>(pdata);
-
-    self->mDeviceName = pa_stream_get_device_name(stream);
-
-    TRACE("Stream moved to %s\n", self->mDeviceName.c_str());
+    mDeviceName = pa_stream_get_device_name(stream);
+    TRACE("Stream moved to %s\n", mDeviceName.c_str());
 }
 
 
@@ -964,7 +980,7 @@ ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
         dev_name = iter->name.c_str();
     }
 
-    std::tie(self->mLoop, self->mContext) = pulse_open(PulsePlayback_contextStateCallback, self);
+    std::tie(self->mLoop, self->mContext) = pulse_open(&PulsePlayback::contextStateCallbackC, self);
     if(!self->mLoop) return ALC_INVALID_VALUE;
 
     unique_palock palock{self->mLoop};
@@ -995,14 +1011,14 @@ ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
         self->mContext = nullptr;
         return ALC_INVALID_VALUE;
     }
-    pa_stream_set_moved_callback(self->mStream, PulsePlayback_streamMovedCallback, self);
+    pa_stream_set_moved_callback(self->mStream, &PulsePlayback::streamMovedCallbackC, self);
     self->mFrameSize = pa_frame_size(pa_stream_get_sample_spec(self->mStream));
 
     self->mDeviceName = pa_stream_get_device_name(self->mStream);
     if(!dev_name)
     {
         pa_operation *op{pa_context_get_sink_info_by_name(self->mContext,
-            self->mDeviceName.c_str(), PulsePlayback_sinkNameCallback, self)};
+            self->mDeviceName.c_str(), &PulsePlayback::sinkNameCallbackC, self)};
         wait_for_operation(op, self->mLoop);
     }
     else
@@ -1030,7 +1046,7 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
     }
 
     pa_operation *op{pa_context_get_sink_info_by_name(self->mContext,
-        self->mDeviceName.c_str(), PulsePlayback_sinkInfoCallback, self)};
+        self->mDeviceName.c_str(), &PulsePlayback::sinkInfoCallbackC, self)};
     wait_for_operation(op, self->mLoop);
 
     ALCdevice *device{self->mDevice};
@@ -1124,8 +1140,8 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
         flags, &self->mAttr, &self->mSpec, &chanmap, ALCbackend_Playback);
     if(!self->mStream) return ALC_FALSE;
 
-    pa_stream_set_state_callback(self->mStream, PulsePlayback_streamStateCallback, self);
-    pa_stream_set_moved_callback(self->mStream, PulsePlayback_streamMovedCallback, self);
+    pa_stream_set_state_callback(self->mStream, &PulsePlayback::streamStateCallbackC, self);
+    pa_stream_set_moved_callback(self->mStream, &PulsePlayback::streamMovedCallbackC, self);
 
     self->mSpec = *(pa_stream_get_sample_spec(self->mStream));
     self->mFrameSize = pa_frame_size(&self->mSpec);
@@ -1150,8 +1166,8 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
         device->Frequency = self->mSpec.rate;
     }
 
-    pa_stream_set_buffer_attr_callback(self->mStream, PulsePlayback_bufferAttrCallback, self);
-    PulsePlayback_bufferAttrCallback(self->mStream, self);
+    pa_stream_set_buffer_attr_callback(self->mStream, &PulsePlayback::bufferAttrCallbackC, self);
+    self->bufferAttrCallback(self->mStream);
 
     device->NumUpdates = clampu(
         (self->mAttr.tlength + self->mAttr.minreq/2u) / self->mAttr.minreq, 2u, 16u);
@@ -1184,7 +1200,7 @@ ALCboolean PulsePlayback_start(PulsePlayback *self)
 {
     unique_palock palock{self->mLoop};
 
-    pa_stream_set_write_callback(self->mStream, PulsePlayback_streamWriteCallback, self);
+    pa_stream_set_write_callback(self->mStream, &PulsePlayback::streamWriteCallbackC, self);
     pa_operation *op{pa_stream_cork(self->mStream, 0, stream_success_callback, self->mLoop)};
     wait_for_operation(op, self->mLoop);
 
@@ -1246,6 +1262,18 @@ struct PulseCapture final : public ALCbackend {
     PulseCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
     ~PulseCapture() override;
 
+    static void contextStateCallbackC(pa_context *context, void *pdata);
+    void contextStateCallback(pa_context *context);
+
+    static void streamStateCallbackC(pa_stream *stream, void *pdata);
+    void streamStateCallback(pa_stream *stream);
+
+    static void sourceNameCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata);
+    void sourceNameCallback(pa_context *context, const pa_source_info *info, int eol);
+
+    static void streamMovedCallbackC(pa_stream *stream, void *pdata);
+    void streamMovedCallback(pa_stream *stream);
+
     std::string mDeviceName;
 
     const void *mCapStore{nullptr};
@@ -1261,12 +1289,9 @@ struct PulseCapture final : public ALCbackend {
 
     pa_stream *mStream{nullptr};
     pa_context *mContext{nullptr};
-};
 
-void PulseCapture_contextStateCallback(pa_context *context, void *pdata);
-void PulseCapture_streamStateCallback(pa_stream *stream, void *pdata);
-void PulseCapture_sourceNameCallback(pa_context *context, const pa_source_info *info, int eol, void *pdata);
-void PulseCapture_streamMovedCallback(pa_stream *stream, void *pdata);
+    static constexpr inline const char *CurrentPrefix() noexcept { return "PulseCapture::"; }
+};
 
 void PulseCapture_Construct(PulseCapture *self, ALCdevice *device);
 void PulseCapture_Destruct(PulseCapture *self);
@@ -1303,52 +1328,52 @@ PulseCapture::~PulseCapture()
     mStream = nullptr;
 }
 
+void PulseCapture::contextStateCallbackC(pa_context *context, void *pdata)
+{ static_cast<PulseCapture*>(pdata)->contextStateCallback(context); }
 
-void PulseCapture_contextStateCallback(pa_context *context, void *pdata)
+void PulseCapture::contextStateCallback(pa_context *context)
 {
-    auto self = static_cast<PulseCapture*>(pdata);
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
-        aluHandleDisconnect(self->mDevice, "Capture state failure");
+        aluHandleDisconnect(mDevice, "Capture state failure");
     }
-    pa_threaded_mainloop_signal(self->mLoop, 0);
+    pa_threaded_mainloop_signal(mLoop, 0);
 }
 
-void PulseCapture_streamStateCallback(pa_stream *stream, void *pdata)
+void PulseCapture::streamStateCallbackC(pa_stream *stream, void *pdata)
+{ static_cast<PulseCapture*>(pdata)->streamStateCallback(stream); }
+
+void PulseCapture::streamStateCallback(pa_stream *stream)
 {
-    auto self = static_cast<PulseCapture*>(pdata);
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(self->mDevice, "Capture stream failure");
+        aluHandleDisconnect(mDevice, "Capture stream failure");
     }
-    pa_threaded_mainloop_signal(self->mLoop, 0);
+    pa_threaded_mainloop_signal(mLoop, 0);
 }
 
+void PulseCapture::sourceNameCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata)
+{ static_cast<PulseCapture*>(pdata)->sourceNameCallback(context, info, eol); }
 
-void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void *pdata)
+void PulseCapture::sourceNameCallback(pa_context* UNUSED(context), const pa_source_info *info, int eol)
 {
-    auto self = static_cast<PulseCapture*>(pdata);
-
     if(eol)
     {
-        pa_threaded_mainloop_signal(self->mLoop, 0);
+        pa_threaded_mainloop_signal(mLoop, 0);
         return;
     }
-
-    ALCdevice *device{self->mDevice};
-    device->DeviceName = info->description;
+    mDevice->DeviceName = info->description;
 }
 
+void PulseCapture::streamMovedCallbackC(pa_stream *stream, void *pdata)
+{ static_cast<PulseCapture*>(pdata)->streamMovedCallback(stream); }
 
-void PulseCapture_streamMovedCallback(pa_stream *stream, void *pdata)
+void PulseCapture::streamMovedCallback(pa_stream *stream)
 {
-    auto self = static_cast<PulseCapture*>(pdata);
-
-    self->mDeviceName = pa_stream_get_device_name(stream);
-
-    TRACE("Stream moved to %s\n", self->mDeviceName.c_str());
+    mDeviceName = pa_stream_get_device_name(stream);
+    TRACE("Stream moved to %s\n", mDeviceName.c_str());
 }
 
 
@@ -1372,7 +1397,7 @@ ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
         device->DeviceName = iter->name;
     }
 
-    std::tie(self->mLoop, self->mContext) = pulse_open(PulseCapture_contextStateCallback, self);
+    std::tie(self->mLoop, self->mContext) = pulse_open(&PulseCapture::contextStateCallbackC, self);
     if(!self->mLoop) return ALC_INVALID_VALUE;
 
     unique_palock palock{self->mLoop};
@@ -1467,14 +1492,14 @@ ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
         &self->mAttr, &self->mSpec, &chanmap, ALCbackend_Capture);
     if(!self->mStream) return ALC_INVALID_VALUE;
 
-    pa_stream_set_moved_callback(self->mStream, PulseCapture_streamMovedCallback, self);
-    pa_stream_set_state_callback(self->mStream, PulseCapture_streamStateCallback, self);
+    pa_stream_set_moved_callback(self->mStream, &PulseCapture::streamMovedCallbackC, self);
+    pa_stream_set_state_callback(self->mStream, &PulseCapture::streamStateCallbackC, self);
 
     self->mDeviceName = pa_stream_get_device_name(self->mStream);
     if(device->DeviceName.empty())
     {
         pa_operation *op{pa_context_get_source_info_by_name(self->mContext,
-            self->mDeviceName.c_str(), PulseCapture_sourceNameCallback, self
+            self->mDeviceName.c_str(), &PulseCapture::sourceNameCallbackC, self
         )};
         wait_for_operation(op, self->mLoop);
     }

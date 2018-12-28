@@ -43,6 +43,7 @@ static const ALCchar ca_device[] = "CoreAudio Default";
 
 struct ALCcoreAudioPlayback final : public ALCbackend {
     ALCcoreAudioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCcoreAudioPlayback() override;
 
     static OSStatus MixerProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
@@ -80,11 +81,12 @@ static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice
 }
 
 static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)
-{
-    AudioUnitUninitialize(self->mAudioUnit);
-    AudioComponentInstanceDispose(self->mAudioUnit);
+{ self->~ALCcoreAudioPlayback(); }
 
-    self->~ALCcoreAudioPlayback();
+ALCcoreAudioPlayback::~ALCcoreAudioPlayback()
+{
+    AudioUnitUninitialize(mAudioUnit);
+    AudioComponentInstanceDispose(mAudioUnit);
 }
 
 
@@ -322,6 +324,7 @@ static void ALCcoreAudioPlayback_stop(ALCcoreAudioPlayback *self)
 
 struct ALCcoreAudioCapture final : public ALCbackend {
     ALCcoreAudioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCcoreAudioCapture() override;
 
     static OSStatus RecordProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
@@ -363,12 +366,13 @@ static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *
 }
 
 static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self)
-{
-    if(self->mAudioUnit)
-        AudioComponentInstanceDispose(self->mAudioUnit);
-    self->mAudioUnit = 0;
+{ self->~ALCcoreAudioCapture(); }
 
-    self->~ALCcoreAudioCapture();
+ALCcoreAudioCapture::~ALCcoreAudioCapture()
+{
+    if(mAudioUnit)
+        AudioComponentInstanceDispose(mAudioUnit);
+    mAudioUnit = 0;
 }
 
 

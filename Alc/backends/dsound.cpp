@@ -185,6 +185,11 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUS
 
 
 struct ALCdsoundPlayback final : public ALCbackend {
+    ALCdsoundPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCdsoundPlayback() override;
+
+    int mixerProc();
+
     IDirectSound       *mDS{nullptr};
     IDirectSoundBuffer *mPrimaryBuffer{nullptr};
     IDirectSoundBuffer *mBuffer{nullptr};
@@ -193,11 +198,7 @@ struct ALCdsoundPlayback final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
-
-    ALCdsoundPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
-
-int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self);
 
 void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device);
 void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self);
@@ -222,80 +223,77 @@ void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device)
 }
 
 void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
+{ self->~ALCdsoundPlayback(); }
+
+ALCdsoundPlayback::~ALCdsoundPlayback()
 {
-    if(self->mNotifies)
-        self->mNotifies->Release();
-    self->mNotifies = nullptr;
-    if(self->mBuffer)
-        self->mBuffer->Release();
-    self->mBuffer = nullptr;
-    if(self->mPrimaryBuffer)
-        self->mPrimaryBuffer->Release();
-    self->mPrimaryBuffer = nullptr;
+    if(mNotifies)
+        mNotifies->Release();
+    mNotifies = nullptr;
+    if(mBuffer)
+        mBuffer->Release();
+    mBuffer = nullptr;
+    if(mPrimaryBuffer)
+        mPrimaryBuffer->Release();
+    mPrimaryBuffer = nullptr;
 
-    if(self->mDS)
-        self->mDS->Release();
-    self->mDS = nullptr;
-    if(self->mNotifyEvent)
-        CloseHandle(self->mNotifyEvent);
-    self->mNotifyEvent = nullptr;
-
-    self->~ALCdsoundPlayback();
+    if(mDS)
+        mDS->Release();
+    mDS = nullptr;
+    if(mNotifyEvent)
+        CloseHandle(mNotifyEvent);
+    mNotifyEvent = nullptr;
 }
 
 
-FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
+FORCE_ALIGN int ALCdsoundPlayback::mixerProc()
 {
-    ALCdevice *device{self->mDevice};
-
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    IDirectSoundBuffer *const Buffer{self->mBuffer};
-
     DSBCAPS DSBCaps{};
     DSBCaps.dwSize = sizeof(DSBCaps);
-    HRESULT err{Buffer->GetCaps(&DSBCaps)};
+    HRESULT err{mBuffer->GetCaps(&DSBCaps)};
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
-        ALCdsoundPlayback_lock(self);
-        aluHandleDisconnect(device, "Failure retrieving playback buffer info: 0x%lx", err);
-        ALCdsoundPlayback_unlock(self);
+        ALCdsoundPlayback_lock(this);
+        aluHandleDisconnect(mDevice, "Failure retrieving playback buffer info: 0x%lx", err);
+        ALCdsoundPlayback_unlock(this);
         return 1;
     }
 
-    ALsizei FrameSize{device->frameSizeFromFmt()};
-    DWORD FragSize{device->UpdateSize * FrameSize};
+    ALsizei FrameSize{mDevice->frameSizeFromFmt()};
+    DWORD FragSize{mDevice->UpdateSize * FrameSize};
 
     bool Playing{false};
     DWORD LastCursor{0u};
-    Buffer->GetCurrentPosition(&LastCursor, nullptr);
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
+    mBuffer->GetCurrentPosition(&LastCursor, nullptr);
+    while(!mKillNow.load(std::memory_order_acquire) &&
+          mDevice->Connected.load(std::memory_order_acquire))
     {
         // Get current play cursor
         DWORD PlayCursor;
-        Buffer->GetCurrentPosition(&PlayCursor, nullptr);
+        mBuffer->GetCurrentPosition(&PlayCursor, nullptr);
         DWORD avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
 
         if(avail < FragSize)
         {
             if(!Playing)
             {
-                err = Buffer->Play(0, 0, DSBPLAY_LOOPING);
+                err = mBuffer->Play(0, 0, DSBPLAY_LOOPING);
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
-                    ALCdsoundPlayback_lock(self);
-                    aluHandleDisconnect(device, "Failure starting playback: 0x%lx", err);
-                    ALCdsoundPlayback_unlock(self);
+                    ALCdsoundPlayback_lock(this);
+                    aluHandleDisconnect(mDevice, "Failure starting playback: 0x%lx", err);
+                    ALCdsoundPlayback_unlock(this);
                     return 1;
                 }
                 Playing = true;
             }
 
-            avail = WaitForSingleObjectEx(self->mNotifyEvent, 2000, FALSE);
+            avail = WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE);
             if(avail != WAIT_OBJECT_0)
                 ERR("WaitForSingleObjectEx error: 0x%lx\n", avail);
             continue;
@@ -305,19 +303,19 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
         // Lock output buffer
         void *WritePtr1, *WritePtr2;
         DWORD WriteCnt1{0u},  WriteCnt2{0u};
-        err = Buffer->Lock(LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+        err = mBuffer->Lock(LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
 
         // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
             WARN("Buffer lost, restoring...\n");
-            err = Buffer->Restore();
+            err = mBuffer->Restore();
             if(SUCCEEDED(err))
             {
                 Playing = false;
                 LastCursor = 0;
-                err = Buffer->Lock(0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1,
-                                   &WritePtr2, &WriteCnt2, 0);
+                err = mBuffer->Lock(0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1,
+                                    &WritePtr2, &WriteCnt2, 0);
             }
         }
 
@@ -325,20 +323,21 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
         if(SUCCEEDED(err))
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
-            ALCdsoundPlayback_lock(self);
-            aluMixData(device, WritePtr1, WriteCnt1/FrameSize);
-            aluMixData(device, WritePtr2, WriteCnt2/FrameSize);
-            ALCdsoundPlayback_unlock(self);
+            ALCdsoundPlayback_lock(this);
+            aluMixData(mDevice, WritePtr1, WriteCnt1/FrameSize);
+            if(WriteCnt2 > 0)
+                aluMixData(mDevice, WritePtr2, WriteCnt2/FrameSize);
+            ALCdsoundPlayback_unlock(this);
 
             // Unlock output buffer only when successfully locked
-            Buffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
+            mBuffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
-            ALCdsoundPlayback_lock(self);
-            aluHandleDisconnect(device, "Failed to lock output buffer: 0x%lx", err);
-            ALCdsoundPlayback_unlock(self);
+            ALCdsoundPlayback_lock(this);
+            aluHandleDisconnect(mDevice, "Failed to lock output buffer: 0x%lx", err);
+            ALCdsoundPlayback_unlock(this);
             return 1;
         }
 
@@ -627,7 +626,7 @@ ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 {
     try {
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread(ALCdsoundPlayback_mixerProc, self);
+        self->mThread = std::thread(std::mem_fn(&ALCdsoundPlayback::mixerProc), self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -650,14 +649,15 @@ void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
 
 
 struct ALCdsoundCapture final : public ALCbackend {
+    ALCdsoundCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCdsoundCapture() override;
+
     IDirectSoundCapture *mDSC{nullptr};
     IDirectSoundCaptureBuffer *mDSCbuffer{nullptr};
     DWORD mBufferBytes{0u};
     DWORD mCursor{0u};
 
     RingBufferPtr mRing;
-
-    ALCdsoundCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
@@ -681,19 +681,20 @@ void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device)
 }
 
 void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
+{ self->~ALCdsoundCapture(); }
+
+ALCdsoundCapture::~ALCdsoundCapture()
 {
-    if(self->mDSCbuffer)
+    if(mDSCbuffer)
     {
-        self->mDSCbuffer->Stop();
-        self->mDSCbuffer->Release();
-        self->mDSCbuffer = nullptr;
+        mDSCbuffer->Stop();
+        mDSCbuffer->Release();
+        mDSCbuffer = nullptr;
     }
 
-    if(self->mDSC)
-        self->mDSC->Release();
-    self->mDSC = nullptr;
-
-    self->~ALCdsoundCapture();
+    if(mDSC)
+        mDSC->Release();
+    mDSC = nullptr;
 }
 
 

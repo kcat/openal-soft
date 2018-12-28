@@ -424,6 +424,7 @@ int verify_state(snd_pcm_t *handle)
 
 struct ALCplaybackAlsa final : public ALCbackend {
     ALCplaybackAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCplaybackAlsa() override;
 
     int mixerProc();
     int mixerNoMMapProc();
@@ -458,12 +459,13 @@ void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 }
 
 void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
-{
-    if(self->mPcmHandle)
-        snd_pcm_close(self->mPcmHandle);
-    self->mPcmHandle = nullptr;
+{ self->~ALCplaybackAlsa(); }
 
-    self->~ALCplaybackAlsa();
+ALCplaybackAlsa::~ALCplaybackAlsa()
+{
+    if(mPcmHandle)
+        snd_pcm_close(mPcmHandle);
+    mPcmHandle = nullptr;
 }
 
 
@@ -922,6 +924,7 @@ ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 
 struct ALCcaptureAlsa final : public ALCbackend {
     ALCcaptureAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
+    ~ALCcaptureAlsa() override;
 
     snd_pcm_t *mPcmHandle{nullptr};
 
@@ -956,12 +959,13 @@ void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
 }
 
 void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
-{
-    if(self->mPcmHandle)
-        snd_pcm_close(self->mPcmHandle);
-    self->mPcmHandle = nullptr;
+{ self->~ALCcaptureAlsa(); }
 
-    self->~ALCcaptureAlsa();
+ALCcaptureAlsa::~ALCcaptureAlsa()
+{
+    if(mPcmHandle)
+        snd_pcm_close(mPcmHandle);
+    mPcmHandle = nullptr;
 }
 
 

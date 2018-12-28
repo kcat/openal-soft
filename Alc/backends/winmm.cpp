@@ -121,14 +121,14 @@ void ProbeCaptureDevices(void)
 
 
 struct ALCwinmmPlayback final : public ALCbackend {
-    std::atomic<ALuint> Writable{0u};
-    al::semaphore Sem;
-    int Idx{0};
-    std::array<WAVEHDR,4> WaveBuffer;
+    std::atomic<ALuint> mWritable{0u};
+    al::semaphore mSem;
+    int mIdx{0};
+    std::array<WAVEHDR,4> mWaveBuffer;
 
-    HWAVEOUT OutHdl{nullptr};
+    HWAVEOUT mOutHdl{nullptr};
 
-    WAVEFORMATEX Format{};
+    WAVEFORMATEX mFormat{};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -161,17 +161,17 @@ void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device)
     new (self) ALCwinmmPlayback{device};
     SET_VTABLE2(ALCwinmmPlayback, ALCbackend, self);
 
-    std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
+    std::fill(self->mWaveBuffer.begin(), self->mWaveBuffer.end(), WAVEHDR{});
 }
 
 void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
 {
-    if(self->OutHdl)
-        waveOutClose(self->OutHdl);
-    self->OutHdl = nullptr;
+    if(self->mOutHdl)
+        waveOutClose(self->mOutHdl);
+    self->mOutHdl = nullptr;
 
-    al_free(self->WaveBuffer[0].lpData);
-    std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
+    al_free(self->mWaveBuffer[0].lpData);
+    std::fill(self->mWaveBuffer.begin(), self->mWaveBuffer.end(), WAVEHDR{});
 
     self->~ALCwinmmPlayback();
 }
@@ -190,8 +190,8 @@ void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT msg,
         return;
 
     auto self = reinterpret_cast<ALCwinmmPlayback*>(instance);
-    self->Writable.fetch_add(1, std::memory_order_acq_rel);
-    self->Sem.post();
+    self->mWritable.fetch_add(1, std::memory_order_acq_rel);
+    self->mSem.post();
 }
 
 FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
@@ -205,25 +205,25 @@ FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
-        ALsizei todo = self->Writable.load(std::memory_order_acquire);
+        ALsizei todo = self->mWritable.load(std::memory_order_acquire);
         if(todo < 1)
         {
             ALCwinmmPlayback_unlock(self);
-            self->Sem.wait();
+            self->mSem.wait();
             ALCwinmmPlayback_lock(self);
             continue;
         }
 
-        int widx{self->Idx};
+        int widx{self->mIdx};
         do {
-            WAVEHDR &waveHdr = self->WaveBuffer[widx];
-            widx = (widx+1) % self->WaveBuffer.size();
+            WAVEHDR &waveHdr = self->mWaveBuffer[widx];
+            widx = (widx+1) % self->mWaveBuffer.size();
 
             aluMixData(device, waveHdr.lpData, device->UpdateSize);
-            self->Writable.fetch_sub(1, std::memory_order_acq_rel);
-            waveOutWrite(self->OutHdl, &waveHdr, sizeof(WAVEHDR));
+            self->mWritable.fetch_sub(1, std::memory_order_acq_rel);
+            waveOutWrite(self->mOutHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
-        self->Idx = widx;
+        self->mIdx = widx;
     }
     ALCwinmmPlayback_unlock(self);
 
@@ -243,32 +243,32 @@ ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *deviceName)
         std::find(PlaybackDevices.cbegin(), PlaybackDevices.cend(), deviceName) :
         PlaybackDevices.cbegin();
     if(iter == PlaybackDevices.cend()) return ALC_INVALID_VALUE;
-    UINT DeviceID{static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter))};
+    auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
 retry_open:
-    self->Format = WAVEFORMATEX{};
+    self->mFormat = WAVEFORMATEX{};
     if(device->FmtType == DevFmtFloat)
     {
-        self->Format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-        self->Format.wBitsPerSample = 32;
+        self->mFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+        self->mFormat.wBitsPerSample = 32;
     }
     else
     {
-        self->Format.wFormatTag = WAVE_FORMAT_PCM;
+        self->mFormat.wFormatTag = WAVE_FORMAT_PCM;
         if(device->FmtType == DevFmtUByte || device->FmtType == DevFmtByte)
-            self->Format.wBitsPerSample = 8;
+            self->mFormat.wBitsPerSample = 8;
         else
-            self->Format.wBitsPerSample = 16;
+            self->mFormat.wBitsPerSample = 16;
     }
-    self->Format.nChannels = ((device->FmtChans == DevFmtMono) ? 1 : 2);
-    self->Format.nBlockAlign = self->Format.wBitsPerSample *
-                               self->Format.nChannels / 8;
-    self->Format.nSamplesPerSec = device->Frequency;
-    self->Format.nAvgBytesPerSec = self->Format.nSamplesPerSec *
-                                   self->Format.nBlockAlign;
-    self->Format.cbSize = 0;
+    self->mFormat.nChannels = ((device->FmtChans == DevFmtMono) ? 1 : 2);
+    self->mFormat.nBlockAlign = self->mFormat.wBitsPerSample *
+                                self->mFormat.nChannels / 8;
+    self->mFormat.nSamplesPerSec = device->Frequency;
+    self->mFormat.nAvgBytesPerSec = self->mFormat.nSamplesPerSec *
+                                    self->mFormat.nBlockAlign;
+    self->mFormat.cbSize = 0;
 
-    MMRESULT res{waveOutOpen(&self->OutHdl, DeviceID, &self->Format,
+    MMRESULT res{waveOutOpen(&self->mOutHdl, DeviceID, &self->mFormat,
         (DWORD_PTR)&ALCwinmmPlayback_waveOutProc, (DWORD_PTR)self, CALLBACK_FUNCTION
     )};
     if(res != MMSYSERR_NOERROR)
@@ -290,67 +290,66 @@ ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
 {
     ALCdevice *device{self->mDevice};
 
-    device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
-                                  self->Format.nSamplesPerSec /
-                                  device->Frequency);
+    device->UpdateSize = static_cast<ALuint>(
+        (ALuint64)device->UpdateSize * self->mFormat.nSamplesPerSec / device->Frequency);
     device->UpdateSize = (device->UpdateSize*device->NumUpdates + 3) / 4;
     device->NumUpdates = 4;
-    device->Frequency = self->Format.nSamplesPerSec;
+    device->Frequency = self->mFormat.nSamplesPerSec;
 
-    if(self->Format.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+    if(self->mFormat.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
     {
-        if(self->Format.wBitsPerSample == 32)
+        if(self->mFormat.wBitsPerSample == 32)
             device->FmtType = DevFmtFloat;
         else
         {
-            ERR("Unhandled IEEE float sample depth: %d\n", self->Format.wBitsPerSample);
+            ERR("Unhandled IEEE float sample depth: %d\n", self->mFormat.wBitsPerSample);
             return ALC_FALSE;
         }
     }
-    else if(self->Format.wFormatTag == WAVE_FORMAT_PCM)
+    else if(self->mFormat.wFormatTag == WAVE_FORMAT_PCM)
     {
-        if(self->Format.wBitsPerSample == 16)
+        if(self->mFormat.wBitsPerSample == 16)
             device->FmtType = DevFmtShort;
-        else if(self->Format.wBitsPerSample == 8)
+        else if(self->mFormat.wBitsPerSample == 8)
             device->FmtType = DevFmtUByte;
         else
         {
-            ERR("Unhandled PCM sample depth: %d\n", self->Format.wBitsPerSample);
+            ERR("Unhandled PCM sample depth: %d\n", self->mFormat.wBitsPerSample);
             return ALC_FALSE;
         }
     }
     else
     {
-        ERR("Unhandled format tag: 0x%04x\n", self->Format.wFormatTag);
+        ERR("Unhandled format tag: 0x%04x\n", self->mFormat.wFormatTag);
         return ALC_FALSE;
     }
 
-    if(self->Format.nChannels == 2)
+    if(self->mFormat.nChannels == 2)
         device->FmtChans = DevFmtStereo;
-    else if(self->Format.nChannels == 1)
+    else if(self->mFormat.nChannels == 1)
         device->FmtChans = DevFmtMono;
     else
     {
-        ERR("Unhandled channel count: %d\n", self->Format.nChannels);
+        ERR("Unhandled channel count: %d\n", self->mFormat.nChannels);
         return ALC_FALSE;
     }
     SetDefaultWFXChannelOrder(device);
 
     ALuint BufferSize{device->UpdateSize * device->frameSizeFromFmt()};
 
-    al_free(self->WaveBuffer[0].lpData);
-    self->WaveBuffer[0] = WAVEHDR{};
-    self->WaveBuffer[0].lpData = static_cast<char*>(al_calloc(16,
-        BufferSize * self->WaveBuffer.size()));
-    self->WaveBuffer[0].dwBufferLength = BufferSize;
-    for(size_t i{1};i < self->WaveBuffer.size();i++)
+    al_free(self->mWaveBuffer[0].lpData);
+    self->mWaveBuffer[0] = WAVEHDR{};
+    self->mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16,
+        BufferSize * self->mWaveBuffer.size()));
+    self->mWaveBuffer[0].dwBufferLength = BufferSize;
+    for(size_t i{1};i < self->mWaveBuffer.size();i++)
     {
-        self->WaveBuffer[i] = WAVEHDR{};
-        self->WaveBuffer[i].lpData = self->WaveBuffer[i-1].lpData +
-                                     self->WaveBuffer[i-1].dwBufferLength;
-        self->WaveBuffer[i].dwBufferLength = BufferSize;
+        self->mWaveBuffer[i] = WAVEHDR{};
+        self->mWaveBuffer[i].lpData = self->mWaveBuffer[i-1].lpData +
+                                     self->mWaveBuffer[i-1].dwBufferLength;
+        self->mWaveBuffer[i].dwBufferLength = BufferSize;
     }
-    self->Idx = 0;
+    self->mIdx = 0;
 
     return ALC_TRUE;
 }
@@ -358,11 +357,11 @@ ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
 ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
 {
     try {
-        std::for_each(self->WaveBuffer.begin(), self->WaveBuffer.end(),
+        std::for_each(self->mWaveBuffer.begin(), self->mWaveBuffer.end(),
             [self](WAVEHDR &waveHdr) -> void
-            { waveOutPrepareHeader(self->OutHdl, &waveHdr, static_cast<UINT>(sizeof(WAVEHDR))); }
+            { waveOutPrepareHeader(self->mOutHdl, &waveHdr, static_cast<UINT>(sizeof(WAVEHDR))); }
         );
-        self->Writable.store(static_cast<ALuint>(self->WaveBuffer.size()),
+        self->mWritable.store(static_cast<ALuint>(self->mWaveBuffer.size()),
             std::memory_order_release);
 
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
@@ -383,27 +382,27 @@ void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
         return;
     self->mThread.join();
 
-    while(self->Writable.load(std::memory_order_acquire) < self->WaveBuffer.size())
-        self->Sem.wait();
-    std::for_each(self->WaveBuffer.begin(), self->WaveBuffer.end(),
+    while(self->mWritable.load(std::memory_order_acquire) < self->mWaveBuffer.size())
+        self->mSem.wait();
+    std::for_each(self->mWaveBuffer.begin(), self->mWaveBuffer.end(),
         [self](WAVEHDR &waveHdr) -> void
-        { waveOutUnprepareHeader(self->OutHdl, &waveHdr, sizeof(WAVEHDR)); }
+        { waveOutUnprepareHeader(self->mOutHdl, &waveHdr, sizeof(WAVEHDR)); }
     );
-    self->Writable.store(0, std::memory_order_release);
+    self->mWritable.store(0, std::memory_order_release);
 }
 
 
 struct ALCwinmmCapture final : public ALCbackend {
-    std::atomic<ALuint> Readable{0u};
-    al::semaphore Sem;
-    int Idx{0};
-    std::array<WAVEHDR,4> WaveBuffer;
+    std::atomic<ALuint> mReadable{0u};
+    al::semaphore mSem;
+    int mIdx{0};
+    std::array<WAVEHDR,4> mWaveBuffer{};
 
-    HWAVEIN InHdl{nullptr};
+    HWAVEIN mInHdl{nullptr};
 
-    RingBufferPtr Ring{nullptr};
+    RingBufferPtr mRing{nullptr};
 
-    WAVEFORMATEX Format{};
+    WAVEFORMATEX mFormat{};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -435,19 +434,17 @@ void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
 {
     new (self) ALCwinmmCapture{device};
     SET_VTABLE2(ALCwinmmCapture, ALCbackend, self);
-
-    std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 }
 
 void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
 {
     // Close the Wave device
-    if(self->InHdl)
-        waveInClose(self->InHdl);
-    self->InHdl = nullptr;
+    if(self->mInHdl)
+        waveInClose(self->mInHdl);
+    self->mInHdl = nullptr;
 
-    al_free(self->WaveBuffer[0].lpData);
-    std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
+    al_free(self->mWaveBuffer[0].lpData);
+    std::fill(self->mWaveBuffer.begin(), self->mWaveBuffer.end(), WAVEHDR{});
 
     self->~ALCwinmmCapture();
 }
@@ -466,14 +463,14 @@ void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg,
         return;
 
     auto self = reinterpret_cast<ALCwinmmCapture*>(instance);
-    self->Readable.fetch_add(1, std::memory_order_acq_rel);
-    self->Sem.post();
+    self->mReadable.fetch_add(1, std::memory_order_acq_rel);
+    self->mSem.post();
 }
 
 int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 {
     ALCdevice *device{self->mDevice};
-    RingBuffer *ring{self->Ring.get()};
+    RingBuffer *ring{self->mRing.get()};
 
     althrd_setname(RECORD_THREAD_NAME);
 
@@ -481,25 +478,25 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
-        ALsizei todo = self->Readable.load(std::memory_order_acquire);
+        ALuint todo{self->mReadable.load(std::memory_order_acquire)};
         if(todo < 1)
         {
             ALCwinmmCapture_unlock(self);
-            self->Sem.wait();
+            self->mSem.wait();
             ALCwinmmCapture_lock(self);
             continue;
         }
 
-        int widx{self->Idx};
+        int widx{self->mIdx};
         do {
-            WAVEHDR &waveHdr = self->WaveBuffer[widx];
-            widx = (widx+1) % self->WaveBuffer.size();
+            WAVEHDR &waveHdr = self->mWaveBuffer[widx];
+            widx = (widx+1) % self->mWaveBuffer.size();
 
-            ring->write(waveHdr.lpData, waveHdr.dwBytesRecorded / self->Format.nBlockAlign);
-            self->Readable.fetch_sub(1, std::memory_order_acq_rel);
-            waveInAddBuffer(self->InHdl, &waveHdr, sizeof(WAVEHDR));
+            ring->write(waveHdr.lpData, waveHdr.dwBytesRecorded / self->mFormat.nBlockAlign);
+            self->mReadable.fetch_sub(1, std::memory_order_acq_rel);
+            waveInAddBuffer(self->mInHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
-        self->Idx = widx;
+        self->mIdx = widx;
     }
     ALCwinmmCapture_unlock(self);
 
@@ -519,7 +516,7 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
         std::find(CaptureDevices.cbegin(), CaptureDevices.cend(), deviceName) :
         CaptureDevices.cbegin();
     if(iter == CaptureDevices.cend()) return ALC_INVALID_VALUE;
-    UINT DeviceID{static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter))};
+    auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter));
 
     switch(device->FmtChans)
     {
@@ -550,19 +547,19 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
             return ALC_INVALID_ENUM;
     }
 
-    self->Format = WAVEFORMATEX{};
-    self->Format.wFormatTag = (device->FmtType == DevFmtFloat) ?
-                              WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
-    self->Format.nChannels = device->channelsFromFmt();
-    self->Format.wBitsPerSample = device->bytesFromFmt() * 8;
-    self->Format.nBlockAlign = self->Format.wBitsPerSample *
-                               self->Format.nChannels / 8;
-    self->Format.nSamplesPerSec = device->Frequency;
-    self->Format.nAvgBytesPerSec = self->Format.nSamplesPerSec *
-                                   self->Format.nBlockAlign;
-    self->Format.cbSize = 0;
+    self->mFormat = WAVEFORMATEX{};
+    self->mFormat.wFormatTag = (device->FmtType == DevFmtFloat) ?
+                               WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
+    self->mFormat.nChannels = device->channelsFromFmt();
+    self->mFormat.wBitsPerSample = device->bytesFromFmt() * 8;
+    self->mFormat.nBlockAlign = self->mFormat.wBitsPerSample *
+                                self->mFormat.nChannels / 8;
+    self->mFormat.nSamplesPerSec = device->Frequency;
+    self->mFormat.nAvgBytesPerSec = self->mFormat.nSamplesPerSec *
+                                    self->mFormat.nBlockAlign;
+    self->mFormat.cbSize = 0;
 
-    MMRESULT res{waveInOpen(&self->InHdl, DeviceID, &self->Format,
+    MMRESULT res{waveInOpen(&self->mInHdl, DeviceID, &self->mFormat,
         (DWORD_PTR)&ALCwinmmCapture_waveInProc, (DWORD_PTR)self, CALLBACK_FUNCTION
     )};
     if(res != MMSYSERR_NOERROR)
@@ -572,28 +569,28 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
     }
 
     // Ensure each buffer is 50ms each
-    DWORD BufferSize{self->Format.nAvgBytesPerSec / 20};
-    BufferSize -= (BufferSize % self->Format.nBlockAlign);
+    DWORD BufferSize{self->mFormat.nAvgBytesPerSec / 20u};
+    BufferSize -= (BufferSize % self->mFormat.nBlockAlign);
 
     // Allocate circular memory buffer for the captured audio
     // Make sure circular buffer is at least 100ms in size
-    auto CapturedDataSize = static_cast<DWORD>(
-        std::max<size_t>(device->UpdateSize*device->NumUpdates, BufferSize*self->WaveBuffer.size())
-    );
+    ALuint CapturedDataSize{device->UpdateSize*device->NumUpdates};
+    CapturedDataSize = static_cast<ALuint>(
+        std::max<size_t>(CapturedDataSize, BufferSize*self->mWaveBuffer.size()));
 
-    self->Ring = CreateRingBuffer(CapturedDataSize, self->Format.nBlockAlign, false);
-    if(!self->Ring) return ALC_INVALID_VALUE;
+    self->mRing = CreateRingBuffer(CapturedDataSize, self->mFormat.nBlockAlign, false);
+    if(!self->mRing) return ALC_INVALID_VALUE;
 
-    al_free(self->WaveBuffer[0].lpData);
-    self->WaveBuffer[0] = WAVEHDR{};
-    self->WaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize*4));
-    self->WaveBuffer[0].dwBufferLength = BufferSize;
-    for(size_t i{1};i < self->WaveBuffer.size();++i)
+    al_free(self->mWaveBuffer[0].lpData);
+    self->mWaveBuffer[0] = WAVEHDR{};
+    self->mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize*4));
+    self->mWaveBuffer[0].dwBufferLength = BufferSize;
+    for(size_t i{1};i < self->mWaveBuffer.size();++i)
     {
-        self->WaveBuffer[i] = WAVEHDR{};
-        self->WaveBuffer[i].lpData = self->WaveBuffer[i-1].lpData +
-                                     self->WaveBuffer[i-1].dwBufferLength;
-        self->WaveBuffer[i].dwBufferLength = self->WaveBuffer[i-1].dwBufferLength;
+        self->mWaveBuffer[i] = WAVEHDR{};
+        self->mWaveBuffer[i].lpData = self->mWaveBuffer[i-1].lpData +
+                                      self->mWaveBuffer[i-1].dwBufferLength;
+        self->mWaveBuffer[i].dwBufferLength = self->mWaveBuffer[i-1].dwBufferLength;
     }
 
     device->DeviceName = CaptureDevices[DeviceID];
@@ -603,16 +600,16 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
 ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)
 {
     try {
-        for(size_t i{0};i < self->WaveBuffer.size();++i)
+        for(size_t i{0};i < self->mWaveBuffer.size();++i)
         {
-            waveInPrepareHeader(self->InHdl, &self->WaveBuffer[i], sizeof(WAVEHDR));
-            waveInAddBuffer(self->InHdl, &self->WaveBuffer[i], sizeof(WAVEHDR));
+            waveInPrepareHeader(self->mInHdl, &self->mWaveBuffer[i], sizeof(WAVEHDR));
+            waveInAddBuffer(self->mInHdl, &self->mWaveBuffer[i], sizeof(WAVEHDR));
         }
 
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
         self->mThread = std::thread(ALCwinmmCapture_captureProc, self);
 
-        waveInStart(self->InHdl);
+        waveInStart(self->mInHdl);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -625,33 +622,33 @@ ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)
 
 void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 {
-    waveInStop(self->InHdl);
+    waveInStop(self->mInHdl);
 
     self->mKillNow.store(AL_TRUE, std::memory_order_release);
     if(self->mThread.joinable())
     {
-        self->Sem.post();
+        self->mSem.post();
         self->mThread.join();
     }
 
-    waveInReset(self->InHdl);
-    for(size_t i{0};i < self->WaveBuffer.size();++i)
-        waveInUnprepareHeader(self->InHdl, &self->WaveBuffer[i], sizeof(WAVEHDR));
+    waveInReset(self->mInHdl);
+    for(size_t i{0};i < self->mWaveBuffer.size();++i)
+        waveInUnprepareHeader(self->mInHdl, &self->mWaveBuffer[i], sizeof(WAVEHDR));
 
-    self->Readable.store(0, std::memory_order_release);
-    self->Idx = 0;
+    self->mReadable.store(0, std::memory_order_release);
+    self->mIdx = 0;
 }
 
 ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    RingBuffer *ring{self->Ring.get()};
+    RingBuffer *ring{self->mRing.get()};
     ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 {
-    RingBuffer *ring{self->Ring.get()};
+    RingBuffer *ring{self->mRing.get()};
     return (ALCuint)ring->readSpace();
 }
 

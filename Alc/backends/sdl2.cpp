@@ -40,13 +40,13 @@
 #endif
 
 struct ALCsdl2Backend final : public ALCbackend {
-    SDL_AudioDeviceID deviceID{0u};
-    ALsizei frameSize{0};
+    SDL_AudioDeviceID mDeviceID{0u};
+    ALsizei mFrameSize{0};
 
-    ALuint Frequency{0u};
-    DevFmtChannels FmtChans{};
-    DevFmtType     FmtType{};
-    ALuint UpdateSize{0u};
+    ALuint mFrequency{0u};
+    DevFmtChannels mFmtChans{};
+    DevFmtType     mFmtType{};
+    ALuint mUpdateSize{0u};
 
     ALCsdl2Backend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
@@ -72,19 +72,13 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
 {
     new (self) ALCsdl2Backend{device};
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
-
-    self->frameSize = device->frameSizeFromFmt();
-    self->Frequency = device->Frequency;
-    self->FmtChans = device->FmtChans;
-    self->FmtType = device->FmtType;
-    self->UpdateSize = device->UpdateSize;
 }
 
 static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
 {
-    if(self->deviceID)
-        SDL_CloseAudioDevice(self->deviceID);
-    self->deviceID = 0;
+    if(self->mDeviceID)
+        SDL_CloseAudioDevice(self->mDeviceID);
+    self->mDeviceID = 0;
 
     self->~ALCsdl2Backend();
 }
@@ -94,8 +88,8 @@ static void ALCsdl2Backend_audioCallback(void *ptr, Uint8 *stream, int len)
 {
     auto self = static_cast<ALCsdl2Backend*>(ptr);
 
-    assert((len % self->frameSize) == 0);
-    aluMixData(self->mDevice, stream, len / self->frameSize);
+    assert((len % self->mFrameSize) == 0);
+    aluMixData(self->mDevice, stream, len / self->mFrameSize);
 }
 
 static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
@@ -126,19 +120,19 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
      * necessarily the first in the list.
      */
     if(!name || strcmp(name, defaultDeviceName) == 0)
-        self->deviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
+        self->mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
                                              SDL_AUDIO_ALLOW_ANY_CHANGE);
     else
     {
         const size_t prefix_len = strlen(DEVNAME_PREFIX);
         if(strncmp(name, DEVNAME_PREFIX, prefix_len) == 0)
-            self->deviceID = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
+            self->mDeviceID = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
                                                  SDL_AUDIO_ALLOW_ANY_CHANGE);
         else
-            self->deviceID = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have,
+            self->mDeviceID = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have,
                                                  SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
-    if(self->deviceID == 0)
+    if(self->mDeviceID == 0)
         return ALC_INVALID_VALUE;
 
     device->Frequency = have.freq;
@@ -166,11 +160,11 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     device->UpdateSize = have.samples;
     device->NumUpdates = 2; /* SDL always (tries to) use two periods. */
 
-    self->frameSize = device->frameSizeFromFmt();
-    self->Frequency = device->Frequency;
-    self->FmtChans = device->FmtChans;
-    self->FmtType = device->FmtType;
-    self->UpdateSize = device->UpdateSize;
+    self->mFrameSize = device->frameSizeFromFmt();
+    self->mFrequency = device->Frequency;
+    self->mFmtChans = device->FmtChans;
+    self->mFmtType = device->FmtType;
+    self->mUpdateSize = device->UpdateSize;
 
     device->DeviceName = name ? name : defaultDeviceName;
     return ALC_NO_ERROR;
@@ -179,10 +173,10 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
 {
     ALCdevice *device{self->mDevice};
-    device->Frequency = self->Frequency;
-    device->FmtChans = self->FmtChans;
-    device->FmtType = self->FmtType;
-    device->UpdateSize = self->UpdateSize;
+    device->Frequency = self->mFrequency;
+    device->FmtChans = self->mFmtChans;
+    device->FmtType = self->mFmtType;
+    device->UpdateSize = self->mUpdateSize;
     device->NumUpdates = 2;
     SetDefaultWFXChannelOrder(device);
     return ALC_TRUE;
@@ -190,23 +184,23 @@ static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
 
 static ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self)
 {
-    SDL_PauseAudioDevice(self->deviceID, 0);
+    SDL_PauseAudioDevice(self->mDeviceID, 0);
     return ALC_TRUE;
 }
 
 static void ALCsdl2Backend_stop(ALCsdl2Backend *self)
 {
-    SDL_PauseAudioDevice(self->deviceID, 1);
+    SDL_PauseAudioDevice(self->mDeviceID, 1);
 }
 
 static void ALCsdl2Backend_lock(ALCsdl2Backend *self)
 {
-    SDL_LockAudioDevice(self->deviceID);
+    SDL_LockAudioDevice(self->mDeviceID);
 }
 
 static void ALCsdl2Backend_unlock(ALCsdl2Backend *self)
 {
-    SDL_UnlockAudioDevice(self->deviceID);
+    SDL_UnlockAudioDevice(self->mDeviceID);
 }
 
 

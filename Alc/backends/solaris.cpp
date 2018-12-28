@@ -47,10 +47,10 @@
 
 
 struct ALCsolarisBackend final : public ALCbackend {
-    int fd{-1};
+    int mFd{-1};
 
-    ALubyte *mix_data{nullptr};
-    int data_size{0};
+    ALubyte *mMixData{nullptr};
+    int mDataSize{0};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -89,13 +89,13 @@ static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *devi
 
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 {
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
+    if(self->mFd != -1)
+        close(self->mFd);
+    self->mFd = -1;
 
-    free(self->mix_data);
-    self->mix_data = nullptr;
-    self->data_size = 0;
+    free(self->mMixData);
+    self->mMixData = nullptr;
+    self->mDataSize = 0;
 
     self->~ALCsolarisBackend();
 }
@@ -115,7 +115,7 @@ static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
           device->Connected.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
-        pollitem.fd = self->fd;
+        pollitem.fd = self->mFd;
         pollitem.events = POLLOUT;
 
         ALCsolarisBackend_unlock(self);
@@ -135,12 +135,12 @@ static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
             continue;
         }
 
-        ALubyte *write_ptr{self->mix_data};
-        int to_write{self->data_size};
+        ALubyte *write_ptr{self->mMixData};
+        int to_write{self->mDataSize};
         aluMixData(device, write_ptr, to_write/frame_size);
         while(to_write > 0 && !self->mKillNow.load())
         {
-            ssize_t wrote{write(self->fd, write_ptr, to_write)};
+            ssize_t wrote{write(self->mFd, write_ptr, to_write)};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -170,8 +170,8 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
     else if(strcmp(name, solaris_device) != 0)
         return ALC_INVALID_VALUE;
 
-    self->fd = open(solaris_driver, O_WRONLY);
-    if(self->fd == -1)
+    self->mFd = open(solaris_driver, O_WRONLY);
+    if(self->mFd == -1)
     {
         ERR("Could not open %s: %s\n", solaris_driver, strerror(errno));
         return ALC_INVALID_VALUE;
@@ -224,7 +224,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
     frameSize = numChannels * device->bytesFromFmt();
     info.play.buffer_size = device->UpdateSize*device->NumUpdates * frameSize;
 
-    if(ioctl(self->fd, AUDIO_SETINFO, &info) < 0)
+    if(ioctl(self->mFd, AUDIO_SETINFO, &info) < 0)
     {
         ERR("ioctl failed: %s\n", strerror(errno));
         return ALC_FALSE;
@@ -252,9 +252,9 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
     SetDefaultChannelOrder(device);
 
-    free(self->mix_data);
-    self->data_size = device->UpdateSize * device->frameSizeFromFmt();
-    self->mix_data = static_cast<ALubyte*>(calloc(1, self->data_size));
+    free(self->mMixData);
+    self->mDataSize = device->UpdateSize * device->frameSizeFromFmt();
+    self->mMixData = static_cast<ALubyte*>(calloc(1, self->mDataSize));
 
     return ALC_TRUE;
 }
@@ -281,7 +281,7 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 
     self->mThread.join();
 
-    if(ioctl(self->fd, AUDIO_DRAIN) < 0)
+    if(ioctl(self->mFd, AUDIO_DRAIN) < 0)
         ERR("Error draining device: %s\n", strerror(errno));
 }
 

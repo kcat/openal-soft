@@ -31,10 +31,13 @@
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
+#include "vector.h"
 #include "ringbuffer.h"
 
 #include <sndio.h>
 
+
+namespace {
 
 static const ALCchar sndio_device[] = "SndIO Default";
 
@@ -42,10 +45,9 @@ static const ALCchar sndio_device[] = "SndIO Default";
 struct SndioPlayback final : public ALCbackend {
     sio_hdl *mSndHandle{nullptr};
 
-    ALvoid *mMixData{nullptr};
-    ALsizei mDataSize{0};
+    al::vector<ALubyte> mBuffer;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     SndioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
@@ -81,9 +83,6 @@ static void SndioPlayback_Destruct(SndioPlayback *self)
         sio_close(self->mSndHandle);
     self->mSndHandle = nullptr;
 
-    al_free(self->mMixData);
-    self->mMixData = nullptr;
-
     self->~SndioPlayback();
 }
 
@@ -91,26 +90,24 @@ static void SndioPlayback_Destruct(SndioPlayback *self)
 static int SndioPlayback_mixerProc(SndioPlayback *self)
 {
     ALCdevice *device{self->mDevice};
-    ALsizei frameSize;
-    size_t wrote;
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    frameSize = device->frameSizeFromFmt();
+    const ALsizei frameSize{device->frameSizeFromFmt()};
 
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
-        ALsizei len = self->mDataSize;
-        ALubyte *WritePtr = static_cast<ALubyte*>(self->mMixData);
+        auto WritePtr = static_cast<ALubyte*>(self->mBuffer.data());
+        size_t len{self->mBuffer.size()};
 
         SndioPlayback_lock(self);
         aluMixData(device, WritePtr, len/frameSize);
         SndioPlayback_unlock(self);
         while(len > 0 && !self->mKillNow.load(std::memory_order_acquire))
         {
-            wrote = sio_write(self->mSndHandle, WritePtr, len);
+            size_t wrote{sio_write(self->mSndHandle, WritePtr, len)};
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
@@ -226,22 +223,19 @@ static ALCboolean SndioPlayback_reset(SndioPlayback *self)
         return ALC_FALSE;
     }
 
+    SetDefaultChannelOrder(device);
+
     device->UpdateSize = par.round;
     device->NumUpdates = (par.bufsz/par.round) + 1;
 
-    SetDefaultChannelOrder(device);
+    self->mBuffer.resize(device->UpdateSize * device->frameSizeFromFmt());
+    std::fill(self->mBuffer.begin(), self->mBuffer.end(), 0);
 
     return ALC_TRUE;
 }
 
 static ALCboolean SndioPlayback_start(SndioPlayback *self)
 {
-    ALCdevice *device{self->mDevice};
-
-    self->mDataSize = device->UpdateSize * device->frameSizeFromFmt();
-    al_free(self->mMixData);
-    self->mMixData = al_calloc(16, self->mDataSize);
-
     if(!sio_start(self->mSndHandle))
     {
         ERR("Error starting playback\n");
@@ -249,7 +243,7 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
     }
 
     try {
-        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mKillNow.store(false, std::memory_order_release);
         self->mThread = std::thread(SndioPlayback_mixerProc, self);
         return ALC_TRUE;
     }
@@ -264,15 +258,12 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
 
 static void SndioPlayback_stop(SndioPlayback *self)
 {
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
+    if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
     self->mThread.join();
 
     if(!sio_stop(self->mSndHandle))
         ERR("Error stopping device\n");
-
-    al_free(self->mMixData);
-    self->mMixData = nullptr;
 }
 
 
@@ -281,7 +272,7 @@ struct SndioCapture final : public ALCbackend {
 
     RingBufferPtr mRing;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     SndioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
@@ -488,7 +479,7 @@ static ALCboolean SndioCapture_start(SndioCapture *self)
     }
 
     try {
-        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mKillNow.store(false, std::memory_order_release);
         self->mThread = std::thread(SndioCapture_recordProc, self);
         return ALC_TRUE;
     }
@@ -503,7 +494,7 @@ static ALCboolean SndioCapture_start(SndioCapture *self)
 
 static void SndioCapture_stop(SndioCapture *self)
 {
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
+    if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
     self->mThread.join();
 
@@ -524,6 +515,7 @@ static ALCuint SndioCapture_availableSamples(SndioCapture *self)
     return ring->readSpace();
 }
 
+} // namespace
 
 BackendFactory &SndIOBackendFactory::getFactory()
 {

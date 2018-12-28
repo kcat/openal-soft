@@ -41,18 +41,20 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "threads.h"
+#include "vector.h"
 #include "compat.h"
 
 #include <sys/audioio.h>
 
 
+namespace {
+
 struct ALCsolarisBackend final : public ALCbackend {
     int mFd{-1};
 
-    ALubyte *mMixData{nullptr};
-    int mDataSize{0};
+    al::vector<ALubyte> mBuffer;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     ALCsolarisBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
@@ -93,10 +95,6 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
         close(self->mFd);
     self->mFd = -1;
 
-    free(self->mMixData);
-    self->mMixData = nullptr;
-    self->mDataSize = 0;
-
     self->~ALCsolarisBackend();
 }
 
@@ -135,10 +133,10 @@ static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
             continue;
         }
 
-        ALubyte *write_ptr{self->mMixData};
-        int to_write{self->mDataSize};
+        ALubyte *write_ptr{self->mBuffer.data()};
+        size_t to_write{self->mBuffer.size()};
         aluMixData(device, write_ptr, to_write/frame_size);
-        while(to_write > 0 && !self->mKillNow.load())
+        while(to_write > 0 && !self->mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(self->mFd, write_ptr, to_write)};
             if(wrote < 0)
@@ -252,9 +250,8 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
     SetDefaultChannelOrder(device);
 
-    free(self->mMixData);
-    self->mDataSize = device->UpdateSize * device->frameSizeFromFmt();
-    self->mMixData = static_cast<ALubyte*>(calloc(1, self->mDataSize));
+    self->mBuffer.resize(device->UpdateSize * device->frameSizeFromFmt());
+    std::fill(self->mBuffer.begin(), self->mBuffer.end(), 0);
 
     return ALC_TRUE;
 }
@@ -262,7 +259,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
 {
     try {
-        self->mKillNow.store(AL_FALSE);
+        self->mKillNow.store(false, std::memory_order_release);
         self->mThread = std::thread(ALCsolarisBackend_mixerProc, self);
         return ALC_TRUE;
     }
@@ -276,7 +273,7 @@ static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
 
 static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 {
-    if(self->mKillNow.exchange(AL_TRUE) || !self->mThread.joinable())
+    if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
 
     self->mThread.join();
@@ -285,6 +282,7 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
         ERR("Error draining device: %s\n", strerror(errno));
 }
 
+} // namespace
 
 BackendFactory &SolarisBackendFactory::getFactory()
 {

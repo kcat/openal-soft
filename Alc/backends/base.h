@@ -58,8 +58,7 @@ using BackendPtr = std::unique_ptr<BackendBase>;
 
 enum class BackendType {
     Playback,
-    Capture,
-    Loopback
+    Capture
 };
 
 

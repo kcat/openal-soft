@@ -4094,7 +4094,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
     device->Backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
-        BackendType::Loopback);
+        BackendType::Playback);
     if(!device->Backend)
     {
         device = nullptr;

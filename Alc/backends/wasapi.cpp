@@ -353,7 +353,7 @@ struct WasapiProxy {
 
 DWORD WasapiProxy::messageHandler(void *ptr)
 {
-    auto req = reinterpret_cast<ThreadRequest*>(ptr);
+    auto req = static_cast<ThreadRequest*>(ptr);
 
     TRACE("Starting message thread\n");
 
@@ -365,8 +365,8 @@ DWORD WasapiProxy::messageHandler(void *ptr)
         return 0;
     }
 
-    HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-                                  IID_IMMDeviceEnumerator, &ptr);
+    HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+        IID_IMMDeviceEnumerator, &ptr)};
     if(FAILED(hr))
     {
         WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
@@ -374,7 +374,7 @@ DWORD WasapiProxy::messageHandler(void *ptr)
         ReturnMsgResponse(req, hr);
         return 0;
     }
-    auto Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
+    auto Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
     Enumerator->Release();
     Enumerator = nullptr;
 
@@ -466,7 +466,7 @@ DWORD WasapiProxy::messageHandler(void *ptr)
                 hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
             if(SUCCEEDED(hr))
             {
-                Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
+                Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
 
                 if(msg.lParam == ALL_DEVICE_PROBE)
                     hr = probe_devices(Enumerator, eRender, PlaybackDevices);
@@ -757,10 +757,10 @@ ALCenum WasapiPlayback_open(WasapiPlayback *self, const ALCchar *deviceName)
 HRESULT WasapiPlayback::openProxy()
 {
     void *ptr;
-    HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
+    HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr)};
     if(SUCCEEDED(hr))
     {
-        auto Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
+        auto Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
         if(mDevId.empty())
             hr = Enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &mMMDev);
         else
@@ -771,7 +771,7 @@ HRESULT WasapiPlayback::openProxy()
         hr = mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
     if(SUCCEEDED(hr))
     {
-        mClient = reinterpret_cast<IAudioClient*>(ptr);
+        mClient = static_cast<IAudioClient*>(ptr);
         if(mDevice->DeviceName.empty())
             mDevice->DeviceName = get_device_name_and_guid(mMMDev).first;
     }
@@ -823,7 +823,7 @@ HRESULT WasapiPlayback::resetProxy()
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
         return hr;
     }
-    mClient = reinterpret_cast<IAudioClient*>(ptr);
+    mClient = static_cast<IAudioClient*>(ptr);
 
     WAVEFORMATEX *wfx;
     hr = mClient->GetMixFormat(&wfx);
@@ -1093,7 +1093,7 @@ HRESULT WasapiPlayback::startProxy()
     hr = mClient->GetService(IID_IAudioRenderClient, &ptr);
     if(SUCCEEDED(hr))
     {
-        mRender = reinterpret_cast<IAudioRenderClient*>(ptr);
+        mRender = static_cast<IAudioRenderClient*>(ptr);
         try {
             mKillNow.store(AL_FALSE, std::memory_order_release);
             mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
@@ -1421,11 +1421,11 @@ ALCenum WasapiCapture_open(WasapiCapture *self, const ALCchar *deviceName)
 HRESULT WasapiCapture::openProxy()
 {
     void *ptr;
-    HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-                                  IID_IMMDeviceEnumerator, &ptr);
+    HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+        IID_IMMDeviceEnumerator, &ptr)};
     if(SUCCEEDED(hr))
     {
-        auto Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
+        auto Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
         if(mDevId.empty())
             hr = Enumerator->GetDefaultAudioEndpoint(eCapture, eMultimedia, &mMMDev);
         else
@@ -1436,7 +1436,7 @@ HRESULT WasapiCapture::openProxy()
         hr = mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
     if(SUCCEEDED(hr))
     {
-        mClient = reinterpret_cast<IAudioClient*>(ptr);
+        mClient = static_cast<IAudioClient*>(ptr);
         if(mDevice->DeviceName.empty())
             mDevice->DeviceName = get_device_name_and_guid(mMMDev).first;
     }
@@ -1475,7 +1475,7 @@ HRESULT WasapiCapture::resetProxy()
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
         return hr;
     }
-    mClient = reinterpret_cast<IAudioClient*>(ptr);
+    mClient = static_cast<IAudioClient*>(ptr);
 
     REFERENCE_TIME buf_time{ScaleCeil(mDevice->UpdateSize*mDevice->NumUpdates, REFTIME_PER_SEC,
                                       mDevice->Frequency)};
@@ -1721,7 +1721,7 @@ HRESULT WasapiCapture::startProxy()
     hr = mClient->GetService(IID_IAudioCaptureClient, &ptr);
     if(SUCCEEDED(hr))
     {
-        mCapture = reinterpret_cast<IAudioCaptureClient*>(ptr);
+        mCapture = static_cast<IAudioCaptureClient*>(ptr);
         try {
             mKillNow.store(AL_FALSE, std::memory_order_release);
             mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};

@@ -158,7 +158,7 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUS
     if(!guid)
         return TRUE;
 
-    auto& devices = *reinterpret_cast<al::vector<DevMap>*>(data);
+    auto& devices = *static_cast<al::vector<DevMap>*>(data);
     const std::string basename{DEVNAME_HEAD + wstr_to_utf8(desc)};
 
     int count{1};

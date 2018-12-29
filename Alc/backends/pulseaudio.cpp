@@ -371,7 +371,7 @@ pa_proplist *prop_filter;
 /* PulseAudio Event Callbacks */
 void context_state_callback(pa_context *context, void *pdata)
 {
-    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
+    auto loop = static_cast<pa_threaded_mainloop*>(pdata);
     pa_context_state_t state{pa_context_get_state(context)};
     if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
@@ -379,7 +379,7 @@ void context_state_callback(pa_context *context, void *pdata)
 
 void stream_state_callback(pa_stream *stream, void *pdata)
 {
-    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
+    auto loop = static_cast<pa_threaded_mainloop*>(pdata);
     pa_stream_state_t state{pa_stream_get_state(stream)};
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
@@ -387,7 +387,7 @@ void stream_state_callback(pa_stream *stream, void *pdata)
 
 void stream_success_callback(pa_stream *UNUSED(stream), int UNUSED(success), void *pdata)
 {
-    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
+    auto loop = static_cast<pa_threaded_mainloop*>(pdata);
     pa_threaded_mainloop_signal(loop, 0);
 }
 

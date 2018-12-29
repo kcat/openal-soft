@@ -73,7 +73,7 @@ inline T* assume_aligned(T *ptr) noexcept
 {
     static_assert((alignment & (alignment-1)) == 0, "alignment must be a power of 2");
 #ifdef __GNUC__
-    return reinterpret_cast<T*>(__builtin_assume_aligned(ptr, alignment));
+    return static_cast<T*>(__builtin_assume_aligned(ptr, alignment));
 #elif defined(_MSC_VER)
     auto ptrval = reinterpret_cast<uintptr_t>(ptr);
     if((ptrval&(alignment-1)) != 0) __assume(0);

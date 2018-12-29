@@ -25,8 +25,8 @@ struct SampleConverter {
     alignas(16) ALfloat mDstSamples[BUFFERSIZE]{};
 
     struct {
-        alignas(16) ALfloat mPrevSamples[MAX_RESAMPLE_PADDING*2];
-    } Chan[];
+        alignas(16) ALfloat PrevSamples[MAX_RESAMPLE_PADDING*2];
+    } mChan[];
 
     ALsizei convert(const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
     ALsizei availableOut(ALsizei srcframes) const;

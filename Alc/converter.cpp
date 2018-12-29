@@ -141,7 +141,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return nullptr;
 
-    const size_t alloc_size{FAM_SIZE(SampleConverter, Chan, numchans)};
+    const size_t alloc_size{FAM_SIZE(SampleConverter, mChan, numchans)};
     SampleConverterPtr converter{new (al_calloc(16, alloc_size)) SampleConverter{}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
@@ -242,7 +242,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
              * what we're given for later.
              */
             for(ALsizei chan{0};chan < mNumChannels;chan++)
-                LoadSamples(&Chan[chan].mPrevSamples[prepcount], SamplesIn + mSrcTypeSize*chan,
+                LoadSamples(&mChan[chan].PrevSamples[prepcount], SamplesIn + mSrcTypeSize*chan,
                     mNumChannels, mSrcType, toread);
 
             mSrcPrepCount = prepcount + toread;
@@ -272,7 +272,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.
              */
-            std::copy_n(Chan[chan].mPrevSamples, prepcount, SrcData);
+            std::copy_n(mChan[chan].PrevSamples, prepcount, SrcData);
             LoadSamples(SrcData + prepcount, SrcSamples, mNumChannels, mSrcType, toread);
 
             /* Store as many prep samples for next time as possible, given the
@@ -280,14 +280,14 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
              */
             ALsizei SrcDataEnd{(DstSize*increment + DataPosFrac)>>FRACTIONBITS};
             if(SrcDataEnd >= prepcount+toread)
-                std::fill(std::begin(Chan[chan].mPrevSamples),
-                          std::end(Chan[chan].mPrevSamples), 0.0f);
+                std::fill(std::begin(mChan[chan].PrevSamples),
+                          std::end(mChan[chan].PrevSamples), 0.0f);
             else
             {
                 size_t len = mini(MAX_RESAMPLE_PADDING*2, prepcount+toread-SrcDataEnd);
-                std::copy_n(SrcData+SrcDataEnd, len, Chan[chan].mPrevSamples);
-                std::fill(std::begin(Chan[chan].mPrevSamples)+len,
-                          std::end(Chan[chan].mPrevSamples), 0.0f);
+                std::copy_n(SrcData+SrcDataEnd, len, mChan[chan].PrevSamples);
+                std::fill(std::begin(mChan[chan].PrevSamples)+len,
+                          std::end(mChan[chan].PrevSamples), 0.0f);
             }
 
             /* Now resample, and store the result in the output buffer. */

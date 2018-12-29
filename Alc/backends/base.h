@@ -27,9 +27,6 @@ inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
     return device->ClockBase + ns;
 }
 
-void ALCdevice_Lock(ALCdevice *device);
-void ALCdevice_Unlock(ALCdevice *device);
-
 ClockLatency GetClockLatency(ALCdevice *device);
 
 struct BackendBase {

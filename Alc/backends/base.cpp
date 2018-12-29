@@ -11,12 +11,6 @@
 #include "backends/base.h"
 
 
-void ALCdevice_Lock(ALCdevice *device)
-{ device->Backend->lock(); }
-
-void ALCdevice_Unlock(ALCdevice *device)
-{ device->Backend->unlock(); }
-
 ClockLatency GetClockLatency(ALCdevice *device)
 {
     BackendBase *backend{device->Backend.get()};

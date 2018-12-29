@@ -526,14 +526,14 @@ void FreeSource(ALCcontext *context, ALsource *source)
     ALsizei slidx = id & 0x3f;
 
     ALCdevice *device{context->Device};
-    ALCdevice_Lock(device);
+    device->Backend->lock();
     ALvoice *voice{GetSourceVoice(source, context)};
     if(voice)
     {
         voice->SourceID.store(0u, std::memory_order_relaxed);
         voice->Playing.store(false, std::memory_order_release);
     }
-    ALCdevice_Unlock(device);
+    device->Backend->unlock();
 
     source->~ALsource();
 
@@ -1094,22 +1094,22 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
             if(IsPlayingOrPaused(Source))
             {
-                ALvoice *voice;
+                ALCdevice *device{Context->Device};
 
-                ALCdevice_Lock(Context->Device);
+                device->Backend->lock();
                 /* Double-check that the source is still playing while we have
                  * the lock.
                  */
-                voice = GetSourceVoice(Source, Context);
+                ALvoice *voice{GetSourceVoice(Source, Context)};
                 if(voice)
                 {
                     if(ApplyOffset(Source, voice) == AL_FALSE)
                     {
-                        ALCdevice_Unlock(Context->Device);
+                        device->Backend->unlock();
                         SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid offset");
                     }
                 }
-                ALCdevice_Unlock(Context->Device);
+                device->Backend->unlock();
             }
             return AL_TRUE;
 
@@ -1321,18 +1321,19 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
             if(IsPlayingOrPaused(Source))
             {
-                ALCdevice_Lock(Context->Device);
+                ALCdevice *device{Context->Device};
+                device->Backend->lock();
                 ALvoice *voice{GetSourceVoice(Source, Context)};
                 if(voice)
                 {
                     if(ApplyOffset(Source, voice) == AL_FALSE)
                     {
-                        ALCdevice_Unlock(Context->Device);
+                        device->Backend->unlock();
                         SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE,
                                       "Invalid source offset");
                     }
                 }
-                ALCdevice_Unlock(Context->Device);
+                device->Backend->unlock();
             }
             return AL_TRUE;
 
@@ -2704,7 +2705,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", *bad_sid);
 
     ALCdevice *device{context->Device};
-    ALCdevice_Lock(device);
+    device->Backend->lock();
     /* If the device is disconnected, go right to stopped. */
     if(UNLIKELY(!device->Connected.load(std::memory_order_acquire)))
     {
@@ -2718,7 +2719,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 source->state = AL_STOPPED;
             }
         );
-        ALCdevice_Unlock(device);
+        device->Backend->unlock();
         return;
     }
 
@@ -2726,7 +2727,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     {
         if(UNLIKELY(context->MaxVoices > std::numeric_limits<ALsizei>::max()>>1))
         {
-            ALCdevice_Unlock(device);
+            device->Backend->unlock();
             SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
                 "Overflow increasing voice count from %d", context->MaxVoices);
         }
@@ -2861,7 +2862,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
     };
     std::for_each(sources, sources_end, start_source);
-    ALCdevice_Unlock(device);
+    device->Backend->unlock();
 }
 
 AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
@@ -2885,7 +2886,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     }
 
     ALCdevice *device{context->Device};
-    ALCdevice_Lock(device);
+    device->Backend->lock();
     for(ALsizei i{0};i < n;i++)
     {
         ALsource *source{LookupSource(context.get(), sources[i])};
@@ -2897,7 +2898,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
             SendStateChangeEvent(context.get(), source->id, AL_PAUSED);
         }
     }
-    ALCdevice_Unlock(device);
+    device->Backend->unlock();
 }
 
 AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
@@ -2921,7 +2922,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     }
 
     ALCdevice *device{context->Device};
-    ALCdevice_Lock(device);
+    device->Backend->lock();
     for(ALsizei i{0};i < n;i++)
     {
         ALsource *source{LookupSource(context.get(), sources[i])};
@@ -2941,7 +2942,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     }
-    ALCdevice_Unlock(device);
+    device->Backend->unlock();
 }
 
 AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
@@ -2965,7 +2966,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     }
 
     ALCdevice *device{context->Device};
-    ALCdevice_Lock(device);
+    device->Backend->lock();
     for(ALsizei i{0};i < n;i++)
     {
         ALsource *source{LookupSource(context.get(), sources[i])};
@@ -2984,7 +2985,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     }
-    ALCdevice_Unlock(device);
+    device->Backend->unlock();
 }
 
 

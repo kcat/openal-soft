@@ -355,42 +355,41 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags* UNUSED(ioActio
 {
     AudioUnitRenderActionFlags flags = 0;
     union {
-        ALbyte _[sizeof(AudioBufferList) + sizeof(AudioBuffer)];
+        ALbyte _[sizeof(AudioBufferList) + sizeof(AudioBuffer)*2];
         AudioBufferList list;
     } audiobuf = { { 0 } };
 
     auto rec_vec = mRing->getWriteVector();
+    inNumberFrames = minz(inNumberFrames, rec_vec.first.len+rec_vec.second.len);
 
-    // Fill the ringbuffer's first segment with data from the input device
-    size_t total_read{minz(rec_vec.first.len, inNumberFrames)};
-    audiobuf.list.mNumberBuffers = 1;
-    audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
-    audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
-    audiobuf.list.mBuffers[0].mDataByteSize = total_read * mFormat.mBytesPerFrame;
-    OSStatus err{AudioUnitRender(mAudioUnit, &flags, inTimeStamp, 1, inNumberFrames,
-        &audiobuf.list)};
-    if(err == noErr && inNumberFrames > rec_vec.first.len && rec_vec.second.len > 0)
+    // Fill the ringbuffer's two segments with data from the input device
+    if(rec_vec.first.len >= inNumberFrames)
     {
-        /* If there's still more to get and there's space in the ringbuffer's
-         * second segment, fill that with data too.
-         */
-        const size_t remlen{inNumberFrames - rec_vec.first.len};
-        const size_t toread{minz(rec_vec.second.len, remlen)};
-        total_read += toread;
-
         audiobuf.list.mNumberBuffers = 1;
         audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
-        audiobuf.list.mBuffers[0].mData = rec_vec.second.buf;
-        audiobuf.list.mBuffers[0].mDataByteSize = toread * mFormat.mBytesPerFrame;
-        err = AudioUnitRender(mAudioUnit, &flags, inTimeStamp, 1, inNumberFrames, &audiobuf.list);
+        audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
+        audiobuf.list.mBuffers[0].mDataByteSize = inNumberFrames * mFormat.mBytesPerFrame;
     }
+    else
+    {
+        const size_t remaining{inNumberFrames-rec_vec.first.len};
+        audiobuf.list.mNumberBuffers = 2;
+        audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
+        audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
+        audiobuf.list.mBuffers[0].mDataByteSize = rec_vec.first.len * mFormat.mBytesPerFrame;
+        audiobuf.list.mBuffers[1].mNumberChannels = mFormat.mChannelsPerFrame;
+        audiobuf.list.mBuffers[1].mData = rec_vec.second.buf;
+        audiobuf.list.mBuffers[1].mDataByteSize = remaining * mFormat.mBytesPerFrame;
+    }
+    OSStatus err{AudioUnitRender(mAudioUnit, &flags, inTimeStamp, audiobuf.list.mNumberBuffers,
+        inNumberFrames, &audiobuf.list)};
     if(err != noErr)
     {
         ERR("AudioUnitRender error: %d\n", err);
         return err;
     }
 
-    mRing->writeAdvance(total_read);
+    mRing->writeAdvance(inNumberFrames);
     return noErr;
 }
 

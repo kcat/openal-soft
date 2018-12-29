@@ -927,8 +927,8 @@ void QSABackendFactory::deinit()
     CaptureNameMap.clear();
 }
 
-bool QSABackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool QSABackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback || type == BackendType::Capture); }
 
 void QSABackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -952,11 +952,11 @@ void QSABackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *QSABackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *QSABackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new PlaybackWrapper{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new CaptureWrapper{device};
     return nullptr;
 }

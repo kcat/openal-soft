@@ -364,8 +364,8 @@ void WaveBackend::stop()
 bool WaveBackendFactory::init()
 { return true; }
 
-bool WaveBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback); }
+bool WaveBackendFactory::querySupport(BackendType type)
+{ return type == BackendType::Playback; }
 
 void WaveBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -380,9 +380,9 @@ void WaveBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *WaveBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *WaveBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new WaveBackend{device};
     return nullptr;
 }

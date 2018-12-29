@@ -607,8 +607,8 @@ void WinMMBackendFactory::deinit()
     CaptureDevices.clear();
 }
 
-bool WinMMBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool WinMMBackendFactory::querySupport(BackendType type)
+{ return type == BackendType::Playback || type == BackendType::Capture; }
 
 void WinMMBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -634,11 +634,11 @@ void WinMMBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *WinMMBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *WinMMBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new WinMMPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new WinMMCapture{device};
     return nullptr;
 }

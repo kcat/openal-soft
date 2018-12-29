@@ -524,10 +524,10 @@ al::vector<DevMap> CaptureDevices;
 
 pa_stream *pulse_connect_stream(const char *device_name, pa_threaded_mainloop *loop,
     pa_context *context, pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
-    pa_channel_map *chanmap, ALCbackend_Type type)
+    pa_channel_map *chanmap, BackendType type)
 {
     pa_stream *stream{pa_stream_new_with_proplist(context,
-        (type==ALCbackend_Playback) ? "Playback Stream" : "Capture Stream", spec, chanmap,
+        (type==BackendType::Playback) ? "Playback Stream" : "Capture Stream", spec, chanmap,
         prop_filter)};
     if(!stream)
     {
@@ -537,7 +537,7 @@ pa_stream *pulse_connect_stream(const char *device_name, pa_threaded_mainloop *l
 
     pa_stream_set_state_callback(stream, stream_state_callback, loop);
 
-    int err{(type==ALCbackend_Playback) ?
+    int err{(type==BackendType::Playback) ?
         pa_stream_connect_playback(stream, device_name, attr, flags, nullptr, nullptr) :
         pa_stream_connect_record(stream, device_name, attr, flags)};
     if(err < 0)
@@ -620,7 +620,7 @@ void probePlaybackDevices(void)
             spec.channels = 2;
 
             pa_stream *stream{pulse_connect_stream(nullptr, loop, context, flags, nullptr, &spec,
-                nullptr, ALCbackend_Playback)};
+                nullptr, BackendType::Playback)};
             if(stream)
             {
                 pa_operation *op{pa_context_get_sink_info_by_name(context,
@@ -702,7 +702,7 @@ void probeCaptureDevices(void)
             spec.channels = 1;
 
             pa_stream *stream{pulse_connect_stream(nullptr, loop, context, flags, nullptr, &spec,
-                nullptr, ALCbackend_Capture)};
+                nullptr, BackendType::Capture)};
             if(stream)
             {
                 pa_operation *op{pa_context_get_source_info_by_name(context,
@@ -986,7 +986,7 @@ ALCenum PulsePlayback::open(const ALCchar *name)
         if(pulse_name && !pulse_name[0]) pulse_name = nullptr;
     }
     mStream = pulse_connect_stream(pulse_name, mLoop, mContext, flags, nullptr, &spec, nullptr,
-        ALCbackend_Playback);
+        BackendType::Playback);
     if(!mStream)
     {
         palock = unique_palock{};
@@ -1117,7 +1117,7 @@ ALCboolean PulsePlayback::reset()
     mAttr.fragsize = -1;
 
     mStream = pulse_connect_stream(mDeviceName.c_str(), mLoop, mContext, flags, &mAttr, &mSpec,
-        &chanmap, ALCbackend_Playback);
+        &chanmap, BackendType::Playback);
     if(!mStream) return ALC_FALSE;
 
     pa_stream_set_state_callback(mStream, &PulsePlayback::streamStateCallbackC, this);
@@ -1445,7 +1445,7 @@ ALCenum PulseCapture::open(const ALCchar *name)
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     mStream = pulse_connect_stream(pulse_name, mLoop, mContext, flags, &mAttr, &mSpec, &chanmap,
-        ALCbackend_Capture);
+        BackendType::Capture);
     if(!mStream) return ALC_INVALID_VALUE;
 
     pa_stream_set_moved_callback(mStream, &PulseCapture::streamMovedCallbackC, this);
@@ -1638,12 +1638,8 @@ void PulseBackendFactory::deinit()
     /* PulseAudio doesn't like being CloseLib'd sometimes */
 }
 
-bool PulseBackendFactory::querySupport(ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return true;
-    return false;
-}
+bool PulseBackendFactory::querySupport(BackendType type)
+{ return type == BackendType::Playback || type == BackendType::Capture; }
 
 void PulseBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -1668,11 +1664,11 @@ void PulseBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *PulseBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *PulseBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new PulsePlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new PulseCapture{device};
     return nullptr;
 }

@@ -911,8 +911,8 @@ void DSoundBackendFactory::deinit()
 #endif
 }
 
-bool DSoundBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool DSoundBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback || type == BackendType::Capture); }
 
 void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -949,11 +949,11 @@ void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
         CoUninitialize();
 }
 
-BackendBase *DSoundBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *DSoundBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new DSoundPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new DSoundCapture{device};
     return nullptr;
 }

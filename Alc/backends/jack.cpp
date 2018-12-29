@@ -541,8 +541,8 @@ void JackBackendFactory::deinit()
 #endif
 }
 
-bool JackBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback); }
+bool JackBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback); }
 
 void JackBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -558,9 +558,9 @@ void JackBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *JackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *JackBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new JackPlayback{device};
     return nullptr;
 }

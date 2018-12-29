@@ -8,11 +8,11 @@ public:
     bool init() override;
     /*void deinit() override;*/
 
-    bool querySupport(ALCbackend_Type type) override;
+    bool querySupport(BackendType type) override;
 
     void probe(DevProbe type, std::string *outnames) override;
 
-    BackendBase *createBackend(ALCdevice *device, ALCbackend_Type type) override;
+    BackendBase *createBackend(ALCdevice *device, BackendType type) override;
 
     static BackendFactory &getFactory();
 };

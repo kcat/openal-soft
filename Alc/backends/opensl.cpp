@@ -919,8 +919,8 @@ ALCuint OpenSLCapture::availableSamples()
 
 bool OSLBackendFactory::init() { return true; }
 
-bool OSLBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool OSLBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback || type == BackendType::Capture); }
 
 void OSLBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -934,11 +934,11 @@ void OSLBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *OSLBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *OSLBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new OpenSLPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new OpenSLCapture{device};
     return nullptr;
 }

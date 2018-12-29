@@ -64,15 +64,15 @@ void LoopbackBackend::stop()
 bool LoopbackBackendFactory::init()
 { return true; }
 
-bool LoopbackBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Loopback); }
+bool LoopbackBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Loopback); }
 
 void LoopbackBackendFactory::probe(DevProbe, std::string*)
 { }
 
-BackendBase *LoopbackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *LoopbackBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Loopback)
+    if(type == BackendType::Loopback)
         new LoopbackBackend{device};
     return nullptr;
 }

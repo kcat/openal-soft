@@ -55,10 +55,10 @@ struct BackendBase {
 };
 
 
-enum ALCbackend_Type {
-    ALCbackend_Playback,
-    ALCbackend_Capture,
-    ALCbackend_Loopback
+enum class BackendType {
+    Playback,
+    Capture,
+    Loopback
 };
 
 
@@ -66,11 +66,11 @@ struct BackendFactory {
     virtual bool init() = 0;
     virtual void deinit() { }
 
-    virtual bool querySupport(ALCbackend_Type type) = 0;
+    virtual bool querySupport(BackendType type) = 0;
 
     virtual void probe(DevProbe type, std::string *outnames) = 0;
 
-    virtual BackendBase *createBackend(ALCdevice *device, ALCbackend_Type type) = 0;
+    virtual BackendBase *createBackend(ALCdevice *device, BackendType type) = 0;
 };
 
 #endif /* ALC_BACKENDS_BASE_H */

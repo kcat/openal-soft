@@ -153,8 +153,8 @@ void NullBackend::stop()
 bool NullBackendFactory::init()
 { return true; }
 
-bool NullBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback); }
+bool NullBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback); }
 
 void NullBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -169,9 +169,9 @@ void NullBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *NullBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *NullBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new NullBackend{device};
     return nullptr;
 }

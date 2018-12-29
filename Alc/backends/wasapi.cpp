@@ -1773,8 +1773,8 @@ void WasapiBackendFactory::deinit()
     }
 }
 
-bool WasapiBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool WasapiBackendFactory::querySupport(BackendType type)
+{ return type == BackendType::Playback || type == BackendType::Capture; }
 
 void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -1810,11 +1810,11 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *WasapiBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *WasapiBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new WasapiPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new WasapiCapture{device};
     return nullptr;
 }

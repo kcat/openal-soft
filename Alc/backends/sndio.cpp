@@ -477,8 +477,8 @@ BackendFactory &SndIOBackendFactory::getFactory()
 bool SndIOBackendFactory::init()
 { return true; }
 
-bool SndIOBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool SndIOBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback || type == BackendType::Capture); }
 
 void SndIOBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -492,11 +492,11 @@ void SndIOBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *SndIOBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *SndIOBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new SndioPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new SndioCapture{device};
     return nullptr;
 }

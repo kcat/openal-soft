@@ -1116,12 +1116,12 @@ static void alc_initconfig(void)
         }
 
         TRACE("Initialized backend \"%s\"\n", BackendList[n].name);
-        if(!PlaybackBackend.name && factory.querySupport(ALCbackend_Playback))
+        if(!PlaybackBackend.name && factory.querySupport(BackendType::Playback))
         {
             PlaybackBackend = BackendList[n];
             TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
         }
-        if(!CaptureBackend.name && factory.querySupport(ALCbackend_Capture))
+        if(!CaptureBackend.name && factory.querySupport(BackendType::Capture))
         {
             CaptureBackend = BackendList[n];
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
@@ -3768,8 +3768,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    device->Backend = PlaybackBackend.getFactory().createBackend(
-        device.get(), ALCbackend_Playback);
+    device->Backend = PlaybackBackend.getFactory().createBackend(device.get(),
+        BackendType::Playback);
     if(!device->Backend)
     {
         device = nullptr;
@@ -3917,7 +3917,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->UpdateSize = samples;
     device->NumUpdates = 1;
 
-    device->Backend = CaptureBackend.getFactory().createBackend(device.get(), ALCbackend_Capture);
+    device->Backend = CaptureBackend.getFactory().createBackend(device.get(),
+        BackendType::Capture);
     if(!device->Backend)
     {
         device = nullptr;
@@ -4093,8 +4094,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    device->Backend = LoopbackBackendFactory::getFactory().createBackend(
-        device.get(), ALCbackend_Loopback);
+    device->Backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
+        BackendType::Loopback);
     if(!device->Backend)
     {
         device = nullptr;

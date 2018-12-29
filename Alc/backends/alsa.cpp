@@ -1266,8 +1266,8 @@ void AlsaBackendFactory::deinit()
 #endif
 }
 
-bool AlsaBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool AlsaBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback || type == BackendType::Capture); }
 
 void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -1292,11 +1292,11 @@ void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *AlsaBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *AlsaBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new AlsaPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new AlsaCapture{device};
     return nullptr;
 }

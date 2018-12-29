@@ -452,8 +452,8 @@ void PortBackendFactory::deinit()
 #endif
 }
 
-bool PortBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
+bool PortBackendFactory::querySupport(BackendType type)
+{ return (type == BackendType::Playback || type == BackendType::Capture); }
 
 void PortBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -467,11 +467,11 @@ void PortBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *PortBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *PortBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new PortPlayback{device};
-    if(type == ALCbackend_Capture)
+    if(type == BackendType::Capture)
         return new PortCapture{device};
     return nullptr;
 }

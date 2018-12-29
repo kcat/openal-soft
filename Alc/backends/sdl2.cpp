@@ -202,10 +202,8 @@ void SDL2BackendFactory::deinit()
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-bool SDL2BackendFactory::querySupport(ALCbackend_Type type)
-{
-    return (type == ALCbackend_Playback);
-}
+bool SDL2BackendFactory::querySupport(BackendType type)
+{ return type == BackendType::Playback; }
 
 void SDL2BackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -225,9 +223,9 @@ void SDL2BackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *SDL2BackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *SDL2BackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new Sdl2Backend{device};
     return nullptr;
 }

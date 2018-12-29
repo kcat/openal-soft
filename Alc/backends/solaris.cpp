@@ -270,8 +270,8 @@ bool SolarisBackendFactory::init()
     return true;
 }
 
-bool SolarisBackendFactory::querySupport(ALCbackend_Type type)
-{ return (type == ALCbackend_Playback); }
+bool SolarisBackendFactory::querySupport(BackendType type)
+{ return type == BackendType::Playback; }
 
 void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
 {
@@ -292,9 +292,9 @@ void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *SolarisBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *SolarisBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == BackendType::Playback)
         return new SolarisBackend{device};
     return nullptr;
 }

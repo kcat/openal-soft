@@ -27,6 +27,7 @@
 #include <memory.h>
 
 #include <thread>
+#include <functional>
 
 #include "alMain.h"
 #include "alu.h"

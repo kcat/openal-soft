@@ -35,6 +35,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <functional>
 
 #include "alMain.h"
 #include "alu.h"

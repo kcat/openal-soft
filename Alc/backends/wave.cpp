@@ -30,6 +30,7 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <functional>
 
 #include "alMain.h"
 #include "alu.h"

@@ -1223,7 +1223,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                 if(mChannelConv)
                 {
                     samples.resize(numsamples*2);
-                    ChannelConverterInput(mChannelConv.get(), rdata, samples.data(), numsamples);
+                    mChannelConv->convert(rdata, samples.data(), numsamples);
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
@@ -1235,16 +1235,16 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                     const ALvoid *srcdata{rdata};
                     auto srcframes = static_cast<ALsizei>(numsamples);
 
-                    dstframes = SampleConverterInput(mSampleConv.get(), &srcdata, &srcframes,
-                        data.first.buf, (ALsizei)minz(data.first.len, INT_MAX));
+                    dstframes = mSampleConv->convert(&srcdata, &srcframes, data.first.buf,
+                        static_cast<ALsizei>(minz(data.first.len, INT_MAX)));
                     if(srcframes > 0 && dstframes == data.first.len && data.second.len > 0)
                     {
                         /* If some source samples remain, all of the first dest
                          * block was filled, and there's space in the second
                          * dest block, do another run for the second block.
                          */
-                        dstframes += SampleConverterInput(mSampleConv.get(), &srcdata, &srcframes,
-                            data.second.buf, (ALsizei)minz(data.second.len, INT_MAX));
+                        dstframes += mSampleConv->convert(&srcdata, &srcframes, data.second.buf,
+                            static_cast<ALsizei>(minz(data.second.len, INT_MAX)));
                     }
                 }
                 else

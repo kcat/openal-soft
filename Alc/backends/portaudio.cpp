@@ -467,12 +467,12 @@ void PortBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *PortBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr PortBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new PortPlayback{device};
+        return BackendPtr{new PortPlayback{device}};
     if(type == BackendType::Capture)
-        return new PortCapture{device};
+        return BackendPtr{new PortCapture{device}};
     return nullptr;
 }
 

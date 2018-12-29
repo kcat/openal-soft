@@ -751,11 +751,11 @@ void OSSBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *OSSBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr OSSBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new OSSPlayback{device};
+        return BackendPtr{new OSSPlayback{device}};
     if(type == BackendType::Capture)
-        return new OSScapture{device};
+        return BackendPtr{new OSScapture{device}};
     return nullptr;
 }

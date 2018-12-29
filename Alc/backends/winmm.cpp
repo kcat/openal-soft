@@ -634,12 +634,12 @@ void WinMMBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *WinMMBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WinMMBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new WinMMPlayback{device};
+        return BackendPtr{new WinMMPlayback{device}};
     if(type == BackendType::Capture)
-        return new WinMMCapture{device};
+        return BackendPtr{new WinMMCapture{device}};
     return nullptr;
 }
 

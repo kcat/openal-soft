@@ -380,10 +380,10 @@ void WaveBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *WaveBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WaveBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new WaveBackend{device};
+        return BackendPtr{new WaveBackend{device}};
     return nullptr;
 }
 

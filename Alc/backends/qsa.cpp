@@ -952,12 +952,12 @@ void QSABackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *QSABackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr QSABackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new PlaybackWrapper{device};
+        return BackendPtr{new PlaybackWrapper{device}};
     if(type == BackendType::Capture)
-        return new CaptureWrapper{device};
+        return BackendPtr{new CaptureWrapper{device}};
     return nullptr;
 }
 

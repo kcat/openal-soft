@@ -934,12 +934,12 @@ void OSLBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *OSLBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr OSLBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new OpenSLPlayback{device};
+        return BackendPtr{new OpenSLPlayback{device}};
     if(type == BackendType::Capture)
-        return new OpenSLCapture{device};
+        return BackendPtr{new OpenSLCapture{device}};
     return nullptr;
 }
 

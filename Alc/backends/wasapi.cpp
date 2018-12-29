@@ -1810,12 +1810,12 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *WasapiBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WasapiBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new WasapiPlayback{device};
+        return BackendPtr{new WasapiPlayback{device}};
     if(type == BackendType::Capture)
-        return new WasapiCapture{device};
+        return BackendPtr{new WasapiCapture{device}};
     return nullptr;
 }
 

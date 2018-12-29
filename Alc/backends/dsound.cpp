@@ -949,11 +949,11 @@ void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
         CoUninitialize();
 }
 
-BackendBase *DSoundBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr DSoundBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new DSoundPlayback{device};
+        return BackendPtr{new DSoundPlayback{device}};
     if(type == BackendType::Capture)
-        return new DSoundCapture{device};
+        return BackendPtr{new DSoundCapture{device}};
     return nullptr;
 }

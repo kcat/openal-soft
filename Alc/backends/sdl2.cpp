@@ -223,9 +223,9 @@ void SDL2BackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *SDL2BackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SDL2BackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new Sdl2Backend{device};
+        return BackendPtr{new Sdl2Backend{device}};
     return nullptr;
 }

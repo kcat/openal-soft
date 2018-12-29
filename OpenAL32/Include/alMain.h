@@ -786,7 +786,7 @@ struct ALCdevice_struct {
     std::atomic<ALCcontext*> ContextList{nullptr};
 
     std::mutex BackendLock;
-    BackendBase *Backend{nullptr};
+    std::unique_ptr<BackendBase> Backend;
 
     std::atomic<ALCdevice*> next{nullptr};
 

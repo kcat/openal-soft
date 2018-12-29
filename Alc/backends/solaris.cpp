@@ -292,9 +292,9 @@ void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *SolarisBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SolarisBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new SolarisBackend{device};
+        return BackendPtr{new SolarisBackend{device}};
     return nullptr;
 }

@@ -1664,12 +1664,12 @@ void PulseBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *PulseBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr PulseBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new PulsePlayback{device};
+        return BackendPtr{new PulsePlayback{device}};
     if(type == BackendType::Capture)
-        return new PulseCapture{device};
+        return BackendPtr{new PulseCapture{device}};
     return nullptr;
 }
 

@@ -558,10 +558,10 @@ void JackBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *JackBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr JackBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new JackPlayback{device};
+        return BackendPtr{new JackPlayback{device}};
     return nullptr;
 }
 

@@ -1,6 +1,7 @@
 #ifndef ALC_BACKENDS_BASE_H
 #define ALC_BACKENDS_BASE_H
 
+#include <memory>
 #include <chrono>
 #include <string>
 #include <mutex>
@@ -53,7 +54,7 @@ struct BackendBase {
     BackendBase(ALCdevice *device) noexcept;
     virtual ~BackendBase();
 };
-
+using BackendPtr = std::unique_ptr<BackendBase>;
 
 enum class BackendType {
     Playback,
@@ -70,7 +71,7 @@ struct BackendFactory {
 
     virtual void probe(DevProbe type, std::string *outnames) = 0;
 
-    virtual BackendBase *createBackend(ALCdevice *device, BackendType type) = 0;
+    virtual BackendPtr createBackend(ALCdevice *device, BackendType type) = 0;
 };
 
 #endif /* ALC_BACKENDS_BASE_H */

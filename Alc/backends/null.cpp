@@ -169,10 +169,10 @@ void NullBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *NullBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr NullBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new NullBackend{device};
+        return BackendPtr{new NullBackend{device}};
     return nullptr;
 }
 

@@ -2203,7 +2203,6 @@ ALCdevice_struct::~ALCdevice_struct()
 {
     TRACE("%p\n", this);
 
-    delete Backend;
     Backend = nullptr;
 
     size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), size_t{0u},
@@ -4037,7 +4036,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 
     ALCenum err{ALC_INVALID_VALUE};
     { std::lock_guard<std::mutex> _{dev->BackendLock};
-        BackendBase *backend{dev->Backend};
+        BackendBase *backend{dev->Backend.get()};
         if(samples >= 0 && backend->availableSamples() >= (ALCuint)samples)
             err = backend->captureSamples(buffer, samples);
     }

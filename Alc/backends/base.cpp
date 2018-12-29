@@ -19,7 +19,7 @@ void ALCdevice_Unlock(ALCdevice *device)
 
 ClockLatency GetClockLatency(ALCdevice *device)
 {
-    BackendBase *backend{device->Backend};
+    BackendBase *backend{device->Backend.get()};
     ClockLatency ret{backend->getClockLatency()};
     ret.Latency += device->FixedLatency;
     return ret;

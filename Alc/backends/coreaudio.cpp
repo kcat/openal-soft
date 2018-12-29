@@ -703,11 +703,11 @@ void CoreAudioBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *CoreAudioBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr CoreAudioBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new CoreAudioPlayback{device};
+        return BackendPtr{new CoreAudioPlayback{device}};
     if(type == BackendType::Capture)
-        return new CoreAudioCapture{device};
+        return BackendPtr{new CoreAudioCapture{device}};
     return nullptr;
 }

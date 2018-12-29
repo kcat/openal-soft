@@ -1292,12 +1292,12 @@ void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *AlsaBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr AlsaBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new AlsaPlayback{device};
+        return BackendPtr{new AlsaPlayback{device}};
     if(type == BackendType::Capture)
-        return new AlsaCapture{device};
+        return BackendPtr{new AlsaCapture{device}};
     return nullptr;
 }
 

@@ -492,11 +492,11 @@ void SndIOBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-BackendBase *SndIOBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SndIOBackendFactory::createBackend(ALCdevice *device, BackendType type)
 {
     if(type == BackendType::Playback)
-        return new SndioPlayback{device};
+        return BackendPtr{new SndioPlayback{device}};
     if(type == BackendType::Capture)
-        return new SndioCapture{device};
+        return BackendPtr{new SndioCapture{device}};
     return nullptr;
 }

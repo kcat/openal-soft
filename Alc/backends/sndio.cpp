@@ -42,11 +42,16 @@ namespace {
 static const ALCchar sndio_device[] = "SndIO Default";
 
 
-struct SndioPlayback final : public ALCbackend {
-    SndioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct SndioPlayback final : public BackendBase {
+    SndioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~SndioPlayback() override;
 
     int mixerProc();
+
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean reset() override;
+    ALCboolean start() override;
+    void stop() override;
 
     sio_hdl *mSndHandle{nullptr};
 
@@ -56,31 +61,8 @@ struct SndioPlayback final : public ALCbackend {
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "SndioPlayback::"; }
+    DEF_NEWDEL(SndioPlayback)
 };
-
-void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device);
-void SndioPlayback_Destruct(SndioPlayback *self);
-ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name);
-ALCboolean SndioPlayback_reset(SndioPlayback *self);
-ALCboolean SndioPlayback_start(SndioPlayback *self);
-void SndioPlayback_stop(SndioPlayback *self);
-DECLARE_FORWARD2(SndioPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-DECLARE_FORWARD(SndioPlayback, ALCbackend, ALCuint, availableSamples)
-DECLARE_FORWARD(SndioPlayback, ALCbackend, ClockLatency, getClockLatency)
-DECLARE_FORWARD(SndioPlayback, ALCbackend, void, lock)
-DECLARE_FORWARD(SndioPlayback, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(SndioPlayback)
-
-DEFINE_ALCBACKEND_VTABLE(SndioPlayback);
-
-void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device)
-{
-    new (self) SndioPlayback{device};
-    SET_VTABLE2(SndioPlayback, ALCbackend, self);
-}
-
-void SndioPlayback_Destruct(SndioPlayback *self)
-{ self->~SndioPlayback(); }
 
 SndioPlayback::~SndioPlayback()
 {
@@ -102,18 +84,18 @@ int SndioPlayback::mixerProc()
         auto WritePtr = static_cast<ALubyte*>(mBuffer.data());
         size_t len{mBuffer.size()};
 
-        SndioPlayback_lock(this);
+        lock();
         aluMixData(mDevice, WritePtr, len/frameSize);
-        SndioPlayback_unlock(this);
+        unlock();
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             size_t wrote{sio_write(mSndHandle, WritePtr, len)};
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
-                SndioPlayback_lock(this);
+                lock();
                 aluHandleDisconnect(mDevice, "Failed to write playback samples");
-                SndioPlayback_unlock(this);
+                unlock();
                 break;
             }
 
@@ -126,37 +108,33 @@ int SndioPlayback::mixerProc()
 }
 
 
-ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
+ALCenum SndioPlayback::open(const ALCchar *name)
 {
-    ALCdevice *device{self->mDevice};
-
     if(!name)
         name = sndio_device;
     else if(strcmp(name, sndio_device) != 0)
         return ALC_INVALID_VALUE;
 
-    self->mSndHandle = sio_open(nullptr, SIO_PLAY, 0);
-    if(self->mSndHandle == nullptr)
+    mSndHandle = sio_open(nullptr, SIO_PLAY, 0);
+    if(mSndHandle == nullptr)
     {
         ERR("Could not open device\n");
         return ALC_INVALID_VALUE;
     }
 
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
-ALCboolean SndioPlayback_reset(SndioPlayback *self)
+ALCboolean SndioPlayback::reset()
 {
-    ALCdevice *device{self->mDevice};
     sio_par par;
-
     sio_initpar(&par);
 
-    par.rate = device->Frequency;
-    par.pchan = ((device->FmtChans != DevFmtMono) ? 2 : 1);
+    par.rate = mDevice->Frequency;
+    par.pchan = ((mDevice->FmtChans != DevFmtMono) ? 2 : 1);
 
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtByte:
             par.bits = 8;
@@ -186,11 +164,11 @@ ALCboolean SndioPlayback_reset(SndioPlayback *self)
     }
     par.le = SIO_LE_NATIVE;
 
-    par.round = device->UpdateSize;
-    par.appbufsz = device->UpdateSize * (device->NumUpdates-1);
-    if(!par.appbufsz) par.appbufsz = device->UpdateSize;
+    par.round = mDevice->UpdateSize;
+    par.appbufsz = mDevice->UpdateSize * (mDevice->NumUpdates-1);
+    if(!par.appbufsz) par.appbufsz = mDevice->UpdateSize;
 
-    if(!sio_setpar(self->mSndHandle, &par) || !sio_getpar(self->mSndHandle, &par))
+    if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
     {
         ERR("Failed to set device parameters\n");
         return ALC_FALSE;
@@ -202,49 +180,49 @@ ALCboolean SndioPlayback_reset(SndioPlayback *self)
         return ALC_FALSE;
     }
 
-    device->Frequency = par.rate;
-    device->FmtChans = ((par.pchan==1) ? DevFmtMono : DevFmtStereo);
+    mDevice->Frequency = par.rate;
+    mDevice->FmtChans = ((par.pchan==1) ? DevFmtMono : DevFmtStereo);
 
     if(par.bits == 8 && par.sig == 1)
-        device->FmtType = DevFmtByte;
+        mDevice->FmtType = DevFmtByte;
     else if(par.bits == 8 && par.sig == 0)
-        device->FmtType = DevFmtUByte;
+        mDevice->FmtType = DevFmtUByte;
     else if(par.bits == 16 && par.sig == 1)
-        device->FmtType = DevFmtShort;
+        mDevice->FmtType = DevFmtShort;
     else if(par.bits == 16 && par.sig == 0)
-        device->FmtType = DevFmtUShort;
+        mDevice->FmtType = DevFmtUShort;
     else if(par.bits == 32 && par.sig == 1)
-        device->FmtType = DevFmtInt;
+        mDevice->FmtType = DevFmtInt;
     else if(par.bits == 32 && par.sig == 0)
-        device->FmtType = DevFmtUInt;
+        mDevice->FmtType = DevFmtUInt;
     else
     {
         ERR("Unhandled sample format: %s %u-bit\n", (par.sig?"signed":"unsigned"), par.bits);
         return ALC_FALSE;
     }
 
-    SetDefaultChannelOrder(device);
+    SetDefaultChannelOrder(mDevice);
 
-    device->UpdateSize = par.round;
-    device->NumUpdates = (par.bufsz/par.round) + 1;
+    mDevice->UpdateSize = par.round;
+    mDevice->NumUpdates = (par.bufsz/par.round) + 1;
 
-    self->mBuffer.resize(device->UpdateSize * device->frameSizeFromFmt());
-    std::fill(self->mBuffer.begin(), self->mBuffer.end(), 0);
+    mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
+    std::fill(mBuffer.begin(), mBuffer.end(), 0);
 
     return ALC_TRUE;
 }
 
-ALCboolean SndioPlayback_start(SndioPlayback *self)
+ALCboolean SndioPlayback::start()
 {
-    if(!sio_start(self->mSndHandle))
+    if(!sio_start(mSndHandle))
     {
         ERR("Error starting playback\n");
         return ALC_FALSE;
     }
 
     try {
-        self->mKillNow.store(false, std::memory_order_release);
-        self->mThread = std::thread{std::mem_fn(&SndioPlayback::mixerProc), self};
+        mKillNow.store(false, std::memory_order_release);
+        mThread = std::thread{std::mem_fn(&SndioPlayback::mixerProc), this};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -252,26 +230,32 @@ ALCboolean SndioPlayback_start(SndioPlayback *self)
     }
     catch(...) {
     }
-    sio_stop(self->mSndHandle);
+    sio_stop(mSndHandle);
     return ALC_FALSE;
 }
 
-void SndioPlayback_stop(SndioPlayback *self)
+void SndioPlayback::stop()
 {
-    if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
-    self->mThread.join();
+    mThread.join();
 
-    if(!sio_stop(self->mSndHandle))
+    if(!sio_stop(mSndHandle))
         ERR("Error stopping device\n");
 }
 
 
-struct SndioCapture final : public ALCbackend {
-    SndioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct SndioCapture final : public BackendBase {
+    SndioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~SndioCapture() override;
 
     int recordProc();
+
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean start() override;
+    void stop() override;
+    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCuint availableSamples() override;
 
     sio_hdl *mSndHandle{nullptr};
 
@@ -281,31 +265,8 @@ struct SndioCapture final : public ALCbackend {
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "SndioCapture::"; }
+    DEF_NEWDEL(SndioCapture)
 };
-
-void SndioCapture_Construct(SndioCapture *self, ALCdevice *device);
-void SndioCapture_Destruct(SndioCapture *self);
-ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name);
-DECLARE_FORWARD(SndioCapture, ALCbackend, ALCboolean, reset)
-ALCboolean SndioCapture_start(SndioCapture *self);
-void SndioCapture_stop(SndioCapture *self);
-ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples);
-ALCuint SndioCapture_availableSamples(SndioCapture *self);
-DECLARE_FORWARD(SndioCapture, ALCbackend, ClockLatency, getClockLatency)
-DECLARE_FORWARD(SndioCapture, ALCbackend, void, lock)
-DECLARE_FORWARD(SndioCapture, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(SndioCapture)
-
-DEFINE_ALCBACKEND_VTABLE(SndioCapture);
-
-void SndioCapture_Construct(SndioCapture *self, ALCdevice *device)
-{
-    new (self) SndioCapture{device};
-    SET_VTABLE2(SndioCapture, ALCbackend, self);
-}
-
-void SndioCapture_Destruct(SndioCapture *self)
-{ self->~SndioCapture(); }
 
 SndioCapture::~SndioCapture()
 {
@@ -346,9 +307,9 @@ int SndioCapture::recordProc()
             size_t got{sio_read(mSndHandle, data.first.buf, minz(todo-total, data.first.len))};
             if(!got)
             {
-                SndioCapture_lock(this);
+                lock();
                 aluHandleDisconnect(mDevice, "Failed to read capture samples");
-                SndioCapture_unlock(this);
+                unlock();
                 break;
             }
 
@@ -363,26 +324,24 @@ int SndioCapture::recordProc()
 }
 
 
-ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
+ALCenum SndioCapture::open(const ALCchar *name)
 {
-    ALCdevice *device{self->mDevice};
-    sio_par par;
-
     if(!name)
         name = sndio_device;
     else if(strcmp(name, sndio_device) != 0)
         return ALC_INVALID_VALUE;
 
-    self->mSndHandle = sio_open(nullptr, SIO_REC, 0);
-    if(self->mSndHandle == nullptr)
+    mSndHandle = sio_open(nullptr, SIO_REC, 0);
+    if(mSndHandle == nullptr)
     {
         ERR("Could not open device\n");
         return ALC_INVALID_VALUE;
     }
 
+    sio_par par;
     sio_initpar(&par);
 
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtByte:
             par.bps = 1;
@@ -409,23 +368,23 @@ ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
             par.sig = 0;
             break;
         case DevFmtFloat:
-            ERR("%s capture samples not supported\n", DevFmtTypeString(device->FmtType));
+            ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
             return ALC_INVALID_VALUE;
     }
     par.bits = par.bps * 8;
     par.le = SIO_LE_NATIVE;
     par.msb = SIO_LE_NATIVE ? 0 : 1;
-    par.rchan = device->channelsFromFmt();
-    par.rate = device->Frequency;
+    par.rchan = mDevice->channelsFromFmt();
+    par.rate = mDevice->Frequency;
 
-    par.appbufsz = maxu(device->UpdateSize*device->NumUpdates, (device->Frequency+9)/10);
-    par.round = clampu(par.appbufsz/device->NumUpdates, (device->Frequency+99)/100,
-                       (device->Frequency+19)/20);
+    par.appbufsz = maxu(mDevice->UpdateSize*mDevice->NumUpdates, (mDevice->Frequency+9)/10);
+    par.round = clampu(par.appbufsz/mDevice->NumUpdates, (mDevice->Frequency+99)/100,
+        (mDevice->Frequency+19)/20);
 
-    device->UpdateSize = par.round;
-    device->NumUpdates = maxu(par.appbufsz/par.round, 1);
+    mDevice->UpdateSize = par.round;
+    mDevice->NumUpdates = maxu(par.appbufsz/par.round, 1);
 
-    if(!sio_setpar(self->mSndHandle, &par) || !sio_getpar(self->mSndHandle, &par))
+    if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
     {
         ERR("Failed to set device parameters\n");
         return ALC_INVALID_VALUE;
@@ -437,46 +396,46 @@ ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    if(!((device->FmtType == DevFmtByte && par.bits == 8 && par.sig != 0) ||
-         (device->FmtType == DevFmtUByte && par.bits == 8 && par.sig == 0) ||
-         (device->FmtType == DevFmtShort && par.bits == 16 && par.sig != 0) ||
-         (device->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0) ||
-         (device->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0) ||
-         (device->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0)) ||
-       device->channelsFromFmt() != (ALsizei)par.rchan ||
-       device->Frequency != par.rate)
+    if(!((mDevice->FmtType == DevFmtByte && par.bits == 8 && par.sig != 0) ||
+         (mDevice->FmtType == DevFmtUByte && par.bits == 8 && par.sig == 0) ||
+         (mDevice->FmtType == DevFmtShort && par.bits == 16 && par.sig != 0) ||
+         (mDevice->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0) ||
+         (mDevice->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0) ||
+         (mDevice->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0)) ||
+       mDevice->channelsFromFmt() != (ALsizei)par.rchan ||
+       mDevice->Frequency != par.rate)
     {
         ERR("Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead\n",
-            DevFmtTypeString(device->FmtType), DevFmtChannelsString(device->FmtChans),
-            device->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate);
+            DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
+            mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate);
         return ALC_INVALID_VALUE;
     }
 
-    self->mRing = CreateRingBuffer(device->UpdateSize*device->NumUpdates, par.bps*par.rchan, false);
-    if(!self->mRing)
+    mRing = CreateRingBuffer(mDevice->UpdateSize*mDevice->NumUpdates, par.bps*par.rchan, false);
+    if(!mRing)
     {
         ERR("Failed to allocate %u-byte ringbuffer\n",
-            device->UpdateSize*device->NumUpdates*par.bps*par.rchan);
+            mDevice->UpdateSize*mDevice->NumUpdates*par.bps*par.rchan);
         return ALC_OUT_OF_MEMORY;
     }
 
-    SetDefaultChannelOrder(device);
+    SetDefaultChannelOrder(mDevice);
 
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
-ALCboolean SndioCapture_start(SndioCapture *self)
+ALCboolean SndioCapture::start()
 {
-    if(!sio_start(self->mSndHandle))
+    if(!sio_start(mSndHandle))
     {
         ERR("Error starting playback\n");
         return ALC_FALSE;
     }
 
     try {
-        self->mKillNow.store(false, std::memory_order_release);
-        self->mThread = std::thread{std::mem_fn(&SndioCapture::recordProc), self};
+        mKillNow.store(false, std::memory_order_release);
+        mThread = std::thread{std::mem_fn(&SndioCapture::recordProc), this};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -484,32 +443,28 @@ ALCboolean SndioCapture_start(SndioCapture *self)
     }
     catch(...) {
     }
-    sio_stop(self->mSndHandle);
+    sio_stop(mSndHandle);
     return ALC_FALSE;
 }
 
-void SndioCapture_stop(SndioCapture *self)
+void SndioCapture::stop()
 {
-    if(self->mKillNow.exchange(true, std::memory_order_acq_rel) || !self->mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
-    self->mThread.join();
+    mThread.join();
 
-    if(!sio_stop(self->mSndHandle))
+    if(!sio_stop(mSndHandle))
         ERR("Error stopping device\n");
 }
 
-ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples)
+ALCenum SndioCapture::captureSamples(void *buffer, ALCuint samples)
 {
-    RingBuffer *ring{self->mRing.get()};
-    ring->read(buffer, samples);
+    mRing->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
-ALCuint SndioCapture_availableSamples(SndioCapture *self)
-{
-    RingBuffer *ring{self->mRing.get()};
-    return ring->readSpace();
-}
+ALCuint SndioCapture::availableSamples()
+{ return mRing->readSpace(); }
 
 } // namespace
 
@@ -537,20 +492,11 @@ void SndIOBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-ALCbackend *SndIOBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *SndIOBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-    {
-        SndioPlayback *backend;
-        NEW_OBJ(backend, SndioPlayback)(device);
-        return backend;
-    }
+        return new SndioPlayback{device};
     if(type == ALCbackend_Capture)
-    {
-        SndioCapture *backend;
-        NEW_OBJ(backend, SndioCapture)(device);
-        return backend;
-    }
-
+        return new SndioCapture{device};
     return nullptr;
 }

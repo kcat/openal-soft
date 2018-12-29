@@ -236,7 +236,7 @@ struct EnumeratedHrtf;
 struct DirectHrtfState;
 struct FrontStablizer;
 struct Compressor;
-struct ALCbackend;
+struct BackendBase;
 struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
@@ -786,7 +786,7 @@ struct ALCdevice_struct {
     std::atomic<ALCcontext*> ContextList{nullptr};
 
     std::mutex BackendLock;
-    ALCbackend *Backend{nullptr};
+    BackendBase *Backend{nullptr};
 
     std::atomic<ALCdevice*> next{nullptr};
 

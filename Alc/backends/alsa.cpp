@@ -422,12 +422,19 @@ int verify_state(snd_pcm_t *handle)
 }
 
 
-struct ALCplaybackAlsa final : public ALCbackend {
-    ALCplaybackAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
-    ~ALCplaybackAlsa() override;
+struct AlsaPlayback final : public BackendBase {
+    AlsaPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    ~AlsaPlayback() override;
 
     int mixerProc();
     int mixerNoMMapProc();
+
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean reset() override;
+    ALCboolean start() override;
+    void stop() override;
+
+    ClockLatency getClockLatency() override;
 
     snd_pcm_t *mPcmHandle{nullptr};
 
@@ -435,33 +442,12 @@ struct ALCplaybackAlsa final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "AlsaPlayback::"; }
+    DEF_NEWDEL(AlsaPlayback)
 };
 
-void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
-void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self);
-ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
-ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
-ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
-void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
-DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
-ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self);
-DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
-DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCplaybackAlsa)
-DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
-
-
-void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
-{
-    new (self) ALCplaybackAlsa{device};
-    SET_VTABLE2(ALCplaybackAlsa, ALCbackend, self);
-}
-
-void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
-{ self->~ALCplaybackAlsa(); }
-
-ALCplaybackAlsa::~ALCplaybackAlsa()
+AlsaPlayback::~AlsaPlayback()
 {
     if(mPcmHandle)
         snd_pcm_close(mPcmHandle);
@@ -469,7 +455,7 @@ ALCplaybackAlsa::~ALCplaybackAlsa()
 }
 
 
-int ALCplaybackAlsa::mixerProc()
+int AlsaPlayback::mixerProc()
 {
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -482,9 +468,9 @@ int ALCplaybackAlsa::mixerProc()
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            ALCplaybackAlsa_lock(this);
+            lock();
             aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
-            ALCplaybackAlsa_unlock(this);
+            unlock();
             break;
         }
 
@@ -521,7 +507,7 @@ int ALCplaybackAlsa::mixerProc()
         avail -= avail%update_size;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
-        ALCplaybackAlsa_lock(this);
+        lock();
         while(avail > 0)
         {
             snd_pcm_uframes_t frames{static_cast<snd_pcm_uframes_t>(avail)};
@@ -548,13 +534,13 @@ int ALCplaybackAlsa::mixerProc()
 
             avail -= frames;
         }
-        ALCplaybackAlsa_unlock(this);
+        unlock();
     }
 
     return 0;
 }
 
-int ALCplaybackAlsa::mixerNoMMapProc()
+int AlsaPlayback::mixerNoMMapProc()
 {
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -567,9 +553,9 @@ int ALCplaybackAlsa::mixerNoMMapProc()
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            ALCplaybackAlsa_lock(this);
+            lock();
             aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
-            ALCplaybackAlsa_unlock(this);
+            unlock();
             break;
         }
 
@@ -603,7 +589,7 @@ int ALCplaybackAlsa::mixerNoMMapProc()
             continue;
         }
 
-        ALCplaybackAlsa_lock(this);
+        lock();
         char *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
         aluMixData(mDevice, WritePtr, avail);
@@ -637,14 +623,14 @@ int ALCplaybackAlsa::mixerNoMMapProc()
                 if(ret < 0) break;
             }
         }
-        ALCplaybackAlsa_unlock(this);
+        unlock();
     }
 
     return 0;
 }
 
 
-ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
+ALCenum AlsaPlayback::open(const ALCchar *name)
 {
     const char *driver{};
     if(name)
@@ -667,7 +653,7 @@ ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     }
 
     TRACE("Opening device \"%s\"\n", driver);
-    int err{snd_pcm_open(&self->mPcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
+    int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
     if(err < 0)
     {
         ERR("Could not open playback device '%s': %s\n", driver, snd_strerror(err));
@@ -677,18 +663,15 @@ ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
-    ALCdevice *device = self->mDevice;
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
 
     return ALC_NO_ERROR;
 }
 
-ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
+ALCboolean AlsaPlayback::reset()
 {
-    ALCdevice *device{self->mDevice};
-
     snd_pcm_format_t format{SND_PCM_FORMAT_UNKNOWN};
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtByte:
             format = SND_PCM_FORMAT_S8;
@@ -713,11 +696,11 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
             break;
     }
 
-    bool allowmmap{!!GetConfigValueBool(device->DeviceName.c_str(), "alsa", "mmap", 1)};
-    ALuint periods{device->NumUpdates};
-    ALuint periodLen{static_cast<ALuint>(device->UpdateSize * U64(1000000) / device->Frequency)};
+    bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", 1)};
+    ALuint periods{mDevice->NumUpdates};
+    ALuint periodLen{static_cast<ALuint>(mDevice->UpdateSize * U64(1000000) / mDevice->Frequency)};
     ALuint bufferLen{periodLen * periods};
-    ALuint rate{device->Frequency};
+    ALuint rate{mDevice->Frequency};
 
     snd_pcm_uframes_t periodSizeInFrames;
     snd_pcm_sw_params_t *sp{};
@@ -727,15 +710,15 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     int dir, err;
     snd_pcm_hw_params_malloc(&hp);
 #define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
-    CHECK(snd_pcm_hw_params_any(self->mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params_any(mPcmHandle, hp));
     /* set interleaved access */
-    if(!allowmmap || snd_pcm_hw_params_set_access(self->mPcmHandle, hp, SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0)
+    if(!allowmmap || snd_pcm_hw_params_set_access(mPcmHandle, hp, SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0)
     {
         /* No mmap */
-        CHECK(snd_pcm_hw_params_set_access(self->mPcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
+        CHECK(snd_pcm_hw_params_set_access(mPcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
     }
     /* test and set format (implicitly sets sample bits) */
-    if(snd_pcm_hw_params_test_format(self->mPcmHandle, hp, format) < 0)
+    if(snd_pcm_hw_params_test_format(mPcmHandle, hp, format) < 0)
     {
         static const struct {
             snd_pcm_format_t format;
@@ -753,16 +736,16 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
         for(const auto &fmt : formatlist)
         {
             format = fmt.format;
-            if(snd_pcm_hw_params_test_format(self->mPcmHandle, hp, format) >= 0)
+            if(snd_pcm_hw_params_test_format(mPcmHandle, hp, format) >= 0)
             {
-                device->FmtType = fmt.fmttype;
+                mDevice->FmtType = fmt.fmttype;
                 break;
             }
         }
     }
-    CHECK(snd_pcm_hw_params_set_format(self->mPcmHandle, hp, format));
+    CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp, format));
     /* test and set channels (implicitly sets frame bits) */
-    if(snd_pcm_hw_params_test_channels(self->mPcmHandle, hp, device->channelsFromFmt()) < 0)
+    if(snd_pcm_hw_params_test_channels(mPcmHandle, hp, mDevice->channelsFromFmt()) < 0)
     {
         static const DevFmtChannels channellist[] = {
             DevFmtStereo,
@@ -774,33 +757,33 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
 
         for(const auto &chan : channellist)
         {
-            if(snd_pcm_hw_params_test_channels(self->mPcmHandle, hp, ChannelsFromDevFmt(chan, 0)) >= 0)
+            if(snd_pcm_hw_params_test_channels(mPcmHandle, hp, ChannelsFromDevFmt(chan, 0)) >= 0)
             {
-                device->FmtChans = chan;
-                device->mAmbiOrder = 0;
+                mDevice->FmtChans = chan;
+                mDevice->mAmbiOrder = 0;
                 break;
             }
         }
     }
-    CHECK(snd_pcm_hw_params_set_channels(self->mPcmHandle, hp, device->channelsFromFmt()));
+    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp, mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(!GetConfigValueBool(device->DeviceName.c_str(), "alsa", "allow-resampler", 0) ||
-       !(device->Flags&DEVICE_FREQUENCY_REQUEST))
+    if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", 0) ||
+       !(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
     {
-        if(snd_pcm_hw_params_set_rate_resample(self->mPcmHandle, hp, 0) < 0)
+        if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp, 0) < 0)
             ERR("Failed to disable ALSA resampler\n");
     }
-    else if(snd_pcm_hw_params_set_rate_resample(self->mPcmHandle, hp, 1) < 0)
+    else if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp, 1) < 0)
         ERR("Failed to enable ALSA resampler\n");
-    CHECK(snd_pcm_hw_params_set_rate_near(self->mPcmHandle, hp, &rate, nullptr));
+    CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp, &rate, nullptr));
     /* set buffer time (implicitly constrains period/buffer parameters) */
-    if((err=snd_pcm_hw_params_set_buffer_time_near(self->mPcmHandle, hp, &bufferLen, nullptr)) < 0)
+    if((err=snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp, &bufferLen, nullptr)) < 0)
         ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
-    if((err=snd_pcm_hw_params_set_period_time_near(self->mPcmHandle, hp, &periodLen, nullptr)) < 0)
+    if((err=snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp, &periodLen, nullptr)) < 0)
         ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
-    CHECK(snd_pcm_hw_params(self->mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params(mPcmHandle, hp));
 
     /* retrieve configuration info */
     CHECK(snd_pcm_hw_params_get_access(hp, &access));
@@ -812,19 +795,19 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     hp = nullptr;
 
     snd_pcm_sw_params_malloc(&sp);
-    CHECK(snd_pcm_sw_params_current(self->mPcmHandle, sp));
-    CHECK(snd_pcm_sw_params_set_avail_min(self->mPcmHandle, sp, periodSizeInFrames));
-    CHECK(snd_pcm_sw_params_set_stop_threshold(self->mPcmHandle, sp, periodSizeInFrames*periods));
-    CHECK(snd_pcm_sw_params(self->mPcmHandle, sp));
+    CHECK(snd_pcm_sw_params_current(mPcmHandle, sp));
+    CHECK(snd_pcm_sw_params_set_avail_min(mPcmHandle, sp, periodSizeInFrames));
+    CHECK(snd_pcm_sw_params_set_stop_threshold(mPcmHandle, sp, periodSizeInFrames*periods));
+    CHECK(snd_pcm_sw_params(mPcmHandle, sp));
 #undef CHECK
     snd_pcm_sw_params_free(sp);
     sp = nullptr;
 
-    device->NumUpdates = periods;
-    device->UpdateSize = periodSizeInFrames;
-    device->Frequency = rate;
+    mDevice->NumUpdates = periods;
+    mDevice->UpdateSize = periodSizeInFrames;
+    mDevice->Frequency = rate;
 
-    SetDefaultChannelOrder(device);
+    SetDefaultChannelOrder(mDevice);
 
     return ALC_TRUE;
 
@@ -835,9 +818,8 @@ error:
     return ALC_FALSE;
 }
 
-ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
+ALCboolean AlsaPlayback::start()
 {
-    ALCdevice *device{self->mDevice};
     snd_pcm_hw_params_t *hp{};
     snd_pcm_access_t access;
     const char *funcerr;
@@ -845,7 +827,7 @@ ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
 
     snd_pcm_hw_params_malloc(&hp);
 #define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
-    CHECK(snd_pcm_hw_params_current(self->mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params_current(mPcmHandle, hp));
     /* retrieve configuration info */
     CHECK(snd_pcm_hw_params_get_access(hp, &access));
 #undef CHECK
@@ -859,26 +841,26 @@ ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
     snd_pcm_hw_params_free(hp);
     hp = nullptr;
 
-    int (ALCplaybackAlsa::*thread_func)(){};
+    int (AlsaPlayback::*thread_func)(){};
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        self->mBuffer.resize(snd_pcm_frames_to_bytes(self->mPcmHandle, device->UpdateSize));
-        thread_func = &ALCplaybackAlsa::mixerNoMMapProc;
+        mBuffer.resize(snd_pcm_frames_to_bytes(mPcmHandle, mDevice->UpdateSize));
+        thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else
     {
-        err = snd_pcm_prepare(self->mPcmHandle);
+        err = snd_pcm_prepare(mPcmHandle);
         if(err < 0)
         {
             ERR("snd_pcm_prepare(data->mPcmHandle) failed: %s\n", snd_strerror(err));
             return ALC_FALSE;
         }
-        thread_func = &ALCplaybackAlsa::mixerProc;
+        thread_func = &AlsaPlayback::mixerProc;
     }
 
     try {
-        self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread{std::mem_fn(thread_func), self};
+        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mThread = std::thread{std::mem_fn(thread_func), this};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -886,45 +868,50 @@ ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
     }
     catch(...) {
     }
-    self->mBuffer.clear();
+    mBuffer.clear();
     return ALC_FALSE;
 }
 
-void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
+void AlsaPlayback::stop()
 {
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
+    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
         return;
+    mThread.join();
 
-    self->mThread.join();
-
-    self->mBuffer.clear();
+    mBuffer.clear();
 }
 
-ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
+ClockLatency AlsaPlayback::getClockLatency()
 {
-    ALCdevice *device{self->mDevice};
     ClockLatency ret;
 
-    ALCplaybackAlsa_lock(self);
-    ret.ClockTime = GetDeviceClockTime(device);
+    lock();
+    ret.ClockTime = GetDeviceClockTime(mDevice);
     snd_pcm_sframes_t delay{};
-    int err{snd_pcm_delay(self->mPcmHandle, &delay)};
+    int err{snd_pcm_delay(mPcmHandle, &delay)};
     if(err < 0)
     {
         ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
         delay = 0;
     }
     ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
-    ret.Latency /= device->Frequency;
-    ALCplaybackAlsa_unlock(self);
+    ret.Latency /= mDevice->Frequency;
+    unlock();
 
     return ret;
 }
 
 
-struct ALCcaptureAlsa final : public ALCbackend {
-    ALCcaptureAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
-    ~ALCcaptureAlsa() override;
+struct AlsaCapture final : public BackendBase {
+    AlsaCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    ~AlsaCapture() override;
+
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean start() override;
+    void stop() override;
+    ALCenum captureSamples(ALCvoid *buffer, ALCuint samples) override;
+    ALCuint availableSamples() override;
+    ClockLatency getClockLatency() override;
 
     snd_pcm_t *mPcmHandle{nullptr};
 
@@ -934,34 +921,12 @@ struct ALCcaptureAlsa final : public ALCbackend {
     RingBufferPtr mRing{nullptr};
 
     snd_pcm_sframes_t mLastAvail{0};
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "AlsaCapture::"; }
+    DEF_NEWDEL(AlsaCapture)
 };
 
-void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
-void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self);
-ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
-DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, ALCboolean, reset)
-ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
-void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
-ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
-ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
-ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self);
-DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
-DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCcaptureAlsa)
-
-DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
-
-
-void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
-{
-    new (self) ALCcaptureAlsa{device};
-    SET_VTABLE2(ALCcaptureAlsa, ALCbackend, self);
-}
-
-void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
-{ self->~ALCcaptureAlsa(); }
-
-ALCcaptureAlsa::~ALCcaptureAlsa()
+AlsaCapture::~AlsaCapture()
 {
     if(mPcmHandle)
         snd_pcm_close(mPcmHandle);
@@ -969,9 +934,8 @@ ALCcaptureAlsa::~ALCcaptureAlsa()
 }
 
 
-ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
+ALCenum AlsaCapture::open(const ALCchar *name)
 {
-    ALCdevice *device{self->mDevice};
     const char *driver{};
     if(name)
     {
@@ -993,7 +957,7 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     }
 
     TRACE("Opening device \"%s\"\n", driver);
-    int err{snd_pcm_open(&self->mPcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
+    int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
     if(err < 0)
     {
         ERR("Could not open capture device '%s': %s\n", driver, snd_strerror(err));
@@ -1004,7 +968,7 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     snd_config_update_free_global();
 
     snd_pcm_format_t format{SND_PCM_FORMAT_UNKNOWN};
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtByte:
             format = SND_PCM_FORMAT_S8;
@@ -1029,35 +993,35 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
             break;
     }
 
-    snd_pcm_uframes_t bufferSizeInFrames{maxu(device->UpdateSize*device->NumUpdates,
-                                              100*device->Frequency/1000)};
-    snd_pcm_uframes_t periodSizeInFrames{minu(bufferSizeInFrames, 25*device->Frequency/1000)};
+    snd_pcm_uframes_t bufferSizeInFrames{maxu(mDevice->UpdateSize*mDevice->NumUpdates,
+                                              100*mDevice->Frequency/1000)};
+    snd_pcm_uframes_t periodSizeInFrames{minu(bufferSizeInFrames, 25*mDevice->Frequency/1000)};
 
     bool needring{false};
     const char *funcerr{};
     snd_pcm_hw_params_t *hp{};
     snd_pcm_hw_params_malloc(&hp);
 #define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
-    CHECK(snd_pcm_hw_params_any(self->mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params_any(mPcmHandle, hp));
     /* set interleaved access */
-    CHECK(snd_pcm_hw_params_set_access(self->mPcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
+    CHECK(snd_pcm_hw_params_set_access(mPcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
     /* set format (implicitly sets sample bits) */
-    CHECK(snd_pcm_hw_params_set_format(self->mPcmHandle, hp, format));
+    CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp, format));
     /* set channels (implicitly sets frame bits) */
-    CHECK(snd_pcm_hw_params_set_channels(self->mPcmHandle, hp, device->channelsFromFmt()));
+    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp, mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
-    CHECK(snd_pcm_hw_params_set_rate(self->mPcmHandle, hp, device->Frequency, 0));
+    CHECK(snd_pcm_hw_params_set_rate(mPcmHandle, hp, mDevice->Frequency, 0));
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    if(snd_pcm_hw_params_set_buffer_size_min(self->mPcmHandle, hp, &bufferSizeInFrames) < 0)
+    if(snd_pcm_hw_params_set_buffer_size_min(mPcmHandle, hp, &bufferSizeInFrames) < 0)
     {
         TRACE("Buffer too large, using intermediate ring buffer\n");
         needring = true;
-        CHECK(snd_pcm_hw_params_set_buffer_size_near(self->mPcmHandle, hp, &bufferSizeInFrames));
+        CHECK(snd_pcm_hw_params_set_buffer_size_near(mPcmHandle, hp, &bufferSizeInFrames));
     }
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    CHECK(snd_pcm_hw_params_set_period_size_near(self->mPcmHandle, hp, &periodSizeInFrames, nullptr));
+    CHECK(snd_pcm_hw_params_set_period_size_near(mPcmHandle, hp, &periodSizeInFrames, nullptr));
     /* install and prepare hardware configuration */
-    CHECK(snd_pcm_hw_params(self->mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params(mPcmHandle, hp));
     /* retrieve configuration info */
     CHECK(snd_pcm_hw_params_get_period_size(hp, &periodSizeInFrames, nullptr));
 #undef CHECK
@@ -1066,16 +1030,16 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
     if(needring)
     {
-        self->mRing = CreateRingBuffer(device->UpdateSize*device->NumUpdates,
-            device->frameSizeFromFmt(), false);
-        if(!self->mRing)
+        mRing = CreateRingBuffer(mDevice->UpdateSize*mDevice->NumUpdates,
+            mDevice->frameSizeFromFmt(), false);
+        if(!mRing)
         {
             ERR("ring buffer create failed\n");
             goto error2;
         }
     }
 
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
 
     return ALC_NO_ERROR;
 
@@ -1084,99 +1048,99 @@ error:
     if(hp) snd_pcm_hw_params_free(hp);
 
 error2:
-    self->mRing = nullptr;
-    snd_pcm_close(self->mPcmHandle);
-    self->mPcmHandle = nullptr;
+    mRing = nullptr;
+    snd_pcm_close(mPcmHandle);
+    mPcmHandle = nullptr;
 
     return ALC_INVALID_VALUE;
 }
 
-ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
+
+ALCboolean AlsaCapture::start()
 {
-    int err{snd_pcm_prepare(self->mPcmHandle)};
+    int err{snd_pcm_prepare(mPcmHandle)};
     if(err < 0)
         ERR("prepare failed: %s\n", snd_strerror(err));
     else
     {
-        err = snd_pcm_start(self->mPcmHandle);
+        err = snd_pcm_start(mPcmHandle);
         if(err < 0)
             ERR("start failed: %s\n", snd_strerror(err));
     }
     if(err < 0)
     {
-        aluHandleDisconnect(self->mDevice, "Capture state failure: %s", snd_strerror(err));
+        aluHandleDisconnect(mDevice, "Capture state failure: %s", snd_strerror(err));
         return ALC_FALSE;
     }
 
-    self->mDoCapture = true;
+    mDoCapture = true;
     return ALC_TRUE;
 }
 
-void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
+void AlsaCapture::stop()
 {
     /* OpenAL requires access to unread audio after stopping, but ALSA's
      * snd_pcm_drain is unreliable and snd_pcm_drop drops it. Capture what's
-     * available now so it'll be available later after the drop. */
-    ALCuint avail{ALCcaptureAlsa_availableSamples(self)};
-    if(!self->mRing && avail > 0)
+     * available now so it'll be available later after the drop.
+     */
+    ALCuint avail{availableSamples()};
+    if(!mRing && avail > 0)
     {
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage. */
-        al::vector<char> temp(snd_pcm_frames_to_bytes(self->mPcmHandle, avail));
-        ALCcaptureAlsa_captureSamples(self, temp.data(), avail);
-        self->mBuffer = std::move(temp);
+        al::vector<char> temp(snd_pcm_frames_to_bytes(mPcmHandle, avail));
+        captureSamples(temp.data(), avail);
+        mBuffer = std::move(temp);
     }
-    int err{snd_pcm_drop(self->mPcmHandle)};
+    int err{snd_pcm_drop(mPcmHandle)};
     if(err < 0)
         ERR("drop failed: %s\n", snd_strerror(err));
-    self->mDoCapture = false;
+    mDoCapture = false;
 }
 
-ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples)
+ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 {
-    ALCdevice *device{self->mDevice};
-
-    if(RingBuffer *ring{self->mRing.get()})
+    if(mRing)
     {
-        ring->read(buffer, samples);
+        mRing->read(buffer, samples);
         return ALC_NO_ERROR;
     }
 
-    self->mLastAvail -= samples;
-    while(device->Connected.load(std::memory_order_acquire) && samples > 0)
+    mLastAvail -= samples;
+    while(mDevice->Connected.load(std::memory_order_acquire) && samples > 0)
     {
         snd_pcm_sframes_t amt{0};
 
-        if(!self->mBuffer.empty())
+        if(!mBuffer.empty())
         {
             /* First get any data stored from the last stop */
-            amt = snd_pcm_bytes_to_frames(self->mPcmHandle, self->mBuffer.size());
+            amt = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
             if((snd_pcm_uframes_t)amt > samples) amt = samples;
 
-            amt = snd_pcm_frames_to_bytes(self->mPcmHandle, amt);
-            memcpy(buffer, self->mBuffer.data(), amt);
+            amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
+            memcpy(buffer, mBuffer.data(), amt);
 
-            self->mBuffer.erase(self->mBuffer.begin(), self->mBuffer.begin()+amt);
-            amt = snd_pcm_bytes_to_frames(self->mPcmHandle, amt);
+            mBuffer.erase(mBuffer.begin(), mBuffer.begin()+amt);
+            amt = snd_pcm_bytes_to_frames(mPcmHandle, amt);
         }
-        else if(self->mDoCapture)
-            amt = snd_pcm_readi(self->mPcmHandle, buffer, samples);
+        else if(mDoCapture)
+            amt = snd_pcm_readi(mPcmHandle, buffer, samples);
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(amt));
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=snd_pcm_recover(self->mPcmHandle, amt, 1)) >= 0)
+            if((amt=snd_pcm_recover(mPcmHandle, amt, 1)) >= 0)
             {
-                amt = snd_pcm_start(self->mPcmHandle);
+                amt = snd_pcm_start(mPcmHandle);
                 if(amt >= 0)
-                    amt = snd_pcm_avail_update(self->mPcmHandle);
+                    amt = snd_pcm_avail_update(mPcmHandle);
             }
             if(amt < 0)
             {
                 ERR("restore error: %s\n", snd_strerror(amt));
-                aluHandleDisconnect(device, "Capture recovery failure: %s", snd_strerror(amt));
+                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", snd_strerror(amt));
                 break;
             }
             /* If the amount available is less than what's asked, we lost it
@@ -1190,100 +1154,96 @@ ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALC
         samples -= amt;
     }
     if(samples > 0)
-        memset(buffer, ((device->FmtType == DevFmtUByte) ? 0x80 : 0),
-               snd_pcm_frames_to_bytes(self->mPcmHandle, samples));
+        memset(buffer, ((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0),
+               snd_pcm_frames_to_bytes(mPcmHandle, samples));
 
     return ALC_NO_ERROR;
 }
 
-ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
+ALCuint AlsaCapture::availableSamples()
 {
-    ALCdevice *device{self->mDevice};
-
     snd_pcm_sframes_t avail{0};
-    if(device->Connected.load(std::memory_order_acquire) && self->mDoCapture)
-        avail = snd_pcm_avail_update(self->mPcmHandle);
+    if(mDevice->Connected.load(std::memory_order_acquire) && mDoCapture)
+        avail = snd_pcm_avail_update(mPcmHandle);
     if(avail < 0)
     {
         ERR("avail update failed: %s\n", snd_strerror(avail));
 
-        if((avail=snd_pcm_recover(self->mPcmHandle, avail, 1)) >= 0)
+        if((avail=snd_pcm_recover(mPcmHandle, avail, 1)) >= 0)
         {
-            if(self->mDoCapture)
-                avail = snd_pcm_start(self->mPcmHandle);
+            if(mDoCapture)
+                avail = snd_pcm_start(mPcmHandle);
             if(avail >= 0)
-                avail = snd_pcm_avail_update(self->mPcmHandle);
+                avail = snd_pcm_avail_update(mPcmHandle);
         }
         if(avail < 0)
         {
             ERR("restore error: %s\n", snd_strerror(avail));
-            aluHandleDisconnect(device, "Capture recovery failure: %s", snd_strerror(avail));
+            aluHandleDisconnect(mDevice, "Capture recovery failure: %s", snd_strerror(avail));
         }
     }
 
-    RingBuffer *ring{self->mRing.get()};
-    if(!ring)
+    if(!mRing)
     {
         if(avail < 0) avail = 0;
-        avail += snd_pcm_bytes_to_frames(self->mPcmHandle, self->mBuffer.size());
-        if(avail > self->mLastAvail) self->mLastAvail = avail;
-        return self->mLastAvail;
+        avail += snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
+        if(avail > mLastAvail) mLastAvail = avail;
+        return mLastAvail;
     }
 
     while(avail > 0)
     {
-        auto vec = ring->getWriteVector();
+        auto vec = mRing->getWriteVector();
         if(vec.first.len == 0) break;
 
         snd_pcm_sframes_t amt{std::min<snd_pcm_sframes_t>(vec.first.len, avail)};
-        amt = snd_pcm_readi(self->mPcmHandle, vec.first.buf, amt);
+        amt = snd_pcm_readi(mPcmHandle, vec.first.buf, amt);
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(amt));
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=snd_pcm_recover(self->mPcmHandle, amt, 1)) >= 0)
+            if((amt=snd_pcm_recover(mPcmHandle, amt, 1)) >= 0)
             {
-                if(self->mDoCapture)
-                    amt = snd_pcm_start(self->mPcmHandle);
+                if(mDoCapture)
+                    amt = snd_pcm_start(mPcmHandle);
                 if(amt >= 0)
-                    amt = snd_pcm_avail_update(self->mPcmHandle);
+                    amt = snd_pcm_avail_update(mPcmHandle);
             }
             if(amt < 0)
             {
                 ERR("restore error: %s\n", snd_strerror(amt));
-                aluHandleDisconnect(device, "Capture recovery failure: %s", snd_strerror(amt));
+                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", snd_strerror(amt));
                 break;
             }
             avail = amt;
             continue;
         }
 
-        ring->writeAdvance(amt);
+        mRing->writeAdvance(amt);
         avail -= amt;
     }
 
-    return ring->readSpace();
+    return mRing->readSpace();
 }
 
-ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
+ClockLatency AlsaCapture::getClockLatency()
 {
-    ALCdevice *device{self->mDevice};
     ClockLatency ret;
 
-    ALCcaptureAlsa_lock(self);
-    ret.ClockTime = GetDeviceClockTime(device);
+    lock();
+    ret.ClockTime = GetDeviceClockTime(mDevice);
     snd_pcm_sframes_t delay{};
-    int err{snd_pcm_delay(self->mPcmHandle, &delay)};
+    int err{snd_pcm_delay(mPcmHandle, &delay)};
     if(err < 0)
     {
         ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
         delay = 0;
     }
     ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
-    ret.Latency /= device->Frequency;
-    ALCcaptureAlsa_unlock(self);
+    ret.Latency /= mDevice->Frequency;
+    unlock();
 
     return ret;
 }
@@ -1332,21 +1292,12 @@ void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-ALCbackend *AlsaBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *AlsaBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-    {
-        ALCplaybackAlsa *backend;
-        NEW_OBJ(backend, ALCplaybackAlsa)(device);
-        return backend;
-    }
+        return new AlsaPlayback{device};
     if(type == ALCbackend_Capture)
-    {
-        ALCcaptureAlsa *backend;
-        NEW_OBJ(backend, ALCcaptureAlsa)(device);
-        return backend;
-    }
-
+        return new AlsaCapture{device};
     return nullptr;
 }
 

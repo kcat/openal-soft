@@ -30,6 +30,7 @@
 #include "alu.h"
 #include "ringbuffer.h"
 #include "converter.h"
+#include "backends/base.h"
 
 #include <unistd.h>
 #include <AudioUnit/AudioUnit.h>
@@ -41,9 +42,9 @@ namespace {
 static const ALCchar ca_device[] = "CoreAudio Default";
 
 
-struct ALCcoreAudioPlayback final : public ALCbackend {
-    ALCcoreAudioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
-    ~ALCcoreAudioPlayback() override;
+struct CoreAudioPlayback final : public BackendBase {
+    CoreAudioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    ~CoreAudioPlayback() override;
 
     static OSStatus MixerProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
@@ -52,64 +53,47 @@ struct ALCcoreAudioPlayback final : public ALCbackend {
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
         AudioBufferList *ioData);
 
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean reset() override;
+    ALCboolean start() override;
+    void stop() override;
+
     AudioUnit mAudioUnit;
 
     ALuint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{}; // This is the OpenAL format as a CoreAudio ASBD
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "CoreAudioPlayback::"; }
+    DEF_NEWDEL(CoreAudioPlayback)
 };
 
-static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device);
-static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self);
-static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCchar *name);
-static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self);
-static ALCboolean ALCcoreAudioPlayback_start(ALCcoreAudioPlayback *self);
-static void ALCcoreAudioPlayback_stop(ALCcoreAudioPlayback *self);
-static DECLARE_FORWARD2(ALCcoreAudioPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCcoreAudioPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCcoreAudioPlayback, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCcoreAudioPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCcoreAudioPlayback, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCcoreAudioPlayback)
-
-DEFINE_ALCBACKEND_VTABLE(ALCcoreAudioPlayback);
-
-
-static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device)
-{
-    new (self) ALCcoreAudioPlayback{device};
-    SET_VTABLE2(ALCcoreAudioPlayback, ALCbackend, self);
-}
-
-static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)
-{ self->~ALCcoreAudioPlayback(); }
-
-ALCcoreAudioPlayback::~ALCcoreAudioPlayback()
+CoreAudioPlayback::~CoreAudioPlayback()
 {
     AudioUnitUninitialize(mAudioUnit);
     AudioComponentInstanceDispose(mAudioUnit);
 }
 
 
-OSStatus ALCcoreAudioPlayback::MixerProcC(void *inRefCon,
+OSStatus CoreAudioPlayback::MixerProcC(void *inRefCon,
     AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp,
     UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
 {
-    return static_cast<ALCcoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp,
+    return static_cast<CoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp,
         inBusNumber, inNumberFrames, ioData);
 }
 
-OSStatus ALCcoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags* UNUSED(ioActionFlags),
+OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags* UNUSED(ioActionFlags),
     const AudioTimeStamp* UNUSED(inTimeStamp), UInt32 UNUSED(inBusNumber),
     UInt32 UNUSED(inNumberFrames), AudioBufferList *ioData)
 {
-    ALCcoreAudioPlayback_lock(this);
+    lock();
     aluMixData(mDevice, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize/mFrameSize);
-    ALCcoreAudioPlayback_unlock(this);
+    unlock();
     return noErr;
 }
 
 
-static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCchar *name)
+ALCenum CoreAudioPlayback::open(const ALCchar *name)
 {
     if(!name)
         name = ca_device;
@@ -135,7 +119,7 @@ static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCch
         return ALC_INVALID_VALUE;
     }
 
-    OSStatus err{AudioComponentInstanceNew(comp, &self->mAudioUnit)};
+    OSStatus err{AudioComponentInstanceNew(comp, &mAudioUnit)};
     if(err != noErr)
     {
         ERR("AudioComponentInstanceNew failed\n");
@@ -143,32 +127,29 @@ static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCch
     }
 
     /* init and start the default audio unit... */
-    err = AudioUnitInitialize(self->mAudioUnit);
+    err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
     {
         ERR("AudioUnitInitialize failed\n");
-        AudioComponentInstanceDispose(self->mAudioUnit);
+        AudioComponentInstanceDispose(mAudioUnit);
         return ALC_INVALID_VALUE;
     }
 
-    ALCdevice *device{self->mDevice};
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
+ALCboolean CoreAudioPlayback::reset()
 {
-    ALCdevice *device{self->mDevice};
-
-    OSStatus err{AudioUnitUninitialize(self->mAudioUnit)};
+    OSStatus err{AudioUnitUninitialize(mAudioUnit)};
     if(err != noErr)
         ERR("-- AudioUnitUninitialize failed.\n");
 
     /* retrieve default output unit's properties (output side) */
     AudioStreamBasicDescription streamFormat{};
     auto size = static_cast<UInt32>(sizeof(AudioStreamBasicDescription));
-    err = AudioUnitGetProperty(self->mAudioUnit, kAudioUnitProperty_StreamFormat,
-        kAudioUnitScope_Output, 0, &streamFormat, &size);
+    err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
+        0, &streamFormat, &size);
     if(err != noErr || size != sizeof(AudioStreamBasicDescription))
     {
         ERR("AudioUnitGetProperty failed\n");
@@ -186,19 +167,19 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
 #endif
 
     /* set default output unit's input side to match output side */
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioUnitProperty_StreamFormat,
-        kAudioUnitScope_Input, 0, &streamFormat, size);
+    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
+        0, &streamFormat, size);
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
         return ALC_FALSE;
     }
 
-    if(device->Frequency != streamFormat.mSampleRate)
+    if(mDevice->Frequency != streamFormat.mSampleRate)
     {
-        device->NumUpdates = static_cast<ALuint>(
-            (ALuint64)device->NumUpdates*streamFormat.mSampleRate/device->Frequency);
-        device->Frequency = streamFormat.mSampleRate;
+        mDevice->NumUpdates = static_cast<ALuint>(
+            (ALuint64)mDevice->NumUpdates*streamFormat.mSampleRate/mDevice->Frequency);
+        mDevice->Frequency = streamFormat.mSampleRate;
     }
 
     /* FIXME: How to tell what channels are what in the output device, and how
@@ -206,53 +187,53 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     switch(streamFormat.mChannelsPerFrame)
     {
         case 1:
-            device->FmtChans = DevFmtMono;
+            mDevice->FmtChans = DevFmtMono;
             break;
         case 2:
-            device->FmtChans = DevFmtStereo;
+            mDevice->FmtChans = DevFmtStereo;
             break;
         case 4:
-            device->FmtChans = DevFmtQuad;
+            mDevice->FmtChans = DevFmtQuad;
             break;
         case 6:
-            device->FmtChans = DevFmtX51;
+            mDevice->FmtChans = DevFmtX51;
             break;
         case 7:
-            device->FmtChans = DevFmtX61;
+            mDevice->FmtChans = DevFmtX61;
             break;
         case 8:
-            device->FmtChans = DevFmtX71;
+            mDevice->FmtChans = DevFmtX71;
             break;
         default:
             ERR("Unhandled channel count (%d), using Stereo\n", streamFormat.mChannelsPerFrame);
-            device->FmtChans = DevFmtStereo;
+            mDevice->FmtChans = DevFmtStereo;
             streamFormat.mChannelsPerFrame = 2;
             break;
     }
-    SetDefaultWFXChannelOrder(device);
+    SetDefaultWFXChannelOrder(mDevice);
 
     /* use channel count and sample rate from the default output unit's current
      * parameters, but reset everything else */
     streamFormat.mFramesPerPacket = 1;
     streamFormat.mFormatFlags = 0;
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtUByte:
-            device->FmtType = DevFmtByte;
+            mDevice->FmtType = DevFmtByte;
             /* fall-through */
         case DevFmtByte:
             streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 8;
             break;
         case DevFmtUShort:
-            device->FmtType = DevFmtShort;
+            mDevice->FmtType = DevFmtShort;
             /* fall-through */
         case DevFmtShort:
             streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 16;
             break;
         case DevFmtUInt:
-            device->FmtType = DevFmtInt;
+            mDevice->FmtType = DevFmtInt;
             /* fall-through */
         case DevFmtInt:
             streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
@@ -270,8 +251,8 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     streamFormat.mFormatFlags |= kAudioFormatFlagsNativeEndian |
                                  kLinearPCMFormatFlagIsPacked;
 
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioUnitProperty_StreamFormat,
-        kAudioUnitScope_Input, 0, &streamFormat, sizeof(AudioStreamBasicDescription));
+    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
+        0, &streamFormat, sizeof(AudioStreamBasicDescription));
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
@@ -279,12 +260,12 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     }
 
     /* setup callback */
-    self->mFrameSize = device->frameSizeFromFmt();
+    mFrameSize = mDevice->frameSizeFromFmt();
     AURenderCallbackStruct input{};
-    input.inputProc = ALCcoreAudioPlayback::MixerProcC;
-    input.inputProcRefCon = self;
+    input.inputProc = CoreAudioPlayback::MixerProcC;
+    input.inputProcRefCon = this;
 
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioUnitProperty_SetRenderCallback,
+    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_SetRenderCallback,
         kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
@@ -293,7 +274,7 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     }
 
     /* init the default audio unit... */
-    err = AudioUnitInitialize(self->mAudioUnit);
+    err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
     {
         ERR("AudioUnitInitialize failed\n");
@@ -303,9 +284,9 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCcoreAudioPlayback_start(ALCcoreAudioPlayback *self)
+ALCboolean CoreAudioPlayback::start()
 {
-    OSStatus err{AudioOutputUnitStart(self->mAudioUnit)};
+    OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
     {
         ERR("AudioOutputUnitStart failed\n");
@@ -314,17 +295,17 @@ static ALCboolean ALCcoreAudioPlayback_start(ALCcoreAudioPlayback *self)
     return ALC_TRUE;
 }
 
-static void ALCcoreAudioPlayback_stop(ALCcoreAudioPlayback *self)
+void CoreAudioPlayback::stop()
 {
-    OSStatus err{AudioOutputUnitStop(self->mAudioUnit)};
+    OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
         ERR("AudioOutputUnitStop failed\n");
 }
 
 
-struct ALCcoreAudioCapture final : public ALCbackend {
-    ALCcoreAudioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
-    ~ALCcoreAudioCapture() override;
+struct CoreAudioCapture final : public BackendBase {
+    CoreAudioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    ~CoreAudioCapture() override;
 
     static OSStatus RecordProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
@@ -332,6 +313,12 @@ struct ALCcoreAudioCapture final : public ALCbackend {
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
         UInt32 inNumberFrames, AudioBufferList *ioData);
+
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean start() override;
+    void stop() override;
+    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCuint availableSamples() override;
 
     AudioUnit mAudioUnit{0};
 
@@ -341,34 +328,12 @@ struct ALCcoreAudioCapture final : public ALCbackend {
     SampleConverterPtr mConverter;
 
     RingBufferPtr mRing{nullptr};
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "CoreAudioCapture::"; }
+    DEF_NEWDEL(CoreAudioCapture)
 };
 
-static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device);
-static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self);
-static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar *name);
-static DECLARE_FORWARD(ALCcoreAudioCapture, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCcoreAudioCapture_start(ALCcoreAudioCapture *self);
-static void ALCcoreAudioCapture_stop(ALCcoreAudioCapture *self);
-static ALCenum ALCcoreAudioCapture_captureSamples(ALCcoreAudioCapture *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCcoreAudioCapture_availableSamples(ALCcoreAudioCapture *self);
-static DECLARE_FORWARD(ALCcoreAudioCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCcoreAudioCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCcoreAudioCapture, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCcoreAudioCapture)
-
-DEFINE_ALCBACKEND_VTABLE(ALCcoreAudioCapture);
-
-
-static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device)
-{
-    new (self) ALCcoreAudioCapture{device};
-    SET_VTABLE2(ALCcoreAudioCapture, ALCbackend, self);
-}
-
-static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self)
-{ self->~ALCcoreAudioCapture(); }
-
-ALCcoreAudioCapture::~ALCcoreAudioCapture()
+CoreAudioCapture::~CoreAudioCapture()
 {
     if(mAudioUnit)
         AudioComponentInstanceDispose(mAudioUnit);
@@ -376,17 +341,17 @@ ALCcoreAudioCapture::~ALCcoreAudioCapture()
 }
 
 
-OSStatus ALCcoreAudioCapture::RecordProcC(void *inRefCon,
+OSStatus CoreAudioCapture::RecordProcC(void *inRefCon,
     AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp,
     UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
 {
-    return static_cast<ALCcoreAudioCapture*>(inRefCon)->RecordProc(ioActionFlags, inTimeStamp,
+    return static_cast<CoreAudioCapture*>(inRefCon)->RecordProc(ioActionFlags, inTimeStamp,
         inBusNumber, inNumberFrames, ioData);
 }
 
-OSStatus ALCcoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
-    const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
-    AudioBufferList *ioData)
+OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags* UNUSED(ioActionFlags),
+    const AudioTimeStamp *inTimeStamp, UInt32 UNUSED(inBusNumber), UInt32 inNumberFrames,
+    AudioBufferList* UNUSED(ioData))
 {
     AudioUnitRenderActionFlags flags = 0;
     union {
@@ -430,9 +395,8 @@ OSStatus ALCcoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFla
 }
 
 
-static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar *name)
+ALCenum CoreAudioCapture::open(const ALCchar *name)
 {
-    ALCdevice *device{self->mDevice};
     AudioStreamBasicDescription requestedFormat;  // The application requested format
     AudioStreamBasicDescription hardwareFormat;   // The hardware format
     AudioStreamBasicDescription outputFormat;     // The AudioUnit output format
@@ -469,7 +433,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     // Open the component
-    err = AudioComponentInstanceNew(comp, &self->mAudioUnit);
+    err = AudioComponentInstanceNew(comp, &mAudioUnit);
     if(err != noErr)
     {
         ERR("AudioComponentInstanceNew failed\n");
@@ -478,7 +442,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // Turn off AudioUnit output
     enableIO = 0;
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioOutputUnitProperty_EnableIO,
+    err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
         kAudioUnitScope_Output, 0, &enableIO, sizeof(ALuint));
     if(err != noErr)
     {
@@ -488,7 +452,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // Turn on AudioUnit input
     enableIO = 1;
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioOutputUnitProperty_EnableIO,
+    err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
         kAudioUnitScope_Input, 1, &enableIO, sizeof(ALuint));
     if(err != noErr)
     {
@@ -519,7 +483,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         }
 
         // Track the input device
-        err = AudioUnitSetProperty(self->mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
+        err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
             kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
         if(err != noErr)
         {
@@ -530,10 +494,10 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 #endif
 
     // set capture callback
-    input.inputProc = ALCcoreAudioCapture::RecordProcC;
-    input.inputProcRefCon = self;
+    input.inputProc = CoreAudioCapture::RecordProcC;
+    input.inputProcRefCon = this;
 
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioOutputUnitProperty_SetInputCallback,
+    err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_SetInputCallback,
         kAudioUnitScope_Global, 0, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
@@ -542,7 +506,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     // Initialize the device
-    err = AudioUnitInitialize(self->mAudioUnit);
+    err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
     {
         ERR("AudioUnitInitialize failed\n");
@@ -551,8 +515,8 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // Get the hardware format
     propertySize = sizeof(AudioStreamBasicDescription);
-    err = AudioUnitGetProperty(self->mAudioUnit, kAudioUnitProperty_StreamFormat,
-        kAudioUnitScope_Input, 1, &hardwareFormat, &propertySize);
+    err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
+        1, &hardwareFormat, &propertySize);
     if(err != noErr || propertySize != sizeof(AudioStreamBasicDescription))
     {
         ERR("AudioUnitGetProperty failed\n");
@@ -560,7 +524,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     // Set up the requested format description
-    switch(device->FmtType)
+    switch(mDevice->FmtType)
     {
         case DevFmtUByte:
             requestedFormat.mBitsPerChannel = 8;
@@ -581,11 +545,11 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         case DevFmtByte:
         case DevFmtUShort:
         case DevFmtUInt:
-            ERR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
+            ERR("%s samples not supported\n", DevFmtTypeString(mDevice->FmtType));
             return ALC_INVALID_VALUE;
     }
 
-    switch(device->FmtChans)
+    switch(mDevice->FmtChans)
     {
         case DevFmtMono:
             requestedFormat.mChannelsPerFrame = 1;
@@ -600,20 +564,20 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         case DevFmtX61:
         case DevFmtX71:
         case DevFmtAmbi3D:
-            ERR("%s not supported\n", DevFmtChannelsString(device->FmtChans));
+            ERR("%s not supported\n", DevFmtChannelsString(mDevice->FmtChans));
             return ALC_INVALID_VALUE;
     }
 
     requestedFormat.mBytesPerFrame = requestedFormat.mChannelsPerFrame * requestedFormat.mBitsPerChannel / 8;
     requestedFormat.mBytesPerPacket = requestedFormat.mBytesPerFrame;
-    requestedFormat.mSampleRate = device->Frequency;
+    requestedFormat.mSampleRate = mDevice->Frequency;
     requestedFormat.mFormatID = kAudioFormatLinearPCM;
     requestedFormat.mReserved = 0;
     requestedFormat.mFramesPerPacket = 1;
 
     // save requested format description for later use
-    self->mFormat = requestedFormat;
-    self->mFrameSize = device->frameSizeFromFmt();
+    mFormat = requestedFormat;
+    mFrameSize = mDevice->frameSizeFromFmt();
 
     // Use intermediate format for sample rate conversion (outputFormat)
     // Set sample rate to the same as hardware for resampling later
@@ -622,8 +586,8 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // The output format should be the requested format, but using the hardware sample rate
     // This is because the AudioUnit will automatically scale other properties, except for sample rate
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioUnitProperty_StreamFormat,
-        kAudioUnitScope_Output, 1, (void *)&outputFormat, sizeof(outputFormat));
+    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
+        1, (void*)&outputFormat, sizeof(outputFormat));
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
@@ -631,9 +595,9 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     // Set the AudioUnit output format frame count
-    ALuint64 FrameCount64{device->UpdateSize};
-    FrameCount64 = (FrameCount64*outputFormat.mSampleRate + device->Frequency-1) /
-        device->Frequency;
+    ALuint64 FrameCount64{mDevice->UpdateSize};
+    FrameCount64 = (FrameCount64*outputFormat.mSampleRate + mDevice->Frequency-1) /
+        mDevice->Frequency;
     FrameCount64 += MAX_RESAMPLE_PADDING*2;
     if(FrameCount64 > std::numeric_limits<uint32_t>::max()/2)
     {
@@ -642,7 +606,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     outputFrameCount = static_cast<uint32_t>(FrameCount64);
-    err = AudioUnitSetProperty(self->mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
+    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
         kAudioUnitScope_Output, 0, &outputFrameCount, sizeof(outputFrameCount));
     if(err != noErr)
     {
@@ -651,22 +615,22 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     // Set up sample converter if needed
-    if(outputFormat.mSampleRate != device->Frequency)
-        self->mConverter = CreateSampleConverter(device->FmtType, device->FmtType,
-            self->mFormat.mChannelsPerFrame, hardwareFormat.mSampleRate, device->Frequency,
+    if(outputFormat.mSampleRate != mDevice->Frequency)
+        mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
+            mFormat.mChannelsPerFrame, hardwareFormat.mSampleRate, mDevice->Frequency,
             BSinc24Resampler);
 
-    self->mRing = CreateRingBuffer(outputFrameCount, self->mFrameSize, false);
-    if(!self->mRing) return ALC_INVALID_VALUE;
+    mRing = CreateRingBuffer(outputFrameCount, mFrameSize, false);
+    if(!mRing) return ALC_INVALID_VALUE;
 
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
 
-static ALCboolean ALCcoreAudioCapture_start(ALCcoreAudioCapture *self)
+ALCboolean CoreAudioCapture::start()
 {
-    OSStatus err{AudioOutputUnitStart(self->mAudioUnit)};
+    OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
     {
         ERR("AudioOutputUnitStart failed\n");
@@ -675,48 +639,44 @@ static ALCboolean ALCcoreAudioCapture_start(ALCcoreAudioCapture *self)
     return ALC_TRUE;
 }
 
-static void ALCcoreAudioCapture_stop(ALCcoreAudioCapture *self)
+void CoreAudioCapture::stop()
 {
-    OSStatus err{AudioOutputUnitStop(self->mAudioUnit)};
+    OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
         ERR("AudioOutputUnitStop failed\n");
 }
 
-static ALCenum ALCcoreAudioCapture_captureSamples(ALCcoreAudioCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum CoreAudioCapture::captureSamples(void *buffer, ALCuint samples)
 {
-    RingBuffer *ring{self->mRing.get()};
-
-    if(!self->mConverter)
+    if(!mConverter)
     {
-        ring->read(buffer, samples);
+        mRing->read(buffer, samples);
         return ALC_NO_ERROR;
     }
 
-    auto rec_vec = ring->getReadVector();
+    auto rec_vec = mRing->getReadVector();
     const void *src0{rec_vec.first.buf};
     auto src0len = static_cast<ALsizei>(rec_vec.first.len);
-    auto got = static_cast<ALuint>(SampleConverterInput(self->mConverter.get(), &src0, &src0len,
+    auto got = static_cast<ALuint>(SampleConverterInput(mConverter.get(), &src0, &src0len,
         buffer, samples));
     size_t total_read{rec_vec.first.len - src0len};
     if(got < samples && !src0len && rec_vec.second.len > 0)
     {
         const void *src1{rec_vec.second.buf};
         auto src1len = static_cast<ALsizei>(rec_vec.second.len);
-        got += static_cast<ALuint>(SampleConverterInput(self->mConverter.get(), &src1, &src1len,
+        got += static_cast<ALuint>(SampleConverterInput(mConverter.get(), &src1, &src1len,
             static_cast<char*>(buffer)+got, samples-got));
         total_read += rec_vec.second.len - src1len;
     }
 
-    ring->readAdvance(total_read);
+    mRing->readAdvance(total_read);
     return ALC_NO_ERROR;
 }
 
-static ALCuint ALCcoreAudioCapture_availableSamples(ALCcoreAudioCapture *self)
+ALCuint CoreAudioCapture::availableSamples()
 {
-    RingBuffer *ring{self->mRing.get()};
-
-    if(!self->mConverter) return ring->readSpace();
-    return SampleConverterAvailableOut(self->mConverter.get(), ring->readSpace());
+    if(!mConverter) return mRing->readSpace();
+    return SampleConverterAvailableOut(mConverter.get(), mRing->readSpace());
 }
 
 } // namespace
@@ -744,20 +704,11 @@ void CoreAudioBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-ALCbackend *CoreAudioBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *CoreAudioBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-    {
-        ALCcoreAudioPlayback *backend;
-        NEW_OBJ(backend, ALCcoreAudioPlayback)(device);
-        return backend;
-    }
+        return new CoreAudioPlayback{device};
     if(type == ALCbackend_Capture)
-    {
-        ALCcoreAudioCapture *backend;
-        NEW_OBJ(backend, ALCcoreAudioCapture)(device);
-        return backend;
-    }
-
+        return new CoreAudioCapture{device};
     return nullptr;
 }

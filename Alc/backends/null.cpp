@@ -44,42 +44,24 @@ using std::chrono::nanoseconds;
 constexpr ALCchar nullDevice[] = "No Output";
 
 
-struct ALCnullBackend final : public ALCbackend {
-    ALCnullBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct NullBackend final : public BackendBase {
+    NullBackend(ALCdevice *device) noexcept : BackendBase{device} { }
 
     int mixerProc();
 
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean reset() override;
+    ALCboolean start() override;
+    void stop() override;
+
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "NullBackend::"; }
+    DEF_NEWDEL(NullBackend)
 };
 
-void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
-void ALCnullBackend_Destruct(ALCnullBackend *self);
-ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name);
-ALCboolean ALCnullBackend_reset(ALCnullBackend *self);
-ALCboolean ALCnullBackend_start(ALCnullBackend *self);
-void ALCnullBackend_stop(ALCnullBackend *self);
-DECLARE_FORWARD2(ALCnullBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALCuint, availableSamples)
-DECLARE_FORWARD(ALCnullBackend, ALCbackend, ClockLatency, getClockLatency)
-DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
-DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCnullBackend)
-
-DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
-
-
-void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
-{
-    new (self) ALCnullBackend{device};
-    SET_VTABLE2(ALCnullBackend, ALCbackend, self);
-}
-
-void ALCnullBackend_Destruct(ALCnullBackend *self)
-{ self->~ALCnullBackend(); }
-
-
-int ALCnullBackend::mixerProc()
+int NullBackend::mixerProc()
 {
     const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
 
@@ -102,9 +84,9 @@ int ALCnullBackend::mixerProc()
         }
         while(avail-done >= mDevice->UpdateSize)
         {
-            ALCnullBackend_lock(this);
+            lock();
             aluMixData(mDevice, nullptr, mDevice->UpdateSize);
-            ALCnullBackend_unlock(this);
+            unlock();
             done += mDevice->UpdateSize;
         }
 
@@ -125,30 +107,29 @@ int ALCnullBackend::mixerProc()
 }
 
 
-ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
+ALCenum NullBackend::open(const ALCchar *name)
 {
     if(!name)
         name = nullDevice;
     else if(strcmp(name, nullDevice) != 0)
         return ALC_INVALID_VALUE;
 
-    ALCdevice *device{self->mDevice};
-    device->DeviceName = name;
+    mDevice->DeviceName = name;
 
     return ALC_NO_ERROR;
 }
 
-ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
+ALCboolean NullBackend::reset()
 {
-    SetDefaultWFXChannelOrder(self->mDevice);
+    SetDefaultWFXChannelOrder(mDevice);
     return ALC_TRUE;
 }
 
-ALCboolean ALCnullBackend_start(ALCnullBackend *self)
+ALCboolean NullBackend::start()
 {
     try {
-        self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread(std::mem_fn(&ALCnullBackend::mixerProc), self);
+        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mThread = std::thread{std::mem_fn(&NullBackend::mixerProc), this};
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -159,11 +140,11 @@ ALCboolean ALCnullBackend_start(ALCnullBackend *self)
     return ALC_FALSE;
 }
 
-void ALCnullBackend_stop(ALCnullBackend *self)
+void NullBackend::stop()
 {
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
+    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
         return;
-    self->mThread.join();
+    mThread.join();
 }
 
 } // namespace
@@ -188,16 +169,11 @@ void NullBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-ALCbackend *NullBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *NullBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-    {
-        ALCnullBackend *backend;
-        NEW_OBJ(backend, ALCnullBackend)(device);
-        return backend;
-    }
-
-    return NULL;
+        return new NullBackend{device};
+    return nullptr;
 }
 
 BackendFactory &NullBackendFactory::getFactory()

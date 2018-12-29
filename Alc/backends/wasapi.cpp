@@ -494,18 +494,24 @@ DWORD WasapiProxy::messageHandler(void *ptr)
 }
 
 
-struct WasapiPlayback final : public ALCbackend, WasapiProxy {
-    WasapiPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct WasapiPlayback final : public BackendBase, WasapiProxy {
+    WasapiPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~WasapiPlayback() override;
 
     int mixerProc();
 
+    ALCenum open(const ALCchar *name) override;
     HRESULT openProxy() override;
     void closeProxy() override;
 
+    ALCboolean reset() override;
     HRESULT resetProxy() override;
+    ALCboolean start() override;
     HRESULT startProxy() override;
+    void stop() override;
     void stopProxy() override;
+
+    ClockLatency getClockLatency() override;
 
     std::wstring mDevId;
 
@@ -522,31 +528,8 @@ struct WasapiPlayback final : public ALCbackend, WasapiProxy {
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiPlayback::"; }
+    DEF_NEWDEL(WasapiPlayback)
 };
-
-void WasapiPlayback_Construct(WasapiPlayback *self, ALCdevice *device);
-void WasapiPlayback_Destruct(WasapiPlayback *self);
-ALCenum WasapiPlayback_open(WasapiPlayback *self, const ALCchar *name);
-ALCboolean WasapiPlayback_reset(WasapiPlayback *self);
-ALCboolean WasapiPlayback_start(WasapiPlayback *self);
-void WasapiPlayback_stop(WasapiPlayback *self);
-DECLARE_FORWARD2(WasapiPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
-DECLARE_FORWARD(WasapiPlayback, ALCbackend, ALCuint, availableSamples)
-ClockLatency WasapiPlayback_getClockLatency(WasapiPlayback *self);
-DECLARE_FORWARD(WasapiPlayback, ALCbackend, void, lock)
-DECLARE_FORWARD(WasapiPlayback, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(WasapiPlayback)
-
-DEFINE_ALCBACKEND_VTABLE(WasapiPlayback);
-
-void WasapiPlayback_Construct(WasapiPlayback *self, ALCdevice *device)
-{
-    new (self) WasapiPlayback{device};
-    SET_VTABLE2(WasapiPlayback, ALCbackend, self);
-}
-
-void WasapiPlayback_Destruct(WasapiPlayback *self)
-{ self->~WasapiPlayback(); }
 
 WasapiPlayback::~WasapiPlayback()
 {
@@ -576,9 +559,9 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        WasapiPlayback_lock(this);
+        lock();
         aluHandleDisconnect(mDevice, "COM init failed: 0x%08lx", hr);
-        WasapiPlayback_unlock(this);
+        unlock();
         return 1;
     }
 
@@ -594,9 +577,9 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
-            WasapiPlayback_lock(this);
+            lock();
             aluHandleDisconnect(mDevice, "Failed to retrieve buffer padding: 0x%08lx", hr);
-            WasapiPlayback_unlock(this);
+            unlock();
             break;
         }
         mPadding.store(written, std::memory_order_relaxed);
@@ -615,18 +598,18 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         hr = mRender->GetBuffer(len, &buffer);
         if(SUCCEEDED(hr))
         {
-            WasapiPlayback_lock(this);
+            lock();
             aluMixData(mDevice, buffer, len);
             mPadding.store(written + len, std::memory_order_relaxed);
-            WasapiPlayback_unlock(this);
+            unlock();
             hr = mRender->ReleaseBuffer(len, 0);
         }
         if(FAILED(hr))
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
-            WasapiPlayback_lock(this);
+            lock();
             aluHandleDisconnect(mDevice, "Failed to send playback samples: 0x%08lx", hr);
-            WasapiPlayback_unlock(this);
+            unlock();
             break;
         }
     }
@@ -676,13 +659,13 @@ ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
     return ALC_TRUE;
 }
 
-ALCenum WasapiPlayback_open(WasapiPlayback *self, const ALCchar *deviceName)
+ALCenum WasapiPlayback::open(const ALCchar *name)
 {
-    HRESULT hr = S_OK;
+    HRESULT hr{S_OK};
 
-    self->mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-    self->mMsgEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-    if(self->mNotifyEvent == nullptr || self->mMsgEvent == nullptr)
+    mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    mMsgEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(mNotifyEvent == nullptr || mMsgEvent == nullptr)
     {
         ERR("Failed to create message events: %lu\n", GetLastError());
         hr = E_FAIL;
@@ -690,35 +673,34 @@ ALCenum WasapiPlayback_open(WasapiPlayback *self, const ALCchar *deviceName)
 
     if(SUCCEEDED(hr))
     {
-        if(deviceName)
+        if(name)
         {
             if(PlaybackDevices.empty())
             {
-                ThreadRequest req = { self->mMsgEvent, 0 };
+                ThreadRequest req = { mMsgEvent, 0 };
                 if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
                     (void)WaitForResponse(&req);
             }
 
             hr = E_FAIL;
             auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-                [deviceName](const DevMap &entry) -> bool
-                { return entry.name == deviceName || entry.endpoint_guid == deviceName; }
+                [name](const DevMap &entry) -> bool
+                { return entry.name == name || entry.endpoint_guid == name; }
             );
             if(iter == PlaybackDevices.cend())
             {
-                std::wstring wname{utf8_to_wstr(deviceName)};
+                std::wstring wname{utf8_to_wstr(name)};
                 iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
                     [&wname](const DevMap &entry) -> bool
                     { return entry.devid == wname; }
                 );
             }
             if(iter == PlaybackDevices.cend())
-                WARN("Failed to find device name matching \"%s\"\n", deviceName);
+                WARN("Failed to find device name matching \"%s\"\n", name);
             else
             {
-                ALCdevice *device{self->mDevice};
-                self->mDevId = iter->devid;
-                device->DeviceName = iter->name;
+                mDevId = iter->devid;
+                mDevice->DeviceName = iter->name;
                 hr = S_OK;
             }
         }
@@ -726,8 +708,8 @@ ALCenum WasapiPlayback_open(WasapiPlayback *self, const ALCchar *deviceName)
 
     if(SUCCEEDED(hr))
     {
-        ThreadRequest req{ self->mMsgEvent, 0 };
-        auto proxy = static_cast<WasapiProxy*>(self);
+        ThreadRequest req{ mMsgEvent, 0 };
+        auto proxy = static_cast<WasapiProxy*>(this);
 
         hr = E_FAIL;
         if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)proxy))
@@ -738,14 +720,14 @@ ALCenum WasapiPlayback_open(WasapiPlayback *self, const ALCchar *deviceName)
 
     if(FAILED(hr))
     {
-        if(self->mNotifyEvent != nullptr)
-            CloseHandle(self->mNotifyEvent);
-        self->mNotifyEvent = nullptr;
-        if(self->mMsgEvent != nullptr)
-            CloseHandle(self->mMsgEvent);
-        self->mMsgEvent = nullptr;
+        if(mNotifyEvent != nullptr)
+            CloseHandle(mNotifyEvent);
+        mNotifyEvent = nullptr;
+        if(mMsgEvent != nullptr)
+            CloseHandle(mMsgEvent);
+        mMsgEvent = nullptr;
 
-        self->mDevId.clear();
+        mDevId.clear();
 
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_INVALID_VALUE;
@@ -798,12 +780,11 @@ void WasapiPlayback::closeProxy()
 }
 
 
-ALCboolean WasapiPlayback_reset(WasapiPlayback *self)
+ALCboolean WasapiPlayback::reset()
 {
-    ThreadRequest req{ self->mMsgEvent, 0 };
+    ThreadRequest req{ mMsgEvent, 0 };
+    auto proxy = static_cast<WasapiProxy*>(this);
     HRESULT hr{E_FAIL};
-
-    auto proxy = static_cast<WasapiProxy*>(self);
     if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)proxy))
         hr = WaitForResponse(&req);
 
@@ -1066,12 +1047,11 @@ HRESULT WasapiPlayback::resetProxy()
 }
 
 
-ALCboolean WasapiPlayback_start(WasapiPlayback *self)
+ALCboolean WasapiPlayback::start()
 {
-    ThreadRequest req{ self->mMsgEvent, 0 };
+    ThreadRequest req{ mMsgEvent, 0 };
+    auto proxy = static_cast<WasapiProxy*>(this);
     HRESULT hr{E_FAIL};
-
-    auto proxy = static_cast<WasapiProxy*>(self);
     if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)proxy))
         hr = WaitForResponse(&req);
 
@@ -1113,10 +1093,10 @@ HRESULT WasapiPlayback::startProxy()
 }
 
 
-void WasapiPlayback_stop(WasapiPlayback *self)
+void WasapiPlayback::stop()
 {
-    ThreadRequest req{ self->mMsgEvent, 0 };
-    auto proxy = static_cast<WasapiProxy*>(self);
+    ThreadRequest req{ mMsgEvent, 0 };
+    auto proxy = static_cast<WasapiProxy*>(this);
     if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)proxy))
         (void)WaitForResponse(&req);
 }
@@ -1135,33 +1115,38 @@ void WasapiPlayback::stopProxy()
 }
 
 
-ClockLatency WasapiPlayback_getClockLatency(WasapiPlayback *self)
+ClockLatency WasapiPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    WasapiPlayback_lock(self);
-    ALCdevice *device{self->mDevice};
-    ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency  = std::chrono::seconds{self->mPadding.load(std::memory_order_relaxed)};
-    ret.Latency /= device->Frequency;
-    WasapiPlayback_unlock(self);
+    lock();
+    ret.ClockTime = GetDeviceClockTime(mDevice);
+    ret.Latency  = std::chrono::seconds{mPadding.load(std::memory_order_relaxed)};
+    ret.Latency /= mDevice->Frequency;
+    unlock();
 
     return ret;
 }
 
 
-struct WasapiCapture final : public ALCbackend, WasapiProxy {
-    WasapiCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct WasapiCapture final : public BackendBase, WasapiProxy {
+    WasapiCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~WasapiCapture() override;
 
     int recordProc();
 
+    ALCenum open(const ALCchar *name) override;
     HRESULT openProxy() override;
     void closeProxy() override;
 
     HRESULT resetProxy() override;
+    ALCboolean start() override;
     HRESULT startProxy() override;
+    void stop() override;
     void stopProxy() override;
+
+    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCuint availableSamples() override;
 
     std::wstring mDevId;
 
@@ -1180,32 +1165,8 @@ struct WasapiCapture final : public ALCbackend, WasapiProxy {
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiCapture::"; }
+    DEF_NEWDEL(WasapiCapture)
 };
-
-void WasapiCapture_Construct(WasapiCapture *self, ALCdevice *device);
-void WasapiCapture_Destruct(WasapiCapture *self);
-ALCenum WasapiCapture_open(WasapiCapture *self, const ALCchar *name);
-DECLARE_FORWARD(WasapiCapture, ALCbackend, ALCboolean, reset)
-ALCboolean WasapiCapture_start(WasapiCapture *self);
-void WasapiCapture_stop(WasapiCapture *self);
-ALCenum WasapiCapture_captureSamples(WasapiCapture *self, ALCvoid *buffer, ALCuint samples);
-ALuint WasapiCapture_availableSamples(WasapiCapture *self);
-DECLARE_FORWARD(WasapiCapture, ALCbackend, ClockLatency, getClockLatency)
-DECLARE_FORWARD(WasapiCapture, ALCbackend, void, lock)
-DECLARE_FORWARD(WasapiCapture, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(WasapiCapture)
-
-DEFINE_ALCBACKEND_VTABLE(WasapiCapture);
-
-
-void WasapiCapture_Construct(WasapiCapture *self, ALCdevice *device)
-{
-    new (self) WasapiCapture{device};
-    SET_VTABLE2(WasapiCapture, ALCbackend, self);
-}
-
-void WasapiCapture_Destruct(WasapiCapture *self)
-{ self->~WasapiCapture(); }
 
 WasapiCapture::~WasapiCapture()
 {
@@ -1232,9 +1193,9 @@ FORCE_ALIGN int WasapiCapture::recordProc()
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        WasapiCapture_lock(this);
+        lock();
         aluHandleDisconnect(mDevice, "COM init failed: 0x%08lx", hr);
-        WasapiCapture_unlock(this);
+        unlock();
         return 1;
     }
 
@@ -1306,9 +1267,9 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 
         if(FAILED(hr))
         {
-            WasapiCapture_lock(this);
+            lock();
             aluHandleDisconnect(mDevice, "Failed to capture samples: 0x%08lx", hr);
-            WasapiCapture_unlock(this);
+            unlock();
             break;
         }
 
@@ -1322,13 +1283,13 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 }
 
 
-ALCenum WasapiCapture_open(WasapiCapture *self, const ALCchar *deviceName)
+ALCenum WasapiCapture::open(const ALCchar *name)
 {
     HRESULT hr{S_OK};
 
-    self->mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-    self->mMsgEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-    if(self->mNotifyEvent == nullptr || self->mMsgEvent == nullptr)
+    mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    mMsgEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(mNotifyEvent == nullptr || mMsgEvent == nullptr)
     {
         ERR("Failed to create message events: %lu\n", GetLastError());
         hr = E_FAIL;
@@ -1336,35 +1297,34 @@ ALCenum WasapiCapture_open(WasapiCapture *self, const ALCchar *deviceName)
 
     if(SUCCEEDED(hr))
     {
-        if(deviceName)
+        if(name)
         {
             if(CaptureDevices.empty())
             {
-                ThreadRequest req{ self->mMsgEvent, 0 };
+                ThreadRequest req{ mMsgEvent, 0 };
                 if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, CAPTURE_DEVICE_PROBE))
                     (void)WaitForResponse(&req);
             }
 
             hr = E_FAIL;
             auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-                [deviceName](const DevMap &entry) -> bool
-                { return entry.name == deviceName || entry.endpoint_guid == deviceName; }
+                [name](const DevMap &entry) -> bool
+                { return entry.name == name || entry.endpoint_guid == name; }
             );
             if(iter == CaptureDevices.cend())
             {
-                std::wstring wname{utf8_to_wstr(deviceName)};
+                std::wstring wname{utf8_to_wstr(name)};
                 iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
                     [&wname](const DevMap &entry) -> bool
                     { return entry.devid == wname; }
                 );
             }
             if(iter == CaptureDevices.cend())
-                WARN("Failed to find device name matching \"%s\"\n", deviceName);
+                WARN("Failed to find device name matching \"%s\"\n", name);
             else
             {
-                ALCdevice *device{self->mDevice};
-                self->mDevId = iter->devid;
-                device->DeviceName = iter->name;
+                mDevId = iter->devid;
+                mDevice->DeviceName = iter->name;
                 hr = S_OK;
             }
         }
@@ -1372,10 +1332,9 @@ ALCenum WasapiCapture_open(WasapiCapture *self, const ALCchar *deviceName)
 
     if(SUCCEEDED(hr))
     {
-        ThreadRequest req{ self->mMsgEvent, 0 };
-
+        ThreadRequest req{ mMsgEvent, 0 };
+        auto proxy = static_cast<WasapiProxy*>(this);
         hr = E_FAIL;
-        auto proxy = static_cast<WasapiProxy*>(self);
         if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)proxy))
             hr = WaitForResponse(&req);
         else
@@ -1384,24 +1343,23 @@ ALCenum WasapiCapture_open(WasapiCapture *self, const ALCchar *deviceName)
 
     if(FAILED(hr))
     {
-        if(self->mNotifyEvent != nullptr)
-            CloseHandle(self->mNotifyEvent);
-        self->mNotifyEvent = nullptr;
-        if(self->mMsgEvent != nullptr)
-            CloseHandle(self->mMsgEvent);
-        self->mMsgEvent = nullptr;
+        if(mNotifyEvent != nullptr)
+            CloseHandle(mNotifyEvent);
+        mNotifyEvent = nullptr;
+        if(mMsgEvent != nullptr)
+            CloseHandle(mMsgEvent);
+        mMsgEvent = nullptr;
 
-        self->mDevId.clear();
+        mDevId.clear();
 
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_INVALID_VALUE;
     }
     else
     {
-        ThreadRequest req{ self->mMsgEvent, 0 };
-
+        ThreadRequest req{ mMsgEvent, 0 };
+        auto proxy = static_cast<WasapiProxy*>(this);
         hr = E_FAIL;
-        auto proxy = static_cast<WasapiProxy*>(self);
         if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)proxy))
             hr = WaitForResponse(&req);
         else
@@ -1694,12 +1652,11 @@ HRESULT WasapiCapture::resetProxy()
 }
 
 
-ALCboolean WasapiCapture_start(WasapiCapture *self)
+ALCboolean WasapiCapture::start()
 {
-    ThreadRequest req{ self->mMsgEvent, 0 };
+    ThreadRequest req{ mMsgEvent, 0 };
+    auto proxy = static_cast<WasapiProxy*>(this);
     HRESULT hr{E_FAIL};
-
-    auto proxy = static_cast<WasapiProxy*>(self);
     if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)proxy))
         hr = WaitForResponse(&req);
 
@@ -1744,10 +1701,10 @@ HRESULT WasapiCapture::startProxy()
 }
 
 
-void WasapiCapture_stop(WasapiCapture *self)
+void WasapiCapture::stop()
 {
-    ThreadRequest req{ self->mMsgEvent, 0 };
-    auto proxy = static_cast<WasapiProxy*>(self);
+    ThreadRequest req{ mMsgEvent, 0 };
+    auto proxy = static_cast<WasapiProxy*>(this);
     if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)proxy))
         (void)WaitForResponse(&req);
 }
@@ -1767,16 +1724,12 @@ void WasapiCapture::stopProxy()
 }
 
 
-ALuint WasapiCapture_availableSamples(WasapiCapture *self)
-{
-    RingBuffer *ring{self->mRing.get()};
-    return (ALuint)ring->readSpace();
-}
+ALCuint WasapiCapture::availableSamples()
+{ return (ALCuint)mRing->readSpace(); }
 
-ALCenum WasapiCapture_captureSamples(WasapiCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum WasapiCapture::captureSamples(void *buffer, ALCuint samples)
 {
-    RingBuffer *ring{self->mRing.get()};
-    ring->read(buffer, samples);
+    mRing->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
@@ -1857,21 +1810,12 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-ALCbackend *WasapiBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *WasapiBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-    {
-        WasapiPlayback *backend;
-        NEW_OBJ(backend, WasapiPlayback)(device);
-        return backend;
-    }
+        return new WasapiPlayback{device};
     if(type == ALCbackend_Capture)
-    {
-        WasapiCapture *backend;
-        NEW_OBJ(backend, WasapiCapture)(device);
-        return backend;
-    }
-
+        return new WasapiCapture{device};
     return nullptr;
 }
 

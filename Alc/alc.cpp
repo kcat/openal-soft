@@ -1623,7 +1623,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
              * the device attributes can be updated.
              */
             if((device->Flags&DEVICE_RUNNING))
-                V0(device->Backend,stop)();
+                device->Backend->stop();
             device->Flags &= ~DEVICE_RUNNING;
         }
 
@@ -1740,7 +1740,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         if((device->Flags&DEVICE_RUNNING))
-            V0(device->Backend,stop)();
+            device->Backend->stop();
         device->Flags &= ~DEVICE_RUNNING;
 
         UpdateClockBase(device);
@@ -1893,7 +1893,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->UpdateSize, device->NumUpdates
     );
 
-    if(V0(device->Backend,reset)() == ALC_FALSE)
+    if(device->Backend->reset() == ALC_FALSE)
         return ALC_INVALID_DEVICE;
 
     if(device->FmtChans != oldChans && (device->Flags&DEVICE_CHANNELS_REQUEST))
@@ -2180,7 +2180,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(!(device->Flags&DEVICE_PAUSED))
     {
-        if(V0(device->Backend,start)() == ALC_FALSE)
+        if(device->Backend->start() == ALC_FALSE)
             return ALC_INVALID_DEVICE;
         device->Flags |= DEVICE_RUNNING;
     }
@@ -2203,7 +2203,7 @@ ALCdevice_struct::~ALCdevice_struct()
 {
     TRACE("%p\n", this);
 
-    DELETE_OBJ(Backend);
+    delete Backend;
     Backend = nullptr;
 
     size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), size_t{0u},
@@ -2509,7 +2509,7 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     if(GlobalContext.compare_exchange_strong(origctx, nullptr))
         ALCcontext_DecRef(context);
 
-    V0(device->Backend,lock)();
+    device->Backend->lock();
     origctx = context;
     newhead = context->next.load(std::memory_order_relaxed);
     if(!device->ContextList.compare_exchange_strong(origctx, newhead))
@@ -2525,7 +2525,7 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     }
     else
         ret = !!newhead;
-    V0(device->Backend,unlock)();
+    device->Backend->unlock();
 
     /* Make sure the context is finished and no longer processing in the mixer
      * before sending the message queue kill event. The backend's lock does
@@ -2934,7 +2934,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                     values[i++] = ALC_MINOR_VERSION;
                     values[i++] = alcMinorVersion;
                     values[i++] = ALC_CAPTURE_SAMPLES;
-                    values[i++] = V0(device->Backend,availableSamples)();
+                    values[i++] = device->Backend->availableSamples();
                     values[i++] = ALC_CONNECTED;
                     values[i++] = device->Connected.load(std::memory_order_relaxed);
                     values[i++] = 0;
@@ -2950,7 +2950,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             case ALC_CAPTURE_SAMPLES:
                 { std::lock_guard<std::mutex> _{device->BackendLock};
-                    values[0] = V0(device->Backend,availableSamples)();
+                    values[0] = device->Backend->availableSamples();
                 }
                 return 1;
 
@@ -3443,9 +3443,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         alcSetError(dev.get(), err);
         if(err == ALC_INVALID_DEVICE)
         {
-            V0(dev->Backend,lock)();
+            dev->Backend->lock();
             aluHandleDisconnect(dev.get(), "Device update failure");
-            V0(dev->Backend,unlock)();
+            dev->Backend->unlock();
         }
         backlock.unlock();
 
@@ -3526,7 +3526,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         std::lock_guard<std::mutex> _{Device->BackendLock};
         if(!ReleaseContext(ctx.get(), Device))
         {
-            V0(Device->Backend,stop)();
+            Device->Backend->stop();
             Device->Flags &= ~DEVICE_RUNNING;
         }
     }
@@ -3778,7 +3778,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     // Find a playback device to open
-    ALCenum err{V(device->Backend,open)(deviceName)};
+    ALCenum err{device->Backend->open(deviceName)};
     if(err != ALC_NO_ERROR)
     {
         device = nullptr;
@@ -3869,7 +3869,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
         ctx = next;
     }
     if((device->Flags&DEVICE_RUNNING))
-        V0(device->Backend,stop)();
+        device->Backend->stop();
     device->Flags &= ~DEVICE_RUNNING;
     backlock.unlock();
 
@@ -3929,7 +3929,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
         device->Frequency, device->UpdateSize, device->NumUpdates
     );
-    ALCenum err{V(device->Backend,open)(deviceName)};
+    ALCenum err{device->Backend->open(deviceName)};
     if(err != ALC_NO_ERROR)
     {
         device = nullptr;
@@ -3978,7 +3978,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 
     { std::lock_guard<std::mutex> _{device->BackendLock};
         if((device->Flags&DEVICE_RUNNING))
-            V0(device->Backend,stop)();
+            device->Backend->stop();
         device->Flags &= ~DEVICE_RUNNING;
     }
 
@@ -4001,7 +4001,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else if(!(dev->Flags&DEVICE_RUNNING))
     {
-        if(V0(dev->Backend,start)())
+        if(dev->Backend->start())
             dev->Flags |= DEVICE_RUNNING;
         else
         {
@@ -4020,7 +4020,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
     {
         std::lock_guard<std::mutex> _{dev->BackendLock};
         if((dev->Flags&DEVICE_RUNNING))
-            V0(dev->Backend,stop)();
+            dev->Backend->stop();
         dev->Flags &= ~DEVICE_RUNNING;
     }
 }
@@ -4036,8 +4036,9 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 
     ALCenum err{ALC_INVALID_VALUE};
     { std::lock_guard<std::mutex> _{dev->BackendLock};
-        if(samples >= 0 && V0(dev->Backend,availableSamples)() >= (ALCuint)samples)
-            err = V(dev->Backend,captureSamples)(buffer, samples);
+        BackendBase *backend{dev->Backend};
+        if(samples >= 0 && backend->availableSamples() >= (ALCuint)samples)
+            err = backend->captureSamples(buffer, samples);
     }
     if(err != ALC_NO_ERROR)
         alcSetError(dev.get(), err);
@@ -4102,7 +4103,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     }
 
     // Open the "backend"
-    V(device->Backend,open)("Loopback");
+    device->Backend->open("Loopback");
 
     {
         ALCdevice *head{DeviceList.load()};
@@ -4149,9 +4150,9 @@ FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, AL
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
     {
-        V0(dev->Backend,lock)();
+        dev->Backend->lock();
         aluMixData(dev.get(), buffer, samples);
-        V0(dev->Backend,unlock)();
+        dev->Backend->unlock();
     }
 }
 
@@ -4173,7 +4174,7 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
     {
         std::lock_guard<std::mutex> _{dev->BackendLock};
         if((dev->Flags&DEVICE_RUNNING))
-            V0(dev->Backend,stop)();
+            dev->Backend->stop();
         dev->Flags &= ~DEVICE_RUNNING;
         dev->Flags |= DEVICE_PAUSED;
     }
@@ -4199,11 +4200,11 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
     if(dev->ContextList.load() == nullptr)
         return;
 
-    if(V0(dev->Backend,start)() == ALC_FALSE)
+    if(dev->Backend->start() == ALC_FALSE)
     {
-        V0(dev->Backend,lock)();
+        dev->Backend->lock();
         aluHandleDisconnect(dev.get(), "Device start failure");
-        V0(dev->Backend,unlock)();
+        dev->Backend->unlock();
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return;
     }
@@ -4261,7 +4262,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
      * the connected state so lost devices can attempt recover.
      */
     if((dev->Flags&DEVICE_RUNNING))
-        V0(dev->Backend,stop)();
+        dev->Backend->stop();
     dev->Flags &= ~DEVICE_RUNNING;
     device->Connected.store(AL_TRUE);
 
@@ -4271,9 +4272,9 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
     alcSetError(dev.get(), err);
     if(err == ALC_INVALID_DEVICE)
     {
-        V0(dev->Backend,lock)();
+        dev->Backend->lock();
         aluHandleDisconnect(dev.get(), "Device start failure");
-        V0(dev->Backend,unlock)();
+        dev->Backend->unlock();
     }
     return ALC_FALSE;
 }

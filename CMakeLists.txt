@@ -773,7 +773,6 @@ SET(ALC_OBJS
     Alc/bformatdec.cpp
     Alc/bformatdec.h
     Alc/panning.cpp
-    Alc/polymorphism.h
     Alc/mixvoice.cpp
     Alc/mixer/defs.h
     Alc/mixer/mixer_c.cpp

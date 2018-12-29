@@ -12,7 +12,7 @@ public:
 
     void probe(DevProbe type, std::string *outnames) override;
 
-    ALCbackend *createBackend(ALCdevice *device, ALCbackend_Type type) override;
+    BackendBase *createBackend(ALCdevice *device, ALCbackend_Type type) override;
 
     static BackendFactory &getFactory();
 };

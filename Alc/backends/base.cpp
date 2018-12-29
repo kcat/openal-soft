@@ -12,80 +12,60 @@
 
 
 void ALCdevice_Lock(ALCdevice *device)
-{ V0(device->Backend,lock)(); }
+{ device->Backend->lock(); }
 
 void ALCdevice_Unlock(ALCdevice *device)
-{ V0(device->Backend,unlock)(); }
+{ device->Backend->unlock(); }
 
 ClockLatency GetClockLatency(ALCdevice *device)
 {
-    ClockLatency ret = V0(device->Backend,getClockLatency)();
+    BackendBase *backend{device->Backend};
+    ClockLatency ret{backend->getClockLatency()};
     ret.Latency += device->FixedLatency;
     return ret;
 }
 
 
-/* Base ALCbackend method implementations. */
-ALCbackend::ALCbackend(ALCdevice *device) noexcept : mDevice{device}
+/* BackendBase method implementations. */
+BackendBase::BackendBase(ALCdevice *device) noexcept : mDevice{device}
 { }
 
-ALCbackend::~ALCbackend()
+BackendBase::~BackendBase()
 { }
 
-ALCboolean ALCbackend_reset(ALCbackend* UNUSED(self))
-{
-    return ALC_FALSE;
-}
+ALCboolean BackendBase::reset()
+{ return ALC_FALSE; }
 
-ALCenum ALCbackend_captureSamples(ALCbackend* UNUSED(self), void* UNUSED(buffer), ALCuint UNUSED(samples))
-{
-    return ALC_INVALID_DEVICE;
-}
+ALCenum BackendBase::captureSamples(void* UNUSED(buffer), ALCuint UNUSED(samples))
+{ return ALC_INVALID_DEVICE; }
 
-ALCuint ALCbackend_availableSamples(ALCbackend* UNUSED(self))
-{
-    return 0;
-}
+ALCuint BackendBase::availableSamples()
+{ return 0; }
 
-ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
+ClockLatency BackendBase::getClockLatency()
 {
-    ALCdevice *device = self->mDevice;
-    ALuint refcount;
     ClockLatency ret;
 
+    ALuint refcount;
     do {
-        while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
+        while(((refcount=mDevice->MixCount.load(std::memory_order_acquire))&1))
             std::this_thread::yield();
-        ret.ClockTime = GetDeviceClockTime(device);
+        ret.ClockTime = GetDeviceClockTime(mDevice);
         std::atomic_thread_fence(std::memory_order_acquire);
-    } while(refcount != device->MixCount.load(std::memory_order_relaxed));
+    } while(refcount != mDevice->MixCount.load(std::memory_order_relaxed));
 
     /* NOTE: The device will generally have about all but one periods filled at
      * any given time during playback. Without a more accurate measurement from
      * the output, this is an okay approximation.
      */
-    ret.Latency  = std::chrono::seconds{device->UpdateSize*maxi(device->NumUpdates-1, 0)};
-    ret.Latency /= device->Frequency;
+    ret.Latency  = std::chrono::seconds{mDevice->UpdateSize*maxi(mDevice->NumUpdates-1, 0)};
+    ret.Latency /= mDevice->Frequency;
 
     return ret;
 }
 
-void ALCbackend_lock(ALCbackend *self)
-{
-    try {
-        self->mMutex.lock();
-    }
-    catch(...) {
-        std::terminate();
-    }
-}
+void BackendBase::lock() noexcept
+{ mMutex.lock(); }
 
-void ALCbackend_unlock(ALCbackend *self)
-{
-    try {
-        self->mMutex.unlock();
-    }
-    catch(...) {
-        std::terminate();
-    }
-}
+void BackendBase::unlock() noexcept
+{ mMutex.unlock(); }

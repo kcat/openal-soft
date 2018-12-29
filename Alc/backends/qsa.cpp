@@ -170,26 +170,20 @@ void deviceList(int type, al::vector<DevMap> *devmap)
 
 
 /* Wrappers to use an old-style backend with the new interface. */
-struct PlaybackWrapper final : public ALCbackend {
-    PlaybackWrapper(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct PlaybackWrapper final : public BackendBase {
+    PlaybackWrapper(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PlaybackWrapper() override;
 
-    std::unique_ptr<qsa_data> mExtraData;
-};
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean reset() override;
+    ALCboolean start() override;
+    void stop() override;
 
-static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device);
-static void PlaybackWrapper_Destruct(PlaybackWrapper *self);
-static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name);
-static ALCboolean PlaybackWrapper_reset(PlaybackWrapper *self);
-static ALCboolean PlaybackWrapper_start(PlaybackWrapper *self);
-static void PlaybackWrapper_stop(PlaybackWrapper *self);
-static DECLARE_FORWARD2(PlaybackWrapper, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, lock)
-static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(PlaybackWrapper)
-DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
+    std::unique_ptr<qsa_data> mExtraData;
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "PlaybackWrapper::"; }
+    DEF_NEWDEL(PlaybackWrapper)
+};
 
 
 FORCE_ALIGN static int qsa_proc_playback(void *ptr)
@@ -213,7 +207,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 
     const ALint frame_size = device->frameSizeFromFmt();
 
-    PlaybackWrapper_lock(self);
+    self->lock();
     while(!data->mKillNow.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
@@ -221,9 +215,9 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         pollitem.events = POLLOUT;
 
         /* Select also works like time slice to OS */
-        PlaybackWrapper_unlock(self);
+        self->unlock();
         sret = poll(&pollitem, 1, 2000);
-        PlaybackWrapper_lock(self);
+        self->lock();
         if(sret == -1)
         {
             if(errno == EINTR || errno == EAGAIN)
@@ -272,7 +266,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
             }
         }
     }
-    PlaybackWrapper_unlock(self);
+    self->unlock();
 
     return 0;
 }
@@ -614,68 +608,44 @@ static void qsa_stop_playback(PlaybackWrapper *self)
 }
 
 
-static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
-{
-    new (self) PlaybackWrapper{device};
-    SET_VTABLE2(PlaybackWrapper, ALCbackend, self);
-}
-
-static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
-{ self->~PlaybackWrapper(); }
-
 PlaybackWrapper::~PlaybackWrapper()
 {
     if(mExtraData)
         qsa_close_playback(this);
 }
 
-static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name)
-{
-    return qsa_open_playback(self, name);
-}
+ALCenum PlaybackWrapper::open(const ALCchar *name)
+{ return qsa_open_playback(this, name); }
 
-static ALCboolean PlaybackWrapper_reset(PlaybackWrapper *self)
-{
-    return qsa_reset_playback(self);
-}
+ALCboolean PlaybackWrapper::reset()
+{ return qsa_reset_playback(this); }
 
-static ALCboolean PlaybackWrapper_start(PlaybackWrapper *self)
-{
-    return qsa_start_playback(self);
-}
+ALCboolean PlaybackWrapper::start()
+{ return qsa_start_playback(this); }
 
-static void PlaybackWrapper_stop(PlaybackWrapper *self)
-{
-    qsa_stop_playback(self);
-}
-
+void PlaybackWrapper::stop()
+{ qsa_stop_playback(this); }
 
 
 /***********/
 /* Capture */
 /***********/
 
-struct CaptureWrapper final : public ALCbackend {
-    CaptureWrapper(ALCdevice *device) noexcept : ALCbackend{device} { }
+struct CaptureWrapper final : public BackendBase {
+    CaptureWrapper(ALCdevice *device) noexcept : BackendBase{device} { }
     ~CaptureWrapper() override;
 
+    ALCenum open(const ALCchar *name) override;
+    ALCboolean start() override;
+    void stop() override;
+    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCuint availableSamples() override;
+
     std::unique_ptr<qsa_data> mExtraData;
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "CaptureWrapper::"; }
+    DEF_NEWDEL(CaptureWrapper)
 };
-
-static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device);
-static void CaptureWrapper_Destruct(CaptureWrapper *self);
-static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name);
-static DECLARE_FORWARD(CaptureWrapper, ALCbackend, ALCboolean, reset)
-static ALCboolean CaptureWrapper_start(CaptureWrapper *self);
-static void CaptureWrapper_stop(CaptureWrapper *self);
-static ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples);
-static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self);
-static DECLARE_FORWARD(CaptureWrapper, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, lock)
-static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(CaptureWrapper)
-DEFINE_ALCBACKEND_VTABLE(CaptureWrapper);
-
 
 static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
 {
@@ -917,46 +887,26 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
 }
 
 
-static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
-{
-    new (self) CaptureWrapper{device};
-    SET_VTABLE2(CaptureWrapper, ALCbackend, self);
-}
-
-static void CaptureWrapper_Destruct(CaptureWrapper *self)
-{ self->~CaptureWrapper(); }
-
 CaptureWrapper::~CaptureWrapper()
 {
     if(mExtraData)
         qsa_close_capture(this);
 }
 
-static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name)
-{
-    return qsa_open_capture(self, name);
-}
+ALCenum CaptureWrapper::open(const ALCchar *name)
+{ return qsa_open_capture(this, name); }
 
-static ALCboolean CaptureWrapper_start(CaptureWrapper *self)
-{
-    qsa_start_capture(self);
-    return ALC_TRUE;
-}
+ALCboolean CaptureWrapper::start()
+{ qsa_start_capture(this); return ALC_TRUE; }
 
-static void CaptureWrapper_stop(CaptureWrapper *self)
-{
-    qsa_stop_capture(self);
-}
+void CaptureWrapper::stop()
+{ qsa_stop_capture(this); }
 
-static ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples)
-{
-    return qsa_capture_samples(self, buffer, samples);
-}
+ALCenum CaptureWrapper::captureSamples(void *buffer, ALCuint samples)
+{ return qsa_capture_samples(this, buffer, samples); }
 
-static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self)
-{
-    return qsa_available_samples(self);
-}
+ALCuint CaptureWrapper::availableSamples()
+{ return qsa_available_samples(this); }
 
 } // namespace
 
@@ -1002,22 +952,13 @@ void QSABackendFactory::probe(DevProbe type, std::string *outnames)
     }
 }
 
-ALCbackend *QSABackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
+BackendBase *QSABackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-    {
-        PlaybackWrapper *backend;
-        NEW_OBJ(backend, PlaybackWrapper)(device);
-        return backend;
-    }
+        return new PlaybackWrapper{device};
     if(type == ALCbackend_Capture)
-    {
-        CaptureWrapper *backend;
-        NEW_OBJ(backend, CaptureWrapper)(device);
-        return backend;
-    }
-
-    return NULL;
+        return new CaptureWrapper{device};
+    return nullptr;
 }
 
 BackendFactory &QSABackendFactory::getFactory()

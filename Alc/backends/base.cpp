@@ -57,9 +57,3 @@ ClockLatency BackendBase::getClockLatency()
 
     return ret;
 }
-
-void BackendBase::lock() noexcept
-{ mMutex.lock(); }
-
-void BackendBase::unlock() noexcept
-{ mMutex.unlock(); }

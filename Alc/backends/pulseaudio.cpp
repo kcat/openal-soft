@@ -759,8 +759,8 @@ struct PulsePlayback final : public BackendBase {
     ALCboolean start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
-    void lock() noexcept override;
-    void unlock() noexcept override;
+    void lock() override;
+    void unlock() override;
 
     std::string mDeviceName;
 
@@ -1225,10 +1225,10 @@ ClockLatency PulsePlayback::getClockLatency()
 }
 
 
-void PulsePlayback::lock() noexcept
+void PulsePlayback::lock()
 { pa_threaded_mainloop_lock(mLoop); }
 
-void PulsePlayback::unlock() noexcept
+void PulsePlayback::unlock()
 { pa_threaded_mainloop_unlock(mLoop); }
 
 
@@ -1254,8 +1254,8 @@ struct PulseCapture final : public BackendBase {
     ALCenum captureSamples(ALCvoid *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
     ClockLatency getClockLatency() override;
-    void lock() noexcept override;
-    void unlock() noexcept override;
+    void lock() override;
+    void unlock() override;
 
     std::string mDeviceName;
 
@@ -1577,10 +1577,10 @@ ClockLatency PulseCapture::getClockLatency()
 }
 
 
-void PulseCapture::lock() noexcept
+void PulseCapture::lock()
 { pa_threaded_mainloop_lock(mLoop); }
 
-void PulseCapture::unlock() noexcept
+void PulseCapture::unlock()
 { pa_threaded_mainloop_unlock(mLoop); }
 
 } // namespace

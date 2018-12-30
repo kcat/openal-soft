@@ -41,8 +41,8 @@ struct BackendBase {
 
     virtual ClockLatency getClockLatency();
 
-    virtual void lock() noexcept;
-    virtual void unlock() noexcept;
+    virtual void lock() { mMutex.lock(); };
+    virtual void unlock() { mMutex.unlock(); };
 
     ALCdevice *mDevice;
 

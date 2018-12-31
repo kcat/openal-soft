@@ -107,24 +107,23 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
                                const ALsizei IrSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
                                const ALfloat left, const ALfloat right)
 {
-    ALsizei off{Offset&HRIR_MASK};
-    ALsizei count{mini(IrSize, HRIR_LENGTH - off)};
-
+    ASSUME(Offset >= 0 && Offset < HRIR_LENGTH);
     ASSUME(IrSize >= 2);
     ASSUME(&Values != &Coeffs);
-    ASSUME(count > 0);
 
+    ALsizei count{mini(IrSize, HRIR_LENGTH - Offset)};
+    ASSUME(count > 0);
     for(ALsizei c{0};;)
     {
         for(;c < count;++c)
         {
-            Values[off][0] += Coeffs[c][0] * left;
-            Values[off][1] += Coeffs[c][1] * right;
-            ++off;
+            Values[Offset][0] += Coeffs[c][0] * left;
+            Values[Offset][1] += Coeffs[c][1] * right;
+            ++Offset;
         }
         if(c >= IrSize)
             break;
-        off = 0;
+        Offset = 0;
         count = IrSize;
     }
 }

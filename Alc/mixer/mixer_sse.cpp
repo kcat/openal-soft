@@ -90,45 +90,45 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
     ASSUME(IrSize >= 2);
     ASSUME(&Values != &Coeffs);
 
-    ALsizei off{Offset&HRIR_MASK};
+    ASSUME(Offset >= 0 && Offset < HRIR_LENGTH);
     if((Offset&1))
     {
-        ALsizei count{mini(IrSize-1, HRIR_LENGTH - off)};
+        ALsizei count{mini(IrSize-1, HRIR_LENGTH - Offset)};
         ASSUME(count >= 1);
 
         __m128 imp0, imp1;
         coeffs = _mm_load_ps(&Coeffs[0][0]);
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[off][0]);
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[Offset][0]);
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[off][0], vals);
-        ++off;
+        _mm_storel_pi((__m64*)&Values[Offset][0], vals);
+        ++Offset;
         for(ALsizei i{1};;)
         {
             for(;i < count;i += 2)
             {
                 coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-                vals = _mm_load_ps(&Values[off][0]);
+                vals = _mm_load_ps(&Values[Offset][0]);
                 imp1 = _mm_mul_ps(lrlr, coeffs);
                 imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
                 vals = _mm_add_ps(imp0, vals);
-                _mm_store_ps(&Values[off][0], vals);
+                _mm_store_ps(&Values[Offset][0], vals);
                 imp0 = imp1;
-                off += 2;
+                Offset += 2;
             }
-            off &= HRIR_MASK;
+            Offset &= HRIR_MASK;
             if(i >= IrSize-1)
                 break;
             count = IrSize-1;
         }
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[off][0]);
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[Offset][0]);
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[off][0], vals);
+        _mm_storel_pi((__m64*)&Values[Offset][0], vals);
     }
     else
     {
-        ALsizei count{mini(IrSize, HRIR_LENGTH - off)};
+        ALsizei count{mini(IrSize, HRIR_LENGTH - Offset)};
         ASSUME(count >= 2);
 
         for(ALsizei i{0};;)
@@ -136,14 +136,14 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
             for(;i < count;i += 2)
             {
                 coeffs = _mm_load_ps(&Coeffs[i][0]);
-                vals = _mm_load_ps(&Values[off][0]);
+                vals = _mm_load_ps(&Values[Offset][0]);
                 vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
-                _mm_store_ps(&Values[off][0], vals);
-                off += 2;
+                _mm_store_ps(&Values[Offset][0], vals);
+                Offset += 2;
             }
             if(i >= IrSize)
                 break;
-            off = 0;
+            Offset = 0;
             count = IrSize;
         }
     }

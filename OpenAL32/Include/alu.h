@@ -280,12 +280,12 @@ using RowMixerFunc = void(*)(ALfloat *OutBuffer, const ALfloat *gains,
     const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos,
     ALsizei BufferSize);
 using HrtfMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, ALsizei OutPos, const ALsizei IrSize,
-    MixHrtfParams *hrtfparams, HrtfState *hrtfstate, ALsizei BufferSize);
+    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, HrtfState *hrtfstate, const ALsizei BufferSize);
 using HrtfMixerBlendFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, ALsizei OutPos, const ALsizei IrSize,
+    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
     const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
-    ALsizei BufferSize);
+    const ALsizei BufferSize);
 using HrtfDirectMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
     const ALfloat *data, DirectHrtfState *State, const ALsizei Chan, const ALsizei BufferSize);
 

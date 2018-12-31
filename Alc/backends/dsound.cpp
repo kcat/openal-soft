@@ -241,9 +241,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
-        lock();
         aluHandleDisconnect(mDevice, "Failure retrieving playback buffer info: 0x%lx", err);
-        unlock();
         return 1;
     }
 
@@ -269,9 +267,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
-                    lock();
                     aluHandleDisconnect(mDevice, "Failure starting playback: 0x%lx", err);
-                    unlock();
                     return 1;
                 }
                 Playing = true;
@@ -316,9 +312,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
-            lock();
             aluHandleDisconnect(mDevice, "Failed to lock output buffer: 0x%lx", err);
-            unlock();
             return 1;
         }
 

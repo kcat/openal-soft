@@ -556,12 +556,12 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
         FPUCtl mixer_mode{};
         ALCdevice *Device{Context->Device};
-        std::unique_lock<std::mutex> backlock{Device->BackendLock};
+        std::unique_lock<std::mutex> statelock{Device->StateLock};
         State->mOutBuffer = Device->Dry.Buffer;
         State->mOutChannels = Device->Dry.NumChannels;
         if(State->deviceUpdate(Device) == AL_FALSE)
         {
-            backlock.unlock();
+            statelock.unlock();
             mixer_mode.leave();
             State->DecRef();
             return AL_OUT_OF_MEMORY;

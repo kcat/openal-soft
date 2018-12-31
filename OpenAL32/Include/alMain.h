@@ -785,7 +785,11 @@ struct ALCdevice_struct {
     // Contexts created on this device
     std::atomic<ALCcontext*> ContextList{nullptr};
 
-    std::mutex BackendLock;
+    /* This lock protects the device state (format, update size, etc) from
+     * being from being changed in multiple threads, or being accessed while
+     * being changed. It's also used to serialize calls to the backend.
+     */
+    std::mutex StateLock;
     std::unique_ptr<BackendBase> Backend;
 
     std::atomic<ALCdevice*> next{nullptr};

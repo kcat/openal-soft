@@ -172,9 +172,7 @@ int WaveBackend::mixerProc()
             if(ferror(mFile))
             {
                 ERR("Error writing to file\n");
-                lock();
                 aluHandleDisconnect(mDevice, "Failed to write playback samples");
-                unlock();
                 break;
             }
         }

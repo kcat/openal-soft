@@ -560,9 +560,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        lock();
         aluHandleDisconnect(mDevice, "COM init failed: 0x%08lx", hr);
-        unlock();
         return 1;
     }
 
@@ -578,9 +576,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
-            lock();
             aluHandleDisconnect(mDevice, "Failed to retrieve buffer padding: 0x%08lx", hr);
-            unlock();
             break;
         }
         mPadding.store(written, std::memory_order_relaxed);
@@ -608,9 +604,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(FAILED(hr))
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
-            lock();
             aluHandleDisconnect(mDevice, "Failed to send playback samples: 0x%08lx", hr);
-            unlock();
             break;
         }
     }
@@ -1194,9 +1188,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        lock();
         aluHandleDisconnect(mDevice, "COM init failed: 0x%08lx", hr);
-        unlock();
         return 1;
     }
 
@@ -1268,9 +1260,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 
         if(FAILED(hr))
         {
-            lock();
             aluHandleDisconnect(mDevice, "Failed to capture samples: 0x%08lx", hr);
-            unlock();
             break;
         }
 

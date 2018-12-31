@@ -520,9 +520,7 @@ int OSScapture::recordProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            lock();
             aluHandleDisconnect(mDevice, "Failed to check capture samples: %s", strerror(errno));
-            unlock();
             break;
         }
         else if(sret == 0)
@@ -538,10 +536,8 @@ int OSScapture::recordProc()
             if(amt < 0)
             {
                 ERR("read failed: %s\n", strerror(errno));
-                lock();
                 aluHandleDisconnect(mDevice, "Failed reading capture samples: %s",
                     strerror(errno));
-                unlock();
                 break;
             }
             mRing->writeAdvance(amt/frame_size);

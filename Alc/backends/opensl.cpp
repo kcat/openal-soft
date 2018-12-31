@@ -839,9 +839,7 @@ ALCboolean OpenSLCapture::start()
 
     if(SL_RESULT_SUCCESS != result)
     {
-        lock();
         aluHandleDisconnect(mDevice, "Failed to start capture: 0x%08x", result);
-        unlock();
         return ALC_FALSE;
     }
 
@@ -904,9 +902,7 @@ ALCenum OpenSLCapture::captureSamples(void* buffer, ALCuint samples)
 
     if(SL_RESULT_SUCCESS != result)
     {
-        lock();
         aluHandleDisconnect(mDevice, "Failed to update capture buffer: 0x%08x", result);
-        unlock();
         return ALC_INVALID_DEVICE;
     }
 

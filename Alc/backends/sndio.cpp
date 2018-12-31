@@ -94,9 +94,7 @@ int SndioPlayback::mixerProc()
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
-                lock();
                 aluHandleDisconnect(mDevice, "Failed to write playback samples");
-                unlock();
                 break;
             }
 
@@ -308,9 +306,7 @@ int SndioCapture::recordProc()
             size_t got{sio_read(mSndHandle, data.first.buf, minz(todo-total, data.first.len))};
             if(!got)
             {
-                lock();
                 aluHandleDisconnect(mDevice, "Failed to read capture samples");
-                unlock();
                 break;
             }
 

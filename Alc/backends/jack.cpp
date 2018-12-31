@@ -200,7 +200,7 @@ int JackPlayback::bufferSizeNotifyC(jack_nframes_t numframes, void *arg)
 
 int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
 {
-    lock();
+    std::lock_guard<std::mutex> _{mDevice->StateLock};
     mDevice->UpdateSize = numframes;
     mDevice->NumUpdates = 2;
 
@@ -218,7 +218,6 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
         ERR("Failed to reallocate ringbuffer\n");
         aluHandleDisconnect(mDevice, "Failed to reallocate %u-sample buffer", bufsize);
     }
-    unlock();
     return 0;
 }
 

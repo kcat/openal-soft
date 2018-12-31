@@ -2844,7 +2844,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             alcSetError(nullptr, ALC_INVALID_DEVICE);
         else
         {
-            std::lock_guard<std::mutex> _{dev->BackendLock};
+            std::lock_guard<std::mutex> _{dev->StateLock};
             value = (dev->mHrtf ? dev->HrtfName.c_str() : "");
         }
         break;
@@ -2927,7 +2927,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
-                    std::lock_guard<std::mutex> _{device->BackendLock};
+                    std::lock_guard<std::mutex> _{device->StateLock};
                     values[i++] = ALC_MAJOR_VERSION;
                     values[i++] = alcMajorVersion;
                     values[i++] = ALC_MINOR_VERSION;
@@ -2948,13 +2948,13 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 return 1;
 
             case ALC_CAPTURE_SAMPLES:
-                { std::lock_guard<std::mutex> _{device->BackendLock};
+                { std::lock_guard<std::mutex> _{device->StateLock};
                     values[0] = device->Backend->availableSamples();
                 }
                 return 1;
 
             case ALC_CONNECTED:
-                { std::lock_guard<std::mutex> _{device->BackendLock};
+                { std::lock_guard<std::mutex> _{device->StateLock};
                     values[0] = device->Connected.load(std::memory_order_acquire);
                 }
                 return 1;
@@ -2979,7 +2979,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_VALUE);
             else
             {
-                std::lock_guard<std::mutex> _{device->BackendLock};
+                std::lock_guard<std::mutex> _{device->StateLock};
                 values[i++] = ALC_MAJOR_VERSION;
                 values[i++] = alcMajorVersion;
                 values[i++] = ALC_MINOR_VERSION;
@@ -3071,7 +3071,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
-            { std::lock_guard<std::mutex> _{device->BackendLock};
+            { std::lock_guard<std::mutex> _{device->StateLock};
                 values[0] = device->Frequency / device->UpdateSize;
             }
             return 1;
@@ -3143,7 +3143,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_CONNECTED:
-            { std::lock_guard<std::mutex> _{device->BackendLock};
+            { std::lock_guard<std::mutex> _{device->StateLock};
                 values[0] = device->Connected.load(std::memory_order_acquire);
             }
             return 1;
@@ -3157,7 +3157,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_NUM_HRTF_SPECIFIERS_SOFT:
-            { std::lock_guard<std::mutex> _{device->BackendLock};
+            { std::lock_guard<std::mutex> _{device->StateLock};
                 device->HrtfList.clear();
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
                 values[0] = (ALCint)device->HrtfList.size();
@@ -3217,7 +3217,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 else
                 {
                     ALsizei i{0};
-                    std::lock_guard<std::mutex> _{dev->BackendLock};
+                    std::lock_guard<std::mutex> _{dev->StateLock};
                     values[i++] = ALC_FREQUENCY;
                     values[i++] = dev->Frequency;
 
@@ -3280,7 +3280,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 break;
 
             case ALC_DEVICE_CLOCK_SOFT:
-                { std::lock_guard<std::mutex> _{dev->BackendLock};
+                { std::lock_guard<std::mutex> _{dev->StateLock};
                     using std::chrono::seconds;
                     using std::chrono::nanoseconds;
                     using std::chrono::duration_cast;
@@ -3300,7 +3300,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 break;
 
             case ALC_DEVICE_LATENCY_SOFT:
-                { std::lock_guard<std::mutex> _{dev->BackendLock};
+                { std::lock_guard<std::mutex> _{dev->StateLock};
                     ClockLatency clock{GetClockLatency(dev.get())};
                     *values = clock.Latency.count();
                 }
@@ -3311,7 +3311,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     alcSetError(dev.get(), ALC_INVALID_VALUE);
                 else
                 {
-                    std::lock_guard<std::mutex> _{dev->BackendLock};
+                    std::lock_guard<std::mutex> _{dev->StateLock};
                     ClockLatency clock{GetClockLatency(dev.get())};
                     values[0] = clock.ClockTime.count();
                     values[1] = clock.Latency.count();
@@ -3417,8 +3417,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALfloat valf;
     ALCenum err;
 
-    /* Explicitly hold the list lock while taking the BackendLock in case the
-     * device is asynchronously destropyed, to ensure this new context is
+    /* Explicitly hold the list lock while taking the StateLock in case the
+     * device is asynchronously destroyed, to ensure this new context is
      * properly cleaned up after being made.
      */
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
@@ -3429,7 +3429,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return nullptr;
     }
-    std::unique_lock<std::mutex> backlock{dev->BackendLock};
+    std::unique_lock<std::mutex> statelock{dev->StateLock};
     listlock.unlock();
 
     dev->LastError.store(ALC_NO_ERROR);
@@ -3441,12 +3441,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     {
         alcSetError(dev.get(), err);
         if(err == ALC_INVALID_DEVICE)
-        {
-            dev->Backend->lock();
             aluHandleDisconnect(dev.get(), "Device update failure");
-            dev->Backend->unlock();
-        }
-        backlock.unlock();
+        statelock.unlock();
 
         delete ALContext;
         ALContext = nullptr;
@@ -3490,7 +3486,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             ALContext->next.store(head, std::memory_order_relaxed);
         } while(!dev->ContextList.compare_exchange_weak(head, ALContext));
     }
-    backlock.unlock();
+    statelock.unlock();
 
     if(ALContext->DefaultSlot)
     {
@@ -3522,7 +3518,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     ALCdevice* Device{ctx->Device};
     if(Device)
     {
-        std::lock_guard<std::mutex> _{Device->BackendLock};
+        std::lock_guard<std::mutex> _{Device->StateLock};
         if(!ReleaseContext(ctx.get(), Device))
         {
             Device->Backend->stop();
@@ -3845,7 +3841,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
         alcSetError(iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
-    std::unique_lock<std::mutex> backlock{device->BackendLock};
+    std::unique_lock<std::mutex> statelock{device->StateLock};
 
     ALCdevice *origdev{device};
     ALCdevice *nextdev{device->next.load(std::memory_order_relaxed)};
@@ -3870,7 +3866,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
     if((device->Flags&DEVICE_RUNNING))
         device->Backend->stop();
     device->Flags &= ~DEVICE_RUNNING;
-    backlock.unlock();
+    statelock.unlock();
 
     ALCdevice_DecRef(device);
 
@@ -3976,7 +3972,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
     }
     listlock.unlock();
 
-    { std::lock_guard<std::mutex> _{device->BackendLock};
+    { std::lock_guard<std::mutex> _{device->StateLock};
         if((device->Flags&DEVICE_RUNNING))
             device->Backend->stop();
         device->Flags &= ~DEVICE_RUNNING;
@@ -3996,7 +3992,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
         return;
     }
 
-    std::lock_guard<std::mutex> _{dev->BackendLock};
+    std::lock_guard<std::mutex> _{dev->StateLock};
     if(!dev->Connected.load(std::memory_order_acquire))
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else if(!(dev->Flags&DEVICE_RUNNING))
@@ -4018,7 +4014,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else
     {
-        std::lock_guard<std::mutex> _{dev->BackendLock};
+        std::lock_guard<std::mutex> _{dev->StateLock};
         if((dev->Flags&DEVICE_RUNNING))
             dev->Backend->stop();
         dev->Flags &= ~DEVICE_RUNNING;
@@ -4035,7 +4031,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
     }
 
     ALCenum err{ALC_INVALID_VALUE};
-    { std::lock_guard<std::mutex> _{dev->BackendLock};
+    { std::lock_guard<std::mutex> _{dev->StateLock};
         BackendBase *backend{dev->Backend.get()};
         if(samples >= 0 && backend->availableSamples() >= (ALCuint)samples)
             err = backend->captureSamples(buffer, samples);
@@ -4172,7 +4168,7 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else
     {
-        std::lock_guard<std::mutex> _{dev->BackendLock};
+        std::lock_guard<std::mutex> _{dev->StateLock};
         if((dev->Flags&DEVICE_RUNNING))
             dev->Backend->stop();
         dev->Flags &= ~DEVICE_RUNNING;
@@ -4193,7 +4189,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
         return;
     }
 
-    std::lock_guard<std::mutex> _{dev->BackendLock};
+    std::lock_guard<std::mutex> _{dev->StateLock};
     if(!(dev->Flags&DEVICE_PAUSED))
         return;
     dev->Flags &= ~DEVICE_PAUSED;
@@ -4202,9 +4198,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
 
     if(dev->Backend->start() == ALC_FALSE)
     {
-        dev->Backend->lock();
         aluHandleDisconnect(dev.get(), "Device start failure");
-        dev->Backend->unlock();
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return;
     }
@@ -4255,7 +4249,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
-    std::lock_guard<std::mutex> _{dev->BackendLock};
+    std::lock_guard<std::mutex> _{dev->StateLock};
     listlock.unlock();
 
     /* Force the backend to stop mixing first since we're resetting. Also reset
@@ -4271,10 +4265,6 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
 
     alcSetError(dev.get(), err);
     if(err == ALC_INVALID_DEVICE)
-    {
-        dev->Backend->lock();
         aluHandleDisconnect(dev.get(), "Device start failure");
-        dev->Backend->unlock();
-    }
     return ALC_FALSE;
 }

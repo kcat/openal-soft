@@ -478,7 +478,7 @@ void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, AL
 ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
-/* Caller must lock the device, and the mixer must not be running. */
+/* Caller must lock the device state, and the mixer must not be running. */
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...) DECL_FORMAT(printf, 2, 3);
 
 extern MixerFunc MixSamples;

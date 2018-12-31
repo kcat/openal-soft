@@ -469,9 +469,7 @@ int AlsaPlayback::mixerProc()
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            lock();
             aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
-            unlock();
             break;
         }
 
@@ -554,9 +552,7 @@ int AlsaPlayback::mixerNoMMapProc()
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            lock();
             aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
-            unlock();
             break;
         }
 

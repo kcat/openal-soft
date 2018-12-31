@@ -55,7 +55,7 @@ struct NullBackend final : public BackendBase {
     ALCboolean start() override;
     void stop() override;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "NullBackend::"; }
@@ -129,7 +129,7 @@ ALCboolean NullBackend::reset()
 ALCboolean NullBackend::start()
 {
     try {
-        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&NullBackend::mixerProc), this};
         return ALC_TRUE;
     }
@@ -143,7 +143,7 @@ ALCboolean NullBackend::start()
 
 void NullBackend::stop()
 {
-    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 }

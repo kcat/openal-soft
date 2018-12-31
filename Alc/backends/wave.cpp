@@ -95,7 +95,7 @@ struct WaveBackend final : public BackendBase {
 
     al::vector<ALbyte> mBuffer;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WaveBackend::"; }
@@ -328,7 +328,7 @@ ALCboolean WaveBackend::reset()
 ALCboolean WaveBackend::start()
 {
     try {
-        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
         return ALC_TRUE;
     }
@@ -342,7 +342,7 @@ ALCboolean WaveBackend::start()
 
 void WaveBackend::stop()
 {
-    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 

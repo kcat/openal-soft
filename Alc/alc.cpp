@@ -4258,7 +4258,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
     if((dev->Flags&DEVICE_RUNNING))
         dev->Backend->stop();
     dev->Flags &= ~DEVICE_RUNNING;
-    device->Connected.store(AL_TRUE);
+    device->Connected.store(true);
 
     ALCenum err{UpdateDeviceParams(dev.get(), attribs)};
     if(LIKELY(err == ALC_NO_ERROR)) return ALC_TRUE;

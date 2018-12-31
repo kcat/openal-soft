@@ -202,7 +202,7 @@ struct DSoundPlayback final : public BackendBase {
     IDirectSoundNotify *mNotifies{nullptr};
     HANDLE             mNotifyEvent{nullptr};
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "DSoundPlayback::"; }
@@ -596,7 +596,7 @@ retry_open:
 ALCboolean DSoundPlayback::start()
 {
     try {
-        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&DSoundPlayback::mixerProc), this};
         return ALC_TRUE;
     }
@@ -610,7 +610,7 @@ ALCboolean DSoundPlayback::start()
 
 void DSoundPlayback::stop()
 {
-    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 

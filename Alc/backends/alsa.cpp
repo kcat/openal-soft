@@ -441,7 +441,7 @@ struct AlsaPlayback final : public BackendBase {
 
     al::vector<char> mBuffer;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "AlsaPlayback::"; }
@@ -856,7 +856,7 @@ ALCboolean AlsaPlayback::start()
     }
 
     try {
-        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(thread_func), this};
         return ALC_TRUE;
     }
@@ -871,7 +871,7 @@ ALCboolean AlsaPlayback::start()
 
 void AlsaPlayback::stop()
 {
-    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 

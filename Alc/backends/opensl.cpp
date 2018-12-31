@@ -169,7 +169,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     ALsizei mFrameSize{0};
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "OpenSLPlayback::"; }
@@ -550,7 +550,7 @@ ALCboolean OpenSLPlayback::start()
     if(SL_RESULT_SUCCESS != result) return ALC_FALSE;
 
     try {
-        mKillNow.store(AL_FALSE);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread(std::mem_fn(&OpenSLPlayback::mixerProc), this);
         return ALC_TRUE;
     }
@@ -564,7 +564,7 @@ ALCboolean OpenSLPlayback::start()
 
 void OpenSLPlayback::stop()
 {
-    if(mKillNow.exchange(AL_TRUE) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
 
     mSem.post();

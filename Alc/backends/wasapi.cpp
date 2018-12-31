@@ -525,7 +525,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     std::atomic<UINT32> mPadding{0u};
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiPlayback::"; }
@@ -1070,7 +1070,7 @@ HRESULT WasapiPlayback::startProxy()
     {
         mRender = static_cast<IAudioRenderClient*>(ptr);
         try {
-            mKillNow.store(AL_FALSE, std::memory_order_release);
+            mKillNow.store(false, std::memory_order_release);
             mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
         }
         catch(...) {
@@ -1101,7 +1101,7 @@ void WasapiPlayback::stopProxy()
     if(!mRender || !mThread.joinable())
         return;
 
-    mKillNow.store(AL_TRUE);
+    mKillNow.store(true, std::memory_order_release);
     mThread.join();
 
     mRender->Release();
@@ -1156,7 +1156,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     SampleConverterPtr mSampleConv;
     RingBufferPtr mRing;
 
-    std::atomic<int> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiCapture::"; }
@@ -1671,7 +1671,7 @@ HRESULT WasapiCapture::startProxy()
     {
         mCapture = static_cast<IAudioCaptureClient*>(ptr);
         try {
-            mKillNow.store(AL_FALSE, std::memory_order_release);
+            mKillNow.store(false, std::memory_order_release);
             mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};
         }
         catch(...) {
@@ -1705,7 +1705,7 @@ void WasapiCapture::stopProxy()
     if(!mCapture || !mThread.joinable())
         return;
 
-    mKillNow.store(AL_TRUE);
+    mKillNow.store(true, std::memory_order_release);
     mThread.join();
 
     mCapture->Release();

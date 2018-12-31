@@ -666,7 +666,7 @@ using POSTPROCESS = void(*)(ALCdevice *device, ALsizei SamplesToDo);
 struct ALCdevice_struct {
     RefCount ref{1u};
 
-    std::atomic<ALenum> Connected{AL_TRUE};
+    std::atomic<bool> Connected{true};
     const DeviceType Type{};
 
     ALuint Frequency{};

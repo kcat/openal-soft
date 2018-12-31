@@ -144,7 +144,7 @@ struct WinMMPlayback final : public BackendBase {
 
     WAVEFORMATEX mFormat{};
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WinMMPlayback::"; }
@@ -336,7 +336,7 @@ ALCboolean WinMMPlayback::start()
         );
         mWritable.store(static_cast<ALuint>(mWaveBuffer.size()), std::memory_order_release);
 
-        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WinMMPlayback::mixerProc), this};
         return ALC_TRUE;
     }
@@ -350,7 +350,7 @@ ALCboolean WinMMPlayback::start()
 
 void WinMMPlayback::stop()
 {
-    if(mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 
@@ -390,7 +390,7 @@ struct WinMMCapture final : public BackendBase {
 
     WAVEFORMATEX mFormat{};
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "WinMMCapture::"; }
@@ -554,7 +554,7 @@ ALCboolean WinMMCapture::start()
             waveInAddBuffer(mInHdl, &mWaveBuffer[i], sizeof(WAVEHDR));
         }
 
-        mKillNow.store(AL_FALSE, std::memory_order_release);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WinMMCapture::captureProc), this};
 
         waveInStart(mInHdl);
@@ -572,7 +572,7 @@ void WinMMCapture::stop()
 {
     waveInStop(mInHdl);
 
-    mKillNow.store(AL_TRUE, std::memory_order_release);
+    mKillNow.store(true, std::memory_order_release);
     if(mThread.joinable())
     {
         mSem.post();

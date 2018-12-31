@@ -257,7 +257,7 @@ struct OSSPlayback final : public BackendBase {
 
     al::vector<ALubyte> mMixData;
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "OSSPlayback::"; }
@@ -448,7 +448,7 @@ ALCboolean OSSPlayback::reset()
 ALCboolean OSSPlayback::start()
 {
     try {
-        mKillNow.store(AL_FALSE);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSSPlayback::mixerProc), this};
         return ALC_TRUE;
     }
@@ -462,7 +462,7 @@ ALCboolean OSSPlayback::start()
 
 void OSSPlayback::stop()
 {
-    if(mKillNow.exchange(AL_TRUE) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 
@@ -487,7 +487,7 @@ struct OSScapture final : public BackendBase {
 
     RingBufferPtr mRing{nullptr};
 
-    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
     static constexpr inline const char *CurrentPrefix() noexcept { return "OSScapture::"; }
@@ -661,7 +661,7 @@ ALCenum OSScapture::open(const ALCchar *name)
 ALCboolean OSScapture::start()
 {
     try {
-        mKillNow.store(AL_FALSE);
+        mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSScapture::recordProc), this};
         return ALC_TRUE;
     }
@@ -675,7 +675,7 @@ ALCboolean OSScapture::start()
 
 void OSScapture::stop()
 {
-    if(mKillNow.exchange(AL_TRUE) || !mThread.joinable())
+    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 

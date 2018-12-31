@@ -1817,7 +1817,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
 {
-    if(!device->Connected.exchange(AL_FALSE, std::memory_order_acq_rel))
+    if(!device->Connected.exchange(false, std::memory_order_acq_rel))
         return;
 
     AsyncEvent evt{EventType_Disconnected};

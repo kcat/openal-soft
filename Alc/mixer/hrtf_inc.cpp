@@ -152,40 +152,44 @@ void MixHrtfBlend(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
 }
 
 void MixDirectHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                   const ALfloat *data, DirectHrtfState *State, const ALsizei Chan,
-                   const ALsizei BufferSize)
+                   const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
+                   const ALsizei NumChans, const ALsizei BufferSize)
 {
-    ASSUME(Chan >= 0);
+    ASSUME(NumChans >= 0);
     ASSUME(BufferSize > 0);
 
-    const ALfloat (&Coeffs)[HRIR_LENGTH][2] = State->Chan[Chan].Coeffs;
-    ALfloat (&Values)[HRIR_LENGTH][2] = State->Chan[Chan].Values;
-    ALsizei Offset{State->Offset&HRIR_MASK};
     const ALsizei IrSize{State->IrSize};
-
     ASSUME(IrSize >= 4);
 
-    ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
-    for(ALsizei i{0};i < BufferSize;)
+    for(ALsizei c{0};c < NumChans;++c)
     {
-        const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
-        const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
-        ASSUME(todo > i);
+        const ALfloat (&input)[BUFFERSIZE] = data[c];
+        const ALfloat (&Coeffs)[HRIR_LENGTH][2] = State->Chan[c].Coeffs;
+        ALfloat (&Values)[HRIR_LENGTH][2] = State->Chan[c].Values;
+        ALsizei Offset{State->Offset&HRIR_MASK};
 
-        for(;i < todo;++i)
+        ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
+        for(ALsizei i{0};i < BufferSize;)
         {
-            Values[HeadOffset][0] = 0.0f;
-            Values[HeadOffset][1] = 0.0f;
-            ++HeadOffset;
+            const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
+            const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
+            ASSUME(todo > i);
 
-            const ALfloat insample{*(data++)};
-            ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
+            for(;i < todo;++i)
+            {
+                Values[HeadOffset][0] = 0.0f;
+                Values[HeadOffset][1] = 0.0f;
+                ++HeadOffset;
 
-            *(LeftOut++)  += Values[Offset][0];
-            *(RightOut++) += Values[Offset][1];
-            ++Offset;
+                const ALfloat insample{input[i]};
+                ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
+
+                LeftOut[i]  += Values[Offset][0];
+                RightOut[i] += Values[Offset][1];
+                ++Offset;
+            }
+            HeadOffset &= HRIR_MASK;
+            Offset &= HRIR_MASK;
         }
-        HeadOffset &= HRIR_MASK;
-        Offset &= HRIR_MASK;
     }
 }

@@ -31,8 +31,8 @@ void MixHrtfBlend_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                     MixHrtfParams *newparams, HrtfState *hrtfstate,
                     ALsizei BufferSize);
 void MixDirectHrtf_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                     const ALfloat *data, DirectHrtfState *State, const ALsizei Chan,
-                     const ALsizei BufferSize);
+                     const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
+                     const ALsizei NumChans, const ALsizei BufferSize);
 void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
            ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
            ALsizei BufferSize);
@@ -51,8 +51,8 @@ void MixHrtfBlend_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                       MixHrtfParams *newparams, HrtfState *hrtfstate,
                       ALsizei BufferSize);
 void MixDirectHrtf_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                       const ALfloat *data, DirectHrtfState *State, const ALsizei Chan,
-                       const ALsizei BufferSize);
+                       const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
+                       const ALsizei NumChans, const ALsizei BufferSize);
 void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
              ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
              ALsizei BufferSize);
@@ -97,8 +97,8 @@ void MixHrtfBlend_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                        MixHrtfParams *newparams, HrtfState *hrtfstate,
                        ALsizei BufferSize);
 void MixDirectHrtf_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                        const ALfloat *data, DirectHrtfState *State, const ALsizei Chan,
-                        const ALsizei BufferSize);
+                        const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
+                        const ALsizei NumChans, const ALsizei BufferSize);
 void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
               ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
               ALsizei BufferSize);

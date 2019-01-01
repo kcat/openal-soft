@@ -135,14 +135,12 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 
     /* HRTF is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
-    const int ridx{(device->RealOut.ChannelName[1]==FrontRight) ? 1 : 0};
+    const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
     ALfloat *LeftOut{device->RealOut.Buffer[lidx]};
     ALfloat *RightOut{device->RealOut.Buffer[ridx]};
 
-    const ALfloat (*Input)[BUFFERSIZE]{device->Dry.Buffer};
     DirectHrtfState *state{device->mHrtfState.get()};
-    for(ALsizei c{0};c < num_chans;c++)
-        MixDirectHrtf(LeftOut, RightOut, Input[c], state, c, SamplesToDo);
+    MixDirectHrtf(LeftOut, RightOut, device->Dry.Buffer, state, num_chans, SamplesToDo);
     state->Offset += SamplesToDo;
 }
 

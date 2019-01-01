@@ -287,7 +287,8 @@ using HrtfMixerBlendFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT 
     const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
     const ALsizei BufferSize);
 using HrtfDirectMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, DirectHrtfState *State, const ALsizei Chan, const ALsizei BufferSize);
+    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
+    const ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */

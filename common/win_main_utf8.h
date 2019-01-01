@@ -30,7 +30,7 @@ static FILE *my_fopen(const char *fname, const char *mode)
         return NULL;
     }
 
-    wname = calloc(sizeof(WCHAR), namelen+modelen);
+    wname = (WCHAR*)calloc(sizeof(WCHAR), namelen+modelen);
     wmode = wname + namelen;
     MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);
     MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, modelen);
@@ -73,7 +73,7 @@ static void GetUnicodeArgs(int *argc, char ***argv)
         total += WideCharToMultiByte(CP_UTF8, 0, args[i], -1, NULL, 0, NULL, NULL);
 
     atexit(cleanup_arglist);
-    arglist = *argv = calloc(1, total);
+    arglist = *argv = (char**)calloc(1, total);
     (*argv)[0] = (char*)(*argv + nargs);
     for(i = 0;i < nargs-1;i++)
     {

@@ -965,7 +965,7 @@ static double *CreateDoubles(size_t n)
 {
     double *a;
 
-    a = calloc(n?n:1, sizeof(*a));
+    a = static_cast<double*>(calloc(n?n:1, sizeof(*a)));
     if(a == NULL)
     {
         fprintf(stderr, "Error:  Out of memory.\n");
@@ -979,7 +979,7 @@ static Complex *CreateComplexes(size_t n)
 {
     Complex *a;
 
-    a = calloc(n?n:1, sizeof(*a));
+    a = static_cast<Complex*>(calloc(n?n:1, sizeof(*a)));
     if(a == NULL)
     {
         fprintf(stderr, "Error:  Out of memory.\n");
@@ -2545,13 +2545,13 @@ static int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COU
     if(!fdCount || !evTotal || !azTotal)
         return 0;
 
-    hData->mFds = calloc(fdCount, sizeof(*hData->mFds));
+    hData->mFds = static_cast<HrirFdT*>(calloc(fdCount, sizeof(*hData->mFds)));
     if(hData->mFds == NULL)
         return 0;
-    hData->mFds[0].mEvs = calloc(evTotal, sizeof(*hData->mFds[0].mEvs));
+    hData->mFds[0].mEvs = static_cast<HrirEvT*>(calloc(evTotal, sizeof(*hData->mFds[0].mEvs)));
     if(hData->mFds[0].mEvs == NULL)
         return 0;
-    hData->mFds[0].mEvs[0].mAzs = calloc(azTotal, sizeof(*hData->mFds[0].mEvs[0].mAzs));
+    hData->mFds[0].mEvs[0].mAzs = static_cast<HrirAzT*>(calloc(azTotal, sizeof(*hData->mFds[0].mEvs[0].mAzs)));
     if(hData->mFds[0].mEvs[0].mAzs == NULL)
         return 0;
     hData->mIrCount = azTotal;
@@ -2631,7 +2631,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     double distances[MAX_FD_COUNT];
     uint fdCount = 0;
     uint evCounts[MAX_FD_COUNT];
-    uint *azCounts = calloc(MAX_FD_COUNT * MAX_EV_COUNT, sizeof(*azCounts));
+    uint *azCounts = static_cast<uint*>(calloc(MAX_FD_COUNT * MAX_EV_COUNT, sizeof(*azCounts)));
 
     if(azCounts == NULL)
     {

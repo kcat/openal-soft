@@ -1514,7 +1514,7 @@ IF(ALSOFT_UTILS)
     TARGET_COMPILE_OPTIONS(openal-info PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(openal-info PRIVATE ${LINKER_FLAGS} OpenAL)
 
-    SET(MAKEHRTF_SRCS  utils/makehrtf.c)
+    SET(MAKEHRTF_SRCS  utils/makehrtf.cpp)
     IF(NOT HAVE_GETOPT)
         SET(MAKEHRTF_SRCS  ${MAKEHRTF_SRCS} utils/getopt.c utils/getopt.h)
     ENDIF()

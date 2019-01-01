@@ -83,6 +83,7 @@
 #include <limits>
 #include <vector>
 #include <complex>
+#include <algorithm>
 
 #include "win_main_utf8.h"
 

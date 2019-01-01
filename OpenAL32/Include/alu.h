@@ -415,7 +415,7 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
  * vector must be normalized (unit length), and the spread is the angular width
  * of the sound (0...tau).
  */
-inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat (&coeffs)[MAX_AMBI_COEFFS])
+inline void CalcDirectionCoeffs(const ALfloat (&dir)[3], ALfloat spread, ALfloat (&coeffs)[MAX_AMBI_COEFFS])
 {
     /* Convert from OpenAL coords to Ambisonics. */
     CalcAmbiCoeffs(-dir[0], dir[1], -dir[2], spread, coeffs);

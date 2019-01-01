@@ -35,6 +35,8 @@
 #include "vecmat.h"
 
 
+namespace {
+
 /*  The document  "Effects Extension Guide.pdf"  says that low and high  *
  *  frequencies are cutoff frequencies. This is not fully correct, they  *
  *  are corner frequencies for low and high shelf filters. If they were  *
@@ -87,7 +89,7 @@ struct ALequalizerState final : public EffectState {
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_EFFECT_CHANNELS];
 
-    ALfloat mSampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE]{};
+    ALfloat mSampleBuffer[BUFFERSIZE]{};
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
@@ -161,21 +163,19 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
 
 void ALequalizerState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*RESTRICT temps)[BUFFERSIZE] = mSampleBuffer;
-    ALsizei c;
-
-    for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
+    for(ALsizei c{0};c < MAX_EFFECT_CHANNELS;c++)
     {
-        mChans[c].filter[0].process(temps[0], SamplesIn[c], SamplesToDo);
-        mChans[c].filter[1].process(temps[1], temps[0], SamplesToDo);
-        mChans[c].filter[2].process(temps[2], temps[1], SamplesToDo);
-        mChans[c].filter[3].process(temps[3], temps[2], SamplesToDo);
+        mChans[c].filter[0].process(mSampleBuffer, SamplesIn[c], SamplesToDo);
+        mChans[c].filter[1].process(mSampleBuffer, mSampleBuffer, SamplesToDo);
+        mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, SamplesToDo);
+        mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, SamplesToDo);
 
-        MixSamples(temps[3], NumChannels, SamplesOut, mChans[c].CurrentGains,
-                   mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
+        MixSamples(mSampleBuffer, NumChannels, SamplesOut, mChans[c].CurrentGains,
+            mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
     }
 }
 
+} // namespace
 
 struct EqualizerStateFactory final : public EffectStateFactory {
     EffectState *create() override;

@@ -1183,11 +1183,10 @@ void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei tod
 }
 
 /* Applies the two T60 damping filter sections. */
-static inline void LateT60Filter(ALfloat *RESTRICT samples, const ALsizei todo, T60Filter *filter)
+inline void LateT60Filter(ALfloat *samples, const ALsizei todo, T60Filter *filter)
 {
-    ALfloat temp[MAX_UPDATE_SAMPLES];
-    filter->HFFilter.process(temp, samples, todo);
-    filter->LFFilter.process(samples, temp, todo);
+    filter->HFFilter.process(samples, samples, todo);
+    filter->LFFilter.process(samples, samples, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network

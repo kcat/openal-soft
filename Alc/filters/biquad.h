@@ -71,7 +71,7 @@ public:
     }
 
 
-    void process(float *RESTRICT dst, const float *RESTRICT src, int numsamples);
+    void process(float *dst, const float *src, int numsamples);
 
     void passthru(int numsamples) noexcept
     {

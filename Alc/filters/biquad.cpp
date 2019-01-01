@@ -12,18 +12,17 @@
 
 void BiquadFilter::setParams(BiquadType type, float gain, float f0norm, float rcpQ)
 {
-    float alpha, sqrtgain_alpha_2;
-    float w0, sin_w0, cos_w0;
-    float a[3] = { 1.0f, 0.0f, 0.0f };
-    float b[3] = { 1.0f, 0.0f, 0.0f };
-
     // Limit gain to -100dB
     assert(gain > 0.00001f);
 
-    w0 = F_TAU * f0norm;
-    sin_w0 = std::sin(w0);
-    cos_w0 = std::cos(w0);
-    alpha = sin_w0/2.0f * rcpQ;
+    const float w0{F_TAU * f0norm};
+    const float sin_w0{std::sin(w0)};
+    const float cos_w0{std::cos(w0)};
+    const float alpha{sin_w0/2.0f * rcpQ};
+
+    float sqrtgain_alpha_2;
+    float a[3]{ 1.0f, 0.0f, 0.0f };
+    float b[3]{ 1.0f, 0.0f, 0.0f };
 
     /* Calculate filter coefficients depending on filter type */
     switch(type)
@@ -90,7 +89,7 @@ void BiquadFilter::setParams(BiquadType type, float gain, float f0norm, float rc
 }
 
 
-void BiquadFilter::process(float *RESTRICT dst, const float *RESTRICT src, int numsamples)
+void BiquadFilter::process(float *dst, const float *src, int numsamples)
 {
     ASSUME(numsamples > 0);
 

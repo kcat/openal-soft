@@ -83,6 +83,13 @@ inline T* assume_aligned(T *ptr) noexcept
 #endif
 }
 
+/* std::make_unique was added with C++14, so until we rely on that, make our
+ * own version.
+ */
+template<typename T, typename ...ArgsT>
+std::unique_ptr<T> make_unique(ArgsT&&...args)
+{ return std::unique_ptr<T>{new T{std::forward<ArgsT>(args)...}}; }
+
 } // namespace al
 
 #endif /* AL_MALLOC_H */

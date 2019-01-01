@@ -1198,14 +1198,14 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
             ERR("Could not get resource %u, %s\n", residx, name);
             return nullptr;
         }
-        stream.reset(new idstream{res.data, res.data+res.size});
+        stream = al::make_unique<idstream>(res.data, res.data+res.size);
     }
     else
     {
         name = handle->filename;
 
         TRACE("Loading %s...\n", handle->filename);
-        std::unique_ptr<al::ifstream> fstr{new al::ifstream{handle->filename, std::ios::binary}};
+        auto fstr = al::make_unique<al::ifstream>(handle->filename, std::ios::binary);
         if(!fstr->is_open())
         {
             ERR("Could not open %s\n", handle->filename);

@@ -3453,7 +3453,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {
-        ALContext->DefaultSlot.reset(new ALeffectslot{});
+        ALContext->DefaultSlot = al::make_unique<ALeffectslot>();
         if(InitEffectSlot(ALContext->DefaultSlot.get()) == AL_NO_ERROR)
             aluInitEffectPanning(ALContext->DefaultSlot.get());
         else
@@ -3652,7 +3652,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ))
         deviceName = nullptr;
 
-    std::unique_ptr<ALCdevice> device{new ALCdevice{Playback}};
+    auto device = al::make_unique<ALCdevice>(Playback);
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -3896,7 +3896,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = nullptr;
 
-    std::unique_ptr<ALCdevice> device{new ALCdevice{Capture}};
+    auto device = al::make_unique<ALCdevice>(Capture);
 
     device->Frequency = frequency;
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
@@ -4060,7 +4060,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return nullptr;
     }
 
-    std::unique_ptr<ALCdevice> device{new ALCdevice{Loopback}};
+    auto device = al::make_unique<ALCdevice>(Loopback);
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;

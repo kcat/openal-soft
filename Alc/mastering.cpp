@@ -358,20 +358,19 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
         clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
     auto hold = static_cast<ALsizei>(clampf(std::round(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1));
 
-    std::unique_ptr<Compressor> Comp;
     size_t size{sizeof(Compressor)};
     if(lookAhead > 0)
     {
-        size += sizeof(*Comp->mDelay) * NumChans;
+        size += sizeof(*Compressor::mDelay) * NumChans;
         /* The sliding hold implementation doesn't handle a length of 1. A 1-
          * sample hold is useless anyway, it would only ever give back what was
          * just given to it.
          */
         if(hold > 1)
-            size += sizeof(*Comp->mHold);
+            size += sizeof(*Compressor::mHold);
     }
 
-    Comp = std::unique_ptr<Compressor>{new (al_calloc(16, size)) Compressor{}};
+    auto Comp = std::unique_ptr<Compressor>{new (al_calloc(16, size)) Compressor{}};
     Comp->mNumChans = NumChans;
     Comp->mSampleRate = SampleRate;
     Comp->mAuto.Knee = AutoKnee != AL_FALSE;
@@ -388,7 +387,7 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
     Comp->mAttack = maxf(1.0f, AttackTime * SampleRate);
     Comp->mRelease = maxf(1.0f, ReleaseTime * SampleRate);
 
-    /* Knee width automation actually treats the compressor as a limiter.  By
+    /* Knee width automation actually treats the compressor as a limiter. By
      * varying the knee width, it can effectively be seen as applying
      * compression over a wide range of ratios.
      */

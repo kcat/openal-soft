@@ -213,7 +213,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             iter = context->EffectSlotList.end() - 1;
         }
 
-        *iter = std::unique_ptr<ALeffectslot>(new ALeffectslot{});
+        *iter = al::make_unique<ALeffectslot>();
         ALenum err{InitEffectSlot(iter->get())};
         if(err != AL_NO_ERROR)
         {

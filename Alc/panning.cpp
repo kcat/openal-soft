@@ -956,12 +956,12 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         case DevFmtX71:
             if(GetConfigValueBool(devname, nullptr, "front-stablizer", 0))
             {
+                auto stablizer = al::make_unique<FrontStablizer>();
                 /* Initialize band-splitting filters for the front-left and
                  * front-right channels, with a crossover at 5khz (could be
                  * higher).
                  */
-                ALfloat scale = (ALfloat)(5000.0 / device->Frequency);
-                std::unique_ptr<FrontStablizer> stablizer{new FrontStablizer{}};
+                const ALfloat scale{(ALfloat)(5000.0 / device->Frequency)};
 
                 stablizer->LFilter.init(scale);
                 stablizer->RFilter = stablizer->LFilter;
@@ -969,7 +969,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                 /* Initialize all-pass filters for all other channels. */
                 stablizer->APFilter[0].init(scale);
                 std::fill(std::begin(stablizer->APFilter)+1, std::end(stablizer->APFilter),
-                          stablizer->APFilter[0]);
+                    stablizer->APFilter[0]);
 
                 device->Stablizer = std::move(stablizer);
             }

@@ -663,7 +663,7 @@ struct RealMixParams {
 
 using POSTPROCESS = void(*)(ALCdevice *device, ALsizei SamplesToDo);
 
-struct ALCdevice_struct {
+struct ALCdevice {
     RefCount ref{1u};
 
     std::atomic<bool> Connected{true};
@@ -795,10 +795,10 @@ struct ALCdevice_struct {
     std::atomic<ALCdevice*> next{nullptr};
 
 
-    ALCdevice_struct(DeviceType type);
-    ALCdevice_struct(const ALCdevice_struct&) = delete;
-    ALCdevice_struct& operator=(const ALCdevice_struct&) = delete;
-    ~ALCdevice_struct();
+    ALCdevice(DeviceType type);
+    ALCdevice(const ALCdevice&) = delete;
+    ALCdevice& operator=(const ALCdevice&) = delete;
+    ~ALCdevice();
 
     ALsizei bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
     ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }

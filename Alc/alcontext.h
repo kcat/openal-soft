@@ -61,7 +61,7 @@ struct SourceSubList {
  */
 using ALeffectslotPtr = std::unique_ptr<ALeffectslot>;
 
-struct ALCcontext_struct {
+struct ALCcontext {
     RefCount ref{1u};
 
     al::vector<SourceSubList> SourceList;
@@ -129,10 +129,10 @@ struct ALCcontext_struct {
     ALlistener Listener{};
 
 
-    ALCcontext_struct(ALCdevice *device);
-    ALCcontext_struct(const ALCcontext_struct&) = delete;
-    ALCcontext_struct& operator=(const ALCcontext_struct&) = delete;
-    ~ALCcontext_struct();
+    ALCcontext(ALCdevice *device);
+    ALCcontext(const ALCcontext&) = delete;
+    ALCcontext& operator=(const ALCcontext&) = delete;
+    ~ALCcontext();
 
     DEF_NEWDEL(ALCcontext)
 };

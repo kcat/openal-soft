@@ -2189,17 +2189,16 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 }
 
 
-ALCdevice_struct::ALCdevice_struct(DeviceType type)
-  : Type{type}
+ALCdevice::ALCdevice(DeviceType type) : Type{type}
 {
 }
 
-/* ALCdevice_struct::~ALCdevice_struct
+/* ALCdevice::~ALCdevice
  *
  * Frees the device structure, and destroys any objects the app failed to
  * delete. Called once there's no more references on the device.
  */
-ALCdevice_struct::~ALCdevice_struct()
+ALCdevice::~ALCdevice()
 {
     TRACE("%p\n", this);
 
@@ -2311,8 +2310,7 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 }
 
 
-ALCcontext_struct::ALCcontext_struct(ALCdevice *device)
-  : Device{device}
+ALCcontext::ALCcontext(ALCdevice *device) : Device{device}
 {
 }
 
@@ -2373,12 +2371,12 @@ static ALvoid InitContext(ALCcontext *Context)
 }
 
 
-/* ALCcontext_struct::~ALCcontext_struct()
+/* ALCcontext::~ALCcontext()
  *
  * Cleans up the context, and destroys any remaining objects the app failed to
  * delete. Called once there's no more references on the context.
  */
-ALCcontext_struct::~ALCcontext_struct()
+ALCcontext::~ALCcontext()
 {
     TRACE("%p\n", this);
 

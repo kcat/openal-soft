@@ -2494,9 +2494,6 @@ ALCcontext_struct::~ALCcontext_struct()
  */
 static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
-    ALCcontext *origctx, *newhead;
-    bool ret = true;
-
     if(LocalContext.get() == context)
     {
         WARN("%p released while current on thread\n", context);
@@ -2504,27 +2501,28 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
         ALCcontext_DecRef(context);
     }
 
-    origctx = context;
+    ALCcontext *origctx{context};
     if(GlobalContext.compare_exchange_strong(origctx, nullptr))
         ALCcontext_DecRef(context);
 
-    device->Backend->lock();
-    origctx = context;
-    newhead = context->next.load(std::memory_order_relaxed);
-    if(!device->ContextList.compare_exchange_strong(origctx, newhead))
-    {
-        ALCcontext *list;
-        do {
-            /* origctx is what the desired context failed to match. Try
-             * swapping out the next one in the list.
-             */
-            list = origctx;
-            origctx = context;
-        } while(!list->next.compare_exchange_strong(origctx, newhead));
+    bool ret{true};
+    { BackendLockGuard _{*device->Backend};
+        origctx = context;
+        ALCcontext *newhead{context->next.load(std::memory_order_relaxed)};
+        if(!device->ContextList.compare_exchange_strong(origctx, newhead))
+        {
+            ALCcontext *list;
+            do {
+                /* origctx is what the desired context failed to match. Try
+                * swapping out the next one in the list.
+                */
+                list = origctx;
+                origctx = context;
+            } while(!list->next.compare_exchange_strong(origctx, newhead));
+        }
+        else
+            ret = !!newhead;
     }
-    else
-        ret = !!newhead;
-    device->Backend->unlock();
 
     /* Make sure the context is finished and no longer processing in the mixer
      * before sending the message queue kill event. The backend's lock does
@@ -4146,9 +4144,8 @@ FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, AL
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
     {
-        dev->Backend->lock();
+        BackendLockGuard _{*device->Backend};
         aluMixData(dev.get(), buffer, samples);
-        dev->Backend->unlock();
     }
 }
 

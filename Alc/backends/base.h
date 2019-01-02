@@ -41,8 +41,8 @@ struct BackendBase {
 
     virtual ClockLatency getClockLatency();
 
-    virtual void lock() { mMutex.lock(); };
-    virtual void unlock() { mMutex.unlock(); };
+    virtual void lock() { mMutex.lock(); }
+    virtual void unlock() { mMutex.unlock(); }
 
     ALCdevice *mDevice;
 
@@ -52,6 +52,8 @@ struct BackendBase {
     virtual ~BackendBase();
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
+using BackendUniqueLock = std::unique_lock<BackendBase>;
+using BackendLockGuard = std::lock_guard<BackendBase>;
 
 enum class BackendType {
     Playback,

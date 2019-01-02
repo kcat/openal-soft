@@ -3409,10 +3409,6 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
  */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
-    ALCcontext *ALContext;
-    ALfloat valf;
-    ALCenum err;
-
     /* Explicitly hold the list lock while taking the StateLock in case the
      * device is asynchronously destroyed, to ensure this new context is
      * properly cleaned up after being made.
@@ -3430,22 +3426,20 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     dev->LastError.store(ALC_NO_ERROR);
 
-    ALContext = new ALCcontext{dev.get()};
+    ContextRef ALContext{new ALCcontext{dev.get()}};
     ALCdevice_IncRef(ALContext->Device);
 
-    if((err=UpdateDeviceParams(dev.get(), attrList)) != ALC_NO_ERROR)
+    ALCenum err{UpdateDeviceParams(dev.get(), attrList)};
+    if(err != ALC_NO_ERROR)
     {
         alcSetError(dev.get(), err);
         if(err == ALC_INVALID_DEVICE)
             aluHandleDisconnect(dev.get(), "Device update failure");
         statelock.unlock();
 
-        delete ALContext;
-        ALContext = nullptr;
-
         return nullptr;
     }
-    AllocateVoices(ALContext, 256, dev->NumAuxSends);
+    AllocateVoices(ALContext.get(), 256, dev->NumAuxSends);
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {
@@ -3459,8 +3453,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
     }
 
-    InitContext(ALContext);
+    InitContext(ALContext.get());
 
+    ALfloat valf{};
     if(ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust", &valf))
     {
         if(!std::isfinite(valf))
@@ -3474,26 +3469,27 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             TRACE("volume-adjust gain: %f\n", ALContext->GainBoost);
         }
     }
-    UpdateListenerProps(ALContext);
+    UpdateListenerProps(ALContext.get());
 
     {
         ALCcontext *head = dev->ContextList.load();
         do {
             ALContext->next.store(head, std::memory_order_relaxed);
-        } while(!dev->ContextList.compare_exchange_weak(head, ALContext));
+        } while(!dev->ContextList.compare_exchange_weak(head, ALContext.get()));
+        ALCcontext_IncRef(ALContext.get());
     }
     statelock.unlock();
 
     if(ALContext->DefaultSlot)
     {
-        if(InitializeEffect(ALContext, ALContext->DefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
-            UpdateEffectSlotProps(ALContext->DefaultSlot.get(), ALContext);
+        if(InitializeEffect(ALContext.get(), ALContext->DefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
+            UpdateEffectSlotProps(ALContext->DefaultSlot.get(), ALContext.get());
         else
             ERR("Failed to initialize the default effect\n");
     }
 
-    TRACE("Created context %p\n", ALContext);
-    return ALContext;
+    TRACE("Created context %p\n", ALContext.get());
+    return ALContext.get();
 }
 
 /* alcDestroyContext
@@ -3648,7 +3644,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ))
         deviceName = nullptr;
 
-    auto device = al::make_unique<ALCdevice>(Playback);
+    DeviceRef device{new ALCdevice{Playback}};
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -3763,7 +3759,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         BackendType::Playback);
     if(!device->Backend)
     {
-        device = nullptr;
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
         return nullptr;
     }
@@ -3772,7 +3767,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALCenum err{device->Backend->open(deviceName)};
     if(err != ALC_NO_ERROR)
     {
-        device = nullptr;
         alcSetError(nullptr, err);
         return nullptr;
     }
@@ -3813,10 +3807,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         do {
             device->next.store(head, std::memory_order_relaxed);
         } while(!DeviceList.compare_exchange_weak(head, device.get()));
+        ALCdevice_IncRef(device.get());
     }
 
     TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
-    return device.release();
+    return device.get();
 }
 
 /* alcCloseDevice
@@ -3892,14 +3887,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = nullptr;
 
-    auto device = al::make_unique<ALCdevice>(Capture);
+    DeviceRef device{new ALCdevice{Capture}};
 
     device->Frequency = frequency;
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
 
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
-        device = nullptr;
         alcSetError(nullptr, ALC_INVALID_ENUM);
         return nullptr;
     }
@@ -3912,7 +3906,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         BackendType::Capture);
     if(!device->Backend)
     {
-        device = nullptr;
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
         return nullptr;
     }
@@ -3924,7 +3917,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     ALCenum err{device->Backend->open(deviceName)};
     if(err != ALC_NO_ERROR)
     {
-        device = nullptr;
         alcSetError(nullptr, err);
         return nullptr;
     }
@@ -3934,10 +3926,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         do {
             device->next.store(head, std::memory_order_relaxed);
         } while(!DeviceList.compare_exchange_weak(head, device.get()));
+        ALCdevice_IncRef(device.get());
     }
 
     TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
-    return device.release();
+    return device.get();
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
@@ -4056,7 +4049,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return nullptr;
     }
 
-    auto device = al::make_unique<ALCdevice>(Loopback);
+    DeviceRef device{new ALCdevice{Loopback}};
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
@@ -4089,7 +4082,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         BackendType::Playback);
     if(!device->Backend)
     {
-        device = nullptr;
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
         return nullptr;
     }
@@ -4102,10 +4094,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         do {
             device->next.store(head, std::memory_order_relaxed);
         } while(!DeviceList.compare_exchange_weak(head, device.get()));
+        ALCdevice_IncRef(device.get());
     }
 
     TRACE("Created device %p\n", device.get());
-    return device.release();
+    return device.get();
 }
 
 /* alcIsRenderFormatSupportedSOFT

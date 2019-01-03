@@ -26,7 +26,7 @@ using ll_ringbuffer_data_pair = std::pair<ll_ringbuffer_data,ll_ringbuffer_data>
 struct RingBuffer {
     std::atomic<size_t> mWritePtr{0u};
     std::atomic<size_t> mReadPtr{0u};
-    size_t mSize{0u};
+    size_t mWriteSize{0u};
     size_t mSizeMask{0u};
     size_t mElemSize{0u};
 

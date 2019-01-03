@@ -52,7 +52,7 @@ RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
     if(power_of_two < sz) return nullptr;
 
     RingBufferPtr rb{new (al_malloc(16, sizeof(*rb) + power_of_two*elem_sz)) RingBuffer{}};
-    rb->mSize = limit_writes ? sz : power_of_two;
+    rb->mWriteSize = limit_writes ? sz : (power_of_two-1);
     rb->mSizeMask = power_of_two - 1;
     rb->mElemSize = elem_sz;
 
@@ -77,9 +77,8 @@ size_t RingBuffer::readSpace() const noexcept
 size_t RingBuffer::writeSpace() const noexcept
 {
     size_t w = mWritePtr.load(std::memory_order_acquire);
-    size_t r = mReadPtr.load(std::memory_order_acquire);
-    w = (r-w-1) & mSizeMask;
-    return std::max(w, mSize);
+    size_t r = mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask;
+    return (r-w-1) & mSizeMask;
 }
 
 
@@ -104,12 +103,11 @@ size_t RingBuffer::read(void *dest, size_t cnt) noexcept
         n2 = 0;
     }
 
-    memcpy(dest, &mBuffer[read_ptr*mElemSize], n1*mElemSize);
+    memcpy(dest, mBuffer + read_ptr*mElemSize, n1*mElemSize);
     read_ptr += n1;
-    if(n2)
+    if(n2 > 0)
     {
-        memcpy(static_cast<char*>(dest) + n1*mElemSize, &mBuffer[(read_ptr&mSizeMask)*mElemSize],
-            n2*mElemSize);
+        memcpy(static_cast<char*>(dest) + n1*mElemSize, mBuffer, n2*mElemSize);
         read_ptr += n2;
     }
     mReadPtr.store(read_ptr, std::memory_order_release);
@@ -137,13 +135,9 @@ size_t RingBuffer::peek(void *dest, size_t cnt) const noexcept
         n2 = 0;
     }
 
-    memcpy(dest, &mBuffer[read_ptr*mElemSize], n1*mElemSize);
-    if(n2)
-    {
-        read_ptr += n1;
-        memcpy(static_cast<char*>(dest) + n1*mElemSize, &mBuffer[(read_ptr&mSizeMask)*mElemSize],
-            n2*mElemSize);
-    }
+    memcpy(dest, mBuffer + read_ptr*mElemSize, n1*mElemSize);
+    if(n2 > 0)
+        memcpy(static_cast<char*>(dest) + n1*mElemSize, mBuffer, n2*mElemSize);
     return to_read;
 }
 
@@ -168,12 +162,11 @@ size_t RingBuffer::write(const void *src, size_t cnt) noexcept
         n2 = 0;
     }
 
-    memcpy(&mBuffer[write_ptr*mElemSize], src, n1*mElemSize);
+    memcpy(mBuffer + write_ptr*mElemSize, src, n1*mElemSize);
     write_ptr += n1;
-    if(n2)
+    if(n2 > 0)
     {
-        memcpy(&mBuffer[(write_ptr&mSizeMask)*mElemSize],
-            static_cast<const char*>(src) + n1*mElemSize, n2*mElemSize);
+        memcpy(mBuffer, static_cast<const char*>(src) + n1*mElemSize, n2*mElemSize);
         write_ptr += n2;
     }
     mWritePtr.store(write_ptr, std::memory_order_release);
@@ -229,10 +222,10 @@ ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
     ll_ringbuffer_data_pair ret;
 
     size_t w{mWritePtr.load(std::memory_order_acquire)};
-    size_t r{mReadPtr.load(std::memory_order_acquire)};
+    size_t r{mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask};
     w &= mSizeMask;
     r &= mSizeMask;
-    const size_t free_cnt{std::min((r-w-1) & mSizeMask, mSize)};
+    const size_t free_cnt{(r-w-1) & mSizeMask};
 
     const size_t cnt2{w + free_cnt};
     if(cnt2 > mSizeMask+1)

@@ -112,8 +112,6 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             calc_rcpQ_from_slope(gain1, 1.0f));
         for(ALsizei i{2};i < 4;i++)
             mUpSampler[i].Shelf.copyParamsFrom(mUpSampler[1].Shelf);
-        for(auto &upsampler : mUpSampler)
-            upsampler.Shelf.clear();
     }
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
@@ -233,45 +231,78 @@ void AmbiUpsampler::reset(const ALCdevice *device)
 {
     const ALfloat xover_norm{400.0f / (float)device->Frequency};
 
-    mInput[0].XOver.init(xover_norm);
-    for(auto input = std::begin(mInput)+1;input != std::end(mInput);++input)
-        input->XOver = mInput[0].XOver;
-
-    ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
-    for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
+    mSimpleUp = (device->Dry.CoeffCount == 0);
+    if(mSimpleUp)
     {
-        ALfloat coeffs[MAX_AMBI_COEFFS];
-        CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
-        ComputePanGains(&device->Dry, coeffs, 1.0f, encgains[k]);
+        const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(
+            (device->Dry.NumChannels > 16) ? 4 :
+            (device->Dry.NumChannels >  9) ? 3 :
+            (device->Dry.NumChannels >  4) ? 2 : 1);
+        const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
+        const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
+
+        mShelf[0].setParams(BiquadType::HighShelf, gain0, xover_norm,
+            calc_rcpQ_from_slope(gain0, 1.0f));
+        mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
+            calc_rcpQ_from_slope(gain1, 1.0f));
+        for(ALsizei i{2};i < 4;i++)
+            mShelf[i].copyParamsFrom(mShelf[1]);
     }
-
-    /* Combine the matrices that do the in->virt and virt->out conversions so
-     * we get a single in->out conversion. NOTE: the Encoder matrix (encgains)
-     * and output are transposed, so the input channels line up with the rows
-     * and the output channels line up with the columns.
-     */
-    const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(
-        (device->Dry.NumChannels > 16) ? 4 :
-        (device->Dry.NumChannels >  9) ? 3 :
-        (device->Dry.NumChannels >  4) ? 2 : 1);
-    for(ALsizei i{0};i < 4;i++)
+    else
     {
-        mInput[i].Gains.fill({});
-        const ALdouble hfscale = static_cast<ALdouble>(Ambi3DDecoderHFScale[i]) / hfscales[i];
-        for(ALsizei j{0};j < device->Dry.NumChannels;j++)
+        mInput[0].XOver.init(xover_norm);
+        for(auto input = std::begin(mInput)+1;input != std::end(mInput);++input)
+            input->XOver = mInput[0].XOver;
+
+        ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
+        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
         {
-            ALdouble gain{0.0};
-            for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
-                gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
-            mInput[i].Gains[HF_BAND][j] = (ALfloat)(gain * hfscale);
-            mInput[i].Gains[LF_BAND][j] = (ALfloat)gain;
+            ALfloat coeffs[MAX_AMBI_COEFFS];
+            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
+            ComputePanGains(&device->Dry, coeffs, 1.0f, encgains[k]);
+        }
+
+        /* Combine the matrices that do the in->virt and virt->out conversions
+         * so we get a single in->out conversion. NOTE: the Encoder matrix
+         * (encgains) and output are transposed, so the input channels line up
+         * with the rows and the output channels line up with the columns.
+         */
+        const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(
+            (device->Dry.CoeffCount > 16) ? 4 :
+            (device->Dry.CoeffCount >  9) ? 3 :
+            (device->Dry.CoeffCount >  4) ? 2 : 1);
+        for(ALsizei i{0};i < 4;i++)
+        {
+            mInput[i].Gains.fill({});
+            const ALdouble hfscale = static_cast<ALdouble>(Ambi3DDecoderHFScale[i]) / hfscales[i];
+            for(ALsizei j{0};j < device->Dry.NumChannels;j++)
+            {
+                ALdouble gain{0.0};
+                for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
+                    gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
+                mInput[i].Gains[HF_BAND][j] = (ALfloat)(gain * hfscale);
+                mInput[i].Gains[LF_BAND][j] = (ALfloat)gain;
+            }
         }
     }
 }
 
 void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {
-    for(auto input = std::begin(mInput);input != std::end(mInput);++input)
+    ASSUME(SamplesToDo > 0);
+
+    if(mSimpleUp)
+    {
+        for(ALsizei i{0};i < 4;i++)
+        {
+            mShelf[i].process(mSamples[0], InSamples[i], SamplesToDo);
+
+            const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples[0])};
+            ALfloat *dst{al::assume_aligned<16>(OutBuffer[i])};
+            std::transform(src, src+SamplesToDo, dst, dst, std::plus<float>{});
+        }
+    }
+    else for(auto input = std::begin(mInput);input != std::end(mInput);++input)
     {
         input->XOver.process(mSamples[HF_BAND], mSamples[LF_BAND], *(InSamples++), SamplesToDo);
 

@@ -2,6 +2,7 @@
 #define BFORMATDEC_H
 
 #include "alMain.h"
+#include "filters/biquad.h"
 #include "filters/splitter.h"
 #include "almalloc.h"
 
@@ -30,8 +31,7 @@ private:
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
     struct {
-        BandSplitter XOver;
-        ALfloat Gains[sNumBands];
+        BiquadFilter Shelf;
     } mUpSampler[4];
 
     ALsizei mNumChannels;

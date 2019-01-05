@@ -91,64 +91,32 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         { return mask | (1 << chan); }
     );
 
-    mUpSampler[0].XOver.init(conf->XOverFreq / (float)srate);
-    std::fill(std::begin(mUpSampler[0].Gains), std::end(mUpSampler[0].Gains), 0.0f);
-    std::fill(std::begin(mUpSampler)+1, std::end(mUpSampler), mUpSampler[0]);
+    const ALfloat xover_norm{conf->XOverFreq / (float)srate};
 
     const ALsizei out_order{
         (conf->ChanMask > AMBI_3ORDER_MASK) ? 4 :
         (conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
-        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1
-    };
-    const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
-    if(periphonic)
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
     {
-        ALfloat encgains[8][MAX_OUTPUT_CHANNELS]{};
-        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
-        {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
-            std::copy(std::begin(coeffs), std::begin(coeffs)+chancount, std::begin(encgains[k]));
-        }
-        assert(chancount >= 4);
         const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(out_order);
-        for(ALsizei i{0};i < 4;i++)
-        {
-            ALdouble gain{0.0};
-            for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
-                gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][i];
-            mUpSampler[i].Gains[HF_BAND] = (ALfloat)(gain*Ambi3DDecoderHFScale[i]/hfscales[i]);
-            mUpSampler[i].Gains[LF_BAND] = (ALfloat)gain;
-        }
-    }
-    else
-    {
-        ALfloat encgains[8][MAX_OUTPUT_CHANNELS]{};
-        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
-        {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
-            auto ambimap_end = AmbiIndex::From2D.begin() + chancount;
-            std::transform(AmbiIndex::From2D.begin(), ambimap_end, std::begin(encgains[k]),
-                [&coeffs](const ALsizei &index) noexcept -> ALfloat
-                { ASSUME(index >= 0); return coeffs[index]; }
-            );
-        }
-        assert(chancount >= 3);
-        const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(out_order);
-        for(ALsizei c{0};c < 3;c++)
-        {
-            const ALsizei i{AmbiIndex::From2D[c]};
-            ALdouble gain{0.0};
-            for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
-                gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][c];
-            mUpSampler[c].Gains[HF_BAND] = (ALfloat)(gain*Ambi3DDecoderHFScale[i]/hfscales[i]);
-            mUpSampler[c].Gains[LF_BAND] = (ALfloat)gain;
-        }
-        mUpSampler[3].Gains[HF_BAND] = 0.0f;
-        mUpSampler[3].Gains[LF_BAND] = 0.0f;
+        /* The specified filter gain is for the mid-point/reference gain. The
+         * gain at the shelf itself will be the square of that, so specify the
+         * square-root of the desired shelf gain.
+         */
+        const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
+        const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
+
+        mUpSampler[0].Shelf.setParams(BiquadType::HighShelf, gain0, xover_norm,
+            calc_rcpQ_from_slope(gain0, 1.0f));
+        mUpSampler[1].Shelf.setParams(BiquadType::HighShelf, gain1, xover_norm,
+            calc_rcpQ_from_slope(gain1, 1.0f));
+        for(ALsizei i{2};i < 4;i++)
+            mUpSampler[i].Shelf.copyParamsFrom(mUpSampler[1].Shelf);
+        for(auto &upsampler : mUpSampler)
+            upsampler.Shelf.clear();
     }
 
+    const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     const std::array<float,MAX_AMBI_COEFFS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
     const ALsizei coeff_count{periphonic ? MAX_AMBI_COEFFS : MAX_AMBI2D_COEFFS};
 
@@ -173,7 +141,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     }
     else
     {
-        mXOver[0].init(conf->XOverFreq / (float)srate);
+        mXOver[0].init(xover_norm);
         std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
@@ -201,7 +169,6 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
 void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {
     ASSUME(OutChannels > 0);
-    ASSUME(SamplesToDo > 0);
     ASSUME(mNumChannels > 0);
 
     if(mDualBand)
@@ -217,12 +184,10 @@ void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChan
 
             MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][HF_BAND],
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamplesHF[0]),
-                mNumChannels, 0, SamplesToDo
-            );
+                mNumChannels, 0, SamplesToDo);
             MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][LF_BAND],
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamplesLF[0]),
-                mNumChannels, 0, SamplesToDo
-            );
+                mNumChannels, 0, SamplesToDo);
         }
     }
     else
@@ -248,30 +213,27 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSa
      * channel configuration, the low-frequency matrix has identical
      * coefficients in the shared input channels, while the high-frequency
      * matrix has extra scalars applied to the W channel and X/Y/Z channels.
-     * Mixing the first-order content into the higher-order stream with the
-     * appropriate counter-scales applied to the HF response results in the
-     * subsequent higher-order decode generating the same response as a first-
-     * order decode.
+     * Using a high-shelf filter to mix the first-order content into the
+     * higher-order stream, with the appropriate counter-scales applied to the
+     * HF response, results in the subsequent higher-order decode generating
+     * the same response as a first-order decode.
      */
     for(ALsizei i{0};i < InChannels;i++)
     {
-        /* First, split the first-order components into low and high frequency
-         * bands.
-         */
-        mUpSampler[i].XOver.process(mSamples[HF_BAND].data(), mSamples[LF_BAND].data(),
-            InSamples[i], SamplesToDo);
+        mUpSampler[i].Shelf.process(mSamples[0].data(), InSamples[i], SamplesToDo);
 
-        /* Now write each band to the output. */
-        MixRowSamples(OutBuffer[i], mUpSampler[i].Gains,
-            &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamples[0]),
-            sNumBands, 0, SamplesToDo);
+        const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples[0].data())};
+        ALfloat *dst{al::assume_aligned<16>(OutBuffer[i])};
+        std::transform(src, src+SamplesToDo, dst, dst, std::plus<float>{});
     }
 }
 
 
 void AmbiUpsampler::reset(const ALCdevice *device)
 {
-    mInput[0].XOver.init(400.0f / (float)device->Frequency);
+    const ALfloat xover_norm{400.0f / (float)device->Frequency};
+
+    mInput[0].XOver.init(xover_norm);
     for(auto input = std::begin(mInput)+1;input != std::end(mInput);++input)
         input->XOver = mInput[0].XOver;
 
@@ -291,8 +253,7 @@ void AmbiUpsampler::reset(const ALCdevice *device)
     const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(
         (device->Dry.NumChannels > 16) ? 4 :
         (device->Dry.NumChannels >  9) ? 3 :
-        (device->Dry.NumChannels >  4) ? 2 : 1
-    );
+        (device->Dry.NumChannels >  4) ? 2 : 1);
     for(ALsizei i{0};i < 4;i++)
     {
         mInput[i].Gains.fill({});

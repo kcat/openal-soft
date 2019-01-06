@@ -313,17 +313,17 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     };
     std::transform(AmbiPoints, AmbiPoints+AmbiCount, idx.begin(), calc_idxs);
 
-    const ALfloat xover_norm{400.0f / (ALfloat)Hrtf->sampleRate};
+    const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
     const ALsizei order_limit{OrderFromChan[NumChannels-1] + 1};
-    BiquadFilter shelf[MAX_AMBI_ORDER+1];
+    BiquadFilterR<double> shelf[MAX_AMBI_ORDER+1];
     for(ALsizei o{0};o < order_limit;++o)
     {
-        const ALfloat g{std::sqrt(AmbiOrderHFGain[o])};
-        shelf[o].setParams(BiquadType::HighShelf, g, xover_norm, calc_rcpQ_from_slope(g, 1.0f));
+        const auto g = std::sqrt(double{AmbiOrderHFGain[o]});
+        shelf[o].setParams(BiquadType::HighShelf, g, xover_norm, calc_rcpQ_from_slope(g, 1.0));
     }
 
     al::vector<std::array<std::array<ALdouble,2>,HRIR_LENGTH>> tmpres(NumChannels);
-    al::vector<std::array<ALfloat,HRIR_LENGTH>> tmpfilt(order_limit+1);
+    al::vector<std::array<ALdouble,HRIR_LENGTH>> tmpfilt(order_limit+1);
     for(ALsizei c{0};c < AmbiCount;++c)
     {
         const ALfloat (*fir)[2]{&Hrtf->coeffs[idx[c] * Hrtf->irSize]};
@@ -351,7 +351,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
              */
             auto tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt.back().begin(),
                 [](const ALfloat (&ir)[2]) noexcept { return ir[0]; });
-            std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0f);
+            std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0);
             for(ALsizei o{0};o < order_limit;++o)
             {
                 shelf[o].clear();
@@ -372,7 +372,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
              */
             tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt.back().begin(),
                 [](const ALfloat (&ir)[2]) noexcept { return ir[1]; });
-            std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0f);
+            std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0);
             for(ALsizei o{0};o < order_limit;++o)
             {
                 shelf[o].clear();

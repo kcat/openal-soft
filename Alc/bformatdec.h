@@ -2,7 +2,6 @@
 #define BFORMATDEC_H
 
 #include "alMain.h"
-#include "filters/biquad.h"
 #include "filters/splitter.h"
 #include "ambidefs.h"
 #include "almalloc.h"
@@ -33,8 +32,10 @@ private:
     std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
-    /* Shelf filters used for upsampling. */
-    BiquadFilter mShelf[4];
+    struct {
+        BandSplitter Splitter;
+        ALfloat Gains[sNumBands];
+    } mUpsampler[4];
 
     ALsizei mNumChannels;
     ALboolean mDualBand;
@@ -58,8 +59,12 @@ public:
  * with bformatdec.
  */
 class AmbiUpsampler {
-    BiquadFilter mShelf[4];
-    alignas(16) ALfloat mSamples[BUFFERSIZE];
+    static constexpr ALsizei sNumBands{2};
+    struct {
+        BandSplitter Splitter;
+        ALfloat Gains[sNumBands];
+    } mInput[4];
+    alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
 
 public:
     void reset(const ALsizei out_order, const ALfloat xover_norm);

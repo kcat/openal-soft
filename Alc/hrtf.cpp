@@ -37,7 +37,7 @@
 #include "alu.h"
 #include "hrtf.h"
 #include "alconfig.h"
-#include "filters/biquad.h"
+#include "filters/splitter.h"
 
 #include "compat.h"
 #include "almalloc.h"
@@ -314,16 +314,11 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     std::transform(AmbiPoints, AmbiPoints+AmbiCount, idx.begin(), calc_idxs);
 
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
-    const ALsizei order_limit{OrderFromChan[NumChannels-1] + 1};
-    BiquadFilterR<double> shelf[MAX_AMBI_ORDER+1];
-    for(ALsizei o{0};o < order_limit;++o)
-    {
-        const auto g = std::sqrt(double{AmbiOrderHFGain[o]});
-        shelf[o].setParams(BiquadType::HighShelf, g, xover_norm, calc_rcpQ_from_slope(g, 1.0));
-    }
+    BandSplitterR<double> splitter;
+    splitter.init(xover_norm);
 
     al::vector<std::array<std::array<ALdouble,2>,HRIR_LENGTH>> tmpres(NumChannels);
-    al::vector<std::array<ALdouble,HRIR_LENGTH>> tmpfilt(order_limit+1);
+    al::vector<std::array<ALdouble,HRIR_LENGTH>> tmpfilt(3);
     for(ALsizei c{0};c < AmbiCount;++c)
     {
         const ALfloat (*fir)[2]{&Hrtf->coeffs[idx[c] * Hrtf->irSize]};
@@ -352,19 +347,16 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
             auto tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt.back().begin(),
                 [](const ALfloat (&ir)[2]) noexcept { return ir[0]; });
             std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0);
-            for(ALsizei o{0};o < order_limit;++o)
-            {
-                shelf[o].clear();
-                shelf[o].process(tmpfilt[o].data(), tmpfilt.back().data(), HRIR_LENGTH);
-            }
+            splitter.clear();
+            splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(), HRIR_LENGTH);
 
             /* Apply left ear response with delay. */
             for(ALsizei i{0};i < NumChannels;++i)
             {
-                const ALsizei order{OrderFromChan[i]};
                 const ALdouble mult{AmbiMatrix[c][i]};
+                const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
                 for(ALsizei lidx{ldelay},j{0};lidx < HRIR_LENGTH;++lidx,++j)
-                    tmpres[i][lidx][0] += tmpfilt[order][j] * mult;
+                    tmpres[i][lidx][0] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
             }
 
             /* Extract the right HRIR and increase its per-order high-frequency
@@ -373,19 +365,16 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
             tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt.back().begin(),
                 [](const ALfloat (&ir)[2]) noexcept { return ir[1]; });
             std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0);
-            for(ALsizei o{0};o < order_limit;++o)
-            {
-                shelf[o].clear();
-                shelf[o].process(tmpfilt[o].data(), tmpfilt.back().data(), HRIR_LENGTH);
-            }
+            splitter.clear();
+            splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(), HRIR_LENGTH);
 
             /* Apply right ear response with delay. */
             for(ALsizei i{0};i < NumChannels;++i)
             {
-                const ALsizei order{OrderFromChan[i]};
                 const ALdouble mult{AmbiMatrix[c][i]};
+                const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
                 for(ALsizei ridx{rdelay},j{0};ridx < HRIR_LENGTH;++ridx,++j)
-                    tmpres[i][ridx][1] += tmpfilt[order][j] * mult;
+                    tmpres[i][ridx][1] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
             }
         }
     }

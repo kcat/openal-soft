@@ -61,7 +61,7 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
     mMatrix = MatrixU{};
     mDualBand = allow_2band && (conf->FreqBands == 2);
     if(!mDualBand)
-        mSamples.resize(1);
+        mSamples.resize(2);
     else
     {
         mSamples.resize(inchans * 2);
@@ -83,19 +83,14 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
         (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
     {
         const ALfloat (&hfscales)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(out_order);
-        /* The specified filter gain is for the mid-point/reference gain. The
-         * gain at the shelf itself will be the square of that, so specify the
-         * square-root of the desired shelf gain.
-         */
-        const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
-        const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
 
-        mShelf[0].setParams(BiquadType::HighShelf, gain0, xover_norm,
-            calc_rcpQ_from_slope(gain0, 1.0f));
-        mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
-            calc_rcpQ_from_slope(gain1, 1.0f));
-        std::for_each(std::begin(mShelf)+2, std::end(mShelf),
-            std::bind(std::mem_fn(&BiquadFilter::copyParamsFrom), _1, mShelf[1]));
+        mUpsampler[0].Splitter.init(xover_norm);
+        mUpsampler[0].Gains[HF_BAND] = Ambi3DDecoderHFScale[0] / hfscales[0];
+        mUpsampler[0].Gains[LF_BAND] = 1.0f;
+        mUpsampler[1].Splitter.init(xover_norm);
+        mUpsampler[1].Gains[HF_BAND] = Ambi3DDecoderHFScale[1] / hfscales[1];
+        mUpsampler[1].Gains[LF_BAND] = 1.0f;
+        std::fill(std::begin(mUpsampler)+2, std::end(mUpsampler), mUpsampler[1]);
     }
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
@@ -154,7 +149,7 @@ void BFormatDec::reset(const ALsizei inchans, const ALfloat xover_norm, const AL
 
     mMatrix = MatrixU{};
     mDualBand = false;
-    mSamples.resize(1);
+    mSamples.resize(2);
     mNumChannels = inchans;
 
     mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+chancount, 0u,
@@ -168,19 +163,14 @@ void BFormatDec::reset(const ALsizei inchans, const ALfloat xover_norm, const AL
         (inchans > 3) ? 2 : 1};
     {
         const ALfloat (&hfscales)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(out_order);
-        /* The specified filter gain is for the mid-point/reference gain. The
-         * gain at the shelf itself will be the square of that, so specify the
-         * square-root of the desired shelf gain.
-         */
-        const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
-        const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
 
-        mShelf[0].setParams(BiquadType::HighShelf, gain0, xover_norm,
-            calc_rcpQ_from_slope(gain0, 1.0f));
-        mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
-            calc_rcpQ_from_slope(gain1, 1.0f));
-        std::for_each(std::begin(mShelf)+2, std::end(mShelf),
-            std::bind(std::mem_fn(&BiquadFilter::copyParamsFrom), _1, mShelf[1]));
+        mUpsampler[0].Splitter.init(xover_norm);
+        mUpsampler[0].Gains[HF_BAND] = Ambi3DDecoderHFScale[0] / hfscales[0];
+        mUpsampler[0].Gains[LF_BAND] = 1.0f;
+        mUpsampler[1].Splitter.init(xover_norm);
+        mUpsampler[1].Gains[HF_BAND] = Ambi3DDecoderHFScale[1] / hfscales[1];
+        mUpsampler[1].Gains[LF_BAND] = 1.0f;
+        std::fill(std::begin(mUpsampler)+2, std::end(mUpsampler), mUpsampler[1]);
     }
 
     for(ALsizei i{0};i < chancount;i++)
@@ -233,25 +223,23 @@ void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChan
 void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
     ASSUME(InChannels > 0);
-    ASSUME(SamplesToDo > 0);
 
     /* This up-sampler leverages the differences observed in dual-band higher-
      * order decoder matrices compared to first-order. For the same output
      * channel configuration, the low-frequency matrix has identical
      * coefficients in the shared input channels, while the high-frequency
      * matrix has extra scalars applied to the W channel and X/Y/Z channels.
-     * Using a high-shelf filter to mix the first-order content into the
-     * higher-order stream, with the appropriate counter-scales applied to the
-     * HF response, results in the subsequent higher-order decode generating
-     * the same response as a first-order decode.
+     * Mixing the first-order content into the higher-order stream, with the
+     * appropriate counter-scales applied to the HF response, results in the
+     * subsequent higher-order decode generating the same response as a first-
+     * order decode.
      */
     for(ALsizei i{0};i < InChannels;i++)
     {
-        mShelf[i].process(mSamples[0].data(), InSamples[i], SamplesToDo);
-
-        const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples[0].data())};
-        ALfloat *dst{al::assume_aligned<16>(OutBuffer[i])};
-        std::transform(src, src+SamplesToDo, dst, dst, std::plus<float>{});
+        mUpsampler[i].Splitter.process(mSamples[HF_BAND].data(), mSamples[LF_BAND].data(),
+            InSamples[i], SamplesToDo);
+        MixRowSamples(OutBuffer[i], mUpsampler[i].Gains,
+            &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamples[0]), sNumBands, 0, SamplesToDo);
     }
 }
 
@@ -259,29 +247,24 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSa
 void AmbiUpsampler::reset(const ALsizei out_order, const ALfloat xover_norm)
 {
     const ALfloat (&hfscales)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(out_order);
-    const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
-    const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
 
-    mShelf[0].setParams(BiquadType::HighShelf, gain0, xover_norm,
-        calc_rcpQ_from_slope(gain0, 1.0f));
-    mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
-        calc_rcpQ_from_slope(gain1, 1.0f));
-    std::for_each(std::begin(mShelf)+2, std::end(mShelf),
-        std::bind(std::mem_fn(&BiquadFilter::copyParamsFrom), _1, mShelf[1]));
+    mInput[0].Splitter.init(xover_norm);
+    mInput[0].Gains[HF_BAND] = Ambi3DDecoderHFScale[0] / hfscales[0];
+    mInput[0].Gains[LF_BAND] = 1.0f;
+    mInput[1].Splitter.init(xover_norm);
+    mInput[1].Gains[HF_BAND] = Ambi3DDecoderHFScale[1] / hfscales[1];
+    mInput[1].Gains[LF_BAND] = 1.0f;
+    std::fill(std::begin(mInput)+2, std::end(mInput), mInput[1]);
 }
 
 void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
-    ASSUME(SamplesToDo > 0);
     ASSUME(InChannels > 0);
-    ASSUME(InChannels <= 4);
 
     for(ALsizei i{0};i < InChannels;i++)
     {
-        mShelf[i].process(mSamples, InSamples[i], SamplesToDo);
-
-        const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples)};
-        ALfloat *dst{al::assume_aligned<16>(OutBuffer[i])};
-        std::transform(src, src+SamplesToDo, dst, dst, std::plus<float>{});
+        mInput[i].Splitter.process(mSamples[HF_BAND], mSamples[LF_BAND], InSamples[i],
+            SamplesToDo);
+        MixRowSamples(OutBuffer[i], mInput[i].Gains, mSamples, sNumBands, 0, SamplesToDo);
     }
 }

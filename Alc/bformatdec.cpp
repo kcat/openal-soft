@@ -171,6 +171,9 @@ void BFormatDec::reset(const ALsizei inchans, const ALfloat xover_norm, const AL
         mUpsampler[1].Gains[HF_BAND] = Ambi3DDecoderHFScale[1] / hfscales[1];
         mUpsampler[1].Gains[LF_BAND] = 1.0f;
         std::fill(std::begin(mUpsampler)+2, std::end(mUpsampler), mUpsampler[1]);
+
+        mUpAllpass[0].init(xover_norm);
+        std::fill(std::begin(mUpAllpass)+1, std::end(mUpAllpass), mUpAllpass[0]);
     }
 
     for(ALsizei i{0};i < chancount;i++)
@@ -220,9 +223,10 @@ void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChan
     }
 }
 
-void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
+void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
     ASSUME(InChannels > 0);
+    ASSUME(OutChannels > InChannels);
 
     /* This up-sampler leverages the differences observed in dual-band higher-
      * order decoder matrices compared to first-order. For the same output
@@ -236,11 +240,21 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSa
      */
     for(ALsizei i{0};i < InChannels;i++)
     {
+        /* NOTE: Because we can't treat the first-order signal as completely
+         * decorrelated from the existing output (it may contain the reverb,
+         * echo, etc, portion) phase interference is a possibility if not kept
+         * coherent. As such, we need to apply an all-pass on the existing
+         * output so that it stays aligned with the upsampled signal.
+         */
+        mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
+
         mUpsampler[i].Splitter.process(mSamples[HF_BAND].data(), mSamples[LF_BAND].data(),
             InSamples[i], SamplesToDo);
         MixRowSamples(OutBuffer[i], mUpsampler[i].Gains,
             &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamples[0]), sNumBands, 0, SamplesToDo);
     }
+    for(ALsizei i{InChannels};i < OutChannels;i++)
+        mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
 }
 
 
@@ -255,16 +269,23 @@ void AmbiUpsampler::reset(const ALsizei out_order, const ALfloat xover_norm)
     mInput[1].Gains[HF_BAND] = Ambi3DDecoderHFScale[1] / hfscales[1];
     mInput[1].Gains[LF_BAND] = 1.0f;
     std::fill(std::begin(mInput)+2, std::end(mInput), mInput[1]);
+
+    mAllpass[0].init(xover_norm);
+    std::fill(std::begin(mAllpass)+1, std::end(mAllpass), mAllpass[0]);
 }
 
-void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
+void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
     ASSUME(InChannels > 0);
+    ASSUME(OutChannels > InChannels);
 
     for(ALsizei i{0};i < InChannels;i++)
     {
+        mAllpass[i].process(OutBuffer[i], SamplesToDo);
         mInput[i].Splitter.process(mSamples[HF_BAND], mSamples[LF_BAND], InSamples[i],
             SamplesToDo);
         MixRowSamples(OutBuffer[i], mInput[i].Gains, mSamples, sNumBands, 0, SamplesToDo);
     }
+    for(ALsizei i{InChannels};i < OutChannels;i++)
+        mAllpass[i].process(OutBuffer[i], SamplesToDo);
 }

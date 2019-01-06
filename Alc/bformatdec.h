@@ -36,6 +36,7 @@ private:
         BandSplitter Splitter;
         ALfloat Gains[sNumBands];
     } mUpsampler[4];
+    SplitterAllpass mUpAllpass[MAX_OUTPUT_CHANNELS];
 
     ALsizei mNumChannels;
     ALboolean mDualBand;
@@ -49,7 +50,7 @@ public:
     void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
     /* Up-samples a first-order input to the decoder's configuration. */
-    void upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
+    void upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
 
     DEF_NEWDEL(BFormatDec)
 };
@@ -60,15 +61,17 @@ public:
  */
 class AmbiUpsampler {
     static constexpr ALsizei sNumBands{2};
+
+    alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
     struct {
         BandSplitter Splitter;
         ALfloat Gains[sNumBands];
     } mInput[4];
-    alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
+    SplitterAllpass mAllpass[MAX_OUTPUT_CHANNELS];
 
 public:
     void reset(const ALsizei out_order, const ALfloat xover_norm);
-    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
+    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
 
     DEF_NEWDEL(AmbiUpsampler)
 };

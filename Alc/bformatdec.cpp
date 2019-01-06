@@ -75,16 +75,23 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<fl
 } // namespace
 
 
-void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
+void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     mSamples.clear();
     mSamplesHF = nullptr;
     mSamplesLF = nullptr;
 
-    mNumChannels = chancount;
-    mSamples.resize(chancount * 2);
-    mSamplesHF = mSamples.data();
-    mSamplesLF = mSamplesHF + chancount;
+    mMatrix = MatrixU{};
+    mDualBand = allow_2band && (conf->FreqBands == 2);
+    if(!mDualBand)
+        mSamples.resize(1);
+    else
+    {
+        mSamples.resize(inchans * 2);
+        mSamplesHF = mSamples.data();
+        mSamplesLF = mSamplesHF + inchans;
+    }
+    mNumChannels = inchans;
 
     mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->Speakers.size(), 0u,
         [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
@@ -118,8 +125,6 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     const std::array<float,MAX_AMBI_COEFFS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
     const ALsizei coeff_count{periphonic ? MAX_AMBI_COEFFS : MAX_AMBI2D_COEFFS};
 
-    mMatrix = MatrixU{};
-    mDualBand = (conf->FreqBands == 2);
     if(!mDualBand)
     {
         for(size_t i{0u};i < conf->Speakers.size();i++)
@@ -163,6 +168,55 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         }
     }
 }
+
+void BFormatDec::reset(ALsizei inchans, ALuint srate, ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
+{
+    mSamples.clear();
+    mSamplesHF = nullptr;
+    mSamplesLF = nullptr;
+
+    mMatrix = MatrixU{};
+    mDualBand = false;
+    mSamples.resize(1);
+    mNumChannels = inchans;
+
+    mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+chancount, 0u,
+        [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
+        { return mask | (1 << chan); }
+    );
+
+    const ALfloat xover_norm{400.0f / (float)srate};
+
+    const ALsizei out_order{
+        (inchans > 7) ? 4 :
+        (inchans > 5) ? 3 :
+        (inchans > 3) ? 2 : 1};
+    {
+        const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(out_order);
+        /* The specified filter gain is for the mid-point/reference gain. The
+         * gain at the shelf itself will be the square of that, so specify the
+         * square-root of the desired shelf gain.
+         */
+        const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
+        const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
+
+        mUpSampler[0].Shelf.setParams(BiquadType::HighShelf, gain0, xover_norm,
+            calc_rcpQ_from_slope(gain0, 1.0f));
+        mUpSampler[1].Shelf.setParams(BiquadType::HighShelf, gain1, xover_norm,
+            calc_rcpQ_from_slope(gain1, 1.0f));
+        for(ALsizei i{2};i < 4;i++)
+            mUpSampler[i].Shelf.copyParamsFrom(mUpSampler[1].Shelf);
+    }
+
+    for(size_t i{0u};i < chancount;i++)
+    {
+        const ALfloat (&coeffs)[MAX_AMBI_COEFFS] = chancoeffs[chanmap[i]];
+        ALfloat (&mtx)[MAX_AMBI_COEFFS] = mMatrix.Single[chanmap[i]];
+
+        std::copy_n(std::begin(coeffs), inchans, std::begin(mtx));
+    }
+}
+
 
 void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {

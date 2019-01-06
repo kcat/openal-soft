@@ -4,11 +4,14 @@
 #include "alMain.h"
 #include "filters/biquad.h"
 #include "filters/splitter.h"
+#include "ambidefs.h"
 #include "almalloc.h"
 
 
 struct AmbDecConf;
 
+
+using ChannelDec = ALfloat[MAX_AMBI_COEFFS];
 
 class BFormatDec {
 public:
@@ -38,7 +41,9 @@ private:
     ALboolean mDualBand;
 
 public:
-    void reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
+    void reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
+
+    void reset(ALsizei inchans, ALuint srate, ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);

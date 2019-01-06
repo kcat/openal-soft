@@ -420,7 +420,6 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     TRACE("Skipped delay: %d, max delay: %d, new FIR length: %d\n",
           min_delay, max_delay-min_delay, max_length);
     state->IrSize = max_length;
-#undef NUM_BANDS
 }
 
 

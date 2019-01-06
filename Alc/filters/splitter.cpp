@@ -9,11 +9,11 @@
 
 #include "math_defs.h"
 
-
-void BandSplitter::init(float f0norm)
+template<typename Real>
+void BandSplitterR<Real>::init(Real f0norm)
 {
-    float w = f0norm * al::MathDefs<float>::Tau();
-    float cw = std::cos(w);
+    const Real w{f0norm * al::MathDefs<Real>::Tau()};
+    const Real cw{std::cos(w)};
     if(cw > std::numeric_limits<float>::epsilon())
         coeff = (std::sin(w) - 1.0f) / cw;
     else
@@ -24,20 +24,21 @@ void BandSplitter::init(float f0norm)
     ap_z1 = 0.0f;
 }
 
-void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const float *input, int count)
+template<typename Real>
+void BandSplitterR<Real>::process(Real *RESTRICT hpout, Real *RESTRICT lpout, const Real *input, int count)
 {
     ASSUME(count > 0);
 
-    const float ap_coeff{this->coeff};
-    const float lp_coeff{this->coeff*0.5f + 0.5f};
-    float lp_z1{this->lp_z1};
-    float lp_z2{this->lp_z2};
-    float ap_z1{this->ap_z1};
-    auto proc_sample = [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpout](const float in) noexcept -> float
+    const Real ap_coeff{this->coeff};
+    const Real lp_coeff{this->coeff*0.5f + 0.5f};
+    Real lp_z1{this->lp_z1};
+    Real lp_z2{this->lp_z2};
+    Real ap_z1{this->ap_z1};
+    auto proc_sample = [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpout](const Real in) noexcept -> Real
     {
         /* Low-pass sample processing. */
-        float d{(in - lp_z1) * lp_coeff};
-        float lp_y{lp_z1 + d};
+        Real d{(in - lp_z1) * lp_coeff};
+        Real lp_y{lp_z1 + d};
         lp_z1 = lp_y + d;
 
         d = (lp_y - lp_z2) * lp_coeff;
@@ -47,7 +48,7 @@ void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const f
         *(lpout++) = lp_y;
 
         /* All-pass sample processing. */
-        float ap_y{in*ap_coeff + ap_z1};
+        Real ap_y{in*ap_coeff + ap_z1};
         ap_z1 = in - ap_y*ap_coeff;
 
         /* High-pass generated from removing low-passed output. */
@@ -59,11 +60,15 @@ void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const f
     this->ap_z1 = ap_z1;
 }
 
+template class BandSplitterR<float>;
+template class BandSplitterR<double>;
 
-void SplitterAllpass::init(float f0norm)
+
+template<typename Real>
+void SplitterAllpassR<Real>::init(Real f0norm)
 {
-    float w = f0norm * al::MathDefs<float>::Tau();
-    float cw = std::cos(w);
+    const Real w{f0norm * al::MathDefs<Real>::Tau()};
+    const Real cw{std::cos(w)};
     if(cw > std::numeric_limits<float>::epsilon())
         coeff = (std::sin(w) - 1.0f) / cw;
     else
@@ -72,18 +77,22 @@ void SplitterAllpass::init(float f0norm)
     z1 = 0.0f;
 }
 
-void SplitterAllpass::process(float *RESTRICT samples, int count)
+template<typename Real>
+void SplitterAllpassR<Real>::process(Real *RESTRICT samples, int count)
 {
     ASSUME(count > 0);
 
-    const float coeff{this->coeff};
-    float z1{this->z1};
-    auto proc_sample = [coeff,&z1](const float in) noexcept -> float
+    const Real coeff{this->coeff};
+    Real z1{this->z1};
+    auto proc_sample = [coeff,&z1](const Real in) noexcept -> Real
     {
-        float out{in*coeff + z1};
+        Real out{in*coeff + z1};
         z1 = in - out*coeff;
         return out;
     };
     std::transform(samples, samples+count, samples, proc_sample);
     this->z1 = z1;
 }
+
+template class SplitterAllpassR<float>;
+template class SplitterAllpassR<double>;

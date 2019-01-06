@@ -453,7 +453,6 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
 }
 
 
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 
 /**
@@ -466,11 +465,7 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
  */
 inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
-    if(dry->CoeffCount > 0)
-        ComputePanningGainsMC(dry->Ambi.Coeffs, dry->NumChannels, dry->CoeffCount,
-                              coeffs, ingain, gains);
-    else
-        ComputePanningGainsBF(dry->Ambi.Map, dry->NumChannels, coeffs, ingain, gains);
+    ComputePanningGainsBF(dry->AmbiMap.data(), dry->NumChannels, coeffs, ingain, gains);
 }
 
 void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);

@@ -56,8 +56,7 @@ public:
 
 
 /* Stand-alone first-order upsampler. Kept here because it shares some stuff
- * with bformatdec. Assumes a periphonic (4-channel) input mix! If output is
- * B-Format, it must also be periphonic.
+ * with bformatdec.
  */
 class AmbiUpsampler {
 public:
@@ -66,16 +65,11 @@ public:
 private:
     alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
 
-    bool mSimpleUp;
     BiquadFilter mShelf[4];
-    struct {
-        BandSplitter XOver;
-        std::array<std::array<ALfloat,MAX_OUTPUT_CHANNELS>,sNumBands> Gains;
-    } mInput[4];
 
 public:
-    void reset(const ALCdevice *device);
-    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
+    void reset(const ALsizei out_order, const ALfloat xover_norm);
+    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
 
     DEF_NEWDEL(AmbiUpsampler)
 };

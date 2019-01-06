@@ -127,11 +127,9 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 
 void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 {
-    const ALsizei num_chans{device->Dry.NumChannels};
-    ASSUME(num_chans > 0);
-
     if(AmbiUpsampler *ambiup{device->AmbiUp.get()})
-        ambiup->process(device->Dry.Buffer, num_chans, device->FOAOut.Buffer, SamplesToDo);
+        ambiup->process(device->Dry.Buffer, device->FOAOut.Buffer, device->FOAOut.NumChannels,
+            SamplesToDo);
 
     /* HRTF is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
@@ -140,7 +138,8 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
     ALfloat *RightOut{device->RealOut.Buffer[ridx]};
 
     DirectHrtfState *state{device->mHrtfState.get()};
-    MixDirectHrtf(LeftOut, RightOut, device->Dry.Buffer, state, num_chans, SamplesToDo);
+    MixDirectHrtf(LeftOut, RightOut, device->Dry.Buffer, state, device->Dry.NumChannels,
+        SamplesToDo);
     state->Offset += SamplesToDo;
 }
 
@@ -156,8 +155,8 @@ void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
 
 void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
 {
-    device->AmbiUp->process(device->RealOut.Buffer, device->RealOut.NumChannels,
-        device->FOAOut.Buffer, SamplesToDo);
+    device->AmbiUp->process(device->RealOut.Buffer, device->FOAOut.Buffer,
+        device->FOAOut.NumChannels, SamplesToDo);
 }
 
 void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
@@ -445,9 +444,8 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
     if(ALeffectslot *target{slot->Params.Target})
     {
         auto iter = std::copy(std::begin(target->ChanMap), std::end(target->ChanMap),
-            std::begin(params.Ambi.Map));
-        std::fill(iter, std::end(params.Ambi.Map), BFChannelConfig{});
-        params.CoeffCount = 0;
+            std::begin(params.AmbiMap));
+        std::fill(iter, std::end(params.AmbiMap), BFChannelConfig{});
         params.Buffer = target->WetBuffer;
         params.NumChannels = target->NumChannels;
 

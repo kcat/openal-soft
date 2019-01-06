@@ -532,20 +532,6 @@ enum RenderMode {
 };
 
 
-using ChannelConfig = ALfloat[MAX_AMBI_COEFFS];
-struct BFChannelConfig {
-    ALfloat Scale;
-    ALsizei Index;
-};
-
-union AmbiConfig {
-    /* Ambisonic coefficients for mixing to the dry buffer. */
-    ChannelConfig Coeffs[MAX_OUTPUT_CHANNELS];
-    /* Coefficient channel mapping for mixing to the dry buffer. */
-    BFChannelConfig Map[MAX_OUTPUT_CHANNELS];
-};
-
-
 struct BufferSubList {
     uint64_t FreeMask{~uint64_t{}};
     ALbuffer *Buffers{nullptr}; /* 64 */
@@ -635,6 +621,11 @@ public:
     const DistData& operator[](size_t o) const noexcept { return mChannel[o]; }
 };
 
+struct BFChannelConfig {
+    ALfloat Scale;
+    ALsizei Index;
+};
+
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
  * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
@@ -643,12 +634,8 @@ public:
 #define BUFFERSIZE 2048
 
 struct MixParams {
-    AmbiConfig Ambi{};
-    /* Number of coefficients in each Ambi.Coeffs to mix together (4 for first-
-     * order, 9 for second-order, etc). If the count is 0, Ambi.Map is used
-     * instead to map each output to a coefficient index.
-     */
-    ALsizei CoeffCount{0};
+    /* Coefficient channel mapping for mixing to the buffer. */
+    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap;
 
     ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
     ALsizei NumChannels{0};

@@ -450,7 +450,8 @@ void InitPanning(ALCdevice *device)
             ""
         );
         device->AmbiDecoder.reset(new BFormatDec{});
-        device->AmbiDecoder->reset(coeffcount, device->Frequency, count, chancoeffs, idxmap);
+        device->AmbiDecoder->reset(coeffcount, 400.0f / static_cast<ALfloat>(device->Frequency),
+            count, chancoeffs, idxmap);
 
         if(coeffcount <= 4)
         {

@@ -146,7 +146,7 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
     }
 }
 
-void BFormatDec::reset(ALsizei inchans, ALuint srate, ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
+void BFormatDec::reset(const ALsizei inchans, const ALfloat xover_norm, const ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     mSamples.clear();
     mSamplesHF = nullptr;
@@ -161,8 +161,6 @@ void BFormatDec::reset(ALsizei inchans, ALuint srate, ALsizei chancount, const C
         [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
         { return mask | (1 << chan); }
     );
-
-    const ALfloat xover_norm{400.0f / (float)srate};
 
     const ALsizei out_order{
         (inchans > 7) ? 4 :

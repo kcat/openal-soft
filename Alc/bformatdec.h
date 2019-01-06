@@ -33,9 +33,8 @@ private:
     std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
-    struct {
-        BiquadFilter Shelf;
-    } mUpSampler[4];
+    /* Shelf filters used for upsampling. */
+    BiquadFilter mShelf[4];
 
     ALsizei mNumChannels;
     ALboolean mDualBand;
@@ -59,13 +58,8 @@ public:
  * with bformatdec.
  */
 class AmbiUpsampler {
-public:
-    static constexpr size_t sNumBands{2};
-
-private:
-    alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
-
     BiquadFilter mShelf[4];
+    alignas(16) ALfloat mSamples[BUFFERSIZE];
 
 public:
     void reset(const ALsizei out_order, const ALfloat xover_norm);

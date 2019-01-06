@@ -19,10 +19,11 @@
 
 namespace {
 
+using namespace std::placeholders;
+
 #define HF_BAND 0
 #define LF_BAND 1
 static_assert(BFormatDec::sNumBands == 2, "Unexpected BFormatDec::sNumBands");
-static_assert(AmbiUpsampler::sNumBands == 2, "Unexpected AmbiUpsampler::sNumBands");
 
 constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_ORDER+1] = {
     2.00000000f, 1.15470054f
@@ -89,12 +90,12 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
         const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
         const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
 
-        mUpSampler[0].Shelf.setParams(BiquadType::HighShelf, gain0, xover_norm,
+        mShelf[0].setParams(BiquadType::HighShelf, gain0, xover_norm,
             calc_rcpQ_from_slope(gain0, 1.0f));
-        mUpSampler[1].Shelf.setParams(BiquadType::HighShelf, gain1, xover_norm,
+        mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
             calc_rcpQ_from_slope(gain1, 1.0f));
-        for(ALsizei i{2};i < 4;i++)
-            mUpSampler[i].Shelf.copyParamsFrom(mUpSampler[1].Shelf);
+        std::for_each(std::begin(mShelf)+2, std::end(mShelf),
+            std::bind(std::mem_fn(&BiquadFilter::copyParamsFrom), _1, mShelf[1]));
     }
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
@@ -176,12 +177,12 @@ void BFormatDec::reset(ALsizei inchans, ALuint srate, ALsizei chancount, const C
         const ALfloat gain0{std::sqrt(Ambi3DDecoderHFScale[0] / hfscales[0])};
         const ALfloat gain1{std::sqrt(Ambi3DDecoderHFScale[1] / hfscales[1])};
 
-        mUpSampler[0].Shelf.setParams(BiquadType::HighShelf, gain0, xover_norm,
+        mShelf[0].setParams(BiquadType::HighShelf, gain0, xover_norm,
             calc_rcpQ_from_slope(gain0, 1.0f));
-        mUpSampler[1].Shelf.setParams(BiquadType::HighShelf, gain1, xover_norm,
+        mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
             calc_rcpQ_from_slope(gain1, 1.0f));
-        for(ALsizei i{2};i < 4;i++)
-            mUpSampler[i].Shelf.copyParamsFrom(mUpSampler[1].Shelf);
+        std::for_each(std::begin(mShelf)+2, std::end(mShelf),
+            std::bind(std::mem_fn(&BiquadFilter::copyParamsFrom), _1, mShelf[1]));
     }
 
     for(ALsizei i{0};i < chancount;i++)
@@ -248,7 +249,7 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSa
      */
     for(ALsizei i{0};i < InChannels;i++)
     {
-        mUpSampler[i].Shelf.process(mSamples[0].data(), InSamples[i], SamplesToDo);
+        mShelf[i].process(mSamples[0].data(), InSamples[i], SamplesToDo);
 
         const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples[0].data())};
         ALfloat *dst{al::assume_aligned<16>(OutBuffer[i])};
@@ -267,8 +268,8 @@ void AmbiUpsampler::reset(const ALsizei out_order, const ALfloat xover_norm)
         calc_rcpQ_from_slope(gain0, 1.0f));
     mShelf[1].setParams(BiquadType::HighShelf, gain1, xover_norm,
         calc_rcpQ_from_slope(gain1, 1.0f));
-    for(ALsizei i{2};i < 4;i++)
-        mShelf[i].copyParamsFrom(mShelf[1]);
+    std::for_each(std::begin(mShelf)+2, std::end(mShelf),
+        std::bind(std::mem_fn(&BiquadFilter::copyParamsFrom), _1, mShelf[1]));
 }
 
 void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
@@ -279,9 +280,9 @@ void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*In
 
     for(ALsizei i{0};i < InChannels;i++)
     {
-        mShelf[i].process(mSamples[0], InSamples[i], SamplesToDo);
+        mShelf[i].process(mSamples, InSamples[i], SamplesToDo);
 
-        const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples[0])};
+        const ALfloat *RESTRICT src{al::assume_aligned<16>(mSamples)};
         ALfloat *dst{al::assume_aligned<16>(OutBuffer[i])};
         std::transform(src, src+SamplesToDo, dst, dst, std::plus<float>{});
     }

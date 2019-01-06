@@ -43,7 +43,7 @@
 
 static inline ALfloat Sin(ALsizei index)
 {
-    return std::sin((ALfloat)index * (F_TAU / (ALfloat)WAVEFORM_FRACONE));
+    return std::sin((ALfloat)index * (al::MathDefs<float>::Tau() / (ALfloat)WAVEFORM_FRACONE));
 }
 
 static inline ALfloat Saw(ALsizei index)

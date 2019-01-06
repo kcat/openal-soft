@@ -738,9 +738,9 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
     ALfloat mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
-        norm[0] = vec[0] / mag * -SQRTF_3;
-        norm[1] = vec[1] / mag * SQRTF_3;
-        norm[2] = vec[2] / mag * SQRTF_3;
+        norm[0] = vec[0] / mag * -al::MathDefs<float>::Sqrt3();
+        norm[1] = vec[1] / mag * al::MathDefs<float>::Sqrt3();
+        norm[2] = vec[2] / mag * al::MathDefs<float>::Sqrt3();
         mag = 1.0f;
     }
     else
@@ -749,9 +749,9 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] = vec[0] * -SQRTF_3;
-        norm[1] = vec[1] * SQRTF_3;
-        norm[2] = vec[2] * SQRTF_3;
+        norm[0] = vec[0] * -al::MathDefs<float>::Sqrt3();
+        norm[1] = vec[1] * al::MathDefs<float>::Sqrt3();
+        norm[2] = vec[2] * al::MathDefs<float>::Sqrt3();
     }
 
     return alu::Matrix{

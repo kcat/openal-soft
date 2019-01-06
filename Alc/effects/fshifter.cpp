@@ -52,7 +52,7 @@ std::array<ALdouble,HIL_SIZE> InitHannWindow(void)
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
     for(ALsizei i{0};i < HIL_SIZE>>1;i++)
     {
-        ALdouble val = std::sin(M_PI * (ALdouble)i / (ALdouble)(HIL_SIZE-1));
+        ALdouble val = std::sin(al::MathDefs<double>::Pi() * i / ALdouble{HIL_SIZE-1});
         ret[i] = ret[HIL_SIZE-1-i] = val * val;
     }
     return ret;
@@ -140,13 +140,13 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
 
 void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    static const complex_d complex_zero{0.0, 0.0};
+    static constexpr complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = mBufferOut;
     ALsizei j, k, base;
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALsizei todo = mini(HIL_SIZE-mCount, SamplesToDo-base);
+        const ALsizei todo{mini(HIL_SIZE-mCount, SamplesToDo-base)};
 
         ASSUME(todo > 0);
 
@@ -189,7 +189,7 @@ void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
     /* Process frequency shifter using the analytic signal obtained. */
     for(k = 0;k < SamplesToDo;k++)
     {
-        double phase = mPhase * ((1.0/FRACTIONONE) * 2.0*M_PI);
+        double phase = mPhase * ((1.0/FRACTIONONE) * al::MathDefs<double>::Tau());
         BufferOut[k] = (float)(mOutdata[k].real()*std::cos(phase) +
                                mOutdata[k].imag()*std::sin(phase)*mLdSign);
 

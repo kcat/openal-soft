@@ -150,7 +150,7 @@ void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sampl
         env_delay = lerp(sample, env_delay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
-        w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * F_TAU;
+        w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * al::MathDefs<float>::Tau();
         mEnv[i].cos_w0 = cosf(w0);
         mEnv[i].alpha = sinf(w0)/(2.0f * Q_FACTOR);
     }

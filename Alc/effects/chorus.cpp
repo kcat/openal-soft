@@ -147,8 +147,8 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
 
     /* Gains for left and right sides */
     ALfloat coeffs[2][MAX_AMBI_COEFFS];
-    CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs[0]);
-    CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs[1]);
+    CalcAngleCoeffs(al::MathDefs<float>::Pi()*-0.5f, 0.0f, 0.0f, coeffs[0]);
+    CalcAngleCoeffs(al::MathDefs<float>::Pi()* 0.5f, 0.0f, 0.0f, coeffs[1]);
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;
@@ -178,7 +178,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
                 mLfoScale = 4.0f / mLfoRange;
                 break;
             case WaveForm::Sinusoid:
-                mLfoScale = F_TAU / mLfoRange;
+                mLfoScale = al::MathDefs<float>::Tau() / mLfoRange;
                 break;
         }
 

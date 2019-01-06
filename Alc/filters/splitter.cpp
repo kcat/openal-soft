@@ -12,7 +12,7 @@
 
 void BandSplitter::init(float f0norm)
 {
-    float w = f0norm * F_TAU;
+    float w = f0norm * al::MathDefs<float>::Tau();
     float cw = std::cos(w);
     if(cw > std::numeric_limits<float>::epsilon())
         coeff = (std::sin(w) - 1.0f) / cw;
@@ -62,7 +62,7 @@ void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const f
 
 void SplitterAllpass::init(float f0norm)
 {
-    float w = f0norm * F_TAU;
+    float w = f0norm * al::MathDefs<float>::Tau();
     float cw = std::cos(w);
     if(cw > std::numeric_limits<float>::epsilon())
         coeff = (std::sin(w) - 1.0f) / cw;

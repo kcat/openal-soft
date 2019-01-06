@@ -84,7 +84,7 @@ std::array<ALdouble,STFT_SIZE> InitHannWindow(void)
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
     for(ALsizei i{0};i < STFT_SIZE>>1;i++)
     {
-        ALdouble val = std::sin(M_PI * (ALdouble)i / (ALdouble)(STFT_SIZE-1));
+        ALdouble val = std::sin(al::MathDefs<double>::Pi() * i / ALdouble{STFT_SIZE-1});
         ret[i] = ret[STFT_SIZE-1-i] = val * val;
     }
     return ret;
@@ -195,7 +195,7 @@ void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
      */
 
-    static constexpr ALdouble expected{M_PI*2.0 / OVERSAMP};
+    static constexpr ALdouble expected{al::MathDefs<double>::Tau() / OVERSAMP};
     const ALdouble freq_per_bin{mFreqPerBin};
     ALfloat *RESTRICT bufferOut{mBufferOut};
     ALsizei count{mCount};
@@ -237,8 +237,8 @@ void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
             double tmp{(component.Phase - mLastPhase[k]) - k*expected};
 
             /* Map delta phase into +/- Pi interval */
-            int qpd{double2int(tmp / M_PI)};
-            tmp -= M_PI * (qpd + (qpd%2));
+            int qpd{double2int(tmp / al::MathDefs<double>::Pi())};
+            tmp -= al::MathDefs<double>::Pi() * (qpd + (qpd%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected;

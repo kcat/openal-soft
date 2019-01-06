@@ -91,11 +91,11 @@ static void init(struct bs2b *bs2b)
      * $d  = 1 / 2 / pi / $fc;
      * $x  = exp(-1 / $d);
      */
-    x           = std::exp(-2.0f * F_PI * Fc_lo / bs2b->srate);
+    x           = std::exp(-al::MathDefs<float>::Tau() * Fc_lo / bs2b->srate);
     bs2b->b1_lo = x;
     bs2b->a0_lo = G_lo * (1.0f - x) * g;
 
-    x           = std::exp(-2.0f * F_PI * Fc_hi / bs2b->srate);
+    x           = std::exp(-al::MathDefs<float>::Tau() * Fc_hi / bs2b->srate);
     bs2b->b1_hi = x;
     bs2b->a0_hi = (1.0f - G_hi * (1.0f - x)) * g;
     bs2b->a1_hi = -x * g;

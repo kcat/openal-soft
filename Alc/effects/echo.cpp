@@ -116,8 +116,8 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
     );
 
     ALfloat coeffs[2][MAX_AMBI_COEFFS];
-    CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs[0]);
-    CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs[1]);
+    CalcAngleCoeffs(al::MathDefs<float>::Pi()*-0.5f*lrpan, 0.0f, spread, coeffs[0]);
+    CalcAngleCoeffs(al::MathDefs<float>::Pi()* 0.5f*lrpan, 0.0f, spread, coeffs[1]);
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;

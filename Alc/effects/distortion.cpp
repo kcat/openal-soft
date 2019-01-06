@@ -65,7 +65,8 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
     const ALCdevice *device{context->Device};
 
     /* Store waveshaper edge settings. */
-    const ALfloat edge{minf(std::sin(props->Distortion.Edge * F_PI_2), 0.99f)};
+    const ALfloat edge{
+        minf(std::sin(al::MathDefs<float>::Pi()*0.5f * props->Distortion.Edge), 0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
     ALfloat cutoff{props->Distortion.LowpassCutoff};

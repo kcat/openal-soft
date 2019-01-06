@@ -1390,7 +1390,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 
     ALfloat spread{0.0f};
     if(props->Radius > Distance)
-        spread = F_TAU - Distance/props->Radius*F_PI;
+        spread = al::MathDefs<float>::Tau() - Distance/props->Radius*al::MathDefs<float>::Pi();
     else if(Distance > 0.0f)
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
@@ -1571,8 +1571,10 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
          * frequency sum is 1/4th toward center (3/4ths on left/right). These
          * values can be tweaked.
          */
-        ALfloat m{lfsum*std::cos(1.0f/3.0f * F_PI_2) + hfsum*std::cos(1.0f/4.0f * F_PI_2)};
-        ALfloat c{lfsum*std::sin(1.0f/3.0f * F_PI_2) + hfsum*std::sin(1.0f/4.0f * F_PI_2)};
+        ALfloat m{lfsum*std::cos(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f)) +
+            hfsum*std::cos(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
+        ALfloat c{lfsum*std::sin(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f)) +
+            hfsum*std::sin(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
 
         /* The generated center channel signal adds to the existing signal,
          * while the modified left and right channels replace.

@@ -160,7 +160,7 @@ public:
  */
 ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
 {
-    ev = (F_PI_2+ev) * (evcount-1) / F_PI;
+    ev = (al::MathDefs<float>::Pi()*0.5f + ev) * (evcount-1) / al::MathDefs<float>::Pi();
     ALsizei idx{float2int(ev)};
 
     *mu = ev - idx;
@@ -172,7 +172,7 @@ ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
  */
 ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 {
-    az = (F_TAU+az) * azcount / F_TAU;
+    az = (al::MathDefs<float>::Tau()+az) * azcount / al::MathDefs<float>::Tau();
     ALsizei idx{float2int(az)};
 
     *mu = az - idx;
@@ -188,7 +188,7 @@ ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
                    ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
 {
-    const ALfloat dirfact{1.0f - (spread / F_TAU)};
+    const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
     /* Claculate the lower elevation index. */
     ALfloat emu;

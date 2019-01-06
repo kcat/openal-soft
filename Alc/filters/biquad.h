@@ -124,13 +124,13 @@ inline double calc_rcpQ_from_slope(double gain, double slope)
  */
 inline float calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
 {
-    const float w0{F_TAU * f0norm};
+    const float w0{al::MathDefs<float>::Tau() * f0norm};
     return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
 }
 
 inline double calc_rcpQ_from_bandwidth(double f0norm, double bandwidth)
 {
-    const double w0{F_TAU * f0norm};
+    const double w0{al::MathDefs<double>::Tau() * f0norm};
     return 2.0*std::sinh(std::log(2.0)/2.0*bandwidth*w0/std::sin(w0));
 }
 

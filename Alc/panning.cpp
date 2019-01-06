@@ -752,9 +752,9 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
     /* Zeroth-order */
     coeffs[0]  = 1.0f; /* ACN 0 = 1 */
     /* First-order */
-    coeffs[1]  = SQRTF_3 * y; /* ACN 1 = sqrt(3) * Y */
-    coeffs[2]  = SQRTF_3 * z; /* ACN 2 = sqrt(3) * Z */
-    coeffs[3]  = SQRTF_3 * x; /* ACN 3 = sqrt(3) * X */
+    coeffs[1]  = 1.732050808f * y; /* ACN 1 = sqrt(3) * Y */
+    coeffs[2]  = 1.732050808f * z; /* ACN 2 = sqrt(3) * Z */
+    coeffs[3]  = 1.732050808f * x; /* ACN 3 = sqrt(3) * X */
     /* Second-order */
     coeffs[4]  = 3.872983346f * x * y;             /* ACN 4 = sqrt(15) * X * Y */
     coeffs[5]  = 3.872983346f * y * z;             /* ACN 5 = sqrt(15) * Y * Z */
@@ -808,7 +808,7 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
          */
         ALfloat ca = std::cos(spread * 0.5f);
         /* Increase the source volume by up to +3dB for a full spread. */
-        ALfloat scale = std::sqrt(1.0f + spread/F_TAU);
+        ALfloat scale = std::sqrt(1.0f + spread/al::MathDefs<float>::Tau());
 
         ALfloat ZH0_norm = scale;
         ALfloat ZH1_norm = 0.5f * (ca+1.f) * scale;

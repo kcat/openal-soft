@@ -34,13 +34,14 @@ enum class BiquadType {
     BandPass,
 };
 
-class BiquadFilter {
+template<typename Real>
+class BiquadFilterR {
     /* Last two delayed components for direct form II. */
-    float z1{0.0f}, z2{0.0f};
+    Real z1{0.0f}, z2{0.0f};
     /* Transfer function coefficients "b" (numerator) */
-    float b0{1.0f}, b1{0.0f}, b2{0.0f};
+    Real b0{1.0f}, b1{0.0f}, b2{0.0f};
     /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
-    float a1{0.0f}, a2{0.0f};
+    Real a1{0.0f}, a2{0.0f};
 
 public:
     void clear() noexcept { z1 = z2 = 0.0f; }
@@ -59,9 +60,9 @@ public:
      *             transition band. Can be generated from calc_rcpQ_from_slope
      *             or calc_rcpQ_from_bandwidth as needed.
      */
-    void setParams(BiquadType type, float gain, float f0norm, float rcpQ);
+    void setParams(BiquadType type, Real gain, Real f0norm, Real rcpQ);
 
-    void copyParamsFrom(const BiquadFilter &other)
+    void copyParamsFrom(const BiquadFilterR &other)
     {
         b0 = other.b0;
         b1 = other.b1;
@@ -71,7 +72,7 @@ public:
     }
 
 
-    void process(float *dst, const float *src, int numsamples);
+    void process(Real *dst, const Real *src, int numsamples);
 
     void passthru(int numsamples) noexcept
     {
@@ -88,18 +89,20 @@ public:
     }
 
     /* Rather hacky. It's just here to support "manual" processing. */
-    std::pair<float,float> getComponents() const noexcept
+    std::pair<Real,Real> getComponents() const noexcept
     { return {z1, z2}; }
-    void setComponents(float z1_, float z2_) noexcept
+    void setComponents(Real z1_, Real z2_) noexcept
     { z1 = z1_; z2 = z2_; }
-    float processOne(const float in, float &z1_, float &z2_) const noexcept
+    Real processOne(const Real in, Real &z1_, Real &z2_) const noexcept
     {
-        float out{in*b0 + z1_};
+        Real out{in*b0 + z1_};
         z1_ = in*b1 - out*a1 + z2_;
         z2_ = in*b2 - out*a2;
         return out;
     }
 };
+
+using BiquadFilter = BiquadFilterR<float>;
 
 /**
  * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
@@ -108,19 +111,27 @@ public:
  * \param slope 0 < slope <= 1
  */
 inline float calc_rcpQ_from_slope(float gain, float slope)
-{
-    return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f);
-}
+{ return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
+
+inline double calc_rcpQ_from_slope(double gain, double slope)
+{ return std::sqrt((gain + 1.0/gain)*(1.0/slope - 1.0) + 2.0); }
+
 /**
  * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the normalized
  * reference frequency and bandwidth.
  * \param f0norm 0 < f0norm < 0.5.
  * \param bandwidth 0 < bandwidth
  */
-inline ALfloat calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
+inline float calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
 {
-    float w0 = F_TAU * f0norm;
+    const float w0{F_TAU * f0norm};
     return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
+}
+
+inline double calc_rcpQ_from_bandwidth(double f0norm, double bandwidth)
+{
+    const double w0{F_TAU * f0norm};
+    return 2.0*std::sinh(std::log(2.0)/2.0*bandwidth*w0/std::sin(w0));
 }
 
 #endif /* FILTERS_BIQUAD_H */

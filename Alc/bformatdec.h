@@ -73,6 +73,8 @@ public:
     void reset(const ALsizei out_order, const ALfloat xover_norm);
     void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
 
+    static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALsizei in_order, const ALsizei out_order) noexcept;
+
     DEF_NEWDEL(AmbiUpsampler)
 };
 

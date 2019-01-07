@@ -26,13 +26,13 @@ using namespace std::placeholders;
 static_assert(BFormatDec::sNumBands == 2, "Unexpected BFormatDec::sNumBands");
 
 constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_ORDER+1] = {
-    2.00000000f, 1.15470054f
+    1.00000000e+00f, 1.00000000e+00f
 };
 constexpr ALfloat Ambi3DDecoderHFScale2O[MAX_AMBI_ORDER+1] = {
-    1.49071198f, 1.15470054f
+    7.45355990e-01f, 1.00000000e+00f
 };
 constexpr ALfloat Ambi3DDecoderHFScale3O[MAX_AMBI_ORDER+1] = {
-    1.17958441f, 1.01578297f
+    5.89792205e-01f, 8.79693856e-01f
 };
 
 inline auto GetDecoderHFScales(ALsizei order) noexcept -> const ALfloat(&)[MAX_AMBI_ORDER+1]
@@ -257,6 +257,22 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutCha
         mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
 }
 
+
+std::array<ALfloat,MAX_AMBI_ORDER+1> AmbiUpsampler::GetHFOrderScales(const ALsizei in_order, const ALsizei out_order) noexcept
+{
+    std::array<ALfloat,MAX_AMBI_ORDER+1> ret{};
+
+    assert(out_order >= in_order);
+    ASSUME(out_order >= in_order);
+
+    const ALfloat (&target)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(out_order);
+    const ALfloat (&input)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(in_order);
+
+    for(ALsizei i{0};i < in_order+1;++i)
+        ret[i] = input[i] / target[i];
+
+    return ret;
+}
 
 void AmbiUpsampler::reset(const ALsizei out_order, const ALfloat xover_norm)
 {

@@ -453,20 +453,23 @@ void InitPanning(ALCdevice *device)
         device->AmbiDecoder->reset(coeffcount, 400.0f / static_cast<ALfloat>(device->Frequency),
             count, chancoeffs, idxmap);
 
-        if(coeffcount <= 4)
-        {
+        if(coeffcount <= 3)
             device->FOAOut.AmbiMap = device->Dry.AmbiMap;
-            device->FOAOut.NumChannels = 0;
-        }
         else
         {
-            device->FOAOut.AmbiMap.fill(BFChannelConfig{});
-            std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+3,
-                std::begin(device->FOAOut.AmbiMap),
-                [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
+            const std::array<ALfloat,MAX_AMBI_ORDER+1> scales{AmbiUpsampler::GetHFOrderScales(1,
+                (coeffcount > 7) ? 4 :
+                (coeffcount > 5) ? 3 :
+                (coeffcount > 3) ? 2 : 1)};
+
+            device->FOAOut.AmbiMap[0] = BFChannelConfig{scales[0], AmbiIndex::From2D[0]};
+            auto ambimap_iter = std::transform(AmbiIndex::From2D.begin()+1,
+                AmbiIndex::From2D.begin()+3, std::begin(device->FOAOut.AmbiMap)+1,
+                [&scales](const ALsizei &acn) noexcept { return BFChannelConfig{scales[1], acn}; }
             );
-            device->FOAOut.NumChannels = 3;
+            std::fill(ambimap_iter, std::end(device->FOAOut.AmbiMap), BFChannelConfig{});
         }
+        device->FOAOut.NumChannels = 0;
 
         device->RealOut.NumChannels = device->channelsFromFmt();
     }
@@ -508,31 +511,34 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     device->AmbiDecoder->reset(conf, false, count, device->Frequency, speakermap);
 
     if(conf->ChanMask <= AMBI_1ORDER_MASK)
-    {
         device->FOAOut.AmbiMap = device->Dry.AmbiMap;
-        device->FOAOut.NumChannels = 0;
-    }
     else
     {
-        device->FOAOut.AmbiMap.fill(BFChannelConfig{});
+        const std::array<ALfloat,MAX_AMBI_ORDER+1> scales{AmbiUpsampler::GetHFOrderScales(1,
+            (conf->ChanMask > AMBI_3ORDER_MASK) ? 4 :
+            (conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
+            (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1)};
+
+        auto ambimap_iter = std::begin(device->FOAOut.AmbiMap);
         if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
         {
-            count = 4;
-            std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
-                std::begin(device->FOAOut.AmbiMap),
-                [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            device->FOAOut.AmbiMap[0] = BFChannelConfig{scales[0], AmbiIndex::From3D[0]};
+            ambimap_iter = std::transform(AmbiIndex::From3D.begin()+1,
+                AmbiIndex::From3D.begin()+4, ambimap_iter+1,
+                [&scales](const ALsizei &acn) noexcept { return BFChannelConfig{scales[1], acn}; }
             );
         }
         else
         {
-            count = 3;
-            std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
-                std::begin(device->FOAOut.AmbiMap),
-                [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            device->FOAOut.AmbiMap[0] = BFChannelConfig{scales[0], AmbiIndex::From2D[0]};
+            ambimap_iter = std::transform(AmbiIndex::From2D.begin()+1,
+                AmbiIndex::From2D.begin()+3, ambimap_iter,
+                [&scales](const ALsizei &acn) noexcept { return BFChannelConfig{scales[1], acn}; }
             );
         }
-        device->FOAOut.NumChannels = count;
+        std::fill(ambimap_iter, std::end(device->FOAOut.AmbiMap), BFChannelConfig{});
     }
+    device->FOAOut.NumChannels = 0;
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 

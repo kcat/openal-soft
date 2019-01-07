@@ -232,7 +232,7 @@ ALeffect *AllocEffect(ALCcontext *context)
         if(UNLIKELY(device->EffectList.size() >= 1<<25))
         {
             alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
-            return NULL;
+            return nullptr;
         }
         device->EffectList.emplace_back();
         sublist = device->EffectList.end() - 1;
@@ -242,7 +242,7 @@ ALeffect *AllocEffect(ALCcontext *context)
         {
             device->EffectList.pop_back();
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
-            return NULL;
+            return nullptr;
         }
 
         slidx = 0;

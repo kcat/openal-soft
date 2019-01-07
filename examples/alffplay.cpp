@@ -879,7 +879,7 @@ int AudioState::handler()
     ALsizei buffer_len = std::chrono::duration_cast<std::chrono::duration<int>>(
         mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize;
 
-    mSamples = NULL;
+    mSamples = nullptr;
     mSamplesMax = 0;
     mSamplesPos = 0;
     mSamplesLen = 0;

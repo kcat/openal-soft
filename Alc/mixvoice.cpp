@@ -156,7 +156,7 @@ void aluInitMixer(void)
 {
     const char *str;
 
-    if(ConfigValueStr(NULL, NULL, "resampler", &str))
+    if(ConfigValueStr(nullptr, nullptr, "resampler", &str))
     {
         if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
             ResamplerDefault = PointResampler;
@@ -698,7 +698,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                 if(DataPosInt >= BufferListItem->max_samples)
                 {
                     isplaying = false;
-                    BufferListItem = NULL;
+                    BufferListItem = nullptr;
                     DataPosInt = 0;
                     DataPosFrac = 0;
                     break;

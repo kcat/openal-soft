@@ -215,13 +215,13 @@ static QString getNameFromValue(const NameValuePair (&list)[N], const QString &s
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    mPeriodSizeValidator(NULL),
-    mPeriodCountValidator(NULL),
-    mSourceCountValidator(NULL),
-    mEffectSlotValidator(NULL),
-    mSourceSendValidator(NULL),
-    mSampleRateValidator(NULL),
-    mJackBufferValidator(NULL),
+    mPeriodSizeValidator(nullptr),
+    mPeriodCountValidator(nullptr),
+    mSourceCountValidator(nullptr),
+    mEffectSlotValidator(nullptr),
+    mSourceSendValidator(nullptr),
+    mSampleRateValidator(nullptr),
+    mJackBufferValidator(nullptr),
     mNeedsSave(false)
 {
     ui->setupUi(this);
@@ -1290,7 +1290,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
             delete item;
         enableApplyButton();
     }
-    else if(gotAction != NULL)
+    else if(gotAction != nullptr)
     {
         QMap<QAction*,QString>::const_iterator iter = actionMap.find(gotAction);
         if(iter != actionMap.end())
@@ -1328,7 +1328,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
             delete item;
         enableApplyButton();
     }
-    else if(gotAction != NULL)
+    else if(gotAction != nullptr)
     {
         QMap<QAction*,QString>::const_iterator iter = actionMap.find(gotAction);
         if(iter != actionMap.end())

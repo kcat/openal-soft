@@ -344,7 +344,7 @@ struct ResamplerT {
 // output is desired.
 static void TrSetup(FILE *fp, const char *filename, TokenReaderT *tr)
 {
-    const char *name = NULL;
+    const char *name = nullptr;
 
     if(filename)
     {
@@ -599,7 +599,7 @@ static int TrReadInt(TokenReaderT *tr, const int loBound, const int hiBound, int
                 return 0;
             }
             temp[len] = '\0';
-            *value = strtol(temp, NULL, 10);
+            *value = strtol(temp, nullptr, 10);
             if(*value < loBound || *value > hiBound)
             {
                 TrErrorAt(tr, tr->mLine, col, "Expected a value from %d to %d.\n", loBound, hiBound);
@@ -695,7 +695,7 @@ static int TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBo
                     return 0;
                 }
                 temp[len] = '\0';
-                *value = strtod(temp, NULL);
+                *value = strtod(temp, nullptr);
                 if(*value < loBound || *value > hiBound)
                 {
                     TrErrorAt(tr, tr->mLine, col, "Expected a value from %f to %f.\n", loBound, hiBound);
@@ -1696,7 +1696,7 @@ static int LoadAsciiSource(FILE *fp, const SourceRefT *src, const uint n, double
     uint i, j;
     double dummy;
 
-    TrSetup(fp, NULL, &tr);
+    TrSetup(fp, nullptr, &tr);
     for(i = 0;i < src->mOffset;i++)
     {
         if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, (uint)src->mBits, &dummy))
@@ -1725,7 +1725,7 @@ static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double
         fp = fopen(src->mPath, "r");
     else
         fp = fopen(src->mPath, "rb");
-    if(fp == NULL)
+    if(fp == nullptr)
     {
         fprintf(stderr, "Error: Could not open source file '%s'.\n", src->mPath);
         return 0;
@@ -1799,7 +1799,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     uint fi, ei, ai, i;
     uint dither_seed = 22222;
 
-    if((fp=fopen(filename, "wb")) == NULL)
+    if((fp=fopen(filename, "wb")) == nullptr)
     {
         fprintf(stderr, "Error: Could not open MHR file '%s'.\n", filename);
         return 0;
@@ -2878,7 +2878,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
             return 0;
         HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
-        if(azd->mIrs[0] != NULL)
+        if(azd->mIrs[0] != nullptr)
         {
             TrErrorAt(tr, line, col, "Redefinition of source.\n");
             return 0;
@@ -2928,12 +2928,12 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         }
         if(hData->mChannelType == CT_STEREO)
         {
-            if(azd->mIrs[0] == NULL)
+            if(azd->mIrs[0] == nullptr)
             {
                 TrErrorAt(tr, line, col, "Missing left ear source reference(s).\n");
                 return 0;
             }
-            else if(azd->mIrs[1] == NULL)
+            else if(azd->mIrs[1] == nullptr)
             {
                 TrErrorAt(tr, line, col, "Missing right ear source reference(s).\n");
                 return 0;
@@ -2948,7 +2948,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                if(azd->mIrs[0] != NULL)
+                if(azd->mIrs[0] != nullptr)
                     break;
             }
             if(ai < hData->mFds[fi].mEvs[ei].mAzCount)
@@ -2966,7 +2966,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
-                if(azd->mIrs[0] == NULL)
+                if(azd->mIrs[0] == nullptr)
                 {
                     TrError(tr, "Missing source reference [ %d, %d, %d ].\n", fi, ei, ai);
                     return 0;
@@ -3009,10 +3009,10 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     int ret;
 
     fprintf(stdout, "Reading HRIR definition from %s...\n", inName?inName:"stdin");
-    if(inName != NULL)
+    if(inName != nullptr)
     {
         fp = fopen(inName, "r");
-        if(fp == NULL)
+        if(fp == nullptr)
         {
             fprintf(stderr, "Error: Could not open definition file '%s'\n", inName);
             return 0;
@@ -3026,7 +3026,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     }
     if(!ProcessMetrics(&tr, fftSize, truncSize, &hData))
     {
-        if(inName != NULL)
+        if(inName != nullptr)
             fclose(fp);
         return 0;
     }
@@ -3099,10 +3099,10 @@ static void PrintHelp(const char *argv0, FILE *ofile)
 // Standard command line dispatch.
 int main(int argc, char *argv[])
 {
-    const char *inName = NULL, *outName = NULL;
+    const char *inName = nullptr, *outName = nullptr;
     uint outRate, fftSize;
     int equalize, surface;
-    char *end = NULL;
+    char *end = nullptr;
     HeadModelT model;
     uint truncSize;
     double radius;

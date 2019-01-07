@@ -696,6 +696,7 @@ SET(COMMON_OBJS
     common/almalloc.h
     common/atomic.h
     common/math_defs.h
+    common/opthelpers.h
     common/threads.cpp
     common/threads.h
     common/vecmat.h

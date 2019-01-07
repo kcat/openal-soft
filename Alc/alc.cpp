@@ -2102,7 +2102,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 ALsizei idx = CTZ64(usemask);
                 ALsource *source = sublist.Sources + idx;
 
-                usemask &= ~(U64(1) << idx);
+                usemask &= ~(1_u64 << idx);
 
                 if(old_sends != device->NumAuxSends)
                 {

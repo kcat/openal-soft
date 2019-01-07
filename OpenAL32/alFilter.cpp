@@ -296,7 +296,7 @@ ALfilter *AllocFilter(ALCcontext *context)
         }
         device->FilterList.emplace_back();
         sublist = device->FilterList.end() - 1;
-        sublist->FreeMask = ~U64(0);
+        sublist->FreeMask = ~0_u64;
         sublist->Filters = static_cast<ALfilter*>(al_calloc(16, sizeof(ALfilter)*64));
         if(UNLIKELY(!sublist->Filters))
         {
@@ -315,7 +315,7 @@ ALfilter *AllocFilter(ALCcontext *context)
     /* Add 1 to avoid filter ID 0. */
     filter->id = ((lidx<<6) | slidx) + 1;
 
-    sublist->FreeMask &= ~(U64(1)<<slidx);
+    sublist->FreeMask &= ~(1_u64 << slidx);
 
     return filter;
 }
@@ -328,7 +328,7 @@ void FreeFilter(ALCdevice *device, ALfilter *filter)
 
     filter->~ALfilter();
 
-    device->FilterList[lidx].FreeMask |= U64(1) << slidx;
+    device->FilterList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
 
@@ -340,7 +340,7 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
     if(UNLIKELY(lidx >= device->FilterList.size()))
         return nullptr;
     FilterSubList &sublist = device->FilterList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Filters + slidx;
 }
@@ -625,7 +625,7 @@ FilterSubList::~FilterSubList()
     {
         ALsizei idx = CTZ64(usemask);
         Filters[idx].~ALfilter();
-        usemask &= ~(U64(1) << idx);
+        usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
     al_free(Filters);

@@ -236,7 +236,7 @@ ALeffect *AllocEffect(ALCcontext *context)
         }
         device->EffectList.emplace_back();
         sublist = device->EffectList.end() - 1;
-        sublist->FreeMask = ~U64(0);
+        sublist->FreeMask = ~0_u64;
         sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
         if(UNLIKELY(!sublist->Effects))
         {
@@ -255,7 +255,7 @@ ALeffect *AllocEffect(ALCcontext *context)
     /* Add 1 to avoid effect ID 0. */
     effect->id = ((lidx<<6) | slidx) + 1;
 
-    sublist->FreeMask &= ~(U64(1)<<slidx);
+    sublist->FreeMask &= ~(1_u64 << slidx);
 
     return effect;
 }
@@ -268,7 +268,7 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
 
     effect->~ALeffect();
 
-    device->EffectList[lidx].FreeMask |= U64(1) << slidx;
+    device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
 inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
@@ -279,7 +279,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
     if(UNLIKELY(lidx >= device->EffectList.size()))
         return nullptr;
     EffectSubList &sublist = device->EffectList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Effects + slidx;
 }
@@ -574,7 +574,7 @@ EffectSubList::~EffectSubList()
     {
         ALsizei idx = CTZ64(usemask);
         Effects[idx].~ALeffect();
-        usemask &= ~(U64(1) << idx);
+        usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
     al_free(Effects);

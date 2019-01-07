@@ -79,7 +79,7 @@ ALbuffer *AllocBuffer(ALCcontext *context)
         }
         device->BufferList.emplace_back();
         sublist = device->BufferList.end() - 1;
-        sublist->FreeMask = ~U64(0);
+        sublist->FreeMask = ~0_u64;
         sublist->Buffers = reinterpret_cast<ALbuffer*>(al_calloc(16, sizeof(ALbuffer)*64));
         if(UNLIKELY(!sublist->Buffers))
         {
@@ -96,7 +96,7 @@ ALbuffer *AllocBuffer(ALCcontext *context)
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;
 
-    sublist->FreeMask &= ~(U64(1)<<slidx);
+    sublist->FreeMask &= ~(1_u64 << slidx);
 
     return buffer;
 }
@@ -109,7 +109,7 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
 
     buffer->~ALbuffer();
 
-    device->BufferList[lidx].FreeMask |= U64(1) << slidx;
+    device->BufferList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
 inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
@@ -120,7 +120,7 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
     if(UNLIKELY(lidx >= device->BufferList.size()))
         return nullptr;
     BufferSubList &sublist = device->BufferList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Buffers + slidx;
 }
@@ -1174,7 +1174,7 @@ BufferSubList::~BufferSubList()
     {
         ALsizei idx{CTZ64(usemask)};
         Buffers[idx].~ALbuffer();
-        usemask &= ~(U64(1) << idx);
+        usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
     al_free(Buffers);

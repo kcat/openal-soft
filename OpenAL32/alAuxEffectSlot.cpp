@@ -58,7 +58,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
     if(UNLIKELY(lidx >= device->EffectList.size()))
         return nullptr;
     EffectSubList &sublist = device->EffectList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Effects + slidx;
 }

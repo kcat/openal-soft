@@ -63,25 +63,8 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
 using ALint64 = ALint64SOFT;
 using ALuint64 = ALuint64SOFT;
 
-#ifndef U64
-#if defined(_MSC_VER)
-#define U64(x) ((ALuint64)(x##ui64))
-#elif SIZEOF_LONG == 8
-#define U64(x) ((ALuint64)(x##ul))
-#elif SIZEOF_LONG_LONG == 8
-#define U64(x) ((ALuint64)(x##ull))
-#endif
-#endif
-
-#ifndef I64
-#if defined(_MSC_VER)
-#define I64(x) ((ALint64)(x##i64))
-#elif SIZEOF_LONG == 8
-#define I64(x) ((ALint64)(x##l))
-#elif SIZEOF_LONG_LONG == 8
-#define I64(x) ((ALint64)(x##ll))
-#endif
-#endif
+inline constexpr int64_t operator "" _i64(unsigned long long int n) noexcept { return static_cast<int64_t>(n); }
+inline constexpr uint64_t operator "" _u64(unsigned long long int n) noexcept { return static_cast<uint64_t>(n); }
 
 /* Define CTZ macros (count trailing zeros), and POPCNT macros (population
  * count/count 1 bits), for 32- and 64-bit integers. The CTZ macros' results
@@ -174,10 +157,10 @@ inline int fallback_ctz32(ALuint value)
 
 inline int fallback_popcnt64(ALuint64 v)
 {
-    v = v - ((v >> 1) & U64(0x5555555555555555));
-    v = (v & U64(0x3333333333333333)) + ((v >> 2) & U64(0x3333333333333333));
-    v = (v + (v >> 4)) & U64(0x0f0f0f0f0f0f0f0f);
-    return (int)((v * U64(0x0101010101010101)) >> 56);
+    v = v - ((v >> 1) & 0x5555555555555555_u64);
+    v = (v & 0x3333333333333333_u64) + ((v >> 2) & 0x3333333333333333_u64);
+    v = (v + (v >> 4)) & 0x0f0f0f0f0f0f0f0f_u64;
+    return (int)((v * 0x0101010101010101_u64) >> 56);
 }
 #define POPCNT64 fallback_popcnt64
 inline int fallback_ctz64(ALuint64 value)
@@ -775,7 +758,7 @@ struct ALCdevice {
 
 
 /* Nanosecond resolution for the device clock time. */
-#define DEVICE_CLOCK_RES  U64(1000000000)
+#define DEVICE_CLOCK_RES  1000000000_u64
 
 
 /* Must be less than 15 characters (16 including terminating null) for

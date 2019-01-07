@@ -188,7 +188,7 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
             readPos += (ALuint64)BufferList->max_samples << 32;
             BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
-        readPos = minu64(readPos, U64(0x7fffffffffffffff));
+        readPos = minu64(readPos, 0x7fffffffffffffff_u64);
     }
 
     return (ALint64)readPos;
@@ -495,7 +495,7 @@ ALsource *AllocSource(ALCcontext *context)
         context->SourceList.emplace_back();
         sublist = context->SourceList.end() - 1;
 
-        sublist->FreeMask = ~U64(0);
+        sublist->FreeMask = ~0_u64;
         sublist->Sources = static_cast<ALsource*>(al_calloc(16, sizeof(ALsource)*64));
         if(UNLIKELY(!sublist->Sources))
         {
@@ -514,7 +514,7 @@ ALsource *AllocSource(ALCcontext *context)
     source->id = ((lidx<<6) | slidx) + 1;
 
     context->NumSources += 1;
-    sublist->FreeMask &= ~(U64(1)<<slidx);
+    sublist->FreeMask &= ~(1_u64 << slidx);
 
     return source;
 }
@@ -536,7 +536,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
 
     source->~ALsource();
 
-    context->SourceList[lidx].FreeMask |= U64(1) << slidx;
+    context->SourceList[lidx].FreeMask |= 1_u64 << slidx;
     context->NumSources--;
 }
 
@@ -549,7 +549,7 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     if(UNLIKELY(lidx >= context->SourceList.size()))
         return nullptr;
     SourceSubList &sublist{context->SourceList[lidx]};
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Sources + slidx;
 }
@@ -562,7 +562,7 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
     if(UNLIKELY(lidx >= device->BufferList.size()))
         return nullptr;
     BufferSubList &sublist = device->BufferList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Buffers + slidx;
 }
@@ -575,7 +575,7 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id) noexcept
     if(UNLIKELY(lidx >= device->FilterList.size()))
         return nullptr;
     FilterSubList &sublist = device->FilterList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Filters + slidx;
 }
@@ -3401,7 +3401,7 @@ SourceSubList::~SourceSubList()
     {
         ALsizei idx{CTZ64(usemask)};
         Sources[idx].~ALsource();
-        usemask &= ~(U64(1) << idx);
+        usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
     al_free(Sources);

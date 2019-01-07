@@ -695,7 +695,7 @@ ALCboolean AlsaPlayback::reset()
 
     bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", 1)};
     ALuint periods{mDevice->NumUpdates};
-    ALuint periodLen{static_cast<ALuint>(mDevice->UpdateSize * U64(1000000) / mDevice->Frequency)};
+    ALuint periodLen{static_cast<ALuint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
     ALuint bufferLen{periodLen * periods};
     ALuint rate{mDevice->Frequency};
 

@@ -65,7 +65,7 @@ inline int double2int(double d)
     if(UNLIKELY(shift >= 63 || shift < -52))
         return 0;
 
-    mant = (conv.i64&I64(0xfffffffffffff)) | I64(0x10000000000000);
+    mant = (conv.i64&0xfffffffffffff_i64) | 0x10000000000000_i64;
     if(LIKELY(shift < 0))
         return (ALint)(mant >> -shift) * sign;
     return (ALint)(mant << shift) * sign;

@@ -292,7 +292,7 @@ ALfilter *AllocFilter(ALCcontext *context)
         if(UNLIKELY(device->FilterList.size() >= 1<<25))
         {
             alSetError(context, AL_OUT_OF_MEMORY, "Too many filters allocated");
-            return NULL;
+            return nullptr;
         }
         device->FilterList.emplace_back();
         sublist = device->FilterList.end() - 1;
@@ -302,7 +302,7 @@ ALfilter *AllocFilter(ALCcontext *context)
         {
             device->FilterList.pop_back();
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate filter batch");
-            return NULL;
+            return nullptr;
         }
 
         slidx = 0;

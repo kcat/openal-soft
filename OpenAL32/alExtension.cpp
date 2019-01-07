@@ -47,7 +47,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
            (ptr[len] == '\0' || isspace(ptr[len])))
             return AL_TRUE;
 
-        if((ptr=strchr(ptr, ' ')) != NULL)
+        if((ptr=strchr(ptr, ' ')) != nullptr)
         {
             do {
                 ++ptr;

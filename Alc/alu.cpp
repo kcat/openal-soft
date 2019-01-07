@@ -1012,8 +1012,8 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
             SendSlots[i] = ALContext->DefaultSlot.get();
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
-            SendSlots[i] = NULL;
-            voice->Send[i].Buffer = NULL;
+            SendSlots[i] = nullptr;
+            voice->Send[i].Buffer = nullptr;
             voice->Send[i].Channels = 0;
         }
         else

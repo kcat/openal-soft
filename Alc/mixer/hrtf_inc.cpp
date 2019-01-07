@@ -155,7 +155,7 @@ void MixDirectHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
                    const ALsizei NumChans, const ALsizei BufferSize)
 {
-    ASSUME(NumChans >= 0);
+    ASSUME(NumChans > 0);
     ASSUME(BufferSize > 0);
 
     const ALsizei IrSize{State->IrSize};

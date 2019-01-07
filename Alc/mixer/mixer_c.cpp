@@ -11,35 +11,31 @@
 #include "defs.h"
 
 
-static inline ALfloat do_point(const InterpState*, const ALfloat *RESTRICT vals, ALsizei) noexcept
+static inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei) noexcept
 { return vals[0]; }
-static inline ALfloat do_lerp(const InterpState*, const ALfloat *RESTRICT vals, ALsizei frac) noexcept
+static inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_cubic(const InterpState*, const ALfloat *RESTRICT vals, ALsizei frac) noexcept
+static inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
 { return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *RESTRICT vals, ALsizei frac) noexcept
+static inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
 {
-    const ALfloat *fil, *scd, *phd, *spd;
-    ALsizei j_f, pi;
-    ALfloat pf, r;
-
-    ASSUME(state->bsinc.m > 0);
+    ASSUME(istate.bsinc.m > 0);
 
     // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
-    pi = frac >> FRAC_PHASE_BITDIFF;
-    pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
+    const ALsizei pi{frac >> FRAC_PHASE_BITDIFF};
+    const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    fil = state->bsinc.filter + state->bsinc.m*pi*4;
-    scd = fil + state->bsinc.m;
-    phd = scd + state->bsinc.m;
-    spd = phd + state->bsinc.m;
+    const ALfloat *fil{istate.bsinc.filter + istate.bsinc.m*pi*4};
+    const ALfloat *scd{fil + istate.bsinc.m};
+    const ALfloat *phd{scd + istate.bsinc.m};
+    const ALfloat *spd{phd + istate.bsinc.m};
 
     // Apply the scale and phase interpolated filter.
-    r = 0.0f;
-    for(j_f = 0;j_f < state->bsinc.m;j_f++)
-        r += (fil[j_f] + state->bsinc.sf*scd[j_f] + pf*(phd[j_f] + state->bsinc.sf*spd[j_f])) * vals[j_f];
+    ALfloat r{0.0f};
+    for(ALsizei j_f{0};j_f < istate.bsinc.m;j_f++)
+        r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
     return r;
 }
 
@@ -57,7 +53,7 @@ const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
     return dst;
 }
 
-template<ALfloat Sampler(const InterpState*, const ALfloat*RESTRICT, ALsizei) noexcept>
+template<ALfloat Sampler(const InterpState&, const ALfloat*RESTRICT, const ALsizei) noexcept>
 static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
                                  ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
                                  ALsizei numsamples)
@@ -66,11 +62,11 @@ static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRI
     ASSUME(increment > 0);
     ASSUME(frac >= 0);
 
-    const InterpState istate = *state;
+    const InterpState istate{*state};
     std::generate_n<ALfloat*RESTRICT>(dst, numsamples,
         [&src,&frac,istate,increment]() noexcept -> ALfloat
         {
-            ALfloat ret{Sampler(&istate, src, frac)};
+            ALfloat ret{Sampler(istate, src, frac)};
 
             frac += increment;
             src  += frac>>FRACTIONBITS;
@@ -138,23 +134,21 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
            ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
            ALsizei BufferSize)
 {
-    const ALfloat delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
-    ALsizei c;
-
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
 
-    for(c = 0;c < OutChans;c++)
+    const ALfloat delta{(Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f};
+    for(ALsizei c{0};c < OutChans;c++)
     {
-        ALsizei pos = 0;
-        ALfloat gain = CurrentGains[c];
-        const ALfloat diff = TargetGains[c] - gain;
+        ALsizei pos{0};
+        ALfloat gain{CurrentGains[c]};
 
-        if(fabsf(diff) > std::numeric_limits<float>::epsilon())
+        const ALfloat diff{TargetGains[c] - gain};
+        if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
         {
-            ALsizei minsize = mini(BufferSize, Counter);
-            const ALfloat step = diff * delta;
-            ALfloat step_count = 0.0f;
+            ALsizei minsize{mini(BufferSize, Counter)};
+            const ALfloat step{diff * delta};
+            ALfloat step_count{0.0f};
             for(;pos < minsize;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos] * (gain + step*step_count);
@@ -167,7 +161,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
             CurrentGains[c] = gain;
         }
 
-        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
         for(;pos < BufferSize;pos++)
             OutBuffer[c][OutPos+pos] += data[pos]*gain;
@@ -182,18 +176,16 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
  */
 void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
-    ALsizei c, i;
-
     ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
 
-    for(c = 0;c < InChans;c++)
+    for(ALsizei c{0};c < InChans;c++)
     {
-        const ALfloat gain = Gains[c];
-        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+        const ALfloat gain{Gains[c]};
+        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        for(i = 0;i < BufferSize;i++)
+        for(ALsizei i{0};i < BufferSize;i++)
             OutBuffer[i] += data[c][InPos+i] * gain;
     }
 }

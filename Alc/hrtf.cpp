@@ -327,9 +327,11 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
 
         if(!DualBand)
         {
+            /* For single-band decoding, apply the HF scale to the response. */
             for(ALsizei i{0};i < NumChannels;++i)
             {
-                const ALdouble mult{static_cast<ALdouble>(AmbiOrderHFGain[OrderFromChan[i]]) * AmbiMatrix[c][i]};
+                const ALdouble mult{ALdouble{AmbiOrderHFGain[OrderFromChan[i]]} *
+                    AmbiMatrix[c][i]};
                 const ALsizei numirs{mini(Hrtf->irSize, HRIR_LENGTH-maxi(ldelay, rdelay))};
                 ALsizei lidx{ldelay}, ridx{rdelay};
                 for(ALsizei j{0};j < numirs;++j)
@@ -338,44 +340,39 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
                     tmpres[i][ridx++][1] += fir[j][1] * mult;
                 }
             }
+            continue;
         }
-        else
+
+        /* Split the left HRIR into low and high frequency bands. */
+        auto tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt[2].begin(),
+            [](const ALfloat (&ir)[2]) noexcept { return ir[0]; });
+        std::fill(tmpfilt_iter, tmpfilt[2].end(), 0.0);
+        splitter.clear();
+        splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(), HRIR_LENGTH);
+
+        /* Apply left ear response with delay and HF scale. */
+        for(ALsizei i{0};i < NumChannels;++i)
         {
-            /* Extract the left HRIR and increase its per-order high-frequency
-             * response.
-             */
-            auto tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt.back().begin(),
-                [](const ALfloat (&ir)[2]) noexcept { return ir[0]; });
-            std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0);
-            splitter.clear();
-            splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(), HRIR_LENGTH);
+            const ALdouble mult{AmbiMatrix[c][i]};
+            const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
+            for(ALsizei lidx{ldelay},j{0};lidx < HRIR_LENGTH;++lidx,++j)
+                tmpres[i][lidx][0] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
+        }
 
-            /* Apply left ear response with delay. */
-            for(ALsizei i{0};i < NumChannels;++i)
-            {
-                const ALdouble mult{AmbiMatrix[c][i]};
-                const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
-                for(ALsizei lidx{ldelay},j{0};lidx < HRIR_LENGTH;++lidx,++j)
-                    tmpres[i][lidx][0] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
-            }
+        /* Split the right HRIR into low and high frequency bands. */
+        tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt[2].begin(),
+            [](const ALfloat (&ir)[2]) noexcept { return ir[1]; });
+        std::fill(tmpfilt_iter, tmpfilt[2].end(), 0.0);
+        splitter.clear();
+        splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(), HRIR_LENGTH);
 
-            /* Extract the right HRIR and increase its per-order high-frequency
-             * response.
-             */
-            tmpfilt_iter = std::transform(fir, fir+Hrtf->irSize, tmpfilt.back().begin(),
-                [](const ALfloat (&ir)[2]) noexcept { return ir[1]; });
-            std::fill(tmpfilt_iter, tmpfilt.back().end(), 0.0);
-            splitter.clear();
-            splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(), HRIR_LENGTH);
-
-            /* Apply right ear response with delay. */
-            for(ALsizei i{0};i < NumChannels;++i)
-            {
-                const ALdouble mult{AmbiMatrix[c][i]};
-                const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
-                for(ALsizei ridx{rdelay},j{0};ridx < HRIR_LENGTH;++ridx,++j)
-                    tmpres[i][ridx][1] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
-            }
+        /* Apply right ear response with delay and HF scale. */
+        for(ALsizei i{0};i < NumChannels;++i)
+        {
+            const ALdouble mult{AmbiMatrix[c][i]};
+            const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
+            for(ALsizei ridx{rdelay},j{0};ridx < HRIR_LENGTH;++ridx,++j)
+                tmpres[i][ridx][1] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
         }
     }
     tmpfilt.clear();

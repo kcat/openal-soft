@@ -13,10 +13,10 @@ struct AmbDecConf;
 using ChannelDec = ALfloat[MAX_AMBI_COEFFS];
 
 class BFormatDec {
-public:
+    static constexpr size_t sHFBand{0};
+    static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
-private:
     ALuint mEnabled; /* Bitfield of enabled channels. */
 
     union MatrixU {
@@ -60,7 +60,9 @@ public:
  * with bformatdec.
  */
 class AmbiUpsampler {
-    static constexpr ALsizei sNumBands{2};
+    static constexpr size_t sHFBand{0};
+    static constexpr size_t sLFBand{1};
+    static constexpr size_t sNumBands{2};
 
     alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
     struct {

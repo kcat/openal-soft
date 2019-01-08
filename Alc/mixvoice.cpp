@@ -211,7 +211,7 @@ template<> inline ALfloat LoadSample<FmtShort>(FmtTypeTraits<FmtShort>::Type val
 template<> inline ALfloat LoadSample<FmtFloat>(FmtTypeTraits<FmtFloat>::Type val)
 { return val; }
 template<> inline ALfloat LoadSample<FmtDouble>(FmtTypeTraits<FmtDouble>::Type val)
-{ return (ALfloat)val; }
+{ return static_cast<ALfloat>(val); }
 template<> inline ALfloat LoadSample<FmtMulaw>(FmtTypeTraits<FmtMulaw>::Type val)
 { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
 template<> inline ALfloat LoadSample<FmtAlaw>(FmtTypeTraits<FmtAlaw>::Type val)
@@ -295,7 +295,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
     /* Get source info */
     bool isplaying{true}; /* Will only be called while playing. */
     bool isstatic{(voice->Flags&VOICE_IS_STATIC) != 0};
-    ALsizei DataPosInt{(ALsizei)voice->position.load(std::memory_order_acquire)};
+    ALsizei DataPosInt{static_cast<ALsizei>(voice->position.load(std::memory_order_acquire))};
     ALsizei DataPosFrac{voice->position_fraction.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferLoopItem{voice->loop_buffer.load(std::memory_order_relaxed)};
@@ -603,13 +603,13 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                          * this mix handles.
                          */
                         ALfloat gain{lerp(parms.Hrtf.Old.Gain, parms.Hrtf.Target.Gain,
-                                          minf(1.0f, (ALfloat)fademix/Counter))};
+                                          minf(1.0f, static_cast<ALfloat>(fademix))/Counter)};
                         MixHrtfParams hrtfparams;
                         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
                         hrtfparams.Gain = 0.0f;
-                        hrtfparams.GainStep = gain / (ALfloat)fademix;
+                        hrtfparams.GainStep = gain / static_cast<ALfloat>(fademix);
 
                         MixHrtfBlendSamples(
                             voice->Direct.Buffer[OutLIdx], voice->Direct.Buffer[OutRIdx],
@@ -631,14 +631,14 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                          */
                         if(Counter > DstBufferSize)
                             gain = lerp(parms.Hrtf.Old.Gain, gain,
-                                        (ALfloat)todo/(Counter-fademix));
+                                        static_cast<ALfloat>(todo)/(Counter-fademix));
 
                         MixHrtfParams hrtfparams;
                         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
                         hrtfparams.Gain = parms.Hrtf.Old.Gain;
-                        hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / (ALfloat)todo;
+                        hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / static_cast<ALfloat>(todo);
                         MixHrtfSamples(
                             voice->Direct.Buffer[OutLIdx], voice->Direct.Buffer[OutRIdx],
                             samples+fademix, voice->Offset+fademix, OutPos+fademix, IrSize,

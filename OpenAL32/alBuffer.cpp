@@ -204,8 +204,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
     case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
     }
-    if(UNLIKELY((long)SrcChannels != (long)DstChannels))
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
+    if (UNLIKELY(static_cast<long>(SrcChannels) !=
+                 static_cast<long>(DstChannels)))
+        SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short. */
     FmtType DstType{FmtUByte};
@@ -227,9 +228,10 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
      */
     if((access&MAP_READ_WRITE_FLAGS))
     {
-        if(UNLIKELY((long)SrcType != (long)DstType))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
-                          NameFromUserFmtType(SrcType));
+        if (UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType)))
+          SETERR_RETURN(context, AL_INVALID_VALUE, ,
+                        "%s samples cannot be mapped",
+                        NameFromUserFmtType(SrcType));
     }
 
     ALsizei unpackalign{ALBuf->UnpackAlign.load()};
@@ -313,7 +315,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     }
     else
     {
-        assert((long)SrcType == (long)DstType);
+        assert(static_cast<long>(SrcType) == static_cast<long>(DstType));
         if(data != nullptr && !ALBuf->mData.empty())
             std::copy_n(static_cast<const ALbyte*>(data), frames*FrameSize, ALBuf->mData.begin());
         ALBuf->OriginalAlign = 1;
@@ -683,9 +685,11 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     ALsizei align{SanitizeAlignment(srctype, unpack_align)};
     if(UNLIKELY(align < 1))
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
-    else if(UNLIKELY((long)srcchannels != (long)albuf->mFmtChannels ||
-                    srctype != albuf->OriginalType))
-        alSetError(context.get(), AL_INVALID_ENUM, "Unpacking data with mismatched format");
+    else if (UNLIKELY(static_cast<long>(srcchannels) !=
+                          static_cast<long>(albuf->mFmtChannels) ||
+                      srctype != albuf->OriginalType))
+        alSetError(context.get(), AL_INVALID_ENUM,
+                   "Unpacking data with mismatched format");
     else if(UNLIKELY(align != albuf->OriginalAlign))
         alSetError(context.get(), AL_INVALID_VALUE,
                 "Unpacking data with alignment %u does not match original alignment %u",
@@ -730,8 +734,9 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
                     static_cast<const ALubyte*>(data), num_chans, length, align);
             else
             {
-                assert((long)srctype == (long)albuf->mFmtType);
-                memcpy(dst, data, length*frame_size);
+                assert(static_cast<long>(srctype) ==
+                       static_cast<long>(albuf->mFmtType));
+                memcpy(dst, data, length * frame_size);
             }
         }
     }

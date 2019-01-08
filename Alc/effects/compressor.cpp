@@ -60,8 +60,8 @@ ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
      */
-    const ALfloat attackCount  = (ALfloat)device->Frequency * ATTACK_TIME;
-    const ALfloat releaseCount = (ALfloat)device->Frequency * RELEASE_TIME;
+    const ALfloat attackCount  = static_cast<ALfloat>(device->Frequency) * ATTACK_TIME;
+    const ALfloat releaseCount = static_cast<ALfloat>(device->Frequency) * RELEASE_TIME;
 
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.

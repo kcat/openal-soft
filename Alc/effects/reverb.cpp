@@ -359,7 +359,7 @@ inline ALvoid RealizeLineOffset(ALfloat *sampleBuffer, DelayLineI *Delay)
         ALfloat *f;
         ALfloat (*f4)[NUM_LINES];
     } u;
-    u.f = &sampleBuffer[(ptrdiff_t)Delay->Line * NUM_LINES];
+    u.f = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Delay->Line) * NUM_LINES];
     Delay->Line = u.f4;
 }
 
@@ -377,7 +377,7 @@ ALuint CalcLineLength(const ALfloat length, const ptrdiff_t offset, const ALuint
 
     /* All lines share a single sample buffer. */
     Delay->Mask = samples - 1;
-    Delay->Line = (ALfloat(*)[NUM_LINES])offset;
+    Delay->Line = reinterpret_cast<ALfloat(*)[NUM_LINES]>(offset);
 
     /* Return the sample count for accumulation. */
     return samples;
@@ -658,7 +658,7 @@ ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALf
     /* Scaling factor to convert the normalized reference frequencies from
      * representing 0...freq to 0...max_reference.
      */
-    const ALfloat norm_weight_factor = (ALfloat)frequency / AL_EAXREVERB_MAX_HFREFERENCE;
+    const ALfloat norm_weight_factor = static_cast<ALfloat>(frequency) / AL_EAXREVERB_MAX_HFREFERENCE;
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of

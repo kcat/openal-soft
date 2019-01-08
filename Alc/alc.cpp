@@ -985,7 +985,7 @@ static void alc_initconfig(void)
                 if(!str[0] || str[0] == ',')
                     continue;
 
-                size_t len{next ? (size_t)(next-str) : strlen(str)};
+                size_t len{next ? static_cast<size_t>(next-str) : strlen(str)};
                 while(len > 0 && isspace(str[len-1]))
                     len--;
                 if(len == 3 && strncasecmp(str, "sse", len) == 0)
@@ -1062,7 +1062,7 @@ static void alc_initconfig(void)
             }
             endlist = 1;
 
-            len = (next ? ((size_t)(next-devs)) : strlen(devs));
+            len = (next ? (static_cast<size_t>(next-devs)) : strlen(devs));
             while(len > 0 && isspace(devs[len-1]))
                 len--;
 #ifdef HAVE_WASAPI
@@ -1147,7 +1147,7 @@ static void alc_initconfig(void)
             if(!str[0] || next == str)
                 continue;
 
-            size_t len{next ? (size_t)(next-str) : strlen(str)};
+            size_t len{next ? static_cast<size_t>(next-str) : strlen(str)};
             for(size_t n{0u};n < countof(gEffectList);n++)
             {
                 if(len == strlen(gEffectList[n].name) &&
@@ -1858,7 +1858,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
             if(!device->HrtfList.empty())
             {
-                if(hrtf_id >= 0 && (size_t)hrtf_id < device->HrtfList.size())
+                if(hrtf_id >= 0 && static_cast<size_t>(hrtf_id) < device->HrtfList.size())
                     hrtf = GetLoadedHrtf(device->HrtfList[hrtf_id].hrtf);
                 else
                     hrtf = GetLoadedHrtf(device->HrtfList.front().hrtf);
@@ -1989,7 +1989,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(depth > 0)
         {
             depth = clampi(depth, 2, 24);
-            device->DitherDepth = std::pow(2.0f, (ALfloat)(depth-1));
+            device->DitherDepth = std::pow(2.0f, static_cast<ALfloat>(depth-1));
         }
     }
     if(!(device->DitherDepth > 0.0f))
@@ -2608,7 +2608,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
     const size_t size{sizeof(ALvoice*) + sizeof_voice};
 
     auto voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
-    auto voice = reinterpret_cast<ALvoice*>((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
+    auto voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voices) + RoundUp(num_voices*sizeof(ALvoice*), 16));
 
     auto viter = voices;
     if(context->Voices)
@@ -2670,7 +2670,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             /* Set this voice's reference. */
             ALvoice *ret = voice;
             /* Increment pointer to the next storage space. */
-            voice = reinterpret_cast<ALvoice*>((char*)voice + sizeof_voice);
+            voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voice) + sizeof_voice);
             return ret;
         };
         viter = std::transform(context->Voices, context->Voices+v_count, viter, copy_voice);
@@ -2683,7 +2683,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
     auto init_voice = [&voice,sizeof_voice]() -> ALvoice*
     {
         ALvoice *ret = new (voice) ALvoice{};
-        voice = reinterpret_cast<ALvoice*>((char*)voice + sizeof_voice);
+        voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voice) + sizeof_voice);
         return ret;
     };
     std::generate(viter, voices+num_voices, init_voice);
@@ -3156,7 +3156,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             { std::lock_guard<std::mutex> _{device->StateLock};
                 device->HrtfList.clear();
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-                values[0] = (ALCint)device->HrtfList.size();
+                values[0] = static_cast<ALCint>(device->HrtfList.size());
             }
             return 1;
 
@@ -4022,7 +4022,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
     ALCenum err{ALC_INVALID_VALUE};
     { std::lock_guard<std::mutex> _{dev->StateLock};
         BackendBase *backend{dev->Backend.get()};
-        if(samples >= 0 && backend->availableSamples() >= (ALCuint)samples)
+        if(samples >= 0 && backend->availableSamples() >= static_cast<ALCuint>(samples))
             err = backend->captureSamples(buffer, samples);
     }
     if(err != ALC_NO_ERROR)
@@ -4210,7 +4210,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
     else switch(paramName)
     {
         case ALC_HRTF_SPECIFIER_SOFT:
-            if(index >= 0 && (size_t)index < dev->HrtfList.size())
+            if(index >= 0 && static_cast<size_t>(index) < dev->HrtfList.size())
                 return dev->HrtfList[index].name.c_str();
             alcSetError(dev.get(), ALC_INVALID_VALUE);
             break;

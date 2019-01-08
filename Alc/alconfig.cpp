@@ -93,7 +93,7 @@ std:: string expdup(const char *str)
         {
             const char *next = std::strchr(str, '$');
             addstr = str;
-            addstrlen = next ? (size_t)(next-str) : std::strlen(str);
+            addstrlen = next ? static_cast<size_t>(next-str) : std::strlen(str);
 
             str += addstrlen;
         }
@@ -104,7 +104,7 @@ std:: string expdup(const char *str)
             {
                 const char *next = std::strchr(str+1, '$');
                 addstr = str;
-                addstrlen = next ? (size_t)(next-str) : std::strlen(str);
+                addstrlen = next ? static_cast<size_t>(next-str) : std::strlen(str);
 
                 str += addstrlen;
             }

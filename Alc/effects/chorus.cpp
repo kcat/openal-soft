@@ -141,7 +141,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     const ALCdevice *device{Context->Device};
     auto frequency = static_cast<ALfloat>(device->Frequency);
     mDelay = maxi(float2int(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f), mindelay);
-    mDepth = minf(props->Chorus.Depth * mDelay, (ALfloat)(mDelay - mindelay));
+    mDepth = minf(props->Chorus.Depth * mDelay, static_cast<ALfloat>(mDelay - mindelay));
 
     mFeedback = props->Chorus.Feedback;
 
@@ -168,9 +168,9 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        ALsizei lfo_range = float2int(minf(frequency/rate + 0.5f, (ALfloat)(INT_MAX/360 - 180)));
+        ALsizei lfo_range = float2int(minf(frequency/rate + 0.5f, static_cast<ALfloat>(INT_MAX/360 - 180)));
 
-        mLfoOffset = float2int((ALfloat)mLfoOffset/mLfoRange*lfo_range + 0.5f) % lfo_range;
+        mLfoOffset = float2int(static_cast<ALfloat>(mLfoOffset)/mLfoRange*lfo_range + 0.5f) % lfo_range;
         mLfoRange = lfo_range;
         switch(mWaveform)
         {

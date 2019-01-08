@@ -113,7 +113,7 @@ ALboolean ALequalizerState::deviceUpdate(const ALCdevice *UNUSED(device))
 void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device = context->Device;
-    ALfloat frequency = (ALfloat)device->Frequency;
+    ALfloat frequency = static_cast<ALfloat>(device->Frequency);
     ALfloat gain, f0norm;
     ALuint i;
 

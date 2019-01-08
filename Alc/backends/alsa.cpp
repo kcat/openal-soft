@@ -480,7 +480,7 @@ int AlsaPlayback::mixerProc()
             continue;
         }
 
-        if((snd_pcm_uframes_t)avail > update_size*(num_updates+1))
+        if(static_cast<snd_pcm_uframes_t>(avail) > update_size*(num_updates+1))
         {
             WARN("available samples exceeds the buffer size\n");
             snd_pcm_reset(mPcmHandle);
@@ -488,7 +488,7 @@ int AlsaPlayback::mixerProc()
         }
 
         // make sure there's frames to process
-        if((snd_pcm_uframes_t)avail < update_size)
+        if(static_cast<snd_pcm_uframes_t>(avail) < update_size)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
@@ -520,7 +520,7 @@ int AlsaPlayback::mixerProc()
                 break;
             }
 
-            char *WritePtr{(char*)areas->addr + (offset * areas->step / 8)};
+            char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
             aluMixData(mDevice, WritePtr, frames);
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
@@ -563,14 +563,14 @@ int AlsaPlayback::mixerNoMMapProc()
             continue;
         }
 
-        if((snd_pcm_uframes_t)avail > update_size*num_updates)
+        if(static_cast<snd_pcm_uframes_t>(avail) > update_size*num_updates)
         {
             WARN("available samples exceeds the buffer size\n");
             snd_pcm_reset(mPcmHandle);
             continue;
         }
 
-        if((snd_pcm_uframes_t)avail < update_size)
+        if(static_cast<snd_pcm_uframes_t>(avail) < update_size)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
@@ -1112,7 +1112,7 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
         {
             /* First get any data stored from the last stop */
             amt = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
-            if((snd_pcm_uframes_t)amt > samples) amt = samples;
+            if(static_cast<snd_pcm_uframes_t>(amt) > samples) amt = samples;
 
             amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
             memcpy(buffer, mBuffer.data(), amt);
@@ -1142,12 +1142,12 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
             }
             /* If the amount available is less than what's asked, we lost it
              * during recovery. So just give silence instead. */
-            if((snd_pcm_uframes_t)amt < samples)
+            if(static_cast<snd_pcm_uframes_t>(amt) < samples)
                 break;
             continue;
         }
 
-        buffer = (ALbyte*)buffer + amt;
+        buffer = static_cast<ALbyte*>(buffer) + amt;
         samples -= amt;
     }
     if(samples > 0)

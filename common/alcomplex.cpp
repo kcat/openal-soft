@@ -54,7 +54,7 @@ void complex_fft(std::complex<double> *FFTBuffer, int FFTSize, double Sign)
 
 void complex_hilbert(std::complex<double> *Buffer, int size)
 {
-    const double inverse_size = 1.0/(double)size;
+    const double inverse_size = 1.0/static_cast<double>(size);
 
     for(int i{0};i < size;i++)
         Buffer[i].imag(0.0);

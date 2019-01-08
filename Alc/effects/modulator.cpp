@@ -43,17 +43,17 @@
 
 static inline ALfloat Sin(ALsizei index)
 {
-    return std::sin((ALfloat)index * (al::MathDefs<float>::Tau() / (ALfloat)WAVEFORM_FRACONE));
+    return std::sin(static_cast<ALfloat>(index) * (al::MathDefs<float>::Tau() / static_cast<ALfloat>WAVEFORM_FRACONE));
 }
 
 static inline ALfloat Saw(ALsizei index)
 {
-    return (ALfloat)index*(2.0f/WAVEFORM_FRACONE) - 1.0f;
+    return static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f;
 }
 
 static inline ALfloat Square(ALsizei index)
 {
-    return (ALfloat)(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
+    return static_cast<ALfloat>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
 }
 
 static inline ALfloat One(ALsizei UNUSED(index))
@@ -111,7 +111,7 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     ALfloat f0norm;
     ALsizei i;
 
-    mStep = fastf2i(props->Modulator.Frequency / (ALfloat)device->Frequency * WAVEFORM_FRACONE);
+    mStep = fastf2i(props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency) * WAVEFORM_FRACONE);
     mStep = clampi(mStep, 0, WAVEFORM_FRACONE-1);
 
     if(mStep == 0)
@@ -123,7 +123,7 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         mGetSamples = Modulate<Square>;
 
-    f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
+    f0norm = props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency);
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
@@ -214,7 +214,7 @@ void ALmodulator_setParami(ALeffect *effect, ALCcontext *context, ALenum param, 
     {
         case AL_RING_MODULATOR_FREQUENCY:
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            ALmodulator_setParamf(effect, context, param, (ALfloat)val);
+            ALmodulator_setParamf(effect, context, param, static_cast<ALfloat>(val));
             break;
 
         case AL_RING_MODULATOR_WAVEFORM:
@@ -236,10 +236,10 @@ void ALmodulator_getParami(const ALeffect *effect, ALCcontext *context, ALenum p
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
-            *val = (ALint)props->Modulator.Frequency;
+            *val = static_cast<ALint>(props->Modulator.Frequency);
             break;
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            *val = (ALint)props->Modulator.HighPassCutoff;
+            *val = static_cast<ALint>(props->Modulator.HighPassCutoff);
             break;
         case AL_RING_MODULATOR_WAVEFORM:
             *val = props->Modulator.Waveform;

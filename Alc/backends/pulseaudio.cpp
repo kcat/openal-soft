@@ -1131,7 +1131,7 @@ ALCboolean PulsePlayback::reset()
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
         mDevice->NumUpdates = static_cast<ALuint>(clampd(
-            (ALdouble)mSpec.rate/mDevice->Frequency*mDevice->NumUpdates + 0.5, 2.0, 16.0));
+            static_cast<ALdouble>(mSpec.rate)/mDevice->Frequency*mDevice->NumUpdates + 0.5, 2.0, 16.0));
 
         period_size = mDevice->UpdateSize * mFrameSize;
         mAttr.maxlength = -1;
@@ -1511,10 +1511,10 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 
         memcpy(buffer, mCapStore, rem);
 
-        buffer = (ALbyte*)buffer + rem;
+        buffer = static_cast<ALbyte*>(buffer) + rem;
         todo -= rem;
 
-        mCapStore = (ALbyte*)mCapStore + rem;
+        mCapStore = reinterpret_cast<const ALbyte*>(mCapStore) + rem;
         mCapRemain -= rem;
         if(mCapRemain == 0)
         {

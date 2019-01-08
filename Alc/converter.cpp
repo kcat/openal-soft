@@ -155,7 +155,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
     auto step = static_cast<ALsizei>(
-        mind((ALdouble)srcRate/dstRate*FRACTIONONE + 0.5, MAX_PITCH*FRACTIONONE));
+        mind(static_cast<ALdouble>(srcRate)/dstRate*FRACTIONONE + 0.5, MAX_PITCH*FRACTIONONE));
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_copy_C;
@@ -203,7 +203,7 @@ ALsizei SampleConverter::availableOut(ALsizei srcframes) const
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
-    return (ALsizei)clampu64((DataSize64 + mIncrement-1)/mIncrement, 1, BUFFERSIZE);
+    return static_cast<ALsizei>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1, BUFFERSIZE));
 }
 
 ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
@@ -267,7 +267,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
         for(ALsizei chan{0};chan < mNumChannels;chan++)
         {
             const ALbyte *SrcSamples = SamplesIn + mSrcTypeSize*chan;
-            ALbyte *DstSamples = (ALbyte*)dst + mDstTypeSize*chan;
+            ALbyte *DstSamples = static_cast<ALbyte*>(dst) + mDstTypeSize*chan;
 
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.
@@ -309,7 +309,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
         SamplesIn += SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
         NumSrcSamples -= mini(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
 
-        dst = (ALbyte*)dst + DstFrameSize*DstSize;
+        dst = static_cast<ALbyte*>(dst) + DstFrameSize*DstSize;
         pos += DstSize;
     }
 

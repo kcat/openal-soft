@@ -227,7 +227,7 @@ void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *t
 
     if(increment > FRACTIONONE)
     {
-        sf = (ALfloat)FRACTIONONE / increment;
+        sf = static_cast<ALfloat>FRACTIONONE / increment;
         sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
         si = float2int(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
@@ -620,7 +620,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 const ALfloat mdist{maxf(Distance*Listener.Params.MetersPerUnit,
                     Device->AvgSpeakerDist/4.0f)};
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (mdist * (ALfloat)Device->Frequency)};
+                    (mdist * static_cast<ALfloat>(Device->Frequency))};
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->Direct.Params[0].NFCtrlFilter.adjust(w0);
@@ -849,7 +849,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 const ALfloat mdist{maxf(Distance*Listener.Params.MetersPerUnit,
                     Device->AvgSpeakerDist/4.0f)};
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (mdist * (ALfloat)Device->Frequency)};
+                    (mdist * static_cast<ALfloat>(Device->Frequency))};
 
                 /* Adjust NFC filters. */
                 for(ALsizei c{0};c < num_channels;c++)
@@ -908,7 +908,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                  * source moves away from the listener.
                  */
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (Device->AvgSpeakerDist * (ALfloat)Device->Frequency)};
+                    (Device->AvgSpeakerDist * static_cast<ALfloat>(Device->Frequency))};
 
                 for(ALsizei c{0};c < num_channels;c++)
                     voice->Direct.Params[c].NFCtrlFilter.adjust(w0);
@@ -1026,7 +1026,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     /* Calculate the stepping value */
     const auto Pitch = static_cast<ALfloat>(ALBuffer->Frequency) /
         static_cast<ALfloat>(Device->Frequency) * props->Pitch;
-    if(Pitch > (ALfloat)MAX_PITCH)
+    if(Pitch > static_cast<ALfloat>(MAX_PITCH))
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch * FRACTIONONE), 1);
@@ -1363,8 +1363,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Adjust pitch based on the buffer and output frequencies, and calculate
      * fixed-point stepping value.
      */
-    Pitch *= (ALfloat)ALBuffer->Frequency/(ALfloat)Device->Frequency;
-    if(Pitch > (ALfloat)MAX_PITCH)
+    Pitch *= static_cast<ALfloat>(ALBuffer->Frequency)/static_cast<ALfloat>(Device->Frequency);
+    if(Pitch > static_cast<ALfloat>(MAX_PITCH))
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch * FRACTIONONE), 1);
@@ -1648,7 +1648,7 @@ void ApplyDither(ALfloat (*Samples)[BUFFERSIZE], ALuint *dither_seed, const ALfl
                 ALfloat val = sample * quant_scale;
                 ALuint rng0 = dither_rng(&seed);
                 ALuint rng1 = dither_rng(&seed);
-                val += (ALfloat)(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
+                val += static_cast<ALfloat>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
                 return fast_roundf(val) * invscale;
             }
         );
@@ -1828,7 +1828,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     int msglen{vsnprintf(evt.u.user.msg, sizeof(evt.u.user.msg), msg, args)};
     va_end(args);
 
-    if(msglen < 0 || (size_t)msglen >= sizeof(evt.u.user.msg))
+    if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.user.msg))
         evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
 
     ALCcontext *ctx{device->ContextList.load()};

@@ -24,8 +24,7 @@ ClockLatency GetClockLatency(ALCdevice *device)
 BackendBase::BackendBase(ALCdevice *device) noexcept : mDevice{device}
 { }
 
-BackendBase::~BackendBase()
-{ }
+BackendBase::~BackendBase() = default;
 
 ALCboolean BackendBase::reset()
 { return ALC_FALSE; }

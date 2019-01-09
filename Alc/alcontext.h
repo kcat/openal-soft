@@ -90,7 +90,7 @@ struct ALCcontext {
      * indicates if updates are currently happening).
      */
     RefCount UpdateCount{0u};
-    std::atomic<ALenum> HoldUpdates{AL_FALSE};
+    std::atomic<bool> HoldUpdates{false};
 
     ALfloat GainBoost{1.0f};
 

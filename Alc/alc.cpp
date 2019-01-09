@@ -1506,7 +1506,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.
          */
-        context->HoldUpdates.store(AL_TRUE);
+        context->HoldUpdates.store(true, std::memory_order_release);
         while((context->UpdateCount.load(std::memory_order_acquire)&1) != 0)
             std::this_thread::yield();
 
@@ -1520,7 +1520,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         /* Now with all updates declared, let the mixer continue applying them
          * so they all happen at once.
          */
-        context->HoldUpdates.store(AL_FALSE);
+        context->HoldUpdates.store(false, std::memory_order_release);
     }
 }
 

@@ -194,7 +194,7 @@ ALCenum PortPlayback::open(const ALCchar *name)
     if(!ConfigValueInt(nullptr, "port", "device", &mParams.device) || mParams.device < 0)
         mParams.device = Pa_GetDefaultOutputDevice();
     mParams.suggestedLatency = (mDevice->UpdateSize*mDevice->NumUpdates) /
-        (float)mDevice->Frequency;
+        static_cast<float>(mDevice->Frequency);
     mParams.hostApiSpecificStreamInfo = nullptr;
 
     mParams.channelCount = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);

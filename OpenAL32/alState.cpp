@@ -195,36 +195,36 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = (ALdouble)context->DopplerFactor;
+        value = static_cast<ALdouble>(context->DopplerFactor);
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = (ALdouble)context->DopplerVelocity;
+        value = static_cast<ALdouble>(context->DopplerVelocity);
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALdouble)context->mDistanceModel;
+        value = static_cast<ALdouble>(context->mDistanceModel);
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = (ALdouble)context->SpeedOfSound;
+        value = static_cast<ALdouble>(context->SpeedOfSound);
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
         if(context->DeferUpdates.load(std::memory_order_acquire))
-            value = (ALdouble)AL_TRUE;
+            value = static_cast<ALdouble>(AL_TRUE);
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = (ALdouble)GAIN_MIX_MAX/context->GainBoost;
+        value = static_cast<ALdouble>GAIN_MIX_MAX/context->GainBoost;
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = (ALdouble)(ResamplerMax + 1);
+        value = static_cast<ALdouble>(ResamplerMax + 1);
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = (ALdouble)ResamplerDefault;
+        value = static_cast<ALdouble>(ResamplerDefault);
         break;
 
     default:
@@ -252,7 +252,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALfloat)context->mDistanceModel;
+        value = static_cast<ALfloat>(context->mDistanceModel);
         break;
 
     case AL_SPEED_OF_SOUND:
@@ -261,7 +261,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
 
     case AL_DEFERRED_UPDATES_SOFT:
         if(context->DeferUpdates.load(std::memory_order_acquire))
-            value = (ALfloat)AL_TRUE;
+            value = static_cast<ALfloat>(AL_TRUE);
         break;
 
     case AL_GAIN_LIMIT_SOFT:
@@ -269,11 +269,11 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = (ALfloat)(ResamplerMax + 1);
+        value = static_cast<ALfloat>(ResamplerMax + 1);
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = (ALfloat)ResamplerDefault;
+        value = static_cast<ALfloat>(ResamplerDefault);
         break;
 
     default:
@@ -293,28 +293,28 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = (ALint)context->DopplerFactor;
+        value = static_cast<ALint>(context->DopplerFactor);
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = (ALint)context->DopplerVelocity;
+        value = static_cast<ALint>(context->DopplerVelocity);
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALint)context->mDistanceModel;
+        value = static_cast<ALint>(context->mDistanceModel);
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = (ALint)context->SpeedOfSound;
+        value = static_cast<ALint>(context->SpeedOfSound);
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
         if(context->DeferUpdates.load(std::memory_order_acquire))
-            value = (ALint)AL_TRUE;
+            value = static_cast<ALint>(AL_TRUE);
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = (ALint)(GAIN_MIX_MAX/context->GainBoost);
+        value = static_cast<ALint>(GAIN_MIX_MAX/context->GainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -663,7 +663,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     {
         static constexpr ALCchar msg[] =
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
-        const ALsizei msglen = (ALsizei)strlen(msg);
+        const ALsizei msglen = static_cast<ALsizei>(strlen(msg));
         std::lock_guard<std::mutex> _{context->EventCbLock};
         ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Deprecated) && context->EventCb)
@@ -749,7 +749,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
     switch(pname)
     {
     case AL_RESAMPLER_NAME_SOFT:
-        if(index < 0 || (size_t)index >= COUNTOF(ResamplerNames))
+        if(index < 0 || static_cast<size_t>(index) >= COUNTOF(ResamplerNames))
             alSetError(context.get(), AL_INVALID_VALUE, "Resampler name index %d out of range",
                        index);
         else

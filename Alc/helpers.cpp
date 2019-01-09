@@ -531,7 +531,7 @@ const PathNamePair &GetProcBinary()
             len = readlink(selfname, pathname.data(), pathname.size());
         }
 
-        while(len > 0 && (size_t)len == pathname.size())
+        while(len > 0 && static_cast<size_t>(len) == pathname.size())
         {
             pathname.resize(pathname.size() << 1);
             len = readlink(selfname, pathname.data(), pathname.size());

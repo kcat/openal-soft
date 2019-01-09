@@ -1229,7 +1229,7 @@ void MainWindow::updateJackBufferSizeEdit(int size)
 void MainWindow::updateJackBufferSizeSlider()
 {
     int value = ui->jackBufferSizeLine->text().toInt();
-    int pos = (int)floor(log2(value) + 0.5);
+    int pos = static_cast<int>(floor(log2(value) + 0.5));
     ui->jackBufferSizeSlider->setSliderPosition(pos);
     enableApplyButton();
 }

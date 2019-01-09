@@ -986,8 +986,8 @@ static void LimitMagnitudeResponse(const uint n, const uint m, const double limi
     for(i = 0;i < m;i++)
         out[i] = 20.0 * std::log10(in[i]);
     // Use six octaves to calculate the average magnitude of the signal.
-    lower = ((uint)std::ceil(n / std::pow(2.0, 8.0))) - 1;
-    upper = ((uint)std::floor(n / std::pow(2.0, 2.0))) - 1;
+    lower = (static_cast<uint>(std::ceil(n / std::pow(2.0, 8.0)))) - 1;
+    upper = (static_cast<uint>(std::floor(n / std::pow(2.0, 2.0)))) - 1;
     ave = 0.0;
     for(i = lower;i <= upper;i++)
         ave += out[i];
@@ -1121,8 +1121,8 @@ static uint CalcKaiserOrder(const double rejection, const double transition)
 {
     double w_t = 2.0 * M_PI * transition;
     if(rejection > 21.0)
-        return (uint)std::ceil((rejection - 7.95) / (2.285 * w_t));
-    return (uint)std::ceil(5.79 / w_t);
+        return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
+    return static_cast<uint>(std::ceil(5.79 / w_t));
 }
 
 // Calculates the beta value of the Kaiser window.  Rejection is in dB.
@@ -1150,7 +1150,7 @@ static double CalcKaiserBeta(const double rejection)
  */
 static double SincFilter(const int l, const double b, const double gain, const double cutoff, const int i)
 {
-    return Kaiser(b, (double)(i - l) / l) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * (i - l));
+    return Kaiser(b, static_cast<double>(i - l) / l) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * (i - l));
 }
 
 /* This is a polyphase sinc-filtered resampler.
@@ -1211,8 +1211,8 @@ static void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRat
     rs->mM = l*2 + 1;
     rs->mL = l;
     rs->mF.resize(rs->mM);
-    for(i = 0;i < ((int)rs->mM);i++)
-        rs->mF[i] = SincFilter((int)l, beta, rs->mP, cutoff, i);
+    for(i = 0;i < (static_cast<int>(rs->mM));i++)
+        rs->mF[i] = SincFilter(static_cast<int>(l), beta, rs->mP, cutoff, i);
 }
 
 // Perform the upsample-filter-downsample resampling operation using a
@@ -1365,13 +1365,13 @@ static int ReadBinAsDouble(FILE *fp, const char *filename, const ByteOrderT orde
         else
         {
             if(bits > 0)
-                v4.ui >>= (8*bytes) - ((uint)bits);
+                v4.ui >>= (8*bytes) - (static_cast<uint>(bits));
             else
                 v4.ui &= (0xFFFFFFFF >> (32+bits));
 
-            if(v4.ui&(uint)(1<<(std::abs(bits)-1)))
+            if(v4.ui&static_cast<uint>(1<<(std::abs(bits)-1)))
                 v4.ui |= (0xFFFFFFFF << std::abs(bits));
-            *out = v4.i / (double)(1<<(std::abs(bits)-1));
+            *out = v4.i / static_cast<double>(1<<(std::abs(bits)-1));
         }
     }
     return 1;
@@ -1410,7 +1410,7 @@ static int ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const Eleme
             fprintf(stderr, "Error: Bad read from file '%s'.\n", filename);
             return 0;
         }
-        *out = v / (double)((1<<(bits-1))-1);
+        *out = v / static_cast<double>((1<<(bits-1))-1);
     }
     return 1;
 }
@@ -1425,7 +1425,7 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
     chunkSize = 0;
     do {
         if(chunkSize > 0)
-            fseek(fp, (long) chunkSize, SEEK_CUR);
+            fseek(fp, static_cast<long>(chunkSize), SEEK_CUR);
         if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
            !ReadBin4(fp, src->mPath, order, 4, &chunkSize))
             return 0;
@@ -1457,15 +1457,15 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
         fseek(fp, 4, SEEK_CUR);
         if(!ReadBin4(fp, src->mPath, order, 2, &format))
             return 0;
-        fseek(fp, (long)(chunkSize - 26), SEEK_CUR);
+        fseek(fp, static_cast<long>(chunkSize - 26), SEEK_CUR);
     }
     else
     {
         bits = 8 * size;
         if(chunkSize > 14)
-            fseek(fp, (long)(chunkSize - 16), SEEK_CUR);
+            fseek(fp, static_cast<long>(chunkSize - 16), SEEK_CUR);
         else
-            fseek(fp, (long)(chunkSize - 14), SEEK_CUR);
+            fseek(fp, static_cast<long>(chunkSize - 14), SEEK_CUR);
     }
     if(format != WAVE_FORMAT_PCM && format != WAVE_FORMAT_IEEE_FLOAT)
     {
@@ -1506,7 +1506,7 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
         src->mType = ET_FP;
     }
     src->mSize = size;
-    src->mBits = (int)bits;
+    src->mBits = static_cast<int>(bits);
     src->mSkip = channels;
     return 1;
 }
@@ -1517,8 +1517,8 @@ static int ReadWaveData(FILE *fp, const SourceRefT *src, const ByteOrderT order,
     int pre, post, skip;
     uint i;
 
-    pre = (int)(src->mSize * src->mChannel);
-    post = (int)(src->mSize * (src->mSkip - src->mChannel - 1));
+    pre = static_cast<int>(src->mSize * src->mChannel);
+    post = static_cast<int>(src->mSize * (src->mSkip - src->mChannel - 1));
     skip = 0;
     for(i = 0;i < n;i++)
     {
@@ -1557,7 +1557,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
                 fprintf(stderr, "Error: Bad read from file '%s'.\n", src->mPath);
                 return 0;
             }
-            fseek(fp, (long)(src->mOffset * block), SEEK_CUR);
+            fseek(fp, static_cast<long>(src->mOffset * block), SEEK_CUR);
             if(!ReadWaveData(fp, src, order, n, &hrir[0]))
                 return 0;
             return 1;
@@ -1571,7 +1571,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
                 break;
         }
         if(chunkSize > 0)
-            fseek(fp, (long)chunkSize, SEEK_CUR);
+            fseek(fp, static_cast<long>(chunkSize), SEEK_CUR);
     }
     listSize = chunkSize;
     block = src->mSize * src->mSkip;
@@ -1589,7 +1589,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
             count = chunkSize / block;
             if(count > skip)
             {
-                fseek(fp, (long)(skip * block), SEEK_CUR);
+                fseek(fp, static_cast<long>(skip * block), SEEK_CUR);
                 chunkSize -= skip * block;
                 count -= skip;
                 skip = 0;
@@ -1629,7 +1629,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
             }
         }
         if(chunkSize > 0)
-            fseek(fp, (long)chunkSize, SEEK_CUR);
+            fseek(fp, static_cast<long>(chunkSize), SEEK_CUR);
     }
     if(offset < n)
     {
@@ -1677,13 +1677,13 @@ static int LoadBinarySource(FILE *fp, const SourceRefT *src, const ByteOrderT or
 {
     uint i;
 
-    fseek(fp, (long)src->mOffset, SEEK_SET);
+    fseek(fp, static_cast<long>(src->mOffset), SEEK_SET);
     for(i = 0;i < n;i++)
     {
         if(!ReadBinAsDouble(fp, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
             return 0;
         if(src->mSkip > 0)
-            fseek(fp, (long)src->mSkip, SEEK_CUR);
+            fseek(fp, static_cast<long>(src->mSkip), SEEK_CUR);
     }
     return 1;
 }
@@ -1699,16 +1699,16 @@ static int LoadAsciiSource(FILE *fp, const SourceRefT *src, const uint n, double
     TrSetup(fp, nullptr, &tr);
     for(i = 0;i < src->mOffset;i++)
     {
-        if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, (uint)src->mBits, &dummy))
+        if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits), &dummy))
             return 0;
     }
     for(i = 0;i < n;i++)
     {
-        if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, (uint)src->mBits, &hrir[i]))
+        if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits), &hrir[i]))
             return 0;
         for(j = 0;j < src->mSkip;j++)
         {
-            if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, (uint)src->mBits, &dummy))
+            if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits), &dummy))
                 return 0;
         }
     }
@@ -1806,25 +1806,25 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     }
     if(!WriteAscii(MHR_FORMAT, fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 4, (uint32_t)hData->mIrRate, fp, filename))
+    if(!WriteBin4(BO_LITTLE, 4, static_cast<uint32_t>(hData->mIrRate), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, (uint32_t)hData->mSampleType, fp, filename))
+    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mSampleType), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, (uint32_t)hData->mChannelType, fp, filename))
+    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, (uint32_t)hData->mIrPoints, fp, filename))
+    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mIrPoints), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, (uint32_t)hData->mFdCount, fp, filename))
+    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mFdCount), fp, filename))
         return 0;
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
-        if(!WriteBin4(BO_LITTLE, 2, (uint32_t)(1000.0 * hData->mFds[fi].mDistance), fp, filename))
+        if(!WriteBin4(BO_LITTLE, 2, static_cast<uint32_t>(1000.0 * hData->mFds[fi].mDistance), fp, filename))
             return 0;
-        if(!WriteBin4(BO_LITTLE, 1, (uint32_t)hData->mFds[fi].mEvCount, fp, filename))
+        if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mFds[fi].mEvCount), fp, filename))
             return 0;
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
-            if(!WriteBin4(BO_LITTLE, 1, (uint32_t)hData->mFds[fi].mEvs[ei].mAzCount, fp, filename))
+            if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mFds[fi].mEvs[ei].mAzCount), fp, filename))
                 return 0;
         }
     }
@@ -1848,8 +1848,8 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
                     TpdfDither(out+1, azd->mIrs[1], scale, n, channels, &dither_seed);
                 for(i = 0;i < (channels * n);i++)
                 {
-                    int v = (int)Clamp(out[i], -scale-1.0, scale);
-                    if(!WriteBin4(BO_LITTLE, bps, (uint32_t)v, fp, filename))
+                    int v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
+                    if(!WriteBin4(BO_LITTLE, bps, static_cast<uint32_t>(v), fp, filename))
                         return 0;
                 }
             }
@@ -1862,15 +1862,15 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
                 const HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
-                int v = (int)std::min(std::round(hData->mIrRate * azd.mDelays[0]), MAX_HRTD);
+                int v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[0]), MAX_HRTD));
 
-                if(!WriteBin4(BO_LITTLE, 1, (uint32_t)v, fp, filename))
+                if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(v), fp, filename))
                     return 0;
                 if(hData->mChannelType == CT_STEREO)
                 {
-                    v = (int)std::min(std::round(hData->mIrRate * azd.mDelays[1]), MAX_HRTD);
+                    v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[1]), MAX_HRTD));
 
-                    if(!WriteBin4(BO_LITTLE, 1, (uint32_t)v, fp, filename))
+                    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(v), fp, filename))
                         return 0;
                 }
             }
@@ -1900,7 +1900,7 @@ static double AverageHrirOnset(const uint rate, const uint n, const double *hrir
         if(std::abs(hrir[i]) >= mag)
             break;
     }
-    return Lerp(onset, (double)i / rate, f);
+    return Lerp(onset, static_cast<double>(i) / rate, f);
 }
 
 // Calculate the magnitude response of an HRIR and average it with any
@@ -2130,7 +2130,7 @@ static void ResampleHrirs(const uint rate, HrirDataT *hData)
 static void CalcAzIndices(const HrirDataT *hData, const uint fi, const uint ei, const double az, uint *a0, uint *a1, double *af)
 {
     double f = (2.0*M_PI + az) * hData->mFds[fi].mEvs[ei].mAzCount / (2.0*M_PI);
-    uint i = (uint)f % hData->mFds[fi].mEvs[ei].mAzCount;
+    uint i = static_cast<uint>(f) % hData->mFds[fi].mEvs[ei].mAzCount;
 
     f -= std::floor(f);
     *a0 = i;
@@ -2161,7 +2161,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
             hData->mFds[fi].mEvs[0].mAzs[0].mDelays[ti] = 1.32e-4 + (t / hData->mFds[fi].mEvs[oi].mAzCount);
             for(ei = 1;ei < hData->mFds[fi].mEvStart;ei++)
             {
-                of = (double)ei / hData->mFds[fi].mEvStart;
+                of = static_cast<double>(ei) / hData->mFds[fi].mEvStart;
                 for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
                 {
                     CalcAzIndices(hData, fi, oi, hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
@@ -2209,7 +2209,7 @@ static void SynthesizeHrirs(HrirDataT *hData)
             }
             for(ei = 1;ei < hData->mFds[fi].mEvStart;ei++)
             {
-                of = (double)ei / hData->mFds[fi].mEvStart;
+                of = static_cast<double>(ei) / hData->mFds[fi].mEvStart;
                 b = (1.0 - of) * (3.5e-6 * hData->mIrRate);
                 for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
                 {
@@ -2467,7 +2467,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                 return 0;
             if(!TrReadInt(tr, MIN_RATE, MAX_RATE, &intVal))
                 return 0;
-            hData->mIrRate = (uint)intVal;
+            hData->mIrRate = static_cast<uint>(intVal);
             hasRate = 1;
         }
         else if(strcasecmp(ident, "type") == 0)
@@ -2504,7 +2504,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             TrIndication(tr, &line, &col);
             if(!TrReadInt(tr, MIN_POINTS, MAX_POINTS, &intVal))
                 return 0;
-            points = (uint)intVal;
+            points = static_cast<uint>(intVal);
             if(fftSize > 0 && points > fftSize)
             {
                 TrErrorAt(tr, line, col, "Value exceeds the overridden FFT size.\n");
@@ -2600,7 +2600,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             {
                 if(!TrReadInt(tr, MIN_AZ_COUNT, MAX_AZ_COUNT, &intVal))
                     return 0;
-                azCounts[(count * MAX_EV_COUNT) + evCounts[count]++] = (uint)intVal;
+                azCounts[(count * MAX_EV_COUNT) + evCounts[count]++] = static_cast<uint>(intVal);
                 if(TrIsOperator(tr, ","))
                 {
                     if(evCounts[count] >= MAX_EV_COUNT)
@@ -2677,9 +2677,9 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
 
     if(hData->mFdCount > 1)
     {
-        if(!TrReadInt(tr, 0, (int)hData->mFdCount - 1, &intVal))
+        if(!TrReadInt(tr, 0, static_cast<int>(hData->mFdCount) - 1, &intVal))
             return 0;
-        *fi = (uint)intVal;
+        *fi = static_cast<uint>(intVal);
         if(!TrReadOperator(tr, ","))
             return 0;
     }
@@ -2687,14 +2687,14 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
     {
         *fi = 0;
     }
-    if(!TrReadInt(tr, 0, (int)hData->mFds[*fi].mEvCount - 1, &intVal))
+    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvCount) - 1, &intVal))
         return 0;
-    *ei = (uint)intVal;
+    *ei = static_cast<uint>(intVal);
     if(!TrReadOperator(tr, ","))
         return 0;
-    if(!TrReadInt(tr, 0, (int)hData->mFds[*fi].mEvs[*ei].mAzCount - 1, &intVal))
+    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs[*ei].mAzCount) - 1, &intVal))
         return 0;
-    *ai = (uint)intVal;
+    *ai = static_cast<uint>(intVal);
     return 1;
 }
 
@@ -2747,7 +2747,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
         src->mType = ET_NONE;
         src->mSize = 0;
         src->mBits = 0;
-        src->mChannel = (uint)intVal;
+        src->mChannel = static_cast<uint>(intVal);
         src->mSkip = 0;
     }
     else
@@ -2769,16 +2769,16 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
             {
                 if(!TrReadInt(tr, MIN_BIN_SIZE, MAX_BIN_SIZE, &intVal))
                     return 0;
-                src->mSize = (uint)intVal;
+                src->mSize = static_cast<uint>(intVal);
                 if(!TrIsOperator(tr, ","))
-                    src->mBits = (int)(8*src->mSize);
+                    src->mBits = static_cast<int>(8*src->mSize);
                 else
                 {
                     TrReadOperator(tr, ",");
                     TrIndication(tr, &line, &col);
                     if(!TrReadInt(tr, -2147483647-1, 2147483647, &intVal))
                         return 0;
-                    if(std::abs(intVal) < MIN_BIN_BITS || (uint)std::abs(intVal) > (8*src->mSize))
+                    if(std::abs(intVal) < MIN_BIN_BITS || static_cast<uint>(std::abs(intVal)) > (8*src->mSize))
                     {
                         TrErrorAt(tr, line, col, "Expected a value of (+/-) %d to %d.\n", MIN_BIN_BITS, 8*src->mSize);
                         return 0;
@@ -2796,7 +2796,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
                     TrErrorAt(tr, line, col, "Expected a value of 4 or 8.\n");
                     return 0;
                 }
-                src->mSize = (uint)intVal;
+                src->mSize = static_cast<uint>(intVal);
                 src->mBits = 0;
             }
         }
@@ -2822,7 +2822,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
             TrReadOperator(tr, ";");
             if(!TrReadInt(tr, 0, 0x7FFFFFFF, &intVal))
                 return 0;
-            src->mSkip = (uint)intVal;
+            src->mSkip = static_cast<uint>(intVal);
         }
     }
     if(!TrReadOperator(tr, ")"))
@@ -2832,7 +2832,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
         TrReadOperator(tr, "@");
         if(!TrReadInt(tr, 0, 0x7FFFFFFF, &intVal))
             return 0;
-        src->mOffset = (uint)intVal;
+        src->mOffset = static_cast<uint>(intVal);
     }
     else
         src->mOffset = 0;
@@ -2911,7 +2911,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
                 if(!TrReadIdent(tr, MAX_IDENT_LEN, ident))
                     return 0;
                 ti = MatchTargetEar(ident);
-                if((int)ti < 0)
+                if(static_cast<int>(ti) < 0)
                 {
                     TrErrorAt(tr, line, col, "Expected a target ear.\n");
                     return 0;

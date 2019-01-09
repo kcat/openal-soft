@@ -398,15 +398,15 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
     {
         if(hold > 1)
         {
-            Comp->mHold = new ((void*)(Comp.get() + 1)) SlidingHold{};
+            Comp->mHold = new (reinterpret_cast<void*>(Comp.get() + 1)) SlidingHold{};
             Comp->mHold->mValues[0] = -std::numeric_limits<float>::infinity();
             Comp->mHold->mExpiries[0] = hold;
             Comp->mHold->mLength = hold;
-            Comp->mDelay = (ALfloat(*)[BUFFERSIZE])(Comp->mHold + 1);
+            Comp->mDelay = reinterpret_cast<ALfloat(*)[BUFFERSIZE]>(Comp->mHold + 1);
         }
         else
         {
-            Comp->mDelay = (ALfloat(*)[BUFFERSIZE])(Comp.get() + 1);
+            Comp->mDelay = reinterpret_cast<ALfloat(*)[BUFFERSIZE]>(Comp.get() + 1);
         }
     }
 

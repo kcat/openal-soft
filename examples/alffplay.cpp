@@ -459,7 +459,7 @@ nanoseconds AudioState::getClockNoLock()
         {
             ALint ioffset;
             alGetSourcei(mSource, AL_SAMPLE_OFFSET, &ioffset);
-            offset[0] = (ALint64SOFT)ioffset << 32;
+            offset[0] = static_cast<ALint64SOFT>(ioffset) << 32;
             offset[1] = 0;
         }
         alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
@@ -545,7 +545,7 @@ int AudioState::getSync()
     /* Constrain the per-update difference to avoid exceedingly large skips */
     diff = std::min<nanoseconds>(std::max<nanoseconds>(diff, -AudioSampleCorrectionMax),
                                  AudioSampleCorrectionMax);
-    return (int)std::chrono::duration_cast<seconds>(diff*mCodecCtx->sample_rate).count();
+    return static_cast<int>(std::chrono::duration_cast<seconds>(diff*mCodecCtx->sample_rate).count());
 }
 
 int AudioState::decodeFrame()
@@ -894,7 +894,7 @@ int AudioState::handler()
     mSwresCtx.reset(swr_alloc_set_opts(nullptr,
         mDstChanLayout, mDstSampleFmt, mCodecCtx->sample_rate,
         mCodecCtx->channel_layout ? mCodecCtx->channel_layout :
-            (uint64_t)av_get_default_channel_layout(mCodecCtx->channels),
+            static_cast<uint64_t>(av_get_default_channel_layout(mCodecCtx->channels)),
         mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
         0, nullptr
     ));
@@ -910,9 +910,9 @@ int AudioState::handler()
 
     if(EnableDirectOut)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
-    if(EnableWideStereo)
-    {
-        ALfloat angles[2] = { (ALfloat)(M_PI/3.0), (ALfloat)(-M_PI/3.0) };
+    if (EnableWideStereo) {
+        ALfloat angles[2] = {static_cast<ALfloat>(M_PI / 3.0),
+                             static_cast<ALfloat>(-M_PI / 3.0)};
         alSourcefv(mSource, AL_STEREO_ANGLES, angles);
     }
 
@@ -952,7 +952,7 @@ int AudioState::handler()
         /* Refill the buffer queue. */
         ALint queued;
         alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
-        while((ALuint)queued < mBuffers.size())
+        while(static_cast<ALuint>(queued) < mBuffers.size())
         {
             ALuint bufid = mBuffers[mBufferIdx];
 
@@ -1081,15 +1081,15 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
                        mCodecCtx->height;
     }
     if(aspect_ratio <= 0.0f)
-        aspect_ratio = (float)mCodecCtx->width / (float)mCodecCtx->height;
+        aspect_ratio = static_cast<float>(mCodecCtx->width) / static_cast<float>(mCodecCtx->height);
 
     SDL_GetWindowSize(screen, &win_w, &win_h);
     h = win_h;
-    w = ((int)rint(h * aspect_ratio) + 3) & ~3;
+    w = (static_cast<int>(rint(h * aspect_ratio)) + 3) & ~3;
     if(w > win_w)
     {
         w = win_w;
-        h = ((int)rint(w / aspect_ratio) + 3) & ~3;
+        h = (static_cast<int>(rint(w / aspect_ratio)) + 3) & ~3;
     }
     x = (win_w - w) / 2;
     y = (win_h - h) / 2;
@@ -1225,9 +1225,9 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
             {
                 double aspect_ratio = av_q2d(mCodecCtx->sample_aspect_ratio);
                 if(aspect_ratio >= 1.0)
-                    w = (int)(w*aspect_ratio + 0.5);
+                    w = static_cast<int>(w*aspect_ratio + 0.5);
                 else if(aspect_ratio > 0.0)
-                    h = (int)(h/aspect_ratio + 0.5);
+                    h = static_cast<int>(h/aspect_ratio + 0.5);
             }
             SDL_SetWindowSize(screen, w, h);
         }
@@ -1274,7 +1274,7 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
             pict_linesize[1] = pitch / 2;
             pict_linesize[2] = pitch / 2;
 
-            sws_scale(mSwscaleCtx.get(), (const uint8_t**)frame->data,
+            sws_scale(mSwscaleCtx.get(), reinterpret_cast<uint8_t**>(frame->data),
                       frame->linesize, 0, h, pict_data, pict_linesize);
             SDL_UnlockTexture(vp->mImage);
         }
@@ -1458,7 +1458,7 @@ nanoseconds MovieState::getDuration()
 
 int MovieState::streamComponentOpen(int stream_index)
 {
-    if(stream_index < 0 || (unsigned int)stream_index >= mFormatCtx->nb_streams)
+    if(stream_index < 0 || static_cast<unsigned int>(stream_index) >= mFormatCtx->nb_streams)
         return -1;
 
     /* Get a pointer to the codec context for the stream, and open the

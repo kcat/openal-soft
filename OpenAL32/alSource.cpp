@@ -173,8 +173,8 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         {
             Current = voice->current_buffer.load(std::memory_order_relaxed);
 
-            readPos  = (ALuint64)voice->position.load(std::memory_order_relaxed) << 32;
-            readPos |= (ALuint64)voice->position_fraction.load(std::memory_order_relaxed) <<
+            readPos  = static_cast<ALuint64>(voice->position.load(std::memory_order_relaxed)) << 32;
+            readPos |= static_cast<ALuint64>(voice->position_fraction.load(std::memory_order_relaxed)) <<
                        (32-FRACTIONBITS);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -185,13 +185,13 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         const ALbufferlistitem *BufferList{Source->queue};
         while(BufferList && BufferList != Current)
         {
-            readPos += (ALuint64)BufferList->max_samples << 32;
+            readPos += static_cast<ALuint64>(BufferList->max_samples) << 32;
             BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
         readPos = minu64(readPos, 0x7fffffffffffffff_u64);
     }
 
-    return (ALint64)readPos;
+    return static_cast<ALint64>(readPos);
 }
 
 /* GetSourceSecOffset
@@ -219,7 +219,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         {
             Current = voice->current_buffer.load(std::memory_order_relaxed);
 
-            readPos  = (ALuint64)voice->position.load(std::memory_order_relaxed) << FRACTIONBITS;
+            readPos  = static_cast<ALuint64>(voice->position.load(std::memory_order_relaxed)) << FRACTIONBITS;
             readPos |= voice->position_fraction.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -234,7 +234,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         {
             for(ALsizei i{0};!BufferFmt && i < BufferList->num_buffers;++i)
                 BufferFmt = BufferList->buffers[i];
-            readPos += (ALuint64)BufferList->max_samples << FRACTIONBITS;
+            readPos += static_cast<ALuint64>(BufferList->max_samples) << FRACTIONBITS;
             BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
 
@@ -246,8 +246,8 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         }
         assert(BufferFmt != nullptr);
 
-        offset = (ALdouble)readPos / (ALdouble)FRACTIONONE /
-                 (ALdouble)BufferFmt->Frequency;
+        offset = static_cast<ALdouble>(readPos) / static_cast<ALdouble>FRACTIONONE /
+                 static_cast<ALdouble>(BufferFmt->Frequency);
     }
 
     return offset;
@@ -318,11 +318,11 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         switch(name)
         {
             case AL_SEC_OFFSET:
-                offset = (readPos + (ALdouble)readPosFrac/FRACTIONONE) / BufferFmt->Frequency;
+                offset = (readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE) / BufferFmt->Frequency;
                 break;
 
             case AL_SAMPLE_OFFSET:
-                offset = readPos + (ALdouble)readPosFrac/FRACTIONONE;
+                offset = readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE;
                 break;
 
             case AL_BYTE_OFFSET:
@@ -333,7 +333,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
                     ALuint FrameBlockSize = BufferFmt->OriginalAlign;
 
                     /* Round down to nearest ADPCM block */
-                    offset = (ALdouble)(readPos / FrameBlockSize * BlockSize);
+                    offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
                 }
                 else if(BufferFmt->OriginalType == UserFmtMSADPCM)
                 {
@@ -342,13 +342,13 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
                     ALuint FrameBlockSize = BufferFmt->OriginalAlign;
 
                     /* Round down to nearest ADPCM block */
-                    offset = (ALdouble)(readPos / FrameBlockSize * BlockSize);
+                    offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
                 }
                 else
                 {
                     const ALsizei FrameSize{FrameSizeFromFmt(BufferFmt->mFmtChannels,
                         BufferFmt->mFmtType)};
-                    offset = (ALdouble)(readPos * FrameSize);
+                    offset = static_cast<ALdouble>(readPos * FrameSize);
                 }
                 break;
         }
@@ -390,7 +390,7 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
     {
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
-        *offset = (ALuint)Source->Offset;
+        *offset = static_cast<ALuint>(Source->Offset);
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             ALsizei align = (BufferFmt->OriginalAlign-1)/2 + 4;
@@ -410,14 +410,14 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
 
     case AL_SAMPLE_OFFSET:
         dblfrac = modf(Source->Offset, &dbloff);
-        *offset = (ALuint)mind(dbloff, std::numeric_limits<unsigned int>::max());
-        *frac = (ALsizei)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
+        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<unsigned int>::max()));
+        *frac = static_cast<ALsizei>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
         break;
 
     case AL_SEC_OFFSET:
         dblfrac = modf(Source->Offset*BufferFmt->Frequency, &dbloff);
-        *offset = (ALuint)mind(dbloff, std::numeric_limits<unsigned int>::max());
-        *frac = (ALsizei)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
+        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<unsigned int>::max()));
+        *frac = static_cast<ALsizei>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
         break;
     }
     Source->OffsetType = AL_NONE;
@@ -443,7 +443,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
     ALbufferlistitem *BufferList{Source->queue};
     while(BufferList && totalBufferLen <= offset)
     {
-        if((ALuint)BufferList->max_samples > offset-totalBufferLen)
+        if(static_cast<ALuint>(BufferList->max_samples) > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
             voice->position.store(offset - totalBufferLen, std::memory_order_relaxed);
@@ -1174,12 +1174,12 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
-            ival = (ALint)values[0];
+            ival = static_cast<ALint>(values[0]);
             return SetSourceiv(Source, Context, prop, &ival);
 
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
-            ival = (ALint)((ALuint)values[0]);
+            ival = static_cast<ALint>(static_cast<ALuint>(values[0]));
             return SetSourceiv(Source, Context, prop, &ival);
 
         case AL_BUFFER:
@@ -1219,14 +1219,14 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_SOURCE_RELATIVE:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
-            Source->HeadRelative = (ALboolean)*values;
+            Source->HeadRelative = static_cast<ALboolean>(*values);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
         case AL_LOOPING:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
-            Source->Looping = (ALboolean)*values;
+            Source->Looping = static_cast<ALboolean>(*values);
             if(IsPlayingOrPaused(Source))
             {
                 ALvoice *voice{GetSourceVoice(Source, Context)};
@@ -1413,7 +1413,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != nullptr))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
-            if((ALuint)values[1] >= (ALuint)device->NumAuxSends)
+            if(static_cast<ALuint>(values[1]) >= static_cast<ALuint>(device->NumAuxSends))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
 
             filtlock = std::unique_lock<std::mutex>{device->FilterLock};
@@ -1483,26 +1483,26 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_SOURCE_RADIUS:
-            fvals[0] = (ALfloat)*values;
+            fvals[0] = static_cast<ALfloat>(*values);
             return SetSourcefv(Source, Context, prop, fvals);
 
         /* 3x float */
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
-            fvals[0] = (ALfloat)values[0];
-            fvals[1] = (ALfloat)values[1];
-            fvals[2] = (ALfloat)values[2];
+            fvals[0] = static_cast<ALfloat>(values[0]);
+            fvals[1] = static_cast<ALfloat>(values[1]);
+            fvals[2] = static_cast<ALfloat>(values[2]);
             return SetSourcefv(Source, Context, prop, fvals);
 
         /* 6x float */
         case AL_ORIENTATION:
-            fvals[0] = (ALfloat)values[0];
-            fvals[1] = (ALfloat)values[1];
-            fvals[2] = (ALfloat)values[2];
-            fvals[3] = (ALfloat)values[3];
-            fvals[4] = (ALfloat)values[4];
-            fvals[5] = (ALfloat)values[5];
+            fvals[0] = static_cast<ALfloat>(values[0]);
+            fvals[1] = static_cast<ALfloat>(values[1]);
+            fvals[2] = static_cast<ALfloat>(values[2]);
+            fvals[3] = static_cast<ALfloat>(values[3]);
+            fvals[4] = static_cast<ALfloat>(values[4]);
+            fvals[5] = static_cast<ALfloat>(values[5]);
             return SetSourcefv(Source, Context, prop, fvals);
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
@@ -1550,7 +1550,7 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_SOURCE_SPATIALIZE_SOFT:
             CHECKVAL(*values <= INT_MAX && *values >= INT_MIN);
 
-            ivals[0] = (ALint)*values;
+            ivals[0] = static_cast<ALint>(*values);
             return SetSourceiv(Source, Context, prop, ivals);
 
         /* 1x uint */
@@ -1558,7 +1558,7 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_DIRECT_FILTER:
             CHECKVAL(*values <= UINT_MAX && *values >= 0);
 
-            ivals[0] = (ALuint)*values;
+            ivals[0] = static_cast<ALuint>(*values);
             return SetSourceiv(Source, Context, prop, ivals);
 
         /* 3x uint */
@@ -1567,9 +1567,9 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
                      values[1] <= UINT_MAX && values[1] >= 0 &&
                      values[2] <= UINT_MAX && values[2] >= 0);
 
-            ivals[0] = (ALuint)values[0];
-            ivals[1] = (ALuint)values[1];
-            ivals[2] = (ALuint)values[2];
+            ivals[0] = static_cast<ALuint>(values[0]);
+            ivals[1] = static_cast<ALuint>(values[1]);
+            ivals[2] = static_cast<ALuint>(values[2]);
             return SetSourceiv(Source, Context, prop, ivals);
 
         /* 1x float */
@@ -1588,26 +1588,26 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_SOURCE_RADIUS:
-            fvals[0] = (ALfloat)*values;
+            fvals[0] = static_cast<ALfloat>(*values);
             return SetSourcefv(Source, Context, prop, fvals);
 
         /* 3x float */
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
-            fvals[0] = (ALfloat)values[0];
-            fvals[1] = (ALfloat)values[1];
-            fvals[2] = (ALfloat)values[2];
+            fvals[0] = static_cast<ALfloat>(values[0]);
+            fvals[1] = static_cast<ALfloat>(values[1]);
+            fvals[2] = static_cast<ALfloat>(values[2]);
             return SetSourcefv(Source, Context, prop, fvals);
 
         /* 6x float */
         case AL_ORIENTATION:
-            fvals[0] = (ALfloat)values[0];
-            fvals[1] = (ALfloat)values[1];
-            fvals[2] = (ALfloat)values[2];
-            fvals[3] = (ALfloat)values[3];
-            fvals[4] = (ALfloat)values[4];
-            fvals[5] = (ALfloat)values[5];
+            fvals[0] = static_cast<ALfloat>(values[0]);
+            fvals[1] = static_cast<ALfloat>(values[1]);
+            fvals[2] = static_cast<ALfloat>(values[2]);
+            fvals[3] = static_cast<ALfloat>(values[3]);
+            fvals[4] = static_cast<ALfloat>(values[4]);
+            fvals[5] = static_cast<ALfloat>(values[5]);
             return SetSourcefv(Source, Context, prop, fvals);
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1718,7 +1718,7 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
                 clocktime = GetClockLatency(device);
             }
             if(srcclock == clocktime.ClockTime)
-                values[1] = (ALdouble)clocktime.Latency.count() / 1000000000.0;
+                values[1] = static_cast<ALdouble>(clocktime.Latency.count()) / 1000000000.0;
             else
             {
                 /* If the clock time incremented, reduce the latency by that
@@ -1726,7 +1726,7 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
                  * earlier.
                  */
                 std::chrono::nanoseconds diff = clocktime.ClockTime - srcclock;
-                values[1] = (ALdouble)(clocktime.Latency - std::min(clocktime.Latency, diff)).count() /
+                values[1] = static_cast<ALdouble>((clocktime.Latency - std::min(clocktime.Latency, diff)).count()) /
                             1000000000.0;
             }
             return AL_TRUE;
@@ -1778,7 +1778,7 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
             if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
-                *values = (ALdouble)ivals[0];
+                *values = static_cast<ALdouble>(ivals[0]);
             return err;
 
         case AL_BUFFER:
@@ -1914,7 +1914,7 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
         case AL_CONE_OUTER_GAINHF:
         case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
-                *values = (ALint)dvals[0];
+                *values = static_cast<ALint>(dvals[0]);
             return err;
 
         /* 3x float/double */
@@ -1923,9 +1923,9 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
         case AL_DIRECTION:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
-                values[0] = (ALint)dvals[0];
-                values[1] = (ALint)dvals[1];
-                values[2] = (ALint)dvals[2];
+                values[0] = static_cast<ALint>(dvals[0]);
+                values[1] = static_cast<ALint>(dvals[1]);
+                values[2] = static_cast<ALint>(dvals[2]);
             }
             return err;
 
@@ -1933,12 +1933,12 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
         case AL_ORIENTATION:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
-                values[0] = (ALint)dvals[0];
-                values[1] = (ALint)dvals[1];
-                values[2] = (ALint)dvals[2];
-                values[3] = (ALint)dvals[3];
-                values[4] = (ALint)dvals[4];
-                values[5] = (ALint)dvals[5];
+                values[0] = static_cast<ALint>(dvals[0]);
+                values[1] = static_cast<ALint>(dvals[1]);
+                values[2] = static_cast<ALint>(dvals[2]);
+                values[3] = static_cast<ALint>(dvals[3]);
+                values[4] = static_cast<ALint>(dvals[4]);
+                values[5] = static_cast<ALint>(dvals[5]);
             }
             return err;
 
@@ -2018,7 +2018,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_CONE_OUTER_GAINHF:
         case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
-                *values = (ALint64)dvals[0];
+                *values = static_cast<ALint64>(dvals[0]);
             return err;
 
         /* 3x float/double */
@@ -2027,9 +2027,9 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_DIRECTION:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
-                values[0] = (ALint64)dvals[0];
-                values[1] = (ALint64)dvals[1];
-                values[2] = (ALint64)dvals[2];
+                values[0] = static_cast<ALint64>(dvals[0]);
+                values[1] = static_cast<ALint64>(dvals[1]);
+                values[2] = static_cast<ALint64>(dvals[2]);
             }
             return err;
 
@@ -2037,12 +2037,12 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_ORIENTATION:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
-                values[0] = (ALint64)dvals[0];
-                values[1] = (ALint64)dvals[1];
-                values[2] = (ALint64)dvals[2];
-                values[3] = (ALint64)dvals[3];
-                values[4] = (ALint64)dvals[4];
-                values[5] = (ALint64)dvals[5];
+                values[0] = static_cast<ALint64>(dvals[0]);
+                values[1] = static_cast<ALint64>(dvals[1]);
+                values[2] = static_cast<ALint64>(dvals[2]);
+                values[3] = static_cast<ALint64>(dvals[3]);
+                values[4] = static_cast<ALint64>(dvals[4]);
+                values[5] = static_cast<ALint64>(dvals[5]);
             }
             return err;
 
@@ -2068,16 +2068,16 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_BUFFER:
         case AL_DIRECT_FILTER:
             if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
-                *values = (ALuint)ivals[0];
+                *values = static_cast<ALuint>(ivals[0]);
             return err;
 
         /* 3x uint */
         case AL_AUXILIARY_SEND_FILTER:
             if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
             {
-                values[0] = (ALuint)ivals[0];
-                values[1] = (ALuint)ivals[1];
-                values[2] = (ALuint)ivals[2];
+                values[0] = static_cast<ALuint>(ivals[0]);
+                values[1] = static_cast<ALuint>(ivals[1]);
+                values[2] = static_cast<ALuint>(ivals[2]);
             }
             return err;
 
@@ -2246,7 +2246,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
     {
-        ALfloat fval = (ALfloat)value;
+        ALfloat fval = static_cast<ALfloat>(value);
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &fval);
     }
 }
@@ -2263,9 +2263,10 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(DoubleValsByProp(param) != 3)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
-    else
-    {
-        ALfloat fvals[3] = { (ALfloat)value1, (ALfloat)value2, (ALfloat)value3 };
+    else {
+        ALfloat fvals[3] = {static_cast<ALfloat>(value1),
+                            static_cast<ALfloat>(value2),
+                            static_cast<ALfloat>(value3)};
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
@@ -2293,7 +2294,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
             ALint i;
 
             for(i = 0;i < count;i++)
-                fvals[i] = (ALfloat)values[i];
+                fvals[i] = static_cast<ALfloat>(values[i]);
             SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
         }
     }
@@ -2425,7 +2426,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     {
         ALdouble dval;
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), &dval))
-            *value = (ALfloat)dval;
+            *value = static_cast<ALfloat>(dval);
     }
 }
 
@@ -2448,9 +2449,9 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
         ALdouble dvals[3];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
         {
-            *value1 = (ALfloat)dvals[0];
-            *value2 = (ALfloat)dvals[1];
-            *value3 = (ALfloat)dvals[2];
+            *value1 = static_cast<ALfloat>(dvals[0]);
+            *value2 = static_cast<ALfloat>(dvals[1]);
+            *value3 = static_cast<ALfloat>(dvals[2]);
         }
     }
 }
@@ -2478,7 +2479,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
             if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
             {
                 for(ALint i{0};i < count;i++)
-                    values[i] = (ALfloat)dvals[i];
+                    values[i] = static_cast<ALfloat>(dvals[i]);
             }
         }
     }

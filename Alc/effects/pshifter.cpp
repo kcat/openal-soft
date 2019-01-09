@@ -72,7 +72,7 @@ inline int double2int(double d)
 
 #else
 
-    return (ALint)d;
+    return static_cast<ALint>(d);
 #endif
 }
 
@@ -156,7 +156,7 @@ ALboolean ALpshifterState::deviceUpdate(const ALCdevice *device)
     mCount       = FIFO_LATENCY;
     mPitchShiftI = FRACTIONONE;
     mPitchShift  = 1.0f;
-    mFreqPerBin  = device->Frequency / (ALfloat)STFT_SIZE;
+    mFreqPerBin  = device->Frequency / static_cast<ALfloat>(STFT_SIZE);
 
     std::fill(std::begin(mInFIFO),          std::end(mInFIFO),          0.0f);
     std::fill(std::begin(mOutFIFO),         std::end(mOutFIFO),         0.0f);
@@ -176,7 +176,7 @@ ALboolean ALpshifterState::deviceUpdate(const ALCdevice *device)
 void ALpshifterState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const float pitch{std::pow(2.0f,
-        (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
+        static_cast<ALfloat>(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
     )};
     mPitchShiftI = fastf2i(pitch*FRACTIONONE);
     mPitchShift  = mPitchShiftI * (1.0f/FRACTIONONE);
@@ -304,7 +304,7 @@ void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
 
         /* Shift accumulator, input & output FIFO */
         ALsizei j, k;
-        for(k = 0;k < STFT_STEP;k++) mOutFIFO[k] = (ALfloat)mOutputAccum[k];
+        for(k = 0;k < STFT_STEP;k++) mOutFIFO[k] = static_cast<ALfloat>(mOutputAccum[k]);
         for(j = 0;k < STFT_SIZE;k++,j++) mOutputAccum[j] = mOutputAccum[k];
         for(;j < STFT_SIZE;j++) mOutputAccum[j] = 0.0;
         for(k = 0;k < FIFO_LATENCY;k++)
@@ -375,10 +375,10 @@ void ALpshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum pa
     switch(param)
     {
         case AL_PITCH_SHIFTER_COARSE_TUNE:
-            *val = (ALint)props->Pshifter.CoarseTune;
+            *val = props->Pshifter.CoarseTune;
             break;
         case AL_PITCH_SHIFTER_FINE_TUNE:
-            *val = (ALint)props->Pshifter.FineTune;
+            *val = props->Pshifter.FineTune;
             break;
 
         default:

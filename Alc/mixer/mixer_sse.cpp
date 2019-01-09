@@ -37,10 +37,10 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTR
 #undef FRAC_PHASE_BITDIFF
 
         ALsizei offset{m*pi*4};
-        const __m128 *fil{(const __m128*)(filter + offset)}; offset += m;
-        const __m128 *scd{(const __m128*)(filter + offset)}; offset += m;
-        const __m128 *phd{(const __m128*)(filter + offset)}; offset += m;
-        const __m128 *spd{(const __m128*)(filter + offset)};
+        const __m128 *fil{reinterpret_cast<const __m128*>(filter + offset)}; offset += m;
+        const __m128 *scd{reinterpret_cast<const __m128*>(filter + offset)}; offset += m;
+        const __m128 *phd{reinterpret_cast<const __m128*>(filter + offset)}; offset += m;
+        const __m128 *spd{reinterpret_cast<const __m128*>(filter + offset)};
 
         // Apply the scale and phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
@@ -92,10 +92,10 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
 
         __m128 imp0, imp1;
         __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
-        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), (__m64*)&Values[Offset][0])};
+        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[Offset][0]))};
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[Offset][0], vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[Offset][0]), vals);
         ++Offset;
         for(ALsizei i{1};;)
         {
@@ -115,10 +115,10 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
                 break;
             count = IrSize-1;
         }
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[Offset][0]);
+        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[Offset][0]));
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[Offset][0], vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[Offset][0]), vals);
     }
     else
     {
@@ -156,7 +156,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
 
-    const ALfloat delta{(Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f};
+    const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     for(ALsizei c{0};c < OutChans;c++)
     {
         ALsizei pos{0};

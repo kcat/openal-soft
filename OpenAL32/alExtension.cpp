@@ -67,6 +67,6 @@ AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 {
-    if(!enumName) return (ALenum)0;
+    if(!enumName) return static_cast<ALenum>(0);
     return alcGetEnumValue(nullptr, enumName);
 }

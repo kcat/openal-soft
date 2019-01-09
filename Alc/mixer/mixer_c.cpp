@@ -46,7 +46,7 @@ const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
     ASSUME(numsamples > 0);
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
-    if((((intptr_t)src)&15) == (((intptr_t)dst)&15))
+    if((reinterpret_cast<intptr_t>(src)&15) == (reinterpret_cast<intptr_t>(dst)&15))
         return src;
 #endif
     std::copy_n(src, numsamples, dst);
@@ -137,7 +137,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
 
-    const ALfloat delta{(Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f};
+    const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     for(ALsizei c{0};c < OutChans;c++)
     {
         ALsizei pos{0};

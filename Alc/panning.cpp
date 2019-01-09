@@ -273,12 +273,12 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
         const ALfloat delay{
             std::floor((maxdist - speaker.Distance)/SPEEDOFSOUNDMETRESPERSEC*srate + 0.5f)
         };
-        if(delay >= (ALfloat)MAX_DELAY_LENGTH)
+        if(delay >= static_cast<ALfloat>(MAX_DELAY_LENGTH))
             ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %d)\n",
                 speaker.Name.c_str(), delay, MAX_DELAY_LENGTH);
 
         device->ChannelDelay[chan].Length = static_cast<ALsizei>(clampf(
-            delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
+            delay, 0.0f, static_cast<ALfloat>(MAX_DELAY_LENGTH-1)
         ));
         device->ChannelDelay[chan].Gain = speaker.Distance / maxdist;
         TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
@@ -951,7 +951,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                  * front-right channels, with a crossover at 5khz (could be
                  * higher).
                  */
-                const ALfloat scale{(ALfloat)(5000.0 / device->Frequency)};
+                const ALfloat scale{static_cast<ALfloat>(5000.0 / device->Frequency)};
 
                 stablizer->LFilter.init(scale);
                 stablizer->RFilter = stablizer->LFilter;
@@ -1016,7 +1016,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     if(device->HrtfList.empty())
         device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
 
-    if(hrtf_id >= 0 && (size_t)hrtf_id < device->HrtfList.size())
+    if(hrtf_id >= 0 && static_cast<size_t>(hrtf_id) < device->HrtfList.size())
     {
         const EnumeratedHrtf &entry = device->HrtfList[hrtf_id];
         HrtfEntry *hrtf{GetLoadedHrtf(entry.hrtf)};

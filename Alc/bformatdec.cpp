@@ -75,7 +75,7 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
         { return mask | (1 << chan); }
     );
 
-    const ALfloat xover_norm{conf->XOverFreq / (float)srate};
+    const ALfloat xover_norm{conf->XOverFreq / static_cast<float>(srate)};
 
     const ALsizei out_order{
         (conf->ChanMask > AMBI_3ORDER_MASK) ? 4 :

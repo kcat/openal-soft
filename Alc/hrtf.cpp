@@ -329,7 +329,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
         {
             for(ALsizei i{0};i < NumChannels;++i)
             {
-                const ALdouble mult{(ALdouble)AmbiOrderHFGain[OrderFromChan[i]] * AmbiMatrix[c][i]};
+                const ALdouble mult{static_cast<ALdouble>(AmbiOrderHFGain[OrderFromChan[i]]) * AmbiMatrix[c][i]};
                 const ALsizei numirs{mini(Hrtf->irSize, HRIR_LENGTH-maxi(ldelay, rdelay))};
                 ALsizei lidx{ldelay}, ridx{rdelay};
                 for(ALsizei j{0};j < numirs;++j)
@@ -384,8 +384,8 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     {
         for(ALsizei idx{0};idx < HRIR_LENGTH;idx++)
         {
-            state->Chan[i].Coeffs[idx][0] = (ALfloat)tmpres[i][idx][0];
-            state->Chan[i].Coeffs[idx][1] = (ALfloat)tmpres[i][idx][1];
+            state->Chan[i].Coeffs[idx][0] = static_cast<ALfloat>(tmpres[i][idx][0]);
+            state->Chan[i].Coeffs[idx][1] = static_cast<ALfloat>(tmpres[i][idx][1]);
         }
     }
     tmpres.clear();
@@ -435,7 +435,7 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsize
     else
     {
         uintptr_t offset = sizeof(HrtfEntry);
-        char *base = (char*)Hrtf;
+        char *base = reinterpret_cast<char*>(Hrtf);
         ALushort *_evOffset;
         ALubyte *_azCount;
         ALubyte (*_delays)[2];
@@ -941,7 +941,7 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
     }
 
     return CreateHrtfStore(rate, irSize,
-        (ALfloat)distance / 1000.0f, evCount, irCount, azCount.data(), evOffset.data(),
+        static_cast<ALfloat>(distance) / 1000.0f, evCount, irCount, azCount.data(), evOffset.data(),
         &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename
     );

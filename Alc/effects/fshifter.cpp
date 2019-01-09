@@ -111,7 +111,7 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
 {
     const ALCdevice *device{context->Device};
 
-    ALfloat step{props->Fshifter.Frequency / (ALfloat)device->Frequency};
+    ALfloat step{props->Fshifter.Frequency / static_cast<ALfloat>(device->Frequency)};
     mPhaseStep = fastf2i(minf(step, 0.5f) * FRACTIONONE);
 
     switch(props->Fshifter.LeftDirection)
@@ -190,7 +190,7 @@ void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
     for(k = 0;k < SamplesToDo;k++)
     {
         double phase = mPhase * ((1.0/FRACTIONONE) * al::MathDefs<double>::Tau());
-        BufferOut[k] = (float)(mOutdata[k].real()*std::cos(phase) +
+        BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
                                mOutdata[k].imag()*std::sin(phase)*mLdSign);
 
         mPhase += mPhaseStep;

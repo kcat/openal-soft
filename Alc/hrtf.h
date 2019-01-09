@@ -1,6 +1,7 @@
 #ifndef ALC_HRTF_H
 #define ALC_HRTF_H
 
+#include <memory>
 #include <string>
 
 #include "AL/al.h"
@@ -64,6 +65,7 @@ struct DirectHrtfState {
     } Chan[];
 
     DirectHrtfState() noexcept { }
+    static std::unique_ptr<DirectHrtfState> Create(ALsizei num_chans);
 
     DEF_PLACE_NEWDEL()
 };

@@ -47,8 +47,16 @@ struct HrtfHandle {
     HrtfEntry *entry{nullptr};
     char filename[];
 
+    static std::unique_ptr<HrtfHandle> Create(size_t fname_len);
+
     DEF_PLACE_NEWDEL()
 };
+
+std::unique_ptr<HrtfHandle> HrtfHandle::Create(size_t fname_len)
+{
+    void *ptr{al_calloc(DEF_ALIGN, FAM_SIZE(HrtfHandle, filename, fname_len))};
+    return std::unique_ptr<HrtfHandle>{new (ptr) HrtfHandle{}};
+}
 
 namespace {
 
@@ -272,6 +280,12 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     }
 }
 
+
+std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(ALsizei num_chans)
+{
+    void *ptr{al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, num_chans))};
+    return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{}};
+}
 
 void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
@@ -980,9 +994,7 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
     {
         TRACE("Got new file \"%s\"\n", filename.c_str());
 
-        LoadedHrtfs.emplace_back(HrtfHandlePtr{new
-            (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfHandle, filename, filename.length()+1)))
-            HrtfHandle{}});
+        LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+1));
         loaded_entry = LoadedHrtfs.end()-1;
         strcpy((*loaded_entry)->filename, filename.c_str());
     }
@@ -1042,9 +1054,7 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
 
         TRACE("Got new file \"%s\"\n", filename.c_str());
 
-        LoadedHrtfs.emplace_back(HrtfHandlePtr{new
-            (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfHandle, filename, namelen)))
-            HrtfHandle{}});
+        LoadedHrtfs.emplace_back(HrtfHandle::Create(namelen));
         loaded_entry = LoadedHrtfs.end()-1;
         snprintf((*loaded_entry)->filename, namelen,  "!%u_%s",
                  residx, filename.c_str());

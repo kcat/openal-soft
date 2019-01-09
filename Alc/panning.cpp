@@ -697,8 +697,7 @@ void InitHrtfPanning(ALCdevice *device)
         count = static_cast<ALsizei>(COUNTOF(IndexMap));
     }
 
-    device->mHrtfState.reset(
-        new (al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, count))) DirectHrtfState{});
+    device->mHrtfState = DirectHrtfState::Create(count);
 
     std::transform(std::begin(IndexMap), std::begin(IndexMap)+count, std::begin(device->Dry.AmbiMap),
         [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }

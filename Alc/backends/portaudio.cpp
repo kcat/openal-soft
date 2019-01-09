@@ -69,7 +69,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #endif
 #endif
 
-bool pa_load(void)
+bool pa_load()
 {
     PaError err;
 

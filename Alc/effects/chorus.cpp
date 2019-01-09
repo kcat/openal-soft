@@ -265,7 +265,7 @@ EffectState *ChorusStateFactory::create()
 
 } // namespace
 
-EffectStateFactory *ChorusStateFactory_getFactory(void)
+EffectStateFactory *ChorusStateFactory_getFactory()
 {
     static ChorusStateFactory ChorusFactory{};
     return &ChorusFactory;
@@ -384,7 +384,7 @@ DEFINE_ALEFFECT_VTABLE(ALchorus);
 /* Flanger is basically a chorus with a really short delay. They can both use
  * the same processing functions, so piggyback flanger on the chorus functions.
  */
-EffectStateFactory *FlangerStateFactory_getFactory(void)
+EffectStateFactory *FlangerStateFactory_getFactory()
 { return ChorusStateFactory_getFactory(); }
 
 

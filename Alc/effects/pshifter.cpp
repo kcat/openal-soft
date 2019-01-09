@@ -78,7 +78,7 @@ inline int double2int(double d)
 
 /* Define a Hann window, used to filter the STFT input and output. */
 /* Making this constexpr seems to require C++14. */
-std::array<ALdouble,STFT_SIZE> InitHannWindow(void)
+std::array<ALdouble,STFT_SIZE> InitHannWindow()
 {
     std::array<ALdouble,STFT_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
@@ -326,7 +326,7 @@ struct PshifterStateFactory final : public EffectStateFactory {
 EffectState *PshifterStateFactory::create()
 { return new ALpshifterState{}; }
 
-EffectStateFactory *PshifterStateFactory_getFactory(void)
+EffectStateFactory *PshifterStateFactory_getFactory()
 {
     static PshifterStateFactory PshifterFactory{};
     return &PshifterFactory;

@@ -204,7 +204,7 @@ ALSA_FUNCS(MAKE_FUNC);
 #endif
 
 
-bool alsa_load(void)
+bool alsa_load()
 {
     bool error{false};
 

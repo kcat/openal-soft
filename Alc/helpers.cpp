@@ -713,7 +713,7 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     return results;
 }
 
-void SetRTPriority(void)
+void SetRTPriority()
 {
     bool failed = false;
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)

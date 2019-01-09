@@ -203,7 +203,7 @@ struct AutowahStateFactory final : public EffectStateFactory {
 EffectState *AutowahStateFactory::create()
 { return new ALautowahState{}; }
 
-EffectStateFactory *AutowahStateFactory_getFactory(void)
+EffectStateFactory *AutowahStateFactory_getFactory()
 {
     static AutowahStateFactory AutowahFactory{};
     return &AutowahFactory;

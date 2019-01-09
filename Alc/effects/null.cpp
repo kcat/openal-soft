@@ -69,7 +69,7 @@ struct NullStateFactory final : public EffectStateFactory {
 EffectState *NullStateFactory::create()
 { return new ALnullState{}; }
 
-EffectStateFactory *NullStateFactory_getFactory(void)
+EffectStateFactory *NullStateFactory_getFactory()
 {
     static NullStateFactory NullFactory{};
     return &NullFactory;

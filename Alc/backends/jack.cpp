@@ -100,7 +100,7 @@ decltype(jack_error_callback) * pjack_error_callback;
 
 jack_options_t ClientOptions = JackNullOption;
 
-ALCboolean jack_load(void)
+ALCboolean jack_load()
 {
     ALCboolean error = ALC_FALSE;
 

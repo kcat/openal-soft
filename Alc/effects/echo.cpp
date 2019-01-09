@@ -180,7 +180,7 @@ struct EchoStateFactory final : public EffectStateFactory {
 EffectState *EchoStateFactory::create()
 { return new ALechoState{}; }
 
-EffectStateFactory *EchoStateFactory_getFactory(void)
+EffectStateFactory *EchoStateFactory_getFactory()
 {
     static EchoStateFactory EchoFactory{};
     return &EchoFactory;

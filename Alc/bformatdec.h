@@ -32,11 +32,11 @@ class BFormatDec {
     std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
+    SplitterAllpass mUpAllpass[MAX_OUTPUT_CHANNELS];
     struct {
         BandSplitter Splitter;
         ALfloat Gains[sNumBands];
     } mUpsampler[4];
-    SplitterAllpass mUpAllpass[MAX_OUTPUT_CHANNELS];
 
     ALsizei mNumChannels;
     ALboolean mDualBand;
@@ -64,12 +64,12 @@ class AmbiUpsampler {
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
+    SplitterAllpass mAllpass[MAX_OUTPUT_CHANNELS];
     alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
     struct {
         BandSplitter Splitter;
         ALfloat Gains[sNumBands];
     } mInput[4];
-    SplitterAllpass mAllpass[MAX_OUTPUT_CHANNELS];
 
 public:
     void reset(const ALsizei out_order, const ALfloat xover_norm);

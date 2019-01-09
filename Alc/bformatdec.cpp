@@ -235,23 +235,23 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutCha
      * subsequent higher-order decode generating the same response as a first-
      * order decode.
      */
-    for(ALsizei i{0};i < InChannels;i++)
-    {
-        /* NOTE: Because we can't treat the first-order signal as completely
-         * decorrelated from the existing output (it may contain the reverb,
-         * echo, etc, portion) phase interference is a possibility if not kept
-         * coherent. As such, we need to apply an all-pass on the existing
-         * output so that it stays aligned with the upsampled signal.
-         */
+
+    /* NOTE: Because we can't treat the first-order signal as completely
+     * decorrelated from the existing output (it may contain the reverb, echo,
+     * etc, portion) phase interference is a possibility if not kept coherent.
+     * As such, we need to apply an all-pass on the existing output so that it
+     * stays aligned with the upsampled signal.
+     */
+    for(ALsizei i{0};i < OutChannels;i++)
         mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
 
+    for(ALsizei i{0};i < InChannels;i++)
+    {
         mUpsampler[i].Splitter.process(mSamples[sHFBand].data(), mSamples[sLFBand].data(),
             InSamples[i], SamplesToDo);
         MixRowSamples(OutBuffer[i], mUpsampler[i].Gains,
             &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamples[0]), sNumBands, 0, SamplesToDo);
     }
-    for(ALsizei i{InChannels};i < OutChannels;i++)
-        mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
 }
 
 
@@ -292,13 +292,12 @@ void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutC
     ASSUME(InChannels > 0);
     ASSUME(OutChannels > InChannels);
 
+    for(ALsizei i{0};i < OutChannels;i++)
+        mAllpass[i].process(OutBuffer[i], SamplesToDo);
     for(ALsizei i{0};i < InChannels;i++)
     {
-        mAllpass[i].process(OutBuffer[i], SamplesToDo);
         mInput[i].Splitter.process(mSamples[sHFBand], mSamples[sLFBand], InSamples[i],
             SamplesToDo);
         MixRowSamples(OutBuffer[i], mInput[i].Gains, mSamples, sNumBands, 0, SamplesToDo);
     }
-    for(ALsizei i{InChannels};i < OutChannels;i++)
-        mAllpass[i].process(OutBuffer[i], SamplesToDo);
 }

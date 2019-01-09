@@ -405,7 +405,7 @@ void InitPanning(ALCdevice *device)
             );
             device->FOAOut.NumChannels = 4;
 
-            device->AmbiUp.reset(new AmbiUpsampler{});
+            device->AmbiUp = al::make_unique<AmbiUpsampler>();
             device->AmbiUp->reset(device->mAmbiOrder,
                 400.0f / static_cast<ALfloat>(device->Frequency));
         }
@@ -449,7 +449,7 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 3) ? "second" : "first",
             ""
         );
-        device->AmbiDecoder.reset(new BFormatDec{});
+        device->AmbiDecoder = al::make_unique<BFormatDec>();
         device->AmbiDecoder->reset(coeffcount, 400.0f / static_cast<ALfloat>(device->Frequency),
             count, chancoeffs, idxmap);
 
@@ -507,7 +507,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder.reset(new BFormatDec{});
+    device->AmbiDecoder = al::make_unique<BFormatDec>();
     device->AmbiDecoder->reset(conf, false, count, device->Frequency, speakermap);
 
     if(conf->ChanMask <= AMBI_1ORDER_MASK)
@@ -577,7 +577,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder.reset(new BFormatDec{});
+    device->AmbiDecoder = al::make_unique<BFormatDec>();
     device->AmbiDecoder->reset(conf, true, count, device->Frequency, speakermap);
 
     if(conf->ChanMask <= AMBI_1ORDER_MASK)
@@ -691,7 +691,7 @@ void InitHrtfPanning(ALCdevice *device)
      */
     if(device->mRenderMode != HrtfRender)
     {
-        device->AmbiUp.reset(new AmbiUpsampler{});
+        device->AmbiUp = al::make_unique<AmbiUpsampler>();
 
         AmbiOrderHFGain = AmbiOrderHFGainHOA;
         count = static_cast<ALsizei>(COUNTOF(IndexMap));
@@ -1087,7 +1087,7 @@ no_hrtf:
         ConfigValueInt(device->DeviceName.c_str(), nullptr, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
     {
-        device->Bs2b.reset(new bs2b{});
+        device->Bs2b = al::make_unique<bs2b>();
         bs2b_set_params(device->Bs2b.get(), bs2blevel, device->Frequency);
         TRACE("BS2B enabled\n");
         InitPanning(device);
@@ -1106,7 +1106,7 @@ no_hrtf:
     }
     if(device->mRenderMode == NormalRender)
     {
-        device->Uhj_Encoder.reset(new Uhj2Encoder{});
+        device->Uhj_Encoder = al::make_unique<Uhj2Encoder>();
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
         return;

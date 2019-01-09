@@ -757,10 +757,6 @@ struct ALCdevice {
 #define DEVICE_RUNNING                           (1u<<31)
 
 
-/* Nanosecond resolution for the device clock time. */
-#define DEVICE_CLOCK_RES  1000000000_u64
-
-
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
 #define MIXER_THREAD_NAME "alsoft-mixer"

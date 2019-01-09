@@ -3,8 +3,8 @@
 
 #include "almalloc.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif

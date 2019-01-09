@@ -27,14 +27,14 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 #include <memory.h>
 #include <unistd.h>
-#include <errno.h>
+#include <cerrno>
 #include <poll.h>
-#include <math.h>
+#include <cmath>
 
 #include <atomic>
 #include <thread>

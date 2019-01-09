@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include <assert.h>
+#include <cassert>
 
 #include <limits>
 

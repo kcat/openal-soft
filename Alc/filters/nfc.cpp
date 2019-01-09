@@ -7,7 +7,7 @@
 
 #include "alMain.h"
 
-#include <string.h>
+#include <cstring>
 
 
 /* Near-field control filters are the basis for handling the near-field effect.

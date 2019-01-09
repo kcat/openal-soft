@@ -23,7 +23,7 @@
 
 #include "backends/pulseaudio.h"
 
-#include <string.h>
+#include <cstring>
 
 #include <array>
 #include <string>

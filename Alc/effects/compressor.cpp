@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "alMain.h"
 #include "alcontext.h"

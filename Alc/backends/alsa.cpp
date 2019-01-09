@@ -22,8 +22,8 @@
 
 #include "backends/alsa.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <memory.h>
 
 #include <atomic>

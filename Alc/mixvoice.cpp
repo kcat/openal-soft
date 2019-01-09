@@ -20,11 +20,11 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <assert.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <cassert>
 
 #include <numeric>
 #include <algorithm>

@@ -20,9 +20,9 @@
 
 #include "config.h"
 
-#include <string.h>
-#include <stdlib.h>
-#include <limits.h>
+#include <cstring>
+#include <cstdlib>
+#include <climits>
 
 #include <algorithm>
 

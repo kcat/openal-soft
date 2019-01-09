@@ -61,15 +61,15 @@
 #include "config.h"
 
 #define _UNICODE
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <string.h>
-#include <limits.h>
-#include <stdint.h>
-#include <ctype.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
+#include <cstddef>
+#include <cstring>
+#include <climits>
+#include <cstdint>
+#include <cctype>
+#include <cmath>
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif

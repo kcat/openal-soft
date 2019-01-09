@@ -28,11 +28,11 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <time.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <ctype.h>
+#include <cstdlib>
+#include <ctime>
+#include <cerrno>
+#include <cstdarg>
+#include <cctype>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -93,7 +93,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include <sys/sysconf.h>
 #endif
 #ifdef HAVE_FLOAT_H
-#include <float.h>
+#include <cfloat>
 #endif
 #ifdef HAVE_IEEEFP_H
 #include <ieeefp.h>

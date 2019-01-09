@@ -22,10 +22,10 @@
 
 #include "backends/wave.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <memory.h>
-#include <errno.h>
+#include <cerrno>
 
 #include <chrono>
 #include <thread>

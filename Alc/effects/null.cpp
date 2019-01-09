@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "AL/al.h"
 #include "AL/alc.h"

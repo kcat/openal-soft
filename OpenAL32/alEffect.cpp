@@ -20,9 +20,9 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <math.h>
-#include <float.h>
+#include <cstdlib>
+#include <cmath>
+#include <cfloat>
 
 #include <algorithm>
 

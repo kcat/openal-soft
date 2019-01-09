@@ -9,23 +9,23 @@
 extern "C" {
 #endif
 
-#ifndef ALC_SOFT_loopback2
-#define ALC_SOFT_loopback2 1
-#define ALC_AMBISONIC_LAYOUT_SOFT                0xfff0
-#define ALC_AMBISONIC_SCALING_SOFT               0xfff1
-#define ALC_AMBISONIC_ORDER_SOFT                 0xfff2
-#define ALC_MAX_AMBISONIC_ORDER_SOFT             0xfff3
+#ifndef ALC_SOFT_loopback_bformat
+#define ALC_SOFT_loopback_bformat 1
+#define ALC_AMBISONIC_LAYOUT_SOFT                0x1997
+#define ALC_AMBISONIC_SCALING_SOFT               0x1998
+#define ALC_AMBISONIC_ORDER_SOFT                 0x1999
+#define ALC_MAX_AMBISONIC_ORDER_SOFT             0x199B
 
 #define ALC_BFORMAT3D_SOFT                       0x1508
 
 /* Ambisonic layouts */
-#define ALC_ACN_SOFT                             0xfff4
-#define ALC_FUMA_SOFT                            0xfff5
+#define ALC_FUMA_SOFT                            0x0000
+#define ALC_ACN_SOFT                             0x0001
 
 /* Ambisonic scalings (normalization) */
 /*#define ALC_FUMA_SOFT*/
-#define ALC_SN3D_SOFT                            0xfff6
-#define ALC_N3D_SOFT                             0xfff7
+#define ALC_SN3D_SOFT                            0x0001
+#define ALC_N3D_SOFT                             0x0002
 #endif
 
 #ifndef AL_SOFT_map_buffer

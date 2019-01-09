@@ -292,7 +292,7 @@ inline int float2int(float f) noexcept
 
 #else
 
-    return (ALint)f;
+    return static_cast<ALint>(f);
 #endif
 }
 

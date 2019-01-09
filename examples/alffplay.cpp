@@ -596,9 +596,8 @@ int AudioState::decodeFrame()
             mSamplesMax = mDecodedFrame->nb_samples;
         }
         /* Return the amount of sample frames converted */
-        int data_size = swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
-            (const uint8_t**)mDecodedFrame->data, mDecodedFrame->nb_samples
-        );
+        int data_size{swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
+            const_cast<const uint8_t**>(mDecodedFrame->data), mDecodedFrame->nb_samples)};
 
         av_frame_unref(mDecodedFrame.get());
         return data_size;

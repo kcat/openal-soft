@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <signal.h>
-#include <stdarg.h>
+#include <csignal>
+#include <cstdarg>
 
 #ifdef HAVE_WINDOWS_H
 #define WIN32_LEAN_AND_MEAN

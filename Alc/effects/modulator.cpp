@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 #include <cmath>
 #include <algorithm>
@@ -177,7 +177,7 @@ struct ModulatorStateFactory final : public EffectStateFactory {
 EffectState *ModulatorStateFactory::create()
 { return new ALmodulatorState{}; }
 
-EffectStateFactory *ModulatorStateFactory_getFactory(void)
+EffectStateFactory *ModulatorStateFactory_getFactory()
 {
     static ModulatorStateFactory ModulatorFactory{};
     return &ModulatorFactory;

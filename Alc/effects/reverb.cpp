@@ -20,9 +20,9 @@
 
 #include "config.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 
 #include <cmath>
 #include <algorithm>
@@ -1420,7 +1420,7 @@ EffectState *ReverbStateFactory::create()
 
 } // namespace
 
-EffectStateFactory *ReverbStateFactory_getFactory(void)
+EffectStateFactory *ReverbStateFactory_getFactory()
 {
     static ReverbStateFactory ReverbFactory{};
     return &ReverbFactory;

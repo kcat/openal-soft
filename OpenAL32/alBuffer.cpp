@@ -20,9 +20,9 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cassert>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif

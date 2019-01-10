@@ -20,9 +20,9 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
 
 #include "AL/al.h"
 #include "AL/alc.h"

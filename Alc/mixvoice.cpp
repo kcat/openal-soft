@@ -20,11 +20,11 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <assert.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <cassert>
 
 #include <numeric>
 #include <algorithm>
@@ -61,7 +61,7 @@ RowMixerFunc MixRowSamples = MixRow_C;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
 
-static MixerFunc SelectMixer(void)
+static MixerFunc SelectMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -74,7 +74,7 @@ static MixerFunc SelectMixer(void)
     return Mix_C;
 }
 
-static RowMixerFunc SelectRowMixer(void)
+static RowMixerFunc SelectRowMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -87,7 +87,7 @@ static RowMixerFunc SelectRowMixer(void)
     return MixRow_C;
 }
 
-static inline HrtfMixerFunc SelectHrtfMixer(void)
+static inline HrtfMixerFunc SelectHrtfMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -100,7 +100,7 @@ static inline HrtfMixerFunc SelectHrtfMixer(void)
     return MixHrtf_C;
 }
 
-static inline HrtfMixerBlendFunc SelectHrtfBlendMixer(void)
+static inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -152,7 +152,7 @@ ResamplerFunc SelectResampler(Resampler resampler)
 }
 
 
-void aluInitMixer(void)
+void aluInitMixer()
 {
     const char *str;
 

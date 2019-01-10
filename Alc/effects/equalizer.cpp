@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 #include <algorithm>
 #include <functional>
@@ -184,7 +184,7 @@ struct EqualizerStateFactory final : public EffectStateFactory {
 EffectState *EqualizerStateFactory::create()
 { return new ALequalizerState{}; }
 
-EffectStateFactory *EqualizerStateFactory_getFactory(void)
+EffectStateFactory *EqualizerStateFactory_getFactory()
 {
     static EqualizerStateFactory EqualizerFactory{};
     return &EqualizerFactory;

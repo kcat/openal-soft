@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -25,16 +25,12 @@ struct ALnullState final : public EffectState {
 /* This constructs the effect state. It's called when the object is first
  * created.
  */
-ALnullState::ALnullState()
-{
-}
+ALnullState::ALnullState() = default;
 
 /* This destructs the effect state. It's called only when the effect slot is no
  * longer used prior to being freed.
  */
-ALnullState::~ALnullState()
-{
-}
+ALnullState::~ALnullState() = default;
 
 /* This updates the device-dependant effect state. This is called on
  * initialization and any time the device parameters (eg. playback frequency,
@@ -69,7 +65,7 @@ struct NullStateFactory final : public EffectStateFactory {
 EffectState *NullStateFactory::create()
 { return new ALnullState{}; }
 
-EffectStateFactory *NullStateFactory_getFactory(void)
+EffectStateFactory *NullStateFactory_getFactory()
 {
     static NullStateFactory NullFactory{};
     return &NullFactory;

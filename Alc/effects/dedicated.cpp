@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <cmath>
 #include <algorithm>
 
@@ -102,7 +102,7 @@ struct DedicatedStateFactory final : public EffectStateFactory {
 EffectState *DedicatedStateFactory::create()
 { return new ALdedicatedState{}; }
 
-EffectStateFactory *DedicatedStateFactory_getFactory(void)
+EffectStateFactory *DedicatedStateFactory_getFactory()
 {
     static DedicatedStateFactory DedicatedFactory{};
     return &DedicatedFactory;

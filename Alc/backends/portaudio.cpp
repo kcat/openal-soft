@@ -22,9 +22,9 @@
 
 #include "backends/portaudio.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "alMain.h"
 #include "alu.h"
@@ -69,7 +69,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #endif
 #endif
 
-bool pa_load(void)
+bool pa_load()
 {
     PaError err;
 

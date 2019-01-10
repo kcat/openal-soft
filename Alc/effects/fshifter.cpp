@@ -46,7 +46,7 @@ using complex_d = std::complex<double>;
 
 /* Define a Hann window, used to filter the HIL input and output. */
 /* Making this constexpr seems to require C++14. */
-std::array<ALdouble,HIL_SIZE> InitHannWindow(void)
+std::array<ALdouble,HIL_SIZE> InitHannWindow()
 {
     std::array<ALdouble,HIL_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
@@ -211,7 +211,7 @@ struct FshifterStateFactory final : public EffectStateFactory {
 EffectState *FshifterStateFactory::create()
 { return new ALfshifterState{}; }
 
-EffectStateFactory *FshifterStateFactory_getFactory(void)
+EffectStateFactory *FshifterStateFactory_getFactory()
 {
     static FshifterStateFactory FshifterFactory{};
     return &FshifterFactory;

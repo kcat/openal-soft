@@ -23,7 +23,7 @@
 
 #include "backends/pulseaudio.h"
 
-#include <string.h>
+#include <cstring>
 
 #include <array>
 #include <string>
@@ -186,7 +186,7 @@ MAKE_FUNC(pa_stream_begin_write);
 
 #endif
 
-ALCboolean pulse_load(void)
+ALCboolean pulse_load()
 {
     ALCboolean ret{ALC_TRUE};
 #ifdef HAVE_DYNLOAD
@@ -599,7 +599,7 @@ void device_sink_callback(pa_context *UNUSED(context), const pa_sink_info *info,
     TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
 }
 
-void probePlaybackDevices(void)
+void probePlaybackDevices()
 {
     PlaybackDevices.clear();
 
@@ -681,7 +681,7 @@ void device_source_callback(pa_context *UNUSED(context), const pa_source_info *i
     TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
 }
 
-void probeCaptureDevices(void)
+void probeCaptureDevices()
 {
     CaptureDevices.clear();
 

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "alMain.h"
 #include "alcontext.h"
@@ -160,7 +160,7 @@ struct CompressorStateFactory final : public EffectStateFactory {
 EffectState *CompressorStateFactory::create()
 { return new ALcompressorState{}; }
 
-EffectStateFactory *CompressorStateFactory_getFactory(void)
+EffectStateFactory *CompressorStateFactory_getFactory()
 {
     static CompressorStateFactory CompressorFactory{};
     return &CompressorFactory;

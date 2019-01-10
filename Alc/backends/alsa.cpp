@@ -22,8 +22,8 @@
 
 #include "backends/alsa.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <memory.h>
 
 #include <atomic>
@@ -204,7 +204,7 @@ ALSA_FUNCS(MAKE_FUNC);
 #endif
 
 
-bool alsa_load(void)
+bool alsa_load()
 {
     bool error{false};
 

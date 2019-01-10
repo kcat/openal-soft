@@ -3,8 +3,8 @@
 
 #include "almalloc.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -73,7 +73,7 @@ void al_free(void *ptr) noexcept
 #endif
 }
 
-size_t al_get_page_size(void) noexcept
+size_t al_get_page_size() noexcept
 {
     static size_t psize = 0;
     if(UNLIKELY(!psize))
@@ -98,7 +98,7 @@ size_t al_get_page_size(void) noexcept
     return psize;
 }
 
-int al_is_sane_alignment_allocator(void) noexcept
+int al_is_sane_alignment_allocator() noexcept
 {
 #if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN) || defined(HAVE__ALIGNED_MALLOC)
     return 1;

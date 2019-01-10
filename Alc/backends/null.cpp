@@ -22,7 +22,7 @@
 
 #include "backends/null.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
 #endif

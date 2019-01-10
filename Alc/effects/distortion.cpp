@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 #include <cmath>
 
@@ -169,7 +169,7 @@ struct DistortionStateFactory final : public EffectStateFactory {
 EffectState *DistortionStateFactory::create()
 { return new ALdistortionState{}; }
 
-EffectStateFactory *DistortionStateFactory_getFactory(void)
+EffectStateFactory *DistortionStateFactory_getFactory()
 {
     static DistortionStateFactory DistortionFactory{};
     return &DistortionFactory;

@@ -26,7 +26,6 @@ struct ALlistenerProps;
 struct ALvoiceProps;
 struct ALeffectslotProps;
 struct ALvoice;
-struct ALeffectslotArray;
 struct RingBuffer;
 
 enum class DistanceModel {
@@ -108,6 +107,7 @@ struct ALCcontext {
     std::atomic<ALsizei> VoiceCount{0};
     ALsizei MaxVoices{0};
 
+    using ALeffectslotArray = al::vector<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};
 
     std::thread EventThread;

@@ -44,10 +44,7 @@ struct EffectStateFactory {
 #define MAX_EFFECT_CHANNELS (4)
 
 
-struct ALeffectslotArray {
-    ALsizei count;
-    ALeffectslot *slot[];
-};
+using ALeffectslotArray = al::vector<ALeffectslot*>;
 
 
 struct ALeffectslotProps {

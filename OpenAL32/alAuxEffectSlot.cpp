@@ -68,42 +68,42 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
 {
     if(count < 1) return;
     ALeffectslotArray *curarray{context->ActiveAuxSlots.load(std::memory_order_acquire)};
-    ALsizei newcount{curarray->count + count};
+    size_t newcount{curarray->size() + count};
 
     /* Insert the new effect slots into the head of the array, followed by the
      * existing ones. Allocate twice as much space for effect slots so the
      * mixer has a place to sort them.
      */
-    auto newarray = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-        FAM_SIZE(ALeffectslotArray, slot, newcount*2)));
-    newarray->count = newcount;
-    auto slotiter = std::transform(slotids, slotids+count, newarray->slot,
+    auto newarray = new ALeffectslotArray{};
+    newarray->reserve(newcount * 2);
+    newarray->resize(newcount);
+    auto slotiter = std::transform(slotids, slotids+count, newarray->begin(),
         [context](ALuint id) noexcept -> ALeffectslot*
         { return LookupEffectSlot(context, id); }
     );
-    std::copy_n(curarray->slot, curarray->count, slotiter);
+    std::copy(curarray->begin(), curarray->end(), slotiter);
 
     /* Remove any duplicates (first instance of each will be kept). */
-    ALeffectslot **last = newarray->slot + newarray->count;
-    for(ALeffectslot **start=newarray->slot+1;;)
+    auto last = newarray->end();
+    for(auto start=newarray->begin()+1;;)
     {
         last = std::remove(start, last, *(start-1));
         if(start == last) break;
         ++start;
     }
-    newcount = static_cast<ALsizei>(std::distance(newarray->slot, last));
+    newcount = static_cast<size_t>(std::distance(newarray->begin(), last));
 
     /* Reallocate newarray if the new size ended up smaller from duplicate
      * removal.
      */
-    if(UNLIKELY(newcount < newarray->count))
+    if(UNLIKELY(newcount < newarray->size()))
     {
         curarray = newarray;
-        newarray = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            FAM_SIZE(ALeffectslotArray, slot, newcount*2)));
-        newarray->count = newcount;
-        std::copy_n(curarray->slot, newcount, newarray->slot);
-        al_free(curarray);
+        newarray = new ALeffectslotArray{};
+        newarray->reserve(newcount * 2);
+        newarray->resize(newcount);
+        std::copy_n(curarray->begin(), newcount, newarray->begin());
+        delete curarray;
         curarray = nullptr;
     }
 
@@ -111,7 +111,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     ALCdevice *device{context->Device};
     while((device->MixCount.load(std::memory_order_acquire)&1))
         std::this_thread::yield();
-    al_free(curarray);
+    delete curarray;
 }
 
 void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context)
@@ -122,16 +122,17 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
     /* Don't shrink the allocated array size since we don't know how many (if
      * any) of the effect slots to remove are in the array.
      */
-    auto newarray = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-        FAM_SIZE(ALeffectslotArray, slot, curarray->count*2)));
+    auto newarray = new ALeffectslotArray{};
+    newarray->reserve(curarray->size() * 2);
+    newarray->resize(curarray->size());
 
     /* Copy each element in curarray to newarray whose ID is not in slotids. */
     const ALuint *slotids_end{slotids + count};
-    auto slotiter = std::copy_if(curarray->slot, curarray->slot+curarray->count, newarray->slot,
+    auto slotiter = std::copy_if(curarray->begin(), curarray->end(), newarray->begin(),
         [slotids, slotids_end](const ALeffectslot *slot) -> bool
         { return std::find(slotids, slotids_end, slot->id) == slotids_end; }
     );
-    newarray->count = static_cast<ALsizei>(std::distance(newarray->slot, slotiter));
+    newarray->resize(std::distance(newarray->begin(), slotiter));
 
     /* TODO: Could reallocate newarray now that we know it's needed size. */
 
@@ -139,7 +140,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
     ALCdevice *device{context->Device};
     while((device->MixCount.load(std::memory_order_acquire)&1))
         std::this_thread::yield();
-    al_free(curarray);
+    delete curarray;
 }
 
 constexpr struct FactoryItem {
@@ -695,9 +696,8 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslotArray *auxslots{context->ActiveAuxSlots.load(std::memory_order_acquire)};
-    for(ALsizei i{0};i < auxslots->count;i++)
+    for(ALeffectslot *slot : *auxslots)
     {
-        ALeffectslot *slot = auxslots->slot[i];
         if(!slot->PropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateEffectSlotProps(slot, context);
     }

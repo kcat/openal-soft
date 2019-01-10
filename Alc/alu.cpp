@@ -28,6 +28,7 @@
 
 #include <cmath>
 #include <limits>
+#include <numeric>
 #include <algorithm>
 #include <functional>
 
@@ -1437,9 +1438,9 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
     {
         bool cforce{CalcContextParams(ctx)};
         bool force{CalcListenerParams(ctx) || cforce};
-        std::for_each(slots->slot, slots->slot+slots->count,
-            [ctx,cforce,&force](ALeffectslot *slot) -> void
-            { force |= CalcEffectSlotParams(slot, ctx, cforce); }
+        force = std::accumulate(slots->begin(), slots->end(), force,
+            [ctx,cforce](bool force, ALeffectslot *slot) -> bool
+            { return CalcEffectSlotParams(slot, ctx, cforce) | force; }
         );
 
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
@@ -1463,7 +1464,7 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     ProcessParamUpdates(ctx, auxslots);
 
     /* Clear auxiliary effect slot mixing buffers. */
-    std::for_each(auxslots->slot, auxslots->slot+auxslots->count,
+    std::for_each(auxslots->begin(), auxslots->end(),
         [SamplesToDo](ALeffectslot *slot) -> void
         {
             std::for_each(slot->WetBuffer, slot->WetBuffer+slot->NumChannels,
@@ -1491,9 +1492,9 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     );
 
     /* Process effects. */
-    if(auxslots->count < 1) return;
-    auto slots = auxslots->slot;
-    auto slots_end = slots + auxslots->count;
+    if(auxslots->size() < 1) return;
+    auto slots = auxslots->data();
+    auto slots_end = slots + auxslots->size();
 
     /* First sort the slots into scratch storage, so that effects come before
      * their effect target (or their targets' target).

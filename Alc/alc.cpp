@@ -2324,22 +2324,16 @@ static ALvoid InitContext(ALCcontext *Context)
     ALeffectslotArray *auxslots;
 
     //Validate Context
-    if(Context->DefaultSlot)
+    if(!Context->DefaultSlot)
+        auxslots = new ALeffectslotArray{};
+    else
     {
-        static constexpr int count{1};
         /* Allocate twice as much space for effect slots so the mixer has a
          * place to sort them.
          */
-        auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            FAM_SIZE(ALeffectslotArray, slot, count*2)));
-        auxslots->count = count;
-        auxslots->slot[0] = Context->DefaultSlot.get();
-    }
-    else
-    {
-        auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            sizeof(ALeffectslotArray)));
-        auxslots->count = 0;
+        auxslots = new ALeffectslotArray{};
+        auxslots->reserve(2);
+        auxslots->push_back(Context->DefaultSlot.get());
     }
     Context->ActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 
@@ -2418,7 +2412,7 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed " SZFMT " AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
+    delete ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed);
     DefaultSlot = nullptr;
 
     count = std::count_if(EffectSlotList.cbegin(), EffectSlotList.cend(),

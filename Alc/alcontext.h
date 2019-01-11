@@ -107,7 +107,7 @@ struct ALCcontext {
     std::atomic<ALsizei> VoiceCount{0};
     ALsizei MaxVoices{0};
 
-    using ALeffectslotArray = al::vector<ALeffectslot*>;
+    using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};
 
     std::thread EventThread;

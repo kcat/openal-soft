@@ -44,7 +44,7 @@ struct EffectStateFactory {
 #define MAX_EFFECT_CHANNELS (4)
 
 
-using ALeffectslotArray = al::vector<ALeffectslot*>;
+using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
 
 
 struct ALeffectslotProps {
@@ -117,6 +117,8 @@ struct ALeffectslot {
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
+
+    static ALeffectslotArray *CreatePtrArray(size_t count) noexcept;
 
     DEF_NEWDEL(ALeffectslot)
 };

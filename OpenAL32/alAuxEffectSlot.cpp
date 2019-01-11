@@ -71,12 +71,9 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     size_t newcount{curarray->size() + count};
 
     /* Insert the new effect slots into the head of the array, followed by the
-     * existing ones. Allocate twice as much space for effect slots so the
-     * mixer has a place to sort them.
+     * existing ones.
      */
-    auto newarray = new ALeffectslotArray{};
-    newarray->reserve(newcount * 2);
-    newarray->resize(newcount);
+    ALeffectslotArray *newarray = ALeffectslot::CreatePtrArray(newcount);
     auto slotiter = std::transform(slotids, slotids+count, newarray->begin(),
         [context](ALuint id) noexcept -> ALeffectslot*
         { return LookupEffectSlot(context, id); }
@@ -99,9 +96,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     if(UNLIKELY(newcount < newarray->size()))
     {
         curarray = newarray;
-        newarray = new ALeffectslotArray{};
-        newarray->reserve(newcount * 2);
-        newarray->resize(newcount);
+        newarray = ALeffectslot::CreatePtrArray(newcount);
         std::copy_n(curarray->begin(), newcount, newarray->begin());
         delete curarray;
         curarray = nullptr;
@@ -122,9 +117,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
     /* Don't shrink the allocated array size since we don't know how many (if
      * any) of the effect slots to remove are in the array.
      */
-    auto newarray = new ALeffectslotArray{};
-    newarray->reserve(curarray->size() * 2);
-    newarray->resize(curarray->size());
+    ALeffectslotArray *newarray = ALeffectslot::CreatePtrArray(curarray->size());
 
     /* Copy each element in curarray to newarray whose ID is not in slotids. */
     const ALuint *slotids_end{slotids + count};
@@ -132,9 +125,18 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
         [slotids, slotids_end](const ALeffectslot *slot) -> bool
         { return std::find(slotids, slotids_end, slot->id) == slotids_end; }
     );
-    newarray->resize(std::distance(newarray->begin(), slotiter));
 
-    /* TODO: Could reallocate newarray now that we know it's needed size. */
+    /* Reallocate with the new size. */
+    auto newsize = static_cast<size_t>(std::distance(newarray->begin(), slotiter));
+    if(LIKELY(newsize != newarray->size()))
+    {
+        curarray = newarray;
+        newarray = ALeffectslot::CreatePtrArray(newsize);
+        std::copy_n(curarray->begin(), newsize, newarray->begin());
+
+        delete curarray;
+        curarray = nullptr;
+    }
 
     curarray = context->ActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
     ALCdevice *device{context->Device};
@@ -182,6 +184,16 @@ inline EffectStateFactory *getFactoryByType(ALenum type)
 } while(0)
 
 } // namespace
+
+ALeffectslotArray *ALeffectslot::CreatePtrArray(size_t count) noexcept
+{
+    /* Allocate space for twice as many pointers, so the mixer has scratch
+     * space to store a sorted list during mixing.
+     */
+    void *ptr{al_calloc(DEF_ALIGN, ALeffectslotArray::CalcSizeof(count*2))};
+    return new (ptr) ALeffectslotArray{count};
+}
+
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {

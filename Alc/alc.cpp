@@ -2325,15 +2325,11 @@ static ALvoid InitContext(ALCcontext *Context)
 
     //Validate Context
     if(!Context->DefaultSlot)
-        auxslots = new ALeffectslotArray{};
+        auxslots = ALeffectslot::CreatePtrArray(0);
     else
     {
-        /* Allocate twice as much space for effect slots so the mixer has a
-         * place to sort them.
-         */
-        auxslots = new ALeffectslotArray{};
-        auxslots->reserve(2);
-        auxslots->push_back(Context->DefaultSlot.get());
+        auxslots = ALeffectslot::CreatePtrArray(1);
+        (*auxslots)[0] = Context->DefaultSlot.get();
     }
     Context->ActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 

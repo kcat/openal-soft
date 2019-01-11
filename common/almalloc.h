@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <limits>
+#include <algorithm>
 
 /* Minimum alignment required by posix_memalign. */
 #define DEF_ALIGN sizeof(void*)

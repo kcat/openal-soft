@@ -90,6 +90,48 @@ template<typename T, typename ...ArgsT>
 std::unique_ptr<T> make_unique(ArgsT&&...args)
 { return std::unique_ptr<T>{new T{std::forward<ArgsT>(args)...}}; }
 
+
+/* A flexible array type. Used either standalone or at the end of a parent
+ * struct, with placement new, to have a run-time-sized array that's embedded
+ * with its size.
+ */
+template<typename T,size_t alignment=DEF_ALIGN>
+struct FlexArray {
+    const size_t mSize;
+    alignas(alignment) T mArray[];
+
+    static constexpr size_t CalcSizeof(size_t count) noexcept
+    { return std::max<size_t>(offsetof(FlexArray, mArray) + sizeof(T)*count, sizeof(FlexArray)); }
+
+    FlexArray(size_t size) : mSize{size}
+    { new (mArray) T[mSize]; }
+    ~FlexArray()
+    {
+        for(size_t i{0u};i < mSize;++i)
+            mArray[i].~T();
+    }
+
+    FlexArray(const FlexArray&) = delete;
+    FlexArray& operator=(const FlexArray&) = delete;
+
+    size_t size() const noexcept { return mSize; }
+
+    T *data() noexcept { return mArray; }
+    const T *data() const noexcept { return mArray; }
+
+    T& operator[](size_t i) noexcept { return mArray[i]; }
+    const T& operator[](size_t i) const noexcept { return mArray[i]; }
+
+    T *begin() noexcept { return mArray; }
+    const T *begin() const noexcept { return mArray; }
+    const T *cbegin() const noexcept { return mArray; }
+    T *end() noexcept { return mArray + mSize; }
+    const T *end() const noexcept { return mArray + mSize; }
+    const T *cend() const noexcept { return mArray + mSize; }
+
+    DEF_PLACE_NEWDEL()
+};
+
 } // namespace al
 
 #endif /* AL_MALLOC_H */

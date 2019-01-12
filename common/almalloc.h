@@ -34,7 +34,8 @@ int al_is_sane_alignment_allocator(void) noexcept;
 
 #define DEF_PLACE_NEWDEL()                                                    \
     void *operator new(size_t /*size*/, void *ptr) noexcept { return ptr; }   \
-    void operator delete(void *block) noexcept { al_free(block); }
+    void operator delete(void *block) noexcept { al_free(block); }            \
+    void operator delete(void* /*block*/, void* /*ptr*/) noexcept { }
 
 namespace al {
 
@@ -101,8 +102,11 @@ struct FlexArray {
     const size_t mSize;
     alignas(alignment) T mArray[];
 
-    static constexpr size_t CalcSizeof(size_t count) noexcept
-    { return std::max<size_t>(offsetof(FlexArray, mArray) + sizeof(T)*count, sizeof(FlexArray)); }
+    static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
+    {
+        return base +
+            std::max<size_t>(offsetof(FlexArray, mArray) + sizeof(T)*count, sizeof(FlexArray));
+    }
 
     FlexArray(size_t size) : mSize{size}
     { new (mArray) T[mSize]; }

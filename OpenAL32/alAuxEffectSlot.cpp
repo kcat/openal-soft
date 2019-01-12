@@ -190,7 +190,7 @@ ALeffectslotArray *ALeffectslot::CreatePtrArray(size_t count) noexcept
     /* Allocate space for twice as many pointers, so the mixer has scratch
      * space to store a sorted list during mixing.
      */
-    void *ptr{al_calloc(DEF_ALIGN, ALeffectslotArray::CalcSizeof(count*2))};
+    void *ptr{al_calloc(DEF_ALIGN, ALeffectslotArray::Sizeof(count*2))};
     return new (ptr) ALeffectslotArray{count};
 }
 

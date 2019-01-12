@@ -2824,7 +2824,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(source->SourceType == AL_STATIC) voice->Flags |= VOICE_IS_STATIC;
 
         std::fill_n(std::begin(voice->Direct.Params), voice->NumChannels, DirectParams{});
-        std::for_each(voice->Send+0, voice->Send+source->Send.size(),
+        std::for_each(voice->Send.begin(), voice->Send.end(),
             [voice](ALvoice::SendData &send) -> void
             { std::fill_n(std::begin(send.Params), voice->NumChannels, SendParams{}); }
         );

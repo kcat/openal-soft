@@ -290,10 +290,10 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
 }
 
 
-std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(ALsizei num_chans)
+std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 {
-    void *ptr{al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, num_chans))};
-    return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{}};
+    void *ptr{al_calloc(16, DirectHrtfState::Sizeof(num_chans))};
+    return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{num_chans}};
 }
 
 void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)

@@ -592,7 +592,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     );
     const ALsizei NumSends{Device->NumAuxSends};
     ASSUME(NumSends >= 0);
-    std::for_each(voice->Send+0, voice->Send+NumSends,
+    std::for_each(voice->Send.begin(), voice->Send.end(),
         [num_channels](ALvoice::SendData &send) -> void
         {
             std::for_each(std::begin(send.Params), std::begin(send.Params)+num_channels,

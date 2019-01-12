@@ -59,13 +59,19 @@ struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
     ALsizei Offset{0};
     ALsizei IrSize{0};
-    struct {
+    struct ChanData {
         alignas(16) ALfloat Values[HRIR_LENGTH][2];
         alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    } Chan[];
+    };
+    al::FlexArray<ChanData> Chan;
 
-    DirectHrtfState() noexcept { }
-    static std::unique_ptr<DirectHrtfState> Create(ALsizei num_chans);
+    DirectHrtfState(size_t numchans) : Chan{numchans} { }
+    DirectHrtfState(const DirectHrtfState&) = delete;
+    DirectHrtfState& operator=(const DirectHrtfState&) = delete;
+
+    static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
+    static constexpr size_t Sizeof(size_t numchans) noexcept
+    { return al::FlexArray<ChanData>::Sizeof(numchans, offsetof(DirectHrtfState, Chan)); }
 
     DEF_PLACE_NEWDEL()
 };

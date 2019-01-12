@@ -2594,7 +2594,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    const size_t sizeof_voice{RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16)};
+    const size_t sizeof_voice{RoundUp(ALvoice::Sizeof(num_sends), 16)};
     const size_t size{sizeof(ALvoice*) + sizeof_voice};
 
     auto voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
@@ -2608,9 +2608,9 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         const ALsizei s_count = mini(old_sends, num_sends);
 
         /* Copy the old voice data to the new storage. */
-        auto copy_voice = [&voice,sizeof_voice,s_count](ALvoice *old_voice) -> ALvoice*
+        auto copy_voice = [&voice,num_sends,sizeof_voice,s_count](ALvoice *old_voice) -> ALvoice*
         {
-            voice = new (voice) ALvoice{};
+            voice = new (voice) ALvoice{static_cast<size_t>(num_sends)};
 
             /* Make sure the old voice's Update (if any) is cleared so it
              * doesn't get deleted on deinit.
@@ -2655,7 +2655,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             voice->ResampleState = old_voice->ResampleState;
 
             voice->Direct = old_voice->Direct;
-            std::copy_n(old_voice->Send, s_count, voice->Send);
+            std::copy_n(old_voice->Send.begin(), s_count, voice->Send.begin());
 
             /* Set this voice's reference. */
             ALvoice *ret = voice;
@@ -2670,9 +2670,9 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         std::for_each(context->Voices, voices_end, DeinitVoice);
     }
     /* Finish setting the voices and references. */
-    auto init_voice = [&voice,sizeof_voice]() -> ALvoice*
+    auto init_voice = [&voice,num_sends,sizeof_voice]() -> ALvoice*
     {
-        ALvoice *ret = new (voice) ALvoice{};
+        ALvoice *ret = new (voice) ALvoice{static_cast<size_t>(num_sends)};
         voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voice) + sizeof_voice);
         return ret;
     };

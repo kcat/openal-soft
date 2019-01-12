@@ -311,12 +311,10 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
 
     ALCdevice *Device{Context->Device};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
-    const ALsizei NumAuxSends{Device->NumAuxSends};
     const int OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
     const int OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
 
     ASSUME(IrSize >= 0);
-    ASSUME(NumAuxSends >= 0);
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
                            Resample_copy_C : voice->Resampler};
@@ -342,7 +340,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                 std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
                     std::begin(parms.Gains.Current));
             };
-            std::for_each(voice->Send, voice->Send+NumAuxSends, set_current);
+            std::for_each(voice->Send.begin(), voice->Send.end(), set_current);
         }
     }
     else if((voice->Flags&VOICE_HAS_HRTF))
@@ -667,7 +665,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                 MixSamples(samples, send.Channels, send.Buffer, parms.Gains.Current,
                     parms.Gains.Target, Counter, OutPos, DstBufferSize);
             };
-            std::for_each(voice->Send, voice->Send+NumAuxSends, mix_send);
+            std::for_each(voice->Send.begin(), voice->Send.end(), mix_send);
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;

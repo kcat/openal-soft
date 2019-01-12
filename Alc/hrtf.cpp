@@ -45,17 +45,26 @@
 
 struct HrtfHandle {
     HrtfEntry *entry{nullptr};
-    char filename[];
+    al::FlexArray<char> filename;
+
+    HrtfHandle(size_t fname_len) : filename{fname_len} { }
+    HrtfHandle(const HrtfHandle&) = delete;
+    HrtfHandle& operator=(const HrtfHandle&) = delete;
 
     static std::unique_ptr<HrtfHandle> Create(size_t fname_len);
+    static constexpr size_t Sizeof(size_t length) noexcept
+    {
+        return maxz(sizeof(HrtfHandle),
+            al::FlexArray<char>::Sizeof(length, offsetof(HrtfHandle, filename)));
+    }
 
     DEF_PLACE_NEWDEL()
 };
 
 std::unique_ptr<HrtfHandle> HrtfHandle::Create(size_t fname_len)
 {
-    void *ptr{al_calloc(DEF_ALIGN, FAM_SIZE(HrtfHandle, filename, fname_len))};
-    return std::unique_ptr<HrtfHandle>{new (ptr) HrtfHandle{}};
+    void *ptr{al_calloc(DEF_ALIGN, HrtfHandle::Sizeof(fname_len))};
+    return std::unique_ptr<HrtfHandle>{new (ptr) HrtfHandle{fname_len}};
 }
 
 namespace {
@@ -973,7 +982,7 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
     auto loaded_entry = LoadedHrtfs.begin();
     for(;loaded_entry != LoadedHrtfs.end();++loaded_entry)
     {
-        if(filename != (*loaded_entry)->filename)
+        if(filename != (*loaded_entry)->filename.data())
             continue;
 
         /* Check if this entry has already been added to the list. */
@@ -996,7 +1005,7 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
 
         LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+1));
         loaded_entry = LoadedHrtfs.end()-1;
-        strcpy((*loaded_entry)->filename, filename.c_str());
+        strcpy((*loaded_entry)->filename.data(), filename.c_str());
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
@@ -1031,7 +1040,7 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
     auto loaded_entry = LoadedHrtfs.begin();
     for(;loaded_entry != LoadedHrtfs.end();++loaded_entry)
     {
-        if(filename != (*loaded_entry)->filename)
+        if(filename != (*loaded_entry)->filename.data())
             continue;
 
         /* Check if this entry has already been added to the list. */
@@ -1050,14 +1059,12 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
 
     if(loaded_entry == LoadedHrtfs.end())
     {
-        const size_t namelen{filename.length()+32};
-
         TRACE("Got new file \"%s\"\n", filename.c_str());
 
-        LoadedHrtfs.emplace_back(HrtfHandle::Create(namelen));
+        LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+32));
         loaded_entry = LoadedHrtfs.end()-1;
-        snprintf((*loaded_entry)->filename, namelen,  "!%u_%s",
-                 residx, filename.c_str());
+        snprintf((*loaded_entry)->filename.data(), (*loaded_entry)->filename.size(), "!%u_%s",
+            residx, filename.c_str());
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
@@ -1195,9 +1202,9 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     const char *name{""};
     ALuint residx{};
     char ch{};
-    if(sscanf(handle->filename, "!%u%c", &residx, &ch) == 2 && ch == '_')
+    if(sscanf(handle->filename.data(), "!%u%c", &residx, &ch) == 2 && ch == '_')
     {
-        name = strchr(handle->filename, ch)+1;
+        name = strchr(handle->filename.data(), ch)+1;
 
         TRACE("Loading %s...\n", name);
         ResData res{GetResource(residx)};
@@ -1210,13 +1217,13 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     }
     else
     {
-        name = handle->filename;
+        name = handle->filename.data();
 
-        TRACE("Loading %s...\n", handle->filename);
-        auto fstr = al::make_unique<al::ifstream>(handle->filename, std::ios::binary);
+        TRACE("Loading %s...\n", handle->filename.data());
+        auto fstr = al::make_unique<al::ifstream>(handle->filename.data(), std::ios::binary);
         if(!fstr->is_open())
         {
-            ERR("Could not open %s\n", handle->filename);
+            ERR("Could not open %s\n", handle->filename.data());
             return nullptr;
         }
         stream = std::move(fstr);
@@ -1286,7 +1293,7 @@ void Hrtf_DecRef(HrtfEntry *hrtf)
         {
             al_free((*iter)->entry);
             (*iter)->entry = nullptr;
-            TRACE("Unloaded unused HRTF %s\n", (*iter)->filename);
+            TRACE("Unloaded unused HRTF %s\n", (*iter)->filename.data());
         }
     }
 }

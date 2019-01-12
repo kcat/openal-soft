@@ -141,11 +141,10 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return nullptr;
 
-    const size_t alloc_size{FAM_SIZE(SampleConverter, mChan, numchans)};
-    SampleConverterPtr converter{new (al_calloc(16, alloc_size)) SampleConverter{}};
+    void *ptr{al_calloc(16, SampleConverter::Sizeof(numchans))};
+    SampleConverterPtr converter{new (ptr) SampleConverter{static_cast<size_t>(numchans)}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
-    converter->mNumChannels = numchans;
     converter->mSrcTypeSize = BytesFromDevFmt(srcType);
     converter->mDstTypeSize = BytesFromDevFmt(dstType);
 
@@ -208,8 +207,8 @@ ALsizei SampleConverter::availableOut(ALsizei srcframes) const
 
 ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
 {
-    const ALsizei SrcFrameSize{mNumChannels * mSrcTypeSize};
-    const ALsizei DstFrameSize{mNumChannels * mDstTypeSize};
+    const ALsizei SrcFrameSize{static_cast<ALsizei>(mChan.size()) * mSrcTypeSize};
+    const ALsizei DstFrameSize{static_cast<ALsizei>(mChan.size()) * mDstTypeSize};
     const ALsizei increment{mIncrement};
     auto SamplesIn = static_cast<const ALbyte*>(*src);
     ALsizei NumSrcSamples{*srcframes};
@@ -241,9 +240,9 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
              */
-            for(ALsizei chan{0};chan < mNumChannels;chan++)
+            for(size_t chan{0u};chan < mChan.size();chan++)
                 LoadSamples(&mChan[chan].PrevSamples[prepcount], SamplesIn + mSrcTypeSize*chan,
-                    mNumChannels, mSrcType, toread);
+                    mChan.size(), mSrcType, toread);
 
             mSrcPrepCount = prepcount + toread;
             NumSrcSamples = 0;
@@ -264,7 +263,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
             clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE));
         DstSize = mini(DstSize, dstframes-pos);
 
-        for(ALsizei chan{0};chan < mNumChannels;chan++)
+        for(size_t chan{0u};chan < mChan.size();chan++)
         {
             const ALbyte *SrcSamples = SamplesIn + mSrcTypeSize*chan;
             ALbyte *DstSamples = static_cast<ALbyte*>(dst) + mDstTypeSize*chan;
@@ -273,7 +272,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
              * new samples from the input buffer.
              */
             std::copy_n(mChan[chan].PrevSamples, prepcount, SrcData);
-            LoadSamples(SrcData + prepcount, SrcSamples, mNumChannels, mSrcType, toread);
+            LoadSamples(SrcData + prepcount, SrcSamples, mChan.size(), mSrcType, toread);
 
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
@@ -294,7 +293,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
             const ALfloat *ResampledData{mResample(&mState, SrcData+MAX_RESAMPLE_PADDING,
                 DataPosFrac, increment, DstData, DstSize)};
 
-            StoreSamples(DstSamples, ResampledData, mNumChannels, mDstType, DstSize);
+            StoreSamples(DstSamples, ResampledData, mChan.size(), mDstType, DstSize);
         }
 
         /* Update the number of prep samples still available, as well as the

@@ -10,7 +10,6 @@
 struct SampleConverter {
     DevFmtType mSrcType{};
     DevFmtType mDstType{};
-    ALsizei mNumChannels{};
     ALsizei mSrcTypeSize{};
     ALsizei mDstTypeSize{};
 
@@ -24,12 +23,23 @@ struct SampleConverter {
     alignas(16) ALfloat mSrcSamples[BUFFERSIZE]{};
     alignas(16) ALfloat mDstSamples[BUFFERSIZE]{};
 
-    struct {
+    struct ChanSamples {
         alignas(16) ALfloat PrevSamples[MAX_RESAMPLE_PADDING*2];
-    } mChan[];
+    };
+    al::FlexArray<ChanSamples> mChan;
+
+    SampleConverter(size_t numchans) : mChan{numchans} { }
+    SampleConverter(const SampleConverter&) = delete;
+    SampleConverter& operator=(const SampleConverter&) = delete;
 
     ALsizei convert(const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
     ALsizei availableOut(ALsizei srcframes) const;
+
+    static constexpr size_t Sizeof(size_t length) noexcept
+    {
+        return maxz(sizeof(SampleConverter),
+            al::FlexArray<ChanSamples>::Sizeof(length, offsetof(SampleConverter, mChan)));
+    }
 
     DEF_PLACE_NEWDEL()
 };

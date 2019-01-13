@@ -334,12 +334,12 @@ struct ALvoice {
 void DeinitVoice(ALvoice *voice) noexcept;
 
 
-using MixerFunc = void(*)(const ALfloat *data, ALsizei OutChans,
-    ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
-    const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos, ALsizei BufferSize);
+using MixerFunc = void(*)(const ALfloat *data, const ALsizei OutChans,
+    ALfloat (*OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains, const ALfloat *TargetGains,
+    const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
 using RowMixerFunc = void(*)(ALfloat *OutBuffer, const ALfloat *gains,
-    const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos,
-    ALsizei BufferSize);
+    const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos,
+    const ALsizei BufferSize);
 using HrtfMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
     const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
     MixHrtfParams *hrtfparams, HrtfState *hrtfstate, const ALsizei BufferSize);

@@ -126,7 +126,7 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 }
 
 
-void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 {
     if(AmbiUpsampler *ambiup{device->AmbiUp.get()})
         ambiup->process(device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
@@ -144,7 +144,7 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
     state->Offset += SamplesToDo;
 }
 
-void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
 {
     BFormatDec *ambidec{device->AmbiDecoder.get()};
     if(device->Dry.Buffer != device->FOAOut.Buffer)
@@ -154,13 +154,13 @@ void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
         SamplesToDo);
 }
 
-void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessAmbiUp(ALCdevice *device, const ALsizei SamplesToDo)
 {
     device->AmbiUp->process(device->RealOut.Buffer, device->RealOut.NumChannels,
         device->FOAOut.Buffer, device->FOAOut.NumChannels, SamplesToDo);
 }
 
-void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* UHJ is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
@@ -172,7 +172,7 @@ void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
         device->Dry.Buffer, SamplesToDo);
 }
 
-void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* BS2B is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};

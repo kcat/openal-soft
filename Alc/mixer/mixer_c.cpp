@@ -130,9 +130,9 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
 #include "hrtf_inc.cpp"
 
 
-void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
-           ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
-           ALsizei BufferSize)
+void Mix_C(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
+           ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter,
+           const ALsizei OutPos, const ALsizei BufferSize)
 {
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
@@ -140,6 +140,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     for(ALsizei c{0};c < OutChans;c++)
     {
+        ALfloat *RESTRICT dst{&OutBuffer[c][OutPos]};
         ALsizei pos{0};
         ALfloat gain{CurrentGains[c]};
 
@@ -151,7 +152,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
             ALfloat step_count{0.0f};
             for(;pos < minsize;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos] * (gain + step*step_count);
+                dst[pos] += data[pos] * (gain + step*step_count);
                 step_count += 1.0f;
             }
             if(pos == Counter)
@@ -164,7 +165,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
         for(;pos < BufferSize;pos++)
-            OutBuffer[c][OutPos+pos] += data[pos]*gain;
+            dst[pos] += data[pos]*gain;
     }
 }
 
@@ -174,18 +175,20 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
  * transform. And as the matrices are more or less static once set up, no
  * stepping is necessary.
  */
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
+              const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize)
 {
     ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
 
     for(ALsizei c{0};c < InChans;c++)
     {
+        const ALfloat *RESTRICT src{&data[c][InPos]};
         const ALfloat gain{Gains[c]};
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
         for(ALsizei i{0};i < BufferSize;i++)
-            OutBuffer[i] += data[c][InPos+i] * gain;
+            OutBuffer[i] += src[i] * gain;
     }
 }

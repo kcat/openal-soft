@@ -149,9 +149,9 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
 #include "hrtf_inc.cpp"
 
 
-void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
-             ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
-             ALsizei BufferSize)
+void Mix_SSE(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
+             ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter,
+             const ALsizei OutPos, const ALsizei BufferSize)
 {
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
@@ -159,6 +159,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     for(ALsizei c{0};c < OutChans;c++)
     {
+        ALfloat *RESTRICT dst{al::assume_aligned<16>(&OutBuffer[c][OutPos])};
         ALsizei pos{0};
         ALfloat gain{CurrentGains[c]};
         const ALfloat diff{TargetGains[c] - gain};
@@ -178,12 +179,12 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer
                 ALsizei todo{minsize >> 2};
                 do {
                     const __m128 val4{_mm_load_ps(&data[pos])};
-                    __m128 dry4{_mm_load_ps(&OutBuffer[c][OutPos+pos])};
+                    __m128 dry4{_mm_load_ps(&dst[pos])};
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
                     /* dry += val * (gain + step*step_count) */
                     dry4 = MLA4(dry4, val4, MLA4(gain4, step4, step_count4));
 #undef MLA4
-                    _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
+                    _mm_store_ps(&dst[pos], dry4);
                     step_count4 = _mm_add_ps(step_count4, four4);
                     pos += 4;
                 } while(--todo);
@@ -196,7 +197,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < minsize;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos]*(gain + step*step_count);
+                dst[pos] += data[pos]*(gain + step*step_count);
                 step_count += 1.0f;
             }
             if(pos == Counter)
@@ -208,7 +209,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer
             /* Mix until pos is aligned with 4 or the mix is done. */
             minsize = mini(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
-                OutBuffer[c][OutPos+pos] += data[pos]*gain;
+                dst[pos] += data[pos]*gain;
         }
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
@@ -219,24 +220,26 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer
             const __m128 gain4{_mm_set1_ps(gain)};
             do {
                 const __m128 val4{_mm_load_ps(&data[pos])};
-                __m128 dry4{_mm_load_ps(&OutBuffer[c][OutPos+pos])};
+                __m128 dry4{_mm_load_ps(&dst[pos])};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-                _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
+                _mm_store_ps(&dst[pos], dry4);
                 pos += 4;
             } while(--todo);
         }
         for(;pos < BufferSize;pos++)
-            OutBuffer[c][OutPos+pos] += data[pos]*gain;
+            dst[pos] += data[pos]*gain;
     }
 }
 
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
+                const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize)
 {
     ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
 
     for(ALsizei c{0};c < InChans;c++)
     {
+        const ALfloat *RESTRICT src{al::assume_aligned<16>(&data[c][InPos])};
         const ALfloat gain{Gains[c]};
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
@@ -247,7 +250,7 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRI
             ALsizei todo{BufferSize >> 2};
             const __m128 gain4 = _mm_set1_ps(gain);
             do {
-                const __m128 val4{_mm_load_ps(&data[c][InPos+pos])};
+                const __m128 val4{_mm_load_ps(&src[pos])};
                 __m128 dry4{_mm_load_ps(&OutBuffer[pos])};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
                 _mm_store_ps(&OutBuffer[pos], dry4);
@@ -255,6 +258,6 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRI
             } while(--todo);
         }
         for(;pos < BufferSize;pos++)
-            OutBuffer[pos] += data[c][InPos+pos]*gain;
+            OutBuffer[pos] += src[pos]*gain;
     }
 }

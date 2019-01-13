@@ -597,7 +597,7 @@ struct RealMixParams {
     ALsizei NumChannels{0};
 };
 
-using POSTPROCESS = void(*)(ALCdevice *device, ALsizei SamplesToDo);
+using POSTPROCESS = void(*)(ALCdevice *device, const ALsizei SamplesToDo);
 
 struct ALCdevice {
     RefCount ref{1u};

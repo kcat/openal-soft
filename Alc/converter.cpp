@@ -35,7 +35,7 @@ template<> inline ALfloat LoadSample<DevFmtUInt>(DevFmtTypeTraits<DevFmtUInt>::T
 
 
 template<DevFmtType T>
-inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcstep, ALsizei samples)
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, size_t srcstep, ALsizei samples)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
@@ -44,7 +44,7 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcste
         dst[i] = LoadSample<T>(ssrc[i*srcstep]);
 }
 
-void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, DevFmtType srctype, ALsizei samples)
+void LoadSamples(ALfloat *dst, const ALvoid *src, size_t srcstep, DevFmtType srctype, ALsizei samples)
 {
 #define HANDLE_FMT(T)                                                         \
     case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -83,7 +83,7 @@ template<> inline ALubyte StoreSample<DevFmtUByte>(ALfloat val)
 { return StoreSample<DevFmtByte>(val) + 128; }
 
 template<DevFmtType T>
-inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, ALint dststep,
+inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, size_t dststep,
                              ALsizei samples)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
@@ -94,7 +94,7 @@ inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, ALint dstst
 }
 
 
-void StoreSamples(ALvoid *dst, const ALfloat *src, ALint dststep, DevFmtType dsttype, ALsizei samples)
+void StoreSamples(ALvoid *dst, const ALfloat *src, size_t dststep, DevFmtType dsttype, ALsizei samples)
 {
 #define HANDLE_FMT(T)                                                         \
     case T: StoreSampleArray<T>(dst, src, dststep, samples); break
@@ -332,7 +332,7 @@ void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALsizei frames) 
 {
     if(mSrcChans == mDstChans)
     {
-        LoadSamples(dst, src, 1, mSrcType, frames*ChannelsFromDevFmt(mSrcChans, 0));
+        LoadSamples(dst, src, 1u, mSrcType, frames*ChannelsFromDevFmt(mSrcChans, 0));
         return;
     }
 

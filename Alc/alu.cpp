@@ -1097,7 +1097,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
             {
-                ALfloat airAbsorption = SendSlots[i]->Params.AirAbsorptionGainHF;
+                ALfloat airAbsorption{SendSlots[i]->Params.AirAbsorptionGainHF};
                 if(airAbsorption < 1.0f)
                 {
                     /* Calculate the distance to where this effect's air
@@ -1105,7 +1105,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                      * decay distance (so it doesn't take any longer to decay
                      * than the air would allow).
                      */
-                    ALfloat absorb_dist = log10f(REVERB_DECAY_GAIN) / log10f(airAbsorption);
+                    ALfloat absorb_dist{std::log10(REVERB_DECAY_GAIN) / std::log10(airAbsorption)};
                     DecayHFDistance[i] = minf(absorb_dist, DecayHFDistance[i]);
                 }
             }

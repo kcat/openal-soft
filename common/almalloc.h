@@ -127,6 +127,12 @@ struct FlexArray {
     T& operator[](size_t i) noexcept { return mArray[i]; }
     const T& operator[](size_t i) const noexcept { return mArray[i]; }
 
+    T& front() noexcept { return mArray[0]; }
+    const T& front() const noexcept { return mArray[0]; }
+
+    T& back() noexcept { return mArray[mSize-1]; }
+    const T& back() const noexcept { return mArray[mSize-1]; }
+
     T *begin() noexcept { return mArray; }
     const T *begin() const noexcept { return mArray; }
     const T *cbegin() const noexcept { return mArray; }

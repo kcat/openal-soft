@@ -289,7 +289,7 @@ WCHAR *get_device_id(IMMDevice *device)
 HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<DevMap> &list)
 {
     IMMDeviceCollection *coll;
-    HRESULT hr = devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, &coll);
+    HRESULT hr{devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, &coll)};
     if(FAILED(hr))
     {
         ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
@@ -320,10 +320,10 @@ HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vecto
         hr = coll->Item(i, &device);
         if(FAILED(hr)) continue;
 
-        WCHAR *devid = get_device_id(device);
+        WCHAR *devid{get_device_id(device)};
         if(devid)
         {
-            if(wcscmp(devid, defdevid) != 0)
+            if(!defdevid || wcscmp(devid, defdevid) != 0)
                 add_device(device, devid, list);
             CoTaskMemFree(devid);
         }

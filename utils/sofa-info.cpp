@@ -366,7 +366,7 @@ static void SofaInfo(const char *filename)
     mysofa_free(sofa.hrtf);
 }
 
-int main(const int argc, const char *argv[])
+int main(int argc, char *argv[])
 {
     GET_UNICODE_ARGS(&argc, &argv);
 

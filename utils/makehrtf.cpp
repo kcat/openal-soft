@@ -2,7 +2,7 @@
  * HRTF utility for producing and demonstrating the process of creating an
  * OpenAL Soft compatible HRIR data set.
  *
- * Copyright (C) 2011-2017  Christopher Fitzgerald
+ * Copyright (C) 2011-2019  Christopher Fitzgerald
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,8 @@
  *  1.  Take the FFT of each HRIR and only keep the magnitude responses.
  *  2.  Calculate the diffuse-field power-average of all HRIRs weighted by
  *      their contribution to the total surface area covered by their
- *      measurement.
+ *      measurement. This has since been modified to use coverage volume for
+ *      multi-field HRIR data sets.
  *  3.  Take the diffuse-field average and limit its magnitude range.
  *  4.  Equalize the responses by using the inverse of the diffuse-field
  *      average.
@@ -84,6 +85,8 @@
 #include <vector>
 #include <complex>
 #include <algorithm>
+
+#include "mysofa.h"
 
 #include "win_main_utf8.h"
 
@@ -231,16 +234,17 @@ enum ByteOrderT {
 // Source format for the references listed in the data set definition.
 enum SourceFormatT {
     SF_NONE,
-    SF_WAVE,   // RIFF/RIFX WAVE file.
+    SF_ASCII,  // ASCII text file.
     SF_BIN_LE, // Little-endian binary file.
     SF_BIN_BE, // Big-endian binary file.
-    SF_ASCII   // ASCII text file.
+    SF_WAVE,   // RIFF/RIFX WAVE file.
+    SF_SOFA    // Spatially Oriented Format for Accoustics (SOFA) file.
 };
 
 // Element types for the references listed in the data set definition.
 enum ElementTypeT {
     ET_NONE,
-    ET_INT,   // Integer elements.
+    ET_INT,  // Integer elements.
     ET_FP    // Floating-point elements.
 };
 
@@ -276,6 +280,9 @@ struct SourceRefT {
     uint mSize;
     int  mBits;
     uint mChannel;
+    double mAzimuth;
+    double mElevation;
+    double mRadius;
     uint mSkip;
     uint mOffset;
     char mPath[MAX_PATH_LEN+1];
@@ -408,7 +415,7 @@ static void TrErrorVA(const TokenReaderT *tr, uint line, uint column, const char
 {
     if(!tr->mName)
         return;
-    fprintf(stderr, "Error (%s:%u:%u): ", tr->mName, line, column);
+    fprintf(stderr, "\nError (%s:%u:%u): ", tr->mName, line, column);
     vfprintf(stderr, format, argPtr);
 }
 
@@ -857,7 +864,7 @@ static inline uint dither_rng(uint *seed)
 static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
                        const int count, const int step, uint *seed)
 {
-    static constexpr double PRNG_SCALE = 1.0 / UINT_MAX;
+    static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
 
     for(int i{0};i < count;i++)
     {
@@ -874,16 +881,14 @@ static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const do
 // Performs bit-reversal ordering.
 static void FftArrange(const uint n, complex_d *inout)
 {
-    uint rk, k, m;
-
     // Handle in-place arrangement.
-    rk = 0;
-    for(k = 0;k < n;k++)
+    uint rk{0u};
+    for(uint k{0u};k < n;k++)
     {
         if(rk > k)
             std::swap(inout[rk], inout[k]);
 
-        m = n;
+        uint m{n};
         while(rk&(m >>= 1))
             rk &= ~m;
         rk |= m;
@@ -1103,7 +1108,7 @@ static uint Gcd(uint x, uint y)
 {
     while(y > 0)
     {
-        uint z = y;
+        uint z{y};
         y = x % y;
         x = z;
     }
@@ -1278,7 +1283,7 @@ static int ReadBin4(FILE *fp, const char *filename, const ByteOrderT order, cons
 
     if(fread(in, 1, bytes, fp) != bytes)
     {
-        fprintf(stderr, "Error: Bad read from file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
         return 0;
     }
     accum = 0;
@@ -1309,7 +1314,7 @@ static int ReadBin8(FILE *fp, const char *filename, const ByteOrderT order, uint
 
     if(fread(in, 1, 8, fp) != 8)
     {
-        fprintf(stderr, "Error: Bad read from file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
         return 0;
     }
     accum = 0ULL;
@@ -1398,7 +1403,7 @@ static int ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const Eleme
         if(!TrReadFloat(tr, -std::numeric_limits<double>::infinity(),
             std::numeric_limits<double>::infinity(), out))
         {
-            fprintf(stderr, "Error: Bad read from file '%s'.\n", filename);
+            fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
             return 0;
         }
     }
@@ -1407,7 +1412,7 @@ static int ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const Eleme
         int v;
         if(!TrReadInt(tr, -(1<<(bits-1)), (1<<(bits-1))-1, &v))
         {
-            fprintf(stderr, "Error: Bad read from file '%s'.\n", filename);
+            fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
             return 0;
         }
         *out = v / static_cast<double>((1<<(bits-1))-1);
@@ -1469,29 +1474,29 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
     }
     if(format != WAVE_FORMAT_PCM && format != WAVE_FORMAT_IEEE_FLOAT)
     {
-        fprintf(stderr, "Error: Unsupported WAVE format in file '%s'.\n", src->mPath);
+        fprintf(stderr, "\nError: Unsupported WAVE format in file '%s'.\n", src->mPath);
         return 0;
     }
     if(src->mChannel >= channels)
     {
-        fprintf(stderr, "Error: Missing source channel in WAVE file '%s'.\n", src->mPath);
+        fprintf(stderr, "\nError: Missing source channel in WAVE file '%s'.\n", src->mPath);
         return 0;
     }
     if(rate != hrirRate)
     {
-        fprintf(stderr, "Error: Mismatched source sample rate in WAVE file '%s'.\n", src->mPath);
+        fprintf(stderr, "\nError: Mismatched source sample rate in WAVE file '%s'.\n", src->mPath);
         return 0;
     }
     if(format == WAVE_FORMAT_PCM)
     {
         if(size < 2 || size > 4)
         {
-            fprintf(stderr, "Error: Unsupported sample size in WAVE file '%s'.\n", src->mPath);
+            fprintf(stderr, "\nError: Unsupported sample size in WAVE file '%s'.\n", src->mPath);
             return 0;
         }
         if(bits < 16 || bits > (8*size))
         {
-            fprintf(stderr, "Error:  Bad significant bits in WAVE file '%s'.\n", src->mPath);
+            fprintf(stderr, "\nError: Bad significant bits in WAVE file '%s'.\n", src->mPath);
             return 0;
         }
         src->mType = ET_INT;
@@ -1500,7 +1505,7 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
     {
         if(size != 4 && size != 8)
         {
-            fprintf(stderr, "Error: Unsupported sample size in WAVE file '%s'.\n", src->mPath);
+            fprintf(stderr, "\nError: Unsupported sample size in WAVE file '%s'.\n", src->mPath);
             return 0;
         }
         src->mType = ET_FP;
@@ -1554,7 +1559,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
             count = chunkSize / block;
             if(count < (src->mOffset + n))
             {
-                fprintf(stderr, "Error: Bad read from file '%s'.\n", src->mPath);
+                fprintf(stderr, "\nError: Bad read from file '%s'.\n", src->mPath);
                 return 0;
             }
             fseek(fp, static_cast<long>(src->mOffset * block), SEEK_CUR);
@@ -1599,7 +1604,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
                     return 0;
                 chunkSize -= count * block;
                 offset += count;
-                lastSample = hrir [offset - 1];
+                lastSample = hrir[offset - 1];
             }
             else
             {
@@ -1633,57 +1638,8 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
     }
     if(offset < n)
     {
-        fprintf(stderr, "Error: Bad read from file '%s'.\n", src->mPath);
+        fprintf(stderr, "\nError: Bad read from file '%s'.\n", src->mPath);
         return 0;
-    }
-    return 1;
-}
-
-// Load a source HRIR from a RIFF/RIFX WAVE file.
-static int LoadWaveSource(FILE *fp, SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
-{
-    uint32_t fourCC, dummy;
-    ByteOrderT order;
-
-    if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
-       !ReadBin4(fp, src->mPath, BO_LITTLE, 4, &dummy))
-        return 0;
-    if(fourCC == FOURCC_RIFF)
-        order = BO_LITTLE;
-    else if(fourCC == FOURCC_RIFX)
-        order = BO_BIG;
-    else
-    {
-        fprintf(stderr, "Error: No RIFF/RIFX chunk in file '%s'.\n", src->mPath);
-        return 0;
-    }
-
-    if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC))
-        return 0;
-    if(fourCC != FOURCC_WAVE)
-    {
-        fprintf(stderr, "Error: Not a RIFF/RIFX WAVE file '%s'.\n", src->mPath);
-        return 0;
-    }
-    if(!ReadWaveFormat(fp, order, hrirRate, src))
-        return 0;
-    if(!ReadWaveList(fp, src, order, n, hrir))
-        return 0;
-    return 1;
-}
-
-// Load a source HRIR from a binary file.
-static int LoadBinarySource(FILE *fp, const SourceRefT *src, const ByteOrderT order, const uint n, double *hrir)
-{
-    uint i;
-
-    fseek(fp, static_cast<long>(src->mOffset), SEEK_SET);
-    for(i = 0;i < n;i++)
-    {
-        if(!ReadBinAsDouble(fp, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
-            return 0;
-        if(src->mSkip > 0)
-            fseek(fp, static_cast<long>(src->mSkip), SEEK_CUR);
     }
     return 1;
 }
@@ -1715,30 +1671,201 @@ static int LoadAsciiSource(FILE *fp, const SourceRefT *src, const uint n, double
     return 1;
 }
 
+// Load a source HRIR from a binary file.
+static int LoadBinarySource(FILE *fp, const SourceRefT *src, const ByteOrderT order, const uint n, double *hrir)
+{
+    uint i;
+
+    fseek(fp, static_cast<long>(src->mOffset), SEEK_SET);
+    for(i = 0;i < n;i++)
+    {
+        if(!ReadBinAsDouble(fp, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
+            return 0;
+        if(src->mSkip > 0)
+            fseek(fp, static_cast<long>(src->mSkip), SEEK_CUR);
+    }
+    return 1;
+}
+
+// Load a source HRIR from a RIFF/RIFX WAVE file.
+static int LoadWaveSource(FILE *fp, SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
+{
+    uint32_t fourCC, dummy;
+    ByteOrderT order;
+
+    if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
+       !ReadBin4(fp, src->mPath, BO_LITTLE, 4, &dummy))
+        return 0;
+    if(fourCC == FOURCC_RIFF)
+        order = BO_LITTLE;
+    else if(fourCC == FOURCC_RIFX)
+        order = BO_BIG;
+    else
+    {
+        fprintf(stderr, "\nError: No RIFF/RIFX chunk in file '%s'.\n", src->mPath);
+        return 0;
+    }
+
+    if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC))
+        return 0;
+    if(fourCC != FOURCC_WAVE)
+    {
+        fprintf(stderr, "\nError: Not a RIFF/RIFX WAVE file '%s'.\n", src->mPath);
+        return 0;
+    }
+    if(!ReadWaveFormat(fp, order, hrirRate, src))
+        return 0;
+    if(!ReadWaveList(fp, src, order, n, hrir))
+        return 0;
+    return 1;
+}
+
+// Load a Spatially Oriented Format for Accoustics (SOFA) file.
+static struct MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n)
+{
+    struct MYSOFA_EASY *sofa{mysofa_cache_lookup(src->mPath, (float)hrirRate)};
+    if(sofa) return sofa;
+
+    sofa = static_cast<MYSOFA_EASY*>(calloc(1, sizeof(*sofa)));
+    if(sofa == nullptr)
+    {
+        fprintf(stderr, "\nError:  Out of memory.\n");
+        return nullptr;
+    }
+    sofa->lookup = nullptr;
+    sofa->neighborhood = nullptr;
+
+    int err;
+    sofa->hrtf = mysofa_load(src->mPath, &err);
+    if(!sofa->hrtf)
+    {
+        mysofa_close(sofa);
+        fprintf(stderr, "\nError: Could not load source file '%s'.\n", src->mPath);
+        return nullptr;
+    }
+    err = mysofa_check(sofa->hrtf);
+    if(err != MYSOFA_OK)
+/* NOTE: Some valid SOFA files are failing this check.
+    {
+        mysofa_close(sofa);
+        fprintf(stderr, "\nError: Malformed source file '%s'.\n", src->mPath);
+        return nullptr;
+    }*/
+        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s'.\n", src->mPath);
+    if((src->mOffset + n) > sofa->hrtf->N)
+    {
+        mysofa_close(sofa);
+        fprintf(stderr, "\nError: Not enough samples in SOFA file '%s'.\n", src->mPath);
+        return nullptr;
+    }
+    if(src->mChannel >= sofa->hrtf->R)
+    {
+        mysofa_close(sofa);
+        fprintf(stderr, "\nError: Missing source receiver in SOFA file '%s'.\n", src->mPath);
+        return nullptr;
+    }
+    mysofa_tocartesian(sofa->hrtf);
+    sofa->lookup = mysofa_lookup_init(sofa->hrtf);
+    if(sofa->lookup == nullptr)
+    {
+        mysofa_close(sofa);
+        fprintf(stderr, "\nError:  Out of memory.\n");
+        return nullptr;
+    }
+    return mysofa_cache_store(sofa, src->mPath, (float)hrirRate);
+}
+
+// Copies the HRIR data from a particular SOFA measurement.
+static void ExtractSofaHrir(const struct MYSOFA_EASY *sofa, const uint index, const uint channel, const uint offset, const uint n, double *hrir)
+{
+    for(uint i{0u};i < n;i++)
+        hrir[i] = sofa->hrtf->DataIR.values[(index*sofa->hrtf->R + channel)*sofa->hrtf->N + offset + i];
+}
+
+// Load a source HRIR from a Spatially Oriented Format for Accoustics (SOFA)
+// file.
+static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
+{
+    struct MYSOFA_EASY *sofa;
+    float target[3];
+    int nearest;
+    float *coords;
+
+    sofa = LoadSofaFile(src, hrirRate, n);
+    if(sofa == nullptr)
+        return 0;
+
+    /* NOTE: At some point it may be benficial or necessary to consider the
+             various coordinate systems, listener/source orientations, and
+             direciontal vectors defined in the SOFA file.
+    */
+    target[0] = src->mAzimuth;
+    target[1] = src->mElevation;
+    target[2] = src->mRadius;
+    mysofa_s2c(target);
+
+    nearest = mysofa_lookup(sofa->lookup, target);
+    if(nearest < 0)
+    {
+        fprintf(stderr, "\nError: Lookup failed in source file '%s'.\n", src->mPath);
+        return 0;
+    }
+
+    coords = &sofa->hrtf->SourcePosition.values[3 * nearest];
+    if(std::fabs(coords[0] - target[0]) > 0.001 || std::fabs(coords[1] - target[1]) > 0.001 || std::fabs(coords[2] - target[2]) > 0.001)
+    {
+        fprintf(stderr, "\nError: No impulse response at coordinates (%.3fr, %.1fev, %.1faz) in file '%s'.\n", src->mRadius, src->mElevation, src->mAzimuth, src->mPath);
+        target[0] = coords[0];
+        target[1] = coords[1];
+        target[2] = coords[2];
+        mysofa_c2s(target);
+        fprintf(stderr, "       Nearest candidate at (%.3fr, %.1fev, %.1faz).\n", target[2], target[1], target[0]);
+        return 0;
+    }
+
+    ExtractSofaHrir(sofa, nearest, src->mChannel, src->mOffset, n, hrir);
+
+     return 1;
+}
+
 // Load a source HRIR from a supported file type.
 static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
 {
-    int result;
-    FILE *fp;
-
-    if(src->mFormat == SF_ASCII)
-        fp = fopen(src->mPath, "r");
-    else
-        fp = fopen(src->mPath, "rb");
-    if(fp == nullptr)
+    FILE *fp{nullptr};
+    if(src->mFormat != SF_SOFA)
     {
-        fprintf(stderr, "Error: Could not open source file '%s'.\n", src->mPath);
-        return 0;
+        if(src->mFormat == SF_ASCII)
+            fp = fopen(src->mPath, "r");
+        else
+            fp = fopen(src->mPath, "rb");
+        if(fp == nullptr)
+        {
+            fprintf(stderr, "\nError: Could not open source file '%s'.\n", src->mPath);
+            return 0;
+        }
     }
-    if(src->mFormat == SF_WAVE)
-        result = LoadWaveSource(fp, src, hrirRate, n, hrir);
-    else if(src->mFormat == SF_BIN_LE)
-        result = LoadBinarySource(fp, src, BO_LITTLE, n, hrir);
-    else if(src->mFormat == SF_BIN_BE)
-        result = LoadBinarySource(fp, src, BO_BIG, n, hrir);
-    else
-        result = LoadAsciiSource(fp, src, n, hrir);
-    fclose(fp);
+    int result;
+    switch(src->mFormat)
+    {
+        case SF_ASCII:
+            result = LoadAsciiSource(fp, src, n, hrir);
+            break;
+        case SF_BIN_LE:
+            result = LoadBinarySource(fp, src, BO_LITTLE, n, hrir);
+            break;
+        case SF_BIN_BE:
+            result = LoadBinarySource(fp, src, BO_BIG, n, hrir);
+            break;
+        case SF_WAVE:
+            result = LoadWaveSource(fp, src, hrirRate, n, hrir);
+            break;
+        case SF_SOFA:
+            result = LoadSofaSource(src, hrirRate, n, hrir);
+            break;
+        default:
+            result = 0;
+    }
+    if(fp) fclose(fp);
     return result;
 }
 
@@ -1756,7 +1883,7 @@ static int WriteAscii(const char *out, FILE *fp, const char *filename)
     if(fwrite(out, 1, len, fp) != len)
     {
         fclose(fp);
-        fprintf(stderr, "Error: Bad write to file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
         return 0;
     }
     return 1;
@@ -1784,7 +1911,7 @@ static int WriteBin4(const ByteOrderT order, const uint bytes, const uint32_t in
     }
     if(fwrite(out, 1, bytes, fp) != bytes)
     {
-        fprintf(stderr, "Error: Bad write to file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
         return 0;
     }
     return 1;
@@ -1801,7 +1928,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 
     if((fp=fopen(filename, "wb")) == nullptr)
     {
-        fprintf(stderr, "Error: Could not open MHR file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
         return 0;
     }
     if(!WriteAscii(MHR_FORMAT, fp, filename))
@@ -1889,18 +2016,25 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 // timing for its field, elevation, azimuth, and ear.
 static double AverageHrirOnset(const uint rate, const uint n, const double *hrir, const double f, const double onset)
 {
-    double mag = 0.0;
-    uint i;
-
-    for(i = 0;i < n;i++)
-        mag = std::max(std::abs(hrir[i]), mag);
-    mag *= 0.15;
-    for(i = 0;i < n;i++)
+    std::vector<double> upsampled(10 * n);
     {
-        if(std::abs(hrir[i]) >= mag)
+        ResamplerT rs;
+        ResamplerSetup(&rs, rate, 10 * rate);
+        ResamplerRun(&rs, n, hrir, 10 * n, upsampled.data());
+    }
+
+    double mag{0.0};
+    for(uint i{0u};i < 10*n;i++)
+        mag = std::max(std::abs(upsampled[i]), mag);
+
+    mag *= 0.15;
+    uint i{0u};
+    for(;i < 10*n;i++)
+    {
+        if(std::abs(upsampled[i]) >= mag)
             break;
     }
-    return Lerp(onset, static_cast<double>(i) / rate, f);
+    return Lerp(onset, static_cast<double>(i) / (10*rate), f);
 }
 
 // Calculate the magnitude response of an HRIR and average it with any
@@ -1921,18 +2055,78 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
         mag[i] = Lerp(mag[i], r[i], f);
 }
 
+/* Balances the maximum HRIR magnitudes of multi-field data sets by
+ * independently normalizing each field in relation to the overall maximum.
+ * This is done to ignore distance attenuation.
+ */
+static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const uint m)
+{
+    double maxMags[MAX_FD_COUNT];
+    uint fi, ei, ai, ti, i;
+
+    double maxMag{0.0};
+    for(fi = 0;fi < hData->mFdCount;fi++)
+    {
+        maxMags[fi] = 0.0;
+
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        {
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            {
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                for(ti = 0;ti < channels;ti++)
+                {
+                    for(i = 0;i < m;i++)
+                        maxMags[fi] = std::max(azd->mIrs[ti][i], maxMags[fi]);
+                }
+            }
+        }
+
+        maxMag = std::max(maxMags[fi], maxMag);
+    }
+
+    for(fi = 0;fi < hData->mFdCount;fi++)
+    {
+        maxMags[fi] /= maxMag;
+
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        {
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            {
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                for(ti = 0;ti < channels;ti++)
+                {
+                    for(i = 0;i < m;i++)
+                        azd->mIrs[ti][i] /= maxMags[fi];
+                }
+            }
+        }
+    }
+}
+
 /* Calculate the contribution of each HRIR to the diffuse-field average based
  * on the area of its surface patch.  All patches are centered at the HRIR
  * coordinates on the unit sphere and are measured by solid angle.
  */
 static void CalculateDfWeights(const HrirDataT *hData, double *weights)
 {
-    double sum, evs, ev, upperEv, lowerEv, solidAngle;
+    double sum, innerRa, outerRa, evs, ev, upperEv, lowerEv;
+    double solidAngle, solidVolume;
     uint fi, ei;
 
     sum = 0.0;
+    // The head radius acts as the limit for the inner radius.
+    innerRa = hData->mRadius;
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
+        // Each volume ends half way between progressive field measurements.
+        if((fi + 1) < hData->mFdCount)
+            outerRa = 0.5f * (hData->mFds[fi].mDistance + hData->mFds[fi + 1].mDistance);
+        // The final volume has its limit extended to some practical value.
+        // This is done to emphasize the far-field responses in the average.
+        else
+            outerRa = 10.0f;
+
         evs = M_PI / 2.0 / (hData->mFds[fi].mEvCount - 1);
         for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -1941,18 +2135,19 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
             ev = hData->mFds[fi].mEvs[ei].mElevation;
             lowerEv = std::max(-M_PI / 2.0, ev - evs);
             upperEv = std::min(M_PI / 2.0, ev + evs);
-            // Calculate the area of the patch band.
+            // Calculate the surface area of the patch band.
             solidAngle = 2.0 * M_PI * (std::sin(upperEv) - std::sin(lowerEv));
-            // Each weight is the area of one patch.
-            weights[(fi * MAX_EV_COUNT) + ei] = solidAngle / hData->mFds[fi].mEvs[ei].mAzCount;
-            // Sum the total surface area covered by the HRIRs of all fields.
+            // Then the volume of the extruded patch band.
+            solidVolume = solidAngle * (std::pow(outerRa, 3.0) - std::pow(innerRa, 3.0)) / 3.0;
+            // Each weight is the volume of one extruded patch.
+            weights[(fi * MAX_EV_COUNT) + ei] = solidVolume / hData->mFds[fi].mEvs[ei].mAzCount;
+            // Sum the total coverage volume of the HRIRs for all fields.
             sum += solidAngle;
         }
+
+        innerRa = outerRa;
     }
-    /* TODO: It may be interesting to experiment with how a volume-based
-             weighting performs compared to the existing distance-indepenent
-             surface patches.
-     */
+
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
         // Normalize the weights given the total surface coverage for all
@@ -1964,8 +2159,8 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
 
 /* Calculate the diffuse-field average from the given magnitude responses of
  * the HRIR set.  Weighting can be applied to compensate for the varying
- * surface area covered by each HRIR.  The final average can then be limited
- * by the specified magnitude range (in positive dB; 0.0 to skip).
+ * coverage of each HRIR.  The final average can then be limited by the
+ * specified magnitude range (in positive dB; 0.0 to skip).
  */
 static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m, const int weighted, const double limit, double *dfa)
 {
@@ -2138,9 +2333,10 @@ static void CalcAzIndices(const HrirDataT *hData, const uint fi, const uint ei, 
     *af = f;
 }
 
-// Synthesize any missing onset timings at the bottom elevations of each
-// field.  This just blends between slightly exaggerated known onsets (not
-// an accurate model).
+/* Synthesize any missing onset timings at the bottom elevations of each
+ * field.  This just blends between slightly exaggerated known onsets (not
+ * an accurate model).
+ */
 static void SynthesizeOnsets(HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
@@ -2253,16 +2449,18 @@ static void SynthesizeHrirs(HrirDataT *hData)
 
 // The following routines assume a full set of HRIRs for all elevations.
 
-// Normalize the HRIR set and slightly attenuate the result.
+// Normalize the HRIR set and slightly attenuate the result. This is done
+// per-field since distance attenuation is ignored.
 static void NormalizeHrirs(const HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     uint n = hData->mIrPoints;
     uint ti, fi, ei, ai, i;
-    double maxLevel = 0.0;
 
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
+        double maxLevel = 0.0;
+
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
@@ -2275,10 +2473,9 @@ static void NormalizeHrirs(const HrirDataT *hData)
                 }
             }
         }
-    }
-    maxLevel = 1.01 * maxLevel;
-    for(fi = 0;fi < hData->mFdCount;fi++)
-    {
+
+        maxLevel = 1.01 * maxLevel;
+
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
@@ -2310,58 +2507,63 @@ static double CalcLTD(const double ev, const double az, const double rad, const 
 }
 
 // Calculate the effective head-related time delays for each minimum-phase
-// HRIR.
+// HRIR. This is done per-field since distance delay is ignored.
 static void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    double minHrtd{std::numeric_limits<double>::infinity()};
-    double maxHrtd{-minHrtd};
+    double customRatio{radius / hData->mRadius};
     uint ti, fi, ei, ai;
-    double t;
 
-    if(model == HM_DATASET)
-    {
-        for(fi = 0;fi < hData->mFdCount;fi++)
-        {
-            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
-            {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
-                {
-                    HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                    for(ti = 0;ti < channels;ti++)
-                    {
-                        t = azd->mDelays[ti] * radius / hData->mRadius;
-                        azd->mDelays[ti] = t;
-                        maxHrtd = std::max(t, maxHrtd);
-                        minHrtd = std::min(t, minHrtd);
-                    }
-                }
-            }
-        }
-    }
-    else
+    if(model == HM_SPHERE)
     {
         for(fi = 0;fi < hData->mFdCount;fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
             {
                 HrirEvT *evd = &hData->mFds[fi].mEvs[ei];
+
                 for(ai = 0;ai < evd->mAzCount;ai++)
                 {
                     HrirAzT *azd = &evd->mAzs[ai];
+
                     for(ti = 0;ti < channels;ti++)
-                    {
-                        t = CalcLTD(evd->mElevation, azd->mAzimuth, radius, hData->mFds[fi].mDistance);
-                        azd->mDelays[ti] = t;
-                        maxHrtd = std::max(t, maxHrtd);
-                        minHrtd = std::min(t, minHrtd);
-                    }
+                        azd->mDelays[ti] = CalcLTD(evd->mElevation, azd->mAzimuth, radius, hData->mFds[fi].mDistance);
                 }
             }
         }
     }
+    else if(customRatio != 1.0)
+    {
+        for(fi = 0;fi < hData->mFdCount;fi++)
+        {
+            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            {
+                HrirEvT *evd = &hData->mFds[fi].mEvs[ei];
+
+                for(ai = 0;ai < evd->mAzCount;ai++)
+                {
+                    HrirAzT *azd = &evd->mAzs[ai];
+                    for(ti = 0;ti < channels;ti++)
+                        azd->mDelays[ti] *= customRatio;
+                }
+            }
+        }
+    }
+
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
+        double minHrtd{std::numeric_limits<double>::infinity()};
+        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        {
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            {
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+
+                for(ti = 0;ti < channels;ti++)
+                    minHrtd = std::min(azd->mDelays[ti], minHrtd);
+            }
+        }
+
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ti = 0;ti < channels;ti++)
@@ -2701,14 +2903,16 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
 // Match the source format from a given identifier.
 static SourceFormatT MatchSourceFormat(const char *ident)
 {
-    if(strcasecmp(ident, "wave") == 0)
-        return SF_WAVE;
+    if(strcasecmp(ident, "ascii") == 0)
+        return SF_ASCII;
     if(strcasecmp(ident, "bin_le") == 0)
         return SF_BIN_LE;
     if(strcasecmp(ident, "bin_be") == 0)
         return SF_BIN_BE;
-    if(strcasecmp(ident, "ascii") == 0)
-        return SF_ASCII;
+    if(strcasecmp(ident, "wave") == 0)
+        return SF_WAVE;
+    if(strcasecmp(ident, "sofa") == 0)
+        return SF_SOFA;
     return SF_NONE;
 }
 
@@ -2727,6 +2931,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
 {
     char ident[MAX_IDENT_LEN+1];
     uint line, col;
+    double fpVal;
     int intVal;
 
     TrIndication(tr, &line, &col);
@@ -2740,7 +2945,32 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
     }
     if(!TrReadOperator(tr, "("))
         return 0;
-    if(src->mFormat == SF_WAVE)
+    if(src->mFormat == SF_SOFA)
+    {
+        if(!TrReadFloat(tr, MIN_DISTANCE, MAX_DISTANCE, &fpVal))
+            return 0;
+        src->mRadius = fpVal;
+        if(!TrReadOperator(tr, ","))
+            return 0;
+        if(!TrReadFloat(tr, -90.0, 90.0, &fpVal))
+            return 0;
+        src->mElevation = fpVal;
+        if(!TrReadOperator(tr, ","))
+            return 0;
+        if(!TrReadFloat(tr, -360.0, 360.0, &fpVal))
+            return 0;
+        src->mAzimuth = fpVal;
+        if(!TrReadOperator(tr, ":"))
+            return 0;
+        if(!TrReadInt(tr, 0, MAX_WAVE_CHANNELS, &intVal))
+            return 0;
+        src->mType = ET_NONE;
+        src->mSize = 0;
+        src->mBits = 0;
+        src->mChannel = (uint)intVal;
+        src->mSkip = 0;
+    }
+    else if(src->mFormat == SF_WAVE)
     {
         if(!TrReadInt(tr, 0, MAX_WAVE_CHANNELS, &intVal))
             return 0;
@@ -2843,6 +3073,45 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
     return 1;
 }
 
+// Parse and validate a SOFA source reference from the data set definition.
+static int ReadSofaRef(TokenReaderT *tr, SourceRefT *src)
+{
+    char ident[MAX_IDENT_LEN+1];
+    uint line, col;
+    int intVal;
+
+    TrIndication(tr, &line, &col);
+    if(!TrReadIdent(tr, MAX_IDENT_LEN, ident))
+        return 0;
+    src->mFormat = MatchSourceFormat(ident);
+    if(src->mFormat != SF_SOFA)
+    {
+        TrErrorAt(tr, line, col, "Expected the SOFA source format.\n");
+        return 0;
+    }
+
+    src->mType = ET_NONE;
+    src->mSize = 0;
+    src->mBits = 0;
+    src->mChannel = 0;
+    src->mSkip = 0;
+
+    if(TrIsOperator(tr, "@"))
+    {
+        TrReadOperator(tr, "@");
+        if(!TrReadInt(tr, 0, 0x7FFFFFFF, &intVal))
+            return 0;
+        src->mOffset = (uint)intVal;
+    }
+    else
+        src->mOffset = 0;
+    if(!TrReadOperator(tr, ":"))
+        return 0;
+    if(!TrReadString(tr, MAX_PATH_LEN, src->mPath))
+        return 0;
+    return 1;
+}
+
 // Match the target ear (index) from a given identifier.
 static int MatchTargetEar(const char *ident)
 {
@@ -2872,6 +3141,134 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
 
         TrIndication(tr, &line, &col);
         TrReadOperator(tr, "[");
+
+        if(TrIsOperator(tr, "*"))
+        {
+            SourceRefT src;
+            struct MYSOFA_EASY *sofa;
+            uint si;
+
+            TrReadOperator(tr, "*");
+            if(!TrReadOperator(tr, "]") || !TrReadOperator(tr, "="))
+                return 0;
+
+            TrIndication(tr, &line, &col);
+            if(!ReadSofaRef(tr, &src))
+                return 0;
+
+            if(hData->mChannelType == CT_STEREO)
+            {
+                char type[MAX_IDENT_LEN+1];
+                ChannelTypeT channelType;
+
+                if(!TrReadIdent(tr, MAX_IDENT_LEN, type))
+                    return 0;
+
+                channelType = MatchChannelType(type);
+
+                switch(channelType)
+                {
+                    case CT_NONE:
+                        TrErrorAt(tr, line, col, "Expected a channel type.\n");
+                        return 0;
+                    case CT_MONO:
+                        src.mChannel = 0;
+                        break;
+                    case CT_STEREO:
+                        src.mChannel = 1;
+                        break;
+                }
+            }
+            else
+            {
+                char type[MAX_IDENT_LEN+1];
+                ChannelTypeT channelType;
+
+                if(!TrReadIdent(tr, MAX_IDENT_LEN, type))
+                    return 0;
+
+                channelType = MatchChannelType(type);
+                if(channelType != CT_MONO)
+                {
+                    TrErrorAt(tr, line, col, "Expected a mono channel type.\n");
+                    return 0;
+                }
+                src.mChannel = 0;
+            }
+
+            sofa = LoadSofaFile(&src, hData->mIrRate, hData->mIrPoints);
+            if(!sofa) return 0;
+
+            for(si = 0;si < sofa->hrtf->M;si++)
+            {
+                printf("\rLoading sources... %d of %d", si+1, sofa->hrtf->M);
+                fflush(stdout);
+
+                float aer[3] = {
+                    sofa->hrtf->SourcePosition.values[3*si],
+                    sofa->hrtf->SourcePosition.values[3*si + 1],
+                    sofa->hrtf->SourcePosition.values[3*si + 2]
+                };
+                mysofa_c2s(aer);
+
+                if(std::fabs(aer[1]) >= 89.999f)
+                    aer[0] = 0.0f;
+                else
+                    aer[0] = std::fmod(360.0f - aer[0], 360.0f);
+
+                for(fi = 0;fi < hData->mFdCount;fi++)
+                {
+                    double delta = aer[2] - hData->mFds[fi].mDistance;
+                    if(std::abs(delta) < 0.001)
+                        break;
+                }
+                if(fi >= hData->mFdCount)
+                    continue;
+
+                double ef{(90.0 + aer[1]) * (hData->mFds[fi].mEvCount - 1) / 180.0};
+                ei = (int)std::round(ef);
+                ef = (ef - ei) * 180.0f / (hData->mFds[fi].mEvCount - 1);
+                if(std::abs(ef) >= 0.1)
+                    continue;
+
+                double af{aer[0] * hData->mFds[fi].mEvs[ei].mAzCount / 360.0f};
+                ai = (int)std::round(af);
+                af = (af - ai) * 360.0f / hData->mFds[fi].mEvs[ei].mAzCount;
+                ai = ai % hData->mFds[fi].mEvs[ei].mAzCount;
+                if(std::abs(af) >= 0.1)
+                    continue;
+
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+
+                if(azd->mIrs[0] != nullptr)
+                {
+                    TrErrorAt(tr, line, col, "Redefinition of source [ %d, %d, %d ].\n", fi, ei, ai);
+                    return 0;
+                }
+
+                ExtractSofaHrir(sofa, si, 0, src.mOffset, hData->mIrPoints, hrir.data());
+                azd->mIrs[0] = &hrirs[hData->mIrSize * azd->mIndex];
+                if(model == HM_DATASET)
+                    azd->mDelays[0] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
+                AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[0]);
+
+                if(src.mChannel == 1)
+                {
+                    ExtractSofaHrir(sofa, si, 1, src.mOffset, hData->mIrPoints, hrir.data());
+                    azd->mIrs[1] = &hrirs[hData->mIrSize * (hData->mIrCount + azd->mIndex)];
+                    if(model == HM_DATASET)
+                        azd->mDelays[1] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
+                    AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[1]);
+                }
+
+                // TODO: Since some SOFA files contain minimum phase HRIRs,
+                // it would be beneficial to check for per-measurement delays
+                // (when available) to reconstruct the HRTDs.
+            }
+
+            continue;
+        }
+
         if(!ReadIndexTriplet(tr, hData, &fi, &ei, &ai))
             return 0;
         if(!TrReadOperator(tr, "]"))
@@ -2990,9 +3387,13 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         }
     }
     if(!TrLoad(tr))
+    {
+        mysofa_cache_release_all();
         return 1;
+    }
 
     TrError(tr, "Errant data at end of source list.\n");
+    mysofa_cache_release_all();
     return 0;
 }
 
@@ -3014,7 +3415,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
         fp = fopen(inName, "r");
         if(fp == nullptr)
         {
-            fprintf(stderr, "Error: Could not open definition file '%s'\n", inName);
+            fprintf(stderr, "\nError: Could not open definition file '%s'\n", inName);
             return 0;
         }
         TrSetup(fp, inName, &tr);
@@ -3044,6 +3445,11 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
         uint m = 1 + hData.mFftSize / 2;
         std::vector<double> dfa(c * m);
 
+        if(hData.mFdCount > 1)
+        {
+            fprintf(stdout, "Balancing field magnitudes...\n");
+            BalanceFieldMagnitudes(&hData, c, m);
+        }
         fprintf(stdout, "Calculating diffuse-field average...\n");
         CalculateDiffuseFieldAverage(&hData, c, m, surface, limit, dfa.data());
         fprintf(stdout, "Performing diffuse-field equalization...\n");
@@ -3078,7 +3484,6 @@ static void PrintHelp(const char *argv0, FILE *ofile)
 {
     fprintf(ofile, "Usage:  %s [<option>...]\n\n", argv0);
     fprintf(ofile, "Options:\n");
-    fprintf(ofile, " -m              Ignored for compatibility.\n");
     fprintf(ofile, " -r <rate>       Change the data set sample rate to the specified value and\n");
     fprintf(ofile, "                 resample the HRIRs accordingly.\n");
     fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
@@ -3090,7 +3495,7 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
     fprintf(ofile, " -d {dataset|    Specify the model used for calculating the head-delay timing\n");
     fprintf(ofile, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
-    fprintf(ofile, " -c <size>       Use a customized head radius measured ear-to-ear in meters.\n");
+    fprintf(ofile, " -c <radius>     Use a customized head radius measured to-ear in meters.\n");
     fprintf(ofile, " -i <filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
     fprintf(ofile, " -o <filename>   Specify an output file. Use of '%%r' will be substituted with\n");
     fprintf(ofile, "                 the data set sample rate.\n");
@@ -3128,19 +3533,15 @@ int main(int argc, char *argv[])
     model = DEFAULT_HEAD_MODEL;
     radius = DEFAULT_CUSTOM_RADIUS;
 
-    while((opt=getopt(argc, argv, "mr:f:e:s:l:w:d:c:e:i:o:h")) != -1)
+    while((opt=getopt(argc, argv, "r:f:e:s:l:w:d:c:e:i:o:h")) != -1)
     {
         switch(opt)
         {
-        case 'm':
-            fprintf(stderr, "Ignoring unused command '-m'.\n");
-            break;
-
         case 'r':
             outRate = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3149,7 +3550,7 @@ int main(int argc, char *argv[])
             fftSize = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MIN_FFTSIZE || fftSize > MAX_FFTSIZE)
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MIN_FFTSIZE, MAX_FFTSIZE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MIN_FFTSIZE, MAX_FFTSIZE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3161,7 +3562,7 @@ int main(int argc, char *argv[])
                 equalize = 0;
             else
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3173,7 +3574,7 @@ int main(int argc, char *argv[])
                 surface = 0;
             else
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3186,7 +3587,7 @@ int main(int argc, char *argv[])
                 limit = strtod(optarg, &end);
                 if(end[0] != '\0' || limit < MIN_LIMIT || limit > MAX_LIMIT)
                 {
-                    fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected between %.0f to %.0f.\n", optarg, opt, MIN_LIMIT, MAX_LIMIT);
+                    fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.0f to %.0f.\n", optarg, opt, MIN_LIMIT, MAX_LIMIT);
                     exit(EXIT_FAILURE);
                 }
             }
@@ -3196,7 +3597,7 @@ int main(int argc, char *argv[])
             truncSize = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE || (truncSize%MOD_TRUNCSIZE))
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected multiple of %u between %u to %u.\n", optarg, opt, MOD_TRUNCSIZE, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected multiple of %u between %u to %u.\n", optarg, opt, MOD_TRUNCSIZE, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3208,7 +3609,7 @@ int main(int argc, char *argv[])
                 model = HM_SPHERE;
             else
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected dataset or sphere.\n", optarg, opt);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected dataset or sphere.\n", optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3217,7 +3618,7 @@ int main(int argc, char *argv[])
             radius = strtod(optarg, &end);
             if(end[0] != '\0' || radius < MIN_CUSTOM_RADIUS || radius > MAX_CUSTOM_RADIUS)
             {
-                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected between %.2f to %.2f.\n", optarg, opt, MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.2f to %.2f.\n", optarg, opt, MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
                 exit(EXIT_FAILURE);
             }
             break;

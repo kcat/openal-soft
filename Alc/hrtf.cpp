@@ -28,6 +28,7 @@
 #include <vector>
 #include <memory>
 #include <istream>
+#include <numeric>
 #include <algorithm>
 
 #include "AL/al.h"
@@ -798,7 +799,7 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
             irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
         failed = AL_TRUE;
     }
-    if(fdCount != 1)
+    if(fdCount < 1 || fdCount > MAX_FD_COUNT)
     {
         ERR("Multiple field-depths not supported: fdCount=%d (%d to %d)\n",
             fdCount, MIN_FD_COUNT, MAX_FD_COUNT);
@@ -807,48 +808,49 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    ALushort distance{};
-    ALubyte evCount{};
+    al::vector<ALushort> distance(fdCount);
+    al::vector<ALubyte> evCount(fdCount);
     al::vector<ALubyte> azCount;
-    for(ALsizei i{0};i < fdCount;i++)
+    for(ALsizei f{0};f < fdCount;f++)
     {
-        distance = GetLE_ALushort(data);
-        evCount = GetLE_ALubyte(data);
+        distance[f] = GetLE_ALushort(data);
+        evCount[f] = GetLE_ALubyte(data);
         if(!data || data.eof())
         {
             ERR("Failed reading %s\n", filename);
             return nullptr;
         }
 
-        if(distance < MIN_FD_DISTANCE || distance > MAX_FD_DISTANCE)
+        if(distance[f] < MIN_FD_DISTANCE || distance[f] > MAX_FD_DISTANCE)
         {
-            ERR("Unsupported field distance: distance=%d (%dmm to %dmm)\n",
-                distance, MIN_FD_DISTANCE, MAX_FD_DISTANCE);
+            ERR("Unsupported field distance[%d]: distance=%d (%dmm to %dmm)\n", f,
+                distance[f], MIN_FD_DISTANCE, MAX_FD_DISTANCE);
             failed = AL_TRUE;
         }
-        if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+        if(evCount[f] < MIN_EV_COUNT || evCount[f] > MAX_EV_COUNT)
         {
-            ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
-                evCount, MIN_EV_COUNT, MAX_EV_COUNT);
+            ERR("Unsupported elevation count: evCount[%d]=%d (%d to %d)\n", f,
+                evCount[f], MIN_EV_COUNT, MAX_EV_COUNT);
             failed = AL_TRUE;
         }
         if(failed)
             return nullptr;
 
-        azCount.resize(evCount);
-        data.read(reinterpret_cast<char*>(azCount.data()), evCount);
-        if(!data || data.eof() || data.gcount() < evCount)
+        size_t ebase{azCount.size()};
+        azCount.resize(ebase + evCount[f]);
+        data.read(reinterpret_cast<char*>(azCount.data()+ebase), evCount[f]);
+        if(!data || data.eof() || data.gcount() < evCount[f])
         {
             ERR("Failed reading %s\n", filename);
             return nullptr;
         }
 
-        for(ALsizei j{0};j < evCount;j++)
+        for(ALsizei e{0};e < evCount[f];e++)
         {
-            if(azCount[j] < MIN_AZ_COUNT || azCount[j] > MAX_AZ_COUNT)
+            if(azCount[ebase+e] < MIN_AZ_COUNT || azCount[ebase+e] > MAX_AZ_COUNT)
             {
-                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
-                    j, azCount[j], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                ERR("Unsupported azimuth count: azCount[%d][%d]=%d (%d to %d)\n", f, e,
+                    azCount[ebase+e], MIN_AZ_COUNT, MAX_AZ_COUNT);
                 failed = AL_TRUE;
             }
         }
@@ -856,17 +858,33 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
             return nullptr;
     }
 
-    al::vector<ALushort> evOffset(evCount);
+    al::vector<ALushort> evOffset;
+    evOffset.resize(evCount[0]);
+
     evOffset[0] = 0;
     ALushort irCount{azCount[0]};
-    for(ALsizei i{1};i < evCount;++i)
+    for(ALsizei e{1};e < evCount[0];++e)
     {
-        evOffset[i] = evOffset[i-1] + azCount[i-1];
-        irCount += azCount[i];
+        evOffset[e] = evOffset[e-1] + azCount[e-1];
+        irCount += azCount[e];
     }
 
-    al::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
-    al::vector<std::array<ALubyte,2>> delays(irCount);
+    ALsizei irTotal{irCount};
+    for(ALsizei f{1};f < fdCount;f++)
+    {
+        const ALsizei ebase{std::accumulate(evCount.begin(), evCount.begin()+f, 0)};
+        evOffset.resize(ebase + evCount[f]);
+
+        evOffset[ebase] = irTotal;
+        irTotal += azCount[ebase];
+        for(ALsizei e{1};e < evCount[f];++e)
+        {
+            evOffset[ebase+e] = evOffset[ebase+e-1] + azCount[ebase+e-1];
+            irTotal += azCount[ebase+e];
+        }
+    }
+    al::vector<std::array<ALfloat,2>> coeffs(irSize*irTotal);
+    al::vector<std::array<ALubyte,2>> delays(irTotal);
     if(channelType == CHANTYPE_LEFTONLY)
     {
         if(sampleType == SAMPLETYPE_S16)
@@ -886,7 +904,7 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
             ERR("Failed reading %s\n", filename);
             return nullptr;
         }
-        for(ALsizei i{0};i < irCount;++i)
+        for(ALsizei i{0};i < irTotal;++i)
         {
             if(delays[i][0] > MAX_HRIR_DELAY)
             {
@@ -924,7 +942,7 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
             return nullptr;
         }
 
-        for(ALsizei i{0};i < irCount;++i)
+        for(ALsizei i{0};i < irTotal;++i)
         {
             if(delays[i][0] > MAX_HRIR_DELAY)
             {
@@ -944,27 +962,31 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
     if(channelType == CHANTYPE_LEFTONLY)
     {
         /* Mirror the left ear responses to the right ear. */
-        for(ALsizei i{0};i < evCount;i++)
+        ALsizei ebase{0};
+        for(ALsizei f{0};f < fdCount;f++)
         {
-            ALushort evoffset = evOffset[i];
-            ALubyte azcount = azCount[i];
-            for(ALsizei j{0};j < azcount;j++)
+            for(ALsizei e{0};e < evCount[f];e++)
             {
-                ALsizei lidx = evoffset + j;
-                ALsizei ridx = evoffset + ((azcount-j) % azcount);
+                ALushort evoffset = evOffset[ebase+e];
+                ALubyte azcount = azCount[ebase+e];
+                for(ALsizei a{0};a < azcount;a++)
+                {
+                    ALsizei lidx = evoffset + a;
+                    ALsizei ridx = evoffset + ((azcount-a) % azcount);
 
-                for(ALsizei k{0};k < irSize;k++)
-                    coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
-                delays[ridx][1] = delays[lidx][0];
+                    for(ALsizei k{0};k < irSize;k++)
+                        coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
+                    delays[ridx][1] = delays[lidx][0];
+                }
             }
+            ebase += evCount[f];
         }
     }
 
     return CreateHrtfStore(rate, irSize,
-        static_cast<ALfloat>(distance) / 1000.0f, evCount, irCount, azCount.data(), evOffset.data(),
-        &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename
-    );
+        static_cast<ALfloat>(distance[0]) / 1000.0f, evCount[0], irCount, azCount.data(),
+        evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
 

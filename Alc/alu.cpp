@@ -109,20 +109,19 @@ struct ChanMap {
     ALfloat elevation;
 };
 
-HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
-
+HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_<CTag>;
 inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirectHrtf_Neon;
+        return MixDirectHrtf_<NEONTag>;
 #endif
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirectHrtf_SSE;
+        return MixDirectHrtf_<SSETag>;
 #endif
 
-    return MixDirectHrtf_C;
+    return MixDirectHrtf_<CTag>;
 }
 
 

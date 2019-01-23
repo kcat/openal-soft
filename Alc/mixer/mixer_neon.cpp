@@ -164,10 +164,32 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
     }
 }
 
-#define MixHrtf MixHrtf_Neon
-#define MixHrtfBlend MixHrtfBlend_Neon
-#define MixDirectHrtf MixDirectHrtf_Neon
 #include "hrtf_inc.cpp"
+
+template<>
+void MixHrtf_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
+    ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams,
+    HrtfState *hrtfstate, const ALsizei BufferSize)
+{
+    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, hrtfparams,
+        hrtfstate, BufferSize);
+}
+
+template<>
+void MixHrtfBlend_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
+    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
+    const ALsizei BufferSize)
+{
+    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, oldparams,
+        newparams, hrtfstate, BufferSize);
+}
+
+template<>
+void MixDirectHrtf_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
+    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
+    const ALsizei BufferSize)
+{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, State, NumChans, BufferSize); }
 
 
 template<>

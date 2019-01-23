@@ -34,33 +34,12 @@ void Mix_(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFF
 template<typename InstTag>
 void MixRow_(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize);
 
-/* C mixers */
-void MixHrtf_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-               const ALfloat *data, ALsizei Offset, const ALsizei OutPos,
-               const ALsizei IrSize, MixHrtfParams *hrtfparams,
-               HrtfState *hrtfstate, const ALsizei BufferSize);
-void MixHrtfBlend_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                    const ALfloat *data, ALsizei Offset, const ALsizei OutPos,
-                    const ALsizei IrSize, const HrtfParams *oldparams,
-                    MixHrtfParams *newparams, HrtfState *hrtfstate,
-                    const ALsizei BufferSize);
-void MixDirectHrtf_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                     const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
-                     const ALsizei NumChans, const ALsizei BufferSize);
-
-/* SSE mixers */
-void MixHrtf_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                 const ALfloat *data, ALsizei Offset, const ALsizei OutPos,
-                 const ALsizei IrSize, MixHrtfParams *hrtfparams,
-                 HrtfState *hrtfstate, const ALsizei BufferSize);
-void MixHrtfBlend_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                      const ALfloat *data, ALsizei Offset, const ALsizei OutPos,
-                      const ALsizei IrSize, const HrtfParams *oldparams,
-                      MixHrtfParams *newparams, HrtfState *hrtfstate,
-                      const ALsizei BufferSize);
-void MixDirectHrtf_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                       const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
-                       const ALsizei NumChans, const ALsizei BufferSize);
+template<typename InstTag>
+void MixHrtf_(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams, HrtfState *hrtfstate, const ALsizei BufferSize);
+template<typename InstTag>
+void MixHrtfBlend_(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate, const ALsizei BufferSize);
+template<typename InstTag>
+void MixDirectHrtf_(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans, const ALsizei BufferSize);
 
 /* Vectorized resampler helpers */
 inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTRICT frac_arr, ALsizei *RESTRICT pos_arr, ALsizei size)
@@ -74,19 +53,5 @@ inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTR
         frac_arr[i] = frac_tmp&FRACTIONMASK;
     }
 }
-
-/* Neon mixers */
-void MixHrtf_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                  const ALfloat *data, ALsizei Offset, const ALsizei OutPos,
-                  const ALsizei IrSize, MixHrtfParams *hrtfparams,
-                  HrtfState *hrtfstate, const ALsizei BufferSize);
-void MixHrtfBlend_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                       const ALfloat *data, ALsizei Offset, const ALsizei OutPos,
-                       const ALsizei IrSize, const HrtfParams *oldparams,
-                       MixHrtfParams *newparams, HrtfState *hrtfstate,
-                       const ALsizei BufferSize);
-void MixDirectHrtf_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                        const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
-                        const ALsizei NumChans, const ALsizei BufferSize);
 
 #endif /* MIXER_DEFS_H */

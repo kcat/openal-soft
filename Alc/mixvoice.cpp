@@ -58,8 +58,8 @@ Resampler ResamplerDefault = LinearResampler;
 
 MixerFunc MixSamples = Mix_<CTag>;
 RowMixerFunc MixRowSamples = MixRow_<CTag>;
-static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
-static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
+static HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
+static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
 
 static MixerFunc SelectMixer()
 {
@@ -91,26 +91,26 @@ static inline HrtfMixerFunc SelectHrtfMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtf_Neon;
+        return MixHrtf_<NEONTag>;
 #endif
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtf_SSE;
+        return MixHrtf_<SSETag>;
 #endif
-    return MixHrtf_C;
+    return MixHrtf_<CTag>;
 }
 
 static inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtfBlend_Neon;
+        return MixHrtfBlend_<NEONTag>;
 #endif
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtfBlend_SSE;
+        return MixHrtfBlend_<SSETag>;
 #endif
-    return MixHrtfBlend_C;
+    return MixHrtfBlend_<CTag>;
 }
 
 ResamplerFunc SelectResampler(Resampler resampler)

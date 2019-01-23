@@ -10,7 +10,7 @@
 #include "alu.h"
 #include "hrtf.h"
 #include "defs.h"
-#include "hrtf.h"
+#include "hrtfbase.h"
 
 
 

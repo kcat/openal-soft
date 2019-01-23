@@ -12,7 +12,7 @@
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
 #include "defs.h"
-#include "hrtf.h"
+#include "hrtfbase.h"
 
 
 template<>

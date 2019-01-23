@@ -1,5 +1,5 @@
-#ifndef MIXER_HRTF_H
-#define MIXER_HRTF_H
+#ifndef MIXER_HRTFBASE_H
+#define MIXER_HRTFBASE_H
 
 #include "alu.h"
 #include "../hrtf.h"
@@ -192,4 +192,4 @@ inline void MixDirectHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT Right
     }
 }
 
-#endif /* MIXER_HRTF_H */
+#endif /* MIXER_HRTFBASE_H */

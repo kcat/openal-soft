@@ -9,7 +9,7 @@
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
 #include "defs.h"
-#include "hrtf.h"
+#include "hrtfbase.h"
 
 
 static inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei) noexcept

@@ -12,6 +12,7 @@
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
 #include "defs.h"
+#include "hrtf.h"
 
 
 template<>
@@ -142,8 +143,6 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
         }
     }
 }
-
-#include "hrtf_inc.cpp"
 
 template<>
 void MixHrtf_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,

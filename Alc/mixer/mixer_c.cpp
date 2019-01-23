@@ -9,6 +9,7 @@
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
 #include "defs.h"
+#include "hrtf.h"
 
 
 static inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei) noexcept
@@ -124,8 +125,6 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
         count = IrSize;
     }
 }
-
-#include "hrtf_inc.cpp"
 
 template<>
 void MixHrtf_<CTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,

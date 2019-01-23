@@ -776,6 +776,7 @@ SET(ALC_OBJS
     Alc/panning.cpp
     Alc/mixvoice.cpp
     Alc/mixer/defs.h
+    Alc/mixer/hrtf.h
     Alc/mixer/mixer_c.cpp
 )
 

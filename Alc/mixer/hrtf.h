@@ -1,17 +1,12 @@
-#include "config.h"
+#ifndef MIXER_HRTF_H
+#define MIXER_HRTF_H
 
-#include "alMain.h"
-#include "alSource.h"
-
-#include "hrtf.h"
-#include "alu.h"
-#include "defs.h"
+#include "../hrtf.h"
 
 
 using ApplyCoeffsT = void(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
     const ALsizei irSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
     const ALfloat left, const ALfloat right);
-
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
@@ -194,3 +189,5 @@ inline void MixDirectHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT Right
         }
     }
 }
+
+#endif /* MIXER_HRTF_H */

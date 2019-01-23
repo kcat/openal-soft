@@ -10,6 +10,8 @@
 #include "alu.h"
 #include "hrtf.h"
 #include "defs.h"
+#include "hrtf.h"
+
 
 
 template<>
@@ -163,8 +165,6 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
         vst1_f32((float32_t*)&Values[o1][0], vget_high_f32(vals));
     }
 }
-
-#include "hrtf_inc.cpp"
 
 template<>
 void MixHrtf_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,

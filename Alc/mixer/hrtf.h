@@ -1,7 +1,9 @@
 #ifndef MIXER_HRTF_H
 #define MIXER_HRTF_H
 
+#include "alu.h"
 #include "../hrtf.h"
+#include "opthelpers.h"
 
 
 using ApplyCoeffsT = void(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],

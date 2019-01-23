@@ -823,8 +823,14 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
 
         if(distance[f] < MIN_FD_DISTANCE || distance[f] > MAX_FD_DISTANCE)
         {
-            ERR("Unsupported field distance[%d]: distance=%d (%dmm to %dmm)\n", f,
+            ERR("Unsupported field distance[%d]=%d (%dmm to %dmm)\n", f,
                 distance[f], MIN_FD_DISTANCE, MAX_FD_DISTANCE);
+            failed = AL_TRUE;
+        }
+        if(f > 0 && distance[f] <= distance[f-1])
+        {
+            ERR("Field distance[%d] is not after previous (%dmm > %dmm)\n", f, distance[f],
+                distance[f-1]);
             failed = AL_TRUE;
         }
         if(evCount[f] < MIN_EV_COUNT || evCount[f] > MAX_EV_COUNT)
@@ -983,9 +989,10 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
         }
     }
 
+    const ALsizei ebase{std::accumulate(evCount.begin(), evCount.end()-1, 0)};
     return CreateHrtfStore(rate, irSize,
-        static_cast<ALfloat>(distance[0]) / 1000.0f, evCount[0], irCount, azCount.data(),
-        evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+        static_cast<ALfloat>(distance[fdCount-1]) / 1000.0f, evCount[fdCount-1], irTotal,
+        azCount.data()+ebase, evOffset.data()+ebase, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 

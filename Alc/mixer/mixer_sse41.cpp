@@ -28,24 +28,25 @@
 #include "defs.h"
 
 
-const ALfloat *Resample_lerp_SSE41(const InterpState* UNUSED(state),
+template<>
+const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState* UNUSED(state),
   const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-  ALfloat *RESTRICT dst, ALsizei numsamples)
+  ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const __m128i increment4{_mm_set1_epi32(increment*4)};
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};
     const __m128i fracMask4{_mm_set1_epi32(FRACTIONMASK)};
 
-    ASSUME(numsamples > 0);
+    ASSUME(frac > 0);
     ASSUME(increment > 0);
-    ASSUME(frac >= 0);
+    ASSUME(dstlen >= 0);
 
     alignas(16) ALsizei pos_[4], frac_[4];
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
     __m128i frac4{_mm_setr_epi32(frac_[0], frac_[1], frac_[2], frac_[3])};
     __m128i pos4{_mm_setr_epi32(pos_[0], pos_[1], pos_[2], pos_[3])};
 
-    const ALsizei todo{numsamples & ~3};
+    const ALsizei todo{dstlen & ~3};
     for(ALsizei i{0};i < todo;i += 4)
     {
         const int pos0{_mm_extract_epi32(pos4, 0)};
@@ -73,7 +74,7 @@ const ALfloat *Resample_lerp_SSE41(const InterpState* UNUSED(state),
     ALsizei pos{_mm_cvtsi128_si32(pos4)};
     frac = _mm_cvtsi128_si32(frac4);
 
-    for(ALsizei i{todo};i < numsamples;++i)
+    for(ALsizei i{todo};i < dstlen;++i)
     {
         dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
 

@@ -118,37 +118,37 @@ ResamplerFunc SelectResampler(Resampler resampler)
     switch(resampler)
     {
         case PointResampler:
-            return Resample_point_C;
+            return Resample_<PointTag,CTag>;
         case LinearResampler:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_lerp_Neon;
+                return Resample_<LerpTag,NEONTag>;
 #endif
 #ifdef HAVE_SSE4_1
             if((CPUCapFlags&CPU_CAP_SSE4_1))
-                return Resample_lerp_SSE41;
+                return Resample_<LerpTag,SSE4Tag>;
 #endif
 #ifdef HAVE_SSE2
             if((CPUCapFlags&CPU_CAP_SSE2))
-                return Resample_lerp_SSE2;
+                return Resample_<LerpTag,SSE2Tag>;
 #endif
-            return Resample_lerp_C;
+            return Resample_<LerpTag,CTag>;
         case FIR4Resampler:
-            return Resample_cubic_C;
+            return Resample_<CubicTag,CTag>;
         case BSinc12Resampler:
         case BSinc24Resampler:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_bsinc_Neon;
+                return Resample_<BSincTag,NEONTag>;
 #endif
 #ifdef HAVE_SSE
             if((CPUCapFlags&CPU_CAP_SSE))
-                return Resample_bsinc_SSE;
+                return Resample_<BSincTag,SSETag>;
 #endif
-            return Resample_bsinc_C;
+            return Resample_<BSincTag,CTag>;
     }
 
-    return Resample_point_C;
+    return Resample_<PointTag,CTag>;
 }
 
 
@@ -317,7 +317,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
     ASSUME(IrSize >= 0);
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
-                           Resample_copy_C : voice->Resampler};
+                           Resample_<CopyTag,CTag> : voice->Resampler};
 
     ALsizei Counter{(voice->Flags&VOICE_IS_FADING) ? SamplesToDo : 0};
     if(!Counter)

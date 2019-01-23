@@ -12,9 +12,10 @@
 #include "defs.h"
 
 
-const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
+template<>
+const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState* UNUSED(state),
   const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-  ALfloat *RESTRICT dst, ALsizei numsamples)
+  ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
@@ -23,15 +24,15 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     int32x4_t pos4, frac4;
     ALsizei todo, pos, i;
 
-    ASSUME(numsamples > 0);
-    ASSUME(increment > 0);
     ASSUME(frac >= 0);
+    ASSUME(increment > 0);
+    ASSUME(dstlen > 0);
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
     frac4 = vld1q_s32(frac_);
     pos4 = vld1q_s32(pos_);
 
-    todo = numsamples & ~3;
+    todo = dstlen & ~3;
     for(i = 0;i < todo;i += 4)
     {
         const int pos0 = vgetq_lane_s32(pos4, 0);
@@ -59,7 +60,7 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     pos = vgetq_lane_s32(pos4, 0);
     frac = vgetq_lane_s32(frac4, 0);
 
-    for(;i < numsamples;++i)
+    for(;i < dstlen;++i)
     {
         dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
 
@@ -70,9 +71,9 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     return dst;
 }
 
-const ALfloat *Resample_bsinc_Neon(const InterpState *state,
-  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-  ALfloat *RESTRICT dst, ALsizei dstlen)
+template<>
+const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALfloat *RESTRICT src,
+    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const ALfloat *const filter = state->bsinc.filter;
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);

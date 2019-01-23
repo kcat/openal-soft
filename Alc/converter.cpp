@@ -157,7 +157,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
         mind(static_cast<ALdouble>(srcRate)/dstRate*FRACTIONONE + 0.5, MAX_PITCH*FRACTIONONE));
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
-        converter->mResample = Resample_copy_C;
+        converter->mResample = Resample_<CopyTag,CTag>;
     else
     {
         if(resampler == BSinc24Resampler)

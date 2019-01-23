@@ -14,9 +14,9 @@
 #include "defs.h"
 
 
-const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTRICT src,
-                                  ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
-                                  ALsizei dstlen)
+template<>
+const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
+    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const ALfloat *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};

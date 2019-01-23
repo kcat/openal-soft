@@ -1511,9 +1511,12 @@ IF(ALSOFT_AMBDEC_PRESETS)
 ENDIF()
 
 IF(ALSOFT_UTILS)
+    set(UTIL_TARGETS )
+
     ADD_EXECUTABLE(openal-info utils/openal-info.c)
     TARGET_COMPILE_OPTIONS(openal-info PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(openal-info PRIVATE ${LINKER_FLAGS} OpenAL)
+    set(UTIL_TARGETS ${UTIL_TARGETS} openal-info)
 
     find_package(MySOFA)
     if(MYSOFA_FOUND)
@@ -1525,6 +1528,7 @@ IF(ALSOFT_UTILS)
         target_compile_definitions(makehrtf PRIVATE ${CPP_DEFS})
         target_compile_options(makehrtf PRIVATE ${C_FLAGS})
         target_link_libraries(makehrtf PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
+        set(UTIL_TARGETS ${UTIL_TARGETS} makehrtf)
 
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)
         add_executable(sofa-info ${SOFAINFO_SRCS})
@@ -1534,7 +1538,7 @@ IF(ALSOFT_UTILS)
     endif()
 
     IF(ALSOFT_INSTALL)
-        INSTALL(TARGETS openal-info makehrtf
+        INSTALL(TARGETS ${UTIL_TARGETS}
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

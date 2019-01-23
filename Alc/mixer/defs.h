@@ -29,6 +29,10 @@ struct BSincTag { };
 template<typename TypeTag, typename InstTag>
 const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen);
 
+template<typename InstTag>
+void Mix_(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
+template<typename InstTag>
+void MixRow_(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize);
 
 /* C mixers */
 void MixHrtf_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
@@ -43,11 +47,6 @@ void MixHrtfBlend_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
 void MixDirectHrtf_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                      const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
                      const ALsizei NumChans, const ALsizei BufferSize);
-void Mix_C(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
-           ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter,
-           const ALsizei OutPos, const ALsizei BufferSize);
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
-              const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize);
 
 /* SSE mixers */
 void MixHrtf_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
@@ -62,11 +61,6 @@ void MixHrtfBlend_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
 void MixDirectHrtf_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                        const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
                        const ALsizei NumChans, const ALsizei BufferSize);
-void Mix_SSE(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
-             ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter,
-             const ALsizei OutPos, const ALsizei BufferSize);
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
-                const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize);
 
 /* Vectorized resampler helpers */
 inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTRICT frac_arr, ALsizei *RESTRICT pos_arr, ALsizei size)
@@ -94,10 +88,5 @@ void MixHrtfBlend_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
 void MixDirectHrtf_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                         const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State,
                         const ALsizei NumChans, const ALsizei BufferSize);
-void Mix_Neon(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
-              ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter,
-              const ALsizei OutPos, const ALsizei BufferSize);
-void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
-                 const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize);
 
 #endif /* MIXER_DEFS_H */

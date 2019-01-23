@@ -56,8 +56,8 @@ static_assert(MAX_RESAMPLE_PADDING >= 24, "MAX_RESAMPLE_PADDING must be at least
 
 Resampler ResamplerDefault = LinearResampler;
 
-MixerFunc MixSamples = Mix_C;
-RowMixerFunc MixRowSamples = MixRow_C;
+MixerFunc MixSamples = Mix_<CTag>;
+RowMixerFunc MixRowSamples = MixRow_<CTag>;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
 
@@ -65,26 +65,26 @@ static MixerFunc SelectMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_Neon;
+        return Mix_<NEONTag>;
 #endif
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_SSE;
+        return Mix_<SSETag>;
 #endif
-    return Mix_C;
+    return Mix_<CTag>;
 }
 
 static RowMixerFunc SelectRowMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixRow_Neon;
+        return MixRow_<NEONTag>;
 #endif
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixRow_SSE;
+        return MixRow_<SSETag>;
 #endif
-    return MixRow_C;
+    return MixRow_<CTag>;
 }
 
 static inline HrtfMixerFunc SelectHrtfMixer()

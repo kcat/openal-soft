@@ -149,9 +149,10 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2]
 #include "hrtf_inc.cpp"
 
 
-void Mix_SSE(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
-             ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter,
-             const ALsizei OutPos, const ALsizei BufferSize)
+template<>
+void Mix_<SSETag>(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
+    ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
+    const ALsizei BufferSize)
 {
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
@@ -231,8 +232,9 @@ void Mix_SSE(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[B
     }
 }
 
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
-                const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize)
+template<>
+void MixRow_<SSETag>(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
+    const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize)
 {
     ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);

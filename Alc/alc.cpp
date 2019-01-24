@@ -1869,8 +1869,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->FmtChans = DevFmtStereo;
                 device->Frequency = hrtf->sampleRate;
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
-                if(device->mHrtf)
-                    Hrtf_DecRef(device->mHrtf);
+                if(HrtfEntry *oldhrtf{device->mHrtf})
+                    oldhrtf->DecRef();
                 device->mHrtf = hrtf;
             }
             else
@@ -2226,7 +2226,7 @@ ALCdevice::~ALCdevice()
         WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
 
     if(mHrtf)
-        Hrtf_DecRef(mHrtf);
+        mHrtf->DecRef();
     mHrtf = nullptr;
 }
 

@@ -885,7 +885,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     if(device->FmtChans != DevFmtStereo)
     {
         if(old_hrtf)
-            Hrtf_DecRef(old_hrtf);
+            old_hrtf->DecRef();
         old_hrtf = nullptr;
         if(hrtf_appreq == Hrtf_Enable)
             device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
@@ -1025,7 +1025,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             device->HrtfName = entry.name;
         }
         else if(hrtf)
-            Hrtf_DecRef(hrtf);
+            hrtf->DecRef();
     }
 
     if(!device->mHrtf)
@@ -1036,7 +1036,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             if(!hrtf) return false;
             if(hrtf->sampleRate != device->Frequency)
             {
-                Hrtf_DecRef(hrtf);
+                hrtf->DecRef();
                 return false;
             }
             device->mHrtf = hrtf;
@@ -1049,7 +1049,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     if(device->mHrtf)
     {
         if(old_hrtf)
-            Hrtf_DecRef(old_hrtf);
+            old_hrtf->DecRef();
         old_hrtf = nullptr;
 
         device->mRenderMode = HrtfRender;
@@ -1074,7 +1074,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
 no_hrtf:
     if(old_hrtf)
-        Hrtf_DecRef(old_hrtf);
+        old_hrtf->DecRef();
     old_hrtf = nullptr;
     TRACE("HRTF disabled\n");
 

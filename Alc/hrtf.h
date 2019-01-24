@@ -35,6 +35,12 @@ struct HrtfEntry {
     const ALushort *evOffset;
     const ALfloat (*coeffs)[2];
     const ALubyte (*delays)[2];
+
+    void IncRef();
+    void DecRef();
+
+    static constexpr inline const char *CurrentPrefix() noexcept { return "HrtfEntry::"; }
+    DEF_PLACE_NEWDEL()
 };
 
 struct EnumeratedHrtf {
@@ -84,8 +90,6 @@ struct AngularPoint {
 
 al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
 HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
-void Hrtf_IncRef(HrtfEntry *hrtf);
-void Hrtf_DecRef(HrtfEntry *hrtf);
 
 void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
 

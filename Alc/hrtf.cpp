@@ -450,7 +450,7 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsize
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
 
-    Hrtf = static_cast<HrtfEntry*>(al_calloc(16, total));
+    Hrtf = new (al_calloc(16, total)) HrtfEntry{};
     if(Hrtf == nullptr)
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
@@ -1223,7 +1223,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     if(handle->entry)
     {
         HrtfEntry *hrtf{handle->entry};
-        Hrtf_IncRef(hrtf);
+        hrtf->IncRef();
         return hrtf;
     }
 
@@ -1287,7 +1287,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     else
     {
         handle->entry = hrtf;
-        Hrtf_IncRef(hrtf);
+        hrtf->IncRef();
         TRACE("Loaded HRTF support for format: %s %uhz\n",
               DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
     }
@@ -1296,16 +1296,16 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 }
 
 
-void Hrtf_IncRef(HrtfEntry *hrtf)
+void HrtfEntry::IncRef()
 {
-    auto ref = IncrementRef(&hrtf->ref);
-    TRACEREF("%p increasing refcount to %u\n", hrtf, ref);
+    auto ref = IncrementRef(&this->ref);
+    TRACEREF("%p increasing refcount to %u\n", this, ref);
 }
 
-void Hrtf_DecRef(HrtfEntry *hrtf)
+void HrtfEntry::DecRef()
 {
-    auto ref = DecrementRef(&hrtf->ref);
-    TRACEREF("%p decreasing refcount to %u\n", hrtf, ref);
+    auto ref = DecrementRef(&this->ref);
+    TRACEREF("%p decreasing refcount to %u\n", this, ref);
     if(ref == 0)
     {
         std::lock_guard<std::mutex> _{LoadedHrtfLock};
@@ -1315,12 +1315,12 @@ void Hrtf_DecRef(HrtfEntry *hrtf)
          * before the lock was taken.
          */
         auto iter = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
-            [hrtf](const HrtfHandlePtr &entry) noexcept -> bool
-            { return hrtf == entry->entry; }
+            [this](const HrtfHandlePtr &entry) noexcept -> bool
+            { return this == entry->entry; }
         );
-        if(iter != LoadedHrtfs.end() && ReadRef(&hrtf->ref) == 0)
+        if(iter != LoadedHrtfs.end() && ReadRef(&this->ref) == 0)
         {
-            al_free((*iter)->entry);
+            delete (*iter)->entry;
             (*iter)->entry = nullptr;
             TRACE("Unloaded unused HRTF %s\n", (*iter)->filename.data());
         }

@@ -202,6 +202,7 @@ NfcFilter4 NfcFilterCreate4(const float w0, const float w1) noexcept
 {
     NfcFilter4 nfc{};
     float b_10, b_11, g_1;
+    float b_00, b_01, g_0;
     float r;
 
     nfc.base_gain = 1.0f;
@@ -211,39 +212,32 @@ NfcFilter4 NfcFilterCreate4(const float w0, const float w1) noexcept
     r = 0.5f * w0;
     b_10 = B[4][0] * r;
     b_11 = B[4][1] * r * r;
+    b_00 = B[4][2] * r;
+    b_01 = B[4][3] * r * r;
     g_1 = 1.0f + b_10 + b_11;
+    g_0 = 1.0f + b_00 + b_01;
 
-    nfc.gain *= g_1;
+    nfc.gain *= g_1 * g_0;
     nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
     nfc.b2 = 4.0f * b_11 / g_1;
-
-    b_10 = B[4][2] * r;
-    b_11 = B[4][3] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc.gain *= g_1;
-    nfc.b3 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.b4 = 4.0f * b_11 / g_1;
+    nfc.b3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
+    nfc.b4 = 4.0f * b_01 / g_0;
 
     /* Calculate bass-cut coefficients. */
     r = 0.5f * w1;
     b_10 = B[4][0] * r;
     b_11 = B[4][1] * r * r;
+    b_00 = B[4][2] * r;
+    b_01 = B[4][3] * r * r;
     g_1 = 1.0f + b_10 + b_11;
+    g_0 = 1.0f + b_00 + b_01;
 
-    nfc.base_gain /= g_1;
-    nfc.gain /= g_1;
+    nfc.base_gain /= g_1 * g_0;
+    nfc.gain /= g_1 * g_0;
     nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
     nfc.a2 = 4.0f * b_11 / g_1;
-
-    b_10 = B[4][2] * r;
-    b_11 = B[4][3] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc.base_gain /= g_1;
-    nfc.gain /= g_1;
-    nfc.a3 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.a4 = 4.0f * b_11 / g_1;
+    nfc.a3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
+    nfc.a4 = 4.0f * b_01 / g_0;
 
     return nfc;
 }

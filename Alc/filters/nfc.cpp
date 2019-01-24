@@ -7,8 +7,6 @@
 
 #include "alMain.h"
 
-#include <cstring>
-
 
 /* Near-field control filters are the basis for handling the near-field effect.
  * The near-field effect is a bass-boost present in the directional components
@@ -89,12 +87,9 @@ NfcFilter1 NfcFilterCreate1(const float w0, const float w1) noexcept
 
 void NfcFilterAdjust1(NfcFilter1 *nfc, const float w0) noexcept
 {
-    float b_00, g_0;
-    float r;
-
-    r = 0.5f * w0;
-    b_00 = B[1][0] * r;
-    g_0 = 1.0f + b_00;
+    const float r{0.5f * w0};
+    const float b_00{B[1][0] * r};
+    const float g_0{1.0f + b_00};
 
     nfc->gain = nfc->base_gain * g_0;
     nfc->b1 = 2.0f * b_00 / g_0;
@@ -136,13 +131,10 @@ NfcFilter2 NfcFilterCreate2(const float w0, const float w1) noexcept
 
 void NfcFilterAdjust2(NfcFilter2 *nfc, const float w0) noexcept
 {
-    float b_10, b_11, g_1;
-    float r;
-
-    r = 0.5f * w0;
-    b_10 = B[2][0] * r;
-    b_11 = B[2][1] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
+    const float r{0.5f * w0};
+    const float b_10{B[2][0] * r};
+    const float b_11{B[2][1] * r * r};
+    const float g_1{1.0f + b_10 + b_11};
 
     nfc->gain = nfc->base_gain * g_1;
     nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
@@ -164,34 +156,27 @@ NfcFilter3 NfcFilterCreate3(const float w0, const float w1) noexcept
     r = 0.5f * w0;
     b_10 = B[3][0] * r;
     b_11 = B[3][1] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc.gain *= g_1;
-    nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.b2 = 4.0f * b_11 / g_1;
-
     b_00 = B[3][2] * r;
+    g_1 = 1.0f + b_10 + b_11;
     g_0 = 1.0f + b_00;
 
-    nfc.gain *= g_0;
+    nfc.gain *= g_1 * g_0;
+    nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.b2 = 4.0f * b_11 / g_1;
     nfc.b3 = 2.0f * b_00 / g_0;
 
     /* Calculate bass-cut coefficients. */
     r = 0.5f * w1;
     b_10 = B[3][0] * r;
     b_11 = B[3][1] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc.base_gain /= g_1;
-    nfc.gain /= g_1;
-    nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.a2 = 4.0f * b_11 / g_1;
-
     b_00 = B[3][2] * r;
+    g_1 = 1.0f + b_10 + b_11;
     g_0 = 1.0f + b_00;
 
-    nfc.base_gain /= g_0;
-    nfc.gain /= g_0;
+    nfc.base_gain /= g_1 * g_0;
+    nfc.gain /= g_1 * g_0;
+    nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.a2 = 4.0f * b_11 / g_1;
     nfc.a3 = 2.0f * b_00 / g_0;
 
     return nfc;
@@ -199,23 +184,16 @@ NfcFilter3 NfcFilterCreate3(const float w0, const float w1) noexcept
 
 void NfcFilterAdjust3(NfcFilter3 *nfc, const float w0) noexcept
 {
-    float b_10, b_11, g_1;
-    float b_00, g_0;
-    float r;
+    const float r{0.5f * w0};
+    const float b_10{B[3][0] * r};
+    const float b_11{B[3][1] * r * r};
+    const float b_00{B[3][2] * r};
+    const float g_1{1.0f + b_10 + b_11};
+    const float g_0{1.0f + b_00};
 
-    r = 0.5f * w0;
-    b_10 = B[3][0] * r;
-    b_11 = B[3][1] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc->gain = nfc->base_gain * g_1;
+    nfc->gain = nfc->base_gain * g_1 * g_0;
     nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
     nfc->b2 = 4.0f * b_11 / g_1;
-
-    b_00 = B[3][2] * r;
-    g_0 = 1.0f + b_00;
-
-    nfc->gain *= g_0;
     nfc->b3 = 2.0f * b_00 / g_0;
 }
 
@@ -272,36 +250,29 @@ NfcFilter4 NfcFilterCreate4(const float w0, const float w1) noexcept
 
 void NfcFilterAdjust4(NfcFilter4 *nfc, const float w0) noexcept
 {
-    float b_10, b_11, g_1;
-    float r;
+    const float r{0.5f * w0};
+    const float b_10{B[4][0] * r};
+    const float b_11{B[4][1] * r * r};
+    const float b_00{B[4][2] * r};
+    const float b_01{B[4][3] * r * r};
+    const float g_1{1.0f + b_10 + b_11};
+    const float g_0{1.0f + b_00 + b_01};
 
-    r = 0.5f * w0;
-    b_10 = B[4][0] * r;
-    b_11 = B[4][1] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc->gain = nfc->base_gain * g_1;
+    nfc->gain = nfc->base_gain * g_1 * g_0;
     nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
     nfc->b2 = 4.0f * b_11 / g_1;
-
-    b_10 = B[4][2] * r;
-    b_11 = B[4][3] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc->gain *= nfc->base_gain * g_1;
-    nfc->b3 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc->b4 = 4.0f * b_11 / g_1;
+    nfc->b3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
+    nfc->b4 = 4.0f * b_01 / g_0;
 }
-
 
 } // namespace
 
-void NfcFilter::init(const float w0, const float w1) noexcept
+void NfcFilter::init(const float w1) noexcept
 {
-    first = NfcFilterCreate1(w0, w1);
-    second = NfcFilterCreate2(w0, w1);
-    third = NfcFilterCreate3(w0, w1);
-    fourth = NfcFilterCreate4(w0, w1);
+    first = NfcFilterCreate1(0.0f, w1);
+    second = NfcFilterCreate2(0.0f, w1);
+    third = NfcFilterCreate3(0.0f, w1);
+    fourth = NfcFilterCreate4(0.0f, w1);
 }
 
 void NfcFilter::adjust(const float w0) noexcept

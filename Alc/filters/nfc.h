@@ -39,7 +39,7 @@ public:
      * should not be too small relative to the control distance.
      */
 
-    void init(const float w0, const float w1) noexcept;
+    void init(const float w1) noexcept;
     void adjust(const float w0) noexcept;
 
     /* Near-field control filter for first-order ambisonic channels (1-3). */

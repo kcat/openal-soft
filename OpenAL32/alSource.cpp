@@ -2835,7 +2835,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                          (device->AvgSpeakerDist * device->Frequency);
             std::for_each(voice->Direct.Params+0, voice->Direct.Params+voice->NumChannels,
                 [w1](DirectParams &parms) noexcept -> void
-                { parms.NFCtrlFilter.init(0.0f, w1); }
+                { parms.NFCtrlFilter.init(w1); }
             );
         }
 

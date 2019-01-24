@@ -2159,7 +2159,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                                  (device->AvgSpeakerDist * device->Frequency);
                     std::for_each(voice->Direct.Params, voice->Direct.Params+voice->NumChannels,
                         [w1](DirectParams &params) noexcept -> void
-                        { params.NFCtrlFilter.init(0.0f, w1); }
+                        { params.NFCtrlFilter.init(w1); }
                     );
                 }
             }

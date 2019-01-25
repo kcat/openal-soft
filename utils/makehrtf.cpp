@@ -2105,8 +2105,8 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
 }
 
 /* Calculate the contribution of each HRIR to the diffuse-field average based
- * on the area of its surface patch.  All patches are centered at the HRIR
- * coordinates on the unit sphere and are measured by solid angle.
+ * on its coverage volume.  All volumes are centered at the spherical HRIR
+ * coordinates and measured by extruded solid angle.
  */
 static void CalculateDfWeights(const HrirDataT *hData, double *weights)
 {

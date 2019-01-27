@@ -694,16 +694,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * matrix is transposed, for the inputs to align on the rows and
              * outputs on the columns.
              */
-            const ALfloat &scale0 = AmbiScale::FromFuMa[0];
-            const ALfloat &scale1 = AmbiScale::FromFuMa[1];
-            const ALfloat &scale2 = AmbiScale::FromFuMa[2];
-            const ALfloat &scale3 = AmbiScale::FromFuMa[3];
+            const ALfloat &wscale = AmbiScale::FromFuMa[0];
+            const ALfloat &yscale = AmbiScale::FromFuMa[1];
+            const ALfloat &zscale = AmbiScale::FromFuMa[2];
+            const ALfloat &xscale = AmbiScale::FromFuMa[3];
             const alu::Matrix matrix{
             //    ACN0          ACN1          ACN2          ACN3
-                scale0,         0.0f,         0.0f,         0.0f, // Ambi W
-                  0.0f, -N[0]*scale1,  N[1]*scale2, -N[2]*scale3, // Ambi X
-                  0.0f,  U[0]*scale1, -U[1]*scale2,  U[2]*scale3, // Ambi Y
-                  0.0f, -V[0]*scale1,  V[1]*scale2, -V[2]*scale3  // Ambi Z
+                wscale,         0.0f,         0.0f,         0.0f, // FuMa W
+                  0.0f, -N[0]*xscale,  N[1]*xscale, -N[2]*xscale, // FuMa X
+                  0.0f,  U[0]*yscale, -U[1]*yscale,  U[2]*yscale, // FuMa Y
+                  0.0f, -V[0]*zscale,  V[1]*zscale, -V[2]*zscale  // FuMa Z
             };
 
             voice->Direct.Buffer = Device->FOAOut.Buffer;

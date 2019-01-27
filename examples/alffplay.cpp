@@ -85,6 +85,8 @@ typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
 
 namespace {
 
+inline constexpr int64_t operator "" _i64(unsigned long long int n) noexcept { return static_cast<int64_t>(n); }
+
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
 #endif
@@ -146,7 +148,7 @@ enum class SyncMaster {
 
 
 inline microseconds get_avtime()
-{ return microseconds(av_gettime()); }
+{ return microseconds{av_gettime()}; }
 
 /* Define unique_ptrs to auto-cleanup associated ffmpeg objects. */
 struct AVIOContextDeleter {
@@ -286,7 +288,7 @@ struct AudioState {
     nanoseconds getClockNoLock();
     nanoseconds getClock()
     {
-        std::lock_guard<std::mutex> lock(mSrcMutex);
+        std::lock_guard<std::mutex> lock{mSrcMutex};
         return getClockNoLock();
     }
 
@@ -771,40 +773,7 @@ int AudioState::handler()
 
     /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
-    if(mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8 || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8P)
-    {
-        mDstSampleFmt = AV_SAMPLE_FMT_U8;
-        mFrameSize = 1;
-        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1 &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_71CHN8")) != AL_NONE && fmt != -1)
-        {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 8;
-            mFormat = fmt;
-        }
-        if((mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1 ||
-            mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_51CHN8")) != AL_NONE && fmt != -1)
-        {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 6;
-            mFormat = fmt;
-        }
-        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_MONO)
-        {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 1;
-            mFormat = AL_FORMAT_MONO8;
-        }
-        if(!mDstChanLayout)
-        {
-            mDstChanLayout = AV_CH_LAYOUT_STEREO;
-            mFrameSize *= 2;
-            mFormat = AL_FORMAT_STEREO8;
-        }
-    }
+    mFormat = AL_NONE;
     if((mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP) &&
        alIsExtensionPresent("AL_EXT_FLOAT32"))
     {
@@ -833,14 +802,80 @@ int AudioState::handler()
             mFrameSize *= 1;
             mFormat = AL_FORMAT_MONO_FLOAT32;
         }
-        if(!mDstChanLayout)
+        /* Assume 3D B-Format (ambisonics) if the channel layout is blank and
+         * there's 4 or more channels. FFmpeg/libavcodec otherwise seems to
+         * have no way to specify if the source is actually B-Format (let alone
+         * if it's 2D or 3D).
+         */
+        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4 &&
+           alIsExtensionPresent("AL_EXT_BFORMAT") &&
+           (fmt=alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32")) != AL_NONE && fmt != -1)
+        {
+            int order{static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1};
+            if((order+1)*(order+1) == mCodecCtx->channels ||
+               (order+1)*(order+1) + 2 == mCodecCtx->channels)
+            {
+                /* OpenAL only supports first-order with AL_EXT_BFORMAT, which
+                 * is 4 channels for 3D buffers.
+                 */
+                mFrameSize *= 4;
+                mFormat = fmt;
+            }
+        }
+        if(!mFormat)
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
             mFormat = AL_FORMAT_STEREO_FLOAT32;
         }
     }
-    if(!mDstChanLayout)
+    if(mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8 || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8P)
+    {
+        mDstSampleFmt = AV_SAMPLE_FMT_U8;
+        mFrameSize = 1;
+        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1 &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_71CHN8")) != AL_NONE && fmt != -1)
+        {
+            mDstChanLayout = mCodecCtx->channel_layout;
+            mFrameSize *= 8;
+            mFormat = fmt;
+        }
+        if((mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1 ||
+            mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_51CHN8")) != AL_NONE && fmt != -1)
+        {
+            mDstChanLayout = mCodecCtx->channel_layout;
+            mFrameSize *= 6;
+            mFormat = fmt;
+        }
+        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_MONO)
+        {
+            mDstChanLayout = mCodecCtx->channel_layout;
+            mFrameSize *= 1;
+            mFormat = AL_FORMAT_MONO8;
+        }
+        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4 &&
+           alIsExtensionPresent("AL_EXT_BFORMAT") &&
+           (fmt=alGetEnumValue("AL_FORMAT_BFORMAT3D8")) != AL_NONE && fmt != -1)
+        {
+            int order{static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1};
+            if((order+1)*(order+1) == mCodecCtx->channels ||
+               (order+1)*(order+1) + 2 == mCodecCtx->channels)
+            {
+                mFrameSize *= 4;
+                mFormat = fmt;
+            }
+        }
+        if(!mFormat)
+        {
+            mDstChanLayout = AV_CH_LAYOUT_STEREO;
+            mFrameSize *= 2;
+            mFormat = AL_FORMAT_STEREO8;
+        }
+    }
+    if(!mFormat)
     {
         mDstSampleFmt = AV_SAMPLE_FMT_S16;
         mFrameSize = 2;
@@ -867,7 +902,19 @@ int AudioState::handler()
             mFrameSize *= 1;
             mFormat = AL_FORMAT_MONO16;
         }
-        if(!mDstChanLayout)
+        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4 &&
+           alIsExtensionPresent("AL_EXT_BFORMAT") &&
+           (fmt=alGetEnumValue("AL_FORMAT_BFORMAT3D16")) != AL_NONE && fmt != -1)
+        {
+            int order{static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1};
+            if((order+1)*(order+1) == mCodecCtx->channels ||
+               (order+1)*(order+1) + 2 == mCodecCtx->channels)
+            {
+                mFrameSize *= 4;
+                mFormat = fmt;
+            }
+        }
+        if(!mFormat)
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
@@ -890,13 +937,36 @@ int AudioState::handler()
         goto finish;
     }
 
-    mSwresCtx.reset(swr_alloc_set_opts(nullptr,
-        mDstChanLayout, mDstSampleFmt, mCodecCtx->sample_rate,
-        mCodecCtx->channel_layout ? mCodecCtx->channel_layout :
-            static_cast<uint64_t>(av_get_default_channel_layout(mCodecCtx->channels)),
-        mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
-        0, nullptr
-    ));
+    if(!mDstChanLayout)
+    {
+        /* OpenAL only supports first-order ambisonics with AL_EXT_BFORMAT, so
+         * we have to drop any extra channels. It also only supports FuMa
+         * channel ordering and normalization, so a custom matrix is needed to
+         * scale and reorder the source from AmbiX.
+         */
+        mSwresCtx.reset(swr_alloc_set_opts(nullptr,
+            (1_i64<<4)-1, mDstSampleFmt, mCodecCtx->sample_rate,
+            (1_i64<<mCodecCtx->channels)-1, mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
+            0, nullptr));
+
+        /* Note that ffmpeg/libavcodec has no method to check the ambisonic
+         * channel order and normalization, so we can only assume AmbiX as the
+         * defacto-standard. This is not true for .amb files, which use FuMa.
+         */
+        std::vector<double> mtx(64*64, 0.0);
+        mtx[0 + 0*64] = std::sqrt(0.5);
+        mtx[3 + 1*64] = 1.0;
+        mtx[1 + 2*64] = 1.0;
+        mtx[2 + 3*64] = 1.0;
+        swr_set_matrix(mSwresCtx.get(), mtx.data(), 64);
+    }
+    else
+        mSwresCtx.reset(swr_alloc_set_opts(nullptr,
+            mDstChanLayout, mDstSampleFmt, mCodecCtx->sample_rate,
+            mCodecCtx->channel_layout ? mCodecCtx->channel_layout :
+                static_cast<uint64_t>(av_get_default_channel_layout(mCodecCtx->channels)),
+            mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
+            0, nullptr));
     if(!mSwresCtx || swr_init(mSwresCtx.get()) != 0)
     {
         std::cerr<< "Failed to initialize audio converter" <<std::endl;

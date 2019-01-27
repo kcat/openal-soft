@@ -2450,18 +2450,16 @@ static void SynthesizeHrirs(HrirDataT *hData)
 
 // The following routines assume a full set of HRIRs for all elevations.
 
-// Normalize the HRIR set and slightly attenuate the result. This is done
-// per-field since distance attenuation is ignored.
+// Normalize the HRIR set and slightly attenuate the result.
 static void NormalizeHrirs(const HrirDataT *hData)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    uint n = hData->mIrPoints;
+    uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    uint n{hData->mIrPoints};
     uint ti, fi, ei, ai, i;
+    double maxLevel{0.0};
 
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
-        double maxLevel = 0.0;
-
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
@@ -2474,9 +2472,11 @@ static void NormalizeHrirs(const HrirDataT *hData)
                 }
             }
         }
+    }
+    maxLevel = 1.01 * maxLevel;
 
-        maxLevel = 1.01 * maxLevel;
-
+    for(fi = 0;fi < hData->mFdCount;fi++)
+    {
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)

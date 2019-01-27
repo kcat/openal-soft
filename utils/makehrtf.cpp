@@ -1933,25 +1933,26 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     }
     if(!WriteAscii(MHR_FORMAT, fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 4, static_cast<uint32_t>(hData->mIrRate), fp, filename))
+    if(!WriteBin4(BO_LITTLE, 4, hData->mIrRate, fp, filename))
         return 0;
     if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mSampleType), fp, filename))
         return 0;
     if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mIrPoints), fp, filename))
+    if(!WriteBin4(BO_LITTLE, 1, hData->mIrPoints, fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mFdCount), fp, filename))
+    if(!WriteBin4(BO_LITTLE, 1, hData->mFdCount, fp, filename))
         return 0;
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
-        if(!WriteBin4(BO_LITTLE, 2, static_cast<uint32_t>(1000.0 * hData->mFds[fi].mDistance), fp, filename))
+        auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
+        if(!WriteBin4(BO_LITTLE, 2, fdist, fp, filename))
             return 0;
-        if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mFds[fi].mEvCount), fp, filename))
+        if(!WriteBin4(BO_LITTLE, 1, hData->mFds[fi].mEvCount, fp, filename))
             return 0;
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
-            if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mFds[fi].mEvs[ei].mAzCount), fp, filename))
+            if(!WriteBin4(BO_LITTLE, 1, hData->mFds[fi].mEvs[ei].mAzCount, fp, filename))
                 return 0;
         }
     }

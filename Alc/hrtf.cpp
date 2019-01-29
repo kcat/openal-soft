@@ -294,6 +294,7 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 
 void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
+    using namespace std::placeholders;
     static constexpr int OrderFromChan[MAX_AMBI_COEFFS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
     };
@@ -306,14 +307,17 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     ASSUME(NumChannels > 0);
     ASSUME(AmbiCount > 0);
 
-    const auto &field = Hrtf->field[Hrtf->fdCount-1];
+    auto &field = Hrtf->field[Hrtf->fdCount-1];
+    const ALsizei ebase{std::accumulate(Hrtf->field, &field, 0,
+        std::bind(std::plus<ALsizei>{}, _1,
+            std::bind(std::mem_fn(&HrtfEntry::Field::evCount), _2)))};
     ALsizei min_delay{HRTF_HISTORY_LENGTH};
     ALsizei max_delay{0};
     al::vector<ALsizei> idx(AmbiCount);
-    auto calc_idxs = [Hrtf,&field,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALsizei
+    auto calc_idxs = [Hrtf,ebase,&field,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALsizei
     {
         /* Calculate elevation index. */
-        const auto evidx = clampi(
+        const auto evidx = ebase + clampi(
             static_cast<ALsizei>((90.0f+pt.Elev)*(field.evCount-1)/180.0f + 0.5f),
             0, field.evCount-1);
 

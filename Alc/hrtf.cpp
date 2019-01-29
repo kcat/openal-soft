@@ -80,8 +80,8 @@ using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 #define MIN_FD_COUNT                 (1)
 #define MAX_FD_COUNT                 (16)
 
-#define MIN_FD_DISTANCE              (50)
-#define MAX_FD_DISTANCE              (2500)
+#define MIN_FD_DISTANCE              (0.05f)
+#define MAX_FD_DISTANCE              (2.5f)
 
 #define MIN_EV_COUNT                 (5)
 #define MAX_EV_COUNT                 (128)
@@ -431,20 +431,20 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
 
 namespace {
 
-HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsizei evCount,
-  ALsizei irCount, const ALubyte *azCount, const ALushort *evOffset, const ALfloat (*coeffs)[2],
-  const ALubyte (*delays)[2], const char *filename)
+HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, const ALsizei fdCount,
+    const ALfloat *distance, const ALubyte *evCount, const ALubyte *azCount,
+    const ALushort *evOffset, ALsizei irCount, const ALfloat (*coeffs)[2],
+    const ALubyte (*delays)[2], const char *filename)
 {
-    static constexpr ALsizei fdCount{1};
     HrtfEntry *Hrtf;
-    size_t total;
 
-    total  = sizeof(HrtfEntry);
+    ALsizei evTotal{std::accumulate(evCount, evCount+fdCount, 0)};
+    size_t total{sizeof(HrtfEntry)};
     total  = RoundUp(total, alignof(HrtfEntry::Field)); /* Align for field infos */
     total += sizeof(HrtfEntry::Field)*fdCount;
-    total += sizeof(Hrtf->azCount[0])*evCount;
+    total += sizeof(Hrtf->azCount[0])*evTotal;
     total  = RoundUp(total, sizeof(ALushort)); /* Align for ushort fields */
-    total += sizeof(Hrtf->evOffset[0])*evCount;
+    total += sizeof(Hrtf->evOffset[0])*evTotal;
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
@@ -473,11 +473,11 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsize
         offset += sizeof(field_[0])*fdCount;
 
         azCount_ = reinterpret_cast<ALubyte*>(base + offset);
-        offset += sizeof(azCount_[0])*evCount;
+        offset += sizeof(azCount_[0])*evTotal;
 
         offset = RoundUp(offset, sizeof(ALushort)); /* Align for ushort fields */
         evOffset_ = reinterpret_cast<ALushort*>(base + offset);
-        offset += sizeof(evOffset_[0])*evCount;
+        offset += sizeof(evOffset_[0])*evTotal;
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
         coeffs_ = reinterpret_cast<ALfloat(*)[2]>(base + offset);
@@ -491,11 +491,11 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsize
         /* Copy input data to storage. */
         for(ALsizei i{0};i < fdCount;i++)
         {
-            field_[i].distance = distance;
-            field_[i].evCount = evCount;
+            field_[i].distance = distance[i];
+            field_[i].evCount = evCount[i];
         }
-        for(ALsizei i{0};i < evCount;i++) azCount_[i] = azCount[i];
-        for(ALsizei i{0};i < evCount;i++) evOffset_[i] = evOffset[i];
+        for(ALsizei i{0};i < evTotal;i++) azCount_[i] = azCount[i];
+        for(ALsizei i{0};i < evTotal;i++) evOffset_[i] = evOffset[i];
         for(ALsizei i{0};i < irSize*irCount;i++)
         {
             coeffs_[i][0] = coeffs[i][0];
@@ -667,9 +667,10 @@ HrtfEntry *LoadHrtf00(std::istream &data, const char *filename)
         }
     }
 
-    return CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount.data(),
-                           evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-                           &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
+    static constexpr ALfloat distance{0.0f};
+    return CreateHrtfStore(rate, irSize, 1, &distance, &evCount, azCount.data(), evOffset.data(),
+        irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
 HrtfEntry *LoadHrtf01(std::istream &data, const char *filename)
@@ -765,9 +766,10 @@ HrtfEntry *LoadHrtf01(std::istream &data, const char *filename)
         }
     }
 
-    return CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount.data(),
-                           evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-                           &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
+    static constexpr ALfloat distance{0.0f};
+    return CreateHrtfStore(rate, irSize, 1, &distance, &evCount, azCount.data(), evOffset.data(),
+        irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
 #define SAMPLETYPE_S16 0
@@ -816,12 +818,12 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<ALushort> distance(fdCount);
+    al::vector<ALfloat> distance(fdCount);
     al::vector<ALubyte> evCount(fdCount);
     al::vector<ALubyte> azCount;
     for(ALsizei f{0};f < fdCount;f++)
     {
-        distance[f] = GetLE_ALushort(data);
+        distance[f] = GetLE_ALushort(data) / 1000.0f;
         evCount[f] = GetLE_ALubyte(data);
         if(!data || data.eof())
         {
@@ -831,13 +833,13 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
 
         if(distance[f] < MIN_FD_DISTANCE || distance[f] > MAX_FD_DISTANCE)
         {
-            ERR("Unsupported field distance[%d]=%d (%dmm to %dmm)\n", f,
+            ERR("Unsupported field distance[%d]=%f (%f to %f meters)\n", f,
                 distance[f], MIN_FD_DISTANCE, MAX_FD_DISTANCE);
             failed = AL_TRUE;
         }
         if(f > 0 && distance[f] <= distance[f-1])
         {
-            ERR("Field distance[%d] is not after previous (%dmm > %dmm)\n", f, distance[f],
+            ERR("Field distance[%d] is not after previous (%f > %f)\n", f, distance[f],
                 distance[f-1]);
             failed = AL_TRUE;
         }
@@ -997,10 +999,8 @@ HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
         }
     }
 
-    const ALsizei ebase{std::accumulate(evCount.begin(), evCount.end()-1, 0)};
-    return CreateHrtfStore(rate, irSize,
-        static_cast<ALfloat>(distance[fdCount-1]) / 1000.0f, evCount[fdCount-1], irTotal,
-        azCount.data()+ebase, evOffset.data()+ebase, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+    return CreateHrtfStore(rate, irSize, fdCount, distance.data(), evCount.data(), azCount.data(),
+        evOffset.data(), irTotal, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 

@@ -28,8 +28,12 @@ struct HrtfEntry {
     ALuint sampleRate;
     ALsizei irSize;
 
-    ALfloat distance;
-    ALubyte evCount;
+    struct Field {
+        ALfloat distance;
+        ALubyte evCount;
+    };
+    ALsizei fdCount;
+    Field *field;
 
     const ALubyte *azCount;
     const ALushort *evOffset;

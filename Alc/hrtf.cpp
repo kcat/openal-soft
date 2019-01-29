@@ -207,8 +207,10 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
 {
     const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
+    const auto &field = Hrtf->field[0];
+
     /* Claculate the lower elevation index. */
-    const auto elev = CalcEvIndex(Hrtf->evCount, elevation);
+    const auto elev = CalcEvIndex(field.evCount, elevation);
     ALsizei ev0offset{Hrtf->evOffset[elev.idx]};
     ALsizei ev1offset{ev0offset};
 
@@ -216,7 +218,7 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     const auto az0 = CalcAzIndex(Hrtf->azCount[elev.idx], azimuth);
     auto az1 = az0;
 
-    if(LIKELY(elev.idx < Hrtf->evCount-1))
+    if(LIKELY(elev.idx < field.evCount-1))
     {
         /* Increment elevation to the next (upper) index. */
         ALsizei evidx{elev.idx+1};
@@ -300,15 +302,16 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     ASSUME(NumChannels > 0);
     ASSUME(AmbiCount > 0);
 
+    const auto &field = Hrtf->field[Hrtf->fdCount-1];
     ALsizei min_delay{HRTF_HISTORY_LENGTH};
     ALsizei max_delay{0};
     al::vector<ALsizei> idx(AmbiCount);
-    auto calc_idxs = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALsizei
+    auto calc_idxs = [Hrtf,&field,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALsizei
     {
         /* Calculate elevation index. */
         const auto evidx = clampi(
-            static_cast<ALsizei>((90.0f+pt.Elev)*(Hrtf->evCount-1)/180.0f + 0.5f),
-            0, Hrtf->evCount-1);
+            static_cast<ALsizei>((90.0f+pt.Elev)*(field.evCount-1)/180.0f + 0.5f),
+            0, field.evCount-1);
 
         const ALsizei azcount{Hrtf->azCount[evidx]};
         const ALsizei evoffset{Hrtf->evOffset[evidx]};
@@ -428,10 +431,13 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsize
   ALsizei irCount, const ALubyte *azCount, const ALushort *evOffset, const ALfloat (*coeffs)[2],
   const ALubyte (*delays)[2], const char *filename)
 {
+    static constexpr ALsizei fdCount{1};
     HrtfEntry *Hrtf;
     size_t total;
 
     total  = sizeof(HrtfEntry);
+    total  = RoundUp(total, alignof(HrtfEntry::Field)); /* Align for field infos */
+    total += sizeof(HrtfEntry::Field)*fdCount;
     total += sizeof(Hrtf->azCount[0])*evCount;
     total  = RoundUp(total, sizeof(ALushort)); /* Align for ushort fields */
     total += sizeof(Hrtf->evOffset[0])*evCount;
@@ -446,54 +452,63 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsize
     {
         uintptr_t offset = sizeof(HrtfEntry);
         char *base = reinterpret_cast<char*>(Hrtf);
-        ALushort *_evOffset;
-        ALubyte *_azCount;
-        ALubyte (*_delays)[2];
-        ALfloat (*_coeffs)[2];
-        ALsizei i;
+        HrtfEntry::Field *field_;
+        ALushort *evOffset_;
+        ALubyte *azCount_;
+        ALubyte (*delays_)[2];
+        ALfloat (*coeffs_)[2];
 
         InitRef(&Hrtf->ref, 0);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
-        Hrtf->distance = distance;
-        Hrtf->evCount = evCount;
+        Hrtf->fdCount = fdCount;
 
         /* Set up pointers to storage following the main HRTF struct. */
-        _azCount = reinterpret_cast<ALubyte*>(base + offset);
-        offset += sizeof(_azCount[0])*evCount;
+        offset  = RoundUp(offset, alignof(HrtfEntry::Field)); /* Align for field infos */
+        field_ = reinterpret_cast<HrtfEntry::Field*>(base + offset);
+        offset += sizeof(field_[0])*fdCount;
+
+        azCount_ = reinterpret_cast<ALubyte*>(base + offset);
+        offset += sizeof(azCount_[0])*evCount;
 
         offset = RoundUp(offset, sizeof(ALushort)); /* Align for ushort fields */
-        _evOffset = reinterpret_cast<ALushort*>(base + offset);
-        offset += sizeof(_evOffset[0])*evCount;
+        evOffset_ = reinterpret_cast<ALushort*>(base + offset);
+        offset += sizeof(evOffset_[0])*evCount;
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
-        _coeffs = reinterpret_cast<ALfloat(*)[2]>(base + offset);
-        offset += sizeof(_coeffs[0])*irSize*irCount;
+        coeffs_ = reinterpret_cast<ALfloat(*)[2]>(base + offset);
+        offset += sizeof(coeffs_[0])*irSize*irCount;
 
-        _delays = reinterpret_cast<ALubyte(*)[2]>(base + offset);
-        offset += sizeof(_delays[0])*irCount;
+        delays_ = reinterpret_cast<ALubyte(*)[2]>(base + offset);
+        offset += sizeof(delays_[0])*irCount;
 
         assert(offset == total);
 
         /* Copy input data to storage. */
-        for(i = 0;i < evCount;i++) _azCount[i] = azCount[i];
-        for(i = 0;i < evCount;i++) _evOffset[i] = evOffset[i];
-        for(i = 0;i < irSize*irCount;i++)
+        for(ALsizei i{0};i < fdCount;i++)
         {
-            _coeffs[i][0] = coeffs[i][0];
-            _coeffs[i][1] = coeffs[i][1];
+            field_[i].distance = distance;
+            field_[i].evCount = evCount;
         }
-        for(i = 0;i < irCount;i++)
+        for(ALsizei i{0};i < evCount;i++) azCount_[i] = azCount[i];
+        for(ALsizei i{0};i < evCount;i++) evOffset_[i] = evOffset[i];
+        for(ALsizei i{0};i < irSize*irCount;i++)
         {
-            _delays[i][0] = delays[i][0];
-            _delays[i][1] = delays[i][1];
+            coeffs_[i][0] = coeffs[i][0];
+            coeffs_[i][1] = coeffs[i][1];
+        }
+        for(ALsizei i{0};i < irCount;i++)
+        {
+            delays_[i][0] = delays[i][0];
+            delays_[i][1] = delays[i][1];
         }
 
         /* Finally, assign the storage pointers. */
-        Hrtf->azCount = _azCount;
-        Hrtf->evOffset = _evOffset;
-        Hrtf->coeffs = _coeffs;
-        Hrtf->delays = _delays;
+        Hrtf->field = field_;
+        Hrtf->azCount = azCount_;
+        Hrtf->evOffset = evOffset_;
+        Hrtf->coeffs = coeffs_;
+        Hrtf->delays = delays_;
     }
 
     return Hrtf;

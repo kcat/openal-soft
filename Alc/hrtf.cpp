@@ -30,6 +30,7 @@
 #include <istream>
 #include <numeric>
 #include <algorithm>
+#include <functional>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -69,6 +70,8 @@ std::unique_ptr<HrtfHandle> HrtfHandle::Create(size_t fname_len)
 }
 
 namespace {
+
+using namespace std::placeholders;
 
 using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 
@@ -294,7 +297,6 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 
 void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
-    using namespace std::placeholders;
     static constexpr int OrderFromChan[MAX_AMBI_COEFFS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
     };

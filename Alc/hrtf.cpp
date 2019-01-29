@@ -202,38 +202,42 @@ IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
-                   ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
+void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
+                   ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
 {
     const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
-    const auto &field = Hrtf->field[0];
+    const auto *field = Hrtf->field;
+    const auto *field_end = field + Hrtf->fdCount-1;
+    ALsizei fdoffset{0};
+    for(;field != field_end && (field+1)->distance <= distance;++field)
+        fdoffset += field->evCount;
 
     /* Claculate the lower elevation index. */
-    const auto elev = CalcEvIndex(field.evCount, elevation);
-    ALsizei ev0offset{Hrtf->evOffset[elev.idx]};
+    const auto elev = CalcEvIndex(field->evCount, elevation);
+    ALsizei ev0offset{Hrtf->evOffset[fdoffset + elev.idx]};
     ALsizei ev1offset{ev0offset};
 
     /* Calculate lower azimuth index. */
-    const auto az0 = CalcAzIndex(Hrtf->azCount[elev.idx], azimuth);
+    const auto az0 = CalcAzIndex(Hrtf->azCount[fdoffset + elev.idx], azimuth);
     auto az1 = az0;
 
-    if(LIKELY(elev.idx < field.evCount-1))
+    if(LIKELY(elev.idx < field->evCount-1))
     {
         /* Increment elevation to the next (upper) index. */
         ALsizei evidx{elev.idx+1};
-        ev1offset = Hrtf->evOffset[evidx];
+        ev1offset = Hrtf->evOffset[fdoffset + evidx];
 
         /* Calculate upper azimuth index. */
-        az1 = CalcAzIndex(Hrtf->azCount[evidx], azimuth);
+        az1 = CalcAzIndex(Hrtf->azCount[fdoffset + evidx], azimuth);
     }
 
     /* Calculate the HRIR indices to blend. */
     ALsizei idx[4]{
         ev0offset + az0.idx,
-        ev0offset + ((az0.idx+1) % Hrtf->azCount[elev.idx]),
+        ev0offset + ((az0.idx+1) % Hrtf->azCount[fdoffset + elev.idx]),
         ev1offset + az1.idx,
-        ev1offset + ((az1.idx+1) % Hrtf->azCount[elev.idx])
+        ev1offset + ((az1.idx+1) % Hrtf->azCount[fdoffset + elev.idx])
     };
 
     /* Calculate bilinear blending weights, attenuated according to the

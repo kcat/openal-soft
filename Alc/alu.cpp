@@ -617,8 +617,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
                  */
-                const ALfloat mdist{maxf(Distance*Listener.Params.MetersPerUnit,
-                    Device->AvgSpeakerDist/4.0f)};
+                const ALfloat mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
                     (mdist * static_cast<ALfloat>(Device->Frequency))};
 
@@ -765,7 +764,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
-            GetHrtfCoeffs(Device->mHrtf, Elev, Azi, Spread,
+            GetHrtfCoeffs(Device->mHrtf, Elev, Azi, Distance, Spread,
                           voice->Direct.Params[0].Hrtf.Target.Coeffs,
                           voice->Direct.Params[0].Hrtf.Target.Delay);
             voice->Direct.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
@@ -812,10 +811,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
                  */
-                GetHrtfCoeffs(Device->mHrtf, chans[c].elevation, chans[c].angle, Spread,
+                GetHrtfCoeffs(Device->mHrtf, chans[c].elevation, chans[c].angle,
+                    std::numeric_limits<float>::infinity(), Spread,
                     voice->Direct.Params[c].Hrtf.Target.Coeffs,
-                    voice->Direct.Params[c].Hrtf.Target.Delay
-                );
+                    voice->Direct.Params[c].Hrtf.Target.Delay);
                 voice->Direct.Params[c].Hrtf.Target.Gain = DryGain;
 
                 /* Normal panning for auxiliary sends. */
@@ -846,8 +845,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
                  */
-                const ALfloat mdist{maxf(Distance*Listener.Params.MetersPerUnit,
-                    Device->AvgSpeakerDist/4.0f)};
+                const ALfloat mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
                     (mdist * static_cast<ALfloat>(Device->Frequency))};
 
@@ -1394,8 +1392,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     else if(Distance > 0.0f)
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
-    CalcPanningAndFilters(voice, az, ev, Distance, spread, DryGain, DryGainHF, DryGainLF, WetGain,
-                          WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
+    CalcPanningAndFilters(voice, az, ev, Distance*Listener.Params.MetersPerUnit, spread, DryGain,
+        DryGainHF, DryGainLF, WetGain, WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener,
+        Device);
 }
 
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)

@@ -95,7 +95,7 @@ struct AngularPoint {
 al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
 HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
 
-void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
+void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

@@ -173,28 +173,27 @@ public:
 };
 
 
+struct IdxBlend { ALsizei idx; ALfloat blend; };
 /* Calculate the elevation index given the polar elevation in radians. This
  * will return an index between 0 and (evcount - 1).
  */
-ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
+IdxBlend CalcEvIndex(ALsizei evcount, ALfloat ev)
 {
     ev = (al::MathDefs<float>::Pi()*0.5f + ev) * (evcount-1) / al::MathDefs<float>::Pi();
     ALsizei idx{float2int(ev)};
 
-    *mu = ev - idx;
-    return mini(idx, evcount-1);
+    return IdxBlend{mini(idx, evcount-1), ev-idx};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1).
  */
-ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
+IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
 {
     az = (al::MathDefs<float>::Tau()+az) * azcount / al::MathDefs<float>::Tau();
     ALsizei idx{float2int(az)};
 
-    *mu = az - idx;
-    return idx % azcount;
+    return IdxBlend{idx%azcount, az-idx};
 }
 
 } // namespace
@@ -209,50 +208,40 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
     /* Claculate the lower elevation index. */
-    ALfloat emu;
-    ALsizei evidx{CalcEvIndex(Hrtf->evCount, elevation, &emu)};
-    ALsizei evoffset{Hrtf->evOffset[evidx]};
+    const auto elev = CalcEvIndex(Hrtf->evCount, elevation);
+    ALsizei ev0offset{Hrtf->evOffset[elev.idx]};
+    ALsizei ev1offset{ev0offset};
 
     /* Calculate lower azimuth index. */
-    ALfloat amu[2];
-    ALsizei azidx{CalcAzIndex(Hrtf->azCount[evidx], azimuth, &amu[0])};
+    const auto az0 = CalcAzIndex(Hrtf->azCount[elev.idx], azimuth);
+    auto az1 = az0;
 
-    /* Calculate the lower HRIR indices. */
-    ALsizei idx[4]{
-        evoffset + azidx,
-        evoffset + ((azidx+1) % Hrtf->azCount[evidx])
-    };
-    if(evidx < Hrtf->evCount-1)
+    if(LIKELY(elev.idx < Hrtf->evCount-1))
     {
         /* Increment elevation to the next (upper) index. */
-        evidx++;
-        evoffset = Hrtf->evOffset[evidx];
+        ALsizei evidx{elev.idx+1};
+        ev1offset = Hrtf->evOffset[evidx];
 
         /* Calculate upper azimuth index. */
-        azidx = CalcAzIndex(Hrtf->azCount[evidx], azimuth, &amu[1]);
+        az1 = CalcAzIndex(Hrtf->azCount[evidx], azimuth);
+    }
 
-        /* Calculate the upper HRIR indices. */
-        idx[2] = evoffset + azidx;
-        idx[3] = evoffset + ((azidx+1) % Hrtf->azCount[evidx]);
-    }
-    else
-    {
-        /* If the lower elevation is the top index, the upper elevation is the
-         * same as the lower.
-         */
-        amu[1] = amu[0];
-        idx[2] = idx[0];
-        idx[3] = idx[1];
-    }
+    /* Calculate the HRIR indices to blend. */
+    ALsizei idx[4]{
+        ev0offset + az0.idx,
+        ev0offset + ((az0.idx+1) % Hrtf->azCount[elev.idx]),
+        ev1offset + az1.idx,
+        ev1offset + ((az1.idx+1) % Hrtf->azCount[elev.idx])
+    };
 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
      */
     const ALfloat blend[4]{
-        (1.0f-emu) * (1.0f-amu[0]) * dirfact,
-        (1.0f-emu) * (     amu[0]) * dirfact,
-        (     emu) * (1.0f-amu[1]) * dirfact,
-        (     emu) * (     amu[1]) * dirfact
+        (1.0f-elev.blend) * (1.0f-az0.blend) * dirfact,
+        (1.0f-elev.blend) * (     az0.blend) * dirfact,
+        (     elev.blend) * (1.0f-az1.blend) * dirfact,
+        (     elev.blend) * (     az1.blend) * dirfact
     };
 
     /* Calculate the blended HRIR delays. */

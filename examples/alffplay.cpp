@@ -91,16 +91,17 @@ inline constexpr int64_t operator "" _i64(unsigned long long int n) noexcept { r
 #define M_PI (3.14159265358979323846)
 #endif
 
+using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1_i64<<32)>>;
 using nanoseconds = std::chrono::nanoseconds;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
 using seconds_d64 = std::chrono::duration<double>;
 
-const std::string AppName("alffplay");
+const std::string AppName{"alffplay"};
 
-bool EnableDirectOut = false;
-bool EnableWideStereo = false;
+bool EnableDirectOut{false};
+bool EnableWideStereo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 
@@ -115,20 +116,20 @@ LPALEVENTCONTROLSOFT alEventControlSOFT;
 LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
 #endif
 
-const seconds AVNoSyncThreshold(10);
+const seconds AVNoSyncThreshold{10};
 
 const milliseconds VideoSyncThreshold(10);
 #define VIDEO_PICTURE_QUEUE_SIZE 16
 
-const seconds_d64 AudioSyncThreshold(0.03);
-const milliseconds AudioSampleCorrectionMax(50);
+const seconds_d64 AudioSyncThreshold{0.03};
+const milliseconds AudioSampleCorrectionMax{50};
 /* Averaging filter coefficient for audio sync. */
 #define AUDIO_DIFF_AVG_NB 20
-const double AudioAvgFilterCoeff = std::pow(0.01, 1.0/AUDIO_DIFF_AVG_NB);
+const double AudioAvgFilterCoeff{std::pow(0.01, 1.0/AUDIO_DIFF_AVG_NB)};
 /* Per-buffer size, in time */
-const milliseconds AudioBufferTime(20);
+const milliseconds AudioBufferTime{20};
 /* Buffer total size, in time (should be divisible by the buffer time) */
-const milliseconds AudioBufferTotalTime(800);
+const milliseconds AudioBufferTotalTime{800};
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024) /* Bytes of compressed data to keep queued */
 
@@ -419,15 +420,15 @@ nanoseconds AudioState::getClockNoLock()
 
         // Get the current device clock time and latency.
         auto device = alcGetContextsDevice(alcGetCurrentContext());
-        ALCint64SOFT devtimes[2] = {0,0};
+        ALCint64SOFT devtimes[2]{0,0};
         alcGetInteger64vSOFT(device, ALC_DEVICE_CLOCK_LATENCY_SOFT, 2, devtimes);
-        auto latency = nanoseconds(devtimes[1]);
-        auto device_time = nanoseconds(devtimes[0]);
+        auto latency = nanoseconds{devtimes[1]};
+        auto device_time = nanoseconds{devtimes[0]};
 
         // The clock is simply the current device time relative to the recorded
         // start time. We can also subtract the latency to get more a accurate
         // position of where the audio device actually is in the output stream.
-        return device_time - mDeviceStartTime - latency;
+        std::max(device_time - mDeviceStartTime - latency, nanoseconds::zero());
     }
 
     /* The source-based clock is based on 4 components:
@@ -445,12 +446,10 @@ nanoseconds AudioState::getClockNoLock()
      * sample at OpenAL's current position, and subtracting the source latency
      * from that gives the timestamp of the sample currently at the DAC.
      */
-    nanoseconds pts = mCurrentPts;
+    nanoseconds pts{mCurrentPts};
     if(mSource)
     {
         ALint64SOFT offset[2];
-        ALint queued;
-        ALint status;
 
         /* NOTE: The source state must be checked last, in case an underrun
          * occurs and the source stops between retrieving the offset+latency
@@ -461,9 +460,10 @@ nanoseconds AudioState::getClockNoLock()
         {
             ALint ioffset;
             alGetSourcei(mSource, AL_SAMPLE_OFFSET, &ioffset);
-            offset[0] = static_cast<ALint64SOFT>(ioffset) << 32;
+            offset[0] = ALint64SOFT{ioffset} << 32;
             offset[1] = 0;
         }
+        ALint queued, status;
         alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
         alGetSourcei(mSource, AL_SOURCE_STATE, &status);
 
@@ -473,16 +473,13 @@ nanoseconds AudioState::getClockNoLock()
          * when it starts recovery. */
         if(status != AL_STOPPED)
         {
-            using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1ll<<32)>>;
-
             pts -= AudioBufferTime*queued;
             pts += std::chrono::duration_cast<nanoseconds>(
-                fixed32(offset[0] / mCodecCtx->sample_rate)
-            );
+                fixed32{offset[0] / mCodecCtx->sample_rate});
         }
         /* Don't offset by the latency if the source isn't playing. */
         if(status == AL_PLAYING)
-            pts -= nanoseconds(offset[1]);
+            pts -= nanoseconds{offset[1]};
     }
 
     return std::max(pts, nanoseconds::zero());
@@ -503,16 +500,14 @@ void AudioState::startPlayback()
     alSourcePlay(mSource);
     if(alcGetInteger64vSOFT)
     {
-        using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1ll<<32)>>;
-
         // Subtract the total buffer queue time from the current pts to get the
         // pts of the start of the queue.
-        nanoseconds startpts = mCurrentPts - AudioBufferTotalTime;
-        int64_t srctimes[2]={0,0};
+        nanoseconds startpts{mCurrentPts - AudioBufferTotalTime};
+        int64_t srctimes[2]{0,0};
         alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_CLOCK_SOFT, srctimes);
-        auto device_time = nanoseconds(srctimes[1]);
-        auto src_offset = std::chrono::duration_cast<nanoseconds>(fixed32(srctimes[0])) /
-                          mCodecCtx->sample_rate;
+        auto device_time = nanoseconds{srctimes[1]};
+        auto src_offset = std::chrono::duration_cast<nanoseconds>(fixed32{srctimes[0]}) /
+            mCodecCtx->sample_rate;
 
         // The mixer may have ticked and incremented the device time and sample
         // offset, so subtract the source offset from the device time to get
@@ -1068,10 +1063,8 @@ int AudioState::handler()
                  */
                 int64_t devtime{};
                 alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()),
-                                     ALC_DEVICE_CLOCK_SOFT, 1, &devtime);
-                auto device_time = nanoseconds{devtime};
-
-                mDeviceStartTime = device_time - mCurrentPts + AudioBufferTotalTime;
+                    ALC_DEVICE_CLOCK_SOFT, 1, &devtime);
+                mDeviceStartTime = nanoseconds{devtime} - mCurrentPts;
             }
             continue;
         }

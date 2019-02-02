@@ -46,7 +46,7 @@
 
 
 struct HrtfHandle {
-    HrtfEntry *entry{nullptr};
+    std::unique_ptr<HrtfEntry> entry;
     al::FlexArray<char> filename;
 
     HrtfHandle(size_t fname_len) : filename{fname_len} { }
@@ -437,12 +437,12 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
 
 namespace {
 
-HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, const ALsizei fdCount,
+std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const ALsizei fdCount,
     const ALfloat *distance, const ALubyte *evCount, const ALubyte *azCount,
     const ALushort *evOffset, ALsizei irCount, const ALfloat (*coeffs)[2],
     const ALubyte (*delays)[2], const char *filename)
 {
-    HrtfEntry *Hrtf;
+    std::unique_ptr<HrtfEntry> Hrtf;
 
     ALsizei evTotal{std::accumulate(evCount, evCount+fdCount, 0)};
     size_t total{sizeof(HrtfEntry)};
@@ -455,41 +455,36 @@ HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, const ALsizei fdCount,
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
 
-    Hrtf = new (al_calloc(16, total)) HrtfEntry{};
-    if(Hrtf == nullptr)
+    Hrtf.reset(new (al_calloc(16, total)) HrtfEntry{});
+    if(!Hrtf)
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
     {
-        uintptr_t offset = sizeof(HrtfEntry);
-        char *base = reinterpret_cast<char*>(Hrtf);
-        HrtfEntry::Field *field_;
-        ALushort *evOffset_;
-        ALubyte *azCount_;
-        ALubyte (*delays_)[2];
-        ALfloat (*coeffs_)[2];
-
-        InitRef(&Hrtf->ref, 0);
+        InitRef(&Hrtf->ref, 1u);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->fdCount = fdCount;
 
         /* Set up pointers to storage following the main HRTF struct. */
-        offset  = RoundUp(offset, alignof(HrtfEntry::Field)); /* Align for field infos */
-        field_ = reinterpret_cast<HrtfEntry::Field*>(base + offset);
+        char *base = reinterpret_cast<char*>(Hrtf.get());
+        uintptr_t offset = sizeof(HrtfEntry);
+
+        offset = RoundUp(offset, alignof(HrtfEntry::Field)); /* Align for field infos */
+        auto field_ = reinterpret_cast<HrtfEntry::Field*>(base + offset);
         offset += sizeof(field_[0])*fdCount;
 
-        azCount_ = reinterpret_cast<ALubyte*>(base + offset);
+        auto azCount_ = reinterpret_cast<ALubyte*>(base + offset);
         offset += sizeof(azCount_[0])*evTotal;
 
         offset = RoundUp(offset, sizeof(ALushort)); /* Align for ushort fields */
-        evOffset_ = reinterpret_cast<ALushort*>(base + offset);
+        auto evOffset_ = reinterpret_cast<ALushort*>(base + offset);
         offset += sizeof(evOffset_[0])*evTotal;
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
-        coeffs_ = reinterpret_cast<ALfloat(*)[2]>(base + offset);
+        auto coeffs_ = reinterpret_cast<ALfloat(*)[2]>(base + offset);
         offset += sizeof(coeffs_[0])*irSize*irCount;
 
-        delays_ = reinterpret_cast<ALubyte(*)[2]>(base + offset);
+        auto delays_ = reinterpret_cast<ALubyte(*)[2]>(base + offset);
         offset += sizeof(delays_[0])*irCount;
 
         assert(offset == total);
@@ -560,7 +555,7 @@ ALuint GetLE_ALuint(std::istream &data)
     return ret;
 }
 
-HrtfEntry *LoadHrtf00(std::istream &data, const char *filename)
+std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irCount{GetLE_ALushort(data)};
@@ -679,7 +674,7 @@ HrtfEntry *LoadHrtf00(std::istream &data, const char *filename)
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
-HrtfEntry *LoadHrtf01(std::istream &data, const char *filename)
+std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irSize{GetLE_ALubyte(data)};
@@ -784,7 +779,7 @@ HrtfEntry *LoadHrtf01(std::istream &data, const char *filename)
 #define CHANTYPE_LEFTONLY  0
 #define CHANTYPE_LEFTRIGHT 1
 
-HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
+std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALubyte sampleType{GetLE_ALubyte(data)};
@@ -1236,7 +1231,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 
     if(handle->entry)
     {
-        HrtfEntry *hrtf{handle->entry};
+        HrtfEntry *hrtf{handle->entry.get()};
         hrtf->IncRef();
         return hrtf;
     }
@@ -1272,7 +1267,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
         stream = std::move(fstr);
     }
 
-    HrtfEntry *hrtf{nullptr};
+    std::unique_ptr<HrtfEntry> hrtf;
     char magic[sizeof(magicMarker02)];
     stream->read(magic, sizeof(magic));
     if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
@@ -1297,16 +1292,16 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     stream.reset();
 
     if(!hrtf)
-        ERR("Failed to load %s\n", name);
-    else
     {
-        handle->entry = hrtf;
-        hrtf->IncRef();
-        TRACE("Loaded HRTF support for format: %s %uhz\n",
-              DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+        ERR("Failed to load %s\n", name);
+        return nullptr;
     }
 
-    return hrtf;
+    TRACE("Loaded HRTF support for format: %s %uhz\n",
+        DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+    handle->entry = std::move(hrtf);
+
+    return handle->entry.get();
 }
 
 
@@ -1330,11 +1325,10 @@ void HrtfEntry::DecRef()
          */
         auto iter = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
             [this](const HrtfHandlePtr &entry) noexcept -> bool
-            { return this == entry->entry; }
+            { return this == entry->entry.get(); }
         );
         if(iter != LoadedHrtfs.end() && ReadRef(&this->ref) == 0)
         {
-            delete (*iter)->entry;
             (*iter)->entry = nullptr;
             TRACE("Unloaded unused HRTF %s\n", (*iter)->filename.data());
         }

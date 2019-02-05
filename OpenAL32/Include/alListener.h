@@ -30,7 +30,7 @@ struct ALlistener {
     std::array<ALfloat,3> OrientUp{{0.0f, 1.0f, 0.0f}};
     ALfloat Gain{1.0f};
 
-    std::atomic_flag PropsClean{true};
+    std::atomic_flag PropsClean;
 
     /* Pointer to the most recent property values that are awaiting an update.
      */
@@ -50,6 +50,8 @@ struct ALlistener {
         ALboolean SourceDistanceModel;
         DistanceModel mDistanceModel;
     } Params;
+
+    ALlistener() { PropsClean.test_and_set(); }
 };
 
 void UpdateListenerProps(ALCcontext *context);

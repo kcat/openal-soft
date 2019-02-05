@@ -3353,6 +3353,8 @@ ALsource::ALsource(ALsizei num_sends)
     queue = nullptr;
 
     VoiceIdx = -1;
+
+    PropsClean.test_and_set();
 }
 
 ALsource::~ALsource()

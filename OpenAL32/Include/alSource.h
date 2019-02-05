@@ -98,7 +98,7 @@ struct ALsource {
     /** Source Buffer Queue head. */
     ALbufferlistitem *queue;
 
-    std::atomic_flag PropsClean{true};
+    std::atomic_flag PropsClean;
 
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.

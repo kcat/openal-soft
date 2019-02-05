@@ -73,7 +73,7 @@ struct ALeffectslot {
         EffectState *State{nullptr};
     } Effect;
 
-    std::atomic_flag PropsClean{true};
+    std::atomic_flag PropsClean;
 
     RefCount ref{0u};
 
@@ -113,7 +113,7 @@ struct ALeffectslot {
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
 
-    ALeffectslot() = default;
+    ALeffectslot() { PropsClean.test_and_set(); }
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();

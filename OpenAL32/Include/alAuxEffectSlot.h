@@ -113,7 +113,7 @@ struct ALeffectslot {
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
 
-    ALeffectslot() { PropsClean.test_and_set(); }
+    ALeffectslot() { PropsClean.test_and_set(std::memory_order_relaxed); }
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();

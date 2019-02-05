@@ -2312,7 +2312,7 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 
 ALCcontext::ALCcontext(ALCdevice *device) : Device{device}
 {
-    PropsClean.test_and_set();
+    PropsClean.test_and_set(std::memory_order_relaxed);
 }
 
 /* InitContext

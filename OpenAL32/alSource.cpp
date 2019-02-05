@@ -3352,9 +3352,9 @@ ALsource::ALsource(ALsizei num_sends)
 
     queue = nullptr;
 
-    VoiceIdx = -1;
+    PropsClean.test_and_set(std::memory_order_relaxed);
 
-    PropsClean.test_and_set();
+    VoiceIdx = -1;
 }
 
 ALsource::~ALsource()

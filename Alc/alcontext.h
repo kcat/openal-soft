@@ -80,7 +80,7 @@ struct ALCcontext {
     ALfloat SpeedOfSound{};
     ALfloat MetersPerUnit{1.0f};
 
-    std::atomic_flag PropsClean{true};
+    std::atomic_flag PropsClean;
     std::atomic<bool> DeferUpdates{false};
 
     std::mutex PropLock;

@@ -2312,6 +2312,7 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 
 ALCcontext::ALCcontext(ALCdevice *device) : Device{device}
 {
+    PropsClean.test_and_set();
 }
 
 /* InitContext

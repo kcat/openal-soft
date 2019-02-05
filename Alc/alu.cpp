@@ -163,7 +163,7 @@ void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* UHJ is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
-    const int ridx{(device->RealOut.ChannelName[1]==FrontRight) ? 1 : 0};
+    const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
     Uhj2Encoder *uhj2enc{device->Uhj_Encoder.get()};
@@ -175,7 +175,7 @@ void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* BS2B is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
-    const int ridx{(device->RealOut.ChannelName[1]==FrontRight) ? 1 : 0};
+    const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
 
     /* Apply binaural/crossfeed filter */
     bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx],

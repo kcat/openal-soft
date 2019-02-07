@@ -101,9 +101,8 @@ const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat 
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst, dstlen); }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
-                               const ALsizei IrSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
-                               const ALfloat left, const ALfloat right)
+static inline void ApplyCoeffs(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei IrSize,
+    const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right)
 {
     ASSUME(Offset >= 0 && Offset < HRIR_LENGTH);
     ASSUME(IrSize >= 2);

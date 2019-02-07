@@ -6,9 +6,8 @@
 #include "opthelpers.h"
 
 
-using ApplyCoeffsT = void(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
-    const ALsizei irSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
-    const ALfloat left, const ALfloat right);
+using ApplyCoeffsT = void(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei irSize,
+    const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right);
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
@@ -19,7 +18,7 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
     ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 
-    const ALfloat (&Coeffs)[HRIR_LENGTH][2] = *hrtfparams->Coeffs;
+    const auto &Coeffs = *hrtfparams->Coeffs;
     const ALfloat gainstep{hrtfparams->GainStep};
     const ALfloat gain{hrtfparams->Gain};
     ALfloat stepcount{0.0f};
@@ -79,10 +78,10 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
     const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
     const ALsizei BufferSize)
 {
-    const ALfloat (&OldCoeffs)[HRIR_LENGTH][2] = oldparams->Coeffs;
+    const auto OldCoeffs = oldparams->Coeffs;
     const ALfloat oldGain{oldparams->Gain};
     const ALfloat oldGainStep{-oldGain / (ALfloat)BufferSize};
-    const ALfloat (&NewCoeffs)[HRIR_LENGTH][2] = *newparams->Coeffs;
+    const auto &NewCoeffs = *newparams->Coeffs;
     const ALfloat newGainStep{newparams->GainStep};
     ALfloat stepcount{0.0f};
 
@@ -162,8 +161,8 @@ inline void MixDirectHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT Right
     for(ALsizei c{0};c < NumChans;++c)
     {
         const ALfloat (&input)[BUFFERSIZE] = data[c];
-        const ALfloat (&Coeffs)[HRIR_LENGTH][2] = State->Chan[c].Coeffs;
-        ALfloat (&Values)[HRIR_LENGTH][2] = State->Chan[c].Values;
+        const auto &Coeffs = State->Chan[c].Coeffs;
+        auto &Values = State->Chan[c].Values;
         ALsizei Offset{State->Offset&HRIR_MASK};
 
         ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};

@@ -158,7 +158,7 @@ enum {
 
 
 struct MixHrtfParams {
-    const ALfloat (*Coeffs)[HRIR_LENGTH][2];
+    const HrirArray<ALfloat> *Coeffs;
     ALsizei Delay[2];
     ALfloat Gain;
     ALfloat GainStep;

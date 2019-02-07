@@ -1,6 +1,7 @@
 #ifndef ALC_HRTF_H
 #define ALC_HRTF_H
 
+#include <array>
 #include <memory>
 #include <string>
 
@@ -54,13 +55,16 @@ struct EnumeratedHrtf {
 };
 
 
+template<typename T>
+using HrirArray = std::array<std::array<T,2>,HRIR_LENGTH>;
+
 struct HrtfState {
-    alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
-    alignas(16) ALfloat Values[HRIR_LENGTH][2];
+    alignas(16) std::array<ALfloat,HRTF_HISTORY_LENGTH> History;
+    alignas(16) HrirArray<ALfloat> Values;
 };
 
 struct HrtfParams {
-    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    alignas(16) HrirArray<ALfloat> Coeffs;
     ALsizei Delay[2];
     ALfloat Gain;
 };
@@ -70,8 +74,8 @@ struct DirectHrtfState {
     ALsizei Offset{0};
     ALsizei IrSize{0};
     struct ChanData {
-        alignas(16) ALfloat Values[HRIR_LENGTH][2];
-        alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+        alignas(16) HrirArray<ALfloat> Values;
+        alignas(16) HrirArray<ALfloat> Coeffs;
     };
     al::FlexArray<ChanData> Chan;
 
@@ -95,7 +99,8 @@ struct AngularPoint {
 al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
 HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
 
-void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
+void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
+    ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei *delays);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

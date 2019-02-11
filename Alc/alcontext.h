@@ -15,6 +15,7 @@
 #include "vector.h"
 #include "threads.h"
 #include "almalloc.h"
+#include "alnumeric.h"
 
 #include "alListener.h"
 
@@ -41,13 +42,13 @@ enum class DistanceModel {
 };
 
 struct SourceSubList {
-    uint64_t FreeMask{~uint64_t{}};
+    uint64_t FreeMask{~0_u64};
     ALsource *Sources{nullptr}; /* 64 */
 
     SourceSubList() noexcept = default;
     SourceSubList(const SourceSubList&) = delete;
     SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
-    { rhs.FreeMask = ~uint64_t{}; rhs.Sources = nullptr; }
+    { rhs.FreeMask = ~0_u64; rhs.Sources = nullptr; }
     ~SourceSubList();
 
     SourceSubList& operator=(const SourceSubList&) = delete;

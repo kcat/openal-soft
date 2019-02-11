@@ -694,6 +694,7 @@ SET(COMMON_OBJS
     common/alcomplex.h
     common/almalloc.cpp
     common/almalloc.h
+    common/alnumeric.h
     common/atomic.h
     common/math_defs.h
     common/opthelpers.h

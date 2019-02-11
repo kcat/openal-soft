@@ -30,6 +30,7 @@
 #include "atomic.h"
 #include "vector.h"
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "threads.h"
 #include "ambidefs.h"
 #include "opthelpers.h"
@@ -62,9 +63,6 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
 
 using ALint64 = ALint64SOFT;
 using ALuint64 = ALuint64SOFT;
-
-inline constexpr int64_t operator "" _i64(unsigned long long int n) noexcept { return static_cast<int64_t>(n); }
-inline constexpr uint64_t operator "" _u64(unsigned long long int n) noexcept { return static_cast<uint64_t>(n); }
 
 /* Define CTZ macros (count trailing zeros), and POPCNT macros (population
  * count/count 1 bits), for 32- and 64-bit integers. The CTZ macros' results
@@ -201,28 +199,6 @@ struct bs2b;
 #define DEFAULT_OUTPUT_RATE  (44100)
 #define MIN_OUTPUT_RATE      (8000)
 
-
-/* Find the next power-of-2 for non-power-of-2 numbers. */
-inline ALuint NextPowerOf2(ALuint value) noexcept
-{
-    if(value > 0)
-    {
-        value--;
-        value |= value>>1;
-        value |= value>>2;
-        value |= value>>4;
-        value |= value>>8;
-        value |= value>>16;
-    }
-    return value+1;
-}
-
-/** Round up a value to the next multiple. */
-inline size_t RoundUp(size_t value, size_t r) noexcept
-{
-    value += r-1;
-    return value - (value%r);
-}
 
 /* Fast float-to-int conversion. No particular rounding mode is assumed; the
  * IEEE-754 default is round-to-nearest with ties-to-even, though an app could
@@ -482,13 +458,13 @@ enum RenderMode {
 
 
 struct BufferSubList {
-    uint64_t FreeMask{~uint64_t{}};
+    uint64_t FreeMask{~0_u64};
     ALbuffer *Buffers{nullptr}; /* 64 */
 
     BufferSubList() noexcept = default;
     BufferSubList(const BufferSubList&) = delete;
     BufferSubList(BufferSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Buffers{rhs.Buffers}
-    { rhs.FreeMask = ~uint64_t{}; rhs.Buffers = nullptr; }
+    { rhs.FreeMask = ~0_u64; rhs.Buffers = nullptr; }
     ~BufferSubList();
 
     BufferSubList& operator=(const BufferSubList&) = delete;
@@ -497,13 +473,13 @@ struct BufferSubList {
 };
 
 struct EffectSubList {
-    uint64_t FreeMask{~uint64_t{}};
+    uint64_t FreeMask{~0_u64};
     ALeffect *Effects{nullptr}; /* 64 */
 
     EffectSubList() noexcept = default;
     EffectSubList(const EffectSubList&) = delete;
     EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
-    { rhs.FreeMask = ~uint64_t{}; rhs.Effects = nullptr; }
+    { rhs.FreeMask = ~0_u64; rhs.Effects = nullptr; }
     ~EffectSubList();
 
     EffectSubList& operator=(const EffectSubList&) = delete;
@@ -512,13 +488,13 @@ struct EffectSubList {
 };
 
 struct FilterSubList {
-    uint64_t FreeMask{~uint64_t{}};
+    uint64_t FreeMask{~0_u64};
     ALfilter *Filters{nullptr}; /* 64 */
 
     FilterSubList() noexcept = default;
     FilterSubList(const FilterSubList&) = delete;
     FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
-    { rhs.FreeMask = ~uint64_t{}; rhs.Filters = nullptr; }
+    { rhs.FreeMask = ~0_u64; rhs.Filters = nullptr; }
     ~FilterSubList();
 
     FilterSubList& operator=(const FilterSubList&) = delete;

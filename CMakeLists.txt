@@ -673,17 +673,9 @@ CHECK_SYMBOL_EXISTS(getopt unistd.h HAVE_GETOPT)
 # Check for a 64-bit type
 CHECK_INCLUDE_FILE(stdint.h HAVE_STDINT_H)
 IF(NOT HAVE_STDINT_H)
-    IF(HAVE_WINDOWS_H)
-        CHECK_C_SOURCE_COMPILES("#define _WIN32_WINNT 0x0502
-                                 #include <windows.h>
-                                 __int64 foo;
-                                 int main() {return 0;}" HAVE___INT64)
-    ENDIF()
-    IF(NOT HAVE___INT64)
-        IF(NOT SIZEOF_LONG MATCHES "8")
-            IF(NOT SIZEOF_LONG_LONG MATCHES "8")
-                MESSAGE(FATAL_ERROR "No 64-bit types found, please report!")
-            ENDIF()
+    IF(NOT SIZEOF_LONG MATCHES "8")
+        IF(NOT SIZEOF_LONG_LONG MATCHES "8")
+            MESSAGE(FATAL_ERROR "No 64-bit types found, please report!")
         ENDIF()
     ENDIF()
 ENDIF()

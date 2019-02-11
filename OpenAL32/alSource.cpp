@@ -153,11 +153,11 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
+int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
     ALCdevice *device{context->Device};
     const ALbufferlistitem *Current;
-    ALuint64 readPos;
+    uint64_t readPos;
     ALuint refcount;
     ALvoice *voice;
 
@@ -173,8 +173,8 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         {
             Current = voice->current_buffer.load(std::memory_order_relaxed);
 
-            readPos  = static_cast<ALuint64>(voice->position.load(std::memory_order_relaxed)) << 32;
-            readPos |= static_cast<ALuint64>(voice->position_fraction.load(std::memory_order_relaxed)) <<
+            readPos  = uint64_t{voice->position.load(std::memory_order_relaxed)} << 32;
+            readPos |= int64_t{voice->position_fraction.load(std::memory_order_relaxed)} <<
                        (32-FRACTIONBITS);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -185,13 +185,13 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         const ALbufferlistitem *BufferList{Source->queue};
         while(BufferList && BufferList != Current)
         {
-            readPos += static_cast<ALuint64>(BufferList->max_samples) << 32;
+            readPos += int64_t{BufferList->max_samples} << 32;
             BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
         readPos = minu64(readPos, 0x7fffffffffffffff_u64);
     }
 
-    return static_cast<ALint64>(readPos);
+    return static_cast<int64_t>(readPos);
 }
 
 /* GetSourceSecOffset
@@ -203,7 +203,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
 {
     ALCdevice *device{context->Device};
     const ALbufferlistitem *Current;
-    ALuint64 readPos;
+    uint64_t readPos;
     ALuint refcount;
     ALvoice *voice;
 
@@ -219,7 +219,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         {
             Current = voice->current_buffer.load(std::memory_order_relaxed);
 
-            readPos  = static_cast<ALuint64>(voice->position.load(std::memory_order_relaxed)) << FRACTIONBITS;
+            readPos  = uint64_t{voice->position.load(std::memory_order_relaxed)} << FRACTIONBITS;
             readPos |= voice->position_fraction.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -234,7 +234,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         {
             for(ALsizei i{0};!BufferFmt && i < BufferList->num_buffers;++i)
                 BufferFmt = BufferList->buffers[i];
-            readPos += static_cast<ALuint64>(BufferList->max_samples) << FRACTIONBITS;
+            readPos += int64_t{BufferList->max_samples} << FRACTIONBITS;
             BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
 
@@ -1626,7 +1626,7 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
 
 ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALdouble *values);
 ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint *values);
-ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values);
+ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64SOFT *values);
 
 ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALdouble *values)
 {
@@ -1961,7 +1961,7 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
                   prop);
 }
 
-ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values)
+ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64SOFT *values)
 {
     ALCdevice *device = Context->Device;
     ClockLatency clocktime;
@@ -2018,7 +2018,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_CONE_OUTER_GAINHF:
         case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
-                *values = static_cast<ALint64>(dvals[0]);
+                *values = static_cast<int64_t>(dvals[0]);
             return err;
 
         /* 3x float/double */
@@ -2027,9 +2027,9 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_DIRECTION:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
-                values[0] = static_cast<ALint64>(dvals[0]);
-                values[1] = static_cast<ALint64>(dvals[1]);
-                values[2] = static_cast<ALint64>(dvals[2]);
+                values[0] = static_cast<int64_t>(dvals[0]);
+                values[1] = static_cast<int64_t>(dvals[1]);
+                values[2] = static_cast<int64_t>(dvals[2]);
             }
             return err;
 
@@ -2037,12 +2037,12 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_ORIENTATION:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
-                values[0] = static_cast<ALint64>(dvals[0]);
-                values[1] = static_cast<ALint64>(dvals[1]);
-                values[2] = static_cast<ALint64>(dvals[2]);
-                values[3] = static_cast<ALint64>(dvals[3]);
-                values[4] = static_cast<ALint64>(dvals[4]);
-                values[5] = static_cast<ALint64>(dvals[5]);
+                values[0] = static_cast<int64_t>(dvals[0]);
+                values[1] = static_cast<int64_t>(dvals[1]);
+                values[2] = static_cast<int64_t>(dvals[2]);
+                values[3] = static_cast<int64_t>(dvals[3]);
+                values[4] = static_cast<int64_t>(dvals[4]);
+                values[5] = static_cast<int64_t>(dvals[5]);
             }
             return err;
 
@@ -2640,7 +2640,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
-        ALint64 i64vals[3];
+        ALint64SOFT i64vals[3];
         if(GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals))
         {
             *value1 = i64vals[0];
@@ -3399,7 +3399,7 @@ void UpdateAllSourceProps(ALCcontext *context)
 
 SourceSubList::~SourceSubList()
 {
-    ALuint64 usemask = ~FreeMask;
+    uint64_t usemask{~FreeMask};
     while(usemask)
     {
         ALsizei idx{CTZ64(usemask)};

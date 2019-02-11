@@ -117,7 +117,7 @@ int WaveBackend::mixerProc()
 
     const ALsizei frameSize{mDevice->frameSizeFromFmt()};
 
-    ALint64 done{0};
+    int64_t done{0};
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
@@ -125,7 +125,7 @@ int WaveBackend::mixerProc()
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) *
+        int64_t avail{std::chrono::duration_cast<seconds>((now-start) *
             mDevice->Frequency).count()};
         if(avail-done < mDevice->UpdateSize)
         {

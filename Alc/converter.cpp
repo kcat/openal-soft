@@ -195,7 +195,7 @@ ALsizei SampleConverter::availableOut(ALsizei srcframes) const
         return 0;
     }
 
-    auto DataSize64 = static_cast<ALuint64>(prepcount);
+    auto DataSize64 = static_cast<uint64_t>(prepcount);
     DataSize64 += srcframes;
     DataSize64 -= MAX_RESAMPLE_PADDING*2;
     DataSize64 <<= FRACTIONBITS;
@@ -252,7 +252,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
         ALfloat *RESTRICT SrcData{mSrcSamples};
         ALfloat *RESTRICT DstData{mDstSamples};
         ALsizei DataPosFrac{mFracOffset};
-        auto DataSize64 = static_cast<ALuint64>(prepcount);
+        auto DataSize64 = static_cast<uint64_t>(prepcount);
         DataSize64 += toread;
         DataSize64 -= MAX_RESAMPLE_PADDING*2;
         DataSize64 <<= FRACTIONBITS;

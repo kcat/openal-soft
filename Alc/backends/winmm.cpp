@@ -265,8 +265,8 @@ retry_open:
 
 ALCboolean WinMMPlayback::reset()
 {
-    mDevice->UpdateSize = static_cast<ALuint>(
-        (ALuint64)mDevice->UpdateSize * mFormat.nSamplesPerSec / mDevice->Frequency);
+    mDevice->UpdateSize = static_cast<ALuint>(uint64_t{mDevice->UpdateSize} *
+        mFormat.nSamplesPerSec / mDevice->Frequency);
     mDevice->UpdateSize = (mDevice->UpdateSize*mDevice->NumUpdates + 3) / 4;
     mDevice->NumUpdates = 4;
     mDevice->Frequency = mFormat.nSamplesPerSec;

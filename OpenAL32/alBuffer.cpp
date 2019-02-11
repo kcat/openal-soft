@@ -1174,7 +1174,7 @@ ALsizei ChannelsFromFmt(FmtChannels chans)
 
 BufferSubList::~BufferSubList()
 {
-    ALuint64 usemask = ~FreeMask;
+    uint64_t usemask{~FreeMask};
     while(usemask)
     {
         ALsizei idx{CTZ64(usemask)};

@@ -177,8 +177,8 @@ ALCboolean CoreAudioPlayback::reset()
 
     if(mDevice->Frequency != streamFormat.mSampleRate)
     {
-        mDevice->NumUpdates = static_cast<ALuint>(
-            (ALuint64)mDevice->NumUpdates*streamFormat.mSampleRate/mDevice->Frequency);
+        mDevice->NumUpdates = static_cast<ALuint>(uint64_t{mDevice->NumUpdates} *
+            streamFormat.mSampleRate / mDevice->Frequency);
         mDevice->Frequency = streamFormat.mSampleRate;
     }
 
@@ -594,7 +594,7 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
     }
 
     // Set the AudioUnit output format frame count
-    ALuint64 FrameCount64{mDevice->UpdateSize};
+    uint64_t FrameCount64{mDevice->UpdateSize};
     FrameCount64 = (FrameCount64*outputFormat.mSampleRate + mDevice->Frequency-1) /
         mDevice->Frequency;
     FrameCount64 += MAX_RESAMPLE_PADDING*2;

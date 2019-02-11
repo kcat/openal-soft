@@ -50,11 +50,11 @@ inline int double2int(double d)
 {
 #if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
      !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
-    ALint sign, shift;
-    ALint64 mant;
+    int sign, shift;
+    int64_t mant;
     union {
-        ALdouble d;
-        ALint64 i64;
+        double d;
+        int64_t i64;
     } conv;
 
     conv.d = d;
@@ -67,12 +67,12 @@ inline int double2int(double d)
 
     mant = (conv.i64&0xfffffffffffff_i64) | 0x10000000000000_i64;
     if(LIKELY(shift < 0))
-        return (ALint)(mant >> -shift) * sign;
-    return (ALint)(mant << shift) * sign;
+        return (int)(mant >> -shift) * sign;
+    return (int)(mant << shift) * sign;
 
 #else
 
-    return static_cast<ALint>(d);
+    return static_cast<int>(d);
 #endif
 }
 

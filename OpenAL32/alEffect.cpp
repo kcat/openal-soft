@@ -569,7 +569,7 @@ void InitEffect(ALeffect *effect)
 
 EffectSubList::~EffectSubList()
 {
-    ALuint64 usemask = ~FreeMask;
+    uint64_t usemask{~FreeMask};
     while(usemask)
     {
         ALsizei idx = CTZ64(usemask);

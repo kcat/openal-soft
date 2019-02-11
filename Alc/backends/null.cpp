@@ -69,7 +69,7 @@ int NullBackend::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    ALint64 done{0};
+    int64_t done{0};
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
@@ -77,7 +77,7 @@ int NullBackend::mixerProc()
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) * mDevice->Frequency).count()};
+        int64_t avail{std::chrono::duration_cast<seconds>((now-start) * mDevice->Frequency).count()};
         if(avail-done < mDevice->UpdateSize)
         {
             std::this_thread::sleep_for(restTime);

@@ -55,9 +55,6 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
 #endif
 
 
-using ALint64 = ALint64SOFT;
-using ALuint64 = ALuint64SOFT;
-
 /* Define CTZ macros (count trailing zeros), and POPCNT macros (population
  * count/count 1 bits), for 32- and 64-bit integers. The CTZ macros' results
  * are *UNDEFINED* if the value is 0.
@@ -87,10 +84,10 @@ inline int msvc64_ctz32(ALuint v)
 }
 #define CTZ32 msvc64_ctz32
 
-inline int msvc64_popcnt64(ALuint64 v)
+inline int msvc64_popcnt64(uint64_t v)
 { return (int)__popcnt64(v); }
 #define POPCNT64 msvc64_popcnt64
-inline int msvc64_ctz64(ALuint64 v)
+inline int msvc64_ctz64(uint64_t v)
 {
     unsigned long idx = 64;
     _BitScanForward64(&idx, v);
@@ -111,10 +108,10 @@ inline int msvc_ctz32(ALuint v)
 }
 #define CTZ32 msvc_ctz32
 
-inline int msvc_popcnt64(ALuint64 v)
+inline int msvc_popcnt64(uint64_t v)
 { return (int)(__popcnt((ALuint)v) + __popcnt((ALuint)(v>>32))); }
 #define POPCNT64 msvc_popcnt64
-inline int msvc_ctz64(ALuint64 v)
+inline int msvc_ctz64(uint64_t v)
 {
     unsigned long idx = 64;
     if(!_BitScanForward(&idx, v&0xffffffff))
@@ -147,7 +144,7 @@ inline int fallback_ctz32(ALuint value)
 { return fallback_popcnt32(~value & (value - 1)); }
 #define CTZ32 fallback_ctz32
 
-inline int fallback_popcnt64(ALuint64 v)
+inline int fallback_popcnt64(uint64_t v)
 {
     v = v - ((v >> 1) & 0x5555555555555555_u64);
     v = (v & 0x3333333333333333_u64) + ((v >> 2) & 0x3333333333333333_u64);
@@ -155,7 +152,7 @@ inline int fallback_popcnt64(ALuint64 v)
     return (int)((v * 0x0101010101010101_u64) >> 56);
 }
 #define POPCNT64 fallback_popcnt64
-inline int fallback_ctz64(ALuint64 value)
+inline int fallback_ctz64(uint64_t value)
 { return fallback_popcnt64(~value & (value - 1)); }
 #define CTZ64 fallback_ctz64
 #endif

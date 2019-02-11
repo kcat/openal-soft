@@ -87,7 +87,7 @@ namespace {
 
 
 /* Scales the given value using 64-bit integer math, ceiling the result. */
-inline ALint64 ScaleCeil(ALint64 val, ALint64 new_scale, ALint64 old_scale)
+inline int64_t ScaleCeil(int64_t val, int64_t new_scale, int64_t old_scale)
 {
     return (val*new_scale + old_scale-1) / old_scale;
 }

@@ -367,7 +367,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
         ALsizei DstBufferSize{SamplesToDo - OutPos};
 
         /* Calculate the last written dst sample pos. */
-        ALint64 DataSize64{DstBufferSize - 1};
+        int64_t DataSize64{DstBufferSize - 1};
         /* Calculate the last read src sample pos. */
         DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
         /* +1 to get the src sample count, include padding. */

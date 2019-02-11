@@ -54,12 +54,6 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
 #endif
 #endif
 
-/* Calculates the size of a struct with N elements of a flexible array member.
- * GCC and Clang allow offsetof(Type, fam[N]) for this, but MSVC seems to have
- * trouble, so a bit more verbose workaround is needed.
- */
-#define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
-
 
 using ALint64 = ALint64SOFT;
 using ALuint64 = ALuint64SOFT;

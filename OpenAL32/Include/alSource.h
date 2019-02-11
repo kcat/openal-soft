@@ -21,6 +21,12 @@ struct ALbufferlistitem {
     ALsizei max_samples;
     ALsizei num_buffers;
     ALbuffer *buffers[];
+
+    static constexpr size_t Sizeof(size_t num_buffers) noexcept
+    {
+        return maxz(offsetof(ALbufferlistitem, buffers) + sizeof(ALbuffer*)*num_buffers,
+            sizeof(ALbufferlistitem));
+    }
 };
 
 

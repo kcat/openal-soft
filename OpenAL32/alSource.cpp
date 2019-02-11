@@ -1270,7 +1270,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             {
                 /* Add the selected buffer to a one-item queue */
                 auto newlist = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
-                    FAM_SIZE(ALbufferlistitem, buffers, 1)));
+                    ALbufferlistitem::Sizeof(1u)));
                 newlist->next.store(nullptr, std::memory_order_relaxed);
                 newlist->max_samples = buffer->SampleLen;
                 newlist->num_buffers = 1;
@@ -3019,13 +3019,13 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(!BufferListStart)
         {
             BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
-                FAM_SIZE(ALbufferlistitem, buffers, 1)));
+                ALbufferlistitem::Sizeof(1u)));
             BufferList = BufferListStart;
         }
         else
         {
             auto item = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
-                FAM_SIZE(ALbufferlistitem, buffers, 1)));
+                ALbufferlistitem::Sizeof(1u)));
             BufferList->next.store(item, std::memory_order_relaxed);
             BufferList = item;
         }
@@ -3122,7 +3122,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
 
     std::unique_lock<std::mutex> buflock{device->BufferLock};
     auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
-        FAM_SIZE(ALbufferlistitem, buffers, nb)));
+        ALbufferlistitem::Sizeof(nb)));
     BufferList = BufferListStart;
     BufferList->next.store(nullptr, std::memory_order_relaxed);
     BufferList->max_samples = 0;

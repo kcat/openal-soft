@@ -1585,44 +1585,33 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
 }
 
 void ApplyDistanceComp(ALfloat (*Samples)[BUFFERSIZE], const DistanceComp &distcomp,
-                       ALfloat (&Values)[BUFFERSIZE], const ALsizei SamplesToDo, const ALsizei numchans)
+                       const ALsizei SamplesToDo, const ALsizei numchans)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(numchans > 0);
 
-    ALfloat *RESTRICT tempvals{al::assume_aligned<16>(&Values[0])};
     for(ALsizei c{0};c < numchans;c++)
     {
-        ALfloat *RESTRICT inout{al::assume_aligned<16>(Samples[c])};
         const ALfloat gain{distcomp[c].Gain};
         const ALsizei base{distcomp[c].Length};
-        ALfloat *RESTRICT distbuf{al::assume_aligned<16>(distcomp[c].Buffer)};
+        ALfloat *distbuf{al::assume_aligned<16>(distcomp[c].Buffer)};
 
-        if(base <= 0)
-        {
-            if(gain < 1.0f)
-                std::transform(inout, inout+SamplesToDo, inout,
-                    [gain](const ALfloat in) noexcept -> ALfloat
-                    { return in * gain; }
-                );
+        if(base < 1)
             continue;
-        }
 
+        ALfloat *inout{al::assume_aligned<16>(Samples[c])};
+        auto inout_end = inout + SamplesToDo;
         if(LIKELY(SamplesToDo >= base))
         {
-            auto out = std::copy_n(distbuf, base, tempvals);
-            std::copy_n(inout, SamplesToDo-base, out);
-            std::copy_n(inout+SamplesToDo-base, base, distbuf);
+            auto delay_end = std::rotate(inout, inout_end - base, inout_end);
+            std::swap_ranges(inout, delay_end, distbuf);
         }
         else
         {
-            std::copy_n(distbuf, SamplesToDo, tempvals);
-            auto out = std::copy(distbuf+SamplesToDo, distbuf+base, distbuf);
-            std::copy_n(inout, SamplesToDo, out);
+            auto delay_start = std::swap_ranges(inout, inout_end, distbuf);
+            std::rotate(distbuf, delay_start, distbuf + base);
         }
-        std::transform(tempvals, tempvals+SamplesToDo, inout,
-            [gain](const ALfloat in) noexcept -> ALfloat { return in * gain; }
-        );
+        std::transform(inout, inout_end, inout, std::bind(std::multiplies<float>{}, _1, gain));
     }
 }
 
@@ -1774,8 +1763,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             comp->process(SamplesToDo, device->RealOut.Buffer);
 
         /* Apply delays and attenuation for mismatched speaker distances. */
-        ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, device->TempBuffer[0],
-                          SamplesToDo, device->RealOut.NumChannels);
+        ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, SamplesToDo,
+            device->RealOut.NumChannels);
 
         /* Apply dithering. The compressor should have left enough headroom for
          * the dither noise to not saturate.

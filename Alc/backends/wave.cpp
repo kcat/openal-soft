@@ -182,7 +182,7 @@ int WaveBackend::mixerProc()
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= mDevice->Frequency)
+        if(done >= mDevice->Frequency && mDevice->Frequency != 0)
         {
             seconds s{done/mDevice->Frequency};
             start += s;

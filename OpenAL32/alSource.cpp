@@ -54,6 +54,9 @@ using namespace std::placeholders;
 
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
+    if(!source || !context)
+        return nullptr;
+
     ALint idx{source->VoiceIdx};
     if(idx >= 0 && idx < context->VoiceCount.load(std::memory_order_relaxed))
     {
@@ -2703,9 +2706,12 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             [&context](ALuint sid) -> void
             {
                 ALsource *source{LookupSource(context.get(), sid)};
-                source->OffsetType = AL_NONE;
-                source->Offset = 0.0;
-                source->state = AL_STOPPED;
+                if(source)
+                {
+                    source->OffsetType = AL_NONE;
+                    source->Offset = 0.0;
+                    source->state = AL_STOPPED;
+                }
             }
         );
         return;
@@ -2723,6 +2729,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     auto start_source = [&context,device](ALuint sid) -> void
     {
         ALsource *source{LookupSource(context.get(), sid)};
+        if(!source)
+            return;
+
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */

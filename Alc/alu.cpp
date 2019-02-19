@@ -1630,16 +1630,15 @@ void ApplyDither(ALfloat (*Samples)[BUFFERSIZE], ALuint *dither_seed, const ALfl
     {
         ASSUME(SamplesToDo > 0);
         ALfloat *buffer{al::assume_aligned<16>(input)};
-        std::transform(buffer, buffer+SamplesToDo, buffer,
-            [&seed,invscale,quant_scale](ALfloat sample) noexcept -> ALfloat
-            {
-                ALfloat val = sample * quant_scale;
-                ALuint rng0 = dither_rng(&seed);
-                ALuint rng1 = dither_rng(&seed);
-                val += static_cast<ALfloat>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
-                return fast_roundf(val) * invscale;
-            }
-        );
+        auto dither_sample = [&seed,invscale,quant_scale](ALfloat sample) noexcept -> ALfloat
+        {
+            ALfloat val{sample * quant_scale};
+            ALuint rng0{dither_rng(&seed)};
+            ALuint rng1{dither_rng(&seed)};
+            val += static_cast<ALfloat>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
+            return fast_roundf(val) * invscale;
+        };
+        std::transform(buffer, buffer+SamplesToDo, buffer, dither_sample);
     };
     std::for_each(Samples, Samples+numchans, dither_channel);
     *dither_seed = seed;
@@ -1755,7 +1754,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
             ApplyStablizer(device->Stablizer.get(), device->RealOut.Buffer, lidx, ridx, cidx,
-                           SamplesToDo, device->RealOut.NumChannels);
+                SamplesToDo, device->RealOut.NumChannels);
         }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */
@@ -1771,7 +1770,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
          */
         if(device->DitherDepth > 0.0f)
             ApplyDither(device->RealOut.Buffer, &device->DitherSeed, device->DitherDepth,
-                        SamplesToDo, device->RealOut.NumChannels);
+                SamplesToDo, device->RealOut.NumChannels);
 
         if(LIKELY(OutBuffer))
         {
@@ -1835,22 +1834,21 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             }
         }
 
-        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
-            [ctx](ALvoice *voice) -> void
-            {
-                if(!voice->Playing.load(std::memory_order_acquire)) return;
-                ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
-                if(!sid) return;
+        auto stop_voice = [ctx](ALvoice *voice) -> void
+        {
+            if(!voice->Playing.load(std::memory_order_acquire)) return;
+            ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
+            if(!sid) return;
 
-                voice->SourceID.store(0u, std::memory_order_relaxed);
-                voice->Playing.store(false, std::memory_order_release);
-                /* If the source's voice was playing, it's now effectively
-                 * stopped (the source state will be updated the next time it's
-                 * checked).
-                 */
-                SendSourceStoppedEvent(ctx, sid);
-            }
-        );
+            voice->SourceID.store(0u, std::memory_order_relaxed);
+            voice->Playing.store(false, std::memory_order_release);
+            /* If the source's voice was playing, it's now effectively stopped
+             * (the source state will be updated the next time it's checked).
+             */
+            SendSourceStoppedEvent(ctx, sid);
+        };
+        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
+            stop_voice);
 
         ctx = ctx->next.load(std::memory_order_relaxed);
     }

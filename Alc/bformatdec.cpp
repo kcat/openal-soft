@@ -222,9 +222,6 @@ void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChan
 
 void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
-    ASSUME(InChannels > 0);
-    ASSUME(OutChannels > InChannels);
-
     /* This up-sampler leverages the differences observed in dual-band higher-
      * order decoder matrices compared to first-order. For the same output
      * channel configuration, the low-frequency matrix has identical
@@ -242,16 +239,19 @@ void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutCha
      * As such, we need to apply an all-pass on the existing output so that it
      * stays aligned with the upsampled signal.
      */
-    for(ALsizei i{0};i < OutChannels;i++)
-        mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
 
+    ASSUME(InChannels > 0);
     for(ALsizei i{0};i < InChannels;i++)
     {
         mUpsampler[i].Splitter.process(mSamples[sHFBand].data(), mSamples[sLFBand].data(),
             InSamples[i], SamplesToDo);
+        mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
         MixRowSamples(OutBuffer[i], mUpsampler[i].Gains,
             &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamples[0]), sNumBands, 0, SamplesToDo);
     }
+    ASSUME(OutChannels > InChannels);
+    for(ALsizei i{InChannels};i < OutChannels;i++)
+        mUpAllpass[i].process(OutBuffer[i], SamplesToDo);
 }
 
 
@@ -278,7 +278,7 @@ void AmbiUpsampler::reset(const ALsizei out_order, const ALfloat xover_norm)
     mInput[0].Splitter.init(xover_norm);
     mInput[0].Gains[sHFBand] = Ambi3DDecoderHFScale[0] / hfscales[0];
     mInput[0].Gains[sLFBand] = 1.0f;
-    mInput[1].Splitter.init(xover_norm);
+    mInput[1].Splitter = mInput[0].Splitter;
     mInput[1].Gains[sHFBand] = Ambi3DDecoderHFScale[1] / hfscales[1];
     mInput[1].Gains[sLFBand] = 1.0f;
     std::fill(std::begin(mInput)+2, std::end(mInput), mInput[1]);
@@ -290,14 +290,14 @@ void AmbiUpsampler::reset(const ALsizei out_order, const ALfloat xover_norm)
 void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
     ASSUME(InChannels > 0);
-    ASSUME(OutChannels > InChannels);
-
-    for(ALsizei i{0};i < OutChannels;i++)
-        mAllpass[i].process(OutBuffer[i], SamplesToDo);
     for(ALsizei i{0};i < InChannels;i++)
     {
         mInput[i].Splitter.process(mSamples[sHFBand], mSamples[sLFBand], InSamples[i],
             SamplesToDo);
+        mAllpass[i].process(OutBuffer[i], SamplesToDo);
         MixRowSamples(OutBuffer[i], mInput[i].Gains, mSamples, sNumBands, 0, SamplesToDo);
     }
+    ASSUME(OutChannels > InChannels);
+    for(ALsizei i{InChannels};i < OutChannels;i++)
+        mAllpass[i].process(OutBuffer[i], SamplesToDo);
 }

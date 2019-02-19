@@ -405,9 +405,10 @@ void InitPanning(ALCdevice *device)
             );
             device->FOAOut.NumChannels = 4;
 
-            device->AmbiUp = al::make_unique<AmbiUpsampler>();
-            device->AmbiUp->reset(device->mAmbiOrder,
-                400.0f / static_cast<ALfloat>(device->Frequency));
+            auto ambiup = al::make_unique<AmbiUpsampler>();
+            ambiup->reset(device->mAmbiOrder, 400.0f / static_cast<ALfloat>(device->Frequency));
+
+            device->AmbiUp = std::move(ambiup);
         }
 
         ALfloat nfc_delay{0.0f};
@@ -677,26 +678,31 @@ void InitHrtfPanning(ALCdevice *device)
         3.16227766e+00f, 1.82574186e+00f
     }, AmbiOrderHFGainHOA[MAX_AMBI_ORDER+1]{
         2.35702260e+00f, 1.82574186e+00f, 9.42809042e-01f
-        /* 1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f */
+        /*1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f*/
     };
-    static constexpr ALsizei IndexMap[9]{ 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-    static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 0 };
+    static constexpr ALsizei IndexMap[MAX_AMBI_COEFFS]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
     const ALfloat *AmbiOrderHFGain{AmbiOrderHFGainFOA};
-    ALsizei count{4};
 
     static_assert(COUNTOF(AmbiPoints) == COUNTOF(AmbiMatrix), "Ambisonic HRTF mismatch");
 
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
      */
+    std::unique_ptr<AmbiUpsampler> ambiup;
+    ALsizei ambi_order{1};
     if(device->mRenderMode != HrtfRender)
     {
-        device->AmbiUp = al::make_unique<AmbiUpsampler>();
+        ambi_order = 2;
+        ambiup = al::make_unique<AmbiUpsampler>();
+        ambiup->reset(ambi_order, 400.0f / static_cast<ALfloat>(device->Frequency));
+
+        device->AmbiUp = std::move(ambiup);
 
         AmbiOrderHFGain = AmbiOrderHFGainHOA;
-        count = static_cast<ALsizei>(COUNTOF(IndexMap));
     }
 
+    const ALsizei count{(ambi_order+1) * (ambi_order+1)};
     device->mHrtfState = DirectHrtfState::Create(count);
 
     std::transform(std::begin(IndexMap), std::begin(IndexMap)+count, std::begin(device->Dry.AmbiMap),
@@ -704,15 +710,13 @@ void InitHrtfPanning(ALCdevice *device)
     );
     device->Dry.NumChannels = count;
 
-    if(device->AmbiUp)
+    if(ambi_order > 1)
     {
         device->FOAOut.AmbiMap.fill(BFChannelConfig{});
         std::transform(std::begin(IndexMap), std::begin(IndexMap)+4, std::begin(device->FOAOut.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
         device->FOAOut.NumChannels = 4;
-
-        device->AmbiUp->reset(2, 400.0f / static_cast<ALfloat>(device->Frequency));
     }
     else
     {
@@ -722,14 +726,12 @@ void InitHrtfPanning(ALCdevice *device)
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
-    BuildBFormatHrtf(device->mHrtf,
-        device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints, AmbiMatrix,
-        static_cast<ALsizei>(COUNTOF(AmbiPoints)), AmbiOrderHFGain
-    );
+    BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints,
+        AmbiMatrix, static_cast<ALsizei>(COUNTOF(AmbiPoints)), AmbiOrderHFGain);
 
     HrtfEntry *Hrtf{device->mHrtf};
     const auto &field = Hrtf->field[Hrtf->fdCount-1];
-    InitNearFieldCtrl(device, field.distance, device->AmbiUp ? 2 : 1, ChansPerOrder);
+    InitNearFieldCtrl(device, field.distance, ambi_order, ChansPerOrder);
 }
 
 void InitUhjPanning(ALCdevice *device)

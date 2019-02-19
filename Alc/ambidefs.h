@@ -3,12 +3,12 @@
 
 #include <array>
 
-/* The maximum number of Ambisonics coefficients. For a given order (o), the
- * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
- * second-order has 9, third-order has 16, and fourth-order has 25.
+/* The maximum number of Ambisonics channels. For a given order (o), the size
+ * needed will be (o+1)**2, thus zero-order has 1, first-order has 4, second-
+ * order has 9, third-order has 16, and fourth-order has 25.
  */
-#define MAX_AMBI_ORDER  3
-#define MAX_AMBI_COEFFS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
+#define MAX_AMBI_ORDER 3
+#define MAX_AMBI_CHANNELS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
 
 /* A bitmask of ambisonic channels for 0 to 4th order. This only specifies up
  * to 4th order, which is the highest order a 32-bit mask value can specify (a
@@ -26,22 +26,22 @@
  */
 #define AMBI_PERIPHONIC_MASK (0xfe7ce4)
 
-/* The maximum number of Ambisonic coefficients for 2D (non-periphonic)
+/* The maximum number of ambisonic channels for 2D (non-periphonic)
  * representation. This is 2 per each order above zero-order, plus 1 for zero-
  * order. Or simply, o*2 + 1.
  */
-#define MAX_AMBI2D_COEFFS (MAX_AMBI_ORDER*2 + 1)
+#define MAX_AMBI2D_CHANNELS (MAX_AMBI_ORDER*2 + 1)
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder
  * coefficients should be divided by these values to get proper scalings.
  */
 struct AmbiScale {
-    static constexpr std::array<float,MAX_AMBI_COEFFS> FromN3D{{
+    static constexpr std::array<float,MAX_AMBI_CHANNELS> FromN3D{{
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
     }};
-    static constexpr std::array<float,MAX_AMBI_COEFFS> FromSN3D{{
+    static constexpr std::array<float,MAX_AMBI_CHANNELS> FromSN3D{{
         1.000000000f, /* ACN  0, sqrt(1) */
         1.732050808f, /* ACN  1, sqrt(3) */
         1.732050808f, /* ACN  2, sqrt(3) */
@@ -59,7 +59,7 @@ struct AmbiScale {
         2.645751311f, /* ACN 14, sqrt(7) */
         2.645751311f, /* ACN 15, sqrt(7) */
     }};
-    static constexpr std::array<float,MAX_AMBI_COEFFS> FromFuMa{{
+    static constexpr std::array<float,MAX_AMBI_CHANNELS> FromFuMa{{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -80,7 +80,7 @@ struct AmbiScale {
 };
 
 struct AmbiIndex {
-    static constexpr std::array<int,MAX_AMBI_COEFFS> FromFuMa{{
+    static constexpr std::array<int,MAX_AMBI_CHANNELS> FromFuMa{{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -98,15 +98,15 @@ struct AmbiIndex {
         15, /* P */
         9,  /* Q */
     }};
-    static constexpr std::array<int,MAX_AMBI_COEFFS> FromACN{{
+    static constexpr std::array<int,MAX_AMBI_CHANNELS> FromACN{{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
     }};
 
-    static constexpr std::array<int,MAX_AMBI2D_COEFFS> From2D{{
+    static constexpr std::array<int,MAX_AMBI2D_CHANNELS> From2D{{
         0, 1,3, 4,8, 9,15
     }};
-    static constexpr std::array<int,MAX_AMBI_COEFFS> From3D{{
+    static constexpr std::array<int,MAX_AMBI_CHANNELS> From3D{{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
     }};

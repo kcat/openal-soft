@@ -146,7 +146,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     mFeedback = props->Chorus.Feedback;
 
     /* Gains for left and right sides */
-    ALfloat coeffs[2][MAX_AMBI_COEFFS];
+    ALfloat coeffs[2][MAX_AMBI_CHANNELS];
     CalcAngleCoeffs(al::MathDefs<float>::Pi()*-0.5f, 0.0f, 0.0f, coeffs[0]);
     CalcAngleCoeffs(al::MathDefs<float>::Pi()* 0.5f, 0.0f, 0.0f, coeffs[1]);
 

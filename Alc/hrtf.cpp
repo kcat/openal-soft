@@ -297,9 +297,9 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
     return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{num_chans}};
 }
 
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
-    static constexpr int OrderFromChan[MAX_AMBI_COEFFS]{
+    static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
     };
     /* Set this to true for dual-band HRTF processing. May require better

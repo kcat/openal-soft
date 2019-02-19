@@ -130,7 +130,7 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
             break;
     }
 
-    ALfloat coeffs[MAX_AMBI_COEFFS];
+    ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
 
     mOutBuffer = target.Main->Buffer;

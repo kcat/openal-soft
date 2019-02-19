@@ -39,7 +39,7 @@ inline auto GetDecoderHFScales(ALsizei order) noexcept -> const ALfloat(&)[MAX_A
     return Ambi3DDecoderHFScale;
 }
 
-inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
+inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
@@ -91,14 +91,14 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
     }
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
-    const std::array<float,MAX_AMBI_COEFFS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
-    const ALsizei coeff_count{periphonic ? MAX_AMBI_COEFFS : MAX_AMBI2D_COEFFS};
+    const std::array<float,MAX_AMBI_CHANNELS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
+    const ALsizei coeff_count{periphonic ? MAX_AMBI_CHANNELS : MAX_AMBI2D_CHANNELS};
 
     if(!mDualBand)
     {
         for(size_t i{0u};i < conf->Speakers.size();i++)
         {
-            ALfloat (&mtx)[MAX_AMBI_COEFFS] = mMatrix.Single[chanmap[i]];
+            ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanmap[i]];
             for(ALsizei j{0},k{0};j < coeff_count;j++)
             {
                 const ALsizei l{periphonic ? j : AmbiIndex::From2D[j]};
@@ -119,7 +119,7 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(size_t i{0u};i < conf->Speakers.size();i++)
         {
-            ALfloat (&mtx)[sNumBands][MAX_AMBI_COEFFS] = mMatrix.Dual[chanmap[i]];
+            ALfloat (&mtx)[sNumBands][MAX_AMBI_CHANNELS] = mMatrix.Dual[chanmap[i]];
             for(ALsizei j{0},k{0};j < coeff_count;j++)
             {
                 const ALsizei l{periphonic ? j : AmbiIndex::From2D[j]};
@@ -175,8 +175,8 @@ void BFormatDec::reset(const ALsizei inchans, const ALfloat xover_norm, const AL
 
     for(ALsizei i{0};i < chancount;i++)
     {
-        const ALfloat (&coeffs)[MAX_AMBI_COEFFS] = chancoeffs[chanmap[i]];
-        ALfloat (&mtx)[MAX_AMBI_COEFFS] = mMatrix.Single[chanmap[i]];
+        const ALfloat (&coeffs)[MAX_AMBI_CHANNELS] = chancoeffs[chanmap[i]];
+        ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanmap[i]];
 
         std::copy_n(std::begin(coeffs), inchans, std::begin(mtx));
     }

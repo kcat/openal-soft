@@ -115,7 +115,7 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
         calc_rcpQ_from_slope(gainhf, 1.0f)
     );
 
-    ALfloat coeffs[2][MAX_AMBI_COEFFS];
+    ALfloat coeffs[2][MAX_AMBI_CHANNELS];
     CalcAngleCoeffs(al::MathDefs<float>::Pi()*-0.5f*lrpan, 0.0f, spread, coeffs[0]);
     CalcAngleCoeffs(al::MathDefs<float>::Pi()* 0.5f*lrpan, 0.0f, spread, coeffs[1]);
 

@@ -10,7 +10,7 @@
 struct AmbDecConf;
 
 
-using ChannelDec = ALfloat[MAX_AMBI_COEFFS];
+using ChannelDec = ALfloat[MAX_AMBI_CHANNELS];
 
 class BFormatDec {
     static constexpr size_t sHFBand{0};
@@ -20,12 +20,12 @@ class BFormatDec {
     ALuint mEnabled; /* Bitfield of enabled channels. */
 
     union MatrixU {
-        ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_COEFFS];
-        ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
+        ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_CHANNELS];
+        ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_CHANNELS];
     } mMatrix;
 
     /* NOTE: BandSplitter filters are unused with single-band decoding */
-    BandSplitter mXOver[MAX_AMBI_COEFFS];
+    BandSplitter mXOver[MAX_AMBI_CHANNELS];
 
     al::vector<std::array<ALfloat,BUFFERSIZE>, 16> mSamples;
     /* These two alias into Samples */

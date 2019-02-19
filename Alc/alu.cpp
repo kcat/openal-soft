@@ -640,7 +640,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * moved to +/-90 degrees for direct right and left speaker
              * responses.
              */
-            ALfloat coeffs[MAX_AMBI_COEFFS];
+            ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcAngleCoeffs((Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
@@ -739,7 +739,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
          */
         for(ALsizei c{0};c < num_channels;c++)
         {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
+            ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
 
             for(ALsizei i{0};i < NumSends;i++)
@@ -780,7 +780,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             /* Calculate the directional coefficients once, which apply to all
              * input channels of the source sends.
              */
-            ALfloat coeffs[MAX_AMBI_COEFFS];
+            ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
 
             for(ALsizei i{0};i < NumSends;i++)
@@ -818,7 +818,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 voice->Direct.Params[c].Hrtf.Target.Gain = DryGain;
 
                 /* Normal panning for auxiliary sends. */
-                ALfloat coeffs[MAX_AMBI_COEFFS];
+                ALfloat coeffs[MAX_AMBI_CHANNELS];
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread, coeffs);
 
                 for(ALsizei i{0};i < NumSends;i++)
@@ -862,7 +862,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             /* Calculate the directional coefficients once, which apply to all
              * input channels.
              */
-            ALfloat coeffs[MAX_AMBI_COEFFS];
+            ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcAngleCoeffs((Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
@@ -930,7 +930,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                     continue;
                 }
 
-                ALfloat coeffs[MAX_AMBI_COEFFS];
+                ALfloat coeffs[MAX_AMBI_CHANNELS];
                 CalcAngleCoeffs(
                     (Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(chans[c].angle, 3.0f)
                                                       : chans[c].angle,

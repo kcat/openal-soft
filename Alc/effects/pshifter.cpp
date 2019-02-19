@@ -181,7 +181,7 @@ void ALpshifterState::update(const ALCcontext* UNUSED(context), const ALeffectsl
     mPitchShiftI = fastf2i(pitch*FRACTIONONE);
     mPitchShift  = mPitchShiftI * (1.0f/FRACTIONONE);
 
-    ALfloat coeffs[MAX_AMBI_COEFFS];
+    ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
 
     mOutBuffer = target.Main->Buffer;

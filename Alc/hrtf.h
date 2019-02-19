@@ -109,6 +109,6 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
  * ordered and scaled according to the matrix input. Note the specified virtual
  * positions should be in degrees, not radians!
  */
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

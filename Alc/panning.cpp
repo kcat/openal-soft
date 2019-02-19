@@ -42,13 +42,13 @@
 #include "bs2b.h"
 
 
-constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromN3D;
-constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromSN3D;
-constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromFuMa;
-constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::FromFuMa;
-constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::FromACN;
-constexpr std::array<int,MAX_AMBI2D_COEFFS> AmbiIndex::From2D;
-constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::From3D;
+constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromN3D;
+constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromSN3D;
+constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromFuMa;
+constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::FromFuMa;
+constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::FromACN;
+constexpr std::array<int,MAX_AMBI2D_CHANNELS> AmbiIndex::From2D;
+constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::From3D;
 
 
 namespace {
@@ -101,7 +101,7 @@ inline const char *GetLabelFromChannel(Channel channel)
 
 struct ChannelMap {
     Channel ChanName;
-    ALfloat Config[MAX_AMBI2D_COEFFS];
+    ALfloat Config[MAX_AMBI2D_CHANNELS];
 };
 
 bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
@@ -308,14 +308,14 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
 }
 
 
-auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
+auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
 {
     if(scaletype == AmbiNorm::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbiNorm::SN3D) return AmbiScale::FromSN3D;
     return AmbiScale::FromN3D;
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<int,MAX_AMBI_COEFFS>&
+auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<int,MAX_AMBI_CHANNELS>&
 {
     if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
     return AmbiIndex::FromACN;
@@ -379,8 +379,8 @@ void InitPanning(ALCdevice *device)
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname{device->DeviceName.c_str()};
-        const std::array<int,MAX_AMBI_COEFFS> &acnmap = GetAmbiLayout(device->mAmbiLayout);
-        const std::array<float,MAX_AMBI_COEFFS> &n3dscale = GetAmbiScales(device->mAmbiScale);
+        const std::array<int,MAX_AMBI_CHANNELS> &acnmap = GetAmbiLayout(device->mAmbiLayout);
+        const std::array<float,MAX_AMBI_CHANNELS> &n3dscale = GetAmbiScales(device->mAmbiScale);
 
         count = (device->mAmbiOrder == 3) ? 16 :
                 (device->mAmbiOrder == 2) ? 9 :
@@ -652,7 +652,7 @@ void InitHrtfPanning(ALCdevice *device)
         { -69.094843f,  180.000000f },
         {  69.094843f,  180.000000f },
     };
-    static constexpr ALfloat AmbiMatrix[][MAX_AMBI_COEFFS]{
+    static constexpr ALfloat AmbiMatrix[][MAX_AMBI_CHANNELS]{
         { 5.00000000e-02f,  5.00000000e-02f,  5.00000000e-02f,  5.00000000e-02f,  6.45497224e-02f,  6.45497224e-02f,  0.00000000e+00f,  6.45497224e-02f,  0.00000000e+00f,  1.48264644e-02f,  6.33865691e-02f,  1.01126676e-01f, -7.36485380e-02f, -1.09260065e-02f,  7.08683387e-02f, -1.01622099e-01f },
         { 5.00000000e-02f, -5.00000000e-02f,  5.00000000e-02f,  5.00000000e-02f, -6.45497224e-02f, -6.45497224e-02f,  0.00000000e+00f,  6.45497224e-02f,  0.00000000e+00f, -1.48264644e-02f, -6.33865691e-02f, -1.01126676e-01f, -7.36485380e-02f, -1.09260065e-02f,  7.08683387e-02f, -1.01622099e-01f },
         { 5.00000000e-02f, -5.00000000e-02f,  5.00000000e-02f, -5.00000000e-02f,  6.45497224e-02f, -6.45497224e-02f,  0.00000000e+00f, -6.45497224e-02f,  0.00000000e+00f, -1.48264644e-02f,  6.33865691e-02f, -1.01126676e-01f, -7.36485380e-02f,  1.09260065e-02f,  7.08683387e-02f,  1.01622099e-01f },
@@ -680,7 +680,7 @@ void InitHrtfPanning(ALCdevice *device)
         2.35702260e+00f, 1.82574186e+00f, 9.42809042e-01f
         /*1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f*/
     };
-    static constexpr ALsizei IndexMap[MAX_AMBI_COEFFS]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    static constexpr ALsizei IndexMap[MAX_AMBI_CHANNELS]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
     const ALfloat *AmbiOrderHFGain{AmbiOrderHFGainFOA};
 
@@ -755,7 +755,7 @@ void InitUhjPanning(ALCdevice *device)
 
 
 void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
-                    ALfloat (&coeffs)[MAX_AMBI_COEFFS])
+                    ALfloat (&coeffs)[MAX_AMBI_CHANNELS])
 {
     /* Zeroth-order */
     coeffs[0]  = 1.0f; /* ACN 0 = 1 */

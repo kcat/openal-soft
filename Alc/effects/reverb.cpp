@@ -297,6 +297,9 @@ struct ReverbState final : public EffectState {
         ALfloat LFReference{AL_EAXREVERB_DEFAULT_LFREFERENCE};
     } mParams;
 
+    ALsizei mNumInputs{0}; /* 3 or 4 */
+    ALfloat mInputConv[NUM_LINES][4/*NumInputs*/];
+
     /* Master effect filters */
     struct {
         BiquadFilter Lp;
@@ -466,6 +469,28 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *Device)
     mLateFeedTap = float2int((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
                               EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier) *
                              frequency);
+
+    mNumInputs = 4;
+    if(mNumInputs == 3)
+    {
+        for(ALsizei i{0};i < NUM_LINES;++i)
+        {
+            mInputConv[i][0] = B2A[i][0];
+            mInputConv[i][1] = B2A[i][1];
+            mInputConv[i][2] = B2A[i][3];
+            mInputConv[i][3] = 0.0f;
+        }
+    }
+    else
+    {
+        for(ALsizei i{0};i < NUM_LINES;++i)
+        {
+            mInputConv[i][0] = B2A[i][0];
+            mInputConv[i][1] = B2A[i][1];
+            mInputConv[i][2] = B2A[i][2];
+            mInputConv[i][3] = B2A[i][3];
+        }
+    }
 
     /* Clear filters and gain coefficients since the delay lines were all just
      * cleared (if not reallocated).
@@ -1321,9 +1346,7 @@ void ReverbState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
-            MixRowSamples(afmt[c], B2A[c].data(),
-                SamplesIn, MAX_EFFECT_CHANNELS, base, todo
-            );
+            MixRowSamples(afmt[c], mInputConv[c], SamplesIn, mNumInputs, base, todo);
         }
 
         /* Process the samples for reverb. */

@@ -785,10 +785,10 @@ ALvoid Update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *LateReverbP
     alu::Matrix latemat{MatrixMult(GetTransformFromVector(LateReverbPan), A2B)};
     State->mOutBuffer = target.FOAOut->Buffer;
     State->mOutChannels = target.FOAOut->NumChannels;
-    for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
         ComputePanGains(target.FOAOut, earlymat[i].data(), earlyGain,
             State->mEarly.PanGain[i]);
-    for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
         ComputePanGains(target.FOAOut, latemat[i].data(), lateGain, State->mLate.PanGain[i]);
 }
 

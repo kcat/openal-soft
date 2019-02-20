@@ -328,7 +328,7 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
         devid = get_device_id(device);
         if(devid)
         {
-            if(wcscmp(devid, defdevid) != 0)
+            if(!defdevid || wcscmp(devid, defdevid) != 0)
                 add_device(device, devid, list);
             CoTaskMemFree(devid);
         }

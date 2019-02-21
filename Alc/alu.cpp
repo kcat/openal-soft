@@ -446,8 +446,8 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         auto iter = std::copy(std::begin(target->ChanMap), std::end(target->ChanMap),
             std::begin(params.AmbiMap));
         std::fill(iter, std::end(params.AmbiMap), BFChannelConfig{});
-        params.Buffer = target->WetBuffer;
-        params.NumChannels = target->NumChannels;
+        params.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(target->WetBuffer[0]);
+        params.NumChannels = target->WetBuffer.size();
 
         output = EffectTarget{&params, &params, nullptr};
     }
@@ -651,7 +651,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                    ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
                         WetGain[i]*scale0, voice->Send[i].Params[0].Gains.Target);
             }
         }
@@ -714,7 +714,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     for(ALsizei c{0};c < num_channels;c++)
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, matrix[c].data(),
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), matrix[c].data(),
                             WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
             }
@@ -745,7 +745,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                    ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
                         WetGain[i], voice->Send[i].Params[c].Gains.Target
                     );
             }
@@ -790,7 +790,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                     {
                         /* Skip LFE */
                         if(chans[c].channel != LFE)
-                            ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                            ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
                                 WetGain[i]*downmix_gain, voice->Send[i].Params[c].Gains.Target
                             );
                     }
@@ -824,7 +824,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 for(ALsizei i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
                             WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
                 }
@@ -890,7 +890,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                     {
                         /* Skip LFE */
                         if(chans[c].channel != LFE)
-                            ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                            ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
                                 WetGain[i]*downmix_gain, voice->Send[i].Params[c].Gains.Target
                             );
                     }
@@ -942,7 +942,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 for(ALsizei i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(),
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
                 }
@@ -1016,8 +1016,8 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         }
         else
         {
-            voice->Send[i].Buffer = SendSlots[i]->WetBuffer;
-            voice->Send[i].Channels = SendSlots[i]->NumChannels;
+            voice->Send[i].Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(SendSlots[i]->WetBuffer[0]);
+            voice->Send[i].Channels = SendSlots[i]->WetBuffer.size();
         }
     }
 
@@ -1124,8 +1124,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         }
         else
         {
-            voice->Send[i].Buffer = SendSlots[i]->WetBuffer;
-            voice->Send[i].Channels = SendSlots[i]->NumChannels;
+            voice->Send[i].Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(SendSlots[i]->WetBuffer[0]);
+            voice->Send[i].Channels = SendSlots[i]->WetBuffer.size();
         }
     }
 
@@ -1465,10 +1465,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     std::for_each(auxslots->begin(), auxslots->end(),
         [SamplesToDo](ALeffectslot *slot) -> void
         {
-            std::for_each(slot->WetBuffer, slot->WetBuffer+slot->NumChannels,
-                [SamplesToDo](ALfloat *buffer) -> void
-                { std::fill_n(buffer, SamplesToDo, 0.0f); }
-            );
+            for(auto &buffer : slot->WetBuffer)
+                std::fill_n(buffer.begin(), SamplesToDo, 0.0f);
         }
     );
 
@@ -1529,8 +1527,9 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo, slot->WetBuffer, state->mOutBuffer,
-                           state->mOutChannels);
+            state->process(SamplesToDo,
+                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(slot->WetBuffer[0]),
+                state->mOutBuffer, state->mOutChannels);
         }
     );
 }

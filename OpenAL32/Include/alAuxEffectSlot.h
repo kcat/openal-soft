@@ -1,8 +1,11 @@
 #ifndef _AL_AUXEFFECTSLOT_H_
 #define _AL_AUXEFFECTSLOT_H_
 
+#include <array>
+
 #include "alMain.h"
 #include "alEffect.h"
+#include "ambidefs.h"
 
 #include "almalloc.h"
 #include "atomic.h"
@@ -99,19 +102,13 @@ struct ALeffectslot {
     /* Self ID */
     ALuint id{};
 
-    ALsizei NumChannels{};
-    BFChannelConfig ChanMap[MAX_EFFECT_CHANNELS];
-    /* Wet buffer configuration is ACN channel order with N3D scaling:
-     * * Channel 0 is the unattenuated mono signal.
-     * * Channel 1 is OpenAL -X * sqrt(3)
-     * * Channel 2 is OpenAL Y * sqrt(3)
-     * * Channel 3 is OpenAL -Z * sqrt(3)
+    /* Wet buffer configuration is ACN channel order with N3D scaling.
      * Consequently, effects that only want to work with mono input can use
      * channel 0 by itself. Effects that want multichannel can process the
-     * ambisonics signal and make a B-Format source pan for first-order device
-     * output (FOAOut).
+     * ambisonics signal and make a B-Format source pan.
      */
-    alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
+    al::vector<std::array<ALfloat,BUFFERSIZE>,16> WetBuffer;
+    BFChannelConfig ChanMap[MAX_AMBI_CHANNELS];
 
     ALeffectslot() { PropsClean.test_and_set(std::memory_order_relaxed); }
     ALeffectslot(const ALeffectslot&) = delete;

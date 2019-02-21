@@ -2068,8 +2068,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(context->DefaultSlot)
         {
             ALeffectslot *slot = context->DefaultSlot.get();
-            EffectState *state = slot->Effect.State;
+            aluInitEffectPanning(slot);
 
+            EffectState *state{slot->Effect.State};
             state->mOutBuffer = device->Dry.Buffer;
             state->mOutChannels = device->Dry.NumChannels;
             if(state->deviceUpdate(device) == AL_FALSE)
@@ -2082,8 +2083,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         std::unique_lock<std::mutex> slotlock{context->EffectSlotLock};
         for(auto &slot : context->EffectSlotList)
         {
-            EffectState *state = slot->Effect.State;
+            if(!slot) continue;
+            aluInitEffectPanning(slot.get());
 
+            EffectState *state{slot->Effect.State};
             state->mOutBuffer = device->Dry.Buffer;
             state->mOutChannels = device->Dry.NumChannels;
             if(state->deviceUpdate(device) == AL_FALSE)

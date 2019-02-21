@@ -8,7 +8,9 @@
  * order has 9, third-order has 16, and fourth-order has 25.
  */
 #define MAX_AMBI_ORDER 3
-#define MAX_AMBI_CHANNELS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
+constexpr inline size_t AmbiChannelsFromOrder(size_t order) noexcept
+{ return (order+1) * (order+1); }
+#define MAX_AMBI_CHANNELS AmbiChannelsFromOrder(MAX_AMBI_ORDER)
 
 /* A bitmask of ambisonic channels for 0 to 4th order. This only specifies up
  * to 4th order, which is the highest order a 32-bit mask value can specify (a
@@ -30,7 +32,9 @@
  * representation. This is 2 per each order above zero-order, plus 1 for zero-
  * order. Or simply, o*2 + 1.
  */
-#define MAX_AMBI2D_CHANNELS (MAX_AMBI_ORDER*2 + 1)
+constexpr inline size_t Ambi2DChannelsFromOrder(size_t order) noexcept
+{ return order*2 + 1; }
+#define MAX_AMBI2D_CHANNELS Ambi2DChannelsFromOrder(MAX_AMBI_CHANNELS)
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder

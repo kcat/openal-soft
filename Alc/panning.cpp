@@ -496,7 +496,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = (order+1) * (order+1);
+        count = AmbiChannelsFromOrder(order);
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -504,7 +504,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
     else
     {
-        count = order*2 + 1;
+        count = Ambi2DChannelsFromOrder(order);
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -567,7 +567,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = (order+1) * (order+1);
+        count = AmbiChannelsFromOrder(order);
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -575,7 +575,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     }
     else
     {
-        count = order*2 + 1;
+        count = Ambi2DChannelsFromOrder(order);
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -714,7 +714,7 @@ void InitHrtfPanning(ALCdevice *device)
     }
     device->mAmbiOrder = ambi_order;
 
-    const ALsizei count{(ambi_order+1) * (ambi_order+1)};
+    const size_t count{AmbiChannelsFromOrder(ambi_order)};
     device->mHrtfState = DirectHrtfState::Create(count);
 
     std::transform(std::begin(IndexMap), std::begin(IndexMap)+count, std::begin(device->Dry.AmbiMap),
@@ -749,9 +749,9 @@ void InitHrtfPanning(ALCdevice *device)
 void InitUhjPanning(ALCdevice *device)
 {
     /* UHJ is always 2D first-order. */
-    static constexpr ALsizei count{3};
+    static constexpr size_t count{Ambi2DChannelsFromOrder(1)};
 
-    device->mAmbiOrder = (count-1) / 2;
+    device->mAmbiOrder = 1;
 
     auto acnmap_end = AmbiIndex::FromFuMa.begin() + count;
     std::transform(AmbiIndex::FromFuMa.begin(), acnmap_end, std::begin(device->Dry.AmbiMap),

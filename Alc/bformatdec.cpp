@@ -92,17 +92,17 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     const std::array<float,MAX_AMBI_CHANNELS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
-    const ALsizei coeff_count{periphonic ? MAX_AMBI_CHANNELS : MAX_AMBI2D_CHANNELS};
+    const size_t coeff_count{periphonic ? MAX_AMBI_CHANNELS : MAX_AMBI2D_CHANNELS};
 
     if(!mDualBand)
     {
         for(size_t i{0u};i < conf->Speakers.size();i++)
         {
             ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanmap[i]];
-            for(ALsizei j{0},k{0};j < coeff_count;j++)
+            for(size_t j{0},k{0};j < coeff_count;j++)
             {
-                const ALsizei l{periphonic ? j : AmbiIndex::From2D[j]};
-                if(!(conf->ChanMask&(1<<l))) continue;
+                const size_t l{periphonic ? j : AmbiIndex::From2D[j]};
+                if(!(conf->ChanMask&(1u<<l))) continue;
                 mtx[j] = conf->HFMatrix[i][k] / coeff_scale[l] *
                     ((l>=9) ? conf->HFOrderGain[3] :
                     (l>=4) ? conf->HFOrderGain[2] :
@@ -120,10 +120,10 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
         for(size_t i{0u};i < conf->Speakers.size();i++)
         {
             ALfloat (&mtx)[sNumBands][MAX_AMBI_CHANNELS] = mMatrix.Dual[chanmap[i]];
-            for(ALsizei j{0},k{0};j < coeff_count;j++)
+            for(size_t j{0},k{0};j < coeff_count;j++)
             {
-                const ALsizei l{periphonic ? j : AmbiIndex::From2D[j]};
-                if(!(conf->ChanMask&(1<<l))) continue;
+                const size_t l{periphonic ? j : AmbiIndex::From2D[j]};
+                if(!(conf->ChanMask&(1u<<l))) continue;
                 mtx[sHFBand][j] = conf->HFMatrix[i][k] / coeff_scale[l] *
                     ((l>=9) ? conf->HFOrderGain[3] :
                     (l>=4) ? conf->HFOrderGain[2] :

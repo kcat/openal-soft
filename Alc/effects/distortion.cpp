@@ -95,7 +95,7 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
-void ALdistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void ALdistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     ALfloat (*RESTRICT buffer)[BUFFERSIZE] = mBuffer;
     const ALfloat fc = mEdgeCoeff;

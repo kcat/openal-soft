@@ -432,6 +432,13 @@ inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs,
 
 void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 
+inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexcept
+{
+    std::array<ALfloat,MAX_AMBI_CHANNELS> ret{};
+    ret[i] = 1.0f;
+    return ret;
+}
+
 
 ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo);
 

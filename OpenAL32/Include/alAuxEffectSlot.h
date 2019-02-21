@@ -117,7 +117,7 @@ struct ALeffectslot {
 
     static ALeffectslotArray *CreatePtrArray(size_t count) noexcept;
 
-    DEF_NEWDEL(ALeffectslot)
+    DEF_PLACE_NEWDEL()
 };
 
 ALenum InitEffectSlot(ALeffectslot *slot);

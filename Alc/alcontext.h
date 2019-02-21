@@ -56,10 +56,21 @@ struct SourceSubList {
     { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
 };
 
-/* Effect slots are rather large, and apps aren't likely to have more than one
- * or two (let alone 64), so hold them individually.
- */
-using ALeffectslotPtr = std::unique_ptr<ALeffectslot>;
+struct EffectSlotSubList {
+    uint64_t FreeMask{~0_u64};
+    ALeffectslot *EffectSlots{nullptr}; /* 64 */
+
+    EffectSlotSubList() noexcept = default;
+    EffectSlotSubList(const EffectSlotSubList&) = delete;
+    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
+      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
+    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
+    ~EffectSlotSubList();
+
+    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
+    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
+};
 
 struct ALCcontext {
     RefCount ref{1u};
@@ -68,7 +79,8 @@ struct ALCcontext {
     ALuint NumSources{0};
     std::mutex SourceLock;
 
-    al::vector<ALeffectslotPtr> EffectSlotList;
+    al::vector<EffectSlotSubList> EffectSlotList;
+    ALuint NumEffectSlots{0u};
     std::mutex EffectSlotLock;
 
     std::atomic<ALenum> LastError{AL_NO_ERROR};

@@ -582,10 +582,15 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id) noexcept
 
 inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 {
-    --id;
-    if(UNLIKELY(id >= context->EffectSlotList.size()))
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= context->EffectSlotList.size()))
         return nullptr;
-    return context->EffectSlotList[id].get();
+    EffectSlotSubList &sublist{context->EffectSlotList[lidx]};
+    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
+        return nullptr;
+    return sublist.EffectSlots + slidx;
 }
 
 

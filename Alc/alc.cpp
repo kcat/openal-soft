@@ -2081,18 +2081,26 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         std::unique_lock<std::mutex> proplock{context->PropLock};
         std::unique_lock<std::mutex> slotlock{context->EffectSlotLock};
-        for(auto &slot : context->EffectSlotList)
+        for(auto &sublist : context->EffectSlotList)
         {
-            if(!slot) continue;
-            aluInitEffectPanning(slot.get());
+            uint64_t usemask = ~sublist.FreeMask;
+            while(usemask)
+            {
+                ALsizei idx = CTZ64(usemask);
+                ALeffectslot *slot = sublist.EffectSlots + idx;
 
-            EffectState *state{slot->Effect.State};
-            state->mOutBuffer = device->Dry.Buffer;
-            state->mOutChannels = device->Dry.NumChannels;
-            if(state->deviceUpdate(device) == AL_FALSE)
-                update_failed = AL_TRUE;
-            else
-                UpdateEffectSlotProps(slot.get(), context);
+                usemask &= ~(1_u64 << idx);
+
+                aluInitEffectPanning(slot);
+
+                EffectState *state{slot->Effect.State};
+                state->mOutBuffer = device->Dry.Buffer;
+                state->mOutChannels = device->Dry.NumChannels;
+                if(state->deviceUpdate(device) == AL_FALSE)
+                    update_failed = AL_TRUE;
+                else
+                    UpdateEffectSlotProps(slot, context);
+            }
         }
         slotlock.unlock();
 
@@ -2415,12 +2423,14 @@ ALCcontext::~ALCcontext()
     delete ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed);
     DefaultSlot = nullptr;
 
-    count = std::count_if(EffectSlotList.cbegin(), EffectSlotList.cend(),
-        [](const ALeffectslotPtr &slot) noexcept -> bool { return slot != nullptr; }
+    count = std::accumulate(EffectSlotList.cbegin(), EffectSlotList.cend(), size_t{0u},
+        [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
+        { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
         WARN(SZFMT " AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     EffectSlotList.clear();
+    NumEffectSlots = 0;
 
     count = 0;
     ALvoiceProps *vprops{FreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
@@ -3440,7 +3450,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {
-        ALContext->DefaultSlot = al::make_unique<ALeffectslot>();
+        void *ptr{al_calloc(16, sizeof(ALeffectslot))};
+        ALContext->DefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
         if(InitEffectSlot(ALContext->DefaultSlot.get()) == AL_NO_ERROR)
             aluInitEffectPanning(ALContext->DefaultSlot.get());
         else

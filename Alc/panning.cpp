@@ -382,6 +382,7 @@ void InitPanning(ALCdevice *device)
         const std::array<int,MAX_AMBI_CHANNELS> &acnmap = GetAmbiLayout(device->mAmbiLayout);
         const std::array<float,MAX_AMBI_CHANNELS> &n3dscale = GetAmbiScales(device->mAmbiScale);
 
+        /* For DevFmtAmbi3D, the ambisonic order is already set. */
         count = (device->mAmbiOrder == 3) ? 16 :
                 (device->mAmbiOrder == 2) ? 9 :
                 (device->mAmbiOrder == 1) ? 4 : 1;
@@ -439,6 +440,12 @@ void InitPanning(ALCdevice *device)
             std::copy_n(chanmap[i].Config, coeffcount, chancoeffs[i]);
         }
 
+        /* For non-DevFmtAmbi3D, set the ambisonic order given the mixing
+         * channel count. Built-in speaker decoders are always 2D, so just
+         * reverse that calculation.
+         */
+        device->mAmbiOrder = (coeffcount-1) / 2;
+
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+coeffcount,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -482,11 +489,14 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
 
+    ALsizei order{(conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
+    device->mAmbiOrder = order;
+
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
-                (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
+        count = (order+1) * (order+1);
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -494,8 +504,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
     else
     {
-        count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 7 :
-                (conf->ChanMask > AMBI_1ORDER_MASK) ? 5 : 3;
+        count = order*2 + 1;
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -551,11 +560,14 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
     static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
 
+    ALsizei order{(conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
+    device->mAmbiOrder = order;
+
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
-                (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
+        count = (order+1) * (order+1);
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -563,8 +575,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     }
     else
     {
-        count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 7 :
-                (conf->ChanMask > AMBI_1ORDER_MASK) ? 5 : 3;
+        count = order*2 + 1;
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -701,6 +712,7 @@ void InitHrtfPanning(ALCdevice *device)
 
         AmbiOrderHFGain = AmbiOrderHFGainHOA;
     }
+    device->mAmbiOrder = ambi_order;
 
     const ALsizei count{(ambi_order+1) * (ambi_order+1)};
     device->mHrtfState = DirectHrtfState::Create(count);
@@ -736,7 +748,10 @@ void InitHrtfPanning(ALCdevice *device)
 
 void InitUhjPanning(ALCdevice *device)
 {
+    /* UHJ is always 2D first-order. */
     static constexpr ALsizei count{3};
+
+    device->mAmbiOrder = (count-1) / 2;
 
     auto acnmap_end = AmbiIndex::FromFuMa.begin() + count;
     std::transform(AmbiIndex::FromFuMa.begin(), acnmap_end, std::begin(device->Dry.AmbiMap),

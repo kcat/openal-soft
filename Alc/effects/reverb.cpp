@@ -71,11 +71,11 @@ namespace {
  * tetrahedron, but it's close enough. Should the model be extended to 8-lines
  * in the future, true opposites can be used.
  */
-constexpr alu::Matrix B2A{
-    0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f,
-    0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f,
-    0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f,
-    0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f
+alignas(16) constexpr ALfloat B2A[NUM_LINES][MAX_AMBI_CHANNELS]{
+    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
+    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
 };
 
 /* Converts A-Format to B-Format. */
@@ -1321,7 +1321,7 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
-            MixRowSamples(afmt[c], B2A[c].data(), samplesIn, numInput, base, todo);
+            MixRowSamples(afmt[c], B2A[c], samplesIn, numInput, base, todo);
         }
 
         /* Process the samples for reverb. */

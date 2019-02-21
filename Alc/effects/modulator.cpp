@@ -85,7 +85,7 @@ struct ALmodulatorState final : public EffectState {
 
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
-    } mChans[MAX_EFFECT_CHANNELS];
+    } mChans[MAX_AMBI_CHANNELS];
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
@@ -107,9 +107,7 @@ ALboolean ALmodulatorState::deviceUpdate(const ALCdevice *UNUSED(device))
 
 void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device = context->Device;
-    ALfloat f0norm;
-    ALsizei i;
+    const ALCdevice *device{context->Device};
 
     mStep = fastf2i(props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency) * WAVEFORM_FRACONE);
     mStep = clampi(mStep, 0, WAVEFORM_FRACONE-1);
@@ -123,19 +121,21 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         mGetSamples = Modulate<Square>;
 
-    f0norm = props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency);
+    ALfloat f0norm{props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency)};
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
         calc_rcpQ_from_bandwidth(f0norm, 0.75f));
-    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+    for(size_t i{1u};i < slot->WetBuffer.size();++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 
     mOutBuffer = target.FOAOut->Buffer;
     mOutChannels = target.FOAOut->NumChannels;
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(target.FOAOut, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
-            mChans[i].TargetGains);
+    for(size_t i{0u};i < slot->WetBuffer.size();++i)
+    {
+        auto coeffs = GetAmbiIdentityRow(i);
+        ComputePanGains(target.FOAOut, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
+    }
 }
 
 void ALmodulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)

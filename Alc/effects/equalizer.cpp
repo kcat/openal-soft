@@ -87,7 +87,7 @@ struct ALequalizerState final : public EffectState {
         /* Effect gains for each channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
-    } mChans[MAX_EFFECT_CHANNELS];
+    } mChans[MAX_AMBI_CHANNELS];
 
     ALfloat mSampleBuffer[BUFFERSIZE]{};
 
@@ -113,9 +113,8 @@ ALboolean ALequalizerState::deviceUpdate(const ALCdevice *UNUSED(device))
 void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device = context->Device;
-    ALfloat frequency = static_cast<ALfloat>(device->Frequency);
+    auto frequency = static_cast<ALfloat>(device->Frequency);
     ALfloat gain, f0norm;
-    ALuint i;
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * filters' gain is for the reference frequency, which is the centerpoint
@@ -124,29 +123,25 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
     mChans[0].filter[0].setParams(BiquadType::LowShelf, gain, f0norm,
-        calc_rcpQ_from_slope(gain, 0.75f)
-    );
+        calc_rcpQ_from_slope(gain, 0.75f));
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
     mChans[0].filter[1].setParams(BiquadType::Peaking, gain, f0norm,
-        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid1Width)
-    );
+        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid1Width));
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
     mChans[0].filter[2].setParams(BiquadType::Peaking, gain, f0norm,
-        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid2Width)
-    );
+        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid2Width));
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
     mChans[0].filter[3].setParams(BiquadType::HighShelf, gain, f0norm,
-        calc_rcpQ_from_slope(gain, 0.75f)
-    );
+        calc_rcpQ_from_slope(gain, 0.75f));
 
     /* Copy the filter coefficients for the other input channels. */
-    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+    for(size_t i{1u};i < slot->WetBuffer.size();++i)
     {
         mChans[i].filter[0].copyParamsFrom(mChans[0].filter[0]);
         mChans[i].filter[1].copyParamsFrom(mChans[0].filter[1]);
@@ -156,9 +151,11 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
 
     mOutBuffer = target.FOAOut->Buffer;
     mOutChannels = target.FOAOut->NumChannels;
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(target.FOAOut, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
-            mChans[i].TargetGains);
+    for(size_t i{0u};i < slot->WetBuffer.size();++i)
+    {
+        auto coeffs = GetAmbiIdentityRow(i);
+        ComputePanGains(target.FOAOut, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
+    }
 }
 
 void ALequalizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)

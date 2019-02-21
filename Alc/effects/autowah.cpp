@@ -62,7 +62,7 @@ struct ALautowahState final : public EffectState {
         /* Effect gains for each output channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-    } mChans[MAX_EFFECT_CHANNELS];
+    } mChans[MAX_AMBI_CHANNELS];
 
     /* Effects buffers */
     alignas(16) ALfloat mBufferOut[BUFFERSIZE];
@@ -105,25 +105,25 @@ ALboolean ALautowahState::deviceUpdate(const ALCdevice *UNUSED(device))
 
 void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device = context->Device;
-    ALfloat ReleaseTime;
-    ALsizei i;
+    const ALCdevice *device{context->Device};
 
-    ReleaseTime = clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f);
+    const ALfloat ReleaseTime{clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f)};
 
     mAttackRate    = expf(-1.0f / (props->Autowah.AttackTime*device->Frequency));
     mReleaseRate   = expf(-1.0f / (ReleaseTime*device->Frequency));
     /* 0-20dB Resonance Peak gain */
-    mResonanceGain = sqrtf(log10f(props->Autowah.Resonance)*10.0f / 3.0f);
-    mPeakGain      = 1.0f - log10f(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
+    mResonanceGain = std::sqrt(std::log10(props->Autowah.Resonance)*10.0f / 3.0f);
+    mPeakGain      = 1.0f - std::log10(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
     mFreqMinNorm   = MIN_FREQ / device->Frequency;
     mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
 
     mOutBuffer = target.FOAOut->Buffer;
     mOutChannels = target.FOAOut->NumChannels;
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(target.FOAOut, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
-                        mChans[i].TargetGains);
+    for(size_t i{0u};i < slot->WetBuffer.size();++i)
+    {
+        auto coeffs = GetAmbiIdentityRow(i);
+        ComputePanGains(target.FOAOut, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
+    }
 }
 
 void ALautowahState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)

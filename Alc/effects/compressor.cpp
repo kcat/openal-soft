@@ -39,7 +39,7 @@
 
 struct ALcompressorState final : public EffectState {
     /* Effect gains for each channel */
-    ALfloat mGain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS]{};
+    ALfloat mGain[MAX_AMBI_CHANNELS][MAX_OUTPUT_CHANNELS]{};
 
     /* Effect parameters */
     ALboolean mEnabled{AL_TRUE};
@@ -66,8 +66,8 @@ ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.
      */
-    mAttackMult  = powf(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
-    mReleaseMult = powf(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
+    mAttackMult  = std::pow(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
+    mReleaseMult = std::pow(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
 
     return AL_TRUE;
 }
@@ -78,9 +78,11 @@ void ALcompressorState::update(const ALCcontext* UNUSED(context), const ALeffect
 
     mOutBuffer = target.FOAOut->Buffer;
     mOutChannels = target.FOAOut->NumChannels;
-    for(ALsizei i{0};i < 4;i++)
-        ComputePanGains(target.FOAOut, alu::Matrix::Identity()[i].data(),
-            slot->Params.Gain, mGain[i]);
+    for(size_t i{0u};i < slot->WetBuffer.size();++i)
+    {
+        auto coeffs = GetAmbiIdentityRow(i);
+        ComputePanGains(target.FOAOut, coeffs.data(), slot->Params.Gain, mGain[i]);
+    }
 }
 
 void ALcompressorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)

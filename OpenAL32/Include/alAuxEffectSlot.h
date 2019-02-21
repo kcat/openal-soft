@@ -44,9 +44,6 @@ struct EffectStateFactory {
 };
 
 
-#define MAX_EFFECT_CHANNELS (4)
-
-
 using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
 
 

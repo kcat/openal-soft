@@ -94,7 +94,7 @@ struct ALequalizerState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALequalizerState)
 };
@@ -161,17 +161,18 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
             mChans[i].TargetGains);
 }
 
-void ALequalizerState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALequalizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
-    for(ALsizei c{0};c < MAX_EFFECT_CHANNELS;c++)
+    ASSUME(numInput > 0);
+    for(ALsizei c{0};c < numInput;c++)
     {
-        mChans[c].filter[0].process(mSampleBuffer, SamplesIn[c], SamplesToDo);
-        mChans[c].filter[1].process(mSampleBuffer, mSampleBuffer, SamplesToDo);
-        mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, SamplesToDo);
-        mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, SamplesToDo);
+        mChans[c].filter[0].process(mSampleBuffer, samplesIn[c], samplesToDo);
+        mChans[c].filter[1].process(mSampleBuffer, mSampleBuffer, samplesToDo);
+        mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
+        mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
 
-        MixSamples(mSampleBuffer, NumChannels, SamplesOut, mChans[c].CurrentGains,
-            mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
+        MixSamples(mSampleBuffer, numOutput, samplesOut, mChans[c].CurrentGains,
+            mChans[c].TargetGains, samplesToDo, 0, samplesToDo);
     }
 }
 

@@ -145,7 +145,7 @@ struct ALpshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALpshifterState)
 };
@@ -189,7 +189,7 @@ void ALpshifterState::update(const ALCcontext* UNUSED(context), const ALeffectsl
     ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALpshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -200,15 +200,15 @@ void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
     ALfloat *RESTRICT bufferOut{mBufferOut};
     ALsizei count{mCount};
 
-    for(ALsizei i{0};i < SamplesToDo;)
+    for(ALsizei i{0};i < samplesToDo;)
     {
         do {
             /* Fill FIFO buffer with samples data */
-            mInFIFO[count] = SamplesIn[0][i];
+            mInFIFO[count] = samplesIn[0][i];
             bufferOut[i] = mOutFIFO[count - FIFO_LATENCY];
 
             count++;
-        } while(++i < SamplesToDo && count < STFT_SIZE);
+        } while(++i < samplesToDo && count < STFT_SIZE);
 
         /* Check whether FIFO buffer is filled */
         if(count < STFT_SIZE) break;
@@ -313,8 +313,8 @@ void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
     mCount = count;
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(bufferOut, NumChannels, SamplesOut, mCurrentGains, mTargetGains,
-               maxi(SamplesToDo, 512), 0, SamplesToDo);
+    MixSamples(bufferOut, numOutput, samplesOut, mCurrentGains, mTargetGains,
+        maxi(samplesToDo, 512), 0, samplesToDo);
 }
 
 } // namespace

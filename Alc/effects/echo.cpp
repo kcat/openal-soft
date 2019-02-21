@@ -58,7 +58,7 @@ struct ALechoState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALechoState)
 };
@@ -125,7 +125,7 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
     ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }
 
-void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALechoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const auto mask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     const ALsizei tap1{mTap[0].delay};
@@ -137,15 +137,15 @@ void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
     ALsizei c, i;
 
     std::tie(z1, z2) = mFilter.getComponents();
-    for(base = 0;base < SamplesToDo;)
+    for(base = 0;base < samplesToDo;)
     {
         alignas(16) ALfloat temps[2][128];
-        ALsizei td = mini(128, SamplesToDo-base);
+        ALsizei td = mini(128, samplesToDo-base);
 
         for(i = 0;i < td;i++)
         {
             /* Feed the delay buffer's input first. */
-            delaybuf[offset&mask] = SamplesIn[0][i+base];
+            delaybuf[offset&mask] = samplesIn[0][i+base];
 
             /* First tap */
             temps[0][i] = delaybuf[(offset-tap1) & mask];
@@ -162,8 +162,8 @@ void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
         }
 
         for(c = 0;c < 2;c++)
-            MixSamples(temps[c], NumChannels, SamplesOut, mGains[c].Current,
-                       mGains[c].Target, SamplesToDo-base, base, td);
+            MixSamples(temps[c], numOutput, samplesOut, mGains[c].Current, mGains[c].Target,
+                samplesToDo-base, base, td);
 
         base += td;
     }

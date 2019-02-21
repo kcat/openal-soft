@@ -90,7 +90,7 @@ struct ALmodulatorState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALmodulatorState)
 };
@@ -138,31 +138,32 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
             mChans[i].TargetGains);
 }
 
-void ALmodulatorState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALmodulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const ALsizei step = mStep;
     ALsizei base;
 
-    for(base = 0;base < SamplesToDo;)
+    for(base = 0;base < samplesToDo;)
     {
         alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
-        ALsizei td = mini(MAX_UPDATE_SAMPLES, SamplesToDo-base);
+        ALsizei td = mini(MAX_UPDATE_SAMPLES, samplesToDo-base);
         ALsizei c, i;
 
         mGetSamples(modsamples, mIndex, step, td);
         mIndex += (step*td) & WAVEFORM_FRACMASK;
         mIndex &= WAVEFORM_FRACMASK;
 
-        for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
+        ASSUME(numInput > 0);
+        for(c = 0;c < numInput;c++)
         {
             alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
 
-            mChans[c].Filter.process(temps, &SamplesIn[c][base], td);
+            mChans[c].Filter.process(temps, &samplesIn[c][base], td);
             for(i = 0;i < td;i++)
                 temps[i] *= modsamples[i];
 
-            MixSamples(temps, NumChannels, SamplesOut, mChans[c].CurrentGains,
-                       mChans[c].TargetGains, SamplesToDo-base, base, td);
+            MixSamples(temps, numOutput, samplesOut, mChans[c].CurrentGains,
+                       mChans[c].TargetGains, samplesToDo-base, base, td);
         }
 
         base += td;

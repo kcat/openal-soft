@@ -92,7 +92,7 @@ struct ChorusState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ChorusState)
 };
@@ -189,7 +189,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     }
 }
 
-void ChorusState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ChorusState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const auto bufmask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     const ALfloat feedback{mFeedback};
@@ -199,9 +199,9 @@ void ChorusState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
     ALsizei i, c;
     ALsizei base;
 
-    for(base = 0;base < SamplesToDo;)
+    for(base = 0;base < samplesToDo;)
     {
-        const ALsizei todo = mini(256, SamplesToDo-base);
+        const ALsizei todo = mini(256, samplesToDo-base);
         ALint moddelays[2][256];
         alignas(16) ALfloat temps[2][256];
 
@@ -224,7 +224,7 @@ void ChorusState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
         for(i = 0;i < todo;i++)
         {
             // Feed the buffer's input first (necessary for delays < 1).
-            delaybuf[offset&bufmask] = SamplesIn[0][base+i];
+            delaybuf[offset&bufmask] = samplesIn[0][base+i];
 
             // Tap for the left output.
             ALint delay{offset - (moddelays[0][i]>>FRACTIONBITS)};
@@ -246,8 +246,8 @@ void ChorusState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
         }
 
         for(c = 0;c < 2;c++)
-            MixSamples(temps[c], NumChannels, SamplesOut, mGains[c].Current,
-                       mGains[c].Target, SamplesToDo-base, base, todo);
+            MixSamples(temps[c], numOutput, samplesOut, mGains[c].Current, mGains[c].Target,
+                samplesToDo-base, base, todo);
 
         base += todo;
     }

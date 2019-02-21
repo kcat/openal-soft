@@ -83,7 +83,7 @@ struct ALfshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALfshifterState)
 };
@@ -138,15 +138,15 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
     ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALfshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     static constexpr complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = mBufferOut;
     ALsizei j, k, base;
 
-    for(base = 0;base < SamplesToDo;)
+    for(base = 0;base < samplesToDo;)
     {
-        const ALsizei todo{mini(HIL_SIZE-mCount, SamplesToDo-base)};
+        const ALsizei todo{mini(HIL_SIZE-mCount, samplesToDo-base)};
 
         ASSUME(todo > 0);
 
@@ -154,7 +154,7 @@ void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
         k = mCount;
         for(j = 0;j < todo;j++,k++)
         {
-            mInFIFO[k] = SamplesIn[0][base+j];
+            mInFIFO[k] = samplesIn[0][base+j];
             mOutdata[base+j]  = mOutFIFO[k-FIFO_LATENCY];
         }
         mCount += todo;
@@ -187,19 +187,19 @@ void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Samp
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
-    for(k = 0;k < SamplesToDo;k++)
+    for(k = 0;k < samplesToDo;k++)
     {
         double phase = mPhase * ((1.0/FRACTIONONE) * al::MathDefs<double>::Tau());
         BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
-                               mOutdata[k].imag()*std::sin(phase)*mLdSign);
+            mOutdata[k].imag()*std::sin(phase)*mLdSign);
 
         mPhase += mPhaseStep;
         mPhase &= FRACTIONMASK;
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(BufferOut, NumChannels, SamplesOut, mCurrentGains, mTargetGains,
-               maxi(SamplesToDo, 512), 0, SamplesToDo);
+    MixSamples(BufferOut, numOutput, samplesOut, mCurrentGains, mTargetGains,
+        maxi(samplesToDo, 512), 0, samplesToDo);
 }
 
 } // namespace

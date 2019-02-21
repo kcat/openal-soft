@@ -1529,7 +1529,7 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
             EffectState *state{slot->Params.mEffectState};
             state->process(SamplesToDo,
                 &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(slot->WetBuffer[0]),
-                state->mOutBuffer, state->mOutChannels);
+                slot->WetBuffer.size(), state->mOutBuffer, state->mOutChannels);
         }
     );
 }

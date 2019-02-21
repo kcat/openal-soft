@@ -48,7 +48,7 @@ struct ALdistortionState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALdistortionState)
 };
@@ -95,27 +95,27 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
-void ALdistortionState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALdistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     ALfloat (*RESTRICT buffer)[BUFFERSIZE] = mBuffer;
     const ALfloat fc = mEdgeCoeff;
     ALsizei base;
     ALsizei i, k;
 
-    for(base = 0;base < SamplesToDo;)
+    for(base = 0;base < samplesToDo;)
     {
         /* Perform 4x oversampling to avoid aliasing. Oversampling greatly
          * improves distortion quality and allows to implement lowpass and
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
-        ALsizei todo = mini(BUFFERSIZE, (SamplesToDo-base) * 4);
+        ALsizei todo{mini(BUFFERSIZE, (samplesToDo-base) * 4)};
 
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.
          */
         for(i = 0;i < todo;i++)
-            buffer[0][i] = !(i&3) ? SamplesIn[0][(i>>2)+base] * 4.0f : 0.0f;
+            buffer[0][i] = !(i&3) ? samplesIn[0][(i>>2)+base] * 4.0f : 0.0f;
 
         /* First step, do lowpass filtering of original signal. Additionally
          * perform buffer interpolation and lowpass cutoff for oversampling
@@ -144,17 +144,17 @@ void ALdistortionState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sa
         mBandpass.process(buffer[1], buffer[0], todo);
 
         todo >>= 2;
-        for(k = 0;k < NumChannels;k++)
+        for(k = 0;k < numOutput;k++)
         {
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.
              */
-            ALfloat gain = mGain[k];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+            const ALfloat gain{mGain[k]};
+            if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(i = 0;i < todo;i++)
-                SamplesOut[k][base+i] += gain * buffer[1][i*4];
+                samplesOut[k][base+i] += gain * buffer[1][i*4];
         }
 
         base += todo;

@@ -70,7 +70,7 @@ struct ALautowahState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALautowahState)
 };
@@ -126,7 +126,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
                         mChans[i].TargetGains);
 }
 
-void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALautowahState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const ALfloat attack_rate = mAttackRate;
     const ALfloat release_rate = mReleaseRate;
@@ -138,14 +138,14 @@ void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sampl
     ALsizei c, i;
 
     env_delay = mEnvDelay;
-    for(i = 0;i < SamplesToDo;i++)
+    for(i = 0;i < samplesToDo;i++)
     {
         ALfloat w0, sample, a;
 
         /* Envelope follower described on the book: Audio Effects, Theory,
          * Implementation and Application.
          */
-        sample = peak_gain * fabsf(SamplesIn[0][i]);
+        sample = peak_gain * std::fabs(samplesIn[0][i]);
         a = (sample > env_delay) ? attack_rate : release_rate;
         env_delay = lerp(sample, env_delay, a);
 
@@ -156,7 +156,8 @@ void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sampl
     }
     mEnvDelay = env_delay;
 
-    for(c = 0;c < MAX_EFFECT_CHANNELS; c++)
+    ASSUME(numInput > 0);
+    for(c = 0;c < numInput;++c)
     {
         /* This effectively inlines BiquadFilter_setParams for a peaking
          * filter and BiquadFilter_processC. The alpha and cosine components
@@ -167,7 +168,7 @@ void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sampl
         ALfloat z1 = mChans[c].Filter.z1;
         ALfloat z2 = mChans[c].Filter.z2;
 
-        for(i = 0;i < SamplesToDo;i++)
+        for(i = 0;i < samplesToDo;i++)
         {
             const ALfloat alpha = mEnv[i].alpha;
             const ALfloat cos_w0 = mEnv[i].cos_w0;
@@ -181,7 +182,7 @@ void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sampl
             a[1] = -2.0f * cos_w0;
             a[2] =  1.0f - alpha/res_gain;
 
-            input = SamplesIn[c][i];
+            input = samplesIn[c][i];
             output = input*(b[0]/a[0]) + z1;
             z1 = input*(b[1]/a[0]) - output*(a[1]/a[0]) + z2;
             z2 = input*(b[2]/a[0]) - output*(a[2]/a[0]);
@@ -191,8 +192,8 @@ void ALautowahState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sampl
         mChans[c].Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(mBufferOut, NumChannels, SamplesOut, mChans[c].CurrentGains,
-                   mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
+        MixSamples(mBufferOut, numOutput, samplesOut, mChans[c].CurrentGains,
+            mChans[c].TargetGains, samplesToDo, 0, samplesToDo);
     }
 }
 

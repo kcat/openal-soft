@@ -350,7 +350,7 @@ ResamplerFunc SelectResampler(Resampler resampler);
  */
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq);
 
-void aluInitEffectPanning(ALeffectslot *slot);
+void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
 
 void aluSelectPostProcess(ALCdevice *device);
 

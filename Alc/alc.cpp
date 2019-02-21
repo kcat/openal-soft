@@ -2068,7 +2068,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(context->DefaultSlot)
         {
             ALeffectslot *slot = context->DefaultSlot.get();
-            aluInitEffectPanning(slot);
+            aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
             state->mOutBuffer = device->Dry.Buffer;
@@ -2091,7 +2091,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(slot);
+                aluInitEffectPanning(slot, device);
 
                 EffectState *state{slot->Effect.State};
                 state->mOutBuffer = device->Dry.Buffer;
@@ -3453,7 +3453,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         void *ptr{al_calloc(16, sizeof(ALeffectslot))};
         ALContext->DefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
         if(InitEffectSlot(ALContext->DefaultSlot.get()) == AL_NO_ERROR)
-            aluInitEffectPanning(ALContext->DefaultSlot.get());
+            aluInitEffectPanning(ALContext->DefaultSlot.get(), dev.get());
         else
         {
             ALContext->DefaultSlot = nullptr;

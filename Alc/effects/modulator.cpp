@@ -129,12 +129,12 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     for(size_t i{1u};i < slot->WetBuffer.size();++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 
-    mOutBuffer = target.FOAOut->Buffer;
-    mOutChannels = target.FOAOut->NumChannels;
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
     for(size_t i{0u};i < slot->WetBuffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
-        ComputePanGains(target.FOAOut, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
+        ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
     }
 }
 

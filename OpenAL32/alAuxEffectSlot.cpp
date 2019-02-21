@@ -237,7 +237,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         alSetError(context, err, "Effect slot object initialization failed");
         return nullptr;
     }
-    aluInitEffectPanning(slot);
+    aluInitEffectPanning(slot, device);
 
     /* Add 1 to avoid source ID 0. */
     slot->id = ((lidx<<6) | slidx) + 1;

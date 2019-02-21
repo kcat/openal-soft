@@ -1134,9 +1134,9 @@ no_hrtf:
 }
 
 
-void aluInitEffectPanning(ALeffectslot *slot)
+void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
 {
-    const size_t count{4u};
+    const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
     slot->WetBuffer.resize(count);
     slot->WetBuffer.shrink_to_fit();
 

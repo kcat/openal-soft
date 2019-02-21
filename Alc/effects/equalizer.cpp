@@ -149,12 +149,12 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
         mChans[i].filter[3].copyParamsFrom(mChans[0].filter[3]);
     }
 
-    mOutBuffer = target.FOAOut->Buffer;
-    mOutChannels = target.FOAOut->NumChannels;
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
     for(size_t i{0u};i < slot->WetBuffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
-        ComputePanGains(target.FOAOut, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
+        ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);
     }
 }
 

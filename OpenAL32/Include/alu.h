@@ -20,6 +20,7 @@
 #include "logging.h"
 #include "math_defs.h"
 #include "filters/biquad.h"
+#include "filters/splitter.h"
 #include "filters/nfc.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -204,10 +205,11 @@ struct ALvoiceProps : public ALvoicePropsBase {
     DEF_NEWDEL(ALvoiceProps)
 };
 
-#define VOICE_IS_STATIC (1<<0)
-#define VOICE_IS_FADING (1<<1) /* Fading sources use gain stepping for smooth transitions. */
-#define VOICE_HAS_HRTF  (1<<2)
-#define VOICE_HAS_NFC   (1<<3)
+#define VOICE_IS_STATIC    (1u<<0)
+#define VOICE_IS_FADING    (1u<<1) /* Fading sources use gain stepping for smooth transitions. */
+#define VOICE_IS_AMBISONIC (1u<<2) /* Voice needs HF scaling for ambisonic upsampling. */
+#define VOICE_HAS_HRTF     (1u<<3)
+#define VOICE_HAS_NFC      (1u<<4)
 
 struct ALvoice {
     std::atomic<ALvoiceProps*> Update{nullptr};
@@ -252,6 +254,9 @@ struct ALvoice {
     alignas(16) std::array<std::array<ALfloat,MAX_RESAMPLE_PADDING>,MAX_INPUT_CHANNELS> PrevSamples;
 
     InterpState ResampleState;
+
+    std::array<ALfloat,MAX_AMBI_ORDER+1> AmbiScales;
+    BandSplitter AmbiSplitter[MAX_INPUT_CHANNELS];
 
     struct {
         int FilterType;

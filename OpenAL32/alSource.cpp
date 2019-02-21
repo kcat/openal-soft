@@ -41,6 +41,7 @@
 #include "alFilter.h"
 #include "alAuxEffectSlot.h"
 #include "ringbuffer.h"
+#include "bformatdec.h"
 
 #include "backends/base.h"
 
@@ -2827,6 +2828,19 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         voice->Flags = start_fading ? VOICE_IS_FADING : 0;
         if(source->SourceType == AL_STATIC) voice->Flags |= VOICE_IS_STATIC;
+
+        /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is
+         * mixing in first order. No HF scaling is necessary to mix it.
+         */
+        if(((*buffer)->mFmtChannels == FmtBFormat2D || (*buffer)->mFmtChannels == FmtBFormat3D) &&
+           device->mAmbiOrder > 1)
+        {
+            voice->AmbiScales = AmbiUpsampler::GetHFOrderScales(1, device->mAmbiOrder);
+            voice->AmbiSplitter[0].init(400.0f / static_cast<ALfloat>(device->Frequency));
+            for(ALsizei i{1};i < voice->NumChannels;++i)
+                voice->AmbiSplitter[i] = voice->AmbiSplitter[0];
+            voice->Flags |= VOICE_IS_AMBISONIC;
+        }
 
         std::fill_n(std::begin(voice->Direct.Params), voice->NumChannels, DirectParams{});
         std::for_each(voice->Send.begin(), voice->Send.end(),

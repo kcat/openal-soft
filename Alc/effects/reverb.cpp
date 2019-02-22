@@ -1298,8 +1298,6 @@ void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei todo, co
 
 void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
-    ALfloat (*RESTRICT afmt)[MAX_UPDATE_SAMPLES]{mTempSamples};
-    ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES]{mMixBuffer};
     ALsizei fadeCount{mFadeCount};
     ALsizei offset{mOffset};
 
@@ -1323,6 +1321,7 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
             todo &= ~3;
 
         /* Convert B-Format to A-Format for processing. */
+        ALfloat (&afmt)[NUM_LINES][MAX_UPDATE_SAMPLES] = mTempSamples;
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
@@ -1333,11 +1332,11 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             /* Band-pass the incoming samples. */
-            mFilter[c].Lp.process(samples[0], afmt[c], todo);
-            mFilter[c].Hp.process(samples[1], samples[0], todo);
+            mFilter[c].Lp.process(mMixBuffer[0], afmt[c], todo);
+            mFilter[c].Hp.process(mMixBuffer[1], mMixBuffer[0], todo);
 
             /* Feed the initial delay line. */
-            DelayLineIn(&mDelay, offset, c, samples[1], todo);
+            DelayLineIn(&mDelay, offset, c, mMixBuffer[1], todo);
         }
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
@@ -1345,18 +1344,18 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
             auto fade = static_cast<ALfloat>(fadeCount);
 
             /* Generate early reflections. */
-            EarlyReflection_Faded(this, offset, todo, fade, samples);
+            EarlyReflection_Faded(this, offset, todo, fade, mMixBuffer);
             /* Mix the A-Format results to output, implicitly converting back
              * to B-Format.
              */
             for(ALsizei c{0};c < NUM_LINES;c++)
-                MixSamples(samples[c], numOutput, samplesOut, mEarly.CurrentGain[c],
+                MixSamples(mMixBuffer[c], numOutput, samplesOut, mEarly.CurrentGain[c],
                     mEarly.PanGain[c], samplesToDo-base, base, todo);
 
             /* Generate and mix late reverb. */
-            LateReverb_Faded(this, offset, todo, fade, samples);
+            LateReverb_Faded(this, offset, todo, fade, mMixBuffer);
             for(ALsizei c{0};c < NUM_LINES;c++)
-                MixSamples(samples[c], numOutput, samplesOut, mLate.CurrentGain[c],
+                MixSamples(mMixBuffer[c], numOutput, samplesOut, mLate.CurrentGain[c],
                     mLate.PanGain[c], samplesToDo-base, base, todo);
 
             /* Step fading forward. */
@@ -1384,15 +1383,15 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
         else
         {
             /* Generate and mix early reflections. */
-            EarlyReflection_Unfaded(this, offset, todo, samples);
+            EarlyReflection_Unfaded(this, offset, todo, mMixBuffer);
             for(ALsizei c{0};c < NUM_LINES;c++)
-                MixSamples(samples[c], numOutput, samplesOut, mEarly.CurrentGain[c],
+                MixSamples(mMixBuffer[c], numOutput, samplesOut, mEarly.CurrentGain[c],
                     mEarly.PanGain[c], samplesToDo-base, base, todo);
 
             /* Generate and mix late reverb. */
-            LateReverb_Unfaded(this, offset, todo, samples);
+            LateReverb_Unfaded(this, offset, todo, mMixBuffer);
             for(ALsizei c{0};c < NUM_LINES;c++)
-                MixSamples(samples[c], numOutput, samplesOut, mLate.CurrentGain[c],
+                MixSamples(mMixBuffer[c], numOutput, samplesOut, mLate.CurrentGain[c],
                     mLate.PanGain[c], samplesToDo-base, base, todo);
         }
 

@@ -25,7 +25,7 @@ void BandSplitterR<Real>::init(Real f0norm)
 }
 
 template<typename Real>
-void BandSplitterR<Real>::process(Real *RESTRICT hpout, Real *RESTRICT lpout, const Real *input, int count)
+void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, int count)
 {
     ASSUME(count > 0);
 

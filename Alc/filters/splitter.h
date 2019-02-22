@@ -16,7 +16,7 @@ class BandSplitterR {
 public:
     void init(Real f0norm);
     void clear() noexcept { lp_z1 = lp_z2 = ap_z1 = 0.0f; }
-    void process(Real *RESTRICT hpout, Real *RESTRICT lpout, const Real *input, int count);
+    void process(Real *hpout, Real *lpout, const Real *input, int count);
 };
 using BandSplitter = BandSplitterR<float>;
 

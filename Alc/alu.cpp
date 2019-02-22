@@ -630,11 +630,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
-            /* Always render B-Format sources to the FOA output, to ensure
-             * smooth changes if it switches between panned and unpanned.
-             */
-            voice->Direct.Buffer = Device->FOAOut.Buffer;
-            voice->Direct.Channels = Device->FOAOut.NumChannels;
+            voice->Direct.Buffer = Device->Dry.Buffer;
+            voice->Direct.Channels = Device->Dry.NumChannels;
 
             /* A scalar of 1.5 for plain stereo results in +/-60 degrees being
              * moved to +/-90 degrees for direct right and left speaker
@@ -646,7 +643,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
             /* NOTE: W needs to be scaled due to FuMa normalization. */
             const ALfloat &scale0 = AmbiScale::FromFuMa[0];
-            ComputePanGains(&Device->FOAOut, coeffs, DryGain*scale0,
+            ComputePanGains(&Device->Dry, coeffs, DryGain*scale0,
                 voice->Direct.Params[0].Gains.Target);
             for(ALsizei i{0};i < NumSends;i++)
             {
@@ -697,26 +694,25 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             const ALfloat &yscale = AmbiScale::FromFuMa[1];
             const ALfloat &zscale = AmbiScale::FromFuMa[2];
             const ALfloat &xscale = AmbiScale::FromFuMa[3];
-            const alu::Matrix matrix{
-            //    ACN0          ACN1          ACN2          ACN3
-                wscale,         0.0f,         0.0f,         0.0f, // FuMa W
-                  0.0f, -N[0]*xscale,  N[1]*xscale, -N[2]*xscale, // FuMa X
-                  0.0f,  U[0]*yscale, -U[1]*yscale,  U[2]*yscale, // FuMa Y
-                  0.0f, -V[0]*zscale,  V[1]*zscale, -V[2]*zscale  // FuMa Z
+            const ALfloat matrix[4][MAX_AMBI_CHANNELS]{
+            //      ACN0          ACN1          ACN2          ACN3
+                { wscale,         0.0f,         0.0f,         0.0f }, // FuMa W
+                {   0.0f, -N[0]*xscale,  N[1]*xscale, -N[2]*xscale }, // FuMa X
+                {   0.0f,  U[0]*yscale, -U[1]*yscale,  U[2]*yscale }, // FuMa Y
+                {   0.0f, -V[0]*zscale,  V[1]*zscale, -V[2]*zscale }  // FuMa Z
             };
 
-            voice->Direct.Buffer = Device->FOAOut.Buffer;
-            voice->Direct.Channels = Device->FOAOut.NumChannels;
+            voice->Direct.Buffer = Device->Dry.Buffer;
+            voice->Direct.Channels = Device->Dry.NumChannels;
             for(ALsizei c{0};c < num_channels;c++)
-                ComputePanGains(&Device->FOAOut, matrix[c].data(), DryGain,
-                                voice->Direct.Params[c].Gains.Target);
+                ComputePanGains(&Device->Dry, matrix[c], DryGain,
+                    voice->Direct.Params[c].Gains.Target);
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     for(ALsizei c{0};c < num_channels;c++)
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), matrix[c].data(),
-                            WetGain[i], voice->Send[i].Params[c].Gains.Target
-                        );
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), matrix[c],
+                            WetGain[i], voice->Send[i].Params[c].Gains.Target);
             }
         }
     }

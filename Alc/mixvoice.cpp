@@ -539,13 +539,30 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
 
             /* Store the last source samples used for next time. */
             std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                        voice->PrevSamples[chan].size(), std::begin(voice->PrevSamples[chan]));
+                voice->PrevSamples[chan].size(), std::begin(voice->PrevSamples[chan]));
 
-            /* Now resample, then filter and mix to the appropriate outputs. */
+            /* Resample, then apply ambisonic upsampling as needed. */
             const ALfloat *ResampledData{Resample(&voice->ResampleState,
                 &SrcData[MAX_RESAMPLE_PADDING], DataPosFrac, increment,
                 Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
             )};
+            if((voice->Flags&VOICE_IS_AMBISONIC))
+            {
+                /* TODO: Does not properly handle HOA sources. Currently only
+                 * first-order sources are possible, but in the future it would
+                 * be desirable.
+                 */
+                const ALfloat hfscale{(chan==0) ? voice->AmbiScales[0] : voice->AmbiScales[1]};
+                ALfloat (&hfbuf)[BUFFERSIZE] = Device->TempBuffer[SOURCE_DATA_BUF];
+                ALfloat (&lfbuf)[BUFFERSIZE] = Device->TempBuffer[RESAMPLED_BUF];
+
+                voice->AmbiSplitter[chan].process(hfbuf, lfbuf, ResampledData, DstBufferSize);
+                MixRowSamples(lfbuf, &hfscale, &hfbuf, 1, 0, DstBufferSize);
+
+                ResampledData = lfbuf;
+            }
+
+            /* Now filter and mix to the appropriate outputs. */
             {
                 DirectParams &parms = voice->Direct.Params[chan];
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,

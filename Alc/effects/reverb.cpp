@@ -765,31 +765,36 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
 /* Update the early and late 3D panning gains. */
 ALvoid Update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, const EffectTarget &target, ReverbState *State)
 {
-    /* Note: ret is transposed. */
-    auto MatrixMult = [](const alu::Matrix &m1, const alu::Matrix &m2) noexcept -> alu::Matrix
+    /* Multiples two matrices, producing the given column's results. */
+    auto MatrixMult = [](const alu::Matrix &m1, const alu::Matrix &m2, size_t col) noexcept -> std::array<ALfloat,MAX_AMBI_CHANNELS>
     {
-        alu::Matrix ret;
-        for(int col{0};col < 4;col++)
-        {
-            for(int row{0};row < 4;row++)
-                ret[col][row] = m1[row][0]*m2[0][col] + m1[row][1]*m2[1][col] +
-                                m1[row][2]*m2[2][col] + m1[row][3]*m2[3][col];
-        }
+        std::array<ALfloat,MAX_AMBI_CHANNELS> ret{};
+        for(int row{0};row < 4;row++)
+            ret[row] = m1[row][0]*m2[0][col] + m1[row][1]*m2[1][col] +
+                       m1[row][2]*m2[2][col] + m1[row][3]*m2[3][col];
         return ret;
     };
 
-    /* Create a matrix that first converts A-Format to B-Format, then
-     * transforms the B-Format signal according to the panning vector.
+    /* Create matrices that transform a B-Format signal according to the
+     * panning vectors.
      */
-    alu::Matrix earlymat{MatrixMult(GetTransformFromVector(ReflectionsPan), A2B)};
-    alu::Matrix latemat{MatrixMult(GetTransformFromVector(LateReverbPan), A2B)};
+    const alu::Matrix earlymat{GetTransformFromVector(ReflectionsPan)};
+    const alu::Matrix latemat{GetTransformFromVector(LateReverbPan)};
     State->mOutBuffer = target.FOAOut->Buffer;
     State->mOutChannels = target.FOAOut->NumChannels;
-    for(ALsizei i{0};i < NUM_LINES;i++)
-        ComputePanGains(target.FOAOut, earlymat[i].data(), earlyGain,
-            State->mEarly.PanGain[i]);
-    for(ALsizei i{0};i < NUM_LINES;i++)
-        ComputePanGains(target.FOAOut, latemat[i].data(), lateGain, State->mLate.PanGain[i]);
+    for(size_t i{0u};i < NUM_LINES;i++)
+    {
+        /* Combine the B-Format transform matrix with one that first converts
+         * A-Format to B-Format.
+         */
+        auto coeffs = MatrixMult(earlymat, A2B, i);
+        ComputePanGains(target.FOAOut, coeffs.data(), earlyGain, State->mEarly.PanGain[i]);
+    }
+    for(size_t i{0u};i < NUM_LINES;i++)
+    {
+        auto coeffs = MatrixMult(latemat, A2B, i);
+        ComputePanGains(target.FOAOut, coeffs.data(), lateGain, State->mLate.PanGain[i]);
+    }
 }
 
 void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props, const EffectTarget target)

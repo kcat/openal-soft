@@ -49,7 +49,8 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<fl
 } // namespace
 
 
-void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
+void BFormatDec::reset(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
+    const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     mSamples.clear();
     mSamplesHF = nullptr;
@@ -61,6 +62,7 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
         mSamples.resize(2);
     else
     {
+        ASSUME(inchans > 0);
         mSamples.resize(inchans * 2);
         mSamplesHF = mSamples.data();
         mSamplesLF = mSamplesHF + inchans;
@@ -122,7 +124,9 @@ void BFormatDec::reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans
     }
 }
 
-void BFormatDec::reset(const ALsizei inchans, const ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
+void BFormatDec::reset(const ALsizei inchans, const ALsizei chancount,
+    const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
+    const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     mSamples.clear();
     mSamplesHF = nullptr;
@@ -133,18 +137,22 @@ void BFormatDec::reset(const ALsizei inchans, const ALsizei chancount, const Cha
     mSamples.resize(2);
     mNumChannels = inchans;
 
+    ASSUME(chancount > 0);
     mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+chancount, 0u,
         [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
         { return mask | (1 << chan); }
     );
 
-    for(ALsizei i{0};i < chancount;i++)
+    auto set_coeffs = [this,inchans,&chancoeffs](const ALsizei chanidx) noexcept -> void
     {
-        const ALfloat (&coeffs)[MAX_AMBI_CHANNELS] = chancoeffs[chanmap[i]];
-        ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanmap[i]];
+        ASSUME(chanidx >= 0);
+        const ALfloat (&coeffs)[MAX_AMBI_CHANNELS] = chancoeffs[chanidx];
+        ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanidx];
 
+        ASSUME(inchans > 0);
         std::copy_n(std::begin(coeffs), inchans, std::begin(mtx));
-    }
+    };
+    std::for_each(chanmap, chanmap+chancount, set_coeffs);
 }
 
 

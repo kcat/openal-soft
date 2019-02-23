@@ -2835,7 +2835,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(((*buffer)->mFmtChannels == FmtBFormat2D || (*buffer)->mFmtChannels == FmtBFormat3D) &&
            device->mAmbiOrder > 1)
         {
-            voice->AmbiScales = AmbiUpsampler::GetHFOrderScales(1, device->mAmbiOrder);
+            voice->AmbiScales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
             voice->AmbiSplitter[0].init(400.0f / static_cast<ALfloat>(device->Frequency));
             for(ALsizei i{1};i < voice->NumChannels;++i)
                 voice->AmbiSplitter[i] = voice->AmbiSplitter[0];

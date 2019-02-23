@@ -585,7 +585,7 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
     if(device->mAmbiOrder > 1)
     {
         mMixOut = &ReverbState::MixOutAmbiUp;
-        mOrderScales = AmbiUpsampler::GetHFOrderScales(1, device->mAmbiOrder);
+        mOrderScales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
     }
     else
     {

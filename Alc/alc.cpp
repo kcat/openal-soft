@@ -1822,8 +1822,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     device->Dry.Buffer = nullptr;
     device->Dry.NumChannels = 0;
-    device->FOAOut.Buffer = nullptr;
-    device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = nullptr;
     device->RealOut.NumChannels = 0;
     device->MixBuffer.clear();
@@ -1928,12 +1926,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     );
 
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
-    TRACE("Channel config, Dry: %d, FOA: %d, Real: %d\n", device->Dry.NumChannels,
-          device->FOAOut.NumChannels, device->RealOut.NumChannels);
+    TRACE("Channel config, Main: %d, Real: %d\n", device->Dry.NumChannels,
+        device->RealOut.NumChannels);
 
     /* Allocate extra channels for any post-filter output. */
-    ALsizei num_chans{device->Dry.NumChannels + device->FOAOut.NumChannels +
-                      device->RealOut.NumChannels};
+    const ALsizei num_chans{device->Dry.NumChannels + device->RealOut.NumChannels};
 
     TRACE("Allocating %d channels, " SZFMT " bytes\n", num_chans,
           num_chans*sizeof(device->MixBuffer[0]));
@@ -1941,20 +1938,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     device->Dry.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(device->MixBuffer[0]);
     if(device->RealOut.NumChannels != 0)
-        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels +
-                                 device->FOAOut.NumChannels;
+        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
     else
     {
         device->RealOut.Buffer = device->Dry.Buffer;
         device->RealOut.NumChannels = device->Dry.NumChannels;
-    }
-
-    if(device->FOAOut.NumChannels != 0)
-        device->FOAOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
-    else
-    {
-        device->FOAOut.Buffer = device->Dry.Buffer;
-        device->FOAOut.NumChannels = device->Dry.NumChannels;
     }
 
     device->NumAuxSends = new_sends;

@@ -32,52 +32,21 @@ class BFormatDec {
     std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
-    SplitterAllpass mUpAllpass[MAX_OUTPUT_CHANNELS];
-    struct {
-        BandSplitter Splitter;
-        ALfloat Gains[sNumBands];
-    } mUpsampler[4];
-
     ALsizei mNumChannels;
     ALboolean mDualBand;
 
 public:
     void reset(const AmbDecConf *conf, bool allow_2band, ALsizei inchans, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 
-    void reset(const ALsizei inchans, const ALfloat xover_norm, const ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
+    void reset(const ALsizei inchans, const ALsizei chancount, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
-    /* Up-samples a first-order input to the decoder's configuration. */
-    void upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
-
-    DEF_NEWDEL(BFormatDec)
-};
-
-
-/* Stand-alone first-order upsampler. Kept here because it shares some stuff
- * with bformatdec.
- */
-class AmbiUpsampler {
-    static constexpr size_t sHFBand{0};
-    static constexpr size_t sLFBand{1};
-    static constexpr size_t sNumBands{2};
-
-    SplitterAllpass mAllpass[MAX_OUTPUT_CHANNELS];
-    alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
-    struct {
-        BandSplitter Splitter;
-        ALfloat Gains[sNumBands];
-    } mInput[4];
-
-public:
-    void reset(const ALsizei out_order, const ALfloat xover_norm);
-    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
-
+    /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALsizei in_order, const ALsizei out_order) noexcept;
 
-    DEF_NEWDEL(AmbiUpsampler)
+    DEF_NEWDEL(BFormatDec)
 };
 
 #endif /* BFORMATDEC_H */

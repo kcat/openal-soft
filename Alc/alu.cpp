@@ -127,10 +127,6 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 
 void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 {
-    if(AmbiUpsampler *ambiup{device->AmbiUp.get()})
-        ambiup->process(device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
-            device->FOAOut.NumChannels, SamplesToDo);
-
     /* HRTF is stereo output only. */
     const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
     const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
@@ -146,17 +142,8 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
 {
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    if(device->Dry.Buffer != device->FOAOut.Buffer)
-        ambidec->upSample(device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
-            device->FOAOut.NumChannels, SamplesToDo);
     ambidec->process(device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
         SamplesToDo);
-}
-
-void ProcessAmbiUp(ALCdevice *device, const ALsizei SamplesToDo)
-{
-    device->AmbiUp->process(device->RealOut.Buffer, device->RealOut.NumChannels,
-        device->FOAOut.Buffer, device->FOAOut.NumChannels, SamplesToDo);
 }
 
 void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
@@ -203,8 +190,6 @@ void aluSelectPostProcess(ALCdevice *device)
         device->PostProcess = ProcessHrtf;
     else if(device->AmbiDecoder)
         device->PostProcess = ProcessAmbiDec;
-    else if(device->AmbiUp)
-        device->PostProcess = ProcessAmbiUp;
     else if(device->Uhj_Encoder)
         device->PostProcess = ProcessUhj;
     else if(device->Bs2b)

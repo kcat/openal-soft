@@ -641,9 +641,6 @@ struct ALCdevice {
     MixParams Dry;
     ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1]{};
 
-    /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
-    MixParams FOAOut;
-
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.
      */
@@ -653,17 +650,14 @@ struct ALCdevice {
     std::unique_ptr<DirectHrtfState> mHrtfState;
     HrtfEntry *mHrtf{nullptr};
 
-    /* UHJ encoder state */
+    /* Ambisonic-to-UHJ encoder */
     std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
 
-    /* High quality Ambisonic decoder */
+    /* Ambisonic decoder for speakers */
     std::unique_ptr<BFormatDec> AmbiDecoder;
 
     /* Stereo-to-binaural filter */
     std::unique_ptr<bs2b> Bs2b;
-
-    /* First-order ambisonic upsampler for higher-order output */
-    std::unique_ptr<AmbiUpsampler> AmbiUp;
 
     POSTPROCESS PostProcess{};
 

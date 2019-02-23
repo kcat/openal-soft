@@ -15,7 +15,6 @@ struct ALeffectslot;
 
 struct EffectTarget {
     MixParams *Main;
-    MixParams *FOAOut;
     RealMixParams *RealOut;
 };
 

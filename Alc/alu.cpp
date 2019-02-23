@@ -449,12 +449,12 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         params.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(target->WetBuffer[0]);
         params.NumChannels = target->WetBuffer.size();
 
-        output = EffectTarget{&params, &params, nullptr};
+        output = EffectTarget{&params, nullptr};
     }
     else
     {
         ALCdevice *device{context->Device};
-        output = EffectTarget{&device->Dry, &device->FOAOut, &device->RealOut};
+        output = EffectTarget{&device->Dry, &device->RealOut};
     }
     state->update(context, slot, &slot->Params.EffectProps, output);
     return true;

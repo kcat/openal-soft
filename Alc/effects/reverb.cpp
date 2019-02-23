@@ -673,13 +673,12 @@ ALfloat CalcLimitedHfRatio(const ALfloat hfRatio, const ALfloat airAbsorptionGai
  * decay times for each band split at two reference frequencies.
  */
 void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime,
-                          const ALfloat mfDecayTime, const ALfloat hfDecayTime,
-                          const ALfloat lf0norm, const ALfloat hf0norm,
-                          T60Filter *filter)
+    const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm,
+    const ALfloat hf0norm, T60Filter *filter)
 {
-    ALfloat lfGain{CalcDecayCoeff(length, lfDecayTime)};
-    ALfloat mfGain{CalcDecayCoeff(length, mfDecayTime)};
-    ALfloat hfGain{CalcDecayCoeff(length, hfDecayTime)};
+    const ALfloat lfGain{CalcDecayCoeff(length, lfDecayTime)};
+    const ALfloat mfGain{CalcDecayCoeff(length, mfDecayTime)};
+    const ALfloat hfGain{CalcDecayCoeff(length, hfDecayTime)};
 
     filter->MidGain[1] = mfGain;
     filter->LFFilter.setParams(BiquadType::LowShelf, lfGain/mfGain, lf0norm,
@@ -689,7 +688,8 @@ void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime,
 }
 
 /* Update the offsets for the main effect delay line. */
-ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay, const ALfloat density, const ALfloat decayTime, const ALuint frequency, ReverbState *State)
+void UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay, const ALfloat density,
+    const ALfloat decayTime, const ALfloat frequency, ReverbState *State)
 {
     const ALfloat multiplier{CalcDelayLengthMult(density)};
 
@@ -717,7 +717,8 @@ ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay, const 
 }
 
 /* Update the early reflection line lengths and gain coefficients. */
-ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat diffusion, const ALfloat decayTime, const ALuint frequency, EarlyReflections *Early)
+void UpdateEarlyLines(const ALfloat density, const ALfloat diffusion, const ALfloat decayTime,
+    const ALfloat frequency, EarlyReflections *Early)
 {
     const ALfloat multiplier{CalcDelayLengthMult(density)};
 
@@ -744,12 +745,14 @@ ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat diffusion, const AL
 }
 
 /* Update the late reverb line lengths and T60 coefficients. */
-ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm, const ALuint frequency, LateReverb *Late)
+void UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime,
+    const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm,
+    const ALfloat hf0norm, const ALfloat frequency, LateReverb *Late)
 {
     /* Scaling factor to convert the normalized reference frequencies from
      * representing 0...freq to 0...max_reference.
      */
-    const ALfloat norm_weight_factor = static_cast<ALfloat>(frequency) / AL_EAXREVERB_MAX_HFREFERENCE;
+    const ALfloat norm_weight_factor{frequency / AL_EAXREVERB_MAX_HFREFERENCE};
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -854,7 +857,9 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
 }
 
 /* Update the early and late 3D panning gains. */
-ALvoid Update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, const EffectTarget &target, ReverbState *State)
+void Update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan,
+    const ALfloat earlyGain, const ALfloat lateGain, const EffectTarget &target,
+    ReverbState *State)
 {
     /* Create matrices that transform a B-Format signal according to the
      * panning vectors.
@@ -881,7 +886,7 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
 {
     const ALCdevice *Device{Context->Device};
     const ALlistener &Listener = Context->Listener;
-    const ALuint frequency{Device->Frequency};
+    const auto frequency = static_cast<ALfloat>(Device->Frequency);
 
     /* Calculate the master filters */
     ALfloat hf0norm{minf(props->Reverb.HFReference / frequency, 0.49f)};

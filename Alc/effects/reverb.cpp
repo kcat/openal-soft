@@ -83,33 +83,20 @@ alignas(16) constexpr ALfloat B2A[NUM_LINES][MAX_AMBI_CHANNELS]{
 };
 
 /* Converts A-Format to B-Format. */
-constexpr alu::Matrix A2B{
-    0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f,
-    0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f,
-    0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f,
-    0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f
+alignas(16) constexpr ALfloat A2B[NUM_LINES][NUM_LINES]{
+    { 0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f },
+    { 0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f },
+    { 0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f },
+    { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
 };
 
-inline void ConvertA2B(ALfloat (&dst)[NUM_LINES][MAX_UPDATE_SAMPLES],
-    const ALfloat (&src)[NUM_LINES][MAX_UPDATE_SAMPLES], const ALsizei todo)
+inline void ConvertA2B(ALfloat (&dst)[NUM_LINES][BUFFERSIZE],
+    const ALfloat (&src)[NUM_LINES][BUFFERSIZE], const ALsizei todo)
 {
     for(ALsizei c{0};c < NUM_LINES;c++)
     {
-        /* Not ideal to do this mixing manually, but the main mixers work on
-         * BUFFERSIZE-length lines and these buffers are MAX_UPDATE_SAMPLES in
-         * length. At least the compiler seems to vectorize it, when targeting
-         * capable CPUs (just no run-time detection).
-         */
         std::fill(std::begin(dst[c]), std::end(dst[c]), 0.0f);
-        for(ALsizei d{0};d < NUM_LINES;d++)
-        {
-            ASSUME(todo > 0);
-            std::transform(std::begin(src[d]), std::begin(src[d])+todo, dst[c], dst[c],
-                std::bind(std::plus<float>{},
-                    std::bind(std::multiplies<float>{}, _1, A2B[c][d]),
-                    _2)
-            );
-        }
+        MixRowSamples(dst[c], A2B[c], src, NUM_LINES, 0, todo);
     }
 }
 
@@ -278,9 +265,9 @@ struct VecAllpass {
     ALfloat Coeff{0.0f};
     ALsizei Offset[NUM_LINES][2]{};
 
-    void processFaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+    void processFaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei offset,
         const ALfloat xCoeff, const ALfloat yCoeff, ALfloat fade, const ALsizei todo);
-    void processUnfaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+    void processUnfaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei offset,
         const ALfloat xCoeff, const ALfloat yCoeff, const ALsizei todo);
 };
 
@@ -402,14 +389,15 @@ struct ReverbState final : public EffectState {
     ALsizei mOffset{0};
 
     /* Temporary storage used when processing. */
-    alignas(16) ALfloat mTempSamples[NUM_LINES][MAX_UPDATE_SAMPLES]{};
-    alignas(16) ALfloat mMixBuffer[NUM_LINES][MAX_UPDATE_SAMPLES]{};
+    alignas(16) ALfloat mTempSamples[NUM_LINES][BUFFERSIZE]{};
+    alignas(16) ALfloat mEarlyBuffer[NUM_LINES][BUFFERSIZE]{};
+    alignas(16) ALfloat mLateBuffer[NUM_LINES][BUFFERSIZE]{};
 
     using MixOutT = void (ReverbState::*)(std::array<BandSplitter,NUM_LINES> &splitter,
         const ALsizei numOutput, ALfloat (*samplesOut)[BUFFERSIZE],
+        ALfloat (&samplesIn)[NUM_LINES][BUFFERSIZE],
         ALfloat (&currentGains)[NUM_LINES][MAX_AMBI_CHANNELS],
-        const ALfloat (&targetGains)[NUM_LINES][MAX_AMBI_CHANNELS], const ALsizei counter,
-        const ALsizei base, const ALsizei todo);
+        const ALfloat (&targetGains)[NUM_LINES][MAX_AMBI_CHANNELS], const ALsizei todo);
 
     MixOutT mMixOut{&ReverbState::MixOutPlain};
     std::array<ALfloat,MAX_AMBI_ORDER+1> mOrderScales{};
@@ -417,42 +405,38 @@ struct ReverbState final : public EffectState {
 
 
     void MixOutPlain(std::array<BandSplitter,NUM_LINES>& /*splitter*/, const ALsizei numOutput,
-        ALfloat (*samplesOut)[BUFFERSIZE], ALfloat (&currentGains)[NUM_LINES][MAX_AMBI_CHANNELS],
-        const ALfloat (&targetGains)[NUM_LINES][MAX_AMBI_CHANNELS], const ALsizei counter,
-        const ALsizei base, const ALsizei todo)
+        ALfloat (*samplesOut)[BUFFERSIZE], ALfloat (&samplesIn)[NUM_LINES][BUFFERSIZE],
+        ALfloat (&currentGains)[NUM_LINES][MAX_AMBI_CHANNELS],
+        const ALfloat (&targetGains)[NUM_LINES][MAX_AMBI_CHANNELS], const ALsizei todo)
     {
         /* Convert back to B-Format, and mix the results to output. */
-        ConvertA2B(mTempSamples, mMixBuffer, todo);
+        ConvertA2B(mTempSamples, samplesIn, todo);
         for(ALsizei c{0};c < NUM_LINES;c++)
             MixSamples(mTempSamples[c], numOutput, samplesOut, currentGains[c],
-                targetGains[c], counter, base, todo);
+                targetGains[c], todo, 0, todo);
     }
 
     void MixOutAmbiUp(std::array<BandSplitter,NUM_LINES> &splitter, const ALsizei numOutput,
-        ALfloat (*samplesOut)[BUFFERSIZE], ALfloat (&currentGains)[NUM_LINES][MAX_AMBI_CHANNELS],
-        const ALfloat (&targetGains)[NUM_LINES][MAX_AMBI_CHANNELS], const ALsizei counter,
-        const ALsizei base, const ALsizei todo)
+        ALfloat (*samplesOut)[BUFFERSIZE], ALfloat (&samplesIn)[NUM_LINES][BUFFERSIZE],
+        ALfloat (&currentGains)[NUM_LINES][MAX_AMBI_CHANNELS],
+        const ALfloat (&targetGains)[NUM_LINES][MAX_AMBI_CHANNELS], const ALsizei todo)
     {
-        ConvertA2B(mTempSamples, mMixBuffer, todo);
+        ConvertA2B(mTempSamples, samplesIn, todo);
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
              */
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            ALfloat (&hfbuf)[MAX_UPDATE_SAMPLES] = mMixBuffer[0];
-            ALfloat (&lfbuf)[MAX_UPDATE_SAMPLES] = mMixBuffer[1];
+            ALfloat (&hfbuf)[BUFFERSIZE] = samplesIn[0];
+            ALfloat (&lfbuf)[BUFFERSIZE] = samplesIn[1];
 
             ASSUME(todo > 0);
             splitter[c].process(hfbuf, lfbuf, mTempSamples[c], todo);
-            std::transform(hfbuf, hfbuf+todo, lfbuf, lfbuf,
-                std::bind(std::plus<float>{},
-                    std::bind(std::multiplies<float>{}, _1, hfscale),
-                    _2)
-            );
+            MixRowSamples(lfbuf, &hfscale, &hfbuf, 1, 0, todo);
 
             MixSamples(lfbuf, numOutput, samplesOut, currentGains[c],
-                targetGains[c], counter, base, todo);
+                targetGains[c], todo, 0, todo);
         }
     }
 
@@ -1069,16 +1053,16 @@ inline void VectorPartialScatter(ALfloat *RESTRICT out, const ALfloat *RESTRICT 
 
 /* Utilizes the above, but reverses the input channels. */
 inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
-                                    const ALfloat xCoeff, const ALfloat yCoeff,
-                                    const ALfloat (*RESTRICT in)[MAX_UPDATE_SAMPLES],
-                                    const ALsizei count)
+    const ALfloat xCoeff, const ALfloat yCoeff, const ALsizei base,
+    const ALfloat (*RESTRICT in)[BUFFERSIZE], const ALsizei count)
 {
     const DelayLineI delay{*Delay};
+    ASSUME(base >= 0);
     for(ALsizei i{0};i < count;++i)
     {
         ALfloat f[NUM_LINES];
         for(ALsizei j{0};j < NUM_LINES;j++)
-            f[NUM_LINES-1-j] = in[j][i];
+            f[NUM_LINES-1-j] = in[j][base+i];
 
         VectorScatterDelayIn(&delay, offset++, f, xCoeff, yCoeff);
     }
@@ -1094,7 +1078,7 @@ inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-void VecAllpass::processUnfaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+void VecAllpass::processUnfaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei offset,
     const ALfloat xCoeff, const ALfloat yCoeff, const ALsizei todo)
 {
     const DelayLineI delay{Delay};
@@ -1122,7 +1106,7 @@ void VecAllpass::processUnfaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES],
         ++offset;
     }
 }
-void VecAllpass::processFaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+void VecAllpass::processFaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei offset,
     const ALfloat xCoeff, const ALfloat yCoeff, ALfloat fade, const ALsizei todo)
 {
     const DelayLineI delay{Delay};
@@ -1176,9 +1160,9 @@ void VecAllpass::processFaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], A
  * line processing and non-transitional processing.
  */
 void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                             ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
+                             const ALsizei base, ALfloat (*RESTRICT out)[BUFFERSIZE])
 {
-    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES]{State->mTempSamples};
+    ALfloat (*RESTRICT temps)[BUFFERSIZE]{State->mTempSamples};
     const DelayLineI early_delay{State->mEarly.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1210,8 +1194,9 @@ void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei t
         ALint early_feedb_tap{offset - State->mEarly.Offset[j][0]};
         const ALfloat early_feedb_coeff{State->mEarly.Coeff[j][0]};
 
+        ASSUME(base >= 0);
         for(ALsizei i{0};i < todo;i++)
-            out[j][i] = early_delay.get(early_feedb_tap++, j)*early_feedb_coeff + temps[j][i];
+            out[j][base+i] = early_delay.get(early_feedb_tap++, j)*early_feedb_coeff + temps[j][i];
     }
     for(ALsizei j{0};j < NUM_LINES;j++)
         early_delay.write(offset, NUM_LINES-1-j, temps[j], todo);
@@ -1221,12 +1206,13 @@ void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei t
      * bounce to improve the initial diffusion in the late reverb.
      */
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);
+    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, base, out, todo);
 }
 void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                           const ALfloat fade, ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
+                           const ALfloat fade, const ALsizei base,
+                           ALfloat (*RESTRICT out)[BUFFERSIZE])
 {
-    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES]{State->mTempSamples};
+    ALfloat (*RESTRICT temps)[BUFFERSIZE]{State->mTempSamples};
     const DelayLineI early_delay{State->mEarly.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1264,11 +1250,12 @@ void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei tod
         const ALfloat feedb_newCoeffStep{State->mEarly.Coeff[j][1] / FADE_SAMPLES};
         ALfloat fadeCount{fade};
 
+        ASSUME(base >= 0);
         for(ALsizei i{0};i < todo;i++)
         {
             const ALfloat fade0{feedb_oldCoeff + feedb_oldCoeffStep*fadeCount};
             const ALfloat fade1{feedb_newCoeffStep*fadeCount};
-            out[j][i] = early_delay.getFaded(feedb_tap0++, feedb_tap1++, j, fade0, fade1) +
+            out[j][base+i] = early_delay.getFaded(feedb_tap0++, feedb_tap1++, j, fade0, fade1) +
                 temps[j][i];
             fadeCount += 1.0f;
         }
@@ -1277,7 +1264,7 @@ void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei tod
         early_delay.write(offset, NUM_LINES-1-j, temps[j], todo);
 
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);
+    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, base, out, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1295,9 +1282,9 @@ void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei tod
  * processing and one for non-transitional processing.
  */
 void LateReverb_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                        ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
+                        const ALsizei base, ALfloat (*RESTRICT out)[BUFFERSIZE])
 {
-    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES]{State->mTempSamples};
+    ALfloat (*RESTRICT temps)[BUFFERSIZE]{State->mTempSamples};
     const DelayLineI late_delay{State->mLate.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1326,15 +1313,15 @@ void LateReverb_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
     State->mLate.VecAp.processUnfaded(temps, offset, mixX, mixY, todo);
 
     for(ALsizei j{0};j < NUM_LINES;j++)
-        std::copy_n(temps[j], todo, out[j]);
+        std::copy_n(temps[j], todo, out[j]+base);
 
     /* Finally, scatter and bounce the results to refeed the feedback buffer. */
-    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, out, todo);
+    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, base, out, todo);
 }
 void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei todo, const ALfloat fade,
-                      ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
+                      const ALsizei base, ALfloat (*RESTRICT out)[BUFFERSIZE])
 {
-    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES]{State->mTempSamples};
+    ALfloat (*RESTRICT temps)[BUFFERSIZE]{State->mTempSamples};
     const DelayLineI late_delay{State->mLate.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1375,9 +1362,9 @@ void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei todo, co
     State->mLate.VecAp.processFaded(temps, offset, mixX, mixY, fade, todo);
 
     for(ALsizei j{0};j < NUM_LINES;j++)
-        std::copy_n(temps[j], todo, out[j]);
+        std::copy_n(temps[j], todo, out[j]+base);
 
-    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, temps, todo);
+    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, base, out, todo);
 }
 
 void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
@@ -1386,6 +1373,14 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
     ALsizei offset{mOffset};
 
     ASSUME(samplesToDo > 0);
+
+    /* Convert B-Format to A-Format for processing. */
+    ALfloat (&afmt)[NUM_LINES][BUFFERSIZE] = mTempSamples;
+    for(ALsizei c{0};c < NUM_LINES;c++)
+    {
+        std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
+        MixRowSamples(afmt[c], B2A[c], samplesIn, numInput, 0, samplesToDo);
+    }
 
     /* Process reverb for these samples. */
     for(ALsizei base{0};base < samplesToDo;)
@@ -1398,45 +1393,27 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
             todo = mini(todo, mMaxUpdate[0]);
         }
         todo = mini(todo, mMaxUpdate[1]);
-        /* If this is not the final update, ensure the update size is a
-         * multiple of 4 for the SIMD mixers.
-         */
-        if(todo < samplesToDo-base)
-            todo &= ~3;
         ASSUME(todo > 0);
-
-        /* Convert B-Format to A-Format for processing. */
-        ALfloat (&afmt)[NUM_LINES][MAX_UPDATE_SAMPLES] = mTempSamples;
-        for(ALsizei c{0};c < NUM_LINES;c++)
-        {
-            std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
-            MixRowSamples(afmt[c], B2A[c], samplesIn, numInput, base, todo);
-        }
 
         /* Process the samples for reverb. */
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             /* Band-pass the incoming samples. */
-            mFilter[c].Lp.process(mMixBuffer[0], afmt[c], todo);
-            mFilter[c].Hp.process(mMixBuffer[1], mMixBuffer[0], todo);
+            mFilter[c].Lp.process(mEarlyBuffer[0], afmt[c]+base, todo);
+            mFilter[c].Hp.process(mEarlyBuffer[1], mEarlyBuffer[0], todo);
 
             /* Feed the initial delay line. */
-            mDelay.write(offset, c, mMixBuffer[1], todo);
+            mDelay.write(offset, c, mEarlyBuffer[1], todo);
         }
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
         {
             auto fade = static_cast<ALfloat>(fadeCount);
 
-            /* Generate and mix early reflections. */
-            EarlyReflection_Faded(this, offset, todo, fade, mMixBuffer);
-            (this->*mMixOut)(mAmbiSplitter[0], numOutput, samplesOut, mEarly.CurrentGain,
-                mEarly.PanGain, samplesToDo-base, base, todo);
+            /* Generate early reflections and late reverb. */
+            EarlyReflection_Faded(this, offset, todo, fade, base, mEarlyBuffer);
 
-            /* Generate and mix late reverb. */
-            LateReverb_Faded(this, offset, todo, fade, mMixBuffer);
-            (this->*mMixOut)(mAmbiSplitter[1], numOutput, samplesOut, mLate.CurrentGain,
-                mLate.PanGain, samplesToDo-base, base, todo);
+            LateReverb_Faded(this, offset, todo, fade, base, mLateBuffer);
 
             /* Step fading forward. */
             fadeCount += todo;
@@ -1462,15 +1439,10 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
         }
         else
         {
-            /* Generate and mix early reflections. */
-            EarlyReflection_Unfaded(this, offset, todo, mMixBuffer);
-            (this->*mMixOut)(mAmbiSplitter[0], numOutput, samplesOut, mEarly.CurrentGain,
-                mEarly.PanGain, samplesToDo-base, base, todo);
+            /* Generate early reflections and late reverb. */
+            EarlyReflection_Unfaded(this, offset, todo, base, mEarlyBuffer);
 
-            /* Generate and mix late reverb. */
-            LateReverb_Unfaded(this, offset, todo, mMixBuffer);
-            (this->*mMixOut)(mAmbiSplitter[1], numOutput, samplesOut, mLate.CurrentGain,
-                mLate.PanGain, samplesToDo-base, base, todo);
+            LateReverb_Unfaded(this, offset, todo, base, mLateBuffer);
         }
 
         /* Step all delays forward. */
@@ -1480,6 +1452,12 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
     }
     mOffset = offset;
     mFadeCount = fadeCount;
+
+    /* Finally, mix early reflections and late reverb. */
+    (this->*mMixOut)(mAmbiSplitter[0], numOutput, samplesOut, mEarlyBuffer, mEarly.CurrentGain,
+        mEarly.PanGain, samplesToDo);
+    (this->*mMixOut)(mAmbiSplitter[1], numOutput, samplesOut, mLateBuffer, mLate.CurrentGain,
+        mLate.PanGain, samplesToDo);
 }
 
 

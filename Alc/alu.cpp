@@ -586,9 +586,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     );
 
     voice->Flags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
-    if(isbformat)
+    if(isbformat) /* Special handling for B-Format sources. */
     {
-        /* Special handling for B-Format sources. */
+        voice->Direct.Buffer = Device->Dry.Buffer;
+        voice->Direct.Channels = Device->Dry.NumChannels;
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -614,9 +615,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                           std::begin(voice->Direct.ChannelsPerOrder));
                 voice->Flags |= VOICE_HAS_NFC;
             }
-
-            voice->Direct.Buffer = Device->Dry.Buffer;
-            voice->Direct.Channels = Device->Dry.NumChannels;
 
             /* A scalar of 1.5 for plain stereo results in +/-60 degrees being
              * moved to +/-90 degrees for direct right and left speaker
@@ -687,8 +685,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 {   0.0f, -V[0]*zscale,  V[1]*zscale, -V[2]*zscale }  // FuMa Z
             };
 
-            voice->Direct.Buffer = Device->Dry.Buffer;
-            voice->Direct.Channels = Device->Dry.NumChannels;
             for(ALsizei c{0};c < num_channels;c++)
                 ComputePanGains(&Device->Dry, matrix[c], DryGain,
                     voice->Direct.Params[c].Gains.Target);
@@ -817,6 +813,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     else
     {
         /* Non-HRTF rendering. Use normal panning to the output. */
+        voice->Direct.Buffer = Device->Dry.Buffer;
+        voice->Direct.Channels = Device->Dry.NumChannels;
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {

@@ -284,10 +284,9 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
 } // namespace
 
 /* This function uses these device temp buffers. */
-#define SOURCE_DATA_BUF 0
-#define RESAMPLED_BUF 1
-#define FILTERED_BUF 2
-#define NFC_DATA_BUF 3
+#define RESAMPLED_BUF 0
+#define FILTERED_BUF 1
+#define NFC_DATA_BUF 2
 ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -373,10 +372,11 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
         /* +1 to get the src sample count, include padding. */
         DataSize64 += 1 + MAX_RESAMPLE_PADDING*2;
 
-        auto SrcBufferSize = static_cast<ALsizei>(mini64(DataSize64, BUFFERSIZE+1));
-        if(SrcBufferSize > BUFFERSIZE)
+        auto SrcBufferSize = static_cast<ALsizei>(
+            mini64(DataSize64, BUFFERSIZE + MAX_RESAMPLE_PADDING*2 + 1));
+        if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLE_PADDING*2)
         {
-            SrcBufferSize = BUFFERSIZE;
+            SrcBufferSize = BUFFERSIZE + MAX_RESAMPLE_PADDING*2;
             /* If the source buffer got saturated, we can't fill the desired
              * dst size. Figure out how many samples we can actually mix from
              * this.
@@ -397,7 +397,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
 
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            ALfloat (&SrcData)[BUFFERSIZE] = Device->TempBuffer[SOURCE_DATA_BUF];
+            auto &SrcData = Device->SourceData;
 
             /* Load the previous samples into the source data first, and clear the rest. */
             auto srciter = std::copy(std::begin(voice->PrevSamples[chan]),
@@ -553,7 +553,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                  * be desirable.
                  */
                 const ALfloat hfscale{(chan==0) ? voice->AmbiScales[0] : voice->AmbiScales[1]};
-                ALfloat (&hfbuf)[BUFFERSIZE] = Device->TempBuffer[SOURCE_DATA_BUF];
+                ALfloat (&hfbuf)[BUFFERSIZE] = Device->TempBuffer[FILTERED_BUF];
                 ALfloat (&lfbuf)[BUFFERSIZE] = Device->TempBuffer[RESAMPLED_BUF];
 
                 voice->AmbiSplitter[chan].process(hfbuf, lfbuf, ResampledData, DstBufferSize);

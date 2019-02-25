@@ -31,11 +31,6 @@ enum class DistanceModel;
 #define MAX_PITCH  255
 #define MAX_SENDS  16
 
-/* Maximum number of samples to pad on either end of a buffer for resampling.
- * Note that both the beginning and end need padding!
- */
-#define MAX_RESAMPLE_PADDING 24
-
 
 struct BSincTable;
 struct ALsource;

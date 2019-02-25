@@ -547,7 +547,13 @@ struct BFChannelConfig {
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
  */
-#define BUFFERSIZE 2048
+#define BUFFERSIZE 1024
+
+/* Maximum number of samples to pad on either end of a buffer for resampling.
+ * Note that both the beginning and end need padding!
+ */
+#define MAX_RESAMPLE_PADDING 24
+
 
 struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
@@ -632,7 +638,8 @@ struct ALCdevice {
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
-    alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];
+    alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLE_PADDING*2];
+    alignas(16) ALfloat TempBuffer[3][BUFFERSIZE];
 
     /* Mixing buffer used by the Dry mix, FOAOut, and Real out. */
     al::vector<std::array<ALfloat,BUFFERSIZE>, 16> MixBuffer;

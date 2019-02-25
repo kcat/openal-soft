@@ -748,7 +748,7 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 
 int AudioState::handler()
 {
-    std::unique_lock<std::mutex> lock(mSrcMutex);
+    std::unique_lock<std::mutex> srclock(mSrcMutex);
     milliseconds sleep_time = AudioBufferTime / 3;
     ALenum fmt;
 
@@ -1074,7 +1074,7 @@ int AudioState::handler()
            mMovie.mPlaying.load(std::memory_order_relaxed))
             startPlayback();
 
-        mSrcCond.wait_for(lock, sleep_time);
+        mSrcCond.wait_for(srclock, sleep_time);
     }
 
     alSourceRewind(mSource);
@@ -1082,6 +1082,7 @@ int AudioState::handler()
 
 finish:
     av_freep(&samples);
+    srclock.unlock();
 
 #ifdef AL_SOFT_events
     if(alEventControlSOFT)

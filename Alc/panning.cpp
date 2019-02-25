@@ -595,7 +595,6 @@ void InitHrtfPanning(ALCdevice *device)
         2.35702260e+00f, 1.82574186e+00f, 9.42809042e-01f
         /*1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f*/
     };
-    static constexpr ALsizei IndexMap[MAX_AMBI_CHANNELS]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
     const ALfloat *AmbiOrderHFGain{AmbiOrderHFGainFOA};
 
@@ -615,7 +614,8 @@ void InitHrtfPanning(ALCdevice *device)
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
     device->mHrtfState = DirectHrtfState::Create(count);
 
-    std::transform(std::begin(IndexMap), std::begin(IndexMap)+count, std::begin(device->Dry.AmbiMap),
+    std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
+        std::begin(device->Dry.AmbiMap),
         [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
     device->Dry.NumChannels = count;

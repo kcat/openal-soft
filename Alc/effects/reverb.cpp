@@ -1417,7 +1417,7 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 
             /* Step fading forward. */
             fadeCount += todo;
-            if(fadeCount >= FADE_SAMPLES-3)
+            if(fadeCount >= FADE_SAMPLES)
             {
                 /* Update the cross-fading delay line taps. */
                 fadeCount = FADE_SAMPLES;

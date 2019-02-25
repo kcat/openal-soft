@@ -496,6 +496,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         { FrontRight, Deg2Rad( 30.0f), Deg2Rad(0.0f) }
     };
 
+    const auto Frequency = static_cast<ALfloat>(Device->Frequency);
+    const ALsizei NumSends{Device->NumAuxSends};
+    ASSUME(NumSends >= 0);
+
     bool DirectChannels{props->DirectChannels != AL_FALSE};
     const ChanMap *chans{nullptr};
     ALsizei num_channels{0};
@@ -574,8 +578,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             ClearArray(params.Gains.Target);
         }
     );
-    const ALsizei NumSends{Device->NumAuxSends};
-    ASSUME(NumSends >= 0);
     std::for_each(voice->Send.begin(), voice->Send.end(),
         [num_channels](ALvoice::SendData &send) -> void
         {
@@ -604,8 +606,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                  * excessive bass.
                  */
                 const ALfloat mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
-                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (mdist * static_cast<ALfloat>(Device->Frequency))};
+                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->Direct.Params[0].NFCtrlFilter.adjust(w0);
@@ -825,8 +826,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                  * excessive bass.
                  */
                 const ALfloat mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
-                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (mdist * static_cast<ALfloat>(Device->Frequency))};
+                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
                 for(ALsizei c{0};c < num_channels;c++)
@@ -884,8 +884,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                  * filters so they keep an appropriate history, in case the
                  * source moves away from the listener.
                  */
-                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (Device->AvgSpeakerDist * static_cast<ALfloat>(Device->Frequency))};
+                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (Device->AvgSpeakerDist * Frequency)};
 
                 for(ALsizei c{0};c < num_channels;c++)
                     voice->Direct.Params[c].NFCtrlFilter.adjust(w0);
@@ -929,7 +928,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         }
     }
 
-    const auto Frequency = static_cast<ALfloat>(Device->Frequency);
     {
         const ALfloat hfScale{props->Direct.HFReference / Frequency};
         const ALfloat lfScale{props->Direct.LFReference / Frequency};

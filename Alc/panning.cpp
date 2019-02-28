@@ -626,8 +626,7 @@ void InitHrtfPanning(ALCdevice *device)
         AmbiMatrix, static_cast<ALsizei>(COUNTOF(AmbiPoints)), AmbiOrderHFGain);
 
     HrtfEntry *Hrtf{device->mHrtf};
-    const auto &field = Hrtf->field[Hrtf->fdCount-1];
-    InitNearFieldCtrl(device, field.distance, ambi_order, ChansPerOrder);
+    InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
 }
 
 void InitUhjPanning(ALCdevice *device)

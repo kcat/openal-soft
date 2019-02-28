@@ -214,9 +214,13 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
 
     const auto *field = Hrtf->field;
     const auto *field_end = field + Hrtf->fdCount-1;
-    ALsizei fdoffset{0};
-    for(;field != field_end && (field+1)->distance <= distance;++field)
-        fdoffset += field->evCount;
+    ALsizei fdoffset{Hrtf->evFarBase};
+    while(distance < field->distance && field != field_end)
+    {
+        ++field;
+        fdoffset -= field->evCount;
+    }
+    assert(fdoffset >= 0);
 
     /* Claculate the lower elevation index. */
     const auto elev = CalcEvIndex(field->evCount, elevation);
@@ -311,10 +315,8 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     ASSUME(NumChannels > 0);
     ASSUME(AmbiCount > 0);
 
-    auto &field = Hrtf->field[Hrtf->fdCount-1];
-    const ALsizei ebase{std::accumulate(Hrtf->field, &field, 0,
-        std::bind(std::plus<ALsizei>{}, _1,
-            std::bind(std::mem_fn(&HrtfEntry::Field::evCount), _2)))};
+    auto &field = Hrtf->field[0];
+    const ALsizei ebase{Hrtf->evFarBase};
     ALsizei min_delay{HRTF_HISTORY_LENGTH};
     ALsizei max_delay{0};
     auto idx = al::vector<ALsizei>(AmbiCount);
@@ -468,7 +470,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
 namespace {
 
 std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const ALsizei fdCount,
-    const ALfloat *distance, const ALubyte *evCount, const ALubyte *azCount,
+    const ALubyte *evCount, const ALfloat *distance, const ALubyte *azCount,
     const ALushort *evOffset, ALsizei irCount, const ALfloat (*coeffs)[2],
     const ALubyte (*delays)[2], const char *filename)
 {
@@ -493,6 +495,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
         InitRef(&Hrtf->ref, 1u);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
+        Hrtf->evFarBase = std::accumulate(evCount+1, evCount+fdCount, 0);
         Hrtf->fdCount = fdCount;
 
         /* Set up pointers to storage following the main HRTF struct. */
@@ -522,8 +525,8 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
         /* Copy input data to storage. */
         for(ALsizei i{0};i < fdCount;i++)
         {
-            field_[i].distance = distance[i];
             field_[i].evCount = evCount[i];
+            field_[i].distance = distance[i];
         }
         for(ALsizei i{0};i < evTotal;i++) azCount_[i] = azCount[i];
         for(ALsizei i{0};i < evTotal;i++) evOffset_[i] = evOffset[i];
@@ -699,7 +702,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     }
 
     static constexpr ALfloat distance{0.0f};
-    return CreateHrtfStore(rate, irSize, 1, &distance, &evCount, azCount.data(), evOffset.data(),
+    return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
         irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
@@ -798,7 +801,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
     }
 
     static constexpr ALfloat distance{0.0f};
-    return CreateHrtfStore(rate, irSize, 1, &distance, &evCount, azCount.data(), evOffset.data(),
+    return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
         irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
@@ -1030,7 +1033,9 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
         }
     }
 
-    return CreateHrtfStore(rate, irSize, fdCount, distance.data(), evCount.data(), azCount.data(),
+    std::reverse(distance.begin(), distance.end());
+    std::reverse(evCount.begin(), evCount.end());
+    return CreateHrtfStore(rate, irSize, fdCount, evCount.data(), distance.data(), azCount.data(),
         evOffset.data(), irTotal, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }

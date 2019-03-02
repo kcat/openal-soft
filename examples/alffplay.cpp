@@ -264,6 +264,7 @@ struct AudioState {
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
     std::atomic_flag mConnected;
+    std::atomic<bool> mPrepared{false};
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
     ALsizei mBufferIdx{0};
@@ -293,7 +294,7 @@ struct AudioState {
         return getClockNoLock();
     }
 
-    bool isBufferFilled();
+    bool isBufferFilled() const { return mPrepared.load(); }
     void startPlayback();
 
     int getSync();
@@ -483,16 +484,6 @@ nanoseconds AudioState::getClockNoLock()
     }
 
     return std::max(pts, nanoseconds::zero());
-}
-
-bool AudioState::isBufferFilled()
-{
-    /* All of OpenAL's buffer queueing happens under the mSrcMutex lock, as
-     * does the source gen. So when we're able to grab the lock and the source
-     * is valid, the queue must be full.
-     */
-    std::lock_guard<std::mutex> lock(mSrcMutex);
-    return mSource != 0;
 }
 
 void AudioState::startPlayback()
@@ -1070,9 +1061,13 @@ int AudioState::handler()
         }
 
         /* (re)start the source if needed, and wait for a buffer to finish */
-        if(state != AL_PLAYING && state != AL_PAUSED &&
-           mMovie.mPlaying.load(std::memory_order_relaxed))
-            startPlayback();
+        if(state != AL_PLAYING && state != AL_PAUSED)
+        {
+            if(mMovie.mPlaying.load(std::memory_order_relaxed))
+                startPlayback();
+            else
+                mPrepared.store(true);
+        }
 
         mSrcCond.wait_for(srclock, sleep_time);
     }

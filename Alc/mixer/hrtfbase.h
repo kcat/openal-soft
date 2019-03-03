@@ -9,7 +9,7 @@
 using ApplyCoeffsT = void(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei irSize,
     const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right);
 
-template<ApplyCoeffsT ApplyCoeffs>
+template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
     ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams,
     HrtfState *hrtfstate, const ALsizei BufferSize)
@@ -72,7 +72,7 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
     hrtfparams->Gain = gain + gainstep*stepcount;
 }
 
-template<ApplyCoeffsT ApplyCoeffs>
+template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
     const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
     const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
@@ -147,7 +147,7 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
     newparams->Gain = newGainStep*stepcount;
 }
 
-template<ApplyCoeffsT ApplyCoeffs>
+template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixDirectHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
     const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
     const ALsizei BufferSize)

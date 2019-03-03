@@ -283,10 +283,6 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
 
 } // namespace
 
-/* This function uses these device temp buffers. */
-#define RESAMPLED_BUF 0
-#define FILTERED_BUF 1
-#define NFC_DATA_BUF 2
 ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -544,8 +540,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
             /* Resample, then apply ambisonic upsampling as needed. */
             const ALfloat *ResampledData{Resample(&voice->ResampleState,
                 &SrcData[MAX_RESAMPLE_PADDING], DataPosFrac, increment,
-                Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
-            )};
+                Device->ResampledData, DstBufferSize)};
             if((voice->Flags&VOICE_IS_AMBISONIC))
             {
                 /* TODO: Does not properly handle HOA sources. Currently only
@@ -553,8 +548,8 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                  * be desirable.
                  */
                 const ALfloat hfscale{(chan==0) ? voice->AmbiScales[0] : voice->AmbiScales[1]};
-                ALfloat (&hfbuf)[BUFFERSIZE] = Device->TempBuffer[FILTERED_BUF];
-                ALfloat (&lfbuf)[BUFFERSIZE] = Device->TempBuffer[RESAMPLED_BUF];
+                ALfloat (&hfbuf)[BUFFERSIZE] = Device->FilteredData;
+                ALfloat (&lfbuf)[BUFFERSIZE] = Device->ResampledData;
 
                 voice->AmbiSplitter[chan].process(hfbuf, lfbuf, ResampledData, DstBufferSize);
                 MixRowSamples(lfbuf, &hfscale, &hfbuf, 1, 0, DstBufferSize);
@@ -566,9 +561,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
             {
                 DirectParams &parms = voice->Direct.Params[chan];
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
-                    Device->TempBuffer[FILTERED_BUF], ResampledData, DstBufferSize,
-                    voice->Direct.FilterType
-                )};
+                    Device->FilteredData, ResampledData, DstBufferSize, voice->Direct.FilterType)};
 
                 if(!(voice->Flags&VOICE_HAS_HRTF))
                 {
@@ -578,15 +571,14 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                             DstBufferSize);
                     else
                     {
-                        MixSamples(samples,
-                            voice->Direct.ChannelsPerOrder[0], voice->Direct.Buffer,
-                            parms.Gains.Current, parms.Gains.Target, Counter, OutPos,
-                            DstBufferSize);
+                        MixSamples(samples, voice->Direct.ChannelsPerOrder[0],
+                            voice->Direct.Buffer, parms.Gains.Current, parms.Gains.Target, Counter,
+                            OutPos, DstBufferSize);
 
-                        ALfloat *nfcsamples{Device->TempBuffer[NFC_DATA_BUF]};
+                        ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
                         ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
                         using FilterProc = void (NfcFilter::*)(float*,const float*,int);
-                        auto apply_nfc = [voice,&parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](FilterProc process, ALsizei order) -> void
+                        auto apply_nfc = [voice,&parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
                         {
                             if(voice->Direct.ChannelsPerOrder[order] < 1)
                                 return;
@@ -669,7 +661,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                 }
             }
 
-            ALfloat (&FilterBuf)[BUFFERSIZE] = Device->TempBuffer[FILTERED_BUF];
+            ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             auto mix_send = [Counter,OutPos,DstBufferSize,chan,ResampledData,&FilterBuf](ALvoice::SendData &send) -> void
             {
                 if(!send.Buffer)

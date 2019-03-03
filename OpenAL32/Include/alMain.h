@@ -639,7 +639,9 @@ struct ALCdevice {
 
     /* Temp storage used for mixer processing. */
     alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLE_PADDING*2];
-    alignas(16) ALfloat TempBuffer[3][BUFFERSIZE];
+    alignas(16) ALfloat ResampledData[BUFFERSIZE];
+    alignas(16) ALfloat FilteredData[BUFFERSIZE];
+    alignas(16) ALfloat NfcSampleData[BUFFERSIZE];
 
     /* Mixing buffer used by the Dry mix, FOAOut, and Real out. */
     al::vector<std::array<ALfloat,BUFFERSIZE>, 16> MixBuffer;

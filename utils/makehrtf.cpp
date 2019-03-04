@@ -2457,6 +2457,7 @@ static void NormalizeHrirs(const HrirDataT *hData)
     uint n{hData->mIrPoints};
     uint ti, fi, ei, ai, i;
     double maxLevel{0.0};
+    double maxRms{0.0};
 
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
@@ -2467,13 +2468,33 @@ static void NormalizeHrirs(const HrirDataT *hData)
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(ti = 0;ti < channels;ti++)
                 {
+                    double rms{0.0};
+
                     for(i = 0;i < n;i++)
+                    {
                         maxLevel = std::max(std::abs(azd->mIrs[ti][i]), maxLevel);
+                        rms += azd->mIrs[ti][i] * azd->mIrs[ti][i];
+                    }
+                    rms = std::sqrt(rms / n);
+                    maxRms = std::max(rms, maxRms);
                 }
             }
         }
     }
-    maxLevel = 1.01 * maxLevel;
+
+    /* Normalize using the maximum RMS of the HRIRs. The RMS measure for the
+     * non-filtered signal is of an impulse with equal length (to the filter):
+     *
+     * rms_impulse = sqrt(sum([ 1^2, 0^2, 0^2, ... ]) / n)
+     *             = sqrt(1 / n)
+     *
+     * This helps keep a more consistent volume between the non-filtered signal
+     * and various data sets.
+     */
+    double factor{std::sqrt(1.0 / n) / maxRms};
+
+    /* Also ensure the impulse samples themselves won't clip. */
+    factor = std::min(factor, 0.99/maxLevel);
 
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
@@ -2486,7 +2507,7 @@ static void NormalizeHrirs(const HrirDataT *hData)
                 for(ti = 0;ti < channels;ti++)
                 {
                     for(i = 0;i < n;i++)
-                        azd->mIrs[ti][i] /= maxLevel;
+                        azd->mIrs[ti][i] *= factor;
                 }
             }
         }

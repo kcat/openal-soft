@@ -84,11 +84,19 @@
 #include <limits>
 #include <vector>
 #include <complex>
+#include <numeric>
 #include <algorithm>
+#include <functional>
 
 #include "mysofa.h"
 
 #include "win_main_utf8.h"
+
+namespace {
+
+using namespace std::placeholders;
+
+} // namespace
 
 #ifndef M_PI
 #define M_PI                         (3.14159265358979323846)
@@ -2323,14 +2331,14 @@ static void ResampleHrirs(const uint rate, HrirDataT *hData)
  * the two HRIRs that bound the coordinate along with a factor for
  * calculating the continuous HRIR using interpolation.
  */
-static void CalcAzIndices(const HrirDataT *hData, const uint fi, const uint ei, const double az, uint *a0, uint *a1, double *af)
+static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
 {
-    double f = (2.0*M_PI + az) * hData->mFds[fi].mEvs[ei].mAzCount / (2.0*M_PI);
-    uint i = static_cast<uint>(f) % hData->mFds[fi].mEvs[ei].mAzCount;
+    double f{(2.0*M_PI + az) * field.mEvs[ei].mAzCount / (2.0*M_PI)};
+    uint i{static_cast<uint>(f) % field.mEvs[ei].mAzCount};
 
     f -= std::floor(f);
     *a0 = i;
-    *a1 = (i + 1) % hData->mFds[fi].mEvs[ei].mAzCount;
+    *a1 = (i + 1) % field.mEvs[ei].mAzCount;
     *af = f;
 }
 
@@ -2340,38 +2348,38 @@ static void CalcAzIndices(const HrirDataT *hData, const uint fi, const uint ei, 
  */
 static void SynthesizeOnsets(HrirDataT *hData)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    uint ti, fi, oi, ai, ei, a0, a1;
-    double t, of, af;
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    auto proc_field = [channels](HrirFdT &field) -> void
     {
-        if(hData->mFds[fi].mEvStart <= 0)
-            continue;
-        oi = hData->mFds[fi].mEvStart;
+        const uint oi{field.mEvStart};
+        if(oi <= 0) return;
 
-        for(ti = 0;ti < channels;ti++)
+        for(uint ti{0u};ti < channels;ti++)
         {
-            t = 0.0;
-            for(ai = 0;ai < hData->mFds[fi].mEvs[oi].mAzCount;ai++)
-                t += hData->mFds[fi].mEvs[oi].mAzs[ai].mDelays[ti];
-            hData->mFds[fi].mEvs[0].mAzs[0].mDelays[ti] = 1.32e-4 + (t / hData->mFds[fi].mEvs[oi].mAzCount);
-            for(ei = 1;ei < hData->mFds[fi].mEvStart;ei++)
+            double t{0.0};
+            for(uint ai{0u};ai < field.mEvs[oi].mAzCount;ai++)
+                t += field.mEvs[oi].mAzs[ai].mDelays[ti];
+            field.mEvs[0].mAzs[0].mDelays[ti] = 1.32e-4 + (t / field.mEvs[oi].mAzCount);
+
+            for(uint ei{1u};ei < field.mEvStart;ei++)
             {
-                of = static_cast<double>(ei) / hData->mFds[fi].mEvStart;
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                const double of{static_cast<double>(ei) / field.mEvStart};
+                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
                 {
-                    CalcAzIndices(hData, fi, oi, hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
-                    hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[ti] = Lerp(
-                        hData->mFds[fi].mEvs[0].mAzs[0].mDelays[ti],
-                        Lerp(hData->mFds[fi].mEvs[oi].mAzs[a0].mDelays[ti],
-                             hData->mFds[fi].mEvs[oi].mAzs[a1].mDelays[ti], af),
-                        of
-                    );
+                    uint a0, a1;
+                    double af;
+
+                    CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                    double other{Lerp(field.mEvs[oi].mAzs[a0].mDelays[ti],
+                        field.mEvs[oi].mAzs[a1].mDelays[ti], af)};
+                    field.mEvs[ei].mAzs[ai].mDelays[ti] = Lerp(field.mEvs[0].mAzs[0].mDelays[ti],
+                        other, of);
                 }
             }
         }
-    }
+    };
+    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
 }
 
 /* Attempt to synthesize any missing HRIRs at the bottom elevations of each
@@ -2381,106 +2389,106 @@ static void SynthesizeOnsets(HrirDataT *hData)
  */
 static void SynthesizeHrirs(HrirDataT *hData)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    uint n = hData->mIrPoints;
-    uint ti, fi, ai, ei, i;
-    double lp[4], s0, s1;
-    double of, b;
-    uint a0, a1;
-    double af;
+    const uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
+    const uint irSize{hData->mIrPoints};
+    const double beta{3.5e-6 * hData->mIrRate};
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    auto proc_field = [channels,irSize,beta](HrirFdT &field) -> void
     {
-        const uint oi = hData->mFds[fi].mEvStart;
-        if(oi <= 0) continue;
+        const uint oi{field.mEvStart};
+        if(oi <= 0) return;
 
-        for(ti = 0;ti < channels;ti++)
+        for(uint ti{0u};ti < channels;ti++)
         {
-            for(i = 0;i < n;i++)
-                hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] = 0.0;
-            for(ai = 0;ai < hData->mFds[fi].mEvs[oi].mAzCount;ai++)
+            for(uint i{0u};i < irSize;i++)
+                field.mEvs[0].mAzs[0].mIrs[ti][i] = 0.0;
+            for(uint ai{0u};ai < field.mEvs[oi].mAzCount;ai++)
             {
-                for(i = 0;i < n;i++)
-                    hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] += hData->mFds[fi].mEvs[oi].mAzs[ai].mIrs[ti][i] /
-                                                                   hData->mFds[fi].mEvs[oi].mAzCount;
+                for(uint i{0u};i < irSize;i++)
+                    field.mEvs[0].mAzs[0].mIrs[ti][i] += field.mEvs[oi].mAzs[ai].mIrs[ti][i] /
+                                                         field.mEvs[oi].mAzCount;
             }
-            for(ei = 1;ei < hData->mFds[fi].mEvStart;ei++)
+            for(uint ei{1u};ei < field.mEvStart;ei++)
             {
-                of = static_cast<double>(ei) / hData->mFds[fi].mEvStart;
-                b = (1.0 - of) * (3.5e-6 * hData->mIrRate);
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                const double of{static_cast<double>(ei) / field.mEvStart};
+                const double b{(1.0 - of) * beta};
+                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
                 {
-                    CalcAzIndices(hData, fi, oi, hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
-                    lp[0] = 0.0;
-                    lp[1] = 0.0;
-                    lp[2] = 0.0;
-                    lp[3] = 0.0;
-                    for(i = 0;i < n;i++)
+                    uint a0, a1;
+                    double af;
+
+                    CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                    double lp[4]{};
+                    for(uint i{0u};i < irSize;i++)
                     {
-                        s0 = hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i];
-                        s1 = Lerp(hData->mFds[fi].mEvs[oi].mAzs[a0].mIrs[ti][i],
-                                  hData->mFds[fi].mEvs[oi].mAzs[a1].mIrs[ti][i], af);
+                        double s0{field.mEvs[0].mAzs[0].mIrs[ti][i]};
+                        const double s1{Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
+                            field.mEvs[oi].mAzs[a1].mIrs[ti][i], af)};
                         s0 = Lerp(s0, s1, of);
                         lp[0] = Lerp(s0, lp[0], b);
                         lp[1] = Lerp(lp[0], lp[1], b);
                         lp[2] = Lerp(lp[1], lp[2], b);
                         lp[3] = Lerp(lp[2], lp[3], b);
-                        hData->mFds[fi].mEvs[ei].mAzs[ai].mIrs[ti][i] = lp[3];
+                        field.mEvs[ei].mAzs[ai].mIrs[ti][i] = lp[3];
                     }
                 }
             }
-            b = 3.5e-6 * hData->mIrRate;
-            lp[0] = 0.0;
-            lp[1] = 0.0;
-            lp[2] = 0.0;
-            lp[3] = 0.0;
-            for(i = 0;i < n;i++)
+            const double b{beta};
+            double lp[4]{};
+            for(uint i{0u};i < irSize;i++)
             {
-                s0 = hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i];
+                const double s0{field.mEvs[0].mAzs[0].mIrs[ti][i]};
                 lp[0] = Lerp(s0, lp[0], b);
                 lp[1] = Lerp(lp[0], lp[1], b);
                 lp[2] = Lerp(lp[1], lp[2], b);
                 lp[3] = Lerp(lp[2], lp[3], b);
-                hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] = lp[3];
+                field.mEvs[0].mAzs[0].mIrs[ti][i] = lp[3];
             }
         }
-        hData->mFds[fi].mEvStart = 0;
-    }
+        field.mEvStart = 0;
+    };
+    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
 }
 
 // The following routines assume a full set of HRIRs for all elevations.
 
 // Normalize the HRIR set and slightly attenuate the result.
-static void NormalizeHrirs(const HrirDataT *hData)
+static void NormalizeHrirs(HrirDataT *hData)
 {
-    uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    uint n{hData->mIrPoints};
-    uint ti, fi, ei, ai, i;
-    double maxLevel{0.0};
-    double maxRms{0.0};
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    const uint irSize{hData->mIrPoints};
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    /* Find the maximum amplitude and RMS out of all the IRs. */
+    struct LevelPair { double amp, rms; };
+    auto proc0_field = [channels,irSize](const LevelPair levels, const HrirFdT &field) -> LevelPair
     {
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        auto proc_elev = [channels,irSize](const LevelPair levels, const HrirEvT &elev) -> LevelPair
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            auto proc_azi = [channels,irSize](const LevelPair levels, const HrirAzT &azi) -> LevelPair
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                for(ti = 0;ti < channels;ti++)
+                auto proc_channel = [irSize](const LevelPair levels, const double *ir) -> LevelPair
                 {
-                    double rms{0.0};
+                    /* Calculate the peak amplitude and RMS of this IR. */
+                    auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
+                        [](const LevelPair current, const double impulse) -> LevelPair
+                        {
+                            return LevelPair{std::max(std::abs(impulse), current.amp),
+                                current.rms + impulse*impulse};
+                        });
+                    current.rms = std::sqrt(current.rms / irSize);
 
-                    for(i = 0;i < n;i++)
-                    {
-                        maxLevel = std::max(std::abs(azd->mIrs[ti][i]), maxLevel);
-                        rms += azd->mIrs[ti][i] * azd->mIrs[ti][i];
-                    }
-                    rms = std::sqrt(rms / n);
-                    maxRms = std::max(rms, maxRms);
-                }
-            }
-        }
-    }
+                    /* Accumulate levels by taking the maximum amplitude and RMS. */
+                    return LevelPair{std::max(current.amp, levels.amp),
+                        std::max(current.rms, levels.rms)};
+                };
+                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels, proc_channel);
+            };
+            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels, proc_azi);
+        };
+        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels, proc_elev);
+    };
+    const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount,
+        LevelPair{0.0, 0.0}, proc0_field);
 
     /* Normalize using the maximum RMS of the HRIRs. The RMS measure for the
      * non-filtered signal is of an impulse with equal length (to the filter):
@@ -2491,27 +2499,30 @@ static void NormalizeHrirs(const HrirDataT *hData)
      * This helps keep a more consistent volume between the non-filtered signal
      * and various data sets.
      */
-    double factor{std::sqrt(1.0 / n) / maxRms};
+    double factor{std::sqrt(1.0 / irSize) / maxlev.rms};
 
-    /* Also ensure the impulse samples themselves won't clip. */
-    factor = std::min(factor, 0.99/maxLevel);
+    /* Also ensure the samples themselves won't clip. */
+    factor = std::min(factor, 0.99/maxlev.amp);
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    /* Now scale all IRs by the given factor. */
+    auto proc1_field = [channels,irSize,factor](HrirFdT &field) -> void
     {
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        auto proc_elev = [channels,irSize,factor](HrirEvT &elev) -> void
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            auto proc_azi = [channels,irSize,factor](HrirAzT &azi) -> void
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-
-                for(ti = 0;ti < channels;ti++)
+                auto proc_channel = [irSize,factor](double *ir) -> void
                 {
-                    for(i = 0;i < n;i++)
-                        azd->mIrs[ti][i] *= factor;
-                }
-            }
-        }
-    }
+                    std::transform(ir, ir+irSize, ir,
+                        std::bind(std::multiplies<double>{}, _1, factor));
+                };
+                std::for_each(azi.mIrs, azi.mIrs+channels, proc_channel);
+            };
+            std::for_each(elev.mAzs, elev.mAzs+elev.mAzCount, proc_azi);
+        };
+        std::for_each(field.mEvs, field.mEvs+field.mEvCount, proc_elev);
+    };
+    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc1_field);
 }
 
 // Calculate the left-ear time delay using a spherical head model.

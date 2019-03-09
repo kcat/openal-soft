@@ -269,6 +269,12 @@ using uint = unsigned int;
 /* Complex double type. */
 using complex_d = std::complex<double>;
 
+/* Channel index enums. Mono uses LeftChannel only. */
+enum ChannelIndex : uint {
+    LeftChannel = 0u,
+    RightChannel = 1u
+};
+
 
 // Token reader state for parsing the data set definition.
 struct TokenReaderT {
@@ -2389,7 +2395,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
  */
 static void SynthesizeHrirs(HrirDataT *hData)
 {
-    const uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     const uint irSize{hData->mIrPoints};
     const double beta{3.5e-6 * hData->mIrRate};
 
@@ -2402,12 +2408,33 @@ static void SynthesizeHrirs(HrirDataT *hData)
         {
             for(uint i{0u};i < irSize;i++)
                 field.mEvs[0].mAzs[0].mIrs[ti][i] = 0.0;
+            /* Blend the lowest defined elevation's responses for an average
+             * -90 degree elevation response.
+             */
+            double blend_count{0.0};
             for(uint ai{0u};ai < field.mEvs[oi].mAzCount;ai++)
             {
-                for(uint i{0u};i < irSize;i++)
-                    field.mEvs[0].mAzs[0].mIrs[ti][i] += field.mEvs[oi].mAzs[ai].mIrs[ti][i] /
-                                                         field.mEvs[oi].mAzCount;
+                /* Only include the left responses for the left ear, and the
+                 * right responses for the right ear. This removes the cross-
+                 * talk that shouldn't exist for the -90 degree elevation
+                 * response (and would be mistimed anyway). NOTE: Azimuth goes
+                 * from 0...2pi rather than -pi...+pi (0 in front, clockwise).
+                 */
+                if(std::abs(field.mEvs[oi].mAzs[ai].mAzimuth) < EPSILON ||
+                   (ti == LeftChannel && field.mEvs[oi].mAzs[ai].mAzimuth > M_PI-EPSILON) ||
+                   (ti == RightChannel && field.mEvs[oi].mAzs[ai].mAzimuth < M_PI+EPSILON))
+                {
+                    for(uint i{0u};i < irSize;i++)
+                        field.mEvs[0].mAzs[0].mIrs[ti][i] += field.mEvs[oi].mAzs[ai].mIrs[ti][i];
+                    blend_count += 1.0;
+                }
             }
+            if(blend_count > 0.0)
+            {
+                for(uint i{0u};i < irSize;i++)
+                    field.mEvs[0].mAzs[0].mIrs[ti][i] /= blend_count;
+            }
+
             for(uint ei{1u};ei < field.mEvStart;ei++)
             {
                 const double of{static_cast<double>(ei) / field.mEvStart};
@@ -2421,10 +2448,13 @@ static void SynthesizeHrirs(HrirDataT *hData)
                     double lp[4]{};
                     for(uint i{0u};i < irSize;i++)
                     {
-                        double s0{field.mEvs[0].mAzs[0].mIrs[ti][i]};
+                        /* Blend the two defined HRIRs closest to this azimuth,
+                         * then blend that with the synthesized -90 elevation.
+                         */
                         const double s1{Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
                             field.mEvs[oi].mAzs[a1].mIrs[ti][i], af)};
-                        s0 = Lerp(s0, s1, of);
+                        const double s0{Lerp(field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of)};
+                        /* Apply a low-pass to simulate body occlusion. */
                         lp[0] = Lerp(s0, lp[0], b);
                         lp[1] = Lerp(lp[0], lp[1], b);
                         lp[2] = Lerp(lp[1], lp[2], b);

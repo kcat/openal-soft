@@ -27,6 +27,7 @@
 #include <cmath>
 #include <thread>
 #include <limits>
+#include <numeric>
 #include <algorithm>
 #include <functional>
 
@@ -2719,13 +2720,32 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         return;
     }
 
-    while(n > context->MaxVoices-context->VoiceCount.load(std::memory_order_relaxed))
+    /* Count the number of reusable voices. */
+    auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
+    auto free_voices = std::accumulate(context->Voices, voices_end, ALsizei{0},
+        [](const ALsizei count, const ALvoice *voice) noexcept -> ALsizei
+        { return (voice->SourceID.load(std::memory_order_relaxed) == 0u) ? count+1 : count; }
+    );
+    if(UNLIKELY(n > free_voices))
     {
-        if(UNLIKELY(context->MaxVoices > std::numeric_limits<ALsizei>::max()>>1))
-            SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
-                "Overflow increasing voice count from %d", context->MaxVoices);
-        ALsizei newcount = context->MaxVoices << 1;
-        AllocateVoices(context.get(), newcount, device->NumAuxSends);
+        /* Increment the number of voices to handle the request. */
+        const ALsizei need_voices{n - free_voices};
+        const ALsizei rem_voices{context->MaxVoices -
+            context->VoiceCount.load(std::memory_order_relaxed)};
+
+        if(UNLIKELY(need_voices > rem_voices))
+        {
+            /* Allocate more voices to get enough. */
+            const ALsizei alloc_count{need_voices - rem_voices};
+            if(UNLIKELY(context->MaxVoices > std::numeric_limits<ALsizei>::max()-alloc_count))
+                SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
+                    "Overflow increasing voice count to %d + %d", context->MaxVoices, alloc_count);
+
+            const ALsizei newcount{context->MaxVoices + alloc_count};
+            AllocateVoices(context.get(), newcount, device->NumAuxSends);
+        }
+
+        context->VoiceCount.fetch_add(need_voices, std::memory_order_relaxed);
     }
 
     auto start_source = [&context,device](ALuint sid) -> void
@@ -2786,10 +2806,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             [](const ALvoice *voice) noexcept -> bool
             { return voice->SourceID.load(std::memory_order_relaxed) == 0u; }
         );
+        assert(voice_iter != voices_end);
         auto vidx = static_cast<ALint>(std::distance(context->Voices, voice_iter));
         voice = *voice_iter;
         voice->Playing.store(false, std::memory_order_release);
-        if(voice_iter == voices_end) context->VoiceCount.fetch_add(1, std::memory_order_acq_rel);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
         UpdateSourceProps(source, voice, context.get());

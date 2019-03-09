@@ -530,6 +530,8 @@ void FreeSource(ALCcontext *context, ALsource *source)
     BackendUniqueLock backlock{*device->Backend};
     if(ALvoice *voice{GetSourceVoice(source, context)})
     {
+        voice->current_buffer.store(nullptr, std::memory_order_relaxed);
+        voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
         voice->SourceID.store(0u, std::memory_order_relaxed);
         voice->Playing.store(false, std::memory_order_release);
     }
@@ -2931,6 +2933,8 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice != nullptr)
         {
+            voice->current_buffer.store(nullptr, std::memory_order_relaxed);
+            voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
             voice->SourceID.store(0u, std::memory_order_relaxed);
             voice->Playing.store(false, std::memory_order_release);
             voice = nullptr;
@@ -2974,6 +2978,8 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice != nullptr)
         {
+            voice->current_buffer.store(nullptr, std::memory_order_relaxed);
+            voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
             voice->SourceID.store(0u, std::memory_order_relaxed);
             voice->Playing.store(false, std::memory_order_release);
             voice = nullptr;

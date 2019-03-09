@@ -1457,6 +1457,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 
             if(!MixSource(voice, sid, ctx, SamplesToDo))
             {
+                voice->current_buffer.store(nullptr, std::memory_order_relaxed);
+                voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
                 voice->SourceID.store(0u, std::memory_order_relaxed);
                 voice->Playing.store(false, std::memory_order_release);
                 SendSourceStoppedEvent(ctx, sid);
@@ -1816,6 +1818,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
             if(!sid) return;
 
+            voice->current_buffer.store(nullptr, std::memory_order_relaxed);
+            voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
             voice->SourceID.store(0u, std::memory_order_relaxed);
             voice->Playing.store(false, std::memory_order_release);
             /* If the source's voice was playing, it's now effectively stopped

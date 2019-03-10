@@ -78,9 +78,9 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
     const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
     const ALsizei BufferSize)
 {
-    const auto OldCoeffs = oldparams->Coeffs;
+    const auto &OldCoeffs = oldparams->Coeffs;
     const ALfloat oldGain{oldparams->Gain};
-    const ALfloat oldGainStep{-oldGain / (ALfloat)BufferSize};
+    const ALfloat oldGainStep{-oldGain / static_cast<ALfloat>(BufferSize)};
     const auto &NewCoeffs = *newparams->Coeffs;
     const ALfloat newGainStep{newparams->GainStep};
     ALfloat stepcount{0.0f};

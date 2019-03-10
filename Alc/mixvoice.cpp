@@ -627,8 +627,8 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     Device->FilteredData, ResampledData, DstBufferSize, voice->Direct.FilterType)};
 
-                const ALfloat (&TargetGains)[MAX_OUTPUT_CHANNELS] =
-                    UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget : parms.Gains.Target;
+                const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
+                    parms.Gains.Target};
                 if(!(voice->Flags&VOICE_HAS_HRTF))
                 {
                     if(!(voice->Flags&VOICE_HAS_NFC))
@@ -643,7 +643,7 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                         ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
                         ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
                         using FilterProc = void (NfcFilter::*)(float*,const float*,int);
-                        auto apply_nfc = [voice,&parms,samples,&TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
+                        auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
                         {
                             if(voice->Direct.ChannelsPerOrder[order] < 1)
                                 return;
@@ -740,8 +740,8 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     FilterBuf, ResampledData, DstBufferSize, send.FilterType)};
 
-                const ALfloat (&TargetGains)[MAX_OUTPUT_CHANNELS] =
-                    UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget : parms.Gains.Target;
+                const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
+                    parms.Gains.Target};
                 MixSamples(samples, send.Channels, send.Buffer, parms.Gains.Current,
                     TargetGains, Counter, OutPos, DstBufferSize);
             };

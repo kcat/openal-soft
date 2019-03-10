@@ -34,7 +34,7 @@ constexpr inline size_t AmbiChannelsFromOrder(size_t order) noexcept
  */
 constexpr inline size_t Ambi2DChannelsFromOrder(size_t order) noexcept
 { return order*2 + 1; }
-#define MAX_AMBI2D_CHANNELS Ambi2DChannelsFromOrder(MAX_AMBI_CHANNELS)
+#define MAX_AMBI2D_CHANNELS Ambi2DChannelsFromOrder(MAX_AMBI_ORDER)
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder

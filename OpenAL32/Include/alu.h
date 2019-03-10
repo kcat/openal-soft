@@ -252,7 +252,8 @@ struct ALvoice {
 
     ALuint Offset; /* Number of output samples mixed since starting. */
 
-    alignas(16) std::array<std::array<ALfloat,MAX_RESAMPLE_PADDING>,MAX_INPUT_CHANNELS> PrevSamples;
+    using ResamplePaddingArray = std::array<ALfloat,MAX_RESAMPLE_PADDING*2>;
+    alignas(16) std::array<ResamplePaddingArray,MAX_INPUT_CHANNELS> PrevSamples;
 
     InterpState ResampleState;
 

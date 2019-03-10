@@ -2855,7 +2855,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         /* Clear previous samples. */
         std::for_each(voice->PrevSamples.begin(), voice->PrevSamples.begin()+voice->NumChannels,
-            [](std::array<ALfloat,MAX_RESAMPLE_PADDING> &samples) -> void
+            [](std::array<ALfloat,MAX_RESAMPLE_PADDING*2> &samples) -> void
             { std::fill(std::begin(samples), std::end(samples), 0.0f); });
 
         /* Clear the stepping value so the mixer knows not to mix this until

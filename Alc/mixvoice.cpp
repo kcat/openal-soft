@@ -612,13 +612,14 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                  * be desirable.
                  */
                 const ALfloat hfscale{(chan==0) ? voice->AmbiScales[0] : voice->AmbiScales[1]};
-                ALfloat (&hfbuf)[BUFFERSIZE] = Device->FilteredData;
-                ALfloat (&lfbuf)[BUFFERSIZE] = Device->ResampledData;
-
-                voice->AmbiSplitter[chan].process(hfbuf, lfbuf, ResampledData, DstBufferSize);
-                MixRowSamples(lfbuf, &hfscale, &hfbuf, 1, 0, DstBufferSize);
-
-                ResampledData = lfbuf;
+                /* Beware the evil const_cast. It's safe since it's pointing to
+                 * either SrcData or Device->ResampledData (both non-const),
+                 * but the resample method takes its input as const float* and
+                 * may return it without copying to output, making it currently
+                 * unavoidable.
+                 */
+                voice->AmbiSplitter[chan].applyHfScale(const_cast<ALfloat*>(ResampledData),
+                    hfscale, DstBufferSize);
             }
 
             /* Now filter and mix to the appropriate outputs. */

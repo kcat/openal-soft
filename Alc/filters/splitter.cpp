@@ -25,7 +25,7 @@ void BandSplitterR<Real>::init(Real f0norm)
 }
 
 template<typename Real>
-void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, int count)
+void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, const int count)
 {
     ASSUME(count > 0);
 
@@ -55,6 +55,40 @@ void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, i
         return ap_y - lp_y;
     };
     std::transform(input, input+count, hpout, proc_sample);
+    this->lp_z1 = lp_z1;
+    this->lp_z2 = lp_z2;
+    this->ap_z1 = ap_z1;
+}
+
+template<typename Real>
+void BandSplitterR<Real>::applyHfScale(Real *RESTRICT samples, const Real hfscale, const int count)
+{
+    ASSUME(count > 0);
+
+    const Real ap_coeff{this->coeff};
+    const Real lp_coeff{this->coeff*0.5f + 0.5f};
+    Real lp_z1{this->lp_z1};
+    Real lp_z2{this->lp_z2};
+    Real ap_z1{this->ap_z1};
+    auto proc_sample = [hfscale,ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1](const Real in) noexcept -> Real
+    {
+        /* Low-pass sample processing. */
+        Real d{(in - lp_z1) * lp_coeff};
+        Real lp_y{lp_z1 + d};
+        lp_z1 = lp_y + d;
+
+        d = (lp_y - lp_z2) * lp_coeff;
+        lp_y = lp_z2 + d;
+        lp_z2 = lp_y + d;
+
+        /* All-pass sample processing. */
+        Real ap_y{in*ap_coeff + ap_z1};
+        ap_z1 = in - ap_y*ap_coeff;
+
+        /* High-pass generated from removing low-passed output. */
+        return (ap_y-lp_y)*hfscale + lp_y;
+    };
+    std::transform(samples, samples+count, samples, proc_sample);
     this->lp_z1 = lp_z1;
     this->lp_z2 = lp_z2;
     this->ap_z1 = ap_z1;

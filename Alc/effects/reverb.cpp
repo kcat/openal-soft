@@ -424,32 +424,23 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             /* Apply scaling to the B-Format's HF response to "upsample" it to
-             * higher-order output. Use the early buffer to store the split
-             * signal since it's not needed anymore.
+             * higher-order output.
              */
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            ALfloat (&hfbuf)[BUFFERSIZE] = mEarlyBuffer[0];
-            ALfloat (&lfbuf)[BUFFERSIZE] = mEarlyBuffer[1];
+            mAmbiSplitter[0][c].applyHfScale(mTempSamples[c], hfscale, todo);
 
-            mAmbiSplitter[0][c].process(hfbuf, lfbuf, mTempSamples[c], todo);
-            MixRowSamples(lfbuf, &hfscale, &hfbuf, 1, 0, todo);
-
-            MixSamples(lfbuf, numOutput, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c],
-                todo, 0, todo);
+            MixSamples(mTempSamples[c], numOutput, samplesOut, mEarly.CurrentGain[c],
+                mEarly.PanGain[c], todo, 0, todo);
         }
 
         ConvertA2B(mTempSamples, mLateBuffer, todo);
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            ALfloat (&hfbuf)[BUFFERSIZE] = mLateBuffer[0];
-            ALfloat (&lfbuf)[BUFFERSIZE] = mLateBuffer[1];
+            mAmbiSplitter[1][c].applyHfScale(mTempSamples[c], hfscale, todo);
 
-            mAmbiSplitter[1][c].process(hfbuf, lfbuf, mTempSamples[c], todo);
-            MixRowSamples(lfbuf, &hfscale, &hfbuf, 1, 0, todo);
-
-            MixSamples(lfbuf, numOutput, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], todo,
-                0, todo);
+            MixSamples(mTempSamples[c], numOutput, samplesOut, mLate.CurrentGain[c],
+                mLate.PanGain[c], todo, 0, todo);
         }
     }
 

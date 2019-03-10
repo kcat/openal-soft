@@ -534,7 +534,13 @@ void FreeSource(ALCcontext *context, ALsource *source)
         voice->current_buffer.store(nullptr, std::memory_order_relaxed);
         voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
         voice->SourceID.store(0u, std::memory_order_relaxed);
-        voice->Playing.store(false, std::memory_order_release);
+        std::atomic_thread_fence(std::memory_order_release);
+        /* Don't set the voice to stopping if it was already stopped or
+         * stopping.
+         */
+        ALvoice::State oldvstate{ALvoice::Playing};
+        voice->PlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+            std::memory_order_acq_rel, std::memory_order_acquire);
     }
     backlock.unlock();
 
@@ -2724,7 +2730,12 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
     auto free_voices = std::accumulate(context->Voices, voices_end, ALsizei{0},
         [](const ALsizei count, const ALvoice *voice) noexcept -> ALsizei
-        { return (voice->SourceID.load(std::memory_order_relaxed) == 0u) ? count+1 : count; }
+        {
+            if(voice->PlayState.load(std::memory_order_acquire) == ALvoice::Stopped &&
+                voice->SourceID.load(std::memory_order_relaxed) == 0u)
+                return count + 1;
+            return count;
+        }
     );
     if(UNLIKELY(n > free_voices))
     {
@@ -2790,7 +2801,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         case AL_PAUSED:
             assert(voice != nullptr);
             /* A source that's paused simply resumes. */
-            voice->Playing.store(true, std::memory_order_release);
+            voice->PlayState.store(ALvoice::Playing, std::memory_order_release);
             source->state = AL_PLAYING;
             SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
             return;
@@ -2804,12 +2815,15 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
         auto voice_iter = std::find_if(context->Voices, voices_end,
             [](const ALvoice *voice) noexcept -> bool
-            { return voice->SourceID.load(std::memory_order_relaxed) == 0u; }
+            {
+                return voice->PlayState.load(std::memory_order_acquire) == ALvoice::Stopped &&
+                    voice->SourceID.load(std::memory_order_relaxed) == 0u;
+            }
         );
         assert(voice_iter != voices_end);
         auto vidx = static_cast<ALint>(std::distance(context->Voices, voice_iter));
         voice = *voice_iter;
-        voice->Playing.store(false, std::memory_order_release);
+        voice->PlayState.store(ALvoice::Stopped, std::memory_order_release);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
         UpdateSourceProps(source, voice, context.get());
@@ -2840,8 +2854,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         }
 
         /* Clear previous samples. */
-        for(auto &samples : voice->PrevSamples)
-            std::fill(std::begin(samples), std::end(samples), 0.0f);
+        std::for_each(voice->PrevSamples.begin(), voice->PrevSamples.begin()+voice->NumChannels,
+            [](std::array<ALfloat,MAX_RESAMPLE_PADDING> &samples) -> void
+            { std::fill(std::begin(samples), std::end(samples), 0.0f); });
 
         /* Clear the stepping value so the mixer knows not to mix this until
          * the update gets applied.
@@ -2881,7 +2896,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         }
 
         voice->SourceID.store(source->id, std::memory_order_relaxed);
-        voice->Playing.store(true, std::memory_order_release);
+        voice->PlayState.store(ALvoice::Playing, std::memory_order_release);
         source->state = AL_PLAYING;
         source->VoiceIdx = vidx;
 
@@ -2916,7 +2931,13 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     {
         ALsource *source{LookupSource(context.get(), sources[i])};
         ALvoice *voice{GetSourceVoice(source, context.get())};
-        if(voice) voice->Playing.store(false, std::memory_order_release);
+        if(voice)
+        {
+            std::atomic_thread_fence(std::memory_order_release);
+            ALvoice::State oldvstate{ALvoice::Playing};
+            voice->PlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                std::memory_order_acq_rel, std::memory_order_acquire);
+        }
         if(GetSourceState(source, voice) == AL_PLAYING)
         {
             source->state = AL_PAUSED;
@@ -2956,7 +2977,10 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
             voice->current_buffer.store(nullptr, std::memory_order_relaxed);
             voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
             voice->SourceID.store(0u, std::memory_order_relaxed);
-            voice->Playing.store(false, std::memory_order_release);
+            std::atomic_thread_fence(std::memory_order_release);
+            ALvoice::State oldvstate{ALvoice::Playing};
+            voice->PlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                std::memory_order_acq_rel, std::memory_order_acquire);
             voice = nullptr;
         }
         ALenum oldstate{GetSourceState(source, voice)};
@@ -3001,7 +3025,10 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
             voice->current_buffer.store(nullptr, std::memory_order_relaxed);
             voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
             voice->SourceID.store(0u, std::memory_order_relaxed);
-            voice->Playing.store(false, std::memory_order_release);
+            std::atomic_thread_fence(std::memory_order_release);
+            ALvoice::State oldvstate{ALvoice::Playing};
+            voice->PlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                std::memory_order_acq_rel, std::memory_order_acquire);
             voice = nullptr;
         }
         if(GetSourceState(source, voice) != AL_INITIAL)

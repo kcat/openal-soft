@@ -198,6 +198,23 @@ void aluInitMixer()
 
 namespace {
 
+void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
+{
+    ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
+    if(!(enabledevt&EventType_SourceStateChange)) return;
+
+    RingBuffer *ring{context->AsyncEvents.get()};
+    auto evt_vec = ring->getWriteVector();
+    if(evt_vec.first.len < 1) return;
+
+    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
+    evt->u.srcstate.id = id;
+    evt->u.srcstate.state = AL_STOPPED;
+
+    ring->writeAdvance(1);
+    context->EventSem.post();
+}
+
 /* Base template left undefined. Should be marked =delete, but Clang 3.8.1
  * chokes on that given the inline specializations.
  */
@@ -283,26 +300,35 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
 
 } // namespace
 
-ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
+void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
     /* Get source info */
-    bool isplaying{true}; /* Will only be called while playing. */
-    bool isstatic{(voice->Flags&VOICE_IS_STATIC) != 0};
-    ALsizei DataPosInt{static_cast<ALsizei>(voice->position.load(std::memory_order_acquire))};
+    ALvoice::State vstate{voice->PlayState.load(std::memory_order_acquire)};
+    const bool isstatic{(voice->Flags&VOICE_IS_STATIC) != 0};
+    ALsizei DataPosInt{static_cast<ALsizei>(voice->position.load(std::memory_order_relaxed))};
     ALsizei DataPosFrac{voice->position_fraction.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferLoopItem{voice->loop_buffer.load(std::memory_order_relaxed)};
-    ALsizei NumChannels{voice->NumChannels};
-    ALsizei SampleSize{voice->SampleSize};
-    ALint increment{voice->Step};
+    const ALsizei NumChannels{voice->NumChannels};
+    const ALsizei SampleSize{voice->SampleSize};
+    const ALint increment{voice->Step};
 
     ASSUME(DataPosInt >= 0);
     ASSUME(DataPosFrac >= 0);
     ASSUME(NumChannels > 0);
     ASSUME(SampleSize > 0);
     ASSUME(increment > 0);
+
+    /* TODO: Use stored previous samples to fade out without incrementing when
+     * stopping (buffers may not be available).
+     */
+    if(UNLIKELY(vstate == ALvoice::Stopping))
+    {
+        voice->PlayState.store(ALvoice::Stopped, std::memory_order_release);
+        return;
+    }
 
     ALCdevice *Device{Context->Device};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
@@ -704,7 +730,7 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
                 /* Handle non-looping static source */
                 if(DataPosInt >= BufferListItem->max_samples)
                 {
-                    isplaying = false;
+                    vstate = ALvoice::Stopped;
                     BufferListItem = nullptr;
                     DataPosInt = 0;
                     DataPosFrac = 0;
@@ -724,13 +750,13 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
             BufferListItem = BufferListItem->next.load(std::memory_order_relaxed);
             if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {
-                isplaying = false;
+                vstate = ALvoice::Stopped;
                 DataPosInt = 0;
                 DataPosFrac = 0;
                 break;
             }
         }
-    } while(isplaying && OutPos < SamplesToDo);
+    } while(vstate != ALvoice::Stopped && OutPos < SamplesToDo);
 
     voice->Flags |= VOICE_IS_FADING;
 
@@ -755,5 +781,12 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
         }
     }
 
-    return isplaying;
+    if(vstate == ALvoice::Stopped)
+    {
+        voice->current_buffer.store(nullptr, std::memory_order_relaxed);
+        voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
+        voice->SourceID.store(0u, std::memory_order_relaxed);
+        voice->PlayState.store(ALvoice::Stopped, std::memory_order_release);
+        SendSourceStoppedEvent(Context, SourceID);
+    }
 }

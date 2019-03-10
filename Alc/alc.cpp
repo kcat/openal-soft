@@ -2148,7 +2148,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 delete voice->Update.exchange(nullptr, std::memory_order_acq_rel);
 
-                if(voice->SourceID.load(std::memory_order_acquire) == 0u)
+                /* Force the voice to stopped if it was stopping. */
+                ALvoice::State vstate{ALvoice::Stopping};
+                voice->PlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
+                    std::memory_order_acquire, std::memory_order_acquire);
+                if(voice->SourceID.load(std::memory_order_relaxed) == 0u)
                     return;
 
                 if(device->AvgSpeakerDist > 0.0f)
@@ -2625,8 +2629,8 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 
             voice->SourceID.store(old_voice->SourceID.load(std::memory_order_relaxed),
                                   std::memory_order_relaxed);
-            voice->Playing.store(old_voice->Playing.load(std::memory_order_relaxed),
-                                 std::memory_order_relaxed);
+            voice->PlayState.store(old_voice->PlayState.load(std::memory_order_relaxed),
+                                   std::memory_order_relaxed);
 
             voice->Props = old_voice->Props;
             /* Clear extraneous property set sends. */

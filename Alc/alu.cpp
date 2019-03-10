@@ -1451,18 +1451,12 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
         [SamplesToDo,ctx](ALvoice *voice) -> void
         {
-            if(!voice->Playing.load(std::memory_order_acquire)) return;
+            if(voice->PlayState.load(std::memory_order_acquire) == ALvoice::Stopped)
+                return;
             ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
-            if(!sid || voice->Step < 1) return;
+            if(voice->Step < 1) return;
 
-            if(!MixSource(voice, sid, ctx, SamplesToDo))
-            {
-                voice->current_buffer.store(nullptr, std::memory_order_relaxed);
-                voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
-                voice->SourceID.store(0u, std::memory_order_relaxed);
-                voice->Playing.store(false, std::memory_order_release);
-                SendSourceStoppedEvent(ctx, sid);
-            }
+            MixSource(voice, sid, ctx, SamplesToDo);
         }
     );
 
@@ -1814,14 +1808,15 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
 
         auto stop_voice = [ctx](ALvoice *voice) -> void
         {
-            if(!voice->Playing.load(std::memory_order_acquire)) return;
+            if(voice->PlayState.load(std::memory_order_acquire) == ALvoice::Playing)
+                return;
             ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
             if(!sid) return;
 
             voice->current_buffer.store(nullptr, std::memory_order_relaxed);
             voice->loop_buffer.store(nullptr, std::memory_order_relaxed);
             voice->SourceID.store(0u, std::memory_order_relaxed);
-            voice->Playing.store(false, std::memory_order_release);
+            voice->PlayState.store(ALvoice::Stopped, std::memory_order_release);
             /* If the source's voice was playing, it's now effectively stopped
              * (the source state will be updated the next time it's checked).
              */

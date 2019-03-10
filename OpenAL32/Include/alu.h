@@ -207,10 +207,16 @@ struct ALvoiceProps : public ALvoicePropsBase {
 #define VOICE_HAS_NFC      (1u<<4)
 
 struct ALvoice {
+    enum State {
+        Stopped = 0,
+        Playing = 1,
+        Stopping = 2
+    };
+
     std::atomic<ALvoiceProps*> Update{nullptr};
 
     std::atomic<ALuint> SourceID{0u};
-    std::atomic<bool> Playing{false};
+    std::atomic<State> PlayState{Stopped};
 
     ALvoicePropsBase Props;
 
@@ -440,7 +446,7 @@ inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexce
 }
 
 
-ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo);
+void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device state, and the mixer must not be running. */

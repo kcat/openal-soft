@@ -482,14 +482,12 @@ constexpr ChanMap MonoMap[1]{
     { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
 };
 
-void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev,
-                           const ALfloat Distance, const ALfloat Spread,
-                           const ALfloat DryGain, const ALfloat DryGainHF,
-                           const ALfloat DryGainLF, const ALfloat *WetGain,
-                           const ALfloat *WetGainLF, const ALfloat *WetGainHF,
-                           ALeffectslot **SendSlots, const ALbuffer *Buffer,
-                           const ALvoicePropsBase *props, const ALlistener &Listener,
-                           const ALCdevice *Device)
+void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypos,
+    const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const ALfloat DryGain,
+    const ALfloat DryGainHF, const ALfloat DryGainLF, const ALfloat (&WetGain)[MAX_SENDS],
+    const ALfloat (&WetGainLF)[MAX_SENDS], const ALfloat (&WetGainHF)[MAX_SENDS],
+    ALeffectslot *(&SendSlots)[MAX_SENDS], const ALbuffer *Buffer, const ALvoicePropsBase *props,
+    const ALlistener &Listener, const ALCdevice *Device)
 {
     ChanMap StereoMap[2]{
         { FrontLeft,  Deg2Rad(-30.0f), Deg2Rad(0.0f) },
@@ -617,13 +615,28 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
-            /* A scalar of 1.5 for plain stereo results in +/-60 degrees being
-             * moved to +/-90 degrees for direct right and left speaker
-             * responses.
-             */
             ALfloat coeffs[MAX_AMBI_CHANNELS];
-            CalcAngleCoeffs((Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
-                            Elev, Spread, coeffs);
+            if(Device->mRenderMode != StereoPair)
+                CalcAmbiCoeffs(-xpos, ypos, -zpos, Spread, coeffs);
+            else
+            {
+                /* A scalar of 1.5 for plain stereo results in +/-60 degrees
+                 * being moved to +/-90 degrees for direct right and left
+                 * speaker responses.
+                 */
+                ALfloat ev{0.0f}, az{0.0f};
+                if(Distance > 0.0f)
+                {
+                    /* Clamp Y, in case rounding errors caused it to end up
+                     * outside of -1...+1.
+                     */
+                    ev = std::asin(clampf(ypos, -1.0f, 1.0f));
+                    /* Negate Z for right-handed coords with -Z in front. */
+                    az = std::atan2(xpos, -zpos);
+                }
+
+                CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
+            }
 
             /* NOTE: W needs to be scaled due to FuMa normalization. */
             const ALfloat &scale0 = AmbiScale::FromFuMa[0];
@@ -739,12 +752,19 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
+            ALfloat ev{0.0f}, az{0.0f};
+            if(Distance > 0.0f)
+            {
+                ev = std::asin(clampf(ypos, -1.0f, 1.0f));
+                az = std::atan2(xpos, -zpos);
+            }
+
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
-            GetHrtfCoeffs(Device->mHrtf, Elev, Azi, Distance, Spread,
-                          voice->Direct.Params[0].Hrtf.Target.Coeffs,
-                          voice->Direct.Params[0].Hrtf.Target.Delay);
+            GetHrtfCoeffs(Device->mHrtf, ev, az, Distance, Spread,
+                voice->Direct.Params[0].Hrtf.Target.Coeffs,
+                voice->Direct.Params[0].Hrtf.Target.Delay);
             voice->Direct.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
@@ -759,7 +779,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * input channels of the source sends.
              */
             ALfloat coeffs[MAX_AMBI_CHANNELS];
-            CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
+            CalcAngleCoeffs(az, ev, Spread, coeffs);
 
             for(ALsizei i{0};i < NumSends;i++)
             {
@@ -842,8 +862,18 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * input channels.
              */
             ALfloat coeffs[MAX_AMBI_CHANNELS];
-            CalcAngleCoeffs((Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
-                            Elev, Spread, coeffs);
+            if(Device->mRenderMode != StereoPair)
+                CalcAmbiCoeffs(-xpos, ypos, -zpos, Spread, coeffs);
+            else
+            {
+                ALfloat ev{0.0f}, az{0.0f};
+                if(Distance > 0.0f)
+                {
+                    ev = std::asin(clampf(ypos, -1.0f, 1.0f));
+                    az = std::atan2(xpos, -zpos);
+                }
+                CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
+            }
 
             for(ALsizei c{0};c < num_channels;c++)
             {
@@ -1028,8 +1058,8 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         WetGainLF[i] = props->Send[i].GainLF;
     }
 
-    CalcPanningAndFilters(voice, 0.0f, 0.0f, 0.0f, 0.0f, DryGain, DryGainHF, DryGainLF, WetGain,
-                          WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
+    CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, DryGainHF, DryGainLF,
+        WetGain, WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
@@ -1124,8 +1154,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     }
 
     const bool directional{Direction.normalize() > 0.0f};
-    alu::Vector SourceToListener{-Position[0], -Position[1], -Position[2], 0.0f};
-    const ALfloat Distance{SourceToListener.normalize()};
+    alu::Vector ToSource{Position[0], Position[1], Position[2], 0.0f};
+    const ALfloat Distance{ToSource.normalize()};
 
     /* Initial source gain */
     ALfloat DryGain{props->Gain};
@@ -1208,7 +1238,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        const ALfloat Angle{Rad2Deg(std::acos(aluDotproduct(Direction, SourceToListener)) *
+        const ALfloat Angle{Rad2Deg(std::acos(-aluDotproduct(Direction, ToSource)) *
             ConeScale * 2.0f)};
 
         ALfloat ConeVolume, ConeHF;
@@ -1308,8 +1338,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     if(DopplerFactor > 0.0f)
     {
         const alu::Vector &lvelocity = Listener.Params.Velocity;
-        ALfloat vss{aluDotproduct(Velocity, SourceToListener) * DopplerFactor};
-        ALfloat vls{aluDotproduct(lvelocity, SourceToListener) * DopplerFactor};
+        ALfloat vss{aluDotproduct(Velocity, ToSource) * -DopplerFactor};
+        ALfloat vls{aluDotproduct(lvelocity, ToSource) * -DopplerFactor};
 
         const ALfloat SpeedOfSound{Listener.Params.SpeedOfSound};
         if(!(vls < SpeedOfSound))
@@ -1349,29 +1379,15 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
     voice->Resampler = SelectResampler(props->mResampler);
 
-    ALfloat ev{0.0f}, az{0.0f};
-    if(Distance > 0.0f)
-    {
-        /* Clamp Y, in case rounding errors caused it to end up outside of
-         * -1...+1.
-         */
-        ev = std::asin(clampf(-SourceToListener[1], -1.0f, 1.0f));
-        /* Double negation on Z cancels out; negate once for changing source-
-         * to-listener to listener-to-source, and again for right-handed coords
-         * with -Z in front.
-         */
-        az = std::atan2(-SourceToListener[0], SourceToListener[2]*ZScale);
-    }
-
     ALfloat spread{0.0f};
     if(props->Radius > Distance)
         spread = al::MathDefs<float>::Tau() - Distance/props->Radius*al::MathDefs<float>::Pi();
     else if(Distance > 0.0f)
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
-    CalcPanningAndFilters(voice, az, ev, Distance*Listener.Params.MetersPerUnit, spread, DryGain,
-        DryGainHF, DryGainLF, WetGain, WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener,
-        Device);
+    CalcPanningAndFilters(voice, ToSource[0], ToSource[1], ToSource[2]*ZScale,
+        Distance*Listener.Params.MetersPerUnit, spread, DryGain, DryGainHF, DryGainLF, WetGain,
+        WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)

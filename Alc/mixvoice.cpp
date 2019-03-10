@@ -607,11 +607,7 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                 Device->ResampledData, DstBufferSize)};
             if((voice->Flags&VOICE_IS_AMBISONIC))
             {
-                /* TODO: Does not properly handle HOA sources. Currently only
-                 * first-order sources are possible, but in the future it would
-                 * be desirable.
-                 */
-                const ALfloat hfscale{(chan==0) ? voice->AmbiScales[0] : voice->AmbiScales[1]};
+                const ALfloat hfscale{voice->AmbiScales[chan]};
                 /* Beware the evil const_cast. It's safe since it's pointing to
                  * either SrcData or Device->ResampledData (both non-const),
                  * but the resample method takes its input as const float* and

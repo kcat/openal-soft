@@ -2871,13 +2871,32 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is
          * mixing in first order. No HF scaling is necessary to mix it.
          */
-        if(((*buffer)->mFmtChannels == FmtBFormat2D || (*buffer)->mFmtChannels == FmtBFormat3D) &&
+        if((voice->Channels == FmtBFormat2D || voice->Channels == FmtBFormat3D) &&
            device->mAmbiOrder > 1)
         {
-            voice->AmbiScales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
+            auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
+            if(voice->Channels == FmtBFormat2D)
+            {
+                static constexpr int Order2DFromChan[MAX_AMBI2D_CHANNELS]{
+                    0, 1,1, 2,2, 3,3
+                };
+                const size_t count{Ambi2DChannelsFromOrder(1u)};
+                std::transform(Order2DFromChan, Order2DFromChan+count, voice->AmbiScales.begin(),
+                    [&scales](size_t idx) -> ALfloat { return scales[idx]; });
+            }
+            else
+            {
+                static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
+                    0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
+                };
+                const size_t count{Ambi2DChannelsFromOrder(1u)};
+                std::transform(OrderFromChan, OrderFromChan+count, voice->AmbiScales.begin(),
+                    [&scales](size_t idx) -> ALfloat { return scales[idx]; });
+            }
+
             voice->AmbiSplitter[0].init(400.0f / static_cast<ALfloat>(device->Frequency));
-            for(ALsizei i{1};i < voice->NumChannels;++i)
-                voice->AmbiSplitter[i] = voice->AmbiSplitter[0];
+            std::fill(std::begin(voice->AmbiSplitter)+1,
+                std::begin(voice->AmbiSplitter)+voice->NumChannels, voice->AmbiSplitter[0]);
             voice->Flags |= VOICE_IS_AMBISONIC;
         }
 

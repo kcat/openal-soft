@@ -2648,6 +2648,8 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             voice->loop_buffer.store(old_voice->loop_buffer.load(std::memory_order_relaxed),
                 std::memory_order_relaxed);
 
+            voice->Frequency = old_voice->Frequency;
+            voice->Channels = old_voice->Channels;
             voice->NumChannels = old_voice->NumChannels;
             voice->SampleSize = old_voice->SampleSize;
 

@@ -236,10 +236,9 @@ struct ALvoice {
      */
     std::atomic<ALbufferlistitem*> loop_buffer;
 
-    /**
-     * Number of channels and bytes-per-sample for the attached source's
-     * buffer(s).
-     */
+    /* Properties for the attached buffer(s). */
+    FmtChannels Channels;
+    ALuint Frequency;
     ALsizei NumChannels;
     ALsizei SampleSize;
 

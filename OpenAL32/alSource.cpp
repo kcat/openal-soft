@@ -2849,6 +2849,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             std::bind(std::not_equal_to<const ALbuffer*>{}, _1, nullptr));
         if(buffer != buffers_end)
         {
+            voice->Frequency = (*buffer)->Frequency;
+            voice->Channels = (*buffer)->mFmtChannels;
             voice->NumChannels = ChannelsFromFmt((*buffer)->mFmtChannels);
             voice->SampleSize  = BytesFromFmt((*buffer)->mFmtType);
         }

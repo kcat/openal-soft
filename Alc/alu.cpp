@@ -486,7 +486,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const ALfloat DryGain,
     const ALfloat DryGainHF, const ALfloat DryGainLF, const ALfloat (&WetGain)[MAX_SENDS],
     const ALfloat (&WetGainLF)[MAX_SENDS], const ALfloat (&WetGainHF)[MAX_SENDS],
-    ALeffectslot *(&SendSlots)[MAX_SENDS], const ALbuffer *Buffer, const ALvoicePropsBase *props,
+    ALeffectslot *(&SendSlots)[MAX_SENDS], const ALvoicePropsBase *props,
     const ALlistener &Listener, const ALCdevice *Device)
 {
     ChanMap StereoMap[2]{
@@ -503,7 +503,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     ALsizei num_channels{0};
     bool isbformat{false};
     ALfloat downmix_gain{1.0f};
-    switch(Buffer->mFmtChannels)
+    switch(voice->Channels)
     {
     case FmtMono:
         chans = MonoMap;
@@ -1003,7 +1003,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     }
 }
 
-void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->Device};
     ALeffectslot *SendSlots[MAX_SENDS];
@@ -1029,7 +1029,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     }
 
     /* Calculate the stepping value */
-    const auto Pitch = static_cast<ALfloat>(ALBuffer->Frequency) /
+    const auto Pitch = static_cast<ALfloat>(voice->Frequency) /
         static_cast<ALfloat>(Device->Frequency) * props->Pitch;
     if(Pitch > static_cast<ALfloat>(MAX_PITCH))
         voice->Step = MAX_PITCH<<FRACTIONBITS;
@@ -1059,10 +1059,10 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     }
 
     CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, DryGainHF, DryGainLF,
-        WetGain, WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
+        WetGain, WetGainLF, WetGainHF, SendSlots, props, Listener, Device);
 }
 
-void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->Device};
     const ALsizei NumSends{Device->NumAuxSends};
@@ -1368,7 +1368,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Adjust pitch based on the buffer and output frequencies, and calculate
      * fixed-point stepping value.
      */
-    Pitch *= static_cast<ALfloat>(ALBuffer->Frequency)/static_cast<ALfloat>(Device->Frequency);
+    Pitch *= static_cast<ALfloat>(voice->Frequency)/static_cast<ALfloat>(Device->Frequency);
     if(Pitch > static_cast<ALfloat>(MAX_PITCH))
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
@@ -1387,7 +1387,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 
     CalcPanningAndFilters(voice, ToSource[0], ToSource[1], ToSource[2]*ZScale,
         Distance*Listener.Params.MetersPerUnit, spread, DryGain, DryGainHF, DryGainLF, WetGain,
-        WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
+        WetGainLF, WetGainHF, SendSlots, props, Listener, Device);
 }
 
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
@@ -1402,23 +1402,11 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
         AtomicReplaceHead(context->FreeVoiceProps, props);
     }
 
-    ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
-    while(BufferListItem)
-    {
-        auto buffers_end = BufferListItem->buffers+BufferListItem->num_buffers;
-        auto buffer = std::find_if(BufferListItem->buffers, buffers_end,
-            std::bind(std::not_equal_to<const ALbuffer*>{}, _1, nullptr));
-        if(LIKELY(buffer != buffers_end))
-        {
-            if(voice->Props.mSpatializeMode==SpatializeOn ||
-               (voice->Props.mSpatializeMode==SpatializeAuto && (*buffer)->mFmtChannels==FmtMono))
-                CalcAttnSourceParams(voice, &voice->Props, *buffer, context);
-            else
-                CalcNonAttnSourceParams(voice, &voice->Props, *buffer, context);
-            break;
-        }
-        BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
-    }
+    if(voice->Props.mSpatializeMode==SpatializeOn ||
+        (voice->Props.mSpatializeMode==SpatializeAuto && voice->Channels==FmtMono))
+        CalcAttnSourceParams(voice, &voice->Props, context);
+    else
+        CalcNonAttnSourceParams(voice, &voice->Props, context);
 }
 
 

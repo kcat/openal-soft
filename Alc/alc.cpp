@@ -2146,13 +2146,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         std::for_each(context->Voices, voices_end,
             [device](ALvoice *voice) -> void
             {
-                delete voice->Update.exchange(nullptr, std::memory_order_acq_rel);
+                delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
 
                 /* Force the voice to stopped if it was stopping. */
                 ALvoice::State vstate{ALvoice::Stopping};
-                voice->PlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
+                voice->mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
                     std::memory_order_acquire, std::memory_order_acquire);
-                if(voice->SourceID.load(std::memory_order_relaxed) == 0u)
+                if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
                     return;
 
                 if(device->AvgSpeakerDist > 0.0f)
@@ -2160,7 +2160,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     /* Reinitialize the NFC filters for new parameters. */
                     ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
                                  (device->AvgSpeakerDist * device->Frequency);
-                    std::for_each(voice->Direct.Params, voice->Direct.Params+voice->NumChannels,
+                    std::for_each(voice->mDirect.Params, voice->mDirect.Params+voice->mNumChannels,
                         [w1](DirectParams &params) noexcept -> void
                         { params.NFCtrlFilter.init(w1); }
                     );
@@ -2624,49 +2624,48 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             /* Make sure the old voice's Update (if any) is cleared so it
              * doesn't get deleted on deinit.
              */
-            voice->Update.store(old_voice->Update.exchange(nullptr, std::memory_order_relaxed),
-                                std::memory_order_relaxed);
+            voice->mUpdate.store(old_voice->mUpdate.exchange(nullptr, std::memory_order_relaxed),
+                std::memory_order_relaxed);
 
-            voice->SourceID.store(old_voice->SourceID.load(std::memory_order_relaxed),
-                                  std::memory_order_relaxed);
-            voice->PlayState.store(old_voice->PlayState.load(std::memory_order_relaxed),
-                                   std::memory_order_relaxed);
+            voice->mSourceID.store(old_voice->mSourceID.load(std::memory_order_relaxed),
+                std::memory_order_relaxed);
+            voice->mPlayState.store(old_voice->mPlayState.load(std::memory_order_relaxed),
+                std::memory_order_relaxed);
 
-            voice->Props = old_voice->Props;
+            voice->mProps = old_voice->mProps;
             /* Clear extraneous property set sends. */
-            std::fill(std::begin(voice->Props.Send)+s_count, std::end(voice->Props.Send),
+            std::fill(std::begin(voice->mProps.Send)+s_count, std::end(voice->mProps.Send),
                 ALvoiceProps::SendData{});
 
-            voice->position.store(old_voice->position.load(std::memory_order_relaxed),
-                                  std::memory_order_relaxed);
-            voice->position_fraction.store(
-                old_voice->position_fraction.load(std::memory_order_relaxed),
+            voice->mPosition.store(old_voice->mPosition.load(std::memory_order_relaxed),
+                std::memory_order_relaxed);
+            voice->mPositionFrac.store(old_voice->mPositionFrac.load(std::memory_order_relaxed),
                 std::memory_order_relaxed);
 
-            voice->current_buffer.store(old_voice->current_buffer.load(std::memory_order_relaxed),
+            voice->mCurrentBuffer.store(old_voice->mCurrentBuffer.load(std::memory_order_relaxed),
                 std::memory_order_relaxed);
-            voice->loop_buffer.store(old_voice->loop_buffer.load(std::memory_order_relaxed),
+            voice->mLoopBuffer.store(old_voice->mLoopBuffer.load(std::memory_order_relaxed),
                 std::memory_order_relaxed);
 
-            voice->Frequency = old_voice->Frequency;
-            voice->Channels = old_voice->Channels;
-            voice->NumChannels = old_voice->NumChannels;
-            voice->SampleSize = old_voice->SampleSize;
+            voice->mFrequency = old_voice->mFrequency;
+            voice->mFmtChannels = old_voice->mFmtChannels;
+            voice->mNumChannels = old_voice->mNumChannels;
+            voice->mSampleSize = old_voice->mSampleSize;
 
-            voice->Step = old_voice->Step;
-            voice->Resampler = old_voice->Resampler;
+            voice->mStep = old_voice->mStep;
+            voice->mResampler = old_voice->mResampler;
 
-            voice->Flags = old_voice->Flags;
+            voice->mFlags = old_voice->mFlags;
 
-            voice->Offset = old_voice->Offset;
+            voice->mOffset = old_voice->mOffset;
 
-            std::copy(std::begin(old_voice->PrevSamples), std::end(old_voice->PrevSamples),
-                      std::begin(voice->PrevSamples));
+            std::copy(std::begin(old_voice->mPrevSamples), std::end(old_voice->mPrevSamples),
+                std::begin(voice->mPrevSamples));
 
-            voice->ResampleState = old_voice->ResampleState;
+            voice->mResampleState = old_voice->mResampleState;
 
-            voice->Direct = old_voice->Direct;
-            std::copy_n(old_voice->Send.begin(), s_count, voice->Send.begin());
+            voice->mDirect = old_voice->mDirect;
+            std::copy_n(old_voice->mSend.begin(), s_count, voice->mSend.begin());
 
             /* Set this voice's reference. */
             ALvoice *ret = voice;

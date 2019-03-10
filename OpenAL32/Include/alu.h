@@ -213,51 +213,51 @@ struct ALvoice {
         Stopping = 2
     };
 
-    std::atomic<ALvoiceProps*> Update{nullptr};
+    std::atomic<ALvoiceProps*> mUpdate{nullptr};
 
-    std::atomic<ALuint> SourceID{0u};
-    std::atomic<State> PlayState{Stopped};
+    std::atomic<ALuint> mSourceID{0u};
+    std::atomic<State> mPlayState{Stopped};
 
-    ALvoicePropsBase Props;
+    ALvoicePropsBase mProps;
 
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
-     * the whole queue, and the fractional (fixed-point) offset to the next
-     * sample.
+     * the whole queue.
      */
-    std::atomic<ALuint> position;
-    std::atomic<ALsizei> position_fraction;
+    std::atomic<ALuint> mPosition;
+    /** Fractional (fixed-point) offset to the next sample. */
+    std::atomic<ALsizei> mPositionFrac;
 
     /* Current buffer queue item being played. */
-    std::atomic<ALbufferlistitem*> current_buffer;
+    std::atomic<ALbufferlistitem*> mCurrentBuffer;
 
     /* Buffer queue item to loop to at end of queue (will be NULL for non-
      * looping voices).
      */
-    std::atomic<ALbufferlistitem*> loop_buffer;
+    std::atomic<ALbufferlistitem*> mLoopBuffer;
 
     /* Properties for the attached buffer(s). */
-    FmtChannels Channels;
-    ALuint Frequency;
-    ALsizei NumChannels;
-    ALsizei SampleSize;
+    FmtChannels mFmtChannels;
+    ALuint mFrequency;
+    ALsizei mNumChannels;
+    ALsizei mSampleSize;
 
     /** Current target parameters used for mixing. */
-    ALint Step;
+    ALint mStep;
 
-    ResamplerFunc Resampler;
+    ResamplerFunc mResampler;
 
-    ALuint Flags;
+    ALuint mFlags;
 
-    ALuint Offset; /* Number of output samples mixed since starting. */
+    ALuint mOffset; /* Number of output samples mixed since starting. */
 
     using ResamplePaddingArray = std::array<ALfloat,MAX_RESAMPLE_PADDING*2>;
-    alignas(16) std::array<ResamplePaddingArray,MAX_INPUT_CHANNELS> PrevSamples;
+    alignas(16) std::array<ResamplePaddingArray,MAX_INPUT_CHANNELS> mPrevSamples;
 
-    InterpState ResampleState;
+    InterpState mResampleState;
 
-    std::array<ALfloat,MAX_INPUT_CHANNELS> AmbiScales;
-    BandSplitter AmbiSplitter[MAX_INPUT_CHANNELS];
+    std::array<ALfloat,MAX_INPUT_CHANNELS> mAmbiScales;
+    BandSplitter mAmbiSplitter[MAX_INPUT_CHANNELS];
 
     struct {
         int FilterType;
@@ -266,7 +266,7 @@ struct ALvoice {
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
         ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
-    } Direct;
+    } mDirect;
 
     struct SendData {
         int FilterType;
@@ -275,16 +275,16 @@ struct ALvoice {
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
     };
-    al::FlexArray<SendData> Send;
+    al::FlexArray<SendData> mSend;
 
-    ALvoice(size_t numsends) : Send{numsends} { }
+    ALvoice(size_t numsends) : mSend{numsends} { }
     ALvoice(const ALvoice&) = delete;
     ALvoice& operator=(const ALvoice&) = delete;
 
     static constexpr size_t Sizeof(size_t numsends) noexcept
     {
         return maxz(sizeof(ALvoice),
-            al::FlexArray<SendData>::Sizeof(numsends, offsetof(ALvoice, Send)));
+            al::FlexArray<SendData>::Sizeof(numsends, offsetof(ALvoice, mSend)));
     }
 };
 

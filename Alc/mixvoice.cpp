@@ -628,48 +628,19 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     Device->FilteredData, ResampledData, DstBufferSize, voice->Direct.FilterType)};
 
-                const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
-                    parms.Gains.Target};
-                if(!(voice->Flags&VOICE_HAS_HRTF))
+                if((voice->Flags&VOICE_HAS_HRTF))
                 {
-                    if(!(voice->Flags&VOICE_HAS_NFC))
-                        MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
-                            parms.Gains.Current, TargetGains, Counter, OutPos, DstBufferSize);
-                    else
-                    {
-                        MixSamples(samples, voice->Direct.ChannelsPerOrder[0],
-                            voice->Direct.Buffer, parms.Gains.Current, TargetGains, Counter,
-                            OutPos, DstBufferSize);
-
-                        ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
-                        ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
-                        using FilterProc = void (NfcFilter::*)(float*,const float*,int);
-                        auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
-                        {
-                            if(voice->Direct.ChannelsPerOrder[order] < 1)
-                                return;
-                            (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
-                            MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],
-                                voice->Direct.Buffer+chanoffset, parms.Gains.Current+chanoffset,
-                                TargetGains+chanoffset, Counter, OutPos, DstBufferSize);
-                            chanoffset += voice->Direct.ChannelsPerOrder[order];
-                        };
-                        apply_nfc(&NfcFilter::process1, 1);
-                        apply_nfc(&NfcFilter::process2, 2);
-                        apply_nfc(&NfcFilter::process3, 3);
-                    }
-                }
-                else
-                {
-                    const ALfloat TargetGain{UNLIKELY(vstate==ALvoice::Stopping) ? 0.0f :
+                    const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
                     ALsizei fademix{0};
+
                     /* If fading, the old gain is not silence, and this is the
                      * first mixing pass, fade between the IRs.
                      */
                     if(Counter && (parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD) && OutPos == 0)
                     {
                         fademix = mini(DstBufferSize, 128);
+                        ALfloat gain{TargetGain};
 
                         /* The new coefficients need to fade in completely
                          * since they're replacing the old ones. To keep the
@@ -677,8 +648,12 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                          * and new target gains given how much of the fade time
                          * this mix handles.
                          */
-                        ALfloat gain{lerp(parms.Hrtf.Old.Gain, TargetGain,
-                                          minf(1.0f, static_cast<ALfloat>(fademix))/Counter)};
+                        if(LIKELY(Counter > fademix))
+                        {
+                            const ALfloat a{static_cast<ALfloat>(fademix) /
+                                static_cast<ALfloat>(Counter)};
+                            gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
+                        }
                         MixHrtfParams hrtfparams;
                         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
@@ -707,15 +682,19 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                          * longer than this mix.
                          */
                         if(Counter > DstBufferSize)
-                            gain = lerp(parms.Hrtf.Old.Gain, gain,
-                                        static_cast<ALfloat>(todo)/(Counter-fademix));
+                        {
+                            const ALfloat a{static_cast<ALfloat>(todo) /
+                                static_cast<ALfloat>(Counter-fademix)};
+                            gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
+                        }
 
                         MixHrtfParams hrtfparams;
                         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
                         hrtfparams.Gain = parms.Hrtf.Old.Gain;
-                        hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / static_cast<ALfloat>(todo);
+                        hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) /
+                            static_cast<ALfloat>(todo);
                         MixHrtfSamples(
                             voice->Direct.Buffer[OutLIdx], voice->Direct.Buffer[OutRIdx],
                             samples+fademix, voice->Offset+fademix, OutPos+fademix, IrSize,
@@ -728,6 +707,39 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
                         else
                             parms.Hrtf.Old.Gain = parms.Hrtf.Target.Gain;
                     }
+                }
+                else if((voice->Flags&VOICE_HAS_NFC))
+                {
+                    const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
+                        SilentTarget : parms.Gains.Target};
+
+                    MixSamples(samples, voice->Direct.ChannelsPerOrder[0],
+                        voice->Direct.Buffer, parms.Gains.Current, TargetGains, Counter,
+                        OutPos, DstBufferSize);
+
+                    ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
+                    ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
+                    using FilterProc = void (NfcFilter::*)(float*,const float*,int);
+                    auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
+                    {
+                        if(voice->Direct.ChannelsPerOrder[order] < 1)
+                            return;
+                        (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
+                        MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],
+                            voice->Direct.Buffer+chanoffset, parms.Gains.Current+chanoffset,
+                            TargetGains+chanoffset, Counter, OutPos, DstBufferSize);
+                        chanoffset += voice->Direct.ChannelsPerOrder[order];
+                    };
+                    apply_nfc(&NfcFilter::process1, 1);
+                    apply_nfc(&NfcFilter::process2, 2);
+                    apply_nfc(&NfcFilter::process3, 3);
+                }
+                else
+                {
+                    const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
+                        SilentTarget : parms.Gains.Target};
+                    MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
+                        parms.Gains.Current, TargetGains, Counter, OutPos, DstBufferSize);
                 }
             }
 

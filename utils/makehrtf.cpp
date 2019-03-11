@@ -2361,22 +2361,29 @@ static void SynthesizeOnsets(HrirDataT *hData)
         const uint oi{field.mEvStart};
         if(oi <= 0) return;
 
-        for(uint ti{0u};ti < channels;ti++)
+        /* Get the -90 degree elevation delays by mirroring the +90 degree
+         * elevation delays. The responses are on a spherical grid centered
+         * between the ears, so these should align.
+         */
+        if(channels > 1)
         {
-            double t{0.0};
-            for(uint ai{0u};ai < field.mEvs[oi].mAzCount;ai++)
-                t += field.mEvs[oi].mAzs[ai].mDelays[ti];
-            field.mEvs[0].mAzs[0].mDelays[ti] = 1.32e-4 + (t / field.mEvs[oi].mAzCount);
+            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[1];
+            field.mEvs[0].mAzs[0].mDelays[1] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
+        }
+        else
+            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
 
-            for(uint ei{1u};ei < field.mEvStart;ei++)
+        for(uint ei{1u};ei < field.mEvStart;ei++)
+        {
+            const double of{static_cast<double>(ei) / field.mEvStart};
+            for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
             {
-                const double of{static_cast<double>(ei) / field.mEvStart};
-                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
-                {
-                    uint a0, a1;
-                    double af;
+                uint a0, a1;
+                double af;
 
-                    CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                for(uint ti{0u};ti < channels;ti++)
+                {
                     double other{Lerp(field.mEvs[oi].mAzs[a0].mDelays[ti],
                         field.mEvs[oi].mAzs[a1].mDelays[ti], af)};
                     field.mEvs[ei].mAzs[ai].mDelays[ti] = Lerp(field.mEvs[0].mAzs[0].mDelays[ti],

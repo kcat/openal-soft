@@ -2408,8 +2408,8 @@ static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, 
 }
 
 /* Synthesize any missing onset timings at the bottom elevations of each
- * field.  This just blends between slightly exaggerated known onsets (not
- * an accurate model).
+ * field. This just mirrors the top elevation for the bottom, and blends the
+ * remaining elevations (not an accurate model).
  */
 static void SynthesizeOnsets(HrirDataT *hData)
 {

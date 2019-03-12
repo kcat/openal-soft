@@ -335,6 +335,8 @@ ALsizei LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Bu
             );
             return CompLen;
         };
+        /* It's impossible to have a buffer list item with no entries. */
+        ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
         FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
             load_buffer);
@@ -359,6 +361,7 @@ ALsizei LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Bu
             );
             return CompLen;
         };
+        ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
         FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
             load_buffer);
@@ -423,6 +426,7 @@ ALsizei LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buff
                         buffer->mFmtType, DataSize);
             return CompLen;
         };
+        ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
         FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
             load_buffer);
@@ -544,9 +548,6 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             if(DstBufferSize < SamplesToDo-OutPos)
                 DstBufferSize &= ~3;
         }
-
-        /* It's impossible to have a buffer list item with no entries. */
-        assert(!BufferListItem || BufferListItem->num_buffers > 0);
 
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {

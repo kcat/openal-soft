@@ -298,7 +298,7 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
     return src;
 }
 
-ALsizei LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
+ALsizei LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
     const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
     ALfloat (&SrcData)[BUFFERSIZE + MAX_RESAMPLE_PADDING*2], ALsizei FilledAmt,
     const ALsizei SrcBufferSize)

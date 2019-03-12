@@ -396,45 +396,42 @@ ALsizei LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buff
     const ALsizei SrcBufferSize)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
-    ALbufferlistitem *tmpiter{BufferListItem};
-    ALsizei pos{DataPosInt};
-
-    while(tmpiter && SrcBufferSize > FilledAmt)
+    while(BufferListItem && SrcBufferSize > FilledAmt)
     {
-        if(pos >= tmpiter->max_samples)
+        if(DataPosInt >= BufferListItem->max_samples)
         {
-            pos -= tmpiter->max_samples;
-            tmpiter = tmpiter->next.load(std::memory_order_acquire);
-            if(!tmpiter) tmpiter = BufferLoopItem;
+            DataPosInt -= BufferListItem->max_samples;
+            BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
+            if(!BufferListItem) BufferListItem = BufferLoopItem;
             continue;
         }
 
         const ALsizei SizeToDo{SrcBufferSize - FilledAmt};
-        auto load_buffer = [pos,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
+        auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
         {
             if(!buffer) return CompLen;
             ALsizei DataSize{buffer->SampleLen};
-            if(pos >= DataSize) return CompLen;
+            if(DataPosInt >= DataSize) return CompLen;
 
-            DataSize = mini(SizeToDo, DataSize - pos);
+            DataSize = mini(SizeToDo, DataSize - DataPosInt);
             CompLen = maxi(CompLen, DataSize);
 
             const ALbyte *Data{buffer->mData.data()};
-            Data += (pos*NumChannels + chan)*SampleSize;
+            Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
             LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
                         buffer->mFmtType, DataSize);
             return CompLen;
         };
-        auto buffers_end = tmpiter->buffers + tmpiter->num_buffers;
-        FilledAmt += std::accumulate(tmpiter->buffers, buffers_end, ALsizei{0},
+        auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
+        FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
             load_buffer);
 
         if(SrcBufferSize <= FilledAmt)
             break;
-        pos = 0;
-        tmpiter = tmpiter->next.load(std::memory_order_acquire);
-        if(!tmpiter) tmpiter = BufferLoopItem;
+        DataPosInt = 0;
+        BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
+        if(!BufferListItem) BufferListItem = BufferLoopItem;
     }
 
     return FilledAmt;

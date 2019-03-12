@@ -699,7 +699,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         if(DstBufferSize < Counter)
                             parms.Hrtf.Old.Gain = gain;
                         else
-                            parms.Hrtf.Old.Gain = parms.Hrtf.Target.Gain;
+                            parms.Hrtf.Old.Gain = TargetGain;
                     }
                 }
                 else if((voice->mFlags&VOICE_HAS_NFC))

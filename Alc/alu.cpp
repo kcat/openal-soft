@@ -1451,12 +1451,12 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
         [SamplesToDo,ctx](ALvoice *voice) -> void
         {
-            if(voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped)
-                return;
-            ALuint sid{voice->mSourceID.load(std::memory_order_relaxed)};
+            const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
+            if(vstate == ALvoice::Stopped) return;
+            const ALuint sid{voice->mSourceID.load(std::memory_order_relaxed)};
             if(voice->mStep < 1) return;
 
-            MixSource(voice, sid, ctx, SamplesToDo);
+            MixVoice(voice, vstate, sid, ctx, SamplesToDo);
         }
     );
 

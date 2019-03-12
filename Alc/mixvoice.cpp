@@ -442,14 +442,13 @@ ALsizei LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buff
 
 } // namespace
 
-void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
+void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
 {
     static constexpr ALfloat SilentTarget[MAX_OUTPUT_CHANNELS]{};
 
     ASSUME(SamplesToDo > 0);
 
-    /* Get source info */
-    ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
+    /* Get voice info */
     const bool isstatic{(voice->mFlags&VOICE_IS_STATIC) != 0};
     ALsizei DataPosInt{static_cast<ALsizei>(voice->mPosition.load(std::memory_order_relaxed))};
     ALsizei DataPosFrac{voice->mPositionFrac.load(std::memory_order_relaxed)};
@@ -822,7 +821,7 @@ void MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const
         return;
     }
 
-    /* Update source info */
+    /* Update voice info */
     voice->mPosition.store(DataPosInt, std::memory_order_relaxed);
     voice->mPositionFrac.store(DataPosFrac, std::memory_order_relaxed);
     voice->mCurrentBuffer.store(BufferListItem, std::memory_order_relaxed);

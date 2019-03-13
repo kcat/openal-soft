@@ -2407,8 +2407,8 @@ static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, 
     *af = f;
 }
 
-/* Synthesize any missing onset timings at the bottom elevations of each
- * field. This just mirrors the top elevation for the bottom, and blends the
+/* Synthesize any missing onset timings at the bottom elevations of each field.
+ * This just mirrors some top elevations for the bottom, and blends the
  * remaining elevations (not an accurate model).
  */
 static void SynthesizeOnsets(HrirDataT *hData)
@@ -2417,36 +2417,112 @@ static void SynthesizeOnsets(HrirDataT *hData)
 
     auto proc_field = [channels](HrirFdT &field) -> void
     {
-        const uint oi{field.mEvStart};
-        if(oi <= 0) return;
-
-        /* Get the -90 degree elevation delays by mirroring the +90 degree
-         * elevation delays. The responses are on a spherical grid centered
-         * between the ears, so these should align.
+        /* Get the starting elevation from the measurements, and use it as the
+         * upper elevation limit for what needs to be calculated.
          */
+        const uint upperElevReal{field.mEvStart};
+        if(upperElevReal <= 0) return;
+
+        /* Get the lowest half of the missing elevations' delays by mirroring
+         * the top elevation delays. The responses are on a spherical grid
+         * centered between the ears, so these should align.
+         */
+        uint ei{};
         if(channels > 1)
         {
+            /* Take the polar opposite position of the desired measurement and
+             * swap the ears.
+             */
             field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[1];
             field.mEvs[0].mAzs[0].mDelays[1] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
+            for(ei = 1u;ei < (upperElevReal+1)/2;++ei)
+            {
+                const uint topElev{field.mEvCount-ei-1};
+
+                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+                {
+                    uint a0, a1;
+                    double af;
+
+                    /* Rotate this current azimuth by a half-circle, and lookup
+                     * the mirrored elevation to find the indices for the polar
+                     * opposite position (may need blending).
+                     */
+                    const double az{field.mEvs[ei].mAzs[ai].mAzimuth + M_PI};
+                    CalcAzIndices(field, topElev, az, &a0, &a1, &af);
+
+                    /* Blend the delays, and again, swap the ears. */
+                    field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
+                        field.mEvs[topElev].mAzs[a0].mDelays[1],
+                        field.mEvs[topElev].mAzs[a1].mDelays[1], af);
+                    field.mEvs[ei].mAzs[ai].mDelays[1] = Lerp(
+                        field.mEvs[topElev].mAzs[a0].mDelays[0],
+                        field.mEvs[topElev].mAzs[a1].mDelays[0], af);
+                }
+            }
         }
         else
-            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
-
-        for(uint ei{1u};ei < field.mEvStart;ei++)
         {
-            const double of{static_cast<double>(ei) / field.mEvStart};
+            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
+            for(ei = 1u;ei < (upperElevReal+1)/2;++ei)
+            {
+                const uint topElev{field.mEvCount-ei-1};
+
+                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+                {
+                    uint a0, a1;
+                    double af;
+
+                    /* For mono data sets, mirror the azimuth front<->back
+                     * since the other ear is a mirror of what we have (e.g.
+                     * the left ear's back-left is simulated with the right
+                     * ear's front-right, which uses the left ear's front-left
+                     * measurement).
+                     */
+                    double az{field.mEvs[ei].mAzs[ai].mAzimuth};
+                    if(az <= M_PI) az = M_PI - az;
+                    else az = (M_PI*2.0)-az + M_PI;
+                    CalcAzIndices(field, topElev, az, &a0, &a1, &af);
+
+                    field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
+                        field.mEvs[topElev].mAzs[a0].mDelays[0],
+                        field.mEvs[topElev].mAzs[a1].mDelays[0], af);
+                }
+            }
+        }
+        /* Record the lowest elevation filled in with the mirrored top. */
+        const uint lowerElevFake{ei-1u};
+
+        /* Fill in the remaining delays using bilinear interpolation. This
+         * helps smooth the transition back to the real delays.
+         */
+        for(;ei < upperElevReal;++ei)
+        {
+            const double ef{(field.mEvs[upperElevReal].mElevation - field.mEvs[ei].mElevation) /
+                (field.mEvs[upperElevReal].mElevation - field.mEvs[lowerElevFake].mElevation)};
+
             for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
             {
-                uint a0, a1;
-                double af;
+                uint a0, a1, a2, a3;
+                double af0, af1;
 
-                CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                double az{field.mEvs[ei].mAzs[ai].mAzimuth};
+                CalcAzIndices(field, upperElevReal, az, &a0, &a1, &af0);
+                CalcAzIndices(field, lowerElevFake, az, &a2, &a3, &af1);
+                double blend[4]{
+                    (1.0-ef) * (1.0-af0),
+                    (1.0-ef) * (    af0),
+                    (    ef) * (1.0-af1),
+                    (    ef) * (    af1)
+                };
+
                 for(uint ti{0u};ti < channels;ti++)
                 {
-                    double other{Lerp(field.mEvs[oi].mAzs[a0].mDelays[ti],
-                        field.mEvs[oi].mAzs[a1].mDelays[ti], af)};
-                    field.mEvs[ei].mAzs[ai].mDelays[ti] = Lerp(field.mEvs[0].mAzs[0].mDelays[ti],
-                        other, of);
+                    field.mEvs[ei].mAzs[ai].mDelays[ti] =
+                        field.mEvs[upperElevReal].mAzs[a0].mDelays[ti]*blend[0] +
+                        field.mEvs[upperElevReal].mAzs[a1].mDelays[ti]*blend[1] +
+                        field.mEvs[lowerElevFake].mAzs[a2].mDelays[ti]*blend[2] +
+                        field.mEvs[lowerElevFake].mAzs[a3].mDelays[ti]*blend[3];
                 }
             }
         }

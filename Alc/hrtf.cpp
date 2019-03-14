@@ -223,40 +223,41 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     assert(fdoffset >= 0);
 
     /* Claculate the lower elevation index. */
-    const auto elev = CalcEvIndex(field->evCount, elevation);
-    ALsizei ev0offset{Hrtf->evOffset[fdoffset + elev.idx]};
+    const auto elev0 = CalcEvIndex(field->evCount, elevation);
+    ALsizei elev1_idx{elev0.idx};
+    ALsizei ev0offset{Hrtf->evOffset[fdoffset + elev0.idx]};
     ALsizei ev1offset{ev0offset};
 
     /* Calculate lower azimuth index. */
-    const auto az0 = CalcAzIndex(Hrtf->azCount[fdoffset + elev.idx], azimuth);
+    const auto az0 = CalcAzIndex(Hrtf->azCount[fdoffset + elev0.idx], azimuth);
     auto az1 = az0;
 
-    if(LIKELY(elev.idx < field->evCount-1))
+    if(LIKELY(elev0.idx+1 < field->evCount))
     {
         /* Increment elevation to the next (upper) index. */
-        ALsizei evidx{elev.idx+1};
-        ev1offset = Hrtf->evOffset[fdoffset + evidx];
+        elev1_idx = elev0.idx+1;
+        ev1offset = Hrtf->evOffset[fdoffset + elev1_idx];
 
         /* Calculate upper azimuth index. */
-        az1 = CalcAzIndex(Hrtf->azCount[fdoffset + evidx], azimuth);
+        az1 = CalcAzIndex(Hrtf->azCount[fdoffset + elev1_idx], azimuth);
     }
 
     /* Calculate the HRIR indices to blend. */
     ALsizei idx[4]{
         ev0offset + az0.idx,
-        ev0offset + ((az0.idx+1) % Hrtf->azCount[fdoffset + elev.idx]),
+        ev0offset + ((az0.idx+1) % Hrtf->azCount[fdoffset + elev0.idx]),
         ev1offset + az1.idx,
-        ev1offset + ((az1.idx+1) % Hrtf->azCount[fdoffset + elev.idx])
+        ev1offset + ((az1.idx+1) % Hrtf->azCount[fdoffset + elev1_idx])
     };
 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
      */
     const ALfloat blend[4]{
-        (1.0f-elev.blend) * (1.0f-az0.blend) * dirfact,
-        (1.0f-elev.blend) * (     az0.blend) * dirfact,
-        (     elev.blend) * (1.0f-az1.blend) * dirfact,
-        (     elev.blend) * (     az1.blend) * dirfact
+        (1.0f-elev0.blend) * (1.0f-az0.blend) * dirfact,
+        (1.0f-elev0.blend) * (     az0.blend) * dirfact,
+        (     elev0.blend) * (1.0f-az1.blend) * dirfact,
+        (     elev0.blend) * (     az1.blend) * dirfact
     };
 
     /* Calculate the blended HRIR delays. */

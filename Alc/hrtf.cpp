@@ -208,7 +208,7 @@ IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
  * and azimuth in radians. The coefficients are normalized.
  */
 void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
-                   ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei *delays)
+    ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei (&delays)[2])
 {
     const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
@@ -222,25 +222,15 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     }
     assert(fdoffset >= 0);
 
-    /* Claculate the lower elevation index. */
+    /* Claculate the elevation indinces. */
     const auto elev0 = CalcEvIndex(field->evCount, elevation);
-    ALsizei elev1_idx{elev0.idx};
-    ALsizei ev0offset{Hrtf->evOffset[fdoffset + elev0.idx]};
-    ALsizei ev1offset{ev0offset};
+    const ALsizei elev1_idx{mini(elev0.idx+1, field->evCount-1)};
+    const ALsizei ev0offset{Hrtf->evOffset[fdoffset + elev0.idx]};
+    const ALsizei ev1offset{Hrtf->evOffset[fdoffset + elev1_idx]};
 
-    /* Calculate lower azimuth index. */
+    /* Calculate azimuth indices. */
     const auto az0 = CalcAzIndex(Hrtf->azCount[fdoffset + elev0.idx], azimuth);
-    auto az1 = az0;
-
-    if(LIKELY(elev0.idx+1 < field->evCount))
-    {
-        /* Increment elevation to the next (upper) index. */
-        elev1_idx = elev0.idx+1;
-        ev1offset = Hrtf->evOffset[fdoffset + elev1_idx];
-
-        /* Calculate upper azimuth index. */
-        az1 = CalcAzIndex(Hrtf->azCount[fdoffset + elev1_idx], azimuth);
-    }
+    const auto az1 = CalcAzIndex(Hrtf->azCount[fdoffset + elev1_idx], azimuth);
 
     /* Calculate the HRIR indices to blend. */
     ALsizei idx[4]{

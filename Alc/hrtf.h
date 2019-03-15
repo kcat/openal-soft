@@ -105,7 +105,7 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
 HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
 
 void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
-    ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei *delays);
+    ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei (&delays)[2]);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

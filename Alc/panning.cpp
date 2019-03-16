@@ -53,6 +53,8 @@ constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::From3D;
 
 namespace {
 
+using namespace std::placeholders;
+
 inline const char *GetLabelFromChannel(Channel channel)
 {
     switch(channel)
@@ -245,8 +247,6 @@ void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, cons
 
 void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    using namespace std::placeholders;
-
     const ALfloat maxdist{
         std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f},
             std::bind(maxf, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2))
@@ -525,7 +525,6 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
-    using namespace std::placeholders;
     auto accum_spkr_dist = std::bind(
         std::plus<float>{}, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2)
     );

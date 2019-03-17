@@ -143,11 +143,12 @@ void BFormatDec::reset(const ALsizei inchans, const ALsizei chancount,
         { return mask | (1 << chan); }
     );
 
-    auto set_coeffs = [this,inchans,&chancoeffs](const ALsizei chanidx) noexcept -> void
+    const ChannelDec *incoeffs{chancoeffs};
+    auto set_coeffs = [this,inchans,&incoeffs](const ALsizei chanidx) noexcept -> void
     {
         ASSUME(chanidx >= 0);
-        const ALfloat (&coeffs)[MAX_AMBI_CHANNELS] = chancoeffs[chanidx];
         ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanidx];
+        const ALfloat (&coeffs)[MAX_AMBI_CHANNELS] = *(incoeffs++);
 
         ASSUME(inchans > 0);
         std::copy_n(std::begin(coeffs), inchans, std::begin(mtx));

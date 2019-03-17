@@ -269,24 +269,6 @@ alu::Vector operator*(const alu::Matrix &mtx, const alu::Vector &vec) noexcept
 }
 
 
-void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
-{
-    ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
-    if(!(enabledevt&EventType_SourceStateChange)) return;
-
-    RingBuffer *ring{context->AsyncEvents.get()};
-    auto evt_vec = ring->getWriteVector();
-    if(evt_vec.first.len < 1) return;
-
-    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
-    evt->u.srcstate.id = id;
-    evt->u.srcstate.state = AL_STOPPED;
-
-    ring->writeAdvance(1);
-    context->EventSem.post();
-}
-
-
 bool CalcContextParams(ALCcontext *Context)
 {
     ALcontextProps *props{Context->Update.exchange(nullptr, std::memory_order_acq_rel)};
@@ -1806,21 +1788,12 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             }
         }
 
-        auto stop_voice = [ctx](ALvoice *voice) -> void
+        auto stop_voice = [](ALvoice *voice) -> void
         {
-            if(voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Playing)
-                return;
-            ALuint sid{voice->mSourceID.load(std::memory_order_relaxed)};
-            if(!sid) return;
-
             voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
             voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
             voice->mSourceID.store(0u, std::memory_order_relaxed);
             voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
-            /* If the source's voice was playing, it's now effectively stopped
-             * (the source state will be updated the next time it's checked).
-             */
-            SendSourceStoppedEvent(ctx, sid);
         };
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             stop_voice);

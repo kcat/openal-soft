@@ -169,41 +169,6 @@ IF(HAVE___RESTRICT)
     SET(RESTRICT_DECL "__restrict")
 ENDIF()
 
-# MSVC may need workarounds for C99 inline
-IF(MSVC)
-    # TODO: Once we truly require C99, this inline check should go away.
-    CHECK_C_SOURCE_COMPILES("inline void foo(void) { }
-                             int main() {return 0;}" HAVE_INLINE)
-    IF(NOT HAVE_INLINE)
-        CHECK_C_SOURCE_COMPILES("__inline void foo(void) { }
-                                 int main() {return 0;}" HAVE___INLINE)
-        IF(NOT HAVE___INLINE)
-            MESSAGE(FATAL_ERROR "No inline keyword found, please report!")
-        ENDIF()
-
-        SET(CPP_DEFS ${CPP_DEFS} inline=__inline)
-        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Dinline=__inline")
-    ENDIF()
-ENDIF()
-
-# Make sure we have C99-style inline semantics with GCC (4.3 or newer).
-IF(CMAKE_COMPILER_IS_GNUCC)
-    SET(CMAKE_C_FLAGS "-fno-gnu89-inline ${CMAKE_C_FLAGS}")
-
-    SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-    # Force no inlining for the next test.
-    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -fno-inline")
-
-    CHECK_C_SOURCE_COMPILES("extern inline int foo() { return 0; }
-                             int main() {return foo();}" INLINE_IS_C99)
-    IF(NOT INLINE_IS_C99)
-        MESSAGE(FATAL_ERROR "Your compiler does not seem to have C99 inline semantics!
-                             Please update your compiler for better C99 compliance.")
-    ENDIF()
-
-    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
-ENDIF()
-
 # Some systems may need libatomic for C11 atomic functions to work
 SET(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 SET(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} atomic)

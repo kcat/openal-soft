@@ -89,6 +89,9 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
 #endif
+#ifdef HAVE_SSE_INTRINSICS
+#include <xmmintrin.h>
+#endif
 #ifdef HAVE_SYS_SYSCONF_H
 #include <sys/sysconf.h>
 #endif
@@ -261,7 +264,15 @@ void FillCPUCaps(int capfilter)
 
 FPUCtl::FPUCtl() noexcept
 {
-#if defined(__GNUC__) && defined(HAVE_SSE)
+#if defined(HAVE_SSE_INTRINSICS)
+    this->sse_state = _mm_getcsr();
+    unsigned int sseState = this->sse_state;
+    sseState |= 0x8000; /* set flush-to-zero */
+    sseState |= 0x0040; /* set denormals-are-zero */
+    _mm_setcsr(sseState);
+
+#elif defined(__GNUC__) && defined(HAVE_SSE)
+
     if((CPUCapFlags&CPU_CAP_SSE))
     {
         __asm__ __volatile__("stmxcsr %0" : "=m" (*&this->sse_state));
@@ -290,7 +301,11 @@ void FPUCtl::leave() noexcept
 {
     if(!this->in_mode) return;
 
-#if defined(__GNUC__) && defined(HAVE_SSE)
+#if defined(HAVE_SSE_INTRINSICS)
+    _mm_setcsr(this->sse_state);
+
+#elif defined(__GNUC__) && defined(HAVE_SSE)
+
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&this->sse_state));
 

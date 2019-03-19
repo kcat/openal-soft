@@ -2,7 +2,7 @@
 #define FPU_MODES_H
 
 class FPUCtl {
-#if defined(__GNUC__) && defined(HAVE_SSE)
+#if defined(HAVE_SSE_INTRINSICS) || (defined(__GNUC__) && defined(HAVE_SSE))
     unsigned int sse_state{};
 #elif defined(HAVE___CONTROL87_2)
     unsigned int state{};

@@ -282,16 +282,6 @@ FPUCtl::FPUCtl() noexcept
             sseState |= 0x0040; /* set denormals-are-zero */
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
     }
-
-#elif defined(HAVE___CONTROL87_2)
-
-    __control87_2(0, 0, &this->state, &this->sse_state);
-    _control87(_DN_FLUSH, _MCW_DN);
-
-#elif defined(HAVE__CONTROLFP)
-
-    this->state = _controlfp(0, 0);
-    _controlfp(_DN_FLUSH, _MCW_DN);
 #endif
 
     this->in_mode = true;
@@ -308,16 +298,6 @@ void FPUCtl::leave() noexcept
 
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&this->sse_state));
-
-#elif defined(HAVE___CONTROL87_2)
-
-    unsigned int mode;
-    __control87_2(this->state, _MCW_DN, &mode, nullptr);
-    __control87_2(this->sse_state, _MCW_DN, nullptr, &mode);
-
-#elif defined(HAVE__CONTROLFP)
-
-    _controlfp(this->state, _MCW_DN);
 #endif
     this->in_mode = false;
 }

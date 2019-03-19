@@ -20,6 +20,10 @@
 
 #include "config.h"
 
+#ifdef HAVE_SSE_INTRINSICS
+#include <emmintrin.h>
+#endif
+
 #include <cmath>
 #include <cstdlib>
 #include <array>
@@ -48,8 +52,12 @@ using complex_d = std::complex<double>;
 
 inline int double2int(double d)
 {
-#if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
-     !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
+#if defined(HAVE_SSE_INTRINSICS)
+    return _mm_cvttsd_si32(_mm_set_sd(d));
+
+#elif ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
+       !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
+
     int sign, shift;
     int64_t mant;
     union {

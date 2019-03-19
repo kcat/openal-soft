@@ -15,6 +15,9 @@
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif
+#ifdef HAVE_SSE_INTRINSICS
+#include <xmmintrin.h>
+#endif
 
 #include <array>
 #include <vector>
@@ -196,10 +199,10 @@ struct bs2b;
  * change it on its own threads. On some systems, a truncating conversion may
  * always be the fastest method.
  */
-inline ALint fastf2i(ALfloat f) noexcept
+inline int fastf2i(float f) noexcept
 {
-#if defined(HAVE_INTRIN_H) && ((defined(_M_IX86_FP) && (_M_IX86_FP > 0)) || defined(_M_X64))
-    return _mm_cvt_ss2si(_mm_set1_ps(f));
+#if defined(HAVE_SSE_INTRINSICS)
+    return _mm_cvt_ss2si(_mm_set_ss(f));
 
 #elif defined(_MSC_VER) && defined(_M_IX86_FP)
 
@@ -210,7 +213,7 @@ inline ALint fastf2i(ALfloat f) noexcept
 
 #elif (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))
 
-    ALint i;
+    int i;
 #ifdef __SSE_MATH__
     __asm__("cvtss2si %1, %0" : "=r"(i) : "x"(f));
 #else
@@ -236,8 +239,11 @@ inline ALint fastf2i(ALfloat f) noexcept
 /* Converts float-to-int using standard behavior (truncation). */
 inline int float2int(float f) noexcept
 {
-#if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
-     !defined(__SSE_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0)
+#if defined(HAVE_SSE_INTRINSICS)
+    return _mm_cvtt_ss2si(_mm_set_ss(f));
+
+#elif ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
+       !defined(__SSE_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0)
     ALint sign, shift, mant;
     union {
         ALfloat f;

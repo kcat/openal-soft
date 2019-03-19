@@ -864,7 +864,7 @@ constexpr ALCint alcEFXMinorVersion = 0;
 /************************************************
  * Device lists
  ************************************************/
-std::atomic<ALCdevice*> DeviceList{nullptr};
+al::vector<ALCdevice*> DeviceList;
 
 std::recursive_mutex ListLock;
 
@@ -2298,17 +2298,12 @@ public:
 static DeviceRef VerifyDevice(ALCdevice *device)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    ALCdevice *tmpDevice{DeviceList.load()};
-    while(tmpDevice)
+    auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
+    if(iter != DeviceList.cend() && *iter == device)
     {
-        if(tmpDevice == device)
-        {
-            ALCdevice_IncRef(tmpDevice);
-            return DeviceRef{tmpDevice};
-        }
-        tmpDevice = tmpDevice->next.load(std::memory_order_relaxed);
+        ALCdevice_IncRef(*iter);
+        return DeviceRef{*iter};
     }
-
     return DeviceRef{};
 }
 
@@ -2552,10 +2547,10 @@ void ALCcontext_DecRef(ALCcontext *context)
 static ContextRef VerifyContext(ALCcontext *context)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    ALCdevice *dev{DeviceList.load()};
-    while(dev)
+    auto iter = DeviceList.cbegin();
+    while(iter != DeviceList.cend())
     {
-        ALCcontext *ctx = dev->ContextList.load(std::memory_order_acquire);
+        ALCcontext *ctx = (*iter)->ContextList.load(std::memory_order_acquire);
         while(ctx)
         {
             if(ctx == context)
@@ -2565,7 +2560,7 @@ static ContextRef VerifyContext(ALCcontext *context)
             }
             ctx = ctx->next.load(std::memory_order_relaxed);
         }
-        dev = dev->next.load(std::memory_order_relaxed);
+        ++iter;
     }
 
     return ContextRef{};
@@ -3804,10 +3799,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     {
-        ALCdevice *head{DeviceList.load()};
-        do {
-            device->next.store(head, std::memory_order_relaxed);
-        } while(!DeviceList.compare_exchange_weak(head, device.get()));
+        std::lock_guard<std::recursive_mutex> _{ListLock};
+        auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
+        DeviceList.insert(iter, device.get());
         ALCdevice_IncRef(device.get());
     }
 
@@ -3822,29 +3816,20 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-    ALCdevice *iter{DeviceList.load()};
-    do {
-        if(iter == device)
-            break;
-        iter = iter->next.load(std::memory_order_relaxed);
-    } while(iter != nullptr);
-    if(!iter || iter->Type == Capture)
+    auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
+    if(iter == DeviceList.cend() || *iter != device)
     {
-        alcSetError(iter, ALC_INVALID_DEVICE);
+        alcSetError(nullptr, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    if((*iter)->Type == Capture)
+    {
+        alcSetError(*iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     std::unique_lock<std::mutex> statelock{device->StateLock};
 
-    ALCdevice *origdev{device};
-    ALCdevice *nextdev{device->next.load(std::memory_order_relaxed)};
-    if(!DeviceList.compare_exchange_strong(origdev, nextdev))
-    {
-        ALCdevice *list;
-        do {
-            list = origdev;
-            origdev = device;
-        } while(!list->next.compare_exchange_strong(origdev, nextdev));
-    }
+    DeviceList.erase(iter);
     listlock.unlock();
 
     ALCcontext *ctx{device->ContextList.load()};
@@ -3923,10 +3908,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
 
     {
-        ALCdevice *head{DeviceList.load()};
-        do {
-            device->next.store(head, std::memory_order_relaxed);
-        } while(!DeviceList.compare_exchange_weak(head, device.get()));
+        std::lock_guard<std::recursive_mutex> _{ListLock};
+        auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
+        DeviceList.insert(iter, device.get());
         ALCdevice_IncRef(device.get());
     }
 
@@ -3937,29 +3921,19 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-
-    ALCdevice *iter{DeviceList.load()};
-    do {
-        if(iter == device)
-            break;
-        iter = iter->next.load(std::memory_order_relaxed);
-    } while(iter != nullptr);
-    if(!iter || iter->Type != Capture)
+    auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
+    if(iter == DeviceList.cend() || *iter != device)
     {
-        alcSetError(iter, ALC_INVALID_DEVICE);
+        alcSetError(nullptr, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    if((*iter)->Type != Capture)
+    {
+        alcSetError(*iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
 
-    ALCdevice *origdev{device};
-    ALCdevice *nextdev{device->next.load(std::memory_order_relaxed)};
-    if(!DeviceList.compare_exchange_strong(origdev, nextdev))
-    {
-        ALCdevice *list;
-        do {
-            list = origdev;
-            origdev = device;
-        } while(!list->next.compare_exchange_strong(origdev, nextdev));
-    }
+    DeviceList.erase(iter);
     listlock.unlock();
 
     { std::lock_guard<std::mutex> _{device->StateLock};
@@ -4091,10 +4065,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Backend->open("Loopback");
 
     {
-        ALCdevice *head{DeviceList.load()};
-        do {
-            device->next.store(head, std::memory_order_relaxed);
-        } while(!DeviceList.compare_exchange_weak(head, device.get()));
+        std::lock_guard<std::recursive_mutex> _{ListLock};
+        auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
+        DeviceList.insert(iter, device.get());
         ALCdevice_IncRef(device.get());
     }
 

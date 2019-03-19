@@ -465,8 +465,6 @@ struct ALCdevice {
     std::mutex StateLock;
     std::unique_ptr<BackendBase> Backend;
 
-    std::atomic<ALCdevice*> next{nullptr};
-
 
     ALCdevice(DeviceType type);
     ALCdevice(const ALCdevice&) = delete;

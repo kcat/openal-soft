@@ -469,9 +469,9 @@ DWORD WasapiProxy::messageHandler(void *ptr)
             {
                 Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
 
-                if(msg.lParam == DevProbe::Playback)
+                if(msg.lParam == static_cast<LPARAM>(DevProbe::Playback))
                     hr = probe_devices(Enumerator, eRender, PlaybackDevices);
-                else if(msg.lParam == DevProbe::Capture)
+                else if(msg.lParam == static_cast<LPARAM>(DevProbe::Capture))
                     hr = probe_devices(Enumerator, eCapture, CaptureDevices);
 
                 Enumerator->Release();
@@ -673,7 +673,7 @@ ALCenum WasapiPlayback::open(const ALCchar *name)
             if(PlaybackDevices.empty())
             {
                 ThreadRequest req = { mMsgEvent, 0 };
-                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, DevProbe::Playback))
+                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, static_cast<LPARAM>(DevProbe::Playback)))
                     (void)WaitForResponse(&req);
             }
 
@@ -1293,7 +1293,7 @@ ALCenum WasapiCapture::open(const ALCchar *name)
             if(CaptureDevices.empty())
             {
                 ThreadRequest req{ mMsgEvent, 0 };
-                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, DevProbe::Capture))
+                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, static_cast<LPARAM>(DevProbe::Capture)))
                     (void)WaitForResponse(&req);
             }
 
@@ -1784,7 +1784,7 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
             outnames->append(entry.name.c_str(), entry.name.length()+1);
         };
         HRESULT hr = E_FAIL;
-        if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, type))
+        if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, static_cast<LPARAM>(type)))
             hr = WaitForResponse(&req);
         if(SUCCEEDED(hr)) switch(type)
         {

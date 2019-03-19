@@ -469,9 +469,9 @@ DWORD WasapiProxy::messageHandler(void *ptr)
             {
                 Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
 
-                if(msg.lParam == ALL_DEVICE_PROBE)
+                if(msg.lParam == DevProbe::Playback)
                     hr = probe_devices(Enumerator, eRender, PlaybackDevices);
-                else if(msg.lParam == CAPTURE_DEVICE_PROBE)
+                else if(msg.lParam == DevProbe::Capture)
                     hr = probe_devices(Enumerator, eCapture, CaptureDevices);
 
                 Enumerator->Release();
@@ -673,7 +673,7 @@ ALCenum WasapiPlayback::open(const ALCchar *name)
             if(PlaybackDevices.empty())
             {
                 ThreadRequest req = { mMsgEvent, 0 };
-                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, ALL_DEVICE_PROBE))
+                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, DevProbe::Playback))
                     (void)WaitForResponse(&req);
             }
 
@@ -1293,7 +1293,7 @@ ALCenum WasapiCapture::open(const ALCchar *name)
             if(CaptureDevices.empty())
             {
                 ThreadRequest req{ mMsgEvent, 0 };
-                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, CAPTURE_DEVICE_PROBE))
+                if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, DevProbe::Capture))
                     (void)WaitForResponse(&req);
             }
 
@@ -1788,11 +1788,11 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
             hr = WaitForResponse(&req);
         if(SUCCEEDED(hr)) switch(type)
         {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
             std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
             break;
 
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
             break;
         }

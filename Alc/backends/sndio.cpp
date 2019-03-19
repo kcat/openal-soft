@@ -481,8 +481,8 @@ void SndIOBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Playback:
+        case DevProbe::Capture:
             /* Includes null char. */
             outnames->append(sndio_device, sizeof(sndio_device));
             break;

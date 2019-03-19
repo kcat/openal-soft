@@ -85,9 +85,9 @@ struct bs2b;
 #define MIN_OUTPUT_RATE      (8000)
 
 
-enum DevProbe {
-    ALL_DEVICE_PROBE,
-    CAPTURE_DEVICE_PROBE
+enum class DevProbe {
+    Playback,
+    Capture
 };
 
 

@@ -1178,9 +1178,9 @@ static void ProbeDevices(std::string *list, BackendInfo *backendinfo, DevProbe t
         backendinfo->getFactory().probe(type, list);
 }
 static void ProbeAllDevicesList(void)
-{ ProbeDevices(&alcAllDevicesList, &PlaybackBackend, ALL_DEVICE_PROBE); }
+{ ProbeDevices(&alcAllDevicesList, &PlaybackBackend, DevProbe::Playback); }
 static void ProbeCaptureDeviceList(void)
-{ ProbeDevices(&alcCaptureDeviceList, &CaptureBackend, CAPTURE_DEVICE_PROBE); }
+{ ProbeDevices(&alcCaptureDeviceList, &CaptureBackend, DevProbe::Capture); }
 
 
 /************************************************

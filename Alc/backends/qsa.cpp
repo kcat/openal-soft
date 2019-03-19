@@ -941,11 +941,11 @@ void QSABackendFactory::probe(DevProbe type, std::string *outnames)
 
     switch (type)
     {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
             deviceList(SND_PCM_CHANNEL_PLAYBACK, &DeviceNameMap);
             std::for_each(DeviceNameMap.cbegin(), DeviceNameMap.cend(), add_device);
             break;
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             deviceList(SND_PCM_CHANNEL_CAPTURE, &CaptureNameMap);
             std::for_each(CaptureNameMap.cbegin(), CaptureNameMap.cend(), add_device);
             break;

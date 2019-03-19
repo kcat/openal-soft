@@ -1277,12 +1277,12 @@ void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
     };
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
             PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
             std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
             break;
 
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
             std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
             break;

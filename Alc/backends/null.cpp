@@ -161,11 +161,11 @@ void NullBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
             /* Includes null char. */
             outnames->append(nullDevice, sizeof(nullDevice));
             break;
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             break;
     }
 }

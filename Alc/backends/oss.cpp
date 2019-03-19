@@ -734,13 +734,13 @@ void OSSBackendFactory::probe(DevProbe type, std::string *outnames)
 
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
             PlaybackDevices.clear();
             ALCossListPopulate(&PlaybackDevices, DSP_CAP_OUTPUT);
             std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
             break;
 
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             CaptureDevices.clear();
             ALCossListPopulate(&CaptureDevices, DSP_CAP_INPUT);
             std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);

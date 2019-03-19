@@ -924,7 +924,7 @@ void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
     HRESULT hrcom{CoInitialize(nullptr)};
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
             PlaybackDevices.clear();
             hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
             if(FAILED(hr))
@@ -932,7 +932,7 @@ void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
             std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
             break;
 
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             CaptureDevices.clear();
             hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
             if(FAILED(hr))

@@ -926,8 +926,8 @@ void OSLBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Playback:
+        case DevProbe::Capture:
             /* Includes null char. */
             outnames->append(opensl_device, sizeof(opensl_device));
             break;

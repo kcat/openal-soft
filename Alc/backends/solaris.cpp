@@ -278,7 +278,7 @@ void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {
-        case ALL_DEVICE_PROBE:
+        case DevProbe::Playback:
         {
 #ifdef HAVE_STAT
             struct stat buf;
@@ -288,7 +288,7 @@ void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
         }
         break;
 
-        case CAPTURE_DEVICE_PROBE:
+        case DevProbe::Capture:
             break;
     }
 }

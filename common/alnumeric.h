@@ -107,10 +107,10 @@ inline size_t RoundUp(size_t value, size_t r) noexcept
 
 #elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
 
-inline int msvc64_popcnt32(ALuint v)
+inline int msvc64_popcnt32(uint32_t v)
 { return (int)__popcnt(v); }
 #define POPCNT32 msvc64_popcnt32
-inline int msvc64_ctz32(ALuint v)
+inline int msvc64_ctz32(uint32_t v)
 {
     unsigned long idx = 32;
     _BitScanForward(&idx, v);
@@ -131,10 +131,10 @@ inline int msvc64_ctz64(uint64_t v)
 
 #elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
 
-inline int msvc_popcnt32(ALuint v)
+inline int msvc_popcnt32(uint32_t v)
 { return (int)__popcnt(v); }
 #define POPCNT32 msvc_popcnt32
-inline int msvc_ctz32(ALuint v)
+inline int msvc_ctz32(uint32_t v)
 {
     unsigned long idx = 32;
     _BitScanForward(&idx, v);
@@ -143,14 +143,14 @@ inline int msvc_ctz32(ALuint v)
 #define CTZ32 msvc_ctz32
 
 inline int msvc_popcnt64(uint64_t v)
-{ return (int)(__popcnt((ALuint)v) + __popcnt((ALuint)(v>>32))); }
+{ return (int)(__popcnt((uint32_t)v) + __popcnt((uint32_t)(v>>32))); }
 #define POPCNT64 msvc_popcnt64
 inline int msvc_ctz64(uint64_t v)
 {
     unsigned long idx = 64;
-    if(!_BitScanForward(&idx, v&0xffffffff))
+    if(!_BitScanForward(&idx, (uint32_t)(v&0xffffffff)))
     {
-        if(_BitScanForward(&idx, v>>32))
+        if(_BitScanForward(&idx, (uint32_t)(v>>32)))
             idx += 32;
     }
     return (int)idx;
@@ -166,7 +166,7 @@ inline int msvc_ctz64(uint64_t v)
  * as the ntz2 variant. These likely aren't the most efficient methods, but
  * they're good enough if the GCC or MSVC intrinsics aren't available.
  */
-inline int fallback_popcnt32(ALuint v)
+inline int fallback_popcnt32(uint32_t v)
 {
     v = v - ((v >> 1) & 0x55555555u);
     v = (v & 0x33333333u) + ((v >> 2) & 0x33333333u);
@@ -174,7 +174,7 @@ inline int fallback_popcnt32(ALuint v)
     return (int)((v * 0x01010101u) >> 24);
 }
 #define POPCNT32 fallback_popcnt32
-inline int fallback_ctz32(ALuint value)
+inline int fallback_ctz32(uint32_t value)
 { return fallback_popcnt32(~value & (value - 1)); }
 #define CTZ32 fallback_ctz32
 

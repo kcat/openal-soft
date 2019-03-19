@@ -155,6 +155,9 @@
 /* Define if we have the _BitScanForward() intrinsic */
 #cmakedefine HAVE_BITSCANFORWARD_INTRINSIC
 
+/* Define if we have SSE intrinsics */
+#cmakedefine HAVE_SSE_INTRINSICS
+
 /* Define if we have _controlfp() */
 #cmakedefine HAVE__CONTROLFP
 

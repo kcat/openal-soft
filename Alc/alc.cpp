@@ -865,6 +865,7 @@ constexpr ALCint alcEFXMinorVersion = 0;
  * Device lists
  ************************************************/
 al::vector<ALCdevice*> DeviceList;
+al::vector<ALCcontext*> ContextList;
 
 std::recursive_mutex ListLock;
 
@@ -2547,22 +2548,12 @@ void ALCcontext_DecRef(ALCcontext *context)
 static ContextRef VerifyContext(ALCcontext *context)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    auto iter = DeviceList.cbegin();
-    while(iter != DeviceList.cend())
+    auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
+    if(iter != ContextList.cend() && *iter == context)
     {
-        ALCcontext *ctx = (*iter)->ContextList.load(std::memory_order_acquire);
-        while(ctx)
-        {
-            if(ctx == context)
-            {
-                ALCcontext_IncRef(ctx);
-                return ContextRef{ctx};
-            }
-            ctx = ctx->next.load(std::memory_order_relaxed);
-        }
-        ++iter;
+        ALCcontext_IncRef(*iter);
+        return ContextRef{*iter};
     }
-
     return ContextRef{};
 }
 
@@ -3421,8 +3412,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     dev->LastError.store(ALC_NO_ERROR);
 
-    ContextRef ALContext{new ALCcontext{dev.get()}};
-    ALCdevice_IncRef(ALContext->Device);
+    ContextRef context{new ALCcontext{dev.get()}};
+    ALCdevice_IncRef(context->Device);
 
     ALCenum err{UpdateDeviceParams(dev.get(), attrList)};
     if(err != ALC_NO_ERROR)
@@ -3434,22 +3425,22 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         return nullptr;
     }
-    AllocateVoices(ALContext.get(), 256, dev->NumAuxSends);
+    AllocateVoices(context.get(), 256, dev->NumAuxSends);
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {
         void *ptr{al_calloc(16, sizeof(ALeffectslot))};
-        ALContext->DefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
-        if(InitEffectSlot(ALContext->DefaultSlot.get()) == AL_NO_ERROR)
-            aluInitEffectPanning(ALContext->DefaultSlot.get(), dev.get());
+        context->DefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
+        if(InitEffectSlot(context->DefaultSlot.get()) == AL_NO_ERROR)
+            aluInitEffectPanning(context->DefaultSlot.get(), dev.get());
         else
         {
-            ALContext->DefaultSlot = nullptr;
+            context->DefaultSlot = nullptr;
             ERR("Failed to initialize the default effect slot\n");
         }
     }
 
-    InitContext(ALContext.get());
+    InitContext(context.get());
 
     ALfloat valf{};
     if(ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust", &valf))
@@ -3461,31 +3452,37 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             ALfloat db = clampf(valf, -24.0f, 24.0f);
             if(db != valf)
                 WARN("volume-adjust clamped: %f, range: +/-%f\n", valf, 24.0f);
-            ALContext->GainBoost = std::pow(10.0f, db/20.0f);
-            TRACE("volume-adjust gain: %f\n", ALContext->GainBoost);
+            context->GainBoost = std::pow(10.0f, db/20.0f);
+            TRACE("volume-adjust gain: %f\n", context->GainBoost);
         }
     }
-    UpdateListenerProps(ALContext.get());
+    UpdateListenerProps(context.get());
 
     {
+        {
+            std::lock_guard<std::recursive_mutex> _{ListLock};
+            auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
+            ContextList.insert(iter, context.get());
+            ALCcontext_IncRef(context.get());
+        }
+
         ALCcontext *head = dev->ContextList.load();
         do {
-            ALContext->next.store(head, std::memory_order_relaxed);
-        } while(!dev->ContextList.compare_exchange_weak(head, ALContext.get()));
-        ALCcontext_IncRef(ALContext.get());
+            context->next.store(head, std::memory_order_relaxed);
+        } while(!dev->ContextList.compare_exchange_weak(head, context.get()));
     }
     statelock.unlock();
 
-    if(ALContext->DefaultSlot)
+    if(context->DefaultSlot)
     {
-        if(InitializeEffect(ALContext.get(), ALContext->DefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
-            UpdateEffectSlotProps(ALContext->DefaultSlot.get(), ALContext.get());
+        if(InitializeEffect(context.get(), context->DefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
+            UpdateEffectSlotProps(context->DefaultSlot.get(), context.get());
         else
             ERR("Failed to initialize the default effect\n");
     }
 
-    TRACE("Created context %p\n", ALContext.get());
-    return ALContext.get();
+    TRACE("Created context %p\n", context.get());
+    return context.get();
 }
 
 /* alcDestroyContext
@@ -3495,16 +3492,21 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-    ContextRef ctx{VerifyContext(context)};
-    if(!ctx)
+    auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
+    if(iter == ContextList.cend() || *iter != context)
     {
         listlock.unlock();
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return;
     }
+    /* Hold an extra reference to this context so it remains valid until the
+     * ListLock is released.
+     */
+    ALCcontext_IncRef(*iter);
+    ContextRef ctx{*iter};
+    ContextList.erase(iter);
 
-    ALCdevice* Device{ctx->Device};
-    if(Device)
+    if(ALCdevice *Device{ctx->Device})
     {
         std::lock_guard<std::mutex> _{Device->StateLock};
         if(!ReleaseContext(ctx.get(), Device))
@@ -3829,10 +3831,22 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
     }
     std::unique_lock<std::mutex> statelock{device->StateLock};
 
+    /* Erase the device, and any remaining contexts left on it, from their
+     * respective lists.
+     */
     DeviceList.erase(iter);
+    ALCcontext *ctx{device->ContextList.load()};
+    while(ctx != nullptr)
+    {
+        ALCcontext *next = ctx->next.load(std::memory_order_relaxed);
+        auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), ctx);
+        if(iter != ContextList.cend() && *iter == ctx)
+            ContextList.erase(iter);
+        ctx = next;
+    }
     listlock.unlock();
 
-    ALCcontext *ctx{device->ContextList.load()};
+    ctx = device->ContextList.load(std::memory_order_relaxed);
     while(ctx != nullptr)
     {
         ALCcontext *next = ctx->next.load(std::memory_order_relaxed);

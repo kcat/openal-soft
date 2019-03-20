@@ -224,7 +224,7 @@ ALCenum WaveBackend::open(const ALCchar *name)
 
 ALCboolean WaveBackend::reset()
 {
-    ALuint channels=0, bits=0, chanmask=0;
+    ALuint channels=0, bytes=0, chanmask=0;
     int isbformat = 0;
     size_t val;
 
@@ -272,8 +272,10 @@ ALCboolean WaveBackend::reset()
             chanmask = 0;
             break;
     }
-    bits = mDevice->bytesFromFmt() * 8;
+    bytes = mDevice->bytesFromFmt();
     channels = mDevice->channelsFromFmt();
+
+    rewind(mFile);
 
     fputs("RIFF", mFile);
     fwrite32le(0xFFFFFFFF, mFile); // 'RIFF' header len; filled in at close
@@ -290,15 +292,15 @@ ALCboolean WaveBackend::reset()
     // 32-bit val, frequency
     fwrite32le(mDevice->Frequency, mFile);
     // 32-bit val, bytes per second
-    fwrite32le(mDevice->Frequency * channels * bits / 8, mFile);
+    fwrite32le(mDevice->Frequency * channels * bytes, mFile);
     // 16-bit val, frame size
-    fwrite16le(channels * bits / 8, mFile);
+    fwrite16le(channels * bytes, mFile);
     // 16-bit val, bits per sample
-    fwrite16le(bits, mFile);
+    fwrite16le(bytes * 8, mFile);
     // 16-bit val, extra byte count
     fwrite16le(22, mFile);
     // 16-bit val, valid bits per sample
-    fwrite16le(bits, mFile);
+    fwrite16le(bytes * 8, mFile);
     // 32-bit val, channel mask
     fwrite32le(chanmask, mFile);
     // 16 byte GUID, sub-type format

@@ -126,6 +126,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context);
 
 EffectStateFactory *NullStateFactory_getFactory(void);
 EffectStateFactory *ReverbStateFactory_getFactory(void);
+EffectStateFactory *StdReverbStateFactory_getFactory(void);
 EffectStateFactory *AutowahStateFactory_getFactory(void);
 EffectStateFactory *ChorusStateFactory_getFactory(void);
 EffectStateFactory *CompressorStateFactory_getFactory(void);

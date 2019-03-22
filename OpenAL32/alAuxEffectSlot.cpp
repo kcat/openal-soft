@@ -156,7 +156,7 @@ constexpr struct FactoryItem {
 } FactoryList[] = {
     { AL_EFFECT_NULL, NullStateFactory_getFactory },
     { AL_EFFECT_EAXREVERB, ReverbStateFactory_getFactory },
-    { AL_EFFECT_REVERB, ReverbStateFactory_getFactory },
+    { AL_EFFECT_REVERB, StdReverbStateFactory_getFactory },
     { AL_EFFECT_AUTOWAH, AutowahStateFactory_getFactory },
     { AL_EFFECT_CHORUS, ChorusStateFactory_getFactory },
     { AL_EFFECT_COMPRESSOR, CompressorStateFactory_getFactory },

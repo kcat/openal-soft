@@ -1477,6 +1477,9 @@ EffectStateFactory *ReverbStateFactory_getFactory()
     return &ReverbFactory;
 }
 
+EffectStateFactory *StdReverbStateFactory_getFactory()
+{ return ReverbStateFactory_getFactory(); }
+
 
 void ALeaxreverb_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {

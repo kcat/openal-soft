@@ -12,6 +12,8 @@
 
 
 struct ALeffectslot;
+union ALeffectProps;
+
 
 struct EffectTarget {
     MixParams *Main;
@@ -40,6 +42,7 @@ struct EffectStateFactory {
     virtual ~EffectStateFactory() { }
 
     virtual EffectState *create() = 0;
+    virtual ALeffectProps getDefaultProps() const;
 };
 
 

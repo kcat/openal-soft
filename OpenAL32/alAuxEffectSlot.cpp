@@ -690,6 +690,10 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 }
 
 
+ALeffectProps EffectStateFactory::getDefaultProps() const
+{ return ALeffectProps{}; }
+
+
 void EffectState::IncRef() noexcept
 {
     auto ref = IncrementRef(&mRef);

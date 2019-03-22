@@ -79,6 +79,33 @@ constexpr struct FactoryItem {
 };
 
 
+template<typename... T>
+void ALeffect_setParami(ALeffect *effect, T&& ...args)
+{ effect->vtab->setParami(&effect->Props, std::forward<T>(args)...); }
+template<typename... T>
+void ALeffect_setParamiv(ALeffect *effect, T&& ...args)
+{ effect->vtab->setParamiv(&effect->Props, std::forward<T>(args)...); }
+template<typename... T>
+void ALeffect_setParamf(ALeffect *effect, T&& ...args)
+{ effect->vtab->setParamf(&effect->Props, std::forward<T>(args)...); }
+template<typename... T>
+void ALeffect_setParamfv(ALeffect *effect, T&& ...args)
+{ effect->vtab->setParamfv(&effect->Props, std::forward<T>(args)...); }
+
+template<typename... T>
+void ALeffect_getParami(const ALeffect *effect, T&& ...args)
+{ effect->vtab->getParami(&effect->Props, std::forward<T>(args)...); }
+template<typename... T>
+void ALeffect_getParamiv(const ALeffect *effect, T&& ...args)
+{ effect->vtab->getParamiv(&effect->Props, std::forward<T>(args)...); }
+template<typename... T>
+void ALeffect_getParamf(const ALeffect *effect, T&& ...args)
+{ effect->vtab->getParamf(&effect->Props, std::forward<T>(args)...); }
+template<typename... T>
+void ALeffect_getParamfv(const ALeffect *effect, T&& ...args)
+{ effect->vtab->getParamfv(&effect->Props, std::forward<T>(args)...); }
+
+
 void InitEffectParams(ALeffect *effect, ALenum type)
 {
     EffectStateFactory *factory = getFactoryByType(type);

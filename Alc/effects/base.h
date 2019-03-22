@@ -12,15 +12,15 @@ union ALeffectProps;
 
 
 struct EffectVtable {
-    void (*const setParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-    void (*const setParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const setParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const setParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+    void (*const setParami)(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val);
+    void (*const setParamiv)(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const setParamf)(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const setParamfv)(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const getParami)(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const getParami)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \

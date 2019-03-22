@@ -175,13 +175,12 @@ void EchoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)
 }
 
 
-void Echo_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Echo_setParami(ALeffectProps*, ALCcontext *context, ALenum param, ALint)
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void Echo_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Echo_setParamiv(ALeffectProps*, ALCcontext *context, ALenum param, const ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void Echo_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Echo_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_ECHO_DELAY:
@@ -218,16 +217,15 @@ void Echo_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat
             alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
-void Echo_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Echo_setParamf(effect, context, param, vals[0]); }
+void Echo_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Echo_setParamf(props, context, param, vals[0]); }
 
-void Echo_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Echo_getParami(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void Echo_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Echo_getParamiv(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void Echo_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Echo_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_ECHO_DELAY:
@@ -254,8 +252,8 @@ void Echo_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, A
             alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
-void Echo_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Echo_getParamf(effect, context, param, vals); }
+void Echo_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Echo_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Echo);
 

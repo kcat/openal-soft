@@ -39,7 +39,7 @@ namespace {
 #define RELEASE_TIME 0.2f /* 200ms to drop from max to min */
 
 
-struct ALcompressorState final : public EffectState {
+struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
     ALfloat mGain[MAX_AMBI_CHANNELS][MAX_OUTPUT_CHANNELS]{};
 
@@ -54,10 +54,10 @@ struct ALcompressorState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
-    DEF_NEWDEL(ALcompressorState)
+    DEF_NEWDEL(CompressorState)
 };
 
-ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
+ALboolean CompressorState::deviceUpdate(const ALCdevice *device)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
@@ -74,7 +74,7 @@ ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
     return AL_TRUE;
 }
 
-void ALcompressorState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void CompressorState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     mEnabled = props->Compressor.OnOff;
 
@@ -87,7 +87,7 @@ void ALcompressorState::update(const ALCcontext* UNUSED(context), const ALeffect
     }
 }
 
-void ALcompressorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void CompressorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     ALsizei i, j, k;
     ALsizei base;
@@ -159,9 +159,8 @@ void ALcompressorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sa
 }
 
 
-void Compressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Compressor_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_COMPRESSOR_ONOFF:
@@ -175,16 +174,15 @@ void Compressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param, A
                        param);
     }
 }
-void Compressor_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ Compressor_setParami(effect, context, param, vals[0]); }
-void Compressor_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+void Compressor_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+{ Compressor_setParami(props, context, param, vals[0]); }
+void Compressor_setParamf(ALeffectProps*, ALCcontext *context, ALenum param, ALfloat)
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
-void Compressor_setParamfv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat *UNUSED(vals))
+void Compressor_setParamfv(ALeffectProps*, ALCcontext *context, ALenum param, const ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
-void Compressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Compressor_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 { 
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_COMPRESSOR_ONOFF:
@@ -196,18 +194,18 @@ void Compressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum pa
                        param);
     }
 }
-void Compressor_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ Compressor_getParami(effect, context, param, vals); }
-void Compressor_getParamf(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(val))
+void Compressor_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+{ Compressor_getParami(props, context, param, vals); }
+void Compressor_getParamf(const ALeffectProps*, ALCcontext *context, ALenum param, ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
-void Compressor_getParamfv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(vals))
+void Compressor_getParamfv(const ALeffectProps*, ALCcontext *context, ALenum param, ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(Compressor);
 
 
 struct CompressorStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ALcompressorState{}; }
+    EffectState *create() override { return new CompressorState{}; }
     ALeffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &Compressor_vtable; }
 };

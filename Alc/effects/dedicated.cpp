@@ -97,13 +97,12 @@ void DedicatedState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
 }
 
 
-void Dedicated_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Dedicated_setParami(ALeffectProps*, ALCcontext *context, ALenum param, ALint)
 { alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer property 0x%04x", param); }
-void Dedicated_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Dedicated_setParamiv(ALeffectProps*, ALCcontext *context, ALenum param, const ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer-vector property 0x%04x", param); }
-void Dedicated_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Dedicated_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DEDICATED_GAIN:
@@ -116,16 +115,15 @@ void Dedicated_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             alSetError(context, AL_INVALID_ENUM, "Invalid dedicated float property 0x%04x", param);
     }
 }
-void Dedicated_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Dedicated_setParamf(effect, context, param, vals[0]); }
+void Dedicated_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Dedicated_setParamf(props, context, param, vals[0]); }
 
-void Dedicated_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Dedicated_getParami(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer property 0x%04x", param); }
-void Dedicated_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Dedicated_getParamiv(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer-vector property 0x%04x", param); }
-void Dedicated_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Dedicated_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DEDICATED_GAIN:
@@ -136,8 +134,8 @@ void Dedicated_getParamf(const ALeffect *effect, ALCcontext *context, ALenum par
             alSetError(context, AL_INVALID_ENUM, "Invalid dedicated float property 0x%04x", param);
     }
 }
-void Dedicated_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Dedicated_getParamf(effect, context, param, vals); }
+void Dedicated_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Dedicated_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Dedicated);
 

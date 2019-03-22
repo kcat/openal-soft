@@ -326,14 +326,13 @@ void PshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sample
 }
 
 
-void Pshifter_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+void Pshifter_setParamf(ALeffectProps*, ALCcontext *context, ALenum param, ALfloat)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
-void Pshifter_setParamfv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat *UNUSED(vals))
+void Pshifter_setParamfv(ALeffectProps*, ALCcontext *context, ALenum param, const ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x", param); }
 
-void Pshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Pshifter_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_PITCH_SHIFTER_COARSE_TUNE:
@@ -352,12 +351,11 @@ void Pshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x", param);
     }
 }
-void Pshifter_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ Pshifter_setParami(effect, context, param, vals[0]); }
+void Pshifter_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+{ Pshifter_setParami(props, context, param, vals[0]); }
 
-void Pshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Pshifter_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_PITCH_SHIFTER_COARSE_TUNE:
@@ -371,12 +369,12 @@ void Pshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum para
             alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x", param);
     }
 }
-void Pshifter_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ Pshifter_getParami(effect, context, param, vals); }
+void Pshifter_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+{ Pshifter_getParami(props, context, param, vals); }
 
-void Pshifter_getParamf(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(val))
+void Pshifter_getParamf(const ALeffectProps*, ALCcontext *context, ALenum param, ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
-void Pshifter_getParamfv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(vals))
+void Pshifter_getParamfv(const ALeffectProps*, ALCcontext *context, ALenum param, ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(Pshifter);

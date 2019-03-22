@@ -164,13 +164,12 @@ void DistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samp
 }
 
 
-void Distortion_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Distortion_setParami(ALeffectProps*, ALCcontext *context, ALenum param, ALint)
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
-void Distortion_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Distortion_setParamiv(ALeffectProps*, ALCcontext *context, ALenum param, const ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
-void Distortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Distortion_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DISTORTION_EDGE:
@@ -208,16 +207,15 @@ void Distortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, A
                        param);
     }
 }
-void Distortion_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Distortion_setParamf(effect, context, param, vals[0]); }
+void Distortion_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Distortion_setParamf(props, context, param, vals[0]); }
 
-void Distortion_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Distortion_getParami(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
-void Distortion_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Distortion_getParamiv(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
-void Distortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Distortion_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_DISTORTION_EDGE:
@@ -245,8 +243,8 @@ void Distortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum pa
                        param);
     }
 }
-void Distortion_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Distortion_getParamf(effect, context, param, vals); }
+void Distortion_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Distortion_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Distortion);
 

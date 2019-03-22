@@ -203,9 +203,8 @@ void FshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sample
 }
 
 
-void Fshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Fshifter_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FREQUENCY_SHIFTER_FREQUENCY:
@@ -218,12 +217,11 @@ void Fshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x", param);
     }
 }
-void Fshifter_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Fshifter_setParamf(effect, context, param, vals[0]); }
+void Fshifter_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Fshifter_setParamf(props, context, param, vals[0]); }
 
-void Fshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Fshifter_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FREQUENCY_SHIFTER_LEFT_DIRECTION:
@@ -242,12 +240,11 @@ void Fshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
     }
 }
-void Fshifter_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ Fshifter_setParami(effect, context, param, vals[0]); }
+void Fshifter_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+{ Fshifter_setParami(props, context, param, vals[0]); }
 
-void Fshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Fshifter_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FREQUENCY_SHIFTER_LEFT_DIRECTION:
@@ -260,12 +257,11 @@ void Fshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum para
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
     }
 }
-void Fshifter_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ Fshifter_getParami(effect, context, param, vals); }
+void Fshifter_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+{ Fshifter_getParami(props, context, param, vals); }
 
-void Fshifter_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Fshifter_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FREQUENCY_SHIFTER_FREQUENCY:
@@ -276,8 +272,8 @@ void Fshifter_getParamf(const ALeffect *effect, ALCcontext *context, ALenum para
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x", param);
     }
 }
-void Fshifter_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Fshifter_getParamf(effect, context, param, vals); }
+void Fshifter_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Fshifter_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Fshifter);
 

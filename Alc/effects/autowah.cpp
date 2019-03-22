@@ -200,9 +200,8 @@ void ALautowahState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
 }
 
 
-void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void ALautowah_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_AUTOWAH_ATTACK_TIME:
@@ -233,18 +232,16 @@ void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             alSetError(context, AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
     }
 }
-void ALautowah_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ ALautowah_setParamf(effect, context, param, vals[0]); }
+void ALautowah_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ ALautowah_setParamf(props, context, param, vals[0]); }
 
-void ALautowah_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void ALautowah_setParami(ALeffectProps*, ALCcontext *context, ALenum param, ALint)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
-void ALautowah_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void ALautowah_setParamiv(ALeffectProps*, ALCcontext *context, ALenum param, const ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
-void ALautowah_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void ALautowah_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_AUTOWAH_ATTACK_TIME:
@@ -268,12 +265,12 @@ void ALautowah_getParamf(const ALeffect *effect, ALCcontext *context, ALenum par
     }
 
 }
-void ALautowah_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ ALautowah_getParamf(effect, context, param, vals); }
+void ALautowah_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ ALautowah_getParamf(props, context, param, vals); }
 
-void ALautowah_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void ALautowah_getParami(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
-void ALautowah_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void ALautowah_getParamiv(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(ALautowah);

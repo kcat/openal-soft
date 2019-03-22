@@ -174,13 +174,12 @@ void EqualizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
 }
 
 
-void Equalizer_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Equalizer_setParami(ALeffectProps*, ALCcontext *context, ALenum param, ALint)
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
-void Equalizer_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Equalizer_setParamiv(ALeffectProps*, ALCcontext *context, ALenum param, const ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
-void Equalizer_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Equalizer_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_EQUALIZER_LOW_GAIN:
@@ -247,16 +246,15 @@ void Equalizer_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             alSetError(context, AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
-void Equalizer_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Equalizer_setParamf(effect, context, param, vals[0]); }
+void Equalizer_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Equalizer_setParamf(props, context, param, vals[0]); }
 
-void Equalizer_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Equalizer_getParami(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
-void Equalizer_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Equalizer_getParamiv(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
-void Equalizer_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Equalizer_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_EQUALIZER_LOW_GAIN:
@@ -303,8 +301,8 @@ void Equalizer_getParamf(const ALeffect *effect, ALCcontext *context, ALenum par
             alSetError(context, AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
-void Equalizer_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Equalizer_getParamf(effect, context, param, vals); }
+void Equalizer_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Equalizer_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Equalizer);
 

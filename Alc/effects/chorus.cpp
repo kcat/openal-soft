@@ -256,9 +256,8 @@ void ChorusState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 }
 
 
-void Chorus_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Chorus_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_WAVEFORM:
@@ -277,11 +276,10 @@ void Chorus_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
-void Chorus_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ Chorus_setParami(effect, context, param, vals[0]); }
-void Chorus_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Chorus_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+{ Chorus_setParami(props, context, param, vals[0]); }
+void Chorus_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_RATE:
@@ -312,12 +310,11 @@ void Chorus_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
-void Chorus_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Chorus_setParamf(effect, context, param, vals[0]); }
+void Chorus_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Chorus_setParamf(props, context, param, vals[0]); }
 
-void Chorus_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Chorus_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_WAVEFORM:
@@ -332,11 +329,10 @@ void Chorus_getParami(const ALeffect *effect, ALCcontext *context, ALenum param,
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
-void Chorus_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ Chorus_getParami(effect, context, param, vals); }
-void Chorus_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Chorus_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+{ Chorus_getParami(props, context, param, vals); }
+void Chorus_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_CHORUS_RATE:
@@ -359,8 +355,8 @@ void Chorus_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param,
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
-void Chorus_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Chorus_getParamf(effect, context, param, vals); }
+void Chorus_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Chorus_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Chorus);
 
@@ -384,9 +380,8 @@ ALeffectProps ChorusStateFactory::getDefaultProps() const noexcept
 }
 
 
-void Flanger_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Flanger_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_WAVEFORM:
@@ -405,11 +400,10 @@ void Flanger_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALin
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
-void Flanger_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ Flanger_setParami(effect, context, param, vals[0]); }
-void Flanger_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Flanger_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+{ Flanger_setParami(props, context, param, vals[0]); }
+void Flanger_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
-    ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_RATE:
@@ -440,12 +434,11 @@ void Flanger_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfl
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
-void Flanger_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ Flanger_setParamf(effect, context, param, vals[0]); }
+void Flanger_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Flanger_setParamf(props, context, param, vals[0]); }
 
-void Flanger_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Flanger_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_WAVEFORM:
@@ -460,11 +453,10 @@ void Flanger_getParami(const ALeffect *effect, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
-void Flanger_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ Flanger_getParami(effect, context, param, vals); }
-void Flanger_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Flanger_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+{ Flanger_getParami(props, context, param, vals); }
+void Flanger_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
-    const ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_FLANGER_RATE:
@@ -487,8 +479,8 @@ void Flanger_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
-void Flanger_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ Flanger_getParamf(effect, context, param, vals); }
+void Flanger_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Flanger_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Flanger);
 

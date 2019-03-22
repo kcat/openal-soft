@@ -35,34 +35,36 @@
 #include "vecmat.h"
 
 
+namespace {
+
 #define MAX_UPDATE_SAMPLES 128
 
 #define WAVEFORM_FRACBITS  24
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
-static inline ALfloat Sin(ALsizei index)
+inline ALfloat Sin(ALsizei index)
 {
     return std::sin(static_cast<ALfloat>(index) * (al::MathDefs<float>::Tau() / static_cast<ALfloat>WAVEFORM_FRACONE));
 }
 
-static inline ALfloat Saw(ALsizei index)
+inline ALfloat Saw(ALsizei index)
 {
     return static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f;
 }
 
-static inline ALfloat Square(ALsizei index)
+inline ALfloat Square(ALsizei index)
 {
     return static_cast<ALfloat>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
 }
 
-static inline ALfloat One(ALsizei UNUSED(index))
+inline ALfloat One(ALsizei UNUSED(index))
 {
     return 1.0f;
 }
 
 template<ALfloat func(ALsizei)>
-static void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei todo)
+void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei todo)
 {
     ALsizei i;
     for(i = 0;i < todo;i++)
@@ -173,10 +175,22 @@ void ALmodulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sam
 
 struct ModulatorStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *ModulatorStateFactory::create()
 { return new ALmodulatorState{}; }
+
+ALeffectProps ModulatorStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Modulator.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
+    props.Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
+    props.Modulator.Waveform       = AL_RING_MODULATOR_DEFAULT_WAVEFORM;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *ModulatorStateFactory_getFactory()
 {

@@ -1464,10 +1464,86 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 
 struct ReverbStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *ReverbStateFactory::create()
 { return new ReverbState{}; }
+
+ALeffectProps ReverbStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Reverb.Density   = AL_EAXREVERB_DEFAULT_DENSITY;
+    props.Reverb.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
+    props.Reverb.Gain   = AL_EAXREVERB_DEFAULT_GAIN;
+    props.Reverb.GainHF = AL_EAXREVERB_DEFAULT_GAINHF;
+    props.Reverb.GainLF = AL_EAXREVERB_DEFAULT_GAINLF;
+    props.Reverb.DecayTime    = AL_EAXREVERB_DEFAULT_DECAY_TIME;
+    props.Reverb.DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO;
+    props.Reverb.DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO;
+    props.Reverb.ReflectionsGain   = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN;
+    props.Reverb.ReflectionsDelay  = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY;
+    props.Reverb.ReflectionsPan[0] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
+    props.Reverb.ReflectionsPan[1] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
+    props.Reverb.ReflectionsPan[2] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
+    props.Reverb.LateReverbGain   = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN;
+    props.Reverb.LateReverbDelay  = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY;
+    props.Reverb.LateReverbPan[0] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
+    props.Reverb.LateReverbPan[1] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
+    props.Reverb.LateReverbPan[2] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
+    props.Reverb.EchoTime  = AL_EAXREVERB_DEFAULT_ECHO_TIME;
+    props.Reverb.EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH;
+    props.Reverb.ModulationTime  = AL_EAXREVERB_DEFAULT_MODULATION_TIME;
+    props.Reverb.ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH;
+    props.Reverb.AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF;
+    props.Reverb.HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE;
+    props.Reverb.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
+    props.Reverb.RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
+    props.Reverb.DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT;
+    return props;
+}
+
+
+struct StdReverbStateFactory final : public EffectStateFactory {
+    EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
+};
+
+EffectState *StdReverbStateFactory::create()
+{ return new ReverbState{}; }
+
+ALeffectProps StdReverbStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Reverb.Density   = AL_REVERB_DEFAULT_DENSITY;
+    props.Reverb.Diffusion = AL_REVERB_DEFAULT_DIFFUSION;
+    props.Reverb.Gain   = AL_REVERB_DEFAULT_GAIN;
+    props.Reverb.GainHF = AL_REVERB_DEFAULT_GAINHF;
+    props.Reverb.GainLF = 1.0f;
+    props.Reverb.DecayTime    = AL_REVERB_DEFAULT_DECAY_TIME;
+    props.Reverb.DecayHFRatio = AL_REVERB_DEFAULT_DECAY_HFRATIO;
+    props.Reverb.DecayLFRatio = 1.0f;
+    props.Reverb.ReflectionsGain   = AL_REVERB_DEFAULT_REFLECTIONS_GAIN;
+    props.Reverb.ReflectionsDelay  = AL_REVERB_DEFAULT_REFLECTIONS_DELAY;
+    props.Reverb.ReflectionsPan[0] = 0.0f;
+    props.Reverb.ReflectionsPan[1] = 0.0f;
+    props.Reverb.ReflectionsPan[2] = 0.0f;
+    props.Reverb.LateReverbGain   = AL_REVERB_DEFAULT_LATE_REVERB_GAIN;
+    props.Reverb.LateReverbDelay  = AL_REVERB_DEFAULT_LATE_REVERB_DELAY;
+    props.Reverb.LateReverbPan[0] = 0.0f;
+    props.Reverb.LateReverbPan[1] = 0.0f;
+    props.Reverb.LateReverbPan[2] = 0.0f;
+    props.Reverb.EchoTime  = 0.25f;
+    props.Reverb.EchoDepth = 0.0f;
+    props.Reverb.ModulationTime  = 0.25f;
+    props.Reverb.ModulationDepth = 0.0f;
+    props.Reverb.AirAbsorptionGainHF = AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF;
+    props.Reverb.HFReference = 5000.0f;
+    props.Reverb.LFReference = 250.0f;
+    props.Reverb.RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
+    props.Reverb.DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT;
+    return props;
+}
 
 } // namespace
 
@@ -1478,7 +1554,10 @@ EffectStateFactory *ReverbStateFactory_getFactory()
 }
 
 EffectStateFactory *StdReverbStateFactory_getFactory()
-{ return ReverbStateFactory_getFactory(); }
+{
+    static StdReverbStateFactory ReverbFactory{};
+    return &ReverbFactory;
+}
 
 
 void ALeaxreverb_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

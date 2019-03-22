@@ -178,7 +178,7 @@ void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Props.Chorus.Delay = AL_FLANGER_DEFAULT_DELAY;
         effect->vtab = &ALflanger_vtable;
         break;
-        case AL_EFFECT_FREQUENCY_SHIFTER:
+    case AL_EFFECT_FREQUENCY_SHIFTER:
         effect->Props.Fshifter.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
         effect->Props.Fshifter.LeftDirection  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
         effect->Props.Fshifter.RightDirection = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;

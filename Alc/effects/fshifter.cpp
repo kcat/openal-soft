@@ -202,14 +202,25 @@ void ALfshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samp
         maxi(samplesToDo, 512), 0, samplesToDo);
 }
 
-} // namespace
 
 struct FshifterStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *FshifterStateFactory::create()
 { return new ALfshifterState{}; }
+
+ALeffectProps FshifterStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Fshifter.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
+    props.Fshifter.LeftDirection  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
+    props.Fshifter.RightDirection = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *FshifterStateFactory_getFactory()
 {

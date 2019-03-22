@@ -33,6 +33,8 @@
 #include "filters/biquad.h"
 
 
+namespace {
+
 struct ALdistortionState final : public EffectState {
     /* Effect gains for each channel */
     ALfloat mGain[MAX_OUTPUT_CHANNELS]{};
@@ -164,10 +166,24 @@ void ALdistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sa
 
 struct DistortionStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *DistortionStateFactory::create()
 { return new ALdistortionState{}; }
+
+ALeffectProps DistortionStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Distortion.Edge = AL_DISTORTION_DEFAULT_EDGE;
+    props.Distortion.Gain = AL_DISTORTION_DEFAULT_GAIN;
+    props.Distortion.LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF;
+    props.Distortion.EQCenter = AL_DISTORTION_DEFAULT_EQCENTER;
+    props.Distortion.EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *DistortionStateFactory_getFactory()
 {

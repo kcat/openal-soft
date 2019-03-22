@@ -173,14 +173,32 @@ void ALequalizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sam
     }
 }
 
-} // namespace
 
 struct EqualizerStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *EqualizerStateFactory::create()
 { return new ALequalizerState{}; }
+
+ALeffectProps EqualizerStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Equalizer.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;
+    props.Equalizer.LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN;
+    props.Equalizer.Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER;
+    props.Equalizer.Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN;
+    props.Equalizer.Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH;
+    props.Equalizer.Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER;
+    props.Equalizer.Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN;
+    props.Equalizer.Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH;
+    props.Equalizer.HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF;
+    props.Equalizer.HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *EqualizerStateFactory_getFactory()
 {

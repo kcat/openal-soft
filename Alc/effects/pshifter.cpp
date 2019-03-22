@@ -325,14 +325,24 @@ void ALpshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samp
         maxi(samplesToDo, 512), 0, samplesToDo);
 }
 
-} // namespace
 
 struct PshifterStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *PshifterStateFactory::create()
 { return new ALpshifterState{}; }
+
+ALeffectProps PshifterStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Pshifter.CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;
+    props.Pshifter.FineTune   = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *PshifterStateFactory_getFactory()
 {

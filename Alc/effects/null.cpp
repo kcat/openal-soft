@@ -11,6 +11,8 @@
 #include "alError.h"
 
 
+namespace {
+
 struct ALnullState final : public EffectState {
     ALnullState();
     ~ALnullState() override;
@@ -59,11 +61,21 @@ void ALnullState::process(ALsizei /*samplesToDo*/, const ALfloat (*RESTRICT /*sa
 
 struct NullStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
-/* Creates ALeffectState objects of the appropriate type. */
+/* Creates EffectState objects of the appropriate type. */
 EffectState *NullStateFactory::create()
 { return new ALnullState{}; }
+
+/* Returns an ALeffectProps initialized with this effect's default properties. */
+ALeffectProps NullStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *NullStateFactory_getFactory()
 {

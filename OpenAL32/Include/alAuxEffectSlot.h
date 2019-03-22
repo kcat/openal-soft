@@ -42,7 +42,7 @@ struct EffectStateFactory {
     virtual ~EffectStateFactory() { }
 
     virtual EffectState *create() = 0;
-    virtual ALeffectProps getDefaultProps() const;
+    virtual ALeffectProps getDefaultProps() const noexcept = 0;
 };
 
 

@@ -33,6 +33,8 @@
 #include "filters/biquad.h"
 #include "vecmat.h"
 
+namespace {
+
 #define MIN_FREQ 20.0f
 #define MAX_FREQ 2500.0f
 #define Q_FACTOR 5.0f
@@ -199,10 +201,23 @@ void ALautowahState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
 
 struct AutowahStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *AutowahStateFactory::create()
 { return new ALautowahState{}; }
+
+ALeffectProps AutowahStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
+    props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
+    props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
+    props.Autowah.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *AutowahStateFactory_getFactory()
 {

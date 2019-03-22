@@ -30,6 +30,8 @@
 #include "vecmat.h"
 
 
+namespace {
+
 #define AMP_ENVELOPE_MIN  0.5f
 #define AMP_ENVELOPE_MAX  2.0f
 
@@ -159,10 +161,20 @@ void ALcompressorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sa
 
 struct CompressorStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *CompressorStateFactory::create()
 { return new ALcompressorState{}; }
+
+ALeffectProps CompressorStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Compressor.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *CompressorStateFactory_getFactory()
 {

@@ -31,6 +31,8 @@
 #include "alu.h"
 
 
+namespace {
+
 struct ALdedicatedState final : public EffectState {
     ALfloat mCurrentGains[MAX_OUTPUT_CHANNELS];
     ALfloat mTargetGains[MAX_OUTPUT_CHANNELS];
@@ -97,10 +99,20 @@ void ALdedicatedState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sam
 
 struct DedicatedStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *DedicatedStateFactory::create()
 { return new ALdedicatedState{}; }
+
+ALeffectProps DedicatedStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Dedicated.Gain = 1.0f;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *DedicatedStateFactory_getFactory()
 {

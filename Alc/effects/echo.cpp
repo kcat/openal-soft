@@ -35,6 +35,8 @@
 #include "vector.h"
 
 
+namespace {
+
 struct ALechoState final : public EffectState {
     al::vector<ALfloat,16> mSampleBuffer;
 
@@ -175,10 +177,24 @@ void ALechoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 
 struct EchoStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *EchoStateFactory::create()
 { return new ALechoState{}; }
+
+ALeffectProps EchoStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Echo.Delay    = AL_ECHO_DEFAULT_DELAY;
+    props.Echo.LRDelay  = AL_ECHO_DEFAULT_LRDELAY;
+    props.Echo.Damping  = AL_ECHO_DEFAULT_DAMPING;
+    props.Echo.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
+    props.Echo.Spread   = AL_ECHO_DEFAULT_SPREAD;
+    return props;
+}
+
+} // namespace
 
 EffectStateFactory *EchoStateFactory_getFactory()
 {

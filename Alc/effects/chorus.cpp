@@ -258,10 +258,46 @@ void ChorusState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 
 struct ChorusStateFactory final : public EffectStateFactory {
     EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
 };
 
 EffectState *ChorusStateFactory::create()
 { return new ChorusState{}; }
+
+ALeffectProps ChorusStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;
+    props.Chorus.Phase = AL_CHORUS_DEFAULT_PHASE;
+    props.Chorus.Rate = AL_CHORUS_DEFAULT_RATE;
+    props.Chorus.Depth = AL_CHORUS_DEFAULT_DEPTH;
+    props.Chorus.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
+    props.Chorus.Delay = AL_CHORUS_DEFAULT_DELAY;
+    return props;
+}
+
+/* Flanger is basically a chorus with a really short delay. They can both use
+ * the same processing functions, so piggyback flanger on the chorus functions.
+ */
+struct FlangerStateFactory final : public EffectStateFactory {
+    EffectState *create() override;
+    ALeffectProps getDefaultProps() const noexcept override;
+};
+
+EffectState *FlangerStateFactory::create()
+{ return new ChorusState{}; }
+
+ALeffectProps FlangerStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Chorus.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
+    props.Chorus.Phase = AL_FLANGER_DEFAULT_PHASE;
+    props.Chorus.Rate = AL_FLANGER_DEFAULT_RATE;
+    props.Chorus.Depth = AL_FLANGER_DEFAULT_DEPTH;
+    props.Chorus.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
+    props.Chorus.Delay = AL_FLANGER_DEFAULT_DELAY;
+    return props;
+}
 
 } // namespace
 
@@ -269,6 +305,12 @@ EffectStateFactory *ChorusStateFactory_getFactory()
 {
     static ChorusStateFactory ChorusFactory{};
     return &ChorusFactory;
+}
+
+EffectStateFactory *FlangerStateFactory_getFactory()
+{
+    static FlangerStateFactory FlangerFactory{};
+    return &FlangerFactory;
 }
 
 
@@ -379,13 +421,6 @@ void ALchorus_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum par
 { ALchorus_getParamf(effect, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(ALchorus);
-
-
-/* Flanger is basically a chorus with a really short delay. They can both use
- * the same processing functions, so piggyback flanger on the chorus functions.
- */
-EffectStateFactory *FlangerStateFactory_getFactory()
-{ return ChorusStateFactory_getFactory(); }
 
 
 void ALflanger_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)

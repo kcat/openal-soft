@@ -171,7 +171,7 @@ constexpr struct FactoryItem {
     { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory }
 };
 
-inline EffectStateFactory *getFactoryByType(ALenum type)
+EffectStateFactory *getFactoryByType(ALenum type)
 {
     auto iter = std::find_if(std::begin(FactoryList), std::end(FactoryList),
         [type](const FactoryItem &item) noexcept -> bool
@@ -688,10 +688,6 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
     return AL_NO_ERROR;
 }
-
-
-ALeffectProps EffectStateFactory::getDefaultProps() const
-{ return ALeffectProps{}; }
 
 
 void EffectState::IncRef() noexcept

@@ -6,6 +6,7 @@
 #include "alMain.h"
 #include "alEffect.h"
 #include "ambidefs.h"
+#include "effects/base.h"
 
 #include "almalloc.h"
 #include "atomic.h"
@@ -13,37 +14,6 @@
 
 struct ALeffectslot;
 union ALeffectProps;
-
-
-struct EffectTarget {
-    MixParams *Main;
-    RealMixParams *RealOut;
-};
-
-struct EffectState {
-    RefCount mRef{1u};
-
-    ALfloat (*mOutBuffer)[BUFFERSIZE]{nullptr};
-    ALsizei mOutChannels{0};
-
-
-    virtual ~EffectState() = default;
-
-    virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
-    virtual void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) = 0;
-    virtual void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) = 0;
-
-    void IncRef() noexcept;
-    void DecRef() noexcept;
-};
-
-
-struct EffectStateFactory {
-    virtual ~EffectStateFactory() { }
-
-    virtual EffectState *create() = 0;
-    virtual ALeffectProps getDefaultProps() const noexcept = 0;
-};
 
 
 using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
@@ -122,23 +92,6 @@ struct ALeffectslot {
 ALenum InitEffectSlot(ALeffectslot *slot);
 void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context);
 void UpdateAllEffectSlotProps(ALCcontext *context);
-
-
-EffectStateFactory *NullStateFactory_getFactory(void);
-EffectStateFactory *ReverbStateFactory_getFactory(void);
-EffectStateFactory *StdReverbStateFactory_getFactory(void);
-EffectStateFactory *AutowahStateFactory_getFactory(void);
-EffectStateFactory *ChorusStateFactory_getFactory(void);
-EffectStateFactory *CompressorStateFactory_getFactory(void);
-EffectStateFactory *DistortionStateFactory_getFactory(void);
-EffectStateFactory *EchoStateFactory_getFactory(void);
-EffectStateFactory *EqualizerStateFactory_getFactory(void);
-EffectStateFactory *FlangerStateFactory_getFactory(void);
-EffectStateFactory *FshifterStateFactory_getFactory(void);
-EffectStateFactory *ModulatorStateFactory_getFactory(void);
-EffectStateFactory *PshifterStateFactory_getFactory(void);
-
-EffectStateFactory *DedicatedStateFactory_getFactory(void);
 
 
 ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);

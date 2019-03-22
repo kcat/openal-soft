@@ -60,7 +60,7 @@ std::array<ALdouble,HIL_SIZE> InitHannWindow()
 alignas(16) const std::array<ALdouble,HIL_SIZE> HannWindow = InitHannWindow();
 
 
-struct ALfshifterState final : public EffectState {
+struct FshifterState final : public EffectState {
     /* Effect parameters */
     ALsizei  mCount{};
     ALsizei  mPhaseStep{};
@@ -85,10 +85,10 @@ struct ALfshifterState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
-    DEF_NEWDEL(ALfshifterState)
+    DEF_NEWDEL(FshifterState)
 };
 
-ALboolean ALfshifterState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean FshifterState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount     = FIFO_LATENCY;
@@ -107,7 +107,7 @@ ALboolean ALfshifterState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->Device};
 
@@ -138,7 +138,7 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
     ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-void ALfshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void FshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     static constexpr complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = mBufferOut;
@@ -203,33 +203,7 @@ void ALfshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samp
 }
 
 
-struct FshifterStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *FshifterStateFactory::create()
-{ return new ALfshifterState{}; }
-
-ALeffectProps FshifterStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Fshifter.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
-    props.Fshifter.LeftDirection  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
-    props.Fshifter.RightDirection = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *FshifterStateFactory_getFactory()
-{
-    static FshifterStateFactory FshifterFactory{};
-    return &FshifterFactory;
-}
-
-
-void ALfshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Fshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -244,13 +218,10 @@ void ALfshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, A
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x", param);
     }
 }
+void Fshifter_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Fshifter_setParamf(effect, context, param, vals[0]); }
 
-void ALfshifter_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    ALfshifter_setParamf(effect, context, param, vals[0]);
-}
-
-void ALfshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Fshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -271,12 +242,10 @@ void ALfshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, A
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
     }
 }
-void ALfshifter_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{
-    ALfshifter_setParami(effect, context, param, vals[0]);
-}
+void Fshifter_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{ Fshifter_setParami(effect, context, param, vals[0]); }
 
-void ALfshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Fshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -291,14 +260,11 @@ void ALfshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum pa
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
     }
 }
-void ALfshifter_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{
-    ALfshifter_getParami(effect, context, param, vals);
-}
+void Fshifter_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{ Fshifter_getParami(effect, context, param, vals); }
 
-void ALfshifter_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Fshifter_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
-
     const ALeffectProps *props = &effect->Props;
     switch(param)
     {
@@ -309,12 +275,32 @@ void ALfshifter_getParamf(const ALeffect *effect, ALCcontext *context, ALenum pa
         default:
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x", param);
     }
-
 }
+void Fshifter_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Fshifter_getParamf(effect, context, param, vals); }
 
-void ALfshifter_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+DEFINE_ALEFFECT_VTABLE(Fshifter);
+
+
+struct FshifterStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new FshifterState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &Fshifter_vtable; }
+};
+
+ALeffectProps FshifterStateFactory::getDefaultProps() const noexcept
 {
-    ALfshifter_getParamf(effect, context, param, vals);
+    ALeffectProps props{};
+    props.Fshifter.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
+    props.Fshifter.LeftDirection  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
+    props.Fshifter.RightDirection = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;
+    return props;
 }
 
-DEFINE_ALEFFECT_VTABLE(ALfshifter);
+} // namespace
+
+EffectStateFactory *FshifterStateFactory_getFactory()
+{
+    static FshifterStateFactory FshifterFactory{};
+    return &FshifterFactory;
+}

@@ -159,31 +159,7 @@ void ALcompressorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sa
 }
 
 
-struct CompressorStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *CompressorStateFactory::create()
-{ return new ALcompressorState{}; }
-
-ALeffectProps CompressorStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Compressor.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *CompressorStateFactory_getFactory()
-{
-    static CompressorStateFactory CompressorFactory{};
-    return &CompressorFactory;
-}
-
-
-void ALcompressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Compressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -199,14 +175,14 @@ void ALcompressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param,
                        param);
     }
 }
-void ALcompressor_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ ALcompressor_setParami(effect, context, param, vals[0]); }
-void ALcompressor_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+void Compressor_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{ Compressor_setParami(effect, context, param, vals[0]); }
+void Compressor_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
-void ALcompressor_setParamfv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat *UNUSED(vals))
+void Compressor_setParamfv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
-void ALcompressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Compressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { 
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -220,11 +196,33 @@ void ALcompressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum 
                        param);
     }
 }
-void ALcompressor_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ ALcompressor_getParami(effect, context, param, vals); }
-void ALcompressor_getParamf(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(val))
+void Compressor_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{ Compressor_getParami(effect, context, param, vals); }
+void Compressor_getParamf(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
-void ALcompressor_getParamfv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(vals))
+void Compressor_getParamfv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
-DEFINE_ALEFFECT_VTABLE(ALcompressor);
+DEFINE_ALEFFECT_VTABLE(Compressor);
+
+
+struct CompressorStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new ALcompressorState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &Compressor_vtable; }
+};
+
+ALeffectProps CompressorStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Compressor.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF;
+    return props;
+}
+
+} // namespace
+
+EffectStateFactory *CompressorStateFactory_getFactory()
+{
+    static CompressorStateFactory CompressorFactory{};
+    return &CompressorFactory;
+}

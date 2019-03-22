@@ -79,7 +79,7 @@ namespace {
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
 
-struct ALequalizerState final : public EffectState {
+struct EqualizerState final : public EffectState {
     struct {
         /* Effect parameters */
         BiquadFilter filter[4];
@@ -96,10 +96,10 @@ struct ALequalizerState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
-    DEF_NEWDEL(ALequalizerState)
+    DEF_NEWDEL(EqualizerState)
 };
 
-ALboolean ALequalizerState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean EqualizerState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     for(auto &e : mChans)
     {
@@ -110,7 +110,7 @@ ALboolean ALequalizerState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device = context->Device;
     auto frequency = static_cast<ALfloat>(device->Frequency);
@@ -158,7 +158,7 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
     }
 }
 
-void ALequalizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void EqualizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     ASSUME(numInput > 0);
     for(ALsizei c{0};c < numInput;c++)
@@ -174,44 +174,11 @@ void ALequalizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sam
 }
 
 
-struct EqualizerStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *EqualizerStateFactory::create()
-{ return new ALequalizerState{}; }
-
-ALeffectProps EqualizerStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Equalizer.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;
-    props.Equalizer.LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN;
-    props.Equalizer.Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER;
-    props.Equalizer.Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN;
-    props.Equalizer.Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH;
-    props.Equalizer.Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER;
-    props.Equalizer.Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN;
-    props.Equalizer.Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH;
-    props.Equalizer.HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF;
-    props.Equalizer.HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *EqualizerStateFactory_getFactory()
-{
-    static EqualizerStateFactory EqualizerFactory{};
-    return &EqualizerFactory;
-}
-
-
-void ALequalizer_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Equalizer_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
-void ALequalizer_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Equalizer_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
-void ALequalizer_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Equalizer_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -280,14 +247,14 @@ void ALequalizer_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             alSetError(context, AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
-void ALequalizer_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ ALequalizer_setParamf(effect, context, param, vals[0]); }
+void Equalizer_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Equalizer_setParamf(effect, context, param, vals[0]); }
 
-void ALequalizer_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Equalizer_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
-void ALequalizer_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Equalizer_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
-void ALequalizer_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Equalizer_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -336,7 +303,38 @@ void ALequalizer_getParamf(const ALeffect *effect, ALCcontext *context, ALenum p
             alSetError(context, AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
-void ALequalizer_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ ALequalizer_getParamf(effect, context, param, vals); }
+void Equalizer_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Equalizer_getParamf(effect, context, param, vals); }
 
-DEFINE_ALEFFECT_VTABLE(ALequalizer);
+DEFINE_ALEFFECT_VTABLE(Equalizer);
+
+
+struct EqualizerStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new EqualizerState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &Equalizer_vtable; }
+};
+
+ALeffectProps EqualizerStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Equalizer.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;
+    props.Equalizer.LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN;
+    props.Equalizer.Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER;
+    props.Equalizer.Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN;
+    props.Equalizer.Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH;
+    props.Equalizer.Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER;
+    props.Equalizer.Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN;
+    props.Equalizer.Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH;
+    props.Equalizer.HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF;
+    props.Equalizer.HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN;
+    return props;
+}
+
+} // namespace
+
+EffectStateFactory *EqualizerStateFactory_getFactory()
+{
+    static EqualizerStateFactory EqualizerFactory{};
+    return &EqualizerFactory;
+}

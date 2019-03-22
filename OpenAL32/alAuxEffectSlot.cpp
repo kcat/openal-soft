@@ -150,36 +150,6 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
     delete curarray;
 }
 
-constexpr struct FactoryItem {
-    ALenum Type;
-    EffectStateFactory* (&GetFactory)(void);
-} FactoryList[] = {
-    { AL_EFFECT_NULL, NullStateFactory_getFactory },
-    { AL_EFFECT_EAXREVERB, ReverbStateFactory_getFactory },
-    { AL_EFFECT_REVERB, StdReverbStateFactory_getFactory },
-    { AL_EFFECT_AUTOWAH, AutowahStateFactory_getFactory },
-    { AL_EFFECT_CHORUS, ChorusStateFactory_getFactory },
-    { AL_EFFECT_COMPRESSOR, CompressorStateFactory_getFactory },
-    { AL_EFFECT_DISTORTION, DistortionStateFactory_getFactory },
-    { AL_EFFECT_ECHO, EchoStateFactory_getFactory },
-    { AL_EFFECT_EQUALIZER, EqualizerStateFactory_getFactory },
-    { AL_EFFECT_FLANGER, FlangerStateFactory_getFactory },
-    { AL_EFFECT_FREQUENCY_SHIFTER, FshifterStateFactory_getFactory },
-    { AL_EFFECT_RING_MODULATOR, ModulatorStateFactory_getFactory },
-    { AL_EFFECT_PITCH_SHIFTER, PshifterStateFactory_getFactory},
-    { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedStateFactory_getFactory },
-    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory }
-};
-
-EffectStateFactory *getFactoryByType(ALenum type)
-{
-    auto iter = std::find_if(std::begin(FactoryList), std::end(FactoryList),
-        [type](const FactoryItem &item) noexcept -> bool
-        { return item.Type == type; }
-    );
-    return (iter != std::end(FactoryList)) ? iter->GetFactory() : nullptr;
-}
-
 
 ALeffectslot *AllocEffectSlot(ALCcontext *context)
 {

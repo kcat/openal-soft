@@ -5,6 +5,8 @@
 
 
 struct ALeffect;
+struct EffectVtable;
+struct EffectStateFactory;
 
 enum {
     EAXREVERB_EFFECT = 0,
@@ -33,41 +35,6 @@ struct EffectList {
     ALenum val;
 };
 extern const EffectList gEffectList[14];
-
-struct ALeffectVtable {
-    void (*const setParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-    void (*const setParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const setParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const setParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
-
-    void (*const getParami)(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
-};
-
-#define DEFINE_ALEFFECT_VTABLE(T)           \
-const ALeffectVtable T##_vtable = {         \
-    T##_setParami, T##_setParamiv,          \
-    T##_setParamf, T##_setParamfv,          \
-    T##_getParami, T##_getParamiv,          \
-    T##_getParamf, T##_getParamfv,          \
-}
-
-extern const ALeffectVtable ALeaxreverb_vtable;
-extern const ALeffectVtable ALreverb_vtable;
-extern const ALeffectVtable ALautowah_vtable;
-extern const ALeffectVtable ALchorus_vtable;
-extern const ALeffectVtable ALcompressor_vtable;
-extern const ALeffectVtable ALdistortion_vtable;
-extern const ALeffectVtable ALecho_vtable;
-extern const ALeffectVtable ALequalizer_vtable;
-extern const ALeffectVtable ALflanger_vtable;
-extern const ALeffectVtable ALfshifter_vtable;
-extern const ALeffectVtable ALmodulator_vtable;
-extern const ALeffectVtable ALnull_vtable;
-extern const ALeffectVtable ALpshifter_vtable;
-extern const ALeffectVtable ALdedicated_vtable;
 
 
 union ALeffectProps {
@@ -179,7 +146,7 @@ struct ALeffect {
 
     ALeffectProps Props{};
 
-    const ALeffectVtable *vtab{nullptr};
+    const EffectVtable *vtab{nullptr};
 
     /* Self ID */
     ALuint id{0u};
@@ -195,6 +162,8 @@ struct ALeffect {
 
 inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
+
+EffectStateFactory *getFactoryByType(ALenum type);
 
 void InitEffect(ALeffect *effect);
 

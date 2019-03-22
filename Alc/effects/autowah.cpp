@@ -199,32 +199,6 @@ void ALautowahState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
     }
 }
 
-struct AutowahStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *AutowahStateFactory::create()
-{ return new ALautowahState{}; }
-
-ALeffectProps AutowahStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
-    props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
-    props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
-    props.Autowah.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *AutowahStateFactory_getFactory()
-{
-    static AutowahStateFactory AutowahFactory{};
-    return &AutowahFactory;
-}
-
 
 void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
@@ -259,30 +233,13 @@ void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
             alSetError(context, AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
     }
 }
-
 void ALautowah_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    ALautowah_setParamf(effect, context, param, vals[0]);
-}
+{ ALautowah_setParamf(effect, context, param, vals[0]); }
 
 void ALautowah_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
-{
-    alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param);
-}
-
+{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
 void ALautowah_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
-{
-    alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param);
-}
-
-void ALautowah_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
-{
-    alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param);
-}
-void ALautowah_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
-{
-    alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param);
-}
+{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
 void ALautowah_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
@@ -311,10 +268,37 @@ void ALautowah_getParamf(const ALeffect *effect, ALCcontext *context, ALenum par
     }
 
 }
-
 void ALautowah_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    ALautowah_getParamf(effect, context, param, vals);
-}
+{ ALautowah_getParamf(effect, context, param, vals); }
+
+void ALautowah_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
+void ALautowah_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(ALautowah);
+
+
+struct AutowahStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new ALautowahState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &ALautowah_vtable; }
+};
+
+ALeffectProps AutowahStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
+    props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
+    props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
+    props.Autowah.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
+    return props;
+}
+
+} // namespace
+
+EffectStateFactory *AutowahStateFactory_getFactory()
+{
+    static AutowahStateFactory AutowahFactory{};
+    return &AutowahFactory;
+}

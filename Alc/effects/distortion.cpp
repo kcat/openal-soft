@@ -35,7 +35,7 @@
 
 namespace {
 
-struct ALdistortionState final : public EffectState {
+struct DistortionState final : public EffectState {
     /* Effect gains for each channel */
     ALfloat mGain[MAX_OUTPUT_CHANNELS]{};
 
@@ -52,17 +52,17 @@ struct ALdistortionState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
-    DEF_NEWDEL(ALdistortionState)
+    DEF_NEWDEL(DistortionState)
 };
 
-ALboolean ALdistortionState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean DistortionState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     mLowpass.clear();
     mBandpass.clear();
     return AL_TRUE;
 }
 
-void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->Device};
 
@@ -97,7 +97,7 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
-void ALdistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void DistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     ALfloat (*RESTRICT buffer)[BUFFERSIZE] = mBuffer;
     const ALfloat fc = mEdgeCoeff;
@@ -164,39 +164,11 @@ void ALdistortionState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sa
 }
 
 
-struct DistortionStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *DistortionStateFactory::create()
-{ return new ALdistortionState{}; }
-
-ALeffectProps DistortionStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Distortion.Edge = AL_DISTORTION_DEFAULT_EDGE;
-    props.Distortion.Gain = AL_DISTORTION_DEFAULT_GAIN;
-    props.Distortion.LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF;
-    props.Distortion.EQCenter = AL_DISTORTION_DEFAULT_EQCENTER;
-    props.Distortion.EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *DistortionStateFactory_getFactory()
-{
-    static DistortionStateFactory DistortionFactory{};
-    return &DistortionFactory;
-}
-
-
-void ALdistortion_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Distortion_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
-void ALdistortion_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Distortion_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
-void ALdistortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Distortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -236,14 +208,14 @@ void ALdistortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param,
                        param);
     }
 }
-void ALdistortion_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ ALdistortion_setParamf(effect, context, param, vals[0]); }
+void Distortion_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Distortion_setParamf(effect, context, param, vals[0]); }
 
-void ALdistortion_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Distortion_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
-void ALdistortion_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Distortion_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
-void ALdistortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Distortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -273,7 +245,33 @@ void ALdistortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum 
                        param);
     }
 }
-void ALdistortion_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ ALdistortion_getParamf(effect, context, param, vals); }
+void Distortion_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Distortion_getParamf(effect, context, param, vals); }
 
-DEFINE_ALEFFECT_VTABLE(ALdistortion);
+DEFINE_ALEFFECT_VTABLE(Distortion);
+
+
+struct DistortionStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new DistortionState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &Distortion_vtable; }
+};
+
+ALeffectProps DistortionStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Distortion.Edge = AL_DISTORTION_DEFAULT_EDGE;
+    props.Distortion.Gain = AL_DISTORTION_DEFAULT_GAIN;
+    props.Distortion.LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF;
+    props.Distortion.EQCenter = AL_DISTORTION_DEFAULT_EQCENTER;
+    props.Distortion.EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH;
+    return props;
+}
+
+} // namespace
+
+EffectStateFactory *DistortionStateFactory_getFactory()
+{
+    static DistortionStateFactory DistortionFactory{};
+    return &DistortionFactory;
+}

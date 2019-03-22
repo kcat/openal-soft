@@ -76,7 +76,7 @@ void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei 
 }
 
 
-struct ALmodulatorState final : public EffectState {
+struct ModulatorState final : public EffectState {
     void (*mGetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, ALsizei){};
 
     ALsizei mIndex{0};
@@ -94,10 +94,10 @@ struct ALmodulatorState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
-    DEF_NEWDEL(ALmodulatorState)
+    DEF_NEWDEL(ModulatorState)
 };
 
-ALboolean ALmodulatorState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean ModulatorState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     for(auto &e : mChans)
     {
@@ -107,7 +107,7 @@ ALboolean ALmodulatorState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->Device};
 
@@ -140,7 +140,7 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     }
 }
 
-void ALmodulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void ModulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const ALsizei step = mStep;
     ALsizei base;
@@ -173,33 +173,7 @@ void ALmodulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sam
 }
 
 
-struct ModulatorStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *ModulatorStateFactory::create()
-{ return new ALmodulatorState{}; }
-
-ALeffectProps ModulatorStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Modulator.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
-    props.Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
-    props.Modulator.Waveform       = AL_RING_MODULATOR_DEFAULT_WAVEFORM;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *ModulatorStateFactory_getFactory()
-{
-    static ModulatorStateFactory ModulatorFactory{};
-    return &ModulatorFactory;
-}
-
-
-void ALmodulator_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Modulator_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -220,16 +194,16 @@ void ALmodulator_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
-void ALmodulator_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ ALmodulator_setParamf(effect, context, param, vals[0]); }
-void ALmodulator_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+void Modulator_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Modulator_setParamf(effect, context, param, vals[0]); }
+void Modulator_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            ALmodulator_setParamf(effect, context, param, static_cast<ALfloat>(val));
+            Modulator_setParamf(effect, context, param, static_cast<ALfloat>(val));
             break;
 
         case AL_RING_MODULATOR_WAVEFORM:
@@ -242,10 +216,10 @@ void ALmodulator_setParami(ALeffect *effect, ALCcontext *context, ALenum param, 
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
-void ALmodulator_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{ ALmodulator_setParami(effect, context, param, vals[0]); }
+void Modulator_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{ Modulator_setParami(effect, context, param, vals[0]); }
 
-void ALmodulator_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void Modulator_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -264,9 +238,9 @@ void ALmodulator_getParami(const ALeffect *effect, ALCcontext *context, ALenum p
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
-void ALmodulator_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{ ALmodulator_getParami(effect, context, param, vals); }
-void ALmodulator_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Modulator_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{ Modulator_getParami(effect, context, param, vals); }
+void Modulator_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -282,7 +256,31 @@ void ALmodulator_getParamf(const ALeffect *effect, ALCcontext *context, ALenum p
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
-void ALmodulator_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ ALmodulator_getParamf(effect, context, param, vals); }
+void Modulator_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Modulator_getParamf(effect, context, param, vals); }
 
-DEFINE_ALEFFECT_VTABLE(ALmodulator);
+DEFINE_ALEFFECT_VTABLE(Modulator);
+
+
+struct ModulatorStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new ModulatorState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &Modulator_vtable; }
+};
+
+ALeffectProps ModulatorStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Modulator.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
+    props.Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
+    props.Modulator.Waveform       = AL_RING_MODULATOR_DEFAULT_WAVEFORM;
+    return props;
+}
+
+} // namespace
+
+EffectStateFactory *ModulatorStateFactory_getFactory()
+{
+    static ModulatorStateFactory ModulatorFactory{};
+    return &ModulatorFactory;
+}

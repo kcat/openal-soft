@@ -37,7 +37,7 @@
 
 namespace {
 
-struct ALechoState final : public EffectState {
+struct EchoState final : public EffectState {
     al::vector<ALfloat,16> mSampleBuffer;
 
     // The echo is two tap. The delay is the number of samples from before the
@@ -62,10 +62,10 @@ struct ALechoState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
-    DEF_NEWDEL(ALechoState)
+    DEF_NEWDEL(EchoState)
 };
 
-ALboolean ALechoState::deviceUpdate(const ALCdevice *Device)
+ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
 {
     ALuint maxlen;
 
@@ -92,7 +92,7 @@ ALboolean ALechoState::deviceUpdate(const ALCdevice *Device)
     return AL_TRUE;
 }
 
-void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device = context->Device;
     ALuint frequency = device->Frequency;
@@ -127,7 +127,7 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
     ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }
 
-void ALechoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void EchoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const auto mask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     const ALsizei tap1{mTap[0].delay};
@@ -175,39 +175,11 @@ void ALechoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 }
 
 
-struct EchoStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
-};
-
-EffectState *EchoStateFactory::create()
-{ return new ALechoState{}; }
-
-ALeffectProps EchoStateFactory::getDefaultProps() const noexcept
-{
-    ALeffectProps props{};
-    props.Echo.Delay    = AL_ECHO_DEFAULT_DELAY;
-    props.Echo.LRDelay  = AL_ECHO_DEFAULT_LRDELAY;
-    props.Echo.Damping  = AL_ECHO_DEFAULT_DAMPING;
-    props.Echo.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
-    props.Echo.Spread   = AL_ECHO_DEFAULT_SPREAD;
-    return props;
-}
-
-} // namespace
-
-EffectStateFactory *EchoStateFactory_getFactory()
-{
-    static EchoStateFactory EchoFactory{};
-    return &EchoFactory;
-}
-
-
-void ALecho_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void Echo_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void ALecho_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+void Echo_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void ALecho_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+void Echo_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
     switch(param)
@@ -246,14 +218,14 @@ void ALecho_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
             alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
-void ALecho_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{ ALecho_setParamf(effect, context, param, vals[0]); }
+void Echo_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ Echo_setParamf(effect, context, param, vals[0]); }
 
-void ALecho_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+void Echo_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void ALecho_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+void Echo_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
 { alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void ALecho_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+void Echo_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
     switch(param)
@@ -282,7 +254,33 @@ void ALecho_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param,
             alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
-void ALecho_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{ ALecho_getParamf(effect, context, param, vals); }
+void Echo_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{ Echo_getParamf(effect, context, param, vals); }
 
-DEFINE_ALEFFECT_VTABLE(ALecho);
+DEFINE_ALEFFECT_VTABLE(Echo);
+
+
+struct EchoStateFactory final : public EffectStateFactory {
+    EffectState *create() override { return new EchoState{}; }
+    ALeffectProps getDefaultProps() const noexcept override;
+    const EffectVtable *getEffectVtable() const noexcept override { return &Echo_vtable; }
+};
+
+ALeffectProps EchoStateFactory::getDefaultProps() const noexcept
+{
+    ALeffectProps props{};
+    props.Echo.Delay    = AL_ECHO_DEFAULT_DELAY;
+    props.Echo.LRDelay  = AL_ECHO_DEFAULT_LRDELAY;
+    props.Echo.Damping  = AL_ECHO_DEFAULT_DAMPING;
+    props.Echo.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
+    props.Echo.Spread   = AL_ECHO_DEFAULT_SPREAD;
+    return props;
+}
+
+} // namespace
+
+EffectStateFactory *EchoStateFactory_getFactory()
+{
+    static EchoStateFactory EchoFactory{};
+    return &EchoFactory;
+}

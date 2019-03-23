@@ -121,7 +121,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;
-    for(size_t i{0u};i < slot->WetBuffer.size();++i)
+    for(ALsizei i{0};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

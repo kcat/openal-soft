@@ -141,7 +141,7 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
         calc_rcpQ_from_slope(gain, 0.75f));
 
     /* Copy the filter coefficients for the other input channels. */
-    for(size_t i{1u};i < slot->WetBuffer.size();++i)
+    for(ALsizei i{1};i < slot->Wet.NumChannels;++i)
     {
         mChans[i].filter[0].copyParamsFrom(mChans[0].filter[0]);
         mChans[i].filter[1].copyParamsFrom(mChans[0].filter[1]);
@@ -151,7 +151,7 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;
-    for(size_t i{0u};i < slot->WetBuffer.size();++i)
+    for(ALsizei i{0};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

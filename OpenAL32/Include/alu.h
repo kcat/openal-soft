@@ -421,8 +421,6 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
 }
 
 
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
-
 /**
  * ComputePanGains
  *
@@ -431,12 +429,8 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
  * coeffs are a 'slice' of a transform matrix for the input channel, used to
  * scale and orient the sound samples.
  */
-inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
-{
-    ComputePanningGainsBF(dry->AmbiMap.data(), dry->NumChannels, coeffs, ingain, gains);
-}
+void ComputePanGains(const MixParams *mix, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 
-void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 
 inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexcept
 {

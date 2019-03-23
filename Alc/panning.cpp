@@ -740,11 +740,13 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
     }
 }
 
-
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
+void ComputePanGains(const MixParams *mix, const ALfloat *RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
+    auto ambimap = mix->AmbiMap.cbegin();
+    const ALsizei numchans{mix->NumChannels};
+
     ASSUME(numchans > 0);
-    auto iter = std::transform(chanmap, chanmap+numchans, std::begin(gains),
+    auto iter = std::transform(ambimap, ambimap+numchans, std::begin(gains),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
         {
             ASSUME(chanmap.Index >= 0);
@@ -753,9 +755,6 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
     );
     std::fill(iter, std::end(gains), 0.0f);
 }
-
-void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
-{ ComputePanningGainsBF(slot->ChanMap, slot->WetBuffer.size(), coeffs, ingain, gains); }
 
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq)
@@ -1015,11 +1014,15 @@ no_hrtf:
 void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
 {
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
-    slot->WetBuffer.resize(count);
-    slot->WetBuffer.shrink_to_fit();
+    slot->MixBuffer.resize(count);
+    slot->MixBuffer.shrink_to_fit();
 
     auto acnmap_end = AmbiIndex::From3D.begin() + count;
-    auto iter = std::transform(AmbiIndex::From3D.begin(), acnmap_end, std::begin(slot->ChanMap),
-        [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; });
-    std::fill(iter, std::end(slot->ChanMap), BFChannelConfig{});
+    auto iter = std::transform(AmbiIndex::From3D.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
+        [](const ALsizei &acn) noexcept -> BFChannelConfig
+        { return BFChannelConfig{1.0f, acn}; }
+    );
+    std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
+    slot->Wet.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(slot->MixBuffer[0]);
+    slot->Wet.NumChannels = static_cast<ALsizei>(count);
 }

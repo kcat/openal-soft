@@ -71,13 +71,15 @@ struct ALeffectslot {
     /* Self ID */
     ALuint id{};
 
+    /* Mixing buffer used by the Wet mix. */
+    al::vector<std::array<ALfloat,BUFFERSIZE>,16> MixBuffer;
+
     /* Wet buffer configuration is ACN channel order with N3D scaling.
      * Consequently, effects that only want to work with mono input can use
      * channel 0 by itself. Effects that want multichannel can process the
      * ambisonics signal and make a B-Format source pan.
      */
-    al::vector<std::array<ALfloat,BUFFERSIZE>,16> WetBuffer;
-    BFChannelConfig ChanMap[MAX_AMBI_CHANNELS];
+    MixParams Wet;
 
     ALeffectslot() { PropsClean.test_and_set(std::memory_order_relaxed); }
     ALeffectslot(const ALeffectslot&) = delete;

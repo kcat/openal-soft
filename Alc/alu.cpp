@@ -406,18 +406,9 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         AtomicReplaceHead(context->FreeEffectslotProps, props);
     }
 
-    MixParams params;
     EffectTarget output;
     if(ALeffectslot *target{slot->Params.Target})
-    {
-        auto iter = std::copy(std::begin(target->ChanMap), std::end(target->ChanMap),
-            std::begin(params.AmbiMap));
-        std::fill(iter, std::end(params.AmbiMap), BFChannelConfig{});
-        params.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(target->WetBuffer[0]);
-        params.NumChannels = target->WetBuffer.size();
-
-        output = EffectTarget{&params, nullptr};
-    }
+        output = EffectTarget{&target->Wet, nullptr};
     else
     {
         ALCdevice *device{context->Device};
@@ -628,8 +619,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
-                        WetGain[i]*scale0, voice->mSend[i].Params[0].Gains.Target);
+                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i]*scale0,
+                        voice->mSend[i].Params[0].Gains.Target);
             }
         }
         else
@@ -689,8 +680,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     for(ALsizei c{0};c < num_channels;c++)
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), matrix[c],
-                            WetGain[i], voice->mSend[i].Params[c].Gains.Target);
+                        ComputePanGains(&Slot->Wet, matrix[c], WetGain[i],
+                            voice->mSend[i].Params[c].Gains.Target);
             }
         }
     }
@@ -719,8 +710,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
-                        WetGain[i], voice->mSend[i].Params[c].Gains.Target);
+                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                        voice->mSend[i].Params[c].Gains.Target);
             }
         }
     }
@@ -770,8 +761,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     {
                         /* Skip LFE */
                         if(chans[c].channel != LFE)
-                            ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
-                                WetGain[i]*downmix_gain, voice->mSend[i].Params[c].Gains.Target);
+                            ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
+                                voice->mSend[i].Params[c].Gains.Target);
                     }
             }
         }
@@ -803,8 +794,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(ALsizei i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
-                            WetGain[i], voice->mSend[i].Params[c].Gains.Target);
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                            voice->mSend[i].Params[c].Gains.Target);
                 }
             }
         }
@@ -879,8 +870,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     {
                         /* Skip LFE */
                         if(chans[c].channel != LFE)
-                            ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
-                                WetGain[i]*downmix_gain, voice->mSend[i].Params[c].Gains.Target);
+                            ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
+                                voice->mSend[i].Params[c].Gains.Target);
                     }
             }
         }
@@ -929,8 +920,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(ALsizei i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->WetBuffer.size(), coeffs,
-                            WetGain[i], voice->mSend[i].Params[c].Gains.Target);
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                            voice->mSend[i].Params[c].Gains.Target);
                 }
             }
         }
@@ -1001,8 +992,8 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         }
         else
         {
-            voice->mSend[i].Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(SendSlots[i]->WetBuffer[0]);
-            voice->mSend[i].Channels = SendSlots[i]->WetBuffer.size();
+            voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
+            voice->mSend[i].Channels = SendSlots[i]->Wet.NumChannels;
         }
     }
 
@@ -1109,8 +1100,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         }
         else
         {
-            voice->mSend[i].Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(SendSlots[i]->WetBuffer[0]);
-            voice->mSend[i].Channels = SendSlots[i]->WetBuffer.size();
+            voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
+            voice->mSend[i].Channels = SendSlots[i]->Wet.NumChannels;
         }
     }
 
@@ -1424,7 +1415,7 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     std::for_each(auxslots->begin(), auxslots->end(),
         [SamplesToDo](ALeffectslot *slot) -> void
         {
-            for(auto &buffer : slot->WetBuffer)
+            for(auto &buffer : slot->MixBuffer)
                 std::fill_n(buffer.begin(), SamplesToDo, 0.0f);
         }
     );
@@ -1482,9 +1473,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo,
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(slot->WetBuffer[0]),
-                slot->WetBuffer.size(), state->mOutBuffer, state->mOutChannels);
+            state->process(SamplesToDo, slot->Wet.Buffer, slot->Wet.NumChannels,
+                state->mOutBuffer, state->mOutChannels);
         }
     );
 }

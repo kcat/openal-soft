@@ -71,7 +71,7 @@ struct ALautowahState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ALautowahState)
@@ -105,7 +105,7 @@ ALboolean ALautowahState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->Device};
 
@@ -200,7 +200,7 @@ void ALautowahState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
 }
 
 
-void ALautowah_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void ALautowah_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -232,15 +232,15 @@ void ALautowah_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
     }
 }
-void ALautowah_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALautowah_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { ALautowah_setParamf(props, context, param, vals[0]); }
 
-void ALautowah_setParami(ALeffectProps*, ALCcontext *context, ALenum param, ALint)
+void ALautowah_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
-void ALautowah_setParamiv(ALeffectProps*, ALCcontext *context, ALenum param, const ALint*)
+void ALautowah_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
-void ALautowah_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void ALautowah_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -265,12 +265,12 @@ void ALautowah_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum
     }
 
 }
-void ALautowah_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALautowah_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 { ALautowah_getParamf(props, context, param, vals); }
 
-void ALautowah_getParami(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
+void ALautowah_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
-void ALautowah_getParamiv(const ALeffectProps*, ALCcontext *context, ALenum param, ALint*)
+void ALautowah_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(ALautowah);
@@ -278,13 +278,13 @@ DEFINE_ALEFFECT_VTABLE(ALautowah);
 
 struct AutowahStateFactory final : public EffectStateFactory {
     EffectState *create() override { return new ALautowahState{}; }
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &ALautowah_vtable; }
 };
 
-ALeffectProps AutowahStateFactory::getDefaultProps() const noexcept
+EffectProps AutowahStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
     props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
     props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;

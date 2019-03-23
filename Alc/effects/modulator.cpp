@@ -92,7 +92,7 @@ struct ModulatorState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ModulatorState)
@@ -108,7 +108,7 @@ ALboolean ModulatorState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->Device};
 
@@ -174,7 +174,7 @@ void ModulatorState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sampl
 }
 
 
-void Modulator_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Modulator_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -194,9 +194,9 @@ void Modulator_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
-void Modulator_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Modulator_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Modulator_setParamf(props, context, param, vals[0]); }
-void Modulator_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Modulator_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -215,10 +215,10 @@ void Modulator_setParami(ALeffectProps *props, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
-void Modulator_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Modulator_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { Modulator_setParami(props, context, param, vals[0]); }
 
-void Modulator_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Modulator_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -236,9 +236,9 @@ void Modulator_getParami(const ALeffectProps *props, ALCcontext *context, ALenum
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
-void Modulator_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Modulator_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { Modulator_getParami(props, context, param, vals); }
-void Modulator_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Modulator_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -253,7 +253,7 @@ void Modulator_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum
             alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
-void Modulator_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Modulator_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 { Modulator_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Modulator);
@@ -261,13 +261,13 @@ DEFINE_ALEFFECT_VTABLE(Modulator);
 
 struct ModulatorStateFactory final : public EffectStateFactory {
     EffectState *create() override { return new ModulatorState{}; }
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &Modulator_vtable; }
 };
 
-ALeffectProps ModulatorStateFactory::getDefaultProps() const noexcept
+EffectProps ModulatorStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Modulator.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
     props.Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
     props.Modulator.Waveform       = AL_RING_MODULATOR_DEFAULT_WAVEFORM;

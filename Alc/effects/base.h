@@ -8,19 +8,122 @@
 
 
 struct ALeffectslot;
-union ALeffectProps;
+
+
+union EffectProps {
+    struct {
+        // Shared Reverb Properties
+        ALfloat Density;
+        ALfloat Diffusion;
+        ALfloat Gain;
+        ALfloat GainHF;
+        ALfloat DecayTime;
+        ALfloat DecayHFRatio;
+        ALfloat ReflectionsGain;
+        ALfloat ReflectionsDelay;
+        ALfloat LateReverbGain;
+        ALfloat LateReverbDelay;
+        ALfloat AirAbsorptionGainHF;
+        ALfloat RoomRolloffFactor;
+        ALboolean DecayHFLimit;
+
+        // Additional EAX Reverb Properties
+        ALfloat GainLF;
+        ALfloat DecayLFRatio;
+        ALfloat ReflectionsPan[3];
+        ALfloat LateReverbPan[3];
+        ALfloat EchoTime;
+        ALfloat EchoDepth;
+        ALfloat ModulationTime;
+        ALfloat ModulationDepth;
+        ALfloat HFReference;
+        ALfloat LFReference;
+    } Reverb;
+
+    struct {
+        ALfloat AttackTime;
+        ALfloat ReleaseTime;
+        ALfloat Resonance;
+        ALfloat PeakGain;
+    } Autowah;
+
+    struct {
+        ALint Waveform;
+        ALint Phase;
+        ALfloat Rate;
+        ALfloat Depth;
+        ALfloat Feedback;
+        ALfloat Delay;
+    } Chorus; /* Also Flanger */
+
+    struct {
+        ALboolean OnOff;
+    } Compressor;
+
+    struct {
+        ALfloat Edge;
+        ALfloat Gain;
+        ALfloat LowpassCutoff;
+        ALfloat EQCenter;
+        ALfloat EQBandwidth;
+    } Distortion;
+
+    struct {
+        ALfloat Delay;
+        ALfloat LRDelay;
+
+        ALfloat Damping;
+        ALfloat Feedback;
+
+        ALfloat Spread;
+    } Echo;
+
+    struct {
+        ALfloat LowCutoff;
+        ALfloat LowGain;
+        ALfloat Mid1Center;
+        ALfloat Mid1Gain;
+        ALfloat Mid1Width;
+        ALfloat Mid2Center;
+        ALfloat Mid2Gain;
+        ALfloat Mid2Width;
+        ALfloat HighCutoff;
+        ALfloat HighGain;
+    } Equalizer;
+
+    struct {
+        ALfloat Frequency;
+        ALint LeftDirection;
+        ALint RightDirection;
+    } Fshifter;
+
+    struct {
+        ALfloat Frequency;
+        ALfloat HighPassCutoff;
+        ALint Waveform;
+    } Modulator;
+
+    struct {
+        ALint CoarseTune;
+        ALint FineTune;
+    } Pshifter;
+
+    struct {
+        ALfloat Gain;
+    } Dedicated;
+};
 
 
 struct EffectVtable {
-    void (*const setParami)(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val);
-    void (*const setParamiv)(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const setParamf)(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const setParamfv)(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals);
+    void (*const setParami)(EffectProps *props, ALCcontext *context, ALenum param, ALint val);
+    void (*const setParamiv)(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const setParamf)(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const setParamfv)(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const getParami)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const getParami)(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \
@@ -47,7 +150,7 @@ struct EffectState {
     virtual ~EffectState() = default;
 
     virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
-    virtual void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) = 0;
+    virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) = 0;
 
     void IncRef() noexcept;
@@ -59,7 +162,7 @@ struct EffectStateFactory {
     virtual ~EffectStateFactory() { }
 
     virtual EffectState *create() = 0;
-    virtual ALeffectProps getDefaultProps() const noexcept = 0;
+    virtual EffectProps getDefaultProps() const noexcept = 0;
     virtual const EffectVtable *getEffectVtable() const noexcept = 0;
 };
 

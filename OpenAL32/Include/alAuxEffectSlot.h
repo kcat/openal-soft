@@ -13,7 +13,6 @@
 
 
 struct ALeffectslot;
-union ALeffectProps;
 
 
 using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
@@ -25,7 +24,7 @@ struct ALeffectslotProps {
     ALeffectslot *Target;
 
     ALenum Type;
-    ALeffectProps Props;
+    EffectProps Props;
 
     EffectState *State;
 
@@ -40,7 +39,7 @@ struct ALeffectslot {
 
     struct {
         ALenum Type{AL_EFFECT_NULL};
-        ALeffectProps Props{};
+        EffectProps Props{};
 
         EffectState *State{nullptr};
     } Effect;
@@ -57,7 +56,7 @@ struct ALeffectslot {
         ALeffectslot *Target{nullptr};
 
         ALenum EffectType{AL_EFFECT_NULL};
-        ALeffectProps EffectProps{};
+        EffectProps mEffectProps{};
         EffectState *mEffectState{nullptr};
 
         ALfloat RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */

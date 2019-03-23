@@ -18,7 +18,7 @@ struct NullState final : public EffectState {
     ~NullState() override;
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(NullState)
@@ -47,7 +47,7 @@ ALboolean NullState::deviceUpdate(const ALCdevice* UNUSED(device))
 /* This updates the effect state. This is called any time the effect is
  * (re)loaded into a slot.
  */
-void NullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const ALeffectProps* UNUSED(props), const EffectTarget UNUSED(target))
+void NullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const EffectProps* UNUSED(props), const EffectTarget UNUSED(target))
 {
 }
 
@@ -60,7 +60,7 @@ void NullState::process(ALsizei /*samplesToDo*/, const ALfloat (*RESTRICT /*samp
 }
 
 
-void NullEffect_setParami(ALeffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void NullEffect_setParami(EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALint UNUSED(val))
 {
     switch(param)
     {
@@ -68,7 +68,7 @@ void NullEffect_setParami(ALeffectProps *UNUSED(props), ALCcontext *context, ALe
         alSetError(context, AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
     }
 }
-void NullEffect_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void NullEffect_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 {
     switch(param)
     {
@@ -76,7 +76,7 @@ void NullEffect_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum par
         NullEffect_setParami(props, context, param, vals[0]);
     }
 }
-void NullEffect_setParamf(ALeffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+void NullEffect_setParamf(EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
 {
     switch(param)
     {
@@ -84,7 +84,7 @@ void NullEffect_setParamf(ALeffectProps *UNUSED(props), ALCcontext *context, ALe
         alSetError(context, AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
     }
 }
-void NullEffect_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void NullEffect_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     switch(param)
     {
@@ -93,7 +93,7 @@ void NullEffect_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum par
     }
 }
 
-void NullEffect_getParami(const ALeffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALint* UNUSED(val))
+void NullEffect_getParami(const EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALint* UNUSED(val))
 {
     switch(param)
     {
@@ -101,7 +101,7 @@ void NullEffect_getParami(const ALeffectProps *UNUSED(props), ALCcontext *contex
         alSetError(context, AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
     }
 }
-void NullEffect_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void NullEffect_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 {
     switch(param)
     {
@@ -109,7 +109,7 @@ void NullEffect_getParamiv(const ALeffectProps *props, ALCcontext *context, ALen
         NullEffect_getParami(props, context, param, vals);
     }
 }
-void NullEffect_getParamf(const ALeffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
+void NullEffect_getParamf(const EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
 {
     switch(param)
     {
@@ -117,7 +117,7 @@ void NullEffect_getParamf(const ALeffectProps *UNUSED(props), ALCcontext *contex
         alSetError(context, AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
     }
 }
-void NullEffect_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void NullEffect_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     switch(param)
     {
@@ -131,7 +131,7 @@ DEFINE_ALEFFECT_VTABLE(NullEffect);
 
 struct NullStateFactory final : public EffectStateFactory {
     EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override;
 };
 
@@ -142,9 +142,9 @@ EffectState *NullStateFactory::create()
 /* Returns an ALeffectProps initialized with this effect type's default
  * property values.
  */
-ALeffectProps NullStateFactory::getDefaultProps() const noexcept
+EffectProps NullStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     return props;
 }
 

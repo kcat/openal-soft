@@ -452,7 +452,7 @@ struct ReverbState final : public EffectState {
         const ALfloat earlyGain, const ALfloat lateGain, const EffectTarget &target);
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ReverbState)
@@ -912,7 +912,7 @@ void ReverbState::update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *
     }
 }
 
-void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props, const EffectTarget target)
+void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *Device{Context->Device};
     const ALlistener &Listener = Context->Listener;
@@ -1462,7 +1462,7 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 }
 
 
-void EAXReverb_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void EAXReverb_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -1477,9 +1477,9 @@ void EAXReverb_setParami(ALeffectProps *props, ALCcontext *context, ALenum param
                        param);
     }
 }
-void EAXReverb_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void EAXReverb_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { EAXReverb_setParami(props, context, param, vals[0]); }
-void EAXReverb_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void EAXReverb_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -1608,7 +1608,7 @@ void EAXReverb_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param
                        param);
     }
 }
-void EAXReverb_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void EAXReverb_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 {
     switch(param)
     {
@@ -1633,7 +1633,7 @@ void EAXReverb_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum para
     }
 }
 
-void EAXReverb_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void EAXReverb_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -1646,9 +1646,9 @@ void EAXReverb_getParami(const ALeffectProps *props, ALCcontext *context, ALenum
                        param);
     }
 }
-void EAXReverb_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void EAXReverb_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { EAXReverb_getParami(props, context, param, vals); }
-void EAXReverb_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void EAXReverb_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -1737,7 +1737,7 @@ void EAXReverb_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum
                        param);
     }
 }
-void EAXReverb_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void EAXReverb_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 {
     switch(param)
     {
@@ -1763,13 +1763,13 @@ DEFINE_ALEFFECT_VTABLE(EAXReverb);
 
 struct ReverbStateFactory final : public EffectStateFactory {
     EffectState *create() override { return new ReverbState{}; }
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &EAXReverb_vtable; }
 };
 
-ALeffectProps ReverbStateFactory::getDefaultProps() const noexcept
+EffectProps ReverbStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Reverb.Density   = AL_EAXREVERB_DEFAULT_DENSITY;
     props.Reverb.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
     props.Reverb.Gain   = AL_EAXREVERB_DEFAULT_GAIN;
@@ -1801,7 +1801,7 @@ ALeffectProps ReverbStateFactory::getDefaultProps() const noexcept
 }
 
 
-void StdReverb_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void StdReverb_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -1815,9 +1815,9 @@ void StdReverb_setParami(ALeffectProps *props, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid reverb integer property 0x%04x", param);
     }
 }
-void StdReverb_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void StdReverb_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { StdReverb_setParami(props, context, param, vals[0]); }
-void StdReverb_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void StdReverb_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -1897,10 +1897,10 @@ void StdReverb_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param
             alSetError(context, AL_INVALID_ENUM, "Invalid reverb float property 0x%04x", param);
     }
 }
-void StdReverb_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void StdReverb_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { StdReverb_setParamf(props, context, param, vals[0]); }
 
-void StdReverb_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void StdReverb_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -1912,9 +1912,9 @@ void StdReverb_getParami(const ALeffectProps *props, ALCcontext *context, ALenum
             alSetError(context, AL_INVALID_ENUM, "Invalid reverb integer property 0x%04x", param);
     }
 }
-void StdReverb_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void StdReverb_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { StdReverb_getParami(props, context, param, vals); }
-void StdReverb_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void StdReverb_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -1970,7 +1970,7 @@ void StdReverb_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum
             alSetError(context, AL_INVALID_ENUM, "Invalid reverb float property 0x%04x", param);
     }
 }
-void StdReverb_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void StdReverb_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 { StdReverb_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(StdReverb);
@@ -1978,13 +1978,13 @@ DEFINE_ALEFFECT_VTABLE(StdReverb);
 
 struct StdReverbStateFactory final : public EffectStateFactory {
     EffectState *create() override { return new ReverbState{}; }
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &StdReverb_vtable; }
 };
 
-ALeffectProps StdReverbStateFactory::getDefaultProps() const noexcept
+EffectProps StdReverbStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Reverb.Density   = AL_REVERB_DEFAULT_DENSITY;
     props.Reverb.Diffusion = AL_REVERB_DEFAULT_DIFFUSION;
     props.Reverb.Gain   = AL_REVERB_DEFAULT_GAIN;

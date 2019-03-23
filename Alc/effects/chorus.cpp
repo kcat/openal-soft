@@ -91,7 +91,7 @@ struct ChorusState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(ChorusState)
@@ -121,7 +121,7 @@ ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
     return AL_TRUE;
 }
 
-void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props, const EffectTarget target)
+void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
     static constexpr ALsizei mindelay = MAX_RESAMPLE_PADDING << FRACTIONBITS;
 
@@ -256,7 +256,7 @@ void ChorusState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 }
 
 
-void Chorus_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Chorus_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -276,9 +276,9 @@ void Chorus_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, A
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
-void Chorus_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Chorus_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { Chorus_setParami(props, context, param, vals[0]); }
-void Chorus_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Chorus_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -310,10 +310,10 @@ void Chorus_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, A
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
-void Chorus_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Chorus_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Chorus_setParamf(props, context, param, vals[0]); }
 
-void Chorus_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Chorus_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -329,9 +329,9 @@ void Chorus_getParami(const ALeffectProps *props, ALCcontext *context, ALenum pa
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
-void Chorus_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Chorus_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { Chorus_getParami(props, context, param, vals); }
-void Chorus_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Chorus_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -355,7 +355,7 @@ void Chorus_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum pa
             alSetError(context, AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
-void Chorus_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Chorus_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 { Chorus_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Chorus);
@@ -363,13 +363,13 @@ DEFINE_ALEFFECT_VTABLE(Chorus);
 
 struct ChorusStateFactory final : public EffectStateFactory {
     EffectState *create() override { return new ChorusState{}; }
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &Chorus_vtable; }
 };
 
-ALeffectProps ChorusStateFactory::getDefaultProps() const noexcept
+EffectProps ChorusStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;
     props.Chorus.Phase = AL_CHORUS_DEFAULT_PHASE;
     props.Chorus.Rate = AL_CHORUS_DEFAULT_RATE;
@@ -380,7 +380,7 @@ ALeffectProps ChorusStateFactory::getDefaultProps() const noexcept
 }
 
 
-void Flanger_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Flanger_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -400,9 +400,9 @@ void Flanger_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, 
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
-void Flanger_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Flanger_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { Flanger_setParami(props, context, param, vals[0]); }
-void Flanger_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Flanger_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -434,10 +434,10 @@ void Flanger_setParamf(ALeffectProps *props, ALCcontext *context, ALenum param, 
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
-void Flanger_setParamfv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Flanger_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Flanger_setParamf(props, context, param, vals[0]); }
 
-void Flanger_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Flanger_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -453,9 +453,9 @@ void Flanger_getParami(const ALeffectProps *props, ALCcontext *context, ALenum p
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
-void Flanger_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Flanger_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { Flanger_getParami(props, context, param, vals); }
-void Flanger_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Flanger_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -479,7 +479,7 @@ void Flanger_getParamf(const ALeffectProps *props, ALCcontext *context, ALenum p
             alSetError(context, AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
-void Flanger_getParamfv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Flanger_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
 { Flanger_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Flanger);
@@ -490,13 +490,13 @@ DEFINE_ALEFFECT_VTABLE(Flanger);
  */
 struct FlangerStateFactory final : public EffectStateFactory {
     EffectState *create() override { return new ChorusState{}; }
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &Flanger_vtable; }
 };
 
-ALeffectProps FlangerStateFactory::getDefaultProps() const noexcept
+EffectProps FlangerStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Chorus.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
     props.Chorus.Phase = AL_FLANGER_DEFAULT_PHASE;
     props.Chorus.Rate = AL_FLANGER_DEFAULT_RATE;

@@ -116,7 +116,7 @@ void InitEffectParams(ALeffect *effect, ALenum type)
     }
     else
     {
-        effect->Props = ALeffectProps{};
+        effect->Props = EffectProps {};
         effect->vtab = nullptr;
     }
     effect->type = type;

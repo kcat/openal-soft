@@ -152,7 +152,7 @@ struct PshifterState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
 
     DEF_NEWDEL(PshifterState)
@@ -181,7 +181,7 @@ ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
     return AL_TRUE;
 }
 
-void PshifterState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
+void PshifterState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const float pitch{std::pow(2.0f,
         static_cast<ALfloat>(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
@@ -326,12 +326,12 @@ void PshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sample
 }
 
 
-void Pshifter_setParamf(ALeffectProps*, ALCcontext *context, ALenum param, ALfloat)
+void Pshifter_setParamf(EffectProps*, ALCcontext *context, ALenum param, ALfloat)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
-void Pshifter_setParamfv(ALeffectProps*, ALCcontext *context, ALenum param, const ALfloat*)
+void Pshifter_setParamfv(EffectProps*, ALCcontext *context, ALenum param, const ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x", param); }
 
-void Pshifter_setParami(ALeffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Pshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
     switch(param)
     {
@@ -351,10 +351,10 @@ void Pshifter_setParami(ALeffectProps *props, ALCcontext *context, ALenum param,
             alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x", param);
     }
 }
-void Pshifter_setParamiv(ALeffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Pshifter_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { Pshifter_setParami(props, context, param, vals[0]); }
 
-void Pshifter_getParami(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Pshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 {
     switch(param)
     {
@@ -369,12 +369,12 @@ void Pshifter_getParami(const ALeffectProps *props, ALCcontext *context, ALenum 
             alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x", param);
     }
 }
-void Pshifter_getParamiv(const ALeffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Pshifter_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { Pshifter_getParami(props, context, param, vals); }
 
-void Pshifter_getParamf(const ALeffectProps*, ALCcontext *context, ALenum param, ALfloat*)
+void Pshifter_getParamf(const EffectProps*, ALCcontext *context, ALenum param, ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
-void Pshifter_getParamfv(const ALeffectProps*, ALCcontext *context, ALenum param, ALfloat*)
+void Pshifter_getParamfv(const EffectProps*, ALCcontext *context, ALenum param, ALfloat*)
 { alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(Pshifter);
@@ -382,16 +382,16 @@ DEFINE_ALEFFECT_VTABLE(Pshifter);
 
 struct PshifterStateFactory final : public EffectStateFactory {
     EffectState *create() override;
-    ALeffectProps getDefaultProps() const noexcept override;
+    EffectProps getDefaultProps() const noexcept override;
     const EffectVtable *getEffectVtable() const noexcept override { return &Pshifter_vtable; }
 };
 
 EffectState *PshifterStateFactory::create()
 { return new PshifterState{}; }
 
-ALeffectProps PshifterStateFactory::getDefaultProps() const noexcept
+EffectProps PshifterStateFactory::getDefaultProps() const noexcept
 {
-    ALeffectProps props{};
+    EffectProps props{};
     props.Pshifter.CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;
     props.Pshifter.FineTune   = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
     return props;

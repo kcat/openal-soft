@@ -340,7 +340,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         slot->Params.AuxSendAuto = props->AuxSendAuto;
         slot->Params.Target = props->Target;
         slot->Params.EffectType = props->Type;
-        slot->Params.EffectProps = props->Props;
+        slot->Params.mEffectProps = props->Props;
         if(IsReverbEffect(props->Type))
         {
             slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
@@ -414,7 +414,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         ALCdevice *device{context->Device};
         output = EffectTarget{&device->Dry, &device->RealOut};
     }
-    state->update(context, slot, &slot->Params.EffectProps, output);
+    state->update(context, slot, &slot->Params.mEffectProps, output);
     return true;
 }
 

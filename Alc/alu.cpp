@@ -562,8 +562,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(isbformat) /* Special handling for B-Format sources. */
     {
-        voice->mDirect.Buffer = Device->Dry.Buffer;
-        voice->mDirect.Channels = Device->Dry.NumChannels;
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -805,8 +803,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     else
     {
         /* Non-HRTF rendering. Use normal panning to the output. */
-        voice->mDirect.Buffer = Device->Dry.Buffer;
-        voice->mDirect.Channels = Device->Dry.NumChannels;
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {

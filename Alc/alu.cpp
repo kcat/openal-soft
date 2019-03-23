@@ -723,12 +723,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
-            ALfloat ev{0.0f}, az{0.0f};
-            if(Distance > 0.0f)
-            {
-                ev = std::asin(clampf(ypos, -1.0f, 1.0f));
-                az = std::atan2(xpos, -zpos);
-            }
+            const ALfloat ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+            const ALfloat az{std::atan2(xpos, -zpos)};
 
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
@@ -833,12 +829,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 CalcAmbiCoeffs(-xpos, ypos, -zpos, Spread, coeffs);
             else
             {
-                ALfloat ev{0.0f}, az{0.0f};
-                if(Distance > 0.0f)
-                {
-                    ev = std::asin(clampf(ypos, -1.0f, 1.0f));
-                    az = std::atan2(xpos, -zpos);
-                }
+                const ALfloat ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+                const ALfloat az{std::atan2(xpos, -zpos)};
                 CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
             }
 

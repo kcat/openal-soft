@@ -45,7 +45,8 @@ namespace {
 
 inline ALfloat Sin(ALsizei index)
 {
-    return std::sin(static_cast<ALfloat>(index) * (al::MathDefs<float>::Tau() / static_cast<ALfloat>WAVEFORM_FRACONE));
+    return std::sin(static_cast<ALfloat>(index) *
+        (al::MathDefs<float>::Tau() / ALfloat{WAVEFORM_FRACONE}));
 }
 
 inline ALfloat Saw(ALsizei index)
@@ -111,8 +112,8 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
 {
     const ALCdevice *device{context->Device};
 
-    mStep = fastf2i(props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency) * WAVEFORM_FRACONE);
-    mStep = clampi(mStep, 0, WAVEFORM_FRACONE-1);
+    const float step{props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency)};
+    mStep = fastf2i(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
 
     if(mStep == 0)
         mGetSamples = Modulate<One>;

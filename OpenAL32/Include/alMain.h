@@ -410,7 +410,7 @@ struct ALCdevice {
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
     alignas(16) ALfloat NfcSampleData[BUFFERSIZE];
 
-    /* Mixing buffer used by the Dry mix, FOAOut, and Real out. */
+    /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<std::array<ALfloat,BUFFERSIZE>, 16> MixBuffer;
 
     /* The "dry" path corresponds to the main output. */

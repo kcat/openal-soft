@@ -2245,7 +2245,7 @@ static void ALCdevice_DecRef(ALCdevice *device)
 {
     auto ref = DecrementRef(&device->ref);
     TRACEREF("%p decreasing refcount to %u\n", device, ref);
-    if(ref == 0) delete device;
+    if(UNLIKELY(ref == 0)) delete device;
 }
 
 /* Simple RAII device reference. Takes the reference of the provided ALCdevice,
@@ -2538,7 +2538,7 @@ void ALCcontext_DecRef(ALCcontext *context)
 {
     auto ref = DecrementRef(&context->ref);
     TRACEREF("%p decreasing refcount to %u\n", context, ref);
-    if(ref == 0) delete context;
+    if(UNLIKELY(ref == 0)) delete context;
 }
 
 /* VerifyContext

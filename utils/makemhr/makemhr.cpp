@@ -1534,6 +1534,8 @@ int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COUNT], co
 static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
+    char startbytes[4]{};
+    size_t startbytecount{0u};
     HrirDataT hData;
     FILE *fp;
     int ret;
@@ -1551,16 +1553,33 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
             fprintf(stderr, "Error: Could not open input file '%s'\n", inName);
             return 0;
         }
+
+        startbytecount = fread(startbytes, 1, sizeof(startbytes), fp);
+        if(startbytecount != sizeof(startbytes))
+        {
+            fclose(fp);
+            fprintf(stderr, "Error: Could not read input file '%s'\n", inName);
+            return 0;
+        }
+
+        if(startbytes[0] == '\x89' && startbytes[1] == 'H' && startbytes[2] == 'D' &&
+           startbytes[3] == 'F')
+        {
+            fclose(fp);
+            fprintf(stderr, "Error: Direct SOFA input not yet supported\n");
+            return 0;
+        }
     }
-    fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-    if(!LoadDefInput(fp, inName, fftSize, truncSize, chanMode, &hData))
+    if(fp != nullptr)
     {
+        fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
+        const bool success{LoadDefInput(fp, startbytes, startbytecount, inName, fftSize, truncSize,
+            chanMode, &hData)};
         if(fp != stdin)
             fclose(fp);
-        return 0;
+        if(!success)
+            return 0;
     }
-    if(fp != stdin)
-        fclose(fp);
 
     if(equalize)
     {
@@ -1660,7 +1679,7 @@ int main(int argc, char *argv[])
     model = DEFAULT_HEAD_MODEL;
     radius = DEFAULT_CUSTOM_RADIUS;
 
-    while((opt=getopt(argc, argv, "r:m:f:e:s:l:w:d:c:e:i:o:h")) != -1)
+    while((opt=getopt(argc, argv, "r:mf:e:s:l:w:d:c:e:i:o:h")) != -1)
     {
         switch(opt)
         {

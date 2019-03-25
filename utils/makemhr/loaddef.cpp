@@ -137,7 +137,7 @@ struct SourceRefT {
 
 // Setup the reader on the given file.  The filename can be NULL if no error
 // output is desired.
-static void TrSetup(FILE *fp, const char *filename, TokenReaderT *tr)
+static void TrSetup(FILE *fp, const char *startbytes, size_t startbytecount, const char *filename, TokenReaderT *tr)
 {
     const char *name = nullptr;
 
@@ -164,6 +164,12 @@ static void TrSetup(FILE *fp, const char *filename, TokenReaderT *tr)
     tr->mColumn = 1;
     tr->mIn = 0;
     tr->mOut = 0;
+
+    if(startbytecount > 0)
+    {
+        memcpy(tr->mRing, startbytes, startbytecount);
+        tr->mIn += startbytecount;
+    }
 }
 
 // Prime the reader's ring buffer, and return a result indicating that there
@@ -966,7 +972,7 @@ static int LoadAsciiSource(FILE *fp, const SourceRefT *src, const uint n, double
     uint i, j;
     double dummy;
 
-    TrSetup(fp, nullptr, &tr);
+    TrSetup(fp, nullptr, 0, nullptr, &tr);
     for(i = 0;i < src->mOffset;i++)
     {
         if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits), &dummy))
@@ -1995,11 +2001,12 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
 }
 
 
-bool LoadDefInput(FILE *fp, const char *filename, const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
+bool LoadDefInput(FILE *fp, const char *startbytes, size_t startbytecount, const char *filename,
+    const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
 {
     TokenReaderT tr;
 
-    TrSetup(fp, filename, &tr);
+    TrSetup(fp, startbytes, startbytecount, filename, &tr);
     if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, hData))
     {
         if(fp != stdin)

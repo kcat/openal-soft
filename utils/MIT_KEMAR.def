@@ -1,5 +1,5 @@
-# This is a makehrtf HRIR definition file.  It is used to define the layout
-# and source data to be processed into an OpenAL Soft compatible HRTF.
+# This is a makemhr HRIR definition file.  It is used to define the layout and
+# source data to be processed into an OpenAL Soft compatible HRTF.
 #
 # This definition is used to transform the left ear HRIRs from the full set
 # of KEMAR HRIRs provided by Bill Gardner <billg@media.mit.edu> and Keith
@@ -33,9 +33,9 @@ type     = mono
 points   = 512
 
 # The radius of the listener's head (measured ear-to-ear in meters).  The
-# makehrtf utility uses this value to rescale measured propagation delays
-# when a custom head radius is specified on the command line.  It is also
-# used as the default radius when the spherical model is used to calculate an
+# makemhr utility uses this value to rescale measured propagation delays when
+# a custom head radius is specified on the command line.  It is also used as
+# the default radius when the spherical model is used to calculate an
 # approximate set of delays.  This should match the data set as close as
 # possible for accurate rescaling when using the measured delays (the
 # default).  At the moment, radius rescaling does not adjust HRIR coupling.

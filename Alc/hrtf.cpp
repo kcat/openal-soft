@@ -76,7 +76,7 @@ using namespace std::placeholders;
 using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 
 /* Data set limits must be the same as or more flexible than those defined in
- * the makehrtf utility.
+ * the makemhr utility.
  */
 #define MIN_IR_SIZE                  (8)
 #define MAX_IR_SIZE                  (512)

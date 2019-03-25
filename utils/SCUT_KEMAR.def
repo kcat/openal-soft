@@ -1,5 +1,5 @@
-# This is a makehrtf HRIR definition file.  It is used to define the layout
-# and source data to be processed into an OpenAL Soft compatible HRTF.
+# This is a makemhr HRIR definition file.  It is used to define the layout and
+# source data to be processed into an OpenAL Soft compatible HRTF.
 #
 # This definition is used to transform the near-field KEMAR HRIRs provided by
 # Bosun Xie <phbsxie@scut.edu.cn> of the South China University of

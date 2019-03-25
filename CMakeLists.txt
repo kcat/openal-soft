@@ -1462,7 +1462,8 @@ IF(ALSOFT_UTILS)
             utils/makemhr/loaddef.h
             utils/makemhr/loadsofa.cpp
             utils/makemhr/loadsofa.h
-            utils/makemhr/makemhr.cpp)
+            utils/makemhr/makemhr.cpp
+            utils/makemhr/makemhr.h)
         if(NOT HAVE_GETOPT)
             set(MAKEMHR_SRCS  ${MAKEMHR_SRCS} utils/getopt.c utils/getopt.h)
         endif()

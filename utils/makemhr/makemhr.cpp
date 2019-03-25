@@ -109,6 +109,14 @@ using namespace std::placeholders;
 #endif
 
 
+// Head model used for calculating the impulse delays.
+enum HeadModelT {
+    HM_NONE,
+    HM_DATASET, // Measure the onset from the dataset.
+    HM_SPHERE   // Calculate the onset using a spherical head model.
+};
+
+
 // The epsilon used to maintain signal stability.
 #define EPSILON                      (1e-9)
 
@@ -147,13 +155,6 @@ using namespace std::placeholders;
 // The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
 // response protocol 02.
 #define MHR_FORMAT                   ("MinPHR02")
-
-// Byte order for the serialization routines.
-enum ByteOrderT {
-    BO_NONE,
-    BO_LITTLE,
-    BO_BIG
-};
 
 /* Channel index enums. Mono uses LeftChannel only. */
 enum ChannelIndex : uint {
@@ -653,24 +654,14 @@ static int WriteAscii(const char *out, FILE *fp, const char *filename)
 
 // Write a binary value of the given byte order and byte size to a file,
 // loading it from a 32-bit unsigned integer.
-static int WriteBin4(const ByteOrderT order, const uint bytes, const uint32_t in, FILE *fp, const char *filename)
+static int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *filename)
 {
     uint8_t out[4];
     uint i;
 
-    switch(order)
-    {
-        case BO_LITTLE:
-            for(i = 0;i < bytes;i++)
-                out[i] = (in>>(i*8)) & 0x000000FF;
-            break;
-        case BO_BIG:
-            for(i = 0;i < bytes;i++)
-                out[bytes - i - 1] = (in>>(i*8)) & 0x000000FF;
-            break;
-        default:
-            break;
-    }
+    for(i = 0;i < bytes;i++)
+        out[i] = (in>>(i*8)) & 0x000000FF;
+
     if(fwrite(out, 1, bytes, fp) != bytes)
     {
         fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
@@ -695,26 +686,26 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     }
     if(!WriteAscii(MHR_FORMAT, fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 4, hData->mIrRate, fp, filename))
+    if(!WriteBin4(4, hData->mIrRate, fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mSampleType), fp, filename))
+    if(!WriteBin4(1, static_cast<uint32_t>(hData->mSampleType), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
+    if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, hData->mIrPoints, fp, filename))
+    if(!WriteBin4(1, hData->mIrPoints, fp, filename))
         return 0;
-    if(!WriteBin4(BO_LITTLE, 1, hData->mFdCount, fp, filename))
+    if(!WriteBin4(1, hData->mFdCount, fp, filename))
         return 0;
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
-        if(!WriteBin4(BO_LITTLE, 2, fdist, fp, filename))
+        if(!WriteBin4(2, fdist, fp, filename))
             return 0;
-        if(!WriteBin4(BO_LITTLE, 1, hData->mFds[fi].mEvCount, fp, filename))
+        if(!WriteBin4(1, hData->mFds[fi].mEvCount, fp, filename))
             return 0;
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
-            if(!WriteBin4(BO_LITTLE, 1, hData->mFds[fi].mEvs[ei].mAzCount, fp, filename))
+            if(!WriteBin4(1, hData->mFds[fi].mEvs[ei].mAzCount, fp, filename))
                 return 0;
         }
     }
@@ -739,7 +730,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
                 for(i = 0;i < (channels * n);i++)
                 {
                     int v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
-                    if(!WriteBin4(BO_LITTLE, bps, static_cast<uint32_t>(v), fp, filename))
+                    if(!WriteBin4(bps, static_cast<uint32_t>(v), fp, filename))
                         return 0;
                 }
             }
@@ -754,13 +745,13 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
                 const HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 int v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[0]), MAX_HRTD));
 
-                if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(v), fp, filename))
+                if(!WriteBin4(1, static_cast<uint32_t>(v), fp, filename))
                     return 0;
                 if(hData->mChannelType == CT_STEREO)
                 {
                     v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[1]), MAX_HRTD));
 
-                    if(!WriteBin4(BO_LITTLE, 1, static_cast<uint32_t>(v), fp, filename))
+                    if(!WriteBin4(1, static_cast<uint32_t>(v), fp, filename))
                         return 0;
                 }
             }
@@ -1570,7 +1561,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
             fclose(fp);
         return 0;
     }
-    if(!ProcessSources(model, &tr, &hData))
+    if(!ProcessSources(&tr, &hData))
     {
         if(inName)
             fclose(fp);

@@ -1701,7 +1701,7 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
 }
 
 // Process the list of sources in the data set definition.
-int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *hData)
+int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
@@ -1826,16 +1826,14 @@ int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *hData)
 
                 ExtractSofaHrir(sofa, si, 0, src.mOffset, hData->mIrPoints, hrir.data());
                 azd->mIrs[0] = &hrirs[hData->mIrSize * azd->mIndex];
-                if(model == HM_DATASET)
-                    azd->mDelays[0] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
+                azd->mDelays[0] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
                 AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[0]);
 
                 if(src.mChannel == 1)
                 {
                     ExtractSofaHrir(sofa, si, 1, src.mOffset, hData->mIrPoints, hrir.data());
                     azd->mIrs[1] = &hrirs[hData->mIrSize * (hData->mIrCount + azd->mIndex)];
-                    if(model == HM_DATASET)
-                        azd->mDelays[1] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
+                    azd->mDelays[1] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
                     AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[1]);
                 }
 
@@ -1893,8 +1891,7 @@ int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *hData)
                 }
             }
             azd->mIrs[ti] = &hrirs[hData->mIrSize * (ti * hData->mIrCount + azd->mIndex)];
-            if(model == HM_DATASET)
-                azd->mDelays[ti] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0 / factor[ti], azd->mDelays[ti]);
+            azd->mDelays[ti] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0 / factor[ti], azd->mDelays[ti]);
             AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0 / factor[ti], azd->mIrs[ti]);
             factor[ti] += 1.0;
             if(!TrIsOperator(tr, "+"))

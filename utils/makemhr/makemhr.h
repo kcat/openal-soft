@@ -40,14 +40,6 @@ using uint = unsigned int;
 using complex_d = std::complex<double>;
 
 
-// Head model used for calculating the impulse delays.
-enum HeadModelT {
-    HM_NONE,
-    HM_DATASET, // Measure the onset from the dataset.
-    HM_SPHERE   // Calculate the onset using a spherical head model.
-};
-
-
 // Sample and channel type enum values.
 enum SampleTypeT {
     ST_S16 = 0,

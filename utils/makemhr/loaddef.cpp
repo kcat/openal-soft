@@ -1181,7 +1181,7 @@ static ChannelTypeT MatchChannelType(const char *ident)
 
 
 // Process the data set definition to read and validate the data set metrics.
-int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, HrirDataT *hData)
+int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
 {
     int hasRate = 0, hasType = 0, hasPoints = 0, hasRadius = 0;
     int hasDistance = 0, hasAzimuths = 0;
@@ -1234,6 +1234,11 @@ int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, H
             {
                 TrErrorAt(tr, line, col, "Expected a channel type.\n");
                 return 0;
+            }
+            else if(hData->mChannelType == CT_STEREO)
+            {
+                if(chanMode == CM_ForceMono)
+                    hData->mChannelType = CT_MONO;
             }
             hasType = 1;
         }

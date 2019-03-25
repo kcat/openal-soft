@@ -40,6 +40,11 @@ using uint = unsigned int;
 using complex_d = std::complex<double>;
 
 
+enum ChannelModeT : bool {
+    CM_AllowStereo = false,
+    CM_ForceMono = true
+};
+
 // Sample and channel type enum values.
 enum SampleTypeT {
     ST_S16 = 0,

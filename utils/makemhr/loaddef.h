@@ -24,7 +24,7 @@ struct TokenReaderT {
 };
 
 void TrSetup(FILE *fp, const char *filename, TokenReaderT *tr);
-int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, HrirDataT *hData);
+int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData);
 int ProcessSources(TokenReaderT *tr, HrirDataT *hData);
 
 #endif /* LOADDEF_H */

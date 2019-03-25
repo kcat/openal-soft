@@ -1531,7 +1531,7 @@ int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COUNT], co
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition(const char *inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const char *outName)
+static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
     TokenReaderT tr;
@@ -1555,7 +1555,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
         fp = stdin;
         TrSetup(fp, "<stdin>", &tr);
     }
-    if(!ProcessMetrics(&tr, fftSize, truncSize, &hData))
+    if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, &hData))
     {
         if(inName != nullptr)
             fclose(fp);
@@ -1616,6 +1616,8 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, "Options:\n");
     fprintf(ofile, " -r <rate>       Change the data set sample rate to the specified value and\n");
     fprintf(ofile, "                 resample the HRIRs accordingly.\n");
+    fprintf(ofile, " -m              Change the data set to mono, mirroring the left ear for the\n");
+    fprintf(ofile, "                 right ear.\n");
     fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
     fprintf(ofile, " -e {on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
     fprintf(ofile, " -s {on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
@@ -1638,6 +1640,7 @@ int main(int argc, char *argv[])
     uint outRate, fftSize;
     int equalize, surface;
     char *end = nullptr;
+    ChannelModeT chanMode;
     HeadModelT model;
     uint truncSize;
     double radius;
@@ -1655,6 +1658,7 @@ int main(int argc, char *argv[])
 
     outName = "./oalsoft_hrtf_%r.mhr";
     outRate = 0;
+    chanMode = CM_AllowStereo;
     fftSize = DEFAULT_FFTSIZE;
     equalize = DEFAULT_EQUALIZE;
     surface = DEFAULT_SURFACE;
@@ -1663,7 +1667,7 @@ int main(int argc, char *argv[])
     model = DEFAULT_HEAD_MODEL;
     radius = DEFAULT_CUSTOM_RADIUS;
 
-    while((opt=getopt(argc, argv, "r:f:e:s:l:w:d:c:e:i:o:h")) != -1)
+    while((opt=getopt(argc, argv, "r:m:f:e:s:l:w:d:c:e:i:o:h")) != -1)
     {
         switch(opt)
         {
@@ -1674,6 +1678,10 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
                 exit(EXIT_FAILURE);
             }
+            break;
+
+        case 'm':
+            chanMode = CM_ForceMono;
             break;
 
         case 'f':
@@ -1771,9 +1779,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    if(!ProcessDefinition(inName, outRate, fftSize, equalize, surface, limit,
-                          truncSize, model, radius, outName))
-        return -1;
+    int ret = ProcessDefinition(inName, outRate, chanMode, fftSize, equalize, surface, limit,
+        truncSize, model, radius, outName);
+    if(!ret) return -1;
     fprintf(stdout, "Operation completed.\n");
 
     return EXIT_SUCCESS;

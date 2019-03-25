@@ -29,8 +29,25 @@
 #include "loaddef.h"
 
 
+// Constants for accessing the token reader's ring buffer.
+#define TR_RING_BITS                 (16)
+#define TR_RING_SIZE                 (1 << TR_RING_BITS)
+#define TR_RING_MASK                 (TR_RING_SIZE - 1)
+
 // The token reader's load interval in bytes.
 #define TR_LOAD_SIZE                 (TR_RING_SIZE >> 2)
+
+// Token reader state for parsing the data set definition.
+struct TokenReaderT {
+    FILE *mFile;
+    const char *mName;
+    uint        mLine;
+    uint        mColumn;
+    char   mRing[TR_RING_SIZE];
+    size_t mIn;
+    size_t mOut;
+};
+
 
 // The maximum identifier length used when processing the data set
 // definition.
@@ -120,7 +137,7 @@ struct SourceRefT {
 
 // Setup the reader on the given file.  The filename can be NULL if no error
 // output is desired.
-void TrSetup(FILE *fp, const char *filename, TokenReaderT *tr)
+static void TrSetup(FILE *fp, const char *filename, TokenReaderT *tr)
 {
     const char *name = nullptr;
 
@@ -1181,7 +1198,7 @@ static ChannelTypeT MatchChannelType(const char *ident)
 
 
 // Process the data set definition to read and validate the data set metrics.
-int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
+static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
 {
     int hasRate = 0, hasType = 0, hasPoints = 0, hasRadius = 0;
     int hasDistance = 0, hasAzimuths = 0;
@@ -1706,7 +1723,7 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
 }
 
 // Process the list of sources in the data set definition.
-int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
+static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
@@ -1975,4 +1992,26 @@ int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
     TrError(tr, "Errant data at end of source list.\n");
     mysofa_cache_release_all();
     return 0;
+}
+
+
+bool LoadDefInput(FILE *fp, const char *filename, const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
+{
+    TokenReaderT tr;
+
+    TrSetup(fp, filename, &tr);
+    if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, hData))
+    {
+        if(fp != stdin)
+            fclose(fp);
+        return false;
+    }
+    if(!ProcessSources(&tr, hData))
+    {
+        if(fp != stdin)
+            fclose(fp);
+        return false;
+    }
+
+    return true;
 }

@@ -1534,41 +1534,34 @@ int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COUNT], co
 static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
-    TokenReaderT tr;
     HrirDataT hData;
     FILE *fp;
     int ret;
 
-    fprintf(stdout, "Reading HRIR definition from %s...\n", inName?inName:"stdin");
-    if(inName != nullptr)
+    if(!inName)
+    {
+        inName = "stdin";
+        fp = stdin;
+    }
+    else
     {
         fp = fopen(inName, "r");
         if(fp == nullptr)
         {
-            fprintf(stderr, "\nError: Could not open definition file '%s'\n", inName);
+            fprintf(stderr, "Error: Could not open input file '%s'\n", inName);
             return 0;
         }
-        TrSetup(fp, inName, &tr);
     }
-    else
+    fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
+    if(!LoadDefInput(fp, inName, fftSize, truncSize, chanMode, &hData))
     {
-        fp = stdin;
-        TrSetup(fp, "<stdin>", &tr);
-    }
-    if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, &hData))
-    {
-        if(inName != nullptr)
-            fclose(fp);
-        return 0;
-    }
-    if(!ProcessSources(&tr, &hData))
-    {
-        if(inName)
+        if(fp != stdin)
             fclose(fp);
         return 0;
     }
     if(fp != stdin)
         fclose(fp);
+
     if(equalize)
     {
         uint c = (hData.mChannelType == CT_STEREO) ? 2 : 1;

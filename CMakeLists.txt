@@ -1457,15 +1457,20 @@ IF(ALSOFT_UTILS)
 
     find_package(MySOFA)
     if(MYSOFA_FOUND)
-        set(MAKEHRTF_SRCS  utils/makehrtf.cpp)
+        set(MAKEMHR_SRCS
+            utils/makemhr/loaddef.cpp
+            utils/makemhr/loaddef.h
+            utils/makemhr/loadsofa.cpp
+            utils/makemhr/loadsofa.h
+            utils/makemhr/makemhr.cpp)
         if(NOT HAVE_GETOPT)
-            set(MAKEHRTF_SRCS  ${MAKEHRTF_SRCS} utils/getopt.c utils/getopt.h)
+            set(MAKEMHR_SRCS  ${MAKEMHR_SRCS} utils/getopt.c utils/getopt.h)
         endif()
-        add_executable(makehrtf ${MAKEHRTF_SRCS})
-        target_compile_definitions(makehrtf PRIVATE ${CPP_DEFS})
-        target_compile_options(makehrtf PRIVATE ${C_FLAGS})
-        target_link_libraries(makehrtf PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
-        set(UTIL_TARGETS ${UTIL_TARGETS} makehrtf)
+        add_executable(makemhr ${MAKEMHR_SRCS})
+        target_compile_definitions(makemhr PRIVATE ${CPP_DEFS})
+        target_compile_options(makemhr PRIVATE ${C_FLAGS})
+        target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
+        set(UTIL_TARGETS ${UTIL_TARGETS} makemhr)
 
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)
         add_executable(sofa-info ${SOFAINFO_SRCS})

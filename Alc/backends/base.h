@@ -60,6 +60,11 @@ enum class BackendType {
     Capture
 };
 
+enum class DevProbe {
+    Playback,
+    Capture
+};
+
 
 struct BackendFactory {
     virtual bool init() = 0;

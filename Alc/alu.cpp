@@ -560,8 +560,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     );
 
     voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
-    if(isbformat) /* Special handling for B-Format sources. */
+    if(isbformat)
     {
+        /* Special handling for B-Format sources. */
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -592,21 +593,17 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 CalcAmbiCoeffs(-xpos, ypos, -zpos, Spread, coeffs);
             else
             {
+                /* Clamp Y, in case rounding errors caused it to end up outside
+                 * of -1...+1.
+                 */
+                const ALfloat ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+                /* Negate Z for right-handed coords with -Z in front. */
+                const ALfloat az{std::atan2(xpos, -zpos)};
+
                 /* A scalar of 1.5 for plain stereo results in +/-60 degrees
                  * being moved to +/-90 degrees for direct right and left
                  * speaker responses.
                  */
-                ALfloat ev{0.0f}, az{0.0f};
-                if(Distance > 0.0f)
-                {
-                    /* Clamp Y, in case rounding errors caused it to end up
-                     * outside of -1...+1.
-                     */
-                    ev = std::asin(clampf(ypos, -1.0f, 1.0f));
-                    /* Negate Z for right-handed coords with -Z in front. */
-                    az = std::atan2(xpos, -zpos);
-                }
-
                 CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
             }
 

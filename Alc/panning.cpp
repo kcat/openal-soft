@@ -971,7 +971,6 @@ no_hrtf:
     if(old_hrtf)
         old_hrtf->DecRef();
     old_hrtf = nullptr;
-    TRACE("HRTF disabled\n");
 
     device->mRenderMode = StereoPair;
 
@@ -987,8 +986,6 @@ no_hrtf:
         InitPanning(device);
         return;
     }
-
-    TRACE("BS2B disabled\n");
 
     const char *mode;
     if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding", &mode))
@@ -1006,7 +1003,7 @@ no_hrtf:
         return;
     }
 
-    TRACE("UHJ disabled\n");
+    TRACE("Stereo rendering\n");
     InitPanning(device);
 }
 

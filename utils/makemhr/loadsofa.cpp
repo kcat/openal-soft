@@ -415,9 +415,9 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
     if(!ir_dim)
     {
         fprintf(stderr, "Missing IR dimensions\n");
-        /*return false;*/
+        return false;
     }
-    else if(ir_dim != std::string{"M,R,N"})
+    if(ir_dim != std::string{"M,R,N"})
     {
         fprintf(stderr, "Unsupported IR dimensions: %s\n", ir_dim);
         return false;

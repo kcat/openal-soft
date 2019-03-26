@@ -1569,11 +1569,9 @@ static inline void UpdateClockBase(ALCdevice *device)
 {
     using std::chrono::seconds;
     using std::chrono::nanoseconds;
-    using std::chrono::duration_cast;
 
     IncrementRef(&device->MixCount);
-    device->ClockBase += duration_cast<nanoseconds>(seconds{device->SamplesDone}) /
-                         device->Frequency;
+    device->ClockBase += nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
     device->SamplesDone = 0;
     IncrementRef(&device->MixCount);
 }
@@ -1585,6 +1583,9 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
+    using std::chrono::seconds;
+    using std::chrono::nanoseconds;
+
     HrtfRequestMode hrtf_userreq = Hrtf_Default;
     HrtfRequestMode hrtf_appreq = Hrtf_Default;
     ALCenum gainLimiter = device->LimiterState;
@@ -1829,7 +1830,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->MixBuffer.shrink_to_fit();
 
     UpdateClockBase(device);
-    device->FixedLatency = std::chrono::nanoseconds::zero();
+    device->FixedLatency = nanoseconds::zero();
 
     device->DitherSeed = DITHER_RNG_SEED;
 
@@ -2036,8 +2037,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         auto limiter = CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f);
         /* Convert the lookahead from samples to nanosamples to nanoseconds. */
-        device->FixedLatency += std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::seconds(limiter->getLookAhead())) / device->Frequency;
+        device->FixedLatency += nanoseconds{seconds{limiter->getLookAhead()}} / device->Frequency;
         device->Limiter = std::move(limiter);
     }
     TRACE("Output limiter %s\n", device->Limiter ? "enabled" : "disabled");
@@ -3265,7 +3265,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 { std::lock_guard<std::mutex> _{dev->StateLock};
                     using std::chrono::seconds;
                     using std::chrono::nanoseconds;
-                    using std::chrono::duration_cast;
 
                     nanoseconds basecount;
                     ALuint samplecount;
@@ -3276,8 +3275,8 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                         basecount = dev->ClockBase;
                         samplecount = dev->SamplesDone;
                     } while(refcount != ReadRef(&dev->MixCount));
-                    *values = (duration_cast<nanoseconds>(seconds{samplecount})/dev->Frequency +
-                        basecount).count();
+                    basecount += nanoseconds{seconds{samplecount}} / dev->Frequency;
+                    *values = basecount.count();
                 }
                 break;
 

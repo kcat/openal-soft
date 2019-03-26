@@ -21,9 +21,8 @@ inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
 {
     using std::chrono::seconds;
     using std::chrono::nanoseconds;
-    using std::chrono::duration_cast;
 
-    auto ns = duration_cast<nanoseconds>(seconds{device->SamplesDone}) / device->Frequency;
+    auto ns = nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
     return device->ClockBase + ns;
 }
 

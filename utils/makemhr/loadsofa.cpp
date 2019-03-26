@@ -437,7 +437,7 @@ static double CalcHrirOnset(const uint rate, const uint n, const double *hrir)
     }
 
     double mag{std::accumulate(upsampled.cbegin(), upsampled.cend(), double{0.0},
-        [](const double mag, const double sample) -> bool
+        [](const double mag, const double sample) -> double
         { return std::max(mag, std::abs(sample)); })};
 
     mag *= 0.15;

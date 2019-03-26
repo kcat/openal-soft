@@ -22,6 +22,7 @@
  */
 
 #include <cstring>
+#include <cstdarg>
 #include <limits>
 
 #include "mysofa.h"

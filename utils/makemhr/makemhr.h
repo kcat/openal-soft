@@ -102,7 +102,7 @@ struct HrirDataT {
 };
 
 
-int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COUNT], const uint evCounts[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData);
+int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT], const uint (&evCounts)[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData);
 void MagnitudeResponse(const uint n, const complex_d *in, double *out);
 void FftForward(const uint n, complex_d *inout);
 void FftInverse(const uint n, complex_d *inout);

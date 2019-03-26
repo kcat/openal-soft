@@ -3,4 +3,8 @@
 
 #include "makemhr.h"
 
+
+bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize,
+    const ChannelModeT chanMode, HrirDataT *hData);
+
 #endif /* LOADSOFA_H */

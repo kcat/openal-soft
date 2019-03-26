@@ -1475,7 +1475,9 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 }
 
 // Allocate and configure dynamic HRIR structures.
-int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COUNT], const uint evCounts[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData)
+int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
+    const uint (&evCounts)[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT],
+    HrirDataT *hData)
 {
     uint evTotal = 0, azTotal = 0, fi, ei, ai;
 
@@ -1566,8 +1568,11 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
            startbytes[3] == 'F')
         {
             fclose(fp);
-            fprintf(stderr, "Error: Direct SOFA input not yet supported\n");
-            return 0;
+            fp = nullptr;
+
+            fprintf(stdout, "Reading HRTF data from %s...\n", inName);
+            if(!LoadSofaFile(inName, fftSize, truncSize, chanMode, &hData))
+                return 0;
         }
     }
     if(fp != nullptr)

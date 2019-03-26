@@ -22,6 +22,7 @@
  */
 
 #include <memory>
+#include <numeric>
 #include <algorithm>
 
 #include "mysofa.h"
@@ -435,35 +436,26 @@ static double CalcHrirOnset(const uint rate, const uint n, const double *hrir)
         ResamplerRun(&rs, n, hrir, 10 * n, upsampled.data());
     }
 
-    double mag{0.0};
-    for(uint i{0u};i < 10*n;i++)
-        mag = std::max(std::abs(upsampled[i]), mag);
+    double mag{std::accumulate(upsampled.cbegin(), upsampled.cend(), double{0.0},
+        [](const double mag, const double sample) -> bool
+        { return std::max(mag, std::abs(sample)); })};
 
     mag *= 0.15;
-    uint i{0u};
-    for(;i < 10*n;i++)
-    {
-        if(std::abs(upsampled[i]) >= mag)
-            break;
-    }
-    return static_cast<double>(i) / (10*rate);
+    auto iter = std::find_if(upsampled.cbegin(), upsampled.cend(),
+        [mag](const double sample) -> bool { return (std::abs(sample) >= mag); });
+    return static_cast<double>(std::distance(upsampled.cbegin(), iter)) / (10.0*rate);
 }
 
 /* Calculate the magnitude response of a HRIR. */
 static void CalcHrirMagnitude(const uint points, const uint n, const double *hrir, double *mag)
 {
-    const uint m{1u + (n / 2u)};
     auto h = std::vector<complex_d>(n);
-    auto r = std::vector<double>(n);
 
-    uint i{0u};
-    for(;i < points;i++)
-        h[i] = complex_d{hrir[i], 0.0};
-    for(;i < n;i++)
-        h[i] = complex_d{0.0, 0.0};
+    auto iter = std::copy_n(hrir, points, h.begin());
+    std::fill(iter, h.end(), complex_d{0.0, 0.0});
+
     FftForward(n, h.data());
-    MagnitudeResponse(n, h.data(), r.data());
-    std::copy_n(r.begin(), m, mag);
+    MagnitudeResponse(n, h.data(), mag);
 }
 
 
@@ -514,7 +506,7 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
         hData->mChannelType = CT_MONO;
 
     /* Check and set the FFT and IR size. */
-    if(fftSize > 0 && sofaHrtf->N > fftSize)
+    if(sofaHrtf->N > fftSize)
     {
         fprintf(stderr, "Sample points exceeds the FFT size.\n");
         return false;
@@ -526,9 +518,7 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
     }
     hData->mIrPoints = sofaHrtf->N;
     hData->mFftSize = fftSize;
-    hData->mIrSize = 1 + (fftSize / 2);
-    if(sofaHrtf->N > hData->mIrSize)
-        hData->mIrSize = sofaHrtf->N;
+    hData->mIrSize = std::max(1u + (fftSize/2u), sofaHrtf->N);
 
     /* Assume a default head radius of 9cm. */
     hData->mRadius = 0.09;
@@ -555,36 +545,37 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
         };
         mysofa_c2s(aer);
 
-        if(std::fabs(aer[1]) >= 89.999f)
+        if(std::abs(aer[1]) >= 89.999f)
             aer[0] = 0.0f;
         else
             aer[0] = std::fmod(360.0f - aer[0], 360.0f);
 
-        uint fi{0u};
-        for(;fi < hData->mFdCount;++fi)
-        {
-            double delta = aer[2] - hData->mFds[fi].mDistance;
-            if(std::abs(delta) < 0.001) break;
-        }
-        if(fi >= hData->mFdCount)
+        auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
+            [&aer](const HrirFdT &fld) -> bool
+            {
+                double delta = aer[2] - fld.mDistance;
+                return (std::abs(delta) < 0.001);
+            });
+        if(field == hData->mFds.cend())
             continue;
 
-        double ef{(90.0+aer[1]) * (hData->mFds[fi].mEvCount-1) / 180.0};
+        double ef{(90.0+aer[1]) * (field->mEvCount-1) / 180.0};
         auto ei = static_cast<int>(std::round(ef));
-        ef = (ef-ei) * 180.0f / (hData->mFds[fi].mEvCount-1);
+        ef = (ef-ei) * 180.0f / (field->mEvCount-1);
         if(std::abs(ef) >= 0.1) continue;
 
-        double af{aer[0] * hData->mFds[fi].mEvs[ei].mAzCount / 360.0f};
+        double af{aer[0] * field->mEvs[ei].mAzCount / 360.0f};
         auto ai = static_cast<int>(std::round(af));
-        af = (af-ai) * 360.0f / hData->mFds[fi].mEvs[ei].mAzCount;
-        ai %= hData->mFds[fi].mEvs[ei].mAzCount;
+        af = (af-ai) * 360.0f / field->mEvs[ei].mAzCount;
+        ai %= field->mEvs[ei].mAzCount;
         if(std::abs(af) >= 0.1) continue;
 
-        HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+        HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
         if(azd->mIrs[0] != nullptr)
         {
-            fprintf(stderr, "Multiple definitions of [ %d, %d, %d ].\n", fi, ei, ai);
-            return 0;
+            fprintf(stderr, "Multiple measurements near [ a=%f, e=%f, r=%f ].\n",
+                aer[0], aer[1], aer[2]);
+            return false;
         }
 
         for(uint ti{0u};ti < channels;++ti)

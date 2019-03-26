@@ -1587,12 +1587,12 @@ template<> inline ALfloat SampleConv(ALfloat val) noexcept
 { return val; }
 template<> inline ALint SampleConv(ALfloat val) noexcept
 {
-    /* Floats have a 23-bit mantissa. There is an implied 1 bit in the mantissa
-     * along with the sign bit, giving 25 bits total, so [-16777216, +16777216]
-     * is the max value a normalized float can be scaled to before losing
-     * precision.
+    /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
+     * This means a normalized float has at most 25 bits of signed precision.
+     * When scaling and clamping for a signed 32-bit integer, these following
+     * values are the best a float can give.
      */
-    return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
+    return fastf2i(clampf(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
 template<> inline ALshort SampleConv(ALfloat val) noexcept
 { return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }

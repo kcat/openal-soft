@@ -22,7 +22,7 @@ template<> inline ALfloat LoadSample<DevFmtByte>(DevFmtTypeTraits<DevFmtByte>::T
 template<> inline ALfloat LoadSample<DevFmtShort>(DevFmtTypeTraits<DevFmtShort>::Type val)
 { return val * (1.0f/32768.0f); }
 template<> inline ALfloat LoadSample<DevFmtInt>(DevFmtTypeTraits<DevFmtInt>::Type val)
-{ return (val>>7) * (1.0f/16777216.0f); }
+{ return val * (1.0f/2147483648.0f); }
 template<> inline ALfloat LoadSample<DevFmtFloat>(DevFmtTypeTraits<DevFmtFloat>::Type val)
 { return val; }
 
@@ -68,7 +68,7 @@ inline typename DevFmtTypeTraits<T>::Type StoreSample(ALfloat);
 template<> inline ALfloat StoreSample<DevFmtFloat>(ALfloat val)
 { return val; }
 template<> inline ALint StoreSample<DevFmtInt>(ALfloat val)
-{ return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7; }
+{ return fastf2i(clampf(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
 template<> inline ALshort StoreSample<DevFmtShort>(ALfloat val)
 { return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
 template<> inline ALbyte StoreSample<DevFmtByte>(ALfloat val)

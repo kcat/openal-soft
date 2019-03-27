@@ -798,7 +798,7 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
 
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
-        maxMags[fi] /= maxMag;
+        const double magFactor{maxMag / maxMags[fi]};
 
         for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -808,7 +808,7 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
                 for(ti = 0;ti < channels;ti++)
                 {
                     for(i = 0;i < m;i++)
-                        azd->mIrs[ti][i] /= maxMags[fi];
+                        azd->mIrs[ti][i] *= magFactor;
                 }
             }
         }

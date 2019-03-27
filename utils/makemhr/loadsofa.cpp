@@ -427,9 +427,9 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
 
 
 /* Calculate the onset time of a HRIR. */
-static double CalcHrirOnset(const uint rate, const uint n, const double *hrir)
+static double CalcHrirOnset(const uint rate, const uint n, std::vector<double> &upsampled,
+    const double *hrir)
 {
-    std::vector<double> upsampled(10 * n);
     {
         ResamplerT rs;
         ResamplerSetup(&rs, rate, 10 * rate);
@@ -447,10 +447,9 @@ static double CalcHrirOnset(const uint rate, const uint n, const double *hrir)
 }
 
 /* Calculate the magnitude response of a HRIR. */
-static void CalcHrirMagnitude(const uint points, const uint n, const double *hrir, double *mag)
+static void CalcHrirMagnitude(const uint points, const uint n, std::vector<complex_d> &h,
+    const double *hrir, double *mag)
 {
-    auto h = std::vector<complex_d>(n);
-
     auto iter = std::copy_n(hrir, points, h.begin());
     std::fill(iter, h.end(), complex_d{0.0, 0.0});
 
@@ -458,6 +457,82 @@ static void CalcHrirMagnitude(const uint points, const uint n, const double *hri
     MagnitudeResponse(n, h.data(), mag);
 }
 
+static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
+{
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
+    double *hrirs = hData->mHrirsBase.data();
+
+    /* Temporary buffers used to calculate the IR's onset and frequency
+     * magnitudes.
+     */
+    auto upsampled = std::vector<double>(10 * hData->mIrPoints);
+    auto htemp = std::vector<complex_d>(hData->mFftSize);
+    auto hrir = std::vector<double>(hData->mFftSize);
+
+    for(uint si{0u};si < sofaHrtf->M;si++)
+    {
+        printf("\rLoading HRIRs... %d of %d", si+1, sofaHrtf->M);
+        fflush(stdout);
+
+        float aer[3]{
+            sofaHrtf->SourcePosition.values[3*si],
+            sofaHrtf->SourcePosition.values[3*si + 1],
+            sofaHrtf->SourcePosition.values[3*si + 2]
+        };
+        mysofa_c2s(aer);
+
+        if(std::abs(aer[1]) >= 89.999f)
+            aer[0] = 0.0f;
+        else
+            aer[0] = std::fmod(360.0f - aer[0], 360.0f);
+
+        auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
+            [&aer](const HrirFdT &fld) -> bool
+            {
+                double delta = aer[2] - fld.mDistance;
+                return (std::abs(delta) < 0.001);
+            });
+        if(field == hData->mFds.cend())
+            continue;
+
+        double ef{(90.0+aer[1]) * (field->mEvCount-1) / 180.0};
+        auto ei = static_cast<int>(std::round(ef));
+        ef = (ef-ei) * 180.0f / (field->mEvCount-1);
+        if(std::abs(ef) >= 0.1) continue;
+
+        double af{aer[0] * field->mEvs[ei].mAzCount / 360.0f};
+        auto ai = static_cast<int>(std::round(af));
+        af = (af-ai) * 360.0f / field->mEvs[ei].mAzCount;
+        ai %= field->mEvs[ei].mAzCount;
+        if(std::abs(af) >= 0.1) continue;
+
+        HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
+        if(azd->mIrs[0] != nullptr)
+        {
+            fprintf(stderr, "Multiple measurements near [ a=%f, e=%f, r=%f ].\n",
+                aer[0], aer[1], aer[2]);
+            return false;
+        }
+
+        for(uint ti{0u};ti < channels;++ti)
+        {
+            std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                hData->mIrPoints, hrir.begin());
+            azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
+            azd->mDelays[ti] = CalcHrirOnset(hData->mIrRate, hData->mIrPoints, upsampled,
+                hrir.data());
+            CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, hrir.data(),
+                azd->mIrs[ti]);
+        }
+
+        // TODO: Since some SOFA files contain minimum phase HRIRs,
+        // it would be beneficial to check for per-measurement delays
+        // (when available) to reconstruct the HRTDs.
+    }
+    printf("\n");
+    return true;
+}
 
 struct MySofaHrtfDeleter {
     void operator()(MYSOFA_HRTF *ptr) { mysofa_free(ptr); }
@@ -529,70 +604,9 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
     if(!PrepareLayout(sofaHrtf->M, sofaHrtf->SourcePosition.values, hData))
         return false;
 
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
-    double *hrirs = hData->mHrirsBase.data();
-    auto hrir = std::vector<double>(hData->mFftSize);
-    for(uint si{0u};si < sofaHrtf->M;si++)
-    {
-        printf("\rLoading HRIRs... %d of %d", si+1, sofaHrtf->M);
-        fflush(stdout);
-
-        float aer[3]{
-            sofaHrtf->SourcePosition.values[3*si],
-            sofaHrtf->SourcePosition.values[3*si + 1],
-            sofaHrtf->SourcePosition.values[3*si + 2]
-        };
-        mysofa_c2s(aer);
-
-        if(std::abs(aer[1]) >= 89.999f)
-            aer[0] = 0.0f;
-        else
-            aer[0] = std::fmod(360.0f - aer[0], 360.0f);
-
-        auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
-            [&aer](const HrirFdT &fld) -> bool
-            {
-                double delta = aer[2] - fld.mDistance;
-                return (std::abs(delta) < 0.001);
-            });
-        if(field == hData->mFds.cend())
-            continue;
-
-        double ef{(90.0+aer[1]) * (field->mEvCount-1) / 180.0};
-        auto ei = static_cast<int>(std::round(ef));
-        ef = (ef-ei) * 180.0f / (field->mEvCount-1);
-        if(std::abs(ef) >= 0.1) continue;
-
-        double af{aer[0] * field->mEvs[ei].mAzCount / 360.0f};
-        auto ai = static_cast<int>(std::round(af));
-        af = (af-ai) * 360.0f / field->mEvs[ei].mAzCount;
-        ai %= field->mEvs[ei].mAzCount;
-        if(std::abs(af) >= 0.1) continue;
-
-        HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
-        if(azd->mIrs[0] != nullptr)
-        {
-            fprintf(stderr, "Multiple measurements near [ a=%f, e=%f, r=%f ].\n",
-                aer[0], aer[1], aer[2]);
-            return false;
-        }
-
-        for(uint ti{0u};ti < channels;++ti)
-        {
-            std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
-                hData->mIrPoints, hrir.begin());
-            azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
-            azd->mDelays[ti] = CalcHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data());
-            CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), azd->mIrs[ti]);
-        }
-
-        // TODO: Since some SOFA files contain minimum phase HRIRs,
-        // it would be beneficial to check for per-measurement delays
-        // (when available) to reconstruct the HRTDs.
-    }
+    if(!LoadResponses(sofaHrtf.get(), hData))
+        return false;
     sofaHrtf = nullptr;
-    printf("\n");
 
     for(uint fi{0u};fi < hData->mFdCount;fi++)
     {
@@ -627,6 +641,9 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
             }
         }
     }
+
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    double *hrirs = hData->mHrirsBase.data();
     for(uint fi{0u};fi < hData->mFdCount;fi++)
     {
         for(uint ei{0u};ei < hData->mFds[fi].mEvCount;ei++)

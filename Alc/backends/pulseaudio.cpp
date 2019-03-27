@@ -299,16 +299,20 @@ ALCboolean pulse_load()
 /* *grumble* Don't use enums for bitflags. */
 inline pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
 { return pa_stream_flags_t(int(lhs) | int(rhs)); }
-
-inline pa_stream_flags_t operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs)
+inline pa_stream_flags_t& operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs)
 {
     lhs = pa_stream_flags_t(int(lhs) | int(rhs));
     return lhs;
 }
-
-inline pa_context_flags_t operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs)
+inline pa_context_flags_t& operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs)
 {
     lhs = pa_context_flags_t(int(lhs) | int(rhs));
+    return lhs;
+}
+
+inline pa_stream_flags_t& operator&=(pa_stream_flags_t &lhs, int rhs)
+{
+    lhs = pa_stream_flags_t(int(lhs) & rhs);
     return lhs;
 }
 
@@ -1031,11 +1035,18 @@ ALCboolean PulsePlayback::reset()
     wait_for_operation(op, mLoop);
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
-        PA_STREAM_AUTO_TIMING_UPDATE};
+        PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_EARLY_REQUESTS};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
     if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "adjust-latency", 0))
+    {
+        /* ADJUST_LATENCY can't be specified with EARLY_REQUESTS, for some
+         * reason. So if the user wants to adjust the overall device latency,
+         * we can't ask to get write signals as soon as minreq is reached.
+         */
+        flags &= ~PA_STREAM_EARLY_REQUESTS;
         flags |= PA_STREAM_ADJUST_LATENCY;
+    }
     if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "fix-rate", 0) ||
        !(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;

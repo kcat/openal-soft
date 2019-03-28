@@ -30,6 +30,7 @@
 #include "alnumeric.h"
 #include "threads.h"
 #include "ambidefs.h"
+#include "hrtf.h"
 
 
 template<typename T, size_t N>
@@ -402,7 +403,10 @@ struct ALCdevice {
     alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLE_PADDING*2];
     alignas(16) ALfloat ResampledData[BUFFERSIZE];
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
-    alignas(16) ALfloat NfcSampleData[BUFFERSIZE];
+    union {
+        alignas(16) ALfloat HrtfSourceData[BUFFERSIZE + HRTF_HISTORY_LENGTH];
+        alignas(16) ALfloat NfcSampleData[BUFFERSIZE];
+    };
 
     /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<std::array<ALfloat,BUFFERSIZE>, 16> MixBuffer;

@@ -23,10 +23,10 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
     const ALfloat gain{hrtfparams->Gain};
     ALfloat stepcount{0.0f};
 
-    ALsizei HistOffset{Offset&HRTF_HISTORY_MASK};
     ALsizei Delay[2]{
-        (HistOffset-hrtfparams->Delay[0])&HRTF_HISTORY_MASK,
-        (HistOffset-hrtfparams->Delay[1])&HRTF_HISTORY_MASK };
+        HRTF_HISTORY_LENGTH - hrtfparams->Delay[0],
+        HRTF_HISTORY_LENGTH - hrtfparams->Delay[1] };
+    ASSUME(Delay[0] >= 0 && Delay[1] >= 0);
 
     Offset &= HRIR_MASK;
     ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
@@ -38,9 +38,8 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
         /* Calculate the number of samples we can do until one of the indices
          * wraps on its buffer, or we reach the end.
          */
-        const ALsizei todo_hist{HRTF_HISTORY_LENGTH - maxi(maxi(HistOffset, Delay[0]), Delay[1])};
         const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
-        const ALsizei todo{mini(BufferSize-i, mini(todo_hist, todo_hrir)) + i};
+        const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
         ASSUME(todo > i);
 
         for(;i < todo;++i)
@@ -49,11 +48,9 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
             hrtfstate->Values[HeadOffset][1] = 0.0f;
             ++HeadOffset;
 
-            hrtfstate->History[HistOffset++] = *(data++);
-
             const ALfloat g{gain + gainstep*stepcount};
-            const ALfloat left{hrtfstate->History[Delay[0]++] * g};
-            const ALfloat right{hrtfstate->History[Delay[1]++] * g};
+            const ALfloat left{data[Delay[0]++] * g};
+            const ALfloat right{data[Delay[1]++] * g};
             ApplyCoeffs(Offset, hrtfstate->Values, IrSize, Coeffs, left, right);
 
             *(LeftOut++)  += hrtfstate->Values[Offset][0];
@@ -64,9 +61,6 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
         }
 
         HeadOffset &= HRIR_MASK;
-        HistOffset &= HRTF_HISTORY_MASK;
-        Delay[0] &= HRTF_HISTORY_MASK;
-        Delay[1] &= HRTF_HISTORY_MASK;
         Offset &= HRIR_MASK;
     }
     hrtfparams->Gain = gain + gainstep*stepcount;
@@ -89,13 +83,14 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
     ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 
-    ALsizei HistOffset{Offset&HRTF_HISTORY_MASK};
     ALsizei OldDelay[2]{
-        (HistOffset-oldparams->Delay[0])&HRTF_HISTORY_MASK,
-        (HistOffset-oldparams->Delay[1])&HRTF_HISTORY_MASK };
+        HRTF_HISTORY_LENGTH - oldparams->Delay[0],
+        HRTF_HISTORY_LENGTH - oldparams->Delay[1] };
+    ASSUME(OldDelay[0] >= 0 && OldDelay[1] >= 0);
     ALsizei NewDelay[2]{
-        (HistOffset-newparams->Delay[0])&HRTF_HISTORY_MASK,
-        (HistOffset-newparams->Delay[1])&HRTF_HISTORY_MASK };
+        HRTF_HISTORY_LENGTH - newparams->Delay[0],
+        HRTF_HISTORY_LENGTH - newparams->Delay[1] };
+    ASSUME(NewDelay[0] >= 0 && NewDelay[1] >= 0);
 
     Offset &= HRIR_MASK;
     ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
@@ -104,11 +99,8 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
     RightOut += OutPos;
     for(ALsizei i{0};i < BufferSize;)
     {
-        const ALsizei todo_hist{HRTF_HISTORY_LENGTH -
-            maxi(maxi(maxi(maxi(HistOffset, OldDelay[0]), OldDelay[1]), NewDelay[0]), NewDelay[1])
-        };
         const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
-        const ALsizei todo{mini(BufferSize-i, mini(todo_hist, todo_hrir)) + i};
+        const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
         ASSUME(todo > i);
 
         for(;i < todo;++i)
@@ -117,16 +109,14 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
             hrtfstate->Values[HeadOffset][1] = 0.0f;
             ++HeadOffset;
 
-            hrtfstate->History[HistOffset++] = *(data++);
-
             ALfloat g{oldGain + oldGainStep*stepcount};
-            ALfloat left{hrtfstate->History[OldDelay[0]++] * g};
-            ALfloat right{hrtfstate->History[OldDelay[1]++] * g};
+            ALfloat left{data[OldDelay[0]++] * g};
+            ALfloat right{data[OldDelay[1]++] * g};
             ApplyCoeffs(Offset, hrtfstate->Values, IrSize, OldCoeffs, left, right);
 
             g = newGainStep*stepcount;
-            left = hrtfstate->History[NewDelay[0]++] * g;
-            right = hrtfstate->History[NewDelay[1]++] * g;
+            left = data[NewDelay[0]++] * g;
+            right = data[NewDelay[1]++] * g;
             ApplyCoeffs(Offset, hrtfstate->Values, IrSize, NewCoeffs, left, right);
 
             *(LeftOut++)  += hrtfstate->Values[Offset][0];
@@ -137,11 +127,6 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
         }
 
         HeadOffset &= HRIR_MASK;
-        HistOffset &= HRTF_HISTORY_MASK;
-        OldDelay[0] &= HRTF_HISTORY_MASK;
-        OldDelay[1] &= HRTF_HISTORY_MASK;
-        NewDelay[0] &= HRTF_HISTORY_MASK;
-        NewDelay[1] &= HRTF_HISTORY_MASK;
         Offset &= HRIR_MASK;
     }
     newparams->Gain = newGainStep*stepcount;

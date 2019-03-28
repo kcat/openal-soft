@@ -40,6 +40,33 @@ static inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRIC
     return r;
 }
 
+using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALsizei);
+template<SamplerT &Sampler>
+static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
+                                 ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
+                                 ALsizei numsamples)
+{
+    ASSUME(numsamples > 0);
+    ASSUME(increment > 0);
+    ASSUME(frac >= 0);
+
+    const InterpState istate{*state};
+    auto proc_sample = [&src,&frac,istate,increment]() -> ALfloat
+    {
+        const ALfloat ret{Sampler(istate, src, frac)};
+
+        frac += increment;
+        src  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
+
+        return ret;
+    };
+    std::generate_n<ALfloat*RESTRICT>(dst, numsamples, proc_sample);
+
+    return dst;
+}
+
+
 template<>
 const ALfloat *Resample_<CopyTag,CTag>(const InterpState* UNUSED(state),
     const ALfloat *RESTRICT src, ALsizei UNUSED(frac), ALint UNUSED(increment),
@@ -52,31 +79,6 @@ const ALfloat *Resample_<CopyTag,CTag>(const InterpState* UNUSED(state),
         return src;
 #endif
     std::copy_n(src, dstlen, dst);
-    return dst;
-}
-
-template<ALfloat Sampler(const InterpState&, const ALfloat*RESTRICT, const ALsizei) noexcept>
-static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
-                                 ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
-                                 ALsizei numsamples)
-{
-    ASSUME(numsamples > 0);
-    ASSUME(increment > 0);
-    ASSUME(frac >= 0);
-
-    const InterpState istate{*state};
-    std::generate_n<ALfloat*RESTRICT>(dst, numsamples,
-        [&src,&frac,istate,increment]() noexcept -> ALfloat
-        {
-            ALfloat ret{Sampler(istate, src, frac)};
-
-            frac += increment;
-            src  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-
-            return ret;
-        }
-    );
     return dst;
 }
 

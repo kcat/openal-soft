@@ -1,18 +1,20 @@
 #ifndef MIXER_HRTFBASE_H
 #define MIXER_HRTFBASE_H
 
+#include <algorithm>
+
 #include "alu.h"
 #include "../hrtf.h"
 #include "opthelpers.h"
 
 
-using ApplyCoeffsT = void(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei irSize,
+using ApplyCoeffsT = void(ALsizei Offset, float2 *RESTRICT Values, const ALsizei irSize,
     const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right);
 
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
-    ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams,
-    HrtfState *hrtfstate, const ALsizei BufferSize)
+    float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, const ALsizei BufferSize)
 {
     ASSUME(OutPos >= 0);
     ASSUME(IrSize >= 4);
@@ -28,49 +30,27 @@ inline void MixHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, c
         HRTF_HISTORY_LENGTH - hrtfparams->Delay[1] };
     ASSUME(Delay[0] >= 0 && Delay[1] >= 0);
 
-    Offset &= HRIR_MASK;
-    ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
-
-    LeftOut  += OutPos;
-    RightOut += OutPos;
-    for(ALsizei i{0};i < BufferSize;)
+    for(ALsizei i{0};i < BufferSize;++i)
     {
-        /* Calculate the number of samples we can do until one of the indices
-         * wraps on its buffer, or we reach the end.
-         */
-        const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
-        const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
-        ASSUME(todo > i);
+        const ALfloat g{gain + gainstep*stepcount};
+        const ALfloat left{data[Delay[0]++] * g};
+        const ALfloat right{data[Delay[1]++] * g};
+        ApplyCoeffs(i, AccumSamples+i, IrSize, Coeffs, left, right);
 
-        for(;i < todo;++i)
-        {
-            hrtfstate->Values[HeadOffset][0] = 0.0f;
-            hrtfstate->Values[HeadOffset][1] = 0.0f;
-            ++HeadOffset;
-
-            const ALfloat g{gain + gainstep*stepcount};
-            const ALfloat left{data[Delay[0]++] * g};
-            const ALfloat right{data[Delay[1]++] * g};
-            ApplyCoeffs(Offset, hrtfstate->Values, IrSize, Coeffs, left, right);
-
-            *(LeftOut++)  += hrtfstate->Values[Offset][0];
-            *(RightOut++) += hrtfstate->Values[Offset][1];
-            ++Offset;
-
-            stepcount += 1.0f;
-        }
-
-        HeadOffset &= HRIR_MASK;
-        Offset &= HRIR_MASK;
+        stepcount += 1.0f;
     }
+    for(ALsizei i{0};i < BufferSize;++i)
+        LeftOut[OutPos+i]  += AccumSamples[i][0];
+    for(ALsizei i{0};i < BufferSize;++i)
+        RightOut[OutPos+i] += AccumSamples[i][1];
+
     hrtfparams->Gain = gain + gainstep*stepcount;
 }
 
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
-    const ALsizei BufferSize)
+    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize)
 {
     const auto &OldCoeffs = oldparams->Coeffs;
     const ALfloat oldGain{oldparams->Gain};
@@ -92,50 +72,32 @@ inline void MixHrtfBlendBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightO
         HRTF_HISTORY_LENGTH - newparams->Delay[1] };
     ASSUME(NewDelay[0] >= 0 && NewDelay[1] >= 0);
 
-    Offset &= HRIR_MASK;
-    ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
-
-    LeftOut  += OutPos;
-    RightOut += OutPos;
-    for(ALsizei i{0};i < BufferSize;)
+    for(ALsizei i{0};i < BufferSize;++i)
     {
-        const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
-        const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
-        ASSUME(todo > i);
+        ALfloat g{oldGain + oldGainStep*stepcount};
+        ALfloat left{data[OldDelay[0]++] * g};
+        ALfloat right{data[OldDelay[1]++] * g};
+        ApplyCoeffs(i, AccumSamples+i, IrSize, OldCoeffs, left, right);
 
-        for(;i < todo;++i)
-        {
-            hrtfstate->Values[HeadOffset][0] = 0.0f;
-            hrtfstate->Values[HeadOffset][1] = 0.0f;
-            ++HeadOffset;
+        g = newGainStep*stepcount;
+        left = data[NewDelay[0]++] * g;
+        right = data[NewDelay[1]++] * g;
+        ApplyCoeffs(i, AccumSamples+i, IrSize, NewCoeffs, left, right);
 
-            ALfloat g{oldGain + oldGainStep*stepcount};
-            ALfloat left{data[OldDelay[0]++] * g};
-            ALfloat right{data[OldDelay[1]++] * g};
-            ApplyCoeffs(Offset, hrtfstate->Values, IrSize, OldCoeffs, left, right);
-
-            g = newGainStep*stepcount;
-            left = data[NewDelay[0]++] * g;
-            right = data[NewDelay[1]++] * g;
-            ApplyCoeffs(Offset, hrtfstate->Values, IrSize, NewCoeffs, left, right);
-
-            *(LeftOut++)  += hrtfstate->Values[Offset][0];
-            *(RightOut++) += hrtfstate->Values[Offset][1];
-            ++Offset;
-
-            stepcount += 1.0f;
-        }
-
-        HeadOffset &= HRIR_MASK;
-        Offset &= HRIR_MASK;
+        stepcount += 1.0f;
     }
+    for(ALsizei i{0};i < BufferSize;++i)
+        LeftOut[OutPos+i]  += AccumSamples[i][0];
+    for(ALsizei i{0};i < BufferSize;++i)
+        RightOut[OutPos+i] += AccumSamples[i][1];
+
     newparams->Gain = newGainStep*stepcount;
 }
 
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixDirectHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
-    const ALsizei BufferSize)
+    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+    const ALsizei NumChans, const ALsizei BufferSize)
 {
     ASSUME(NumChans > 0);
     ASSUME(BufferSize > 0);
@@ -147,32 +109,23 @@ inline void MixDirectHrtfBase(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT Right
     {
         const ALfloat (&input)[BUFFERSIZE] = data[c];
         const auto &Coeffs = State->Chan[c].Coeffs;
-        auto &Values = State->Chan[c].Values;
-        ALsizei Offset{State->Offset&HRIR_MASK};
 
-        ALsizei HeadOffset{(Offset+IrSize-1)&HRIR_MASK};
-        for(ALsizei i{0};i < BufferSize;)
+        auto accum_iter = std::copy_n(State->Chan[c].Values.begin(),
+            State->Chan[c].Values.size(), AccumSamples);
+        std::fill_n(accum_iter, BufferSize, float2{});
+
+        for(ALsizei i{0};i < BufferSize;++i)
         {
-            const ALsizei todo_hrir{HRIR_LENGTH - maxi(HeadOffset, Offset)};
-            const ALsizei todo{mini(BufferSize-i, todo_hrir) + i};
-            ASSUME(todo > i);
-
-            for(;i < todo;++i)
-            {
-                Values[HeadOffset][0] = 0.0f;
-                Values[HeadOffset][1] = 0.0f;
-                ++HeadOffset;
-
-                const ALfloat insample{input[i]};
-                ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
-
-                LeftOut[i]  += Values[Offset][0];
-                RightOut[i] += Values[Offset][1];
-                ++Offset;
-            }
-            HeadOffset &= HRIR_MASK;
-            Offset &= HRIR_MASK;
+            const ALfloat insample{input[i]};
+            ApplyCoeffs(i, AccumSamples+i, IrSize, Coeffs, insample, insample);
         }
+        for(ALsizei i{0};i < BufferSize;++i)
+            LeftOut[i]  += AccumSamples[i][0];
+        for(ALsizei i{0};i < BufferSize;++i)
+            RightOut[i] += AccumSamples[i][1];
+
+        std::copy_n(AccumSamples + BufferSize, State->Chan[c].Values.size(),
+            State->Chan[c].Values.begin());
     }
 }
 

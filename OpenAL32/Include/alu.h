@@ -298,15 +298,14 @@ using RowMixerFunc = void(*)(ALfloat *OutBuffer, const ALfloat *gains,
     const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos,
     const ALsizei BufferSize);
 using HrtfMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
-    MixHrtfParams *hrtfparams, HrtfState *hrtfstate, const ALsizei BufferSize);
+    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, const ALsizei BufferSize);
 using HrtfMixerBlendFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
-    const ALsizei BufferSize);
+    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
 using HrtfDirectMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
-    const ALsizei BufferSize);
+    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+    const ALsizei NumChans, const ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */

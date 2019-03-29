@@ -136,11 +136,10 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
 }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei IrSize,
+static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
     const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right)
 {
     ASSUME(IrSize >= 2);
-    ASSUME(&Values != &Coeffs);
 
     float32x4_t leftright4;
     {
@@ -152,43 +151,43 @@ static inline void ApplyCoeffs(ALsizei Offset, HrirArray<ALfloat> &Values, const
 
     for(ALsizei c{0};c < IrSize;c += 2)
     {
-        const ALsizei o0 = (Offset+c)&HRIR_MASK;
-        const ALsizei o1 = (o0+1)&HRIR_MASK;
-        float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[o0][0]),
-                                        vld1_f32((float32_t*)&Values[o1][0]));
+        float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[c  ][0]),
+                                        vld1_f32((float32_t*)&Values[c+1][0]));
         float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
 
         vals = vmlaq_f32(vals, coefs, leftright4);
 
-        vst1_f32((float32_t*)&Values[o0][0], vget_low_f32(vals));
-        vst1_f32((float32_t*)&Values[o1][0], vget_high_f32(vals));
+        vst1_f32((float32_t*)&Values[c  ][0], vget_low_f32(vals));
+        vst1_f32((float32_t*)&Values[c+1][0], vget_high_f32(vals));
     }
 }
 
 template<>
 void MixHrtf_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
-    ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams,
-    HrtfState *hrtfstate, const ALsizei BufferSize)
+    float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, const ALsizei BufferSize)
 {
-    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, hrtfparams,
-        hrtfstate, BufferSize);
+    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, hrtfparams,
+        BufferSize);
 }
 
 template<>
 void MixHrtfBlend_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
-    const ALsizei BufferSize)
+    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize)
 {
-    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, oldparams,
-        newparams, hrtfstate, BufferSize);
+    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, oldparams,
+        newparams, BufferSize);
 }
 
 template<>
 void MixDirectHrtf_<NEONTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
-    const ALsizei BufferSize)
-{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, State, NumChans, BufferSize); }
+    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+    const ALsizei NumChans, const ALsizei BufferSize)
+{
+    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, State, NumChans,
+        BufferSize);
+}
 
 
 template<>

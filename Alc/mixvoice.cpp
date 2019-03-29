@@ -625,6 +625,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 if((voice->mFlags&VOICE_HAS_HRTF))
                 {
                     auto &HrtfSamples = Device->HrtfSourceData;
+                    auto &AccumSamples = Device->HrtfAccumData;
                     const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
                     ALsizei fademix{0};
@@ -641,12 +642,24 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     std::copy_n(std::begin(HrtfSamples) + DstBufferSize,
                         parms.Hrtf.State.History.size(), parms.Hrtf.State.History.begin());
 
+                    /* Copy the current filtered values being accumulated into
+                     * the temp buffer.
+                     */
+                    auto accum_iter = std::copy_n(parms.Hrtf.State.Values.begin(),
+                        parms.Hrtf.State.Values.size(), std::begin(AccumSamples));
+
                     /* If fading, the old gain is not silence, and this is the
                      * first mixing pass, fade between the IRs.
                      */
                     if(Counter && (parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD) && OutPos == 0)
                     {
                         fademix = mini(DstBufferSize, 128);
+
+                        /* Clear the accumulation buffer that will start
+                         * getting filled in.
+                         */
+                        std::fill_n(accum_iter, fademix, float2{});
+
                         ALfloat gain{TargetGain};
 
                         /* The new coefficients need to fade in completely
@@ -670,19 +683,32 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                         MixHrtfBlendSamples(
                             voice->mDirect.Buffer[OutLIdx], voice->mDirect.Buffer[OutRIdx],
-                            HrtfSamples, voice->mOffset, OutPos, IrSize, &parms.Hrtf.Old,
-                            &hrtfparams, &parms.Hrtf.State, fademix);
+                            HrtfSamples, AccumSamples, OutPos, IrSize, &parms.Hrtf.Old,
+                            &hrtfparams, fademix);
                         /* Update the old parameters with the result. */
                         parms.Hrtf.Old = parms.Hrtf.Target;
                         if(fademix < Counter)
                             parms.Hrtf.Old.Gain = hrtfparams.Gain;
                         else
                             parms.Hrtf.Old.Gain = TargetGain;
+
+                        /* Copy the new in-progress accumulation values to the
+                         * front of the temp buffer for the following mix.
+                         */
+                        accum_iter = std::copy(std::begin(AccumSamples) + fademix,
+                            std::begin(AccumSamples) + fademix + HRIR_LENGTH,
+                            std::begin(AccumSamples));
                     }
 
-                    if(fademix < DstBufferSize)
+                    if(LIKELY(fademix < DstBufferSize))
                     {
                         const ALsizei todo{DstBufferSize - fademix};
+
+                        /* Clear the accumulation buffer that will start
+                         * getting filled in.
+                         */
+                        std::fill_n(accum_iter, todo, float2{});
+
                         ALfloat gain{TargetGain};
 
                         /* Interpolate the target gain if the gain fading lasts
@@ -704,8 +730,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                             static_cast<ALfloat>(todo);
                         MixHrtfSamples(
                             voice->mDirect.Buffer[OutLIdx], voice->mDirect.Buffer[OutRIdx],
-                            HrtfSamples+fademix, voice->mOffset+fademix, OutPos+fademix, IrSize,
-                            &hrtfparams, &parms.Hrtf.State, todo);
+                            HrtfSamples+fademix, AccumSamples, OutPos+fademix, IrSize, &hrtfparams,
+                            todo);
                         /* Store the interpolated gain or the final target gain
                          * depending if the fade is done.
                          */
@@ -714,6 +740,12 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         else
                             parms.Hrtf.Old.Gain = TargetGain;
                     }
+
+                    /* Copy the new in-progress accumulation values back for
+                     * the next mix.
+                     */
+                    std::copy_n(std::begin(AccumSamples) + DstBufferSize,
+                        parms.Hrtf.State.Values.size(), parms.Hrtf.State.Values.begin());
                 }
                 else if((voice->mFlags&VOICE_HAS_NFC))
                 {

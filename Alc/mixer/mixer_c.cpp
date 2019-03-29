@@ -103,54 +103,43 @@ const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat 
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst, dstlen); }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei IrSize,
+static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
     const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right)
 {
-    ASSUME(Offset >= 0 && Offset < HRIR_LENGTH);
     ASSUME(IrSize >= 2);
-    ASSUME(&Values != &Coeffs);
-
-    ALsizei count{mini(IrSize, HRIR_LENGTH - Offset)};
-    ASSUME(count > 0);
-    for(ALsizei c{0};;)
+    for(ALsizei c{0};c < IrSize;++c)
     {
-        for(;c < count;++c)
-        {
-            Values[Offset][0] += Coeffs[c][0] * left;
-            Values[Offset][1] += Coeffs[c][1] * right;
-            ++Offset;
-        }
-        if(c >= IrSize)
-            break;
-        Offset = 0;
-        count = IrSize;
+        Values[c][0] += Coeffs[c][0] * left;
+        Values[c][1] += Coeffs[c][1] * right;
     }
 }
 
 template<>
 void MixHrtf_<CTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
-    ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams,
-    HrtfState *hrtfstate, const ALsizei BufferSize)
+    float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, const ALsizei BufferSize)
 {
-    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, hrtfparams,
-        hrtfstate, BufferSize);
+    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, hrtfparams,
+        BufferSize);
 }
 
 template<>
 void MixHrtfBlend_<CTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
-    const ALsizei BufferSize)
+    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize)
 {
-    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, oldparams,
-        newparams, hrtfstate, BufferSize);
+    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, oldparams,
+        newparams, BufferSize);
 }
 
 template<>
 void MixDirectHrtf_<CTag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
-    const ALsizei BufferSize)
-{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, State, NumChans, BufferSize); }
+    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+    const ALsizei NumChans, const ALsizei BufferSize)
+{
+    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, State, NumChans,
+        BufferSize);
+}
 
 
 template<>

@@ -76,97 +76,75 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
 }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, HrirArray<ALfloat> &Values, const ALsizei IrSize,
+static inline void ApplyCoeffs(ALsizei Offset, float2 *RESTRICT Values, const ALsizei IrSize,
     const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right)
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
 
     ASSUME(IrSize >= 2);
-    ASSUME(&Values != &Coeffs);
 
-    ASSUME(Offset >= 0 && Offset < HRIR_LENGTH);
     if((Offset&1))
     {
-        ALsizei count{mini(IrSize-1, HRIR_LENGTH - Offset)};
-        ASSUME(count >= 1);
-
         __m128 imp0, imp1;
         __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
-        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[Offset][0]))};
+        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[Offset][0]), vals);
-        ++Offset;
-        for(ALsizei i{1};;)
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
+        ALsizei i{1};
+        for(;i < IrSize-1;i += 2)
         {
-            for(;i < count;i += 2)
-            {
-                coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-                vals = _mm_load_ps(&Values[Offset][0]);
-                imp1 = _mm_mul_ps(lrlr, coeffs);
-                imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
-                vals = _mm_add_ps(imp0, vals);
-                _mm_store_ps(&Values[Offset][0], vals);
-                imp0 = imp1;
-                Offset += 2;
-            }
-            Offset &= HRIR_MASK;
-            if(i >= IrSize-1)
-                break;
-            count = IrSize-1;
+            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
+            vals = _mm_load_ps(&Values[i][0]);
+            imp1 = _mm_mul_ps(lrlr, coeffs);
+            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
+            vals = _mm_add_ps(imp0, vals);
+            _mm_store_ps(&Values[i][0], vals);
+            imp0 = imp1;
         }
-        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[Offset][0]));
+        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[Offset][0]), vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
     }
     else
     {
-        ALsizei count{mini(IrSize, HRIR_LENGTH - Offset)};
-        ASSUME(count >= 2);
-
-        for(ALsizei i{0};;)
+        for(ALsizei i{0};i < IrSize;i += 2)
         {
-            for(;i < count;i += 2)
-            {
-                __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
-                __m128 vals{_mm_load_ps(&Values[Offset][0])};
-                vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
-                _mm_store_ps(&Values[Offset][0], vals);
-                Offset += 2;
-            }
-            if(i >= IrSize)
-                break;
-            Offset = 0;
-            count = IrSize;
+            __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
+            __m128 vals{_mm_load_ps(&Values[i][0])};
+            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
+            _mm_store_ps(&Values[i][0], vals);
         }
     }
 }
 
 template<>
 void MixHrtf_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
-    ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams,
-    HrtfState *hrtfstate, const ALsizei BufferSize)
+    float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, const ALsizei BufferSize)
 {
-    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, hrtfparams,
-        hrtfstate, BufferSize);
+    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, hrtfparams,
+        BufferSize);
 }
 
 template<>
 void MixHrtfBlend_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
-    const ALsizei BufferSize)
+    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize)
 {
-    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, Offset, OutPos, IrSize, oldparams,
-        newparams, hrtfstate, BufferSize);
+    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, oldparams,
+        newparams, BufferSize);
 }
 
 template<>
 void MixDirectHrtf_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], DirectHrtfState *State, const ALsizei NumChans,
-    const ALsizei BufferSize)
-{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, State, NumChans, BufferSize); }
+    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+    const ALsizei NumChans, const ALsizei BufferSize)
+{
+    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, State, NumChans,
+        BufferSize);
+}
 
 
 template<>

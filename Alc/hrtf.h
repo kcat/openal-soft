@@ -60,6 +60,8 @@ struct EnumeratedHrtf {
 };
 
 
+using float2 = std::array<float,2>;
+
 template<typename T>
 using HrirArray = std::array<std::array<T,2>,HRIR_LENGTH>;
 

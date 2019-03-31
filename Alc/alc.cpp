@@ -2643,8 +2643,6 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 
             voice->mFlags = old_voice->mFlags;
 
-            voice->mOffset = old_voice->mOffset;
-
             std::copy(std::begin(old_voice->mPrevSamples), std::end(old_voice->mPrevSamples),
                 std::begin(voice->mPrevSamples));
 

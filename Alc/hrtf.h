@@ -78,7 +78,6 @@ struct HrtfParams {
 
 struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
-    ALsizei Offset{0};
     ALsizei IrSize{0};
     struct ChanData {
         alignas(16) HrirArray<ALfloat> Values;

@@ -805,7 +805,6 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         DataPosFrac &= FRACTIONMASK;
 
         OutPos += DstBufferSize;
-        voice->mOffset += DstBufferSize;
         Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
 
         if(UNLIKELY(vstate != ALvoice::Playing))

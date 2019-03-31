@@ -3508,7 +3508,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     if(ALCdevice *Device{ctx->Device})
     {
         std::lock_guard<std::mutex> _{Device->StateLock};
-        if(!ReleaseContext(ctx.get(), Device))
+        if(!ReleaseContext(ctx.get(), Device) && (Device->Flags&DEVICE_RUNNING))
         {
             Device->Backend->stop();
             Device->Flags &= ~DEVICE_RUNNING;

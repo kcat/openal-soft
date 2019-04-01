@@ -1513,7 +1513,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
          */
         auto tmpbuf_end = std::begin(tmpbuf) + SamplesToDo;
         std::copy_n(std::begin(DelayBuf), FrontStablizer::DelayLength, tmpbuf_end);
-        std::reverse_copy(Buffer, Buffer+SamplesToDo, tmpbuf_end);
+        std::reverse_copy(Buffer, Buffer+SamplesToDo, std::begin(tmpbuf));
         std::copy_n(std::begin(tmpbuf), FrontStablizer::DelayLength, std::begin(DelayBuf));
 
         /* Apply an all-pass on the reversed signal, then reverse the samples

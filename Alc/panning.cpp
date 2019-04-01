@@ -386,9 +386,7 @@ void InitPanning(ALCdevice *device)
         const std::array<float,MAX_AMBI_CHANNELS> &n3dscale = GetAmbiScales(device->mAmbiScale);
 
         /* For DevFmtAmbi3D, the ambisonic order is already set. */
-        count = (device->mAmbiOrder == 3) ? 16 :
-                (device->mAmbiOrder == 2) ? 9 :
-                (device->mAmbiOrder == 1) ? 4 : 1;
+        count = static_cast<ALsizei>(AmbiChannelsFromOrder(device->mAmbiOrder));
         std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
             [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
             { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }

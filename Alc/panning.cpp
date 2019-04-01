@@ -27,6 +27,7 @@
 #include <cassert>
 
 #include <cmath>
+#include <chrono>
 #include <numeric>
 #include <algorithm>
 #include <functional>
@@ -54,6 +55,8 @@ constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::From3D;
 namespace {
 
 using namespace std::placeholders;
+using std::chrono::seconds;
+using std::chrono::nanoseconds;
 
 inline const char *GetLabelFromChannel(Channel channel)
 {
@@ -850,12 +853,16 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                 stablizer->LFilter.init(scale);
                 stablizer->RFilter = stablizer->LFilter;
 
-                /* Initialize all-pass filters for all other channels. */
-                stablizer->APFilter[0].init(scale);
-                std::fill(std::begin(stablizer->APFilter)+1, std::end(stablizer->APFilter),
-                    stablizer->APFilter[0]);
+                /* Initialize an all-pass filter for the phase corrector. */
+                stablizer->APFilter.init(scale);
 
                 device->Stablizer = std::move(stablizer);
+                /* NOTE: Don't know why this has to be "copied" into a local
+                 * static constexpr variable to avoid a reference on
+                 * FrontStablizer::DelayLength...
+                 */
+                static constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
+                device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
             }
             break;
         case DevFmtMono:

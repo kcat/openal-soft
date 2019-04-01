@@ -38,10 +38,16 @@ using SplitterAllpass = SplitterAllpassR<float>;
 
 
 struct FrontStablizer {
-    SplitterAllpass APFilter[MAX_OUTPUT_CHANNELS];
+    static constexpr size_t DelayLength{256u};
+
+    alignas(16) float DelayBuf[MAX_OUTPUT_CHANNELS][DelayLength];
+
+    SplitterAllpass APFilter;
     BandSplitter LFilter, RFilter;
     alignas(16) float LSplit[2][BUFFERSIZE];
     alignas(16) float RSplit[2][BUFFERSIZE];
+
+    alignas(16) float TempBuf[BUFFERSIZE + DelayLength];
 
     DEF_NEWDEL(FrontStablizer)
 };

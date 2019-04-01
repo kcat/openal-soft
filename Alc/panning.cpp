@@ -440,8 +440,7 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 3) ? "second" : "first",
             ""
         );
-        device->AmbiDecoder = al::make_unique<BFormatDec>();
-        device->AmbiDecoder->reset(coeffcount, count, chancoeffs, idxmap);
+        device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount, count, chancoeffs, idxmap);
 
         device->RealOut.NumChannels = device->channelsFromFmt();
     }
@@ -481,8 +480,8 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder = al::make_unique<BFormatDec>();
-    device->AmbiDecoder->reset(conf, false, count, device->Frequency, speakermap);
+    device->AmbiDecoder = al::make_unique<BFormatDec>(conf, false, count, device->Frequency,
+        speakermap);
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
@@ -523,8 +522,8 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder = al::make_unique<BFormatDec>();
-    device->AmbiDecoder->reset(conf, true, count, device->Frequency, speakermap);
+    device->AmbiDecoder = al::make_unique<BFormatDec>(conf, true, count, device->Frequency,
+        speakermap);
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 

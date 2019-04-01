@@ -49,14 +49,9 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<fl
 } // namespace
 
 
-void BFormatDec::reset(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
+BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
     const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
-    mSamples.clear();
-    mSamplesHF = nullptr;
-    mSamplesLF = nullptr;
-
-    mMatrix = MatrixU{};
     mDualBand = allow_2band && (conf->FreqBands == 2);
     if(!mDualBand)
         mSamples.resize(2);
@@ -124,16 +119,10 @@ void BFormatDec::reset(const AmbDecConf *conf, const bool allow_2band, const ALs
     }
 }
 
-void BFormatDec::reset(const ALsizei inchans, const ALsizei chancount,
+BFormatDec::BFormatDec(const ALsizei inchans, const ALsizei chancount,
     const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
     const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
-    mSamples.clear();
-    mSamplesHF = nullptr;
-    mSamplesLF = nullptr;
-
-    mMatrix = MatrixU{};
-    mDualBand = false;
     mSamples.resize(2);
     mNumChannels = inchans;
 

@@ -17,29 +17,28 @@ class BFormatDec {
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
-    ALuint mEnabled; /* Bitfield of enabled channels. */
+    ALuint mEnabled{0u}; /* Bitfield of enabled channels. */
 
     union MatrixU {
         ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_CHANNELS];
         ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_CHANNELS];
-    } mMatrix;
+    } mMatrix{};
 
     /* NOTE: BandSplitter filters are unused with single-band decoding */
     BandSplitter mXOver[MAX_AMBI_CHANNELS];
 
     al::vector<std::array<ALfloat,BUFFERSIZE>, 16> mSamples;
     /* These two alias into Samples */
-    std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
-    std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
+    std::array<ALfloat,BUFFERSIZE> *mSamplesHF{nullptr};
+    std::array<ALfloat,BUFFERSIZE> *mSamplesLF{nullptr};
 
-    ALsizei mNumChannels;
-    ALboolean mDualBand;
+    ALsizei mNumChannels{0};
+    bool mDualBand{false};
 
 public:
-    void reset(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
+    BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
         const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
-
-    void reset(const ALsizei inchans, const ALsizei chancount,
+    BFormatDec(const ALsizei inchans, const ALsizei chancount,
         const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
         const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 

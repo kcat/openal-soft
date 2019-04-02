@@ -467,8 +467,6 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
     ALCdevice *Device{Context->Device};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
-    const int OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
-    const int OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
 
     ASSUME(IrSize >= 0);
 
@@ -624,6 +622,10 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                 if((voice->mFlags&VOICE_HAS_HRTF))
                 {
+                    const int OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
+                    const int OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
+                    ASSUME(OutLIdx >= 0 && OutRIdx >= 0);
+
                     auto &HrtfSamples = Device->HrtfSourceData;
                     auto &AccumSamples = Device->HrtfAccumData;
                     const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :

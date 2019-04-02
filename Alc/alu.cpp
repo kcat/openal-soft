@@ -128,14 +128,13 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* HRTF is stereo output only. */
-    const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
-    const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
-    ALfloat *LeftOut{device->RealOut.Buffer[lidx]};
-    ALfloat *RightOut{device->RealOut.Buffer[ridx]};
+    const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
+    const int ridx{device->RealOut.ChannelIndex[FrontRight]};
+    ASSUME(lidx >= 0 && ridx >= 0);
 
     DirectHrtfState *state{device->mHrtfState.get()};
-    MixDirectHrtf(LeftOut, RightOut, device->Dry.Buffer, device->HrtfAccumData, state,
-        device->Dry.NumChannels, SamplesToDo);
+    MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx], device->Dry.Buffer,
+        device->HrtfAccumData, state, device->Dry.NumChannels, SamplesToDo);
 }
 
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
@@ -148,8 +147,9 @@ void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
 void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* UHJ is stereo output only. */
-    const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
-    const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
+    const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
+    const int ridx{device->RealOut.ChannelIndex[FrontRight]};
+    ASSUME(lidx >= 0 && ridx >= 0);
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
     Uhj2Encoder *uhj2enc{device->Uhj_Encoder.get()};
@@ -160,8 +160,9 @@ void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
 void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* BS2B is stereo output only. */
-    const int lidx{(device->RealOut.ChannelName[0]==FrontLeft) ? 0 : 1};
-    const int ridx{(device->RealOut.ChannelName[0]==FrontLeft) ? 1 : 0};
+    const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
+    const int ridx{device->RealOut.ChannelIndex[FrontRight]};
+    ASSUME(lidx >= 0 && ridx >= 0);
 
     /* Apply binaural/crossfeed filter */
     bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx],

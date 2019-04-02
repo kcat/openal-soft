@@ -1375,84 +1375,83 @@ static ALCboolean IsValidAmbiScaling(ALCenum scaling)
  */
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
-    std::fill(std::begin(device->RealOut.ChannelName), std::end(device->RealOut.ChannelName),
-        InvalidChannel);
+    device->RealOut.ChannelIndex.fill(-1);
 
     switch(device->FmtChans)
     {
     case DevFmtMono:
-        device->RealOut.ChannelName[0] = FrontCenter;
+        device->RealOut.ChannelIndex[FrontCenter] = 0;
         break;
     case DevFmtStereo:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelIndex[FrontLeft]  = 0;
+        device->RealOut.ChannelIndex[FrontRight] = 1;
         break;
     case DevFmtQuad:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = BackLeft;
-        device->RealOut.ChannelName[3] = BackRight;
+        device->RealOut.ChannelIndex[FrontLeft]  = 0;
+        device->RealOut.ChannelIndex[FrontRight] = 1;
+        device->RealOut.ChannelIndex[BackLeft]   = 2;
+        device->RealOut.ChannelIndex[BackRight]  = 3;
         break;
     case DevFmtX51:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = FrontCenter;
-        device->RealOut.ChannelName[3] = LFE;
-        device->RealOut.ChannelName[4] = SideLeft;
-        device->RealOut.ChannelName[5] = SideRight;
+        device->RealOut.ChannelIndex[FrontLeft]   = 0;
+        device->RealOut.ChannelIndex[FrontRight]  = 1;
+        device->RealOut.ChannelIndex[FrontCenter] = 2;
+        device->RealOut.ChannelIndex[LFE]         = 3;
+        device->RealOut.ChannelIndex[SideLeft]    = 4;
+        device->RealOut.ChannelIndex[SideRight]   = 5;
         break;
     case DevFmtX51Rear:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = FrontCenter;
-        device->RealOut.ChannelName[3] = LFE;
-        device->RealOut.ChannelName[4] = BackLeft;
-        device->RealOut.ChannelName[5] = BackRight;
+        device->RealOut.ChannelIndex[FrontLeft]   = 0;
+        device->RealOut.ChannelIndex[FrontRight]  = 1;
+        device->RealOut.ChannelIndex[FrontCenter] = 2;
+        device->RealOut.ChannelIndex[LFE]         = 3;
+        device->RealOut.ChannelIndex[BackLeft]    = 4;
+        device->RealOut.ChannelIndex[BackRight]   = 5;
         break;
     case DevFmtX61:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = FrontCenter;
-        device->RealOut.ChannelName[3] = LFE;
-        device->RealOut.ChannelName[4] = BackCenter;
-        device->RealOut.ChannelName[5] = SideLeft;
-        device->RealOut.ChannelName[6] = SideRight;
+        device->RealOut.ChannelIndex[FrontLeft]   = 0;
+        device->RealOut.ChannelIndex[FrontRight]  = 1;
+        device->RealOut.ChannelIndex[FrontCenter] = 2;
+        device->RealOut.ChannelIndex[LFE]         = 3;
+        device->RealOut.ChannelIndex[BackCenter]  = 4;
+        device->RealOut.ChannelIndex[SideLeft]    = 5;
+        device->RealOut.ChannelIndex[SideRight]   = 6;
         break;
     case DevFmtX71:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = FrontCenter;
-        device->RealOut.ChannelName[3] = LFE;
-        device->RealOut.ChannelName[4] = BackLeft;
-        device->RealOut.ChannelName[5] = BackRight;
-        device->RealOut.ChannelName[6] = SideLeft;
-        device->RealOut.ChannelName[7] = SideRight;
+        device->RealOut.ChannelIndex[FrontLeft]   = 0;
+        device->RealOut.ChannelIndex[FrontRight]  = 1;
+        device->RealOut.ChannelIndex[FrontCenter] = 2;
+        device->RealOut.ChannelIndex[LFE]         = 3;
+        device->RealOut.ChannelIndex[BackLeft]    = 4;
+        device->RealOut.ChannelIndex[BackRight]   = 5;
+        device->RealOut.ChannelIndex[SideLeft]    = 6;
+        device->RealOut.ChannelIndex[SideRight]   = 7;
         break;
     case DevFmtAmbi3D:
-        device->RealOut.ChannelName[0] = Aux0;
+        device->RealOut.ChannelIndex[Aux0] = 0;
         if(device->mAmbiOrder > 0)
         {
-            device->RealOut.ChannelName[1] = Aux1;
-            device->RealOut.ChannelName[2] = Aux2;
-            device->RealOut.ChannelName[3] = Aux3;
+            device->RealOut.ChannelIndex[Aux1] = 1;
+            device->RealOut.ChannelIndex[Aux2] = 2;
+            device->RealOut.ChannelIndex[Aux3] = 3;
         }
         if(device->mAmbiOrder > 1)
         {
-            device->RealOut.ChannelName[4] = Aux4;
-            device->RealOut.ChannelName[5] = Aux5;
-            device->RealOut.ChannelName[6] = Aux6;
-            device->RealOut.ChannelName[7] = Aux7;
-            device->RealOut.ChannelName[8] = Aux8;
+            device->RealOut.ChannelIndex[Aux4] = 4;
+            device->RealOut.ChannelIndex[Aux5] = 5;
+            device->RealOut.ChannelIndex[Aux6] = 6;
+            device->RealOut.ChannelIndex[Aux7] = 7;
+            device->RealOut.ChannelIndex[Aux8] = 8;
         }
         if(device->mAmbiOrder > 2)
         {
-            device->RealOut.ChannelName[9]  = Aux9;
-            device->RealOut.ChannelName[10] = Aux10;
-            device->RealOut.ChannelName[11] = Aux11;
-            device->RealOut.ChannelName[12] = Aux12;
-            device->RealOut.ChannelName[13] = Aux13;
-            device->RealOut.ChannelName[14] = Aux14;
-            device->RealOut.ChannelName[15] = Aux15;
+            device->RealOut.ChannelIndex[Aux9]  = 9;
+            device->RealOut.ChannelIndex[Aux10] = 10;
+            device->RealOut.ChannelIndex[Aux11] = 11;
+            device->RealOut.ChannelIndex[Aux12] = 12;
+            device->RealOut.ChannelIndex[Aux13] = 13;
+            device->RealOut.ChannelIndex[Aux14] = 14;
+            device->RealOut.ChannelIndex[Aux15] = 15;
         }
         break;
     }
@@ -1464,28 +1463,27 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
  */
 void SetDefaultChannelOrder(ALCdevice *device)
 {
-    std::fill(std::begin(device->RealOut.ChannelName), std::end(device->RealOut.ChannelName),
-        InvalidChannel);
+    device->RealOut.ChannelIndex.fill(-1);
 
     switch(device->FmtChans)
     {
     case DevFmtX51Rear:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = BackLeft;
-        device->RealOut.ChannelName[3] = BackRight;
-        device->RealOut.ChannelName[4] = FrontCenter;
-        device->RealOut.ChannelName[5] = LFE;
+        device->RealOut.ChannelIndex[FrontLeft]   = 0;
+        device->RealOut.ChannelIndex[FrontRight]  = 1;
+        device->RealOut.ChannelIndex[BackLeft]    = 2;
+        device->RealOut.ChannelIndex[BackRight]   = 3;
+        device->RealOut.ChannelIndex[FrontCenter] = 4;
+        device->RealOut.ChannelIndex[LFE]         = 5;
         return;
     case DevFmtX71:
-        device->RealOut.ChannelName[0] = FrontLeft;
-        device->RealOut.ChannelName[1] = FrontRight;
-        device->RealOut.ChannelName[2] = BackLeft;
-        device->RealOut.ChannelName[3] = BackRight;
-        device->RealOut.ChannelName[4] = FrontCenter;
-        device->RealOut.ChannelName[5] = LFE;
-        device->RealOut.ChannelName[6] = SideLeft;
-        device->RealOut.ChannelName[7] = SideRight;
+        device->RealOut.ChannelIndex[FrontLeft]   = 0;
+        device->RealOut.ChannelIndex[FrontRight]  = 1;
+        device->RealOut.ChannelIndex[BackLeft]    = 2;
+        device->RealOut.ChannelIndex[BackRight]   = 3;
+        device->RealOut.ChannelIndex[FrontCenter] = 4;
+        device->RealOut.ChannelIndex[LFE]         = 5;
+        device->RealOut.ChannelIndex[SideLeft]    = 6;
+        device->RealOut.ChannelIndex[SideRight]   = 7;
         return;
 
     /* Same as WFX order */

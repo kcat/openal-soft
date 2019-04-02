@@ -98,7 +98,7 @@ inline const char *GetLabelFromChannel(Channel channel)
         case Aux14: return "aux-14";
         case Aux15: return "aux-15";
 
-        case InvalidChannel: break;
+        case MaxChannels: break;
     }
     return "(unknown)";
 }

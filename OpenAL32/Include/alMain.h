@@ -123,7 +123,7 @@ enum Channel {
     Aux14,
     Aux15,
 
-    InvalidChannel
+    MaxChannels
 };
 
 
@@ -326,7 +326,7 @@ struct MixParams {
 };
 
 struct RealMixParams {
-    Channel ChannelName[MAX_OUTPUT_CHANNELS]{};
+    std::array<ALint,MaxChannels> ChannelIndex{};
 
     ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
     ALsizei NumChannels{0};
@@ -553,20 +553,14 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 const ALCchar *DevFmtTypeString(DevFmtType type) noexcept;
 const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept;
 
-inline ALint GetChannelIndex(const Channel (&names)[MAX_OUTPUT_CHANNELS], Channel chan)
-{
-    auto iter = std::find(std::begin(names), std::end(names), chan);
-    if(iter == std::end(names)) return -1;
-    return static_cast<ALint>(std::distance(std::begin(names), iter));
-}
 /**
  * GetChannelIdxByName
  *
  * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
  * doesn't exist.
  */
-inline ALint GetChannelIdxByName(const RealMixParams &real, Channel chan)
-{ return GetChannelIndex(real.ChannelName, chan); }
+inline ALint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
+{ return real.ChannelIndex[chan]; }
 
 
 void StartEventThrd(ALCcontext *ctx);

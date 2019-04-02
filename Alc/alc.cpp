@@ -116,6 +116,9 @@
 namespace {
 
 using namespace std::placeholders;
+using std::chrono::seconds;
+using std::chrono::nanoseconds;
+
 
 /************************************************
  * Backends
@@ -1570,9 +1573,6 @@ static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, 
  */
 static inline void UpdateClockBase(ALCdevice *device)
 {
-    using std::chrono::seconds;
-    using std::chrono::nanoseconds;
-
     IncrementRef(&device->MixCount);
     device->ClockBase += nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
     device->SamplesDone = 0;
@@ -1586,9 +1586,6 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
-    using std::chrono::seconds;
-    using std::chrono::nanoseconds;
-
     HrtfRequestMode hrtf_userreq = Hrtf_Default;
     HrtfRequestMode hrtf_appreq = Hrtf_Default;
     ALCenum gainLimiter = device->LimiterState;
@@ -3269,9 +3266,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 
             case ALC_DEVICE_CLOCK_SOFT:
                 { std::lock_guard<std::mutex> _{dev->StateLock};
-                    using std::chrono::seconds;
-                    using std::chrono::nanoseconds;
-
                     nanoseconds basecount;
                     ALuint samplecount;
                     ALuint refcount;

@@ -255,7 +255,7 @@ struct ALvoice {
     InterpState mResampleState;
 
     std::array<ALfloat,MAX_INPUT_CHANNELS> mAmbiScales;
-    BandSplitter mAmbiSplitter[MAX_INPUT_CHANNELS];
+    std::array<BandSplitter,MAX_INPUT_CHANNELS> mAmbiSplitter;
 
     struct {
         int FilterType;

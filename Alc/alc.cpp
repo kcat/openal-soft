@@ -36,6 +36,7 @@
 #include <string>
 #include <numeric>
 #include <algorithm>
+#include <functional>
 
 #include "alMain.h"
 #include "alcontext.h"
@@ -113,6 +114,8 @@
 
 
 namespace {
+
+using namespace std::placeholders;
 
 /************************************************
  * Backends
@@ -2647,6 +2650,11 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
                 std::begin(voice->mPrevSamples));
 
             voice->mResampleState = old_voice->mResampleState;
+
+            voice->mAmbiScales = old_voice->mAmbiScales;
+            voice->mAmbiSplitter = old_voice->mAmbiSplitter;
+            std::for_each(voice->mAmbiSplitter.begin(),voice->mAmbiSplitter.end(),
+                std::bind(std::mem_fn(&BandSplitter::clear), _1));
 
             voice->mDirect = old_voice->mDirect;
             std::copy_n(old_voice->mSend.begin(), s_count, voice->mSend.begin());

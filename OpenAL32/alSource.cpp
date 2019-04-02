@@ -2895,7 +2895,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             }
 
             voice->mAmbiSplitter[0].init(400.0f / static_cast<ALfloat>(device->Frequency));
-            std::fill_n(std::begin(voice->mAmbiSplitter)+1, voice->mNumChannels-1,
+            std::fill_n(voice->mAmbiSplitter.begin()+1, voice->mNumChannels-1,
                 voice->mAmbiSplitter[0]);
             voice->mFlags |= VOICE_IS_AMBISONIC;
         }

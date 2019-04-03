@@ -601,7 +601,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             if(Device->mRenderMode != StereoPair)
-                CalcDirectionCoeffs((float[3]){xpos, ypos, zpos}, Spread, coeffs);
+                CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
             else
             {
                 /* Clamp Y, in case rounding errors caused it to end up outside
@@ -834,7 +834,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
              */
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             if(Device->mRenderMode != StereoPair)
-                CalcDirectionCoeffs((float[3]){xpos, ypos, zpos}, Spread, coeffs);
+                CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
             else
             {
                 const ALfloat ev{std::asin(clampf(ypos, -1.0f, 1.0f))};

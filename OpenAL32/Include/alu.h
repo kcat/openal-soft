@@ -403,20 +403,6 @@ inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, 
     CalcAmbiCoeffs(x, y, z, spread, coeffs);
 }
 
-/**
- * ScaleAzimuthFront
- *
- * Scales the given azimuth toward the side (+/- pi/2 radians) for positions in
- * front.
- */
-inline float ScaleAzimuthFront(float azimuth, float scale)
-{
-    ALfloat sign = std::copysign(1.0f, azimuth);
-    if(!(std::fabs(azimuth) > al::MathDefs<float>::Pi()*0.5f))
-        return minf(std::fabs(azimuth) * scale, al::MathDefs<float>::Pi()*0.5f) * sign;
-    return azimuth;
-}
-
 
 /**
  * ComputePanGains

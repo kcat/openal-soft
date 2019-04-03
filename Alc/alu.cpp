@@ -419,41 +419,16 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 }
 
 
-constexpr ChanMap MonoMap[1]{
-    { FrontCenter, 0.0f, 0.0f }
-}, RearMap[2]{
-    { BackLeft,  Deg2Rad(-150.0f), Deg2Rad(0.0f) },
-    { BackRight, Deg2Rad( 150.0f), Deg2Rad(0.0f) }
-}, QuadMap[4]{
-    { FrontLeft,  Deg2Rad( -45.0f), Deg2Rad(0.0f) },
-    { FrontRight, Deg2Rad(  45.0f), Deg2Rad(0.0f) },
-    { BackLeft,   Deg2Rad(-135.0f), Deg2Rad(0.0f) },
-    { BackRight,  Deg2Rad( 135.0f), Deg2Rad(0.0f) }
-}, X51Map[6]{
-    { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-    { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-    { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
-    { LFE, 0.0f, 0.0f },
-    { SideLeft,    Deg2Rad(-110.0f), Deg2Rad(0.0f) },
-    { SideRight,   Deg2Rad( 110.0f), Deg2Rad(0.0f) }
-}, X61Map[7]{
-    { FrontLeft,   Deg2Rad(-30.0f), Deg2Rad(0.0f) },
-    { FrontRight,  Deg2Rad( 30.0f), Deg2Rad(0.0f) },
-    { FrontCenter, Deg2Rad(  0.0f), Deg2Rad(0.0f) },
-    { LFE, 0.0f, 0.0f },
-    { BackCenter,  Deg2Rad(180.0f), Deg2Rad(0.0f) },
-    { SideLeft,    Deg2Rad(-90.0f), Deg2Rad(0.0f) },
-    { SideRight,   Deg2Rad( 90.0f), Deg2Rad(0.0f) }
-}, X71Map[8]{
-    { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-    { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-    { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
-    { LFE, 0.0f, 0.0f },
-    { BackLeft,    Deg2Rad(-150.0f), Deg2Rad(0.0f) },
-    { BackRight,   Deg2Rad( 150.0f), Deg2Rad(0.0f) },
-    { SideLeft,    Deg2Rad( -90.0f), Deg2Rad(0.0f) },
-    { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
-};
+/* Scales the given azimuth toward the side (+/- pi/2 radians) for positions in
+ * front.
+ */
+inline float ScaleAzimuthFront(float azimuth, float scale)
+{
+    const ALfloat abs_azi{std::fabs(azimuth)};
+    if(!(abs_azi > al::MathDefs<float>::Pi()*0.5f))
+        return minf(abs_azi*scale, al::MathDefs<float>::Pi()*0.5f) * std::copysign(1.0f, azimuth);
+    return azimuth;
+}
 
 void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypos,
     const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const ALfloat DryGain,
@@ -462,6 +437,42 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     ALeffectslot *(&SendSlots)[MAX_SENDS], const ALvoicePropsBase *props,
     const ALlistener &Listener, const ALCdevice *Device)
 {
+    static constexpr ChanMap MonoMap[1]{
+        { FrontCenter, 0.0f, 0.0f }
+    }, RearMap[2]{
+        { BackLeft,  Deg2Rad(-150.0f), Deg2Rad(0.0f) },
+        { BackRight, Deg2Rad( 150.0f), Deg2Rad(0.0f) }
+    }, QuadMap[4]{
+        { FrontLeft,  Deg2Rad( -45.0f), Deg2Rad(0.0f) },
+        { FrontRight, Deg2Rad(  45.0f), Deg2Rad(0.0f) },
+        { BackLeft,   Deg2Rad(-135.0f), Deg2Rad(0.0f) },
+        { BackRight,  Deg2Rad( 135.0f), Deg2Rad(0.0f) }
+    }, X51Map[6]{
+        { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
+        { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
+        { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { SideLeft,    Deg2Rad(-110.0f), Deg2Rad(0.0f) },
+        { SideRight,   Deg2Rad( 110.0f), Deg2Rad(0.0f) }
+    }, X61Map[7]{
+        { FrontLeft,   Deg2Rad(-30.0f), Deg2Rad(0.0f) },
+        { FrontRight,  Deg2Rad( 30.0f), Deg2Rad(0.0f) },
+        { FrontCenter, Deg2Rad(  0.0f), Deg2Rad(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackCenter,  Deg2Rad(180.0f), Deg2Rad(0.0f) },
+        { SideLeft,    Deg2Rad(-90.0f), Deg2Rad(0.0f) },
+        { SideRight,   Deg2Rad( 90.0f), Deg2Rad(0.0f) }
+    }, X71Map[8]{
+        { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
+        { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
+        { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackLeft,    Deg2Rad(-150.0f), Deg2Rad(0.0f) },
+        { BackRight,   Deg2Rad( 150.0f), Deg2Rad(0.0f) },
+        { SideLeft,    Deg2Rad( -90.0f), Deg2Rad(0.0f) },
+        { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
+    };
+
     ChanMap StereoMap[2]{
         { FrontLeft,  Deg2Rad(-30.0f), Deg2Rad(0.0f) },
         { FrontRight, Deg2Rad( 30.0f), Deg2Rad(0.0f) }
@@ -590,7 +601,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             if(Device->mRenderMode != StereoPair)
-                CalcAmbiCoeffs(-xpos, ypos, -zpos, Spread, coeffs);
+                CalcDirectionCoeffs((float[3]){xpos, ypos, zpos}, Spread, coeffs);
             else
             {
                 /* Clamp Y, in case rounding errors caused it to end up outside
@@ -823,7 +834,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
              */
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             if(Device->mRenderMode != StereoPair)
-                CalcAmbiCoeffs(-xpos, ypos, -zpos, Spread, coeffs);
+                CalcDirectionCoeffs((float[3]){xpos, ypos, zpos}, Spread, coeffs);
             else
             {
                 const ALfloat ev{std::asin(clampf(ypos, -1.0f, 1.0f))};

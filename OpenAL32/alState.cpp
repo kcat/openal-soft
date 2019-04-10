@@ -29,6 +29,7 @@
 #include "alcontext.h"
 #include "alu.h"
 #include "alError.h"
+#include "alexcpt.h"
 
 #include "backends/base.h"
 
@@ -60,11 +61,13 @@ constexpr ALchar alBSinc24Resampler[] = "23rd order Sinc";
  * alcFunctions list.
  */
 extern "C" AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
+START_API_FUNC
 {
     const char *spoof{getenv("ALSOFT_SPOOF_VERSION")};
     if(spoof && spoof[0] != '\0') return spoof;
     return ALSOFT_VERSION;
 }
+END_API_FUNC
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!context->DeferUpdates.load(std::memory_order_acquire))                \
@@ -75,6 +78,7 @@ extern "C" AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
 
 
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -91,8 +95,10 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -109,8 +115,10 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
     }
 }
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
@@ -129,8 +137,10 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
 
     return value;
 }
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
@@ -184,8 +194,10 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
 
     return value;
 }
+END_API_FUNC
 
 AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0;
@@ -233,8 +245,10 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
 
     return value;
 }
+END_API_FUNC
 
 AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0f;
@@ -282,8 +296,10 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
 
     return value;
 }
+END_API_FUNC
 
 AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
@@ -331,8 +347,10 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
 
     return value;
 }
+END_API_FUNC
 
 extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
@@ -380,8 +398,10 @@ extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
 
     return value;
 }
+END_API_FUNC
 
 AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
@@ -404,8 +424,10 @@ AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
 
     return value;
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -435,8 +457,10 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid boolean-vector property 0x%04x", pname);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -466,8 +490,10 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid double-vector property 0x%04x", pname);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -497,8 +523,10 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid float-vector property 0x%04x", pname);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -528,8 +556,10 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer-vector property 0x%04x", pname);
     }
 }
+END_API_FUNC
 
 extern "C" AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -559,8 +589,10 @@ extern "C" AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer64-vector property 0x%04x", pname);
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values)
+START_API_FUNC
 {
     if(values)
     {
@@ -584,8 +616,10 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values)
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid pointer-vector property 0x%04x", pname);
     }
 }
+END_API_FUNC
 
 AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
@@ -638,8 +672,10 @@ AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
     }
     return value;
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -653,8 +689,10 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
         DO_UPDATEPROPS();
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -680,8 +718,10 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
         DO_UPDATEPROPS();
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -695,8 +735,10 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
         DO_UPDATEPROPS();
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -714,26 +756,32 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
             DO_UPDATEPROPS();
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
     ALCcontext_DeferUpdates(context.get());
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
     ALCcontext_ProcessUpdates(context.get());
 }
+END_API_FUNC
 
 
 AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
+START_API_FUNC
 {
     const char *ResamplerNames[] = {
         alPointResampler, alLinearResampler,
@@ -761,6 +809,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
     }
     return value;
 }
+END_API_FUNC
 
 
 void UpdateContextProps(ALCcontext *context)

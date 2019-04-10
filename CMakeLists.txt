@@ -642,6 +642,7 @@ ENDIF()
 SET(COMMON_OBJS
     common/alcomplex.cpp
     common/alcomplex.h
+    common/alexcpt.h
     common/almalloc.cpp
     common/almalloc.h
     common/alnumeric.h

@@ -13,6 +13,7 @@
 #include "alAuxEffectSlot.h"
 #include "ringbuffer.h"
 #include "threads.h"
+#include "alexcpt.h"
 
 
 static int EventThread(ALCcontext *context)
@@ -129,6 +130,7 @@ void StopEventThrd(ALCcontext *ctx)
 }
 
 AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -186,8 +188,10 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         std::lock_guard<std::mutex>{context->EventCbLock};
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -197,3 +201,4 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
     context->EventCb = callback;
     context->EventParam = userParam;
 }
+END_API_FUNC

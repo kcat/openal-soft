@@ -32,6 +32,7 @@
 #include "alMain.h"
 #include "alcontext.h"
 #include "alError.h"
+#include "alexcpt.h"
 
 ALboolean TrapALError = AL_FALSE;
 
@@ -80,6 +81,7 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context))
@@ -100,3 +102,4 @@ AL_API ALenum AL_APIENTRY alGetError(void)
 
     return context->LastError.exchange(AL_NO_ERROR);
 }
+END_API_FUNC

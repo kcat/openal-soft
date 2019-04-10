@@ -28,6 +28,7 @@
 #include "alError.h"
 #include "alListener.h"
 #include "alSource.h"
+#include "alexcpt.h"
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!context->DeferUpdates.load(std::memory_order_acquire))                \
@@ -38,6 +39,7 @@
 
 
 AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -68,9 +70,10 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float property");
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -101,9 +104,10 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -147,9 +151,11 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -161,9 +167,10 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer property");
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, ALint value3)
+START_API_FUNC
 {
     switch(param)
     {
@@ -183,9 +190,10 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -221,9 +229,11 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -246,9 +256,10 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float property");
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -275,9 +286,10 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -315,9 +327,11 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -331,9 +345,10 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer property");
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *value2, ALint *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -360,9 +375,10 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -395,6 +411,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
+END_API_FUNC
 
 
 void UpdateListenerProps(ALCcontext *context)

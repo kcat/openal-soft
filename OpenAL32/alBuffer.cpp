@@ -39,6 +39,7 @@
 #include "alError.h"
 #include "alBuffer.h"
 #include "sample_cvt.h"
+#include "alexcpt.h"
 
 
 namespace {
@@ -417,6 +418,7 @@ DecompResult DecomposeUserFormat(ALenum format)
 
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -453,8 +455,10 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
         std::copy(ids.begin(), ids.end(), buffers);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -502,8 +506,10 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
         );
     }
 }
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
@@ -515,12 +521,16 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
     }
     return AL_FALSE;
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
+START_API_FUNC
 { alBufferStorageSOFT(buffer, format, data, size, freq, 0); }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -554,8 +564,10 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
             LoadData(context.get(), albuf, freq, size, srcchannels, srctype, data, flags);
     }
 }
+END_API_FUNC
 
 AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
@@ -604,8 +616,10 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
 
     return nullptr;
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -625,8 +639,10 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
         albuf->MappedSize = 0;
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -655,8 +671,10 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
         std::atomic_thread_fence(std::memory_order_seq_cst);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -741,39 +759,47 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         }
     }
 }
+END_API_FUNC
 
 
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint UNUSED(buffer),
   ALuint UNUSED(samplerate), ALenum UNUSED(internalformat), ALsizei UNUSED(samples),
   ALenum UNUSED(channels), ALenum UNUSED(type), const ALvoid *UNUSED(data))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
     alSetError(context.get(), AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint UNUSED(buffer),
   ALsizei UNUSED(offset), ALsizei UNUSED(samples),
   ALenum UNUSED(channels), ALenum UNUSED(type), const ALvoid *UNUSED(data))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
     alSetError(context.get(), AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint UNUSED(buffer),
   ALsizei UNUSED(offset), ALsizei UNUSED(samples),
   ALenum UNUSED(channels), ALenum UNUSED(type), ALvoid *UNUSED(data))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
     alSetError(context.get(), AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
 }
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum UNUSED(format))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(!context) return AL_FALSE;
@@ -781,9 +807,11 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum UNUSED(format)
     alSetError(context.get(), AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
     return AL_FALSE;
 }
+END_API_FUNC
 
 
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat UNUSED(value))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -799,9 +827,10 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat UNUSED(va
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat UNUSED(value1), ALfloat UNUSED(value2), ALfloat UNUSED(value3))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -817,9 +846,10 @@ AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat UNUSED(v
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -837,9 +867,11 @@ AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *v
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 
 AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -870,9 +902,10 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint UNUSED(value1), ALint UNUSED(value2), ALint UNUSED(value3))
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -888,9 +921,10 @@ AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint UNUSED(val
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *values)
+START_API_FUNC
 {
     if(values)
     {
@@ -935,9 +969,11 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
                    param);
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -956,9 +992,10 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *val
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -976,9 +1013,10 @@ AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *valu
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -1003,9 +1041,11 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *valu
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -1047,9 +1087,10 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -1066,9 +1107,10 @@ AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -1107,6 +1149,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
                    param);
     }
 }
+END_API_FUNC
 
 
 ALsizei BytesFromUserFmt(UserFmtType type)

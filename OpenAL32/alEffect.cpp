@@ -33,6 +33,8 @@
 #include "alcontext.h"
 #include "alEffect.h"
 #include "alError.h"
+#include "alexcpt.h"
+
 #include "effects/base.h"
 
 
@@ -202,6 +204,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 } // namespace
 
 AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -238,8 +241,10 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         std::copy(ids.begin(), ids.end(), effects);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -282,8 +287,10 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
         );
     }
 }
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
@@ -295,8 +302,10 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     }
     return AL_FALSE;
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -330,8 +339,10 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
         }
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -355,8 +366,10 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
         ALeffect_setParamiv(aleffect, context.get(), param, values);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -373,8 +386,10 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
         ALeffect_setParamf(aleffect, context.get(), param, value);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -391,8 +406,10 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
         ALeffect_setParamfv(aleffect, context.get(), param, values);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -414,8 +431,10 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
         }
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -439,8 +458,10 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
         ALeffect_getParamiv(aleffect, context.get(), param, values);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -457,8 +478,10 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
         ALeffect_getParamf(aleffect, context.get(), param, value);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -475,6 +498,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
         ALeffect_getParamfv(aleffect, context.get(), param, values);
     }
 }
+END_API_FUNC
 
 
 void InitEffect(ALeffect *effect)

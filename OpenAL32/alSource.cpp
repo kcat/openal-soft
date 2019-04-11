@@ -47,6 +47,7 @@
 #include "backends/base.h"
 
 #include "threads.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 
 
@@ -2111,6 +2112,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
 } // namespace
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2141,9 +2143,10 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             std::copy(tempids.cbegin(), tempids.cend(), sources);
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2178,9 +2181,10 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         );
     }
 }
-
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
@@ -2191,9 +2195,11 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     }
     return AL_FALSE;
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2208,8 +2214,10 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     else
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2227,8 +2235,10 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2245,9 +2255,11 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     else
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2265,8 +2277,10 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &fval);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2285,8 +2299,10 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2314,9 +2330,11 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
         }
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2331,8 +2349,10 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     else
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2350,8 +2370,10 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), ivals);
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2368,9 +2390,11 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     else
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2385,8 +2409,10 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     else
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2404,8 +2430,10 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals);
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALint64SOFT *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2422,9 +2450,11 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     else
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2444,9 +2474,10 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
             *value = static_cast<ALfloat>(dval);
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2470,9 +2501,10 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
         }
     }
 }
-
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2499,9 +2531,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
         }
     }
 }
+END_API_FUNC
 
 
 AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2517,8 +2551,10 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
     else
         GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), value);
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2542,8 +2578,10 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
         }
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2559,9 +2597,11 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
     else
         GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2577,9 +2617,10 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     else
         GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), value);
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2603,9 +2644,10 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
         }
     }
 }
-
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2621,9 +2663,11 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     else
         GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
+END_API_FUNC
 
 
 AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2639,8 +2683,10 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     else
         GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), value);
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2664,8 +2710,10 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
         }
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *values)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2681,13 +2729,16 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
     else
         GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
-{
-    alSourcePlayv(1, &source);
-}
+START_API_FUNC
+{ alSourcePlayv(1, &source); }
+END_API_FUNC
+
 AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2925,12 +2976,16 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     };
     std::for_each(sources, sources_end, start_source);
 }
+END_API_FUNC
+
 
 AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
-{
-    alSourcePausev(1, &source);
-}
+START_API_FUNC
+{ alSourcePausev(1, &source); }
+END_API_FUNC
+
 AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -2966,12 +3021,16 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
         }
     }
 }
+END_API_FUNC
+
 
 AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
-{
-    alSourceStopv(1, &source);
-}
+START_API_FUNC
+{ alSourceStopv(1, &source); }
+END_API_FUNC
+
 AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -3014,12 +3073,16 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         source->Offset = 0.0;
     }
 }
+END_API_FUNC
+
 
 AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
-{
-    alSourceRewindv(1, &source);
-}
+START_API_FUNC
+{ alSourceRewindv(1, &source); }
+END_API_FUNC
+
 AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -3061,9 +3124,11 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         source->Offset = 0.0;
     }
 }
+END_API_FUNC
 
 
 AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALuint *buffers)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -3179,8 +3244,10 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         BufferList->next.store(BufferListStart, std::memory_order_release);
     }
 }
+END_API_FUNC
 
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, const ALuint *buffers)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -3287,8 +3354,10 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
         BufferList->next.store(BufferListStart, std::memory_order_release);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *buffers)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -3373,6 +3442,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         source->queue = next;
     }
 }
+END_API_FUNC
 
 
 ALsource::ALsource(ALsizei num_sends)

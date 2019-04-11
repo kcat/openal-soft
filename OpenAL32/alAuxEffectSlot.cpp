@@ -37,6 +37,7 @@
 #include "alSource.h"
 
 #include "fpu_modes.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 
 
@@ -251,6 +252,7 @@ ALeffectslotArray *ALeffectslot::CreatePtrArray(size_t count) noexcept
 
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -290,8 +292,10 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     std::unique_lock<std::mutex> slotlock{context->EffectSlotLock};
     AddActiveEffectSlots(effectslots, n, context.get());
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *effectslots)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -332,8 +336,10 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
         }
     );
 }
+END_API_FUNC
 
 AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
@@ -344,8 +350,11 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     }
     return AL_FALSE;
 }
+END_API_FUNC
+
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -421,8 +430,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     }
     DO_UPDATEPROPS();
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -448,8 +459,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
                       "Invalid effect slot integer-vector property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -474,8 +487,10 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     }
     DO_UPDATEPROPS();
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -499,8 +514,11 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
                       "Invalid effect slot float-vector property 0x%04x", param);
     }
 }
+END_API_FUNC
+
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -525,8 +543,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
                       "Invalid effect slot integer property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -552,8 +572,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
                       "Invalid effect slot integer-vector property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *value)
+START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
@@ -574,8 +596,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
                       "Invalid effect slot float property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *values)
+START_API_FUNC
 {
     switch(param)
     {
@@ -599,6 +623,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
                       "Invalid effect slot float-vector property 0x%04x", param);
     }
 }
+END_API_FUNC
 
 
 ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)

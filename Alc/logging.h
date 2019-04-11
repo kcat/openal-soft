@@ -6,14 +6,6 @@
 #include "opthelpers.h"
 
 
-#if defined(_WIN64)
-#define SZFMT "%I64u"
-#elif defined(_WIN32)
-#define SZFMT "%u"
-#else
-#define SZFMT "%zu"
-#endif
-
 #ifdef __GNUC__
 #define DECL_FORMAT(x, y, z) __attribute__((format(x, (y), (z))))
 #else

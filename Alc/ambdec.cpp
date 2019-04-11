@@ -91,15 +91,15 @@ bool load_ambdec_speakers(al::vector<AmbDecConf::SpeakerConf> &spkrs, const std:
             const size_t spkr_num{spkrs.size()};
 
             istr >> spkr.Name;
-            if(istr.fail()) WARN("Name not specified for speaker " SZFMT "\n", spkr_num);
+            if(istr.fail()) WARN("Name not specified for speaker %zu\n", spkr_num);
             istr >> spkr.Distance;
-            if(istr.fail()) WARN("Distance not specified for speaker " SZFMT "\n", spkr_num);
+            if(istr.fail()) WARN("Distance not specified for speaker %zu\n", spkr_num);
             istr >> spkr.Azimuth;
-            if(istr.fail()) WARN("Azimuth not specified for speaker " SZFMT "\n", spkr_num);
+            if(istr.fail()) WARN("Azimuth not specified for speaker %zu\n", spkr_num);
             istr >> spkr.Elevation;
-            if(istr.fail()) WARN("Elevation not specified for speaker " SZFMT "\n", spkr_num);
+            if(istr.fail()) WARN("Elevation not specified for speaker %zu\n", spkr_num);
             istr >> spkr.Connection;
-            if(istr.fail()) TRACE("Connection not specified for speaker " SZFMT "\n", spkr_num);
+            if(istr.fail()) TRACE("Connection not specified for speaker %zu\n", spkr_num);
         }
         else
         {
@@ -149,7 +149,7 @@ bool load_ambdec_matrix(float (&gains)[MAX_AMBI_ORDER+1], al::vector<AmbDecConf:
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on gain " SZFMT ": %s\n", curgain+1,
+                    ERR("Extra junk on gain %zu: %s\n", curgain+1,
                         buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     return false;
                 }
@@ -171,7 +171,7 @@ bool load_ambdec_matrix(float (&gains)[MAX_AMBI_ORDER+1], al::vector<AmbDecConf:
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on matrix element " SZFMT "x" SZFMT ": %s\n", curidx,
+                    ERR("Extra junk on matrix element %zux%zu: %s\n", curidx,
                         matrix.size(), buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     matrix.pop_back();
                     return false;

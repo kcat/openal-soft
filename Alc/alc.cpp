@@ -1928,8 +1928,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     /* Allocate extra channels for any post-filter output. */
     const ALsizei num_chans{device->Dry.NumChannels + device->RealOut.NumChannels};
 
-    TRACE("Allocating %d channels, " SZFMT " bytes\n", num_chans,
-          num_chans*sizeof(device->MixBuffer[0]));
+    TRACE("Allocating %d channels, %zu bytes\n", num_chans,
+        num_chans*sizeof(device->MixBuffer[0]));
     device->MixBuffer.resize(num_chans);
 
     device->Dry.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(device->MixBuffer[0]);
@@ -2207,21 +2207,21 @@ ALCdevice::~ALCdevice()
         { return cur + POPCNT64(~sublist.FreeMask); }
     )};
     if(count > 0)
-        WARN(SZFMT " Buffer%s not deleted\n", count, (count==1)?"":"s");
+        WARN("%zu Buffer%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), size_t{0u},
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
         { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
-        WARN(SZFMT " Effect%s not deleted\n", count, (count==1)?"":"s");
+        WARN("%zu Effect%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), size_t{0u},
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
         { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
-        WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
+        WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
 
     if(mHrtf)
         mHrtf->DecRef();
@@ -2379,14 +2379,14 @@ ALCcontext::~ALCcontext()
         cprops = next;
         ++count;
     }
-    TRACE("Freed " SZFMT " context property object%s\n", count, (count==1)?"":"s");
+    TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
 
     count = std::accumulate(SourceList.cbegin(), SourceList.cend(), size_t{0u},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
         { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
-        WARN(SZFMT " Source%s not deleted\n", count, (count==1)?"":"s");
+        WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
     SourceList.clear();
     NumSources = 0;
 
@@ -2400,7 +2400,7 @@ ALCcontext::~ALCcontext()
         eprops = next;
         ++count;
     }
-    TRACE("Freed " SZFMT " AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
+    TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
     delete ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed);
     DefaultSlot = nullptr;
@@ -2410,7 +2410,7 @@ ALCcontext::~ALCcontext()
         { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
-        WARN(SZFMT " AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
+        WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     EffectSlotList.clear();
     NumEffectSlots = 0;
 
@@ -2423,7 +2423,7 @@ ALCcontext::~ALCcontext()
         vprops = next;
         ++count;
     }
-    TRACE("Freed " SZFMT " voice property object%s\n", count, (count==1)?"":"s");
+    TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
 
     std::for_each(Voices, Voices + MaxVoices, DeinitVoice);
     al_free(Voices);
@@ -2446,7 +2446,7 @@ ALCcontext::~ALCcontext()
         lprops = next;
         ++count;
     }
-    TRACE("Freed " SZFMT " listener property object%s\n", count, (count==1)?"":"s");
+    TRACE("Freed %zu listener property object%s\n", count, (count==1)?"":"s");
 
     if(AsyncEvents)
     {
@@ -2467,7 +2467,7 @@ ALCcontext::~ALCcontext()
             ++count;
         }
         if(count > 0)
-            TRACE("Destructed " SZFMT " orphaned event%s\n", count, (count==1)?"":"s");
+            TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
     }
 
     ALCdevice_DecRef(Device);

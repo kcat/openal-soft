@@ -812,7 +812,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                 if(!conf.load(fname))
                     ERR("Failed to load layout file %s\n", fname);
                 else if(conf.Speakers.size() > MAX_OUTPUT_CHANNELS)
-                    ERR("Unsupported speaker count " SZFMT " (max %d)\n", conf.Speakers.size(),
+                    ERR("Unsupported speaker count %zu (max %d)\n", conf.Speakers.size(),
                         MAX_OUTPUT_CHANNELS);
                 else if(conf.ChanMask > AMBI_3ORDER_MASK)
                     ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,

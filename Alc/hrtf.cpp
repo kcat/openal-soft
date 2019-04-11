@@ -626,7 +626,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     }
     if(irCount <= evOffset.back())
     {
-        ERR("Invalid evOffset: evOffset[" SZFMT "]=%d (irCount=%d)\n",
+        ERR("Invalid evOffset: evOffset[%zu]=%d (irCount=%d)\n",
             evOffset.size()-1, evOffset.back(), irCount);
         failed = AL_TRUE;
     }
@@ -647,7 +647,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     azCount.back() = irCount - evOffset.back();
     if(azCount.back() < MIN_AZ_COUNT || azCount.back() > MAX_AZ_COUNT)
     {
-        ERR("Unsupported azimuth count: azCount[" SZFMT "]=%d (%d to %d)\n",
+        ERR("Unsupported azimuth count: azCount[%zu]=%d (%d to %d)\n",
             azCount.size()-1, azCount.back(), MIN_AZ_COUNT, MAX_AZ_COUNT);
         failed = AL_TRUE;
     }
@@ -1297,7 +1297,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     char magic[sizeof(magicMarker02)];
     stream->read(magic, sizeof(magic));
     if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
-        ERR("%s data is too short (" SZFMT " bytes)\n", name, stream->gcount());
+        ERR("%s data is too short (%zu bytes)\n", name, stream->gcount());
     else if(memcmp(magic, magicMarker02, sizeof(magicMarker02)) == 0)
     {
         TRACE("Detected data set format v2\n");

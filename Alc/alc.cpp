@@ -178,7 +178,7 @@ BackendInfo BackendList[] = {
     { "wave", WaveBackendFactory::getFactory },
 #endif
 };
-ALsizei BackendListSize = static_cast<ALsizei>(COUNTOF(BackendList));
+auto BackendListEnd = std::end(BackendList);
 
 BackendInfo PlaybackBackend;
 BackendInfo CaptureBackend;
@@ -922,12 +922,7 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
 
 static void alc_initconfig(void)
 {
-    const char *devs, *str;
-    int capfilter;
-    float valf;
-    int i, n;
-
-    str = getenv("ALSOFT_LOGLEVEL");
+    const char *str{getenv("ALSOFT_LOGLEVEL")};
     if(str)
     {
         long lvl = strtol(str, nullptr, 0);
@@ -952,12 +947,12 @@ static void alc_initconfig(void)
           ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
     {
         std::string names;
-        if(BackendListSize > 0)
+        if(std::begin(BackendList) != BackendListEnd)
             names += BackendList[0].name;
-        for(i = 1;i < BackendListSize;i++)
+        for(auto backend = std::begin(BackendList)+1;backend != BackendListEnd;++backend)
         {
             names += ", ";
-            names += BackendList[i].name;
+            names += backend->name;
         }
         TRACE("Supported backends: %s\n", names.c_str());
     }
@@ -975,7 +970,7 @@ static void alc_initconfig(void)
             ERR("Unhandled context suspend behavior setting: \"%s\"\n", str);
     }
 
-    capfilter = 0;
+    int capfilter{0};
 #if defined(HAVE_SSE4_1)
     capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
 #elif defined(HAVE_SSE3)
@@ -1053,37 +1048,35 @@ static void alc_initconfig(void)
         TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", TrapALCError);
     }
 
+    float valf{};
     if(ConfigValueFloat(nullptr, "reverb", "boost", &valf))
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
 
-    if(((devs=getenv("ALSOFT_DRIVERS")) && devs[0]) ||
-       ConfigValueStr(nullptr, nullptr, "drivers", &devs))
+    const char *devs{getenv("ALSOFT_DRIVERS")};
+    if((devs && devs[0]) || ConfigValueStr(nullptr, nullptr, "drivers", &devs))
     {
-        int n;
-        size_t len;
-        const char *next = devs;
-        int endlist, delitem;
+        auto backendlist_cur = std::begin(BackendList);
 
-        i = 0;
+        bool endlist{true};
+        const char *next = devs;
         do {
             devs = next;
             while(isspace(devs[0]))
                 devs++;
             next = strchr(devs, ',');
 
-            delitem = (devs[0] == '-');
+            const bool delitem{devs[0] == '-'};
             if(devs[0] == '-') devs++;
 
             if(!devs[0] || devs[0] == ',')
             {
-                endlist = 0;
+                endlist = false;
                 continue;
             }
-            endlist = 1;
+            endlist = true;
 
-            len = (next ? (static_cast<size_t>(next-devs)) : strlen(devs));
-            while(len > 0 && isspace(devs[len-1]))
-                len--;
+            size_t len{next ? (static_cast<size_t>(next-devs)) : strlen(devs)};
+            while(len > 0 && isspace(devs[len-1])) --len;
 #ifdef HAVE_WASAPI
             /* HACK: For backwards compatibility, convert backend references of
              * mmdevapi to wasapi. This should eventually be removed.
@@ -1094,60 +1087,51 @@ static void alc_initconfig(void)
                 len = 6;
             }
 #endif
-            for(n = i;n < BackendListSize;n++)
-            {
-                if(len == strlen(BackendList[n].name) &&
-                   strncmp(BackendList[n].name, devs, len) == 0)
-                {
-                    if(delitem)
-                    {
-                        for(;n+1 < BackendListSize;n++)
-                            BackendList[n] = BackendList[n+1];
-                        BackendListSize--;
-                    }
-                    else
-                    {
-                        BackendInfo Bkp = BackendList[n];
-                        for(;n > i;n--)
-                            BackendList[n] = BackendList[n-1];
-                        BackendList[n] = Bkp;
 
-                        i++;
-                    }
-                    break;
-                }
-            }
+            auto find_backend = [devs,len](const BackendInfo &backend) -> bool
+            { return len == strlen(backend.name) && strncmp(backend.name, devs, len) == 0; };
+            auto this_backend = std::find_if(std::begin(BackendList), BackendListEnd,
+                find_backend);
+
+            if(this_backend == BackendListEnd)
+                continue;
+
+            if(delitem)
+                BackendListEnd = std::move(this_backend+1, BackendListEnd, this_backend);
+            else
+                backendlist_cur = std::rotate(backendlist_cur, this_backend, this_backend+1);
         } while(next++);
 
         if(endlist)
-            BackendListSize = i;
+            BackendListEnd = backendlist_cur;
     }
 
-    for(n = i = 0;i < BackendListSize && (!PlaybackBackend.name || !CaptureBackend.name);i++)
+    auto init_backend = [](BackendInfo &backend) -> bool
     {
-        BackendList[n] = BackendList[i];
+        if(PlaybackBackend.name && CaptureBackend.name)
+            return true;
 
-        BackendFactory &factory = BackendList[n].getFactory();
+        BackendFactory &factory = backend.getFactory();
         if(!factory.init())
         {
-            WARN("Failed to initialize backend \"%s\"\n", BackendList[n].name);
-            continue;
+            WARN("Failed to initialize backend \"%s\"\n", backend.name);
+            return true;
         }
 
-        TRACE("Initialized backend \"%s\"\n", BackendList[n].name);
+        TRACE("Initialized backend \"%s\"\n", backend.name);
         if(!PlaybackBackend.name && factory.querySupport(BackendType::Playback))
         {
-            PlaybackBackend = BackendList[n];
+            PlaybackBackend = backend;
             TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
         }
         if(!CaptureBackend.name && factory.querySupport(BackendType::Capture))
         {
-            CaptureBackend = BackendList[n];
+            CaptureBackend = backend;
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
         }
-        n++;
-    }
-    BackendListSize = n;
+        return false;
+    };
+    BackendListEnd = std::remove_if(std::begin(BackendList), BackendListEnd, init_backend);
 
     LoopbackBackendFactory::getFactory().init();
 

@@ -298,10 +298,9 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
     return src;
 }
 
-ALsizei LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
+ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
     const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
-    ALfloat (&SrcData)[BUFFERSIZE + MAX_RESAMPLE_PADDING*2], ALsizei FilledAmt,
-    const ALsizei SrcBufferSize)
+    ALfloat *SrcData, const ALfloat *const SrcDataEnd)
 {
     /* TODO: For static sources, loop points are taken from the first buffer
      * (should be adjusted by any buffer offset, to possibly be added later).
@@ -315,91 +314,91 @@ ALsizei LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Bu
     /* If current pos is beyond the loop range, do not loop */
     if(!BufferLoopItem || DataPosInt >= LoopEnd)
     {
-        const ALsizei SizeToDo{SrcBufferSize - FilledAmt};
+        const ptrdiff_t SizeToDo{SrcDataEnd - SrcData};
+        ASSUME(SizeToDo > 0);
 
         BufferLoopItem = nullptr;
 
-        auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
+        auto load_buffer = [DataPosInt,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
         {
             if(DataPosInt >= buffer->SampleLen)
                 return CompLen;
 
             /* Load what's left to play from the buffer */
-            const ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - DataPosInt)};
-            CompLen = maxi(CompLen, DataSize);
+            const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
+            CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
             const ALbyte *Data{buffer->mData.data()};
-            LoadSamples(&SrcData[FilledAmt],
-                &Data[(DataPosInt*NumChannels + chan)*SampleSize],
-                NumChannels, buffer->mFmtType, DataSize
-            );
+            Data += (DataPosInt*NumChannels + chan)*SampleSize;
+
+            LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
         /* It's impossible to have a buffer list item with no entries. */
         ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
+        SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0},
             load_buffer);
     }
     else
     {
-        const ALsizei SizeToDo{mini(SrcBufferSize - FilledAmt, LoopEnd - DataPosInt)};
+        const ptrdiff_t SizeToDo{std::min<ptrdiff_t>(SrcDataEnd-SrcData, LoopEnd-DataPosInt)};
+        ASSUME(SizeToDo > 0);
 
-        auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
+        auto load_buffer = [DataPosInt,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
         {
             if(DataPosInt >= buffer->SampleLen)
                 return CompLen;
 
             /* Load what's left of this loop iteration */
-            const ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - DataPosInt)};
-            CompLen = maxi(CompLen, DataSize);
+            const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
+            CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
             const ALbyte *Data{buffer->mData.data()};
-            LoadSamples(&SrcData[FilledAmt],
-                &Data[(DataPosInt*NumChannels + chan)*SampleSize],
-                NumChannels, buffer->mFmtType, DataSize
-            );
+            Data += (DataPosInt*NumChannels + chan)*SampleSize;
+
+            LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
         ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
+        SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0},
             load_buffer);
 
-        const ALsizei LoopSize{LoopEnd - LoopStart};
-        while(SrcBufferSize > FilledAmt)
+        const auto LoopSize = static_cast<ptrdiff_t>(LoopEnd - LoopStart);
+        while(SrcData != SrcDataEnd)
         {
-            const ALsizei SizeToDo{mini(SrcBufferSize - FilledAmt, LoopSize)};
+            const ptrdiff_t SizeToDo{std::min<ptrdiff_t>(SrcDataEnd-SrcData, LoopSize)};
+            ASSUME(SizeToDo > 0);
 
-            auto load_buffer_loop = [LoopStart,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
+            auto load_buffer_loop = [LoopStart,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
             {
                 if(LoopStart >= buffer->SampleLen)
                     return CompLen;
 
-                const ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - LoopStart)};
-                CompLen = maxi(CompLen, DataSize);
+                const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo,
+                    buffer->SampleLen-LoopStart)};
+                CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
                 const ALbyte *Data{buffer->mData.data()};
-                LoadSamples(&SrcData[FilledAmt],
-                    &Data[(LoopStart*NumChannels + chan)*SampleSize],
-                    NumChannels, buffer->mFmtType, DataSize
-                );
+                Data += (LoopStart*NumChannels + chan)*SampleSize;
+
+                LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
                 return CompLen;
             };
-            FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
+            SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0},
                 load_buffer_loop);
         }
     }
-    return FilledAmt;
+    return SrcData;
 }
 
-ALsizei LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
+ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
     const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
-    ALfloat (&SrcData)[BUFFERSIZE + MAX_RESAMPLE_PADDING*2], ALsizei FilledAmt,
-    const ALsizei SrcBufferSize)
+    ALfloat *SrcData, const ALfloat *const SrcDataEnd)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
-    while(BufferListItem && SrcBufferSize > FilledAmt)
+    while(BufferListItem && SrcData != SrcDataEnd)
     {
         if(DataPosInt >= BufferListItem->max_samples)
         {
@@ -409,36 +408,36 @@ ALsizei LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buff
             continue;
         }
 
-        const ALsizei SizeToDo{SrcBufferSize - FilledAmt};
-        auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
+        const ptrdiff_t SizeToDo{SrcDataEnd - SrcData};
+        ASSUME(SizeToDo > 0);
+        auto load_buffer = [DataPosInt,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
         {
             if(!buffer) return CompLen;
-            ALsizei DataSize{buffer->SampleLen};
-            if(DataPosInt >= DataSize) return CompLen;
+            if(DataPosInt >= buffer->SampleLen)
+                return CompLen;
 
-            DataSize = mini(SizeToDo, DataSize - DataPosInt);
-            CompLen = maxi(CompLen, DataSize);
+            const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
+            CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
             const ALbyte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-            LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
-                        buffer->mFmtType, DataSize);
+            LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
         ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
+        SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0u},
             load_buffer);
 
-        if(SrcBufferSize <= FilledAmt)
+        if(SrcData == SrcDataEnd)
             break;
         DataPosInt = 0;
         BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
         if(!BufferListItem) BufferListItem = BufferLoopItem;
     }
 
-    return FilledAmt;
+    return SrcData;
 }
 
 } // namespace
@@ -556,39 +555,32 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 std::begin(SrcData));
             std::fill(srciter, std::end(SrcData), 0.0f);
 
-            ALsizei FilledAmt{MAX_RESAMPLE_PADDING};
+            auto srcdata_end = std::begin(SrcData) + SrcBufferSize;
             if(vstate != ALvoice::Playing)
-            {
-                std::copy(voice->mPrevSamples[chan].begin()+MAX_RESAMPLE_PADDING,
+                srciter = std::copy(voice->mPrevSamples[chan].begin()+MAX_RESAMPLE_PADDING,
                     voice->mPrevSamples[chan].end(), srciter);
-                FilledAmt = voice->mPrevSamples[chan].size();
-            }
             else if(isstatic)
-            {
-                FilledAmt = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
-                    SampleSize, chan, DataPosInt, SrcData, FilledAmt, SrcBufferSize);
-            }
+                srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
+                    SampleSize, chan, DataPosInt, srciter, srcdata_end);
             else
-            {
-                FilledAmt = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
-                    SampleSize, chan, DataPosInt, SrcData, FilledAmt, SrcBufferSize);
-            }
+                srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
+                    SampleSize, chan, DataPosInt, srciter, srcdata_end);
 
-            if(UNLIKELY(FilledAmt < SrcBufferSize))
+            if(UNLIKELY(srciter != srcdata_end))
             {
                 /* If the source buffer wasn't filled, copy the last sample and
                  * fade it to 0 amplitude. Ideally it should have ended with
                  * silence, but if not this should help avoid clicks from
                  * sudden amplitude changes.
                  */
-                const ALfloat sample{SrcData[FilledAmt-1]};
+                const ALfloat sample{*(srciter-1)};
                 const ALfloat gainstep{1.0f / (BUFFERSIZE*2)};
                 ALfloat step{BUFFERSIZE*2};
 
-                for(;FilledAmt < SrcBufferSize;++FilledAmt)
+                while(srciter != srcdata_end)
                 {
                     step -= 1.0f;
-                    SrcData[FilledAmt] = sample * gainstep*step;
+                    *(srciter++) = sample * gainstep*step;
                 }
             }
 

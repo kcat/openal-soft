@@ -457,7 +457,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = AmbiChannelsFromOrder(order);
+        count = static_cast<ALsizei>(AmbiChannelsFromOrder(order));
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -465,7 +465,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
     else
     {
-        count = Ambi2DChannelsFromOrder(order);
+        count = static_cast<ALsizei>(Ambi2DChannelsFromOrder(order));
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -498,7 +498,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = AmbiChannelsFromOrder(order);
+        count = static_cast<ALsizei>(AmbiChannelsFromOrder(order));
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -506,7 +506,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     }
     else
     {
-        count = Ambi2DChannelsFromOrder(order);
+        count = static_cast<ALsizei>(Ambi2DChannelsFromOrder(order));
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -617,12 +617,12 @@ void InitHrtfPanning(ALCdevice *device)
         std::begin(device->Dry.AmbiMap),
         [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
-    device->Dry.NumChannels = count;
+    device->Dry.NumChannels = static_cast<ALsizei>(count);
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
     BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints,
-        AmbiMatrix, static_cast<ALsizei>(COUNTOF(AmbiPoints)), AmbiOrderHFGain);
+        AmbiMatrix, COUNTOF(AmbiPoints), AmbiOrderHFGain);
 
     HrtfEntry *Hrtf{device->mHrtf};
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);

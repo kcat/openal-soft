@@ -215,6 +215,42 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     context->EventSem.post();
 }
 
+
+const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
+    ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples, int type)
+{
+    switch(type)
+    {
+        case AF_None:
+            lpfilter->passthru(numsamples);
+            hpfilter->passthru(numsamples);
+            break;
+
+        case AF_LowPass:
+            lpfilter->process(dst, src, numsamples);
+            hpfilter->passthru(numsamples);
+            return dst;
+        case AF_HighPass:
+            lpfilter->passthru(numsamples);
+            hpfilter->process(dst, src, numsamples);
+            return dst;
+
+        case AF_BandPass:
+            for(ALsizei i{0};i < numsamples;)
+            {
+                ALfloat temp[256];
+                ALsizei todo = mini(256, numsamples-i);
+
+                lpfilter->process(temp, src+i, todo);
+                hpfilter->process(dst+i, temp, todo);
+                i += todo;
+            }
+            return dst;
+    }
+    return src;
+}
+
+
 /* Base template left undefined. Should be marked =delete, but Clang 3.8.1
  * chokes on that given the inline specializations.
  */
@@ -235,7 +271,8 @@ template<> inline ALfloat LoadSample<FmtAlaw>(FmtTypeTraits<FmtAlaw>::Type val)
 { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 
 template<FmtType T>
-inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcstep, ALsizei samples)
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcstep,
+    const ptrdiff_t samples)
 {
     using SampleType = typename FmtTypeTraits<T>::Type;
 
@@ -245,10 +282,9 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcste
 }
 
 void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep, FmtType srctype,
-                 ALsizei samples)
+    const ptrdiff_t samples)
 {
-#define HANDLE_FMT(T)                                                         \
-    case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
+#define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
     switch(srctype)
     {
         HANDLE_FMT(FmtUByte);
@@ -259,43 +295,6 @@ void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcste
         HANDLE_FMT(FmtAlaw);
     }
 #undef HANDLE_FMT
-}
-
-
-const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
-                         ALfloat *RESTRICT dst, const ALfloat *RESTRICT src,
-                         ALsizei numsamples, int type)
-{
-    ALsizei i;
-    switch(type)
-    {
-        case AF_None:
-            lpfilter->passthru(numsamples);
-            hpfilter->passthru(numsamples);
-            break;
-
-        case AF_LowPass:
-            lpfilter->process(dst, src, numsamples);
-            hpfilter->passthru(numsamples);
-            return dst;
-        case AF_HighPass:
-            lpfilter->passthru(numsamples);
-            hpfilter->process(dst, src, numsamples);
-            return dst;
-
-        case AF_BandPass:
-            for(i = 0;i < numsamples;)
-            {
-                ALfloat temp[256];
-                ALsizei todo = mini(256, numsamples-i);
-
-                lpfilter->process(temp, src+i, todo);
-                hpfilter->process(dst+i, temp, todo);
-                i += todo;
-            }
-            return dst;
-    }
-    return src;
 }
 
 ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,

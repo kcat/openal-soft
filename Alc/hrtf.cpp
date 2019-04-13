@@ -292,7 +292,7 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
     return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{num_chans}};
 }
 
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS], const size_t AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
     static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
@@ -346,7 +346,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
 
     auto tmpres = al::vector<HrirArray<ALdouble>>(NumChannels);
     auto tmpfilt = al::vector<std::array<ALdouble,HRIR_LENGTH*4>>(3);
-    for(ALsizei c{0};c < AmbiCount;++c)
+    for(size_t c{0u};c < AmbiCount;++c)
     {
         const ALfloat (*fir)[2]{&Hrtf->coeffs[idx[c] * Hrtf->irSize]};
         const ALsizei ldelay{Hrtf->delays[idx[c]][0] - min_delay + base_delay};
@@ -386,7 +386,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
          * phase-shift (+n degrees becomes -n degrees).
          */
         allpass.clear();
-        allpass.process(tmpfilt[2].data(), tmpfilt[2].size());
+        allpass.process(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
         std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
@@ -395,7 +395,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
          */
         splitter.clear();
         splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
-            tmpfilt[2].size());
+            static_cast<int>(tmpfilt[2].size()));
 
         /* Apply left ear response with delay and HF scale. */
         for(ALsizei i{0};i < NumChannels;++i)
@@ -413,12 +413,12 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
             [](const ALfloat (&ir)[2]) noexcept -> ALdouble { return ir[1]; });
 
         allpass.clear();
-        allpass.process(tmpfilt[2].data(), tmpfilt[2].size());
+        allpass.process(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
         std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
 
         splitter.clear();
         splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
-            tmpfilt[2].size());
+            static_cast<int>(tmpfilt[2].size()));
 
         for(ALsizei i{0};i < NumChannels;++i)
         {

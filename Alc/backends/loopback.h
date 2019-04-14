@@ -6,7 +6,6 @@
 struct LoopbackBackendFactory final : public BackendFactory {
 public:
     bool init() override;
-    /*void deinit() override;*/
 
     bool querySupport(BackendType type) override;
 

@@ -204,46 +204,6 @@ ALSA_FUNCS(MAKE_FUNC);
 #endif
 
 
-bool alsa_load()
-{
-    bool error{false};
-
-#ifdef HAVE_DYNLOAD
-    if(!alsa_handle)
-    {
-        std::string missing_funcs;
-
-        alsa_handle = LoadLib("libasound.so.2");
-        if(!alsa_handle)
-        {
-            WARN("Failed to load %s\n", "libasound.so.2");
-            return ALC_FALSE;
-        }
-
-        error = ALC_FALSE;
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
-    if(p##f == nullptr) {                                                     \
-        error = true;                                                         \
-        missing_funcs += "\n" #f;                                             \
-    }                                                                         \
-} while(0)
-        ALSA_FUNCS(LOAD_FUNC);
-#undef LOAD_FUNC
-
-        if(error)
-        {
-            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
-            CloseLib(alsa_handle);
-            alsa_handle = nullptr;
-        }
-    }
-#endif
-
-    return !error;
-}
-
-
 struct DevMap {
     std::string name;
     std::string device_name;
@@ -1249,18 +1209,42 @@ ClockLatency AlsaCapture::getClockLatency()
 
 
 bool AlsaBackendFactory::init()
-{ return !!alsa_load(); }
-
-void AlsaBackendFactory::deinit()
 {
-    PlaybackDevices.clear();
-    CaptureDevices.clear();
+    bool error{false};
 
 #ifdef HAVE_DYNLOAD
-    if(alsa_handle)
-        CloseLib(alsa_handle);
-    alsa_handle = nullptr;
+    if(!alsa_handle)
+    {
+        std::string missing_funcs;
+
+        alsa_handle = LoadLib("libasound.so.2");
+        if(!alsa_handle)
+        {
+            WARN("Failed to load %s\n", "libasound.so.2");
+            return ALC_FALSE;
+        }
+
+        error = ALC_FALSE;
+#define LOAD_FUNC(f) do {                                                     \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
+    if(p##f == nullptr) {                                                     \
+        error = true;                                                         \
+        missing_funcs += "\n" #f;                                             \
+    }                                                                         \
+} while(0)
+        ALSA_FUNCS(LOAD_FUNC);
+#undef LOAD_FUNC
+
+        if(error)
+        {
+            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
+            CloseLib(alsa_handle);
+            alsa_handle = nullptr;
+        }
+    }
 #endif
+
+    return !error;
 }
 
 bool AlsaBackendFactory::querySupport(BackendType type)

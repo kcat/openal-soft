@@ -193,14 +193,7 @@ BackendFactory &SDL2BackendFactory::getFactory()
 }
 
 bool SDL2BackendFactory::init()
-{
-    return (SDL_InitSubSystem(SDL_INIT_AUDIO) == 0);
-}
-
-void SDL2BackendFactory::deinit()
-{
-    SDL_QuitSubSystem(SDL_INIT_AUDIO);
-}
+{ return (SDL_InitSubSystem(SDL_INIT_AUDIO) == 0); }
 
 bool SDL2BackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }

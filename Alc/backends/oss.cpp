@@ -709,12 +709,6 @@ bool OSSBackendFactory::init()
     return true;
 }
 
-void OSSBackendFactory::deinit()
-{
-    PlaybackDevices.clear();
-    CaptureDevices.clear();
-}
-
 bool OSSBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 

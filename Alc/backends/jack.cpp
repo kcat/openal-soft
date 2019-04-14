@@ -532,15 +532,6 @@ bool JackBackendFactory::init()
     return true;
 }
 
-void JackBackendFactory::deinit()
-{
-#ifdef HAVE_DYNLOAD
-    if(jack_handle)
-        CloseLib(jack_handle);
-    jack_handle = nullptr;
-#endif
-}
-
 bool JackBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback); }
 

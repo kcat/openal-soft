@@ -99,38 +99,6 @@ HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallbac
 #endif
 
 
-bool DSoundLoad(void)
-{
-#ifdef HAVE_DYNLOAD
-    if(!ds_handle)
-    {
-        ds_handle = LoadLib("dsound.dll");
-        if(!ds_handle)
-        {
-            ERR("Failed to load dsound.dll\n");
-            return false;
-        }
-
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
-    if(!p##f)                                                                 \
-    {                                                                         \
-        CloseLib(ds_handle);                                                  \
-        ds_handle = nullptr;                                                  \
-        return false;                                                         \
-    }                                                                         \
-} while(0)
-        LOAD_FUNC(DirectSoundCreate);
-        LOAD_FUNC(DirectSoundEnumerateW);
-        LOAD_FUNC(DirectSoundCaptureCreate);
-        LOAD_FUNC(DirectSoundCaptureEnumerateW);
-#undef LOAD_FUNC
-    }
-#endif
-    return true;
-}
-
-
 #define MAX_UPDATES 128
 
 struct DevMap {
@@ -892,18 +860,34 @@ BackendFactory &DSoundBackendFactory::getFactory()
 }
 
 bool DSoundBackendFactory::init()
-{ return DSoundLoad(); }
-
-void DSoundBackendFactory::deinit()
 {
-    PlaybackDevices.clear();
-    CaptureDevices.clear();
-
 #ifdef HAVE_DYNLOAD
-    if(ds_handle)
-        CloseLib(ds_handle);
-    ds_handle = nullptr;
+    if(!ds_handle)
+    {
+        ds_handle = LoadLib("dsound.dll");
+        if(!ds_handle)
+        {
+            ERR("Failed to load dsound.dll\n");
+            return false;
+        }
+
+#define LOAD_FUNC(f) do {                                                     \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
+    if(!p##f)                                                                 \
+    {                                                                         \
+        CloseLib(ds_handle);                                                  \
+        ds_handle = nullptr;                                                  \
+        return false;                                                         \
+    }                                                                         \
+} while(0)
+        LOAD_FUNC(DirectSoundCreate);
+        LOAD_FUNC(DirectSoundEnumerateW);
+        LOAD_FUNC(DirectSoundCaptureCreate);
+        LOAD_FUNC(DirectSoundCaptureEnumerateW);
+#undef LOAD_FUNC
+    }
 #endif
+    return true;
 }
 
 bool DSoundBackendFactory::querySupport(BackendType type)

@@ -69,66 +69,6 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #endif
 #endif
 
-bool pa_load()
-{
-    PaError err;
-
-#ifdef HAVE_DYNLOAD
-    if(!pa_handle)
-    {
-#ifdef _WIN32
-# define PALIB "portaudio.dll"
-#elif defined(__APPLE__) && defined(__MACH__)
-# define PALIB "libportaudio.2.dylib"
-#elif defined(__OpenBSD__)
-# define PALIB "libportaudio.so"
-#else
-# define PALIB "libportaudio.so.2"
-#endif
-
-        pa_handle = LoadLib(PALIB);
-        if(!pa_handle)
-            return false;
-
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
-    if(p##f == nullptr)                                                       \
-    {                                                                         \
-        CloseLib(pa_handle);                                                  \
-        pa_handle = nullptr;                                                  \
-        return false;                                                         \
-    }                                                                         \
-} while(0)
-        LOAD_FUNC(Pa_Initialize);
-        LOAD_FUNC(Pa_Terminate);
-        LOAD_FUNC(Pa_GetErrorText);
-        LOAD_FUNC(Pa_StartStream);
-        LOAD_FUNC(Pa_StopStream);
-        LOAD_FUNC(Pa_OpenStream);
-        LOAD_FUNC(Pa_CloseStream);
-        LOAD_FUNC(Pa_GetDefaultOutputDevice);
-        LOAD_FUNC(Pa_GetDefaultInputDevice);
-        LOAD_FUNC(Pa_GetStreamInfo);
-#undef LOAD_FUNC
-
-        if((err=Pa_Initialize()) != paNoError)
-        {
-            ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
-            CloseLib(pa_handle);
-            pa_handle = nullptr;
-            return false;
-        }
-    }
-#else
-    if((err=Pa_Initialize()) != paNoError)
-    {
-        ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
-        return false;
-    }
-#endif
-    return true;
-}
-
 
 struct PortPlayback final : public BackendBase {
     PortPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
@@ -436,20 +376,63 @@ ALCenum PortCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 
 
 bool PortBackendFactory::init()
-{ return pa_load(); }
-
-void PortBackendFactory::deinit()
 {
+    PaError err;
+
 #ifdef HAVE_DYNLOAD
-    if(pa_handle)
+    if(!pa_handle)
     {
-        Pa_Terminate();
-        CloseLib(pa_handle);
-        pa_handle = nullptr;
+#ifdef _WIN32
+# define PALIB "portaudio.dll"
+#elif defined(__APPLE__) && defined(__MACH__)
+# define PALIB "libportaudio.2.dylib"
+#elif defined(__OpenBSD__)
+# define PALIB "libportaudio.so"
+#else
+# define PALIB "libportaudio.so.2"
+#endif
+
+        pa_handle = LoadLib(PALIB);
+        if(!pa_handle)
+            return false;
+
+#define LOAD_FUNC(f) do {                                                     \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
+    if(p##f == nullptr)                                                       \
+    {                                                                         \
+        CloseLib(pa_handle);                                                  \
+        pa_handle = nullptr;                                                  \
+        return false;                                                         \
+    }                                                                         \
+} while(0)
+        LOAD_FUNC(Pa_Initialize);
+        LOAD_FUNC(Pa_Terminate);
+        LOAD_FUNC(Pa_GetErrorText);
+        LOAD_FUNC(Pa_StartStream);
+        LOAD_FUNC(Pa_StopStream);
+        LOAD_FUNC(Pa_OpenStream);
+        LOAD_FUNC(Pa_CloseStream);
+        LOAD_FUNC(Pa_GetDefaultOutputDevice);
+        LOAD_FUNC(Pa_GetDefaultInputDevice);
+        LOAD_FUNC(Pa_GetStreamInfo);
+#undef LOAD_FUNC
+
+        if((err=Pa_Initialize()) != paNoError)
+        {
+            ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
+            CloseLib(pa_handle);
+            pa_handle = nullptr;
+            return false;
+        }
     }
 #else
-    Pa_Terminate();
+    if((err=Pa_Initialize()) != paNoError)
+    {
+        ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
+        return false;
+    }
 #endif
+    return true;
 }
 
 bool PortBackendFactory::querySupport(BackendType type)

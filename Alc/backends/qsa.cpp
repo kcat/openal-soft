@@ -914,19 +914,6 @@ ALCuint CaptureWrapper::availableSamples()
 bool QSABackendFactory::init()
 { return true; }
 
-void QSABackendFactory::deinit()
-{
-    std::for_each(DeviceNameMap.begin(), DeviceNameMap.end(),
-        [](DevMap &entry) -> void { free(entry.name); }
-    );
-    DeviceNameMap.clear();
-
-    std::for_each(CaptureNameMap.begin(), CaptureNameMap.end(),
-        [](DevMap &entry) -> void { free(entry.name); }
-    );
-    CaptureNameMap.clear();
-}
-
 bool QSABackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 

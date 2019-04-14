@@ -602,12 +602,6 @@ ALCuint WinMMCapture::availableSamples()
 bool WinMMBackendFactory::init()
 { return true; }
 
-void WinMMBackendFactory::deinit()
-{
-    PlaybackDevices.clear();
-    CaptureDevices.clear();
-}
-
 bool WinMMBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 

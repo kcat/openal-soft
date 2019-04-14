@@ -1660,15 +1660,6 @@ bool WasapiBackendFactory::init()
     return SUCCEEDED(InitResult) ? ALC_TRUE : ALC_FALSE;
 }
 
-void WasapiBackendFactory::deinit()
-{
-    PlaybackDevices.clear();
-    CaptureDevices.clear();
-
-    TRACE("Sending quit message\n");
-    WasapiProxy::pushMessageStatic(MsgType::QuitThread);
-}
-
 bool WasapiBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 

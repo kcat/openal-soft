@@ -186,115 +186,6 @@ MAKE_FUNC(pa_stream_begin_write);
 
 #endif
 
-ALCboolean pulse_load()
-{
-    ALCboolean ret{ALC_TRUE};
-#ifdef HAVE_DYNLOAD
-    if(!pa_handle)
-    {
-        std::string missing_funcs;
-
-#ifdef _WIN32
-#define PALIB "libpulse-0.dll"
-#elif defined(__APPLE__) && defined(__MACH__)
-#define PALIB "libpulse.0.dylib"
-#else
-#define PALIB "libpulse.so.0"
-#endif
-        pa_handle = LoadLib(PALIB);
-        if(!pa_handle)
-        {
-            WARN("Failed to load %s\n", PALIB);
-            return ALC_FALSE;
-        }
-
-#define LOAD_FUNC(x) do {                                                     \
-    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pa_handle, #x));        \
-    if(!(p##x)) {                                                             \
-        ret = ALC_FALSE;                                                      \
-        missing_funcs += "\n" #x;                                             \
-    }                                                                         \
-} while(0)
-        LOAD_FUNC(pa_context_unref);
-        LOAD_FUNC(pa_sample_spec_valid);
-        LOAD_FUNC(pa_stream_drop);
-        LOAD_FUNC(pa_frame_size);
-        LOAD_FUNC(pa_strerror);
-        LOAD_FUNC(pa_context_get_state);
-        LOAD_FUNC(pa_stream_get_state);
-        LOAD_FUNC(pa_threaded_mainloop_signal);
-        LOAD_FUNC(pa_stream_peek);
-        LOAD_FUNC(pa_threaded_mainloop_wait);
-        LOAD_FUNC(pa_threaded_mainloop_unlock);
-        LOAD_FUNC(pa_threaded_mainloop_in_thread);
-        LOAD_FUNC(pa_context_new);
-        LOAD_FUNC(pa_threaded_mainloop_stop);
-        LOAD_FUNC(pa_context_disconnect);
-        LOAD_FUNC(pa_threaded_mainloop_start);
-        LOAD_FUNC(pa_threaded_mainloop_get_api);
-        LOAD_FUNC(pa_context_set_state_callback);
-        LOAD_FUNC(pa_stream_write);
-        LOAD_FUNC(pa_xfree);
-        LOAD_FUNC(pa_stream_connect_record);
-        LOAD_FUNC(pa_stream_connect_playback);
-        LOAD_FUNC(pa_stream_readable_size);
-        LOAD_FUNC(pa_stream_writable_size);
-        LOAD_FUNC(pa_stream_is_corked);
-        LOAD_FUNC(pa_stream_cork);
-        LOAD_FUNC(pa_stream_is_suspended);
-        LOAD_FUNC(pa_stream_get_device_name);
-        LOAD_FUNC(pa_stream_get_latency);
-        LOAD_FUNC(pa_path_get_filename);
-        LOAD_FUNC(pa_get_binary_name);
-        LOAD_FUNC(pa_threaded_mainloop_free);
-        LOAD_FUNC(pa_context_errno);
-        LOAD_FUNC(pa_xmalloc);
-        LOAD_FUNC(pa_stream_unref);
-        LOAD_FUNC(pa_threaded_mainloop_accept);
-        LOAD_FUNC(pa_stream_set_write_callback);
-        LOAD_FUNC(pa_threaded_mainloop_new);
-        LOAD_FUNC(pa_context_connect);
-        LOAD_FUNC(pa_stream_set_buffer_attr);
-        LOAD_FUNC(pa_stream_get_buffer_attr);
-        LOAD_FUNC(pa_stream_get_sample_spec);
-        LOAD_FUNC(pa_stream_get_time);
-        LOAD_FUNC(pa_stream_set_read_callback);
-        LOAD_FUNC(pa_stream_set_state_callback);
-        LOAD_FUNC(pa_stream_set_moved_callback);
-        LOAD_FUNC(pa_stream_set_underflow_callback);
-        LOAD_FUNC(pa_stream_new_with_proplist);
-        LOAD_FUNC(pa_stream_disconnect);
-        LOAD_FUNC(pa_threaded_mainloop_lock);
-        LOAD_FUNC(pa_channel_map_init_auto);
-        LOAD_FUNC(pa_channel_map_parse);
-        LOAD_FUNC(pa_channel_map_snprint);
-        LOAD_FUNC(pa_channel_map_equal);
-        LOAD_FUNC(pa_context_get_server_info);
-        LOAD_FUNC(pa_context_get_sink_info_by_name);
-        LOAD_FUNC(pa_context_get_sink_info_list);
-        LOAD_FUNC(pa_context_get_source_info_by_name);
-        LOAD_FUNC(pa_context_get_source_info_list);
-        LOAD_FUNC(pa_operation_get_state);
-        LOAD_FUNC(pa_operation_unref);
-        LOAD_FUNC(pa_proplist_new);
-        LOAD_FUNC(pa_proplist_free);
-        LOAD_FUNC(pa_proplist_set);
-        LOAD_FUNC(pa_channel_map_superset);
-        LOAD_FUNC(pa_stream_set_buffer_attr_callback);
-        LOAD_FUNC(pa_stream_begin_write);
-#undef LOAD_FUNC
-
-        if(ret == ALC_FALSE)
-        {
-            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
-            CloseLib(pa_handle);
-            pa_handle = nullptr;
-        }
-    }
-#endif /* HAVE_DYNLOAD */
-    return ret;
-}
-
 
 /* *grumble* Don't use enums for bitflags. */
 inline pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
@@ -1599,54 +1490,145 @@ void PulseCapture::unlock()
 
 bool PulseBackendFactory::init()
 {
-    bool ret{false};
-
-    if(pulse_load())
+#ifdef HAVE_DYNLOAD
+    if(!pa_handle)
     {
-        pulse_ctx_flags = PA_CONTEXT_NOFLAGS;
-        if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", 1))
-            pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
+        bool ret{false};
+        std::string missing_funcs;
 
-        pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
-        if(loop && pa_threaded_mainloop_start(loop) >= 0)
+#ifdef _WIN32
+#define PALIB "libpulse-0.dll"
+#elif defined(__APPLE__) && defined(__MACH__)
+#define PALIB "libpulse.0.dylib"
+#else
+#define PALIB "libpulse.so.0"
+#endif
+        pa_handle = LoadLib(PALIB);
+        if(!pa_handle)
         {
-            unique_palock palock{loop};
-            pa_context *context{connect_context(loop, AL_TRUE)};
-            if(context)
-            {
-                ret = true;
-
-                /* Some libraries (Phonon, Qt) set some pulseaudio properties
-                 * through environment variables, which causes all streams in
-                 * the process to inherit them. This attempts to filter those
-                 * properties out by setting them to 0-length data. */
-                prop_filter = pa_proplist_new();
-                pa_proplist_set(prop_filter, PA_PROP_MEDIA_ROLE, nullptr, 0);
-                pa_proplist_set(prop_filter, "phonon.streamid", nullptr, 0);
-
-                pa_context_disconnect(context);
-                pa_context_unref(context);
-            }
-            palock.unlock();
-            pa_threaded_mainloop_stop(loop);
+            WARN("Failed to load %s\n", PALIB);
+            return false;
         }
-        if(loop)
-            pa_threaded_mainloop_free(loop);
+
+#define LOAD_FUNC(x) do {                                                     \
+    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pa_handle, #x));        \
+    if(!(p##x)) {                                                             \
+        ret = false;                                                          \
+        missing_funcs += "\n" #x;                                             \
+    }                                                                         \
+} while(0)
+        LOAD_FUNC(pa_context_unref);
+        LOAD_FUNC(pa_sample_spec_valid);
+        LOAD_FUNC(pa_stream_drop);
+        LOAD_FUNC(pa_frame_size);
+        LOAD_FUNC(pa_strerror);
+        LOAD_FUNC(pa_context_get_state);
+        LOAD_FUNC(pa_stream_get_state);
+        LOAD_FUNC(pa_threaded_mainloop_signal);
+        LOAD_FUNC(pa_stream_peek);
+        LOAD_FUNC(pa_threaded_mainloop_wait);
+        LOAD_FUNC(pa_threaded_mainloop_unlock);
+        LOAD_FUNC(pa_threaded_mainloop_in_thread);
+        LOAD_FUNC(pa_context_new);
+        LOAD_FUNC(pa_threaded_mainloop_stop);
+        LOAD_FUNC(pa_context_disconnect);
+        LOAD_FUNC(pa_threaded_mainloop_start);
+        LOAD_FUNC(pa_threaded_mainloop_get_api);
+        LOAD_FUNC(pa_context_set_state_callback);
+        LOAD_FUNC(pa_stream_write);
+        LOAD_FUNC(pa_xfree);
+        LOAD_FUNC(pa_stream_connect_record);
+        LOAD_FUNC(pa_stream_connect_playback);
+        LOAD_FUNC(pa_stream_readable_size);
+        LOAD_FUNC(pa_stream_writable_size);
+        LOAD_FUNC(pa_stream_is_corked);
+        LOAD_FUNC(pa_stream_cork);
+        LOAD_FUNC(pa_stream_is_suspended);
+        LOAD_FUNC(pa_stream_get_device_name);
+        LOAD_FUNC(pa_stream_get_latency);
+        LOAD_FUNC(pa_path_get_filename);
+        LOAD_FUNC(pa_get_binary_name);
+        LOAD_FUNC(pa_threaded_mainloop_free);
+        LOAD_FUNC(pa_context_errno);
+        LOAD_FUNC(pa_xmalloc);
+        LOAD_FUNC(pa_stream_unref);
+        LOAD_FUNC(pa_threaded_mainloop_accept);
+        LOAD_FUNC(pa_stream_set_write_callback);
+        LOAD_FUNC(pa_threaded_mainloop_new);
+        LOAD_FUNC(pa_context_connect);
+        LOAD_FUNC(pa_stream_set_buffer_attr);
+        LOAD_FUNC(pa_stream_get_buffer_attr);
+        LOAD_FUNC(pa_stream_get_sample_spec);
+        LOAD_FUNC(pa_stream_get_time);
+        LOAD_FUNC(pa_stream_set_read_callback);
+        LOAD_FUNC(pa_stream_set_state_callback);
+        LOAD_FUNC(pa_stream_set_moved_callback);
+        LOAD_FUNC(pa_stream_set_underflow_callback);
+        LOAD_FUNC(pa_stream_new_with_proplist);
+        LOAD_FUNC(pa_stream_disconnect);
+        LOAD_FUNC(pa_threaded_mainloop_lock);
+        LOAD_FUNC(pa_channel_map_init_auto);
+        LOAD_FUNC(pa_channel_map_parse);
+        LOAD_FUNC(pa_channel_map_snprint);
+        LOAD_FUNC(pa_channel_map_equal);
+        LOAD_FUNC(pa_context_get_server_info);
+        LOAD_FUNC(pa_context_get_sink_info_by_name);
+        LOAD_FUNC(pa_context_get_sink_info_list);
+        LOAD_FUNC(pa_context_get_source_info_by_name);
+        LOAD_FUNC(pa_context_get_source_info_list);
+        LOAD_FUNC(pa_operation_get_state);
+        LOAD_FUNC(pa_operation_unref);
+        LOAD_FUNC(pa_proplist_new);
+        LOAD_FUNC(pa_proplist_free);
+        LOAD_FUNC(pa_proplist_set);
+        LOAD_FUNC(pa_channel_map_superset);
+        LOAD_FUNC(pa_stream_set_buffer_attr_callback);
+        LOAD_FUNC(pa_stream_begin_write);
+#undef LOAD_FUNC
+
+        if(!ret)
+        {
+            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
+            CloseLib(pa_handle);
+            pa_handle = nullptr;
+            return false;
+        }
     }
+#endif /* HAVE_DYNLOAD */
+
+    pulse_ctx_flags = PA_CONTEXT_NOFLAGS;
+    if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", 1))
+        pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
+
+    bool ret{false};
+    pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
+    if(loop && pa_threaded_mainloop_start(loop) >= 0)
+    {
+        unique_palock palock{loop};
+        pa_context *context{connect_context(loop, AL_TRUE)};
+        if(context)
+        {
+            ret = true;
+
+            /* Some libraries (Phonon, Qt) set some pulseaudio properties
+             * through environment variables, which causes all streams in the
+             * process to inherit them. This attempts to filter those
+             * properties out by setting them to 0-length data.
+             */
+            prop_filter = pa_proplist_new();
+            pa_proplist_set(prop_filter, PA_PROP_MEDIA_ROLE, nullptr, 0);
+            pa_proplist_set(prop_filter, "phonon.streamid", nullptr, 0);
+
+            pa_context_disconnect(context);
+            pa_context_unref(context);
+        }
+        palock.unlock();
+        pa_threaded_mainloop_stop(loop);
+    }
+    if(loop)
+        pa_threaded_mainloop_free(loop);
 
     return ret;
-}
-
-void PulseBackendFactory::deinit()
-{
-    PlaybackDevices.clear();
-    CaptureDevices.clear();
-
-    if(prop_filter)
-        pa_proplist_free(prop_filter);
-    prop_filter = nullptr;
-
-    /* PulseAudio doesn't like being CloseLib'd sometimes */
 }
 
 bool PulseBackendFactory::querySupport(BackendType type)

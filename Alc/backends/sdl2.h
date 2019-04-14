@@ -6,7 +6,6 @@
 struct SDL2BackendFactory final : public BackendFactory {
 public:
     bool init() override;
-    void deinit() override;
 
     bool querySupport(BackendType type) override;
 

@@ -734,10 +734,6 @@ void PulsePlayback::streamWriteCallbackC(pa_stream *stream, size_t nbytes, void 
 
 void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes)
 {
-    /* Round down to the nearest period/minreq multiple if doing more than 1. */
-    if(nbytes > mAttr.minreq)
-        nbytes -= nbytes%mAttr.minreq;
-
     void *buf{pa_xmalloc(nbytes)};
     aluMixData(mDevice, buf, nbytes/mFrameSize);
 

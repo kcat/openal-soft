@@ -1493,7 +1493,7 @@ bool PulseBackendFactory::init()
 #ifdef HAVE_DYNLOAD
     if(!pa_handle)
     {
-        bool ret{false};
+        bool ret{true};
         std::string missing_funcs;
 
 #ifdef _WIN32

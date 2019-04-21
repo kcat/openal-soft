@@ -3665,7 +3665,7 @@ START_API_FUNC
 
     DeviceRef device{new ALCdevice{Playback}};
 
-    //Set output format
+    /* Set output format */
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
@@ -3677,6 +3677,24 @@ START_API_FUNC
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
+    /* Create the device backend. */
+    device->Backend = PlaybackBackend.getFactory().createBackend(device.get(),
+        BackendType::Playback);
+    if(!device->Backend)
+    {
+        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
+        return nullptr;
+    }
+
+    /* Find a playback device to open */
+    ALCenum err{device->Backend->open(deviceName)};
+    if(err != ALC_NO_ERROR)
+    {
+        alcSetError(nullptr, err);
+        return nullptr;
+    }
+
+    deviceName = device->DeviceName.c_str();
     const ALCchar *fmt{};
     if(ConfigValueStr(deviceName, nullptr, "channels", &fmt))
     {
@@ -3774,23 +3792,7 @@ START_API_FUNC
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    device->Backend = PlaybackBackend.getFactory().createBackend(device.get(),
-        BackendType::Playback);
-    if(!device->Backend)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
-
-    // Find a playback device to open
-    ALCenum err{device->Backend->open(deviceName)};
-    if(err != ALC_NO_ERROR)
-    {
-        alcSetError(nullptr, err);
-        return nullptr;
-    }
-
-    if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "ambi-format", &fmt))
+    if(ConfigValueStr(deviceName, nullptr, "ambi-format", &fmt))
     {
         if(strcasecmp(fmt, "fuma") == 0)
         {

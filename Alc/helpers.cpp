@@ -262,7 +262,7 @@ void FillCPUCaps(int capfilter)
 }
 
 
-FPUCtl::FPUCtl() noexcept
+FPUCtl::FPUCtl()
 {
 #if defined(HAVE_SSE_INTRINSICS)
     this->sse_state = _mm_getcsr();
@@ -287,7 +287,7 @@ FPUCtl::FPUCtl() noexcept
     this->in_mode = true;
 }
 
-void FPUCtl::leave() noexcept
+void FPUCtl::leave()
 {
     if(!this->in_mode) return;
 

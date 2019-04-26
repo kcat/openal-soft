@@ -8,13 +8,18 @@ class FPUCtl {
     bool in_mode{};
 
 public:
-    FPUCtl() noexcept;
-    ~FPUCtl() { leave(); }
+    FPUCtl();
+    /* HACK: 32-bit targets for GCC seem to have a problem here with certain
+     * noexcept methods (which destructors are) causing an internal compiler
+     * error. No idea why it's these methods specifically, but this is needed
+     * to get it to compile.
+     */
+    ~FPUCtl() noexcept(false) { leave(); }
 
     FPUCtl(const FPUCtl&) = delete;
     FPUCtl& operator=(const FPUCtl&) = delete;
 
-    void leave() noexcept;
+    void leave();
 };
 
 #endif /* FPU_MODES_H */

@@ -734,12 +734,12 @@ ALCboolean AlsaPlayback::reset()
     else if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp, 1) < 0)
         ERR("Failed to enable ALSA resampler\n");
     CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp, &rate, nullptr));
-    /* set buffer time (implicitly constrains period/buffer parameters) */
-    if((err=snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp, &bufferLen, nullptr)) < 0)
-        ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
-    /* set period time (implicitly sets buffer size/bytes/time and period size/bytes) */
+    /* set period time (implicitly constrains period/buffer parameters) */
     if((err=snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp, &periodLen, nullptr)) < 0)
         ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
+    /* set buffer time (implicitly sets buffer size/bytes/time and period size/bytes) */
+    if((err=snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp, &bufferLen, nullptr)) < 0)
+        ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
     CHECK(snd_pcm_hw_params(mPcmHandle, hp));
 

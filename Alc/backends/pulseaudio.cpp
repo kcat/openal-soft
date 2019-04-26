@@ -691,7 +691,7 @@ void PulsePlayback::bufferAttrCallbackC(pa_stream *stream, void *pdata)
 
 void PulsePlayback::bufferAttrCallback(pa_stream *stream)
 {
-    /* FIXME: Update the device's UpdateSize (and/or NumUpdates) using the new
+    /* FIXME: Update the device's UpdateSize (and/or BufferSize) using the new
      * buffer attributes? Changing UpdateSize will change the ALC_REFRESH
      * property, which probably shouldn't change between device resets. But
      * leaving it alone means ALC_REFRESH will be off.
@@ -1007,11 +1007,10 @@ ALCboolean PulsePlayback::reset()
     }
     SetDefaultWFXChannelOrder(mDevice);
 
-    size_t period_size{mDevice->UpdateSize * pa_frame_size(&mSpec)};
     mAttr.maxlength = -1;
-    mAttr.tlength = period_size * maxu(mDevice->NumUpdates, 2);
+    mAttr.tlength = mDevice->BufferSize * pa_frame_size(&mSpec);
     mAttr.prebuf = 0;
-    mAttr.minreq = period_size;
+    mAttr.minreq = mDevice->UpdateSize * pa_frame_size(&mSpec);
     mAttr.fragsize = -1;
 
     mStream = pulse_connect_stream(mDeviceName.c_str(), mLoop, mContext, flags, &mAttr, &mSpec,
@@ -1028,14 +1027,14 @@ ALCboolean PulsePlayback::reset()
     {
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        mDevice->NumUpdates = static_cast<ALuint>(clampd(
-            static_cast<ALdouble>(mSpec.rate)/mDevice->Frequency*mDevice->NumUpdates + 0.5, 2.0, 16.0));
+        double newlen{clampd(
+            static_cast<double>(mSpec.rate)/mDevice->Frequency*mDevice->BufferSize + 0.5,
+            mDevice->UpdateSize*2, std::numeric_limits<int>::max()/mFrameSize)};
 
-        period_size = mDevice->UpdateSize * mFrameSize;
         mAttr.maxlength = -1;
-        mAttr.tlength = period_size * maxu(mDevice->NumUpdates, 2);
+        mAttr.tlength = static_cast<ALuint>(newlen) * mFrameSize;
         mAttr.prebuf = 0;
-        mAttr.minreq = period_size;
+        mAttr.minreq = mDevice->UpdateSize * mFrameSize;
 
         op = pa_stream_set_buffer_attr(mStream, &mAttr, stream_success_callback, mLoop);
         wait_for_operation(op, mLoop);
@@ -1046,7 +1045,7 @@ ALCboolean PulsePlayback::reset()
     pa_stream_set_buffer_attr_callback(mStream, &PulsePlayback::bufferAttrCallbackC, this);
     bufferAttrCallback(mStream);
 
-    mDevice->NumUpdates = clampu((mAttr.tlength + mAttr.minreq/2u) / mAttr.minreq, 2u, 16u);
+    mDevice->BufferSize = mAttr.tlength / mFrameSize;
     mDevice->UpdateSize = mAttr.minreq / mFrameSize;
 
     /* HACK: prebuf should be 0 as that's what we set it to. However on some
@@ -1058,15 +1057,9 @@ ALCboolean PulsePlayback::reset()
     if(mAttr.prebuf != 0)
     {
         ALuint len{mAttr.prebuf / mFrameSize};
-        if(len <= mDevice->UpdateSize*mDevice->NumUpdates)
+        if(len <= mDevice->BufferSize)
             ERR("Non-0 prebuf, %u samples (%u bytes), device has %u samples\n",
-                len, mAttr.prebuf, mDevice->UpdateSize*mDevice->NumUpdates);
-        else
-        {
-            ERR("Large prebuf, %u samples (%u bytes), increasing device from %u samples",
-                len, mAttr.prebuf, mDevice->UpdateSize*mDevice->NumUpdates);
-            mDevice->NumUpdates = (len+mDevice->UpdateSize-1) / mDevice->UpdateSize;
-        }
+                len, mAttr.prebuf, mDevice->BufferSize);
     }
 
     return ALC_TRUE;
@@ -1328,7 +1321,7 @@ ALCenum PulseCapture::open(const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    ALuint samples{mDevice->UpdateSize * mDevice->NumUpdates};
+    ALuint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
 
     mAttr.minreq = -1;
@@ -1337,7 +1330,7 @@ ALCenum PulseCapture::open(const ALCchar *name)
     mAttr.tlength = -1;
     mAttr.fragsize = minu(samples, 50*mDevice->Frequency/1000) * pa_frame_size(&mSpec);
 
-    pa_stream_flags_t flags{PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY};
+    pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_ADJUST_LATENCY};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 

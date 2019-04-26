@@ -164,7 +164,7 @@ ALCboolean SndioPlayback::reset()
     par.le = SIO_LE_NATIVE;
 
     par.round = mDevice->UpdateSize;
-    par.appbufsz = mDevice->UpdateSize * (mDevice->NumUpdates-1);
+    par.appbufsz = mDevice->BufferSize - mDevice->UpdateSize;
     if(!par.appbufsz) par.appbufsz = mDevice->UpdateSize;
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
@@ -203,7 +203,7 @@ ALCboolean SndioPlayback::reset()
     SetDefaultChannelOrder(mDevice);
 
     mDevice->UpdateSize = par.round;
-    mDevice->NumUpdates = (par.bufsz/par.round) + 1;
+    mDevice->BufferSize = par.bufsz + par.round;
 
     mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
     std::fill(mBuffer.begin(), mBuffer.end(), 0);
@@ -374,12 +374,11 @@ ALCenum SndioCapture::open(const ALCchar *name)
     par.rchan = mDevice->channelsFromFmt();
     par.rate = mDevice->Frequency;
 
-    par.appbufsz = maxu(mDevice->UpdateSize*mDevice->NumUpdates, (mDevice->Frequency+9)/10);
-    par.round = clampu(par.appbufsz/mDevice->NumUpdates, (mDevice->Frequency+99)/100,
-        (mDevice->Frequency+19)/20);
+    par.appbufsz = maxu(mDevice->BufferSize, mDevice->Frequency/10);
+    par.round = minu(par.appbufsz, mDevice->Frequency/40);
 
     mDevice->UpdateSize = par.round;
-    mDevice->NumUpdates = maxu(par.appbufsz/par.round, 1);
+    mDevice->BufferSize = par.appbufsz;
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
     {
@@ -408,11 +407,10 @@ ALCenum SndioCapture::open(const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    mRing = CreateRingBuffer(mDevice->UpdateSize*mDevice->NumUpdates, par.bps*par.rchan, false);
+    mRing = CreateRingBuffer(mDevice->BufferSize, par.bps*par.rchan, false);
     if(!mRing)
     {
-        ERR("Failed to allocate %u-byte ringbuffer\n",
-            mDevice->UpdateSize*mDevice->NumUpdates*par.bps*par.rchan);
+        ERR("Failed to allocate %u-byte ringbuffer\n", mDevice->BufferSize*par.bps*par.rchan);
         return ALC_OUT_OF_MEMORY;
     }
 

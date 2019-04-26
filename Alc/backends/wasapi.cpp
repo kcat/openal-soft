@@ -561,7 +561,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     althrd_setname(MIXER_THREAD_NAME);
 
     const ALuint update_size{mDevice->UpdateSize};
-    const UINT32 buffer_len{update_size * mDevice->NumUpdates};
+    const UINT32 buffer_len{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_relaxed))
     {
         UINT32 written;
@@ -789,8 +789,7 @@ HRESULT WasapiPlayback::resetProxy()
     CoTaskMemFree(wfx);
     wfx = nullptr;
 
-    REFERENCE_TIME buf_time{ScaleCeil(mDevice->UpdateSize*mDevice->NumUpdates, REFTIME_PER_SEC,
-                                      mDevice->Frequency)};
+    REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
 
     if(!(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
@@ -968,8 +967,8 @@ HRESULT WasapiPlayback::resetProxy()
 
     SetDefaultWFXChannelOrder(mDevice);
 
-    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                             buf_time, 0, &OutputType.Format, nullptr);
+    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buf_time,
+        0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
@@ -980,26 +979,24 @@ HRESULT WasapiPlayback::resetProxy()
     REFERENCE_TIME min_per;
     hr = mClient->GetDevicePeriod(&min_per, nullptr);
     if(SUCCEEDED(hr))
-    {
-        min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
-        /* Find the nearest multiple of the period size to the update size */
-        if(min_len < mDevice->UpdateSize)
-            min_len *= maxu((mDevice->UpdateSize + min_len/2) / min_len, 1u);
         hr = mClient->GetBufferSize(&buffer_len);
-    }
     if(FAILED(hr))
     {
         ERR("Failed to get audio buffer info: 0x%08lx\n", hr);
         return hr;
     }
 
+    min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
+    /* Find the nearest multiple of the period size to the update size */
+    if(min_len < mDevice->UpdateSize)
+        min_len *= maxu((mDevice->UpdateSize + min_len/2) / min_len, 1u);
+
     mDevice->UpdateSize = min_len;
-    mDevice->NumUpdates = buffer_len / mDevice->UpdateSize;
-    if(mDevice->NumUpdates <= 1)
+    mDevice->BufferSize = buffer_len;
+    if(mDevice->BufferSize <= mDevice->UpdateSize)
     {
         ERR("Audio client returned buffer_len < period*2; expect break up\n");
-        mDevice->NumUpdates = 2;
-        mDevice->UpdateSize = buffer_len / mDevice->NumUpdates;
+        mDevice->UpdateSize = buffer_len / 2;
     }
 
     hr = mClient->SetEventHandle(mNotifyEvent);
@@ -1351,12 +1348,9 @@ HRESULT WasapiCapture::resetProxy()
     }
     mClient = static_cast<IAudioClient*>(ptr);
 
-    REFERENCE_TIME buf_time{ScaleCeil(mDevice->UpdateSize*mDevice->NumUpdates, REFTIME_PER_SEC,
-                                      mDevice->Frequency)};
     // Make sure buffer is at least 100ms in size
+    REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
     buf_time = maxu64(buf_time, REFTIME_PER_SEC/10);
-    mDevice->UpdateSize = (ALuint)ScaleCeil(buf_time, mDevice->Frequency, REFTIME_PER_SEC) /
-                          mDevice->NumUpdates;
 
     WAVEFORMATEXTENSIBLE OutputType;
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -1533,8 +1527,8 @@ HRESULT WasapiCapture::resetProxy()
               mDevice->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
     }
 
-    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                             buf_time, 0, &OutputType.Format, nullptr);
+    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buf_time,
+        0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
@@ -1542,14 +1536,20 @@ HRESULT WasapiCapture::resetProxy()
     }
 
     UINT32 buffer_len;
-    hr = mClient->GetBufferSize(&buffer_len);
+    REFERENCE_TIME min_per;
+    hr = mClient->GetDevicePeriod(&min_per, nullptr);
+    if(SUCCEEDED(hr))
+        hr = mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
     {
         ERR("Failed to get buffer size: 0x%08lx\n", hr);
         return hr;
     }
+    mDevice->UpdateSize = static_cast<ALuint>(ScaleCeil(min_per, mDevice->Frequency,
+        REFTIME_PER_SEC));
+    mDevice->BufferSize = buffer_len;
 
-    buffer_len = maxu(mDevice->UpdateSize*mDevice->NumUpdates, buffer_len);
+    buffer_len = maxu(mDevice->BufferSize, buffer_len);
     mRing = CreateRingBuffer(buffer_len, mDevice->frameSizeFromFmt(), false);
     if(!mRing)
     {

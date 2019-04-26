@@ -265,10 +265,10 @@ retry_open:
 
 ALCboolean WinMMPlayback::reset()
 {
-    mDevice->UpdateSize = static_cast<ALuint>(uint64_t{mDevice->UpdateSize} *
+    mDevice->BufferSize = static_cast<ALuint>(uint64_t{mDevice->BufferSize} *
         mFormat.nSamplesPerSec / mDevice->Frequency);
-    mDevice->UpdateSize = (mDevice->UpdateSize*mDevice->NumUpdates + 3) / 4;
-    mDevice->NumUpdates = 4;
+    mDevice->BufferSize = (mDevice->BufferSize+3) & ~0x3;
+    mDevice->UpdateSize = mDevice->BufferSize / 4;
     mDevice->Frequency = mFormat.nSamplesPerSec;
 
     if(mFormat.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
@@ -523,9 +523,8 @@ ALCenum WinMMCapture::open(const ALCchar *name)
 
     // Allocate circular memory buffer for the captured audio
     // Make sure circular buffer is at least 100ms in size
-    ALuint CapturedDataSize{mDevice->UpdateSize*mDevice->NumUpdates};
-    CapturedDataSize = static_cast<ALuint>(
-        std::max<size_t>(CapturedDataSize, BufferSize*mWaveBuffer.size()));
+    ALuint CapturedDataSize{mDevice->BufferSize};
+    CapturedDataSize = static_cast<ALuint>(maxz(CapturedDataSize, BufferSize*mWaveBuffer.size()));
 
     mRing = CreateRingBuffer(CapturedDataSize, mFormat.nBlockAlign, false);
     if(!mRing) return ALC_INVALID_VALUE;

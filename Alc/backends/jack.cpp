@@ -202,14 +202,14 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
 {
     std::lock_guard<std::mutex> _{mDevice->StateLock};
     mDevice->UpdateSize = numframes;
-    mDevice->NumUpdates = 2;
+    mDevice->BufferSize = numframes*2;
 
     ALuint bufsize{mDevice->UpdateSize};
     if(ConfigValueUInt(mDevice->DeviceName.c_str(), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
-    mDevice->NumUpdates = (bufsize+mDevice->UpdateSize) / mDevice->UpdateSize;
+    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 
-    TRACE("%u update size x%u\n", mDevice->UpdateSize, mDevice->NumUpdates);
+    TRACE("%u / %u buffer\n", mDevice->UpdateSize, mDevice->BufferSize);
 
     mRing = nullptr;
     mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
@@ -373,12 +373,12 @@ ALCboolean JackPlayback::reset()
      */
     mDevice->Frequency = jack_get_sample_rate(mClient);
     mDevice->UpdateSize = jack_get_buffer_size(mClient);
-    mDevice->NumUpdates = 2;
+    mDevice->BufferSize = mDevice->UpdateSize * 2;
 
     ALuint bufsize{mDevice->UpdateSize};
     if(ConfigValueUInt(mDevice->DeviceName.c_str(), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
-    mDevice->NumUpdates = (bufsize+mDevice->UpdateSize) / mDevice->UpdateSize;
+    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;

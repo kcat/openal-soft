@@ -380,8 +380,8 @@ static ALCboolean qsa_reset_playback(PlaybackWrapper *self)
     data->cparams.stop_mode=SND_PCM_STOP_STOP;
 
     data->cparams.buf.block.frag_size=device->UpdateSize * device->frameSizeFromFmt();
-    data->cparams.buf.block.frags_max=device->NumUpdates;
-    data->cparams.buf.block.frags_min=device->NumUpdates;
+    data->cparams.buf.block.frags_max=device->BufferSize / device->UpdateSize;
+    data->cparams.buf.block.frags_min=data->cparams.buf.block.frags_max;
 
     data->cparams.format.interleave=1;
     data->cparams.format.rate=device->Frequency;

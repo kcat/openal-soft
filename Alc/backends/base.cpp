@@ -51,7 +51,7 @@ ClockLatency BackendBase::getClockLatency()
      * any given time during playback. Without a more accurate measurement from
      * the output, this is an okay approximation.
      */
-    ret.Latency  = std::chrono::seconds{mDevice->UpdateSize*maxi(mDevice->NumUpdates-1, 0)};
+    ret.Latency  = std::chrono::seconds{maxi(mDevice->BufferSize-mDevice->UpdateSize, 0)};
     ret.Latency /= mDevice->Frequency;
 
     return ret;

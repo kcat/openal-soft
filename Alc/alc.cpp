@@ -1743,7 +1743,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(!loopback)
         {
-            device->NumUpdates = DEFAULT_NUM_UPDATES;
+            device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
             device->UpdateSize = DEFAULT_UPDATE_SIZE;
             device->Frequency = DEFAULT_OUTPUT_RATE;
 
@@ -1754,21 +1754,24 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 freq = maxi(freq, MIN_OUTPUT_RATE);
 
-                device->NumUpdates = (device->NumUpdates*freq + device->NumUpdates/2) /
-                                     device->Frequency;
+                device->BufferSize = (device->BufferSize*freq + device->Frequency/2) /
+                    device->Frequency;
 
                 device->Frequency = freq;
                 device->Flags |= DEVICE_FREQUENCY_REQUEST;
             }
-
-            ConfigValueUInt(devname, nullptr, "periods", &device->NumUpdates);
-            device->NumUpdates = clampu(device->NumUpdates, 2, 16);
 
             ConfigValueUInt(devname, nullptr, "period_size", &device->UpdateSize);
             device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
             /* SSE and Neon do best with the update size being a multiple of 4. */
             if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
                 device->UpdateSize = (device->UpdateSize+3u)&~3u;
+
+            ALuint periods{};
+            if(ConfigValueUInt(devname, nullptr, "periods", &periods))
+                device->BufferSize = device->UpdateSize * clampu(periods, 2, 16);
+            else
+                device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
         }
         else
         {
@@ -1880,12 +1883,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     oldChans = device->FmtChans;
     oldType  = device->FmtType;
 
-    TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u update size x%d\n",
+    TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u / %u buffer\n",
         (device->Flags&DEVICE_CHANNELS_REQUEST)?"*":"", DevFmtChannelsString(device->FmtChans),
         (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?"*":"", DevFmtTypeString(device->FmtType),
         (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"", device->Frequency,
-        device->UpdateSize, device->NumUpdates
-    );
+        device->UpdateSize, device->BufferSize);
 
     if(device->Backend->reset() == ALC_FALSE)
         return ALC_INVALID_DEVICE;
@@ -1916,10 +1918,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
-    TRACE("Post-reset: %s, %s, %uhz, %u update size x%d\n",
+    TRACE("Post-reset: %s, %s, %uhz, %u / %u buffer\n",
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->Frequency, device->UpdateSize, device->NumUpdates
-    );
+        device->Frequency, device->UpdateSize, device->BufferSize);
 
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
     TRACE("Channel config, Main: %d, Real: %d\n", device->Dry.NumChannels,
@@ -3670,7 +3671,7 @@ START_API_FUNC
     device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->UpdateSize = DEFAULT_UPDATE_SIZE;
-    device->NumUpdates = DEFAULT_NUM_UPDATES;
+    device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
     device->LimiterState = ALC_TRUE;
 
     device->SourcesMax = 256;
@@ -3764,18 +3765,21 @@ START_API_FUNC
             ERR("%uhz request clamped to %uhz minimum\n", freq, MIN_OUTPUT_RATE);
             freq = MIN_OUTPUT_RATE;
         }
-        device->NumUpdates = (device->NumUpdates*freq + device->Frequency/2) / device->Frequency;
+        device->BufferSize = (device->BufferSize*freq + device->Frequency/2) / device->Frequency;
         device->Frequency = freq;
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
     }
-
-    ConfigValueUInt(deviceName, nullptr, "periods", &device->NumUpdates);
-    device->NumUpdates = clampu(device->NumUpdates, 2, 16);
 
     ConfigValueUInt(deviceName, nullptr, "period_size", &device->UpdateSize);
     device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
     if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
         device->UpdateSize = (device->UpdateSize+3u)&~3u;
+
+    ALuint periods{};
+    if(ConfigValueUInt(deviceName, nullptr, "periods", &periods))
+        device->BufferSize = device->UpdateSize * clampu(periods, 2, 16);
+    else
+        device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
 
     ConfigValueUInt(deviceName, nullptr, "sources", &device->SourcesMax);
     if(device->SourcesMax == 0) device->SourcesMax = 256;
@@ -3927,7 +3931,7 @@ START_API_FUNC
     device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_SAMPLE_TYPE_REQUEST;
 
     device->UpdateSize = samples;
-    device->NumUpdates = 1;
+    device->BufferSize = samples;
 
     device->Backend = CaptureBackend.getFactory().createBackend(device.get(),
         BackendType::Capture);
@@ -3937,10 +3941,9 @@ START_API_FUNC
         return nullptr;
     }
 
-    TRACE("Capture format: %s, %s, %uhz, %u update size x%d\n",
+    TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->Frequency, device->UpdateSize, device->NumUpdates
-    );
+        device->Frequency, device->UpdateSize, device->BufferSize);
     ALCenum err{device->Backend->open(deviceName)};
     if(err != ALC_NO_ERROR)
     {
@@ -4082,7 +4085,7 @@ START_API_FUNC
     device->NumAuxSends = DEFAULT_SENDS;
 
     //Set output format
-    device->NumUpdates = 0;
+    device->BufferSize = 0;
     device->UpdateSize = 0;
 
     device->Frequency = DEFAULT_OUTPUT_RATE;

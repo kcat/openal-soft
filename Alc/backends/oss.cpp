@@ -391,7 +391,7 @@ ALCboolean OSSPlayback::reset()
             break;
     }
 
-    periods = mDevice->NumUpdates;
+    periods = mDevice->BufferSize / mDevice->UpdateSize;
     numChannels = mDevice->channelsFromFmt();
     ossSpeed = mDevice->Frequency;
     frameSize = numChannels * mDevice->bytesFromFmt();
@@ -436,7 +436,7 @@ ALCboolean OSSPlayback::reset()
 
     mDevice->Frequency = ossSpeed;
     mDevice->UpdateSize = info.fragsize / frameSize;
-    mDevice->NumUpdates = info.fragments;
+    mDevice->BufferSize = info.fragments * mDevice->UpdateSize;
 
     SetDefaultChannelOrder(mDevice);
 
@@ -598,8 +598,7 @@ ALCenum OSScapture::open(const ALCchar *name)
     int numChannels{mDevice->channelsFromFmt()};
     int frameSize{numChannels * mDevice->bytesFromFmt()};
     int ossSpeed{static_cast<int>(mDevice->Frequency)};
-    int log2FragmentSize{log2i(mDevice->UpdateSize * mDevice->NumUpdates *
-                               frameSize / periods)};
+    int log2FragmentSize{log2i(mDevice->BufferSize * frameSize / periods)};
 
     /* according to the OSS spec, 16 bytes are the minimum */
     log2FragmentSize = std::max(log2FragmentSize, 4);
@@ -645,7 +644,7 @@ ALCenum OSScapture::open(const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    mRing = CreateRingBuffer(mDevice->UpdateSize*mDevice->NumUpdates, frameSize, false);
+    mRing = CreateRingBuffer(mDevice->BufferSize, frameSize, false);
     if(!mRing)
     {
         ERR("Ring buffer create failed\n");

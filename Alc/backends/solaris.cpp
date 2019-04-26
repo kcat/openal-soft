@@ -196,7 +196,7 @@ ALCboolean SolarisBackend::reset()
     }
 
     ALsizei frameSize{numChannels * mDevice->bytesFromFmt()};
-    info.play.buffer_size = mDevice->UpdateSize*mDevice->NumUpdates * frameSize;
+    info.play.buffer_size = mDevice->BufferSize * frameSize;
 
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
     {
@@ -222,7 +222,8 @@ ALCboolean SolarisBackend::reset()
     }
 
     mDevice->Frequency = info.play.sample_rate;
-    mDevice->UpdateSize = (info.play.buffer_size/mDevice->NumUpdates) + 1;
+    mDevice->BufferSize = info.play.buffer_size / frameSize;
+    mDevice->UpdateSize = mDevice->BufferSize / 2;
 
     SetDefaultChannelOrder(mDevice);
 

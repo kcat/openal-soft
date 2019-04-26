@@ -133,8 +133,7 @@ ALCenum PortPlayback::open(const ALCchar *name)
     mParams.device = -1;
     if(!ConfigValueInt(nullptr, "port", "device", &mParams.device) || mParams.device < 0)
         mParams.device = Pa_GetDefaultOutputDevice();
-    mParams.suggestedLatency = (mDevice->UpdateSize*mDevice->NumUpdates) /
-        static_cast<float>(mDevice->Frequency);
+    mParams.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
     mParams.hostApiSpecificStreamInfo = nullptr;
 
     mParams.channelCount = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
@@ -294,7 +293,7 @@ ALCenum PortCapture::open(const ALCchar *name)
     else if(strcmp(name, pa_device) != 0)
         return ALC_INVALID_VALUE;
 
-    ALuint samples{mDevice->UpdateSize * mDevice->NumUpdates};
+    ALuint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
     ALsizei frame_size{mDevice->frameSizeFromFmt()};
 

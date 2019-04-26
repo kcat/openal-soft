@@ -496,19 +496,16 @@ retry_open:
 
     if(SUCCEEDED(hr))
     {
-        if(mDevice->NumUpdates > MAX_UPDATES)
-        {
-            mDevice->UpdateSize = (mDevice->UpdateSize*mDevice->NumUpdates + MAX_UPDATES-1) /
-                MAX_UPDATES;
-            mDevice->NumUpdates = MAX_UPDATES;
-        }
+        ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+        if(num_updates > MAX_UPDATES)
+            num_updates = MAX_UPDATES;
+        mDevice->BufferSize = mDevice->UpdateSize * num_updates;
 
         DSBUFFERDESC DSBDescription{};
         DSBDescription.dwSize = sizeof(DSBDescription);
         DSBDescription.dwFlags = DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_GETCURRENTPOSITION2 |
                                  DSBCAPS_GLOBALFOCUS;
-        DSBDescription.dwBufferBytes = mDevice->UpdateSize * mDevice->NumUpdates *
-                                       OutputType.Format.nBlockAlign;
+        DSBDescription.dwBufferBytes = mDevice->BufferSize * OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat = &OutputType.Format;
 
         hr = mDS->CreateSoundBuffer(&DSBDescription, &mBuffer, nullptr);
@@ -528,15 +525,16 @@ retry_open:
             auto Notifies = static_cast<IDirectSoundNotify*>(ptr);
             mNotifies = Notifies;
 
-            mDevice->NumUpdates = minu(mDevice->NumUpdates, MAX_UPDATES);
+            ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+            assert(num_updates <= MAX_UPDATES);
 
             std::array<DSBPOSITIONNOTIFY,MAX_UPDATES> nots;
-            for(ALuint i{0};i < mDevice->NumUpdates;++i)
+            for(ALuint i{0};i < num_updates;++i)
             {
                 nots[i].dwOffset = i * mDevice->UpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;
             }
-            if(Notifies->SetNotificationPositions(mDevice->NumUpdates, nots.data()) != DS_OK)
+            if(Notifies->SetNotificationPositions(num_updates, nots.data()) != DS_OK)
                 hr = E_FAIL;
         }
     }
@@ -743,7 +741,7 @@ ALCenum DSoundCapture::open(const ALCchar *name)
         InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     }
 
-    ALuint samples{mDevice->UpdateSize * mDevice->NumUpdates};
+    ALuint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
 
     DSCBUFFERDESC DSCBDescription{};
@@ -758,8 +756,7 @@ ALCenum DSoundCapture::open(const ALCchar *name)
         mDSC->CreateCaptureBuffer(&DSCBDescription, &mDSCbuffer, nullptr);
     if(SUCCEEDED(hr))
     {
-         mRing = CreateRingBuffer(mDevice->UpdateSize*mDevice->NumUpdates,
-            InputType.Format.nBlockAlign, false);
+         mRing = CreateRingBuffer(mDevice->BufferSize, InputType.Format.nBlockAlign, false);
          if(!mRing) hr = DSERR_OUTOFMEMORY;
     }
 

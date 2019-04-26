@@ -146,7 +146,7 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
             return ALC_INVALID_VALUE;
     }
     mDevice->UpdateSize = have.samples;
-    mDevice->NumUpdates = 2; /* SDL always (tries to) use two periods. */
+    mDevice->BufferSize = have.samples * 2; /* SDL always (tries to) use two periods. */
 
     mFrameSize = mDevice->frameSizeFromFmt();
     mFrequency = mDevice->Frequency;
@@ -164,7 +164,7 @@ ALCboolean Sdl2Backend::reset()
     mDevice->FmtChans = mFmtChans;
     mDevice->FmtType = mFmtType;
     mDevice->UpdateSize = mUpdateSize;
-    mDevice->NumUpdates = 2;
+    mDevice->BufferSize = mUpdateSize * 2;
     SetDefaultWFXChannelOrder(mDevice);
     return ALC_TRUE;
 }

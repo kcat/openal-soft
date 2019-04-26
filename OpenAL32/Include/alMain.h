@@ -342,7 +342,8 @@ struct ALCdevice {
 
     ALuint Frequency{};
     ALuint UpdateSize{};
-    ALuint NumUpdates{};
+    ALuint BufferSize{};
+
     DevFmtChannels FmtChans{};
     DevFmtType     FmtType{};
     ALboolean IsHeadphones{AL_FALSE};

@@ -352,7 +352,6 @@ ALCboolean OpenSLPlayback::reset()
     SLDataLocator_OutputMix loc_outmix;
     SLDataSource audioSrc;
     SLDataSink audioSnk;
-    ALuint sampleRate;
     SLInterfaceID ids[2];
     SLboolean reqs[2];
     SLresult result;
@@ -363,7 +362,6 @@ ALCboolean OpenSLPlayback::reset()
 
     mRing = nullptr;
 
-    sampleRate = mDevice->Frequency;
 #if 0
     if(!(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
     {
@@ -432,14 +430,6 @@ ALCboolean OpenSLPlayback::reset()
     }
 #endif
 
-    if(sampleRate != mDevice->Frequency)
-    {
-        mDevice->NumUpdates = (mDevice->NumUpdates*sampleRate + (mDevice->Frequency>>1)) /
-                              mDevice->Frequency;
-        mDevice->NumUpdates = maxu(mDevice->NumUpdates, 2);
-        mDevice->Frequency = sampleRate;
-    }
-
     mDevice->FmtChans = DevFmtStereo;
     mDevice->FmtType = DevFmtShort;
 
@@ -448,7 +438,7 @@ ALCboolean OpenSLPlayback::reset()
 
 
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
-    loc_bufq.numBuffers = mDevice->NumUpdates;
+    loc_bufq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
 
 #ifdef SL_DATAFORMAT_PCM_EX
     SLDataFormat_PCM_EX format_pcm;
@@ -514,12 +504,13 @@ ALCboolean OpenSLPlayback::reset()
     }
     if(SL_RESULT_SUCCESS == result)
     {
+        const ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
         try {
-            mRing = CreateRingBuffer(mDevice->NumUpdates, mFrameSize*mDevice->UpdateSize, true);
+            mRing = CreateRingBuffer(num_updates, mFrameSize*mDevice->UpdateSize, true);
         }
         catch(std::exception& e) {
             ERR("Failed allocating ring buffer %ux%ux%u: %s\n", mDevice->UpdateSize,
-                mDevice->NumUpdates, mFrameSize, e.what());
+                num_updates, mFrameSize, e.what());
             result = SL_RESULT_MEMORY_FAILURE;
         }
     }
@@ -694,17 +685,17 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
     {
         mFrameSize = mDevice->frameSizeFromFmt();
         /* Ensure the total length is at least 100ms */
-        ALsizei length{maxi(mDevice->NumUpdates*mDevice->UpdateSize, mDevice->Frequency/10)};
+        ALsizei length{maxi(mDevice->BufferSize, mDevice->Frequency/10)};
         /* Ensure the per-chunk length is at least 10ms, and no more than 50ms. */
-        ALsizei update_len{clampi(mDevice->NumUpdates*mDevice->UpdateSize / 3,
-            mDevice->Frequency/100, mDevice->Frequency/100*5)};
+        ALsizei update_len{clampi(mDevice->BufferSize/3, mDevice->Frequency/100,
+            mDevice->Frequency/100*5)};
         ALsizei num_updates{(length+update_len-1) / update_len};
 
         try {
             mRing = CreateRingBuffer(num_updates, update_len*mFrameSize, false);
 
             mDevice->UpdateSize = update_len;
-            mDevice->NumUpdates = mRing->writeSpace();
+            mDevice->BufferSize = mRing->writeSpace() * update_len;
         }
         catch(std::exception& e) {
             ERR("Failed to allocate ring buffer: %s\n", e.what());
@@ -728,7 +719,7 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
 
         SLDataLocator_AndroidSimpleBufferQueue loc_bq{};
         loc_bq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
-        loc_bq.numBuffers = mDevice->NumUpdates;
+        loc_bq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
 
 #ifdef SL_DATAFORMAT_PCM_EX
         SLDataFormat_PCM_EX format_pcm{};

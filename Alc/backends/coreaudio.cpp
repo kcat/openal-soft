@@ -177,7 +177,7 @@ ALCboolean CoreAudioPlayback::reset()
 
     if(mDevice->Frequency != streamFormat.mSampleRate)
     {
-        mDevice->NumUpdates = static_cast<ALuint>(uint64_t{mDevice->NumUpdates} *
+        mDevice->BufferSize = static_cast<ALuint>(uint64_t{mDevice->BufferSize} *
             streamFormat.mSampleRate / mDevice->Frequency);
         mDevice->Frequency = streamFormat.mSampleRate;
     }

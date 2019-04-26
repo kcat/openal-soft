@@ -421,8 +421,8 @@ int AlsaPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    snd_pcm_uframes_t update_size{mDevice->UpdateSize};
-    snd_pcm_uframes_t num_updates{mDevice->NumUpdates};
+    const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
+    const snd_pcm_uframes_t num_updates{mDevice->BufferSize / update_size};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         int state{verify_state(mPcmHandle)};
@@ -504,8 +504,8 @@ int AlsaPlayback::mixerNoMMapProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    snd_pcm_uframes_t update_size{mDevice->UpdateSize};
-    snd_pcm_uframes_t num_updates{mDevice->NumUpdates};
+    const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
+    const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         int state{verify_state(mPcmHandle)};
@@ -523,7 +523,7 @@ int AlsaPlayback::mixerNoMMapProc()
             continue;
         }
 
-        if(static_cast<snd_pcm_uframes_t>(avail) > update_size*num_updates)
+        if(static_cast<snd_pcm_uframes_t>(avail) > buffer_size)
         {
             WARN("available samples exceeds the buffer size\n");
             snd_pcm_reset(mPcmHandle);
@@ -654,17 +654,18 @@ ALCboolean AlsaPlayback::reset()
     }
 
     bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", 1)};
-    ALuint periods{mDevice->NumUpdates};
     ALuint periodLen{static_cast<ALuint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
-    ALuint bufferLen{periodLen * periods};
+    ALuint bufferLen{static_cast<ALuint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
     ALuint rate{mDevice->Frequency};
 
-    snd_pcm_uframes_t periodSizeInFrames;
+    snd_pcm_uframes_t periodSizeInFrames{};
+    snd_pcm_uframes_t bufferSizeInFrames{};
     snd_pcm_sw_params_t *sp{};
     snd_pcm_hw_params_t *hp{};
-    snd_pcm_access_t access;
-    const char *funcerr;
-    int dir, err;
+    snd_pcm_access_t access{};
+    const char *funcerr{};
+    int err{};
+
     snd_pcm_hw_params_malloc(&hp);
 #define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
     CHECK(snd_pcm_hw_params_any(mPcmHandle, hp));
@@ -745,22 +746,20 @@ ALCboolean AlsaPlayback::reset()
     /* retrieve configuration info */
     CHECK(snd_pcm_hw_params_get_access(hp, &access));
     CHECK(snd_pcm_hw_params_get_period_size(hp, &periodSizeInFrames, nullptr));
-    CHECK(snd_pcm_hw_params_get_periods(hp, &periods, &dir));
-    if(dir != 0)
-        WARN("Inexact period count: %u (%d)\n", periods, dir);
+    CHECK(snd_pcm_hw_params_get_buffer_size(hp, &bufferSizeInFrames));
     snd_pcm_hw_params_free(hp);
     hp = nullptr;
 
     snd_pcm_sw_params_malloc(&sp);
     CHECK(snd_pcm_sw_params_current(mPcmHandle, sp));
     CHECK(snd_pcm_sw_params_set_avail_min(mPcmHandle, sp, periodSizeInFrames));
-    CHECK(snd_pcm_sw_params_set_stop_threshold(mPcmHandle, sp, periodSizeInFrames*periods));
+    CHECK(snd_pcm_sw_params_set_stop_threshold(mPcmHandle, sp, bufferSizeInFrames));
     CHECK(snd_pcm_sw_params(mPcmHandle, sp));
 #undef CHECK
     snd_pcm_sw_params_free(sp);
     sp = nullptr;
 
-    mDevice->NumUpdates = periods;
+    mDevice->BufferSize = bufferSizeInFrames;
     mDevice->UpdateSize = periodSizeInFrames;
     mDevice->Frequency = rate;
 
@@ -950,8 +949,7 @@ ALCenum AlsaCapture::open(const ALCchar *name)
             break;
     }
 
-    snd_pcm_uframes_t bufferSizeInFrames{maxu(mDevice->UpdateSize*mDevice->NumUpdates,
-                                              100*mDevice->Frequency/1000)};
+    snd_pcm_uframes_t bufferSizeInFrames{maxu(mDevice->BufferSize, 100*mDevice->Frequency/1000)};
     snd_pcm_uframes_t periodSizeInFrames{minu(bufferSizeInFrames, 25*mDevice->Frequency/1000)};
 
     bool needring{false};
@@ -987,8 +985,7 @@ ALCenum AlsaCapture::open(const ALCchar *name)
 
     if(needring)
     {
-        mRing = CreateRingBuffer(mDevice->UpdateSize*mDevice->NumUpdates,
-            mDevice->frameSizeFromFmt(), false);
+        mRing = CreateRingBuffer(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
         if(!mRing)
         {
             ERR("ring buffer create failed\n");

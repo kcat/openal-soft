@@ -54,16 +54,9 @@ MAKE_FUNC(pa_stream_drop);
 MAKE_FUNC(pa_strerror);
 MAKE_FUNC(pa_context_get_state);
 MAKE_FUNC(pa_stream_get_state);
-MAKE_FUNC(pa_threaded_mainloop_signal);
 MAKE_FUNC(pa_stream_peek);
-MAKE_FUNC(pa_threaded_mainloop_wait);
-MAKE_FUNC(pa_threaded_mainloop_unlock);
-MAKE_FUNC(pa_threaded_mainloop_in_thread);
 MAKE_FUNC(pa_context_new);
-MAKE_FUNC(pa_threaded_mainloop_stop);
 MAKE_FUNC(pa_context_disconnect);
-MAKE_FUNC(pa_threaded_mainloop_start);
-MAKE_FUNC(pa_threaded_mainloop_get_api);
 MAKE_FUNC(pa_context_set_state_callback);
 MAKE_FUNC(pa_stream_write);
 MAKE_FUNC(pa_xfree);
@@ -78,13 +71,10 @@ MAKE_FUNC(pa_stream_get_device_name);
 MAKE_FUNC(pa_stream_get_latency);
 MAKE_FUNC(pa_path_get_filename);
 MAKE_FUNC(pa_get_binary_name);
-MAKE_FUNC(pa_threaded_mainloop_free);
 MAKE_FUNC(pa_context_errno);
 MAKE_FUNC(pa_xmalloc);
 MAKE_FUNC(pa_stream_unref);
-MAKE_FUNC(pa_threaded_mainloop_accept);
 MAKE_FUNC(pa_stream_set_write_callback);
-MAKE_FUNC(pa_threaded_mainloop_new);
 MAKE_FUNC(pa_context_connect);
 MAKE_FUNC(pa_stream_set_buffer_attr);
 MAKE_FUNC(pa_stream_get_buffer_attr);
@@ -96,7 +86,6 @@ MAKE_FUNC(pa_stream_set_moved_callback);
 MAKE_FUNC(pa_stream_set_underflow_callback);
 MAKE_FUNC(pa_stream_new_with_proplist);
 MAKE_FUNC(pa_stream_disconnect);
-MAKE_FUNC(pa_threaded_mainloop_lock);
 MAKE_FUNC(pa_channel_map_init_auto);
 MAKE_FUNC(pa_channel_map_parse);
 MAKE_FUNC(pa_channel_map_snprint);
@@ -124,16 +113,9 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_strerror ppa_strerror
 #define pa_context_get_state ppa_context_get_state
 #define pa_stream_get_state ppa_stream_get_state
-#define pa_threaded_mainloop_signal ppa_threaded_mainloop_signal
 #define pa_stream_peek ppa_stream_peek
-#define pa_threaded_mainloop_wait ppa_threaded_mainloop_wait
-#define pa_threaded_mainloop_unlock ppa_threaded_mainloop_unlock
-#define pa_threaded_mainloop_in_thread ppa_threaded_mainloop_in_thread
 #define pa_context_new ppa_context_new
-#define pa_threaded_mainloop_stop ppa_threaded_mainloop_stop
 #define pa_context_disconnect ppa_context_disconnect
-#define pa_threaded_mainloop_start ppa_threaded_mainloop_start
-#define pa_threaded_mainloop_get_api ppa_threaded_mainloop_get_api
 #define pa_context_set_state_callback ppa_context_set_state_callback
 #define pa_stream_write ppa_stream_write
 #define pa_xfree ppa_xfree
@@ -148,13 +130,10 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_stream_get_latency ppa_stream_get_latency
 #define pa_path_get_filename ppa_path_get_filename
 #define pa_get_binary_name ppa_get_binary_name
-#define pa_threaded_mainloop_free ppa_threaded_mainloop_free
 #define pa_context_errno ppa_context_errno
 #define pa_xmalloc ppa_xmalloc
 #define pa_stream_unref ppa_stream_unref
-#define pa_threaded_mainloop_accept ppa_threaded_mainloop_accept
 #define pa_stream_set_write_callback ppa_stream_set_write_callback
-#define pa_threaded_mainloop_new ppa_threaded_mainloop_new
 #define pa_context_connect ppa_context_connect
 #define pa_stream_set_buffer_attr ppa_stream_set_buffer_attr
 #define pa_stream_get_buffer_attr ppa_stream_get_buffer_attr
@@ -166,7 +145,6 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_stream_set_underflow_callback ppa_stream_set_underflow_callback
 #define pa_stream_new_with_proplist ppa_stream_new_with_proplist
 #define pa_stream_disconnect ppa_stream_disconnect
-#define pa_threaded_mainloop_lock ppa_threaded_mainloop_lock
 #define pa_channel_map_init_auto ppa_channel_map_init_auto
 #define pa_channel_map_parse ppa_channel_map_parse
 #define pa_channel_map_snprint ppa_channel_map_snprint
@@ -208,56 +186,6 @@ inline pa_stream_flags_t& operator&=(pa_stream_flags_t &lhs, int rhs)
     lhs = pa_stream_flags_t(int(lhs) & rhs);
     return lhs;
 }
-
-
-class palock_guard {
-    pa_threaded_mainloop *mLoop;
-
-public:
-    explicit palock_guard(pa_threaded_mainloop *loop) : mLoop(loop)
-    { pa_threaded_mainloop_lock(mLoop); }
-    ~palock_guard() { pa_threaded_mainloop_unlock(mLoop); }
-
-    palock_guard(const palock_guard&) = delete;
-    palock_guard& operator=(const palock_guard&) = delete;
-};
-
-class unique_palock {
-    pa_threaded_mainloop *mLoop{nullptr};
-    bool mLocked{false};
-
-public:
-    unique_palock() noexcept = default;
-    explicit unique_palock(pa_threaded_mainloop *loop) : mLoop(loop)
-    {
-        pa_threaded_mainloop_lock(mLoop);
-        mLocked = true;
-    }
-    unique_palock(unique_palock&& rhs) : mLoop(rhs.mLoop), mLocked(rhs.mLocked)
-    { rhs.mLoop = nullptr; rhs.mLocked = false; }
-    ~unique_palock() { if(mLocked) pa_threaded_mainloop_unlock(mLoop); }
-
-    unique_palock& operator=(const unique_palock&) = delete;
-    unique_palock& operator=(unique_palock&& rhs)
-    {
-        if(mLocked)
-            pa_threaded_mainloop_unlock(mLoop);
-        mLoop = rhs.mLoop; rhs.mLoop = nullptr;
-        mLocked = rhs.mLocked; rhs.mLocked = false;
-        return *this;
-    }
-
-    void lock()
-    {
-        pa_threaded_mainloop_lock(mLoop);
-        mLocked = true;
-    }
-    void unlock()
-    {
-        mLocked = false;
-        pa_threaded_mainloop_unlock(mLoop);
-    }
-};
 
 
 /* Global flags and properties */
@@ -1491,16 +1419,9 @@ bool PulseBackendFactory::init()
         LOAD_FUNC(pa_strerror);
         LOAD_FUNC(pa_context_get_state);
         LOAD_FUNC(pa_stream_get_state);
-        LOAD_FUNC(pa_threaded_mainloop_signal);
         LOAD_FUNC(pa_stream_peek);
-        LOAD_FUNC(pa_threaded_mainloop_wait);
-        LOAD_FUNC(pa_threaded_mainloop_unlock);
-        LOAD_FUNC(pa_threaded_mainloop_in_thread);
         LOAD_FUNC(pa_context_new);
-        LOAD_FUNC(pa_threaded_mainloop_stop);
         LOAD_FUNC(pa_context_disconnect);
-        LOAD_FUNC(pa_threaded_mainloop_start);
-        LOAD_FUNC(pa_threaded_mainloop_get_api);
         LOAD_FUNC(pa_context_set_state_callback);
         LOAD_FUNC(pa_stream_write);
         LOAD_FUNC(pa_xfree);
@@ -1515,13 +1436,10 @@ bool PulseBackendFactory::init()
         LOAD_FUNC(pa_stream_get_latency);
         LOAD_FUNC(pa_path_get_filename);
         LOAD_FUNC(pa_get_binary_name);
-        LOAD_FUNC(pa_threaded_mainloop_free);
         LOAD_FUNC(pa_context_errno);
         LOAD_FUNC(pa_xmalloc);
         LOAD_FUNC(pa_stream_unref);
-        LOAD_FUNC(pa_threaded_mainloop_accept);
         LOAD_FUNC(pa_stream_set_write_callback);
-        LOAD_FUNC(pa_threaded_mainloop_new);
         LOAD_FUNC(pa_context_connect);
         LOAD_FUNC(pa_stream_set_buffer_attr);
         LOAD_FUNC(pa_stream_get_buffer_attr);
@@ -1533,7 +1451,6 @@ bool PulseBackendFactory::init()
         LOAD_FUNC(pa_stream_set_underflow_callback);
         LOAD_FUNC(pa_stream_new_with_proplist);
         LOAD_FUNC(pa_stream_disconnect);
-        LOAD_FUNC(pa_threaded_mainloop_lock);
         LOAD_FUNC(pa_channel_map_init_auto);
         LOAD_FUNC(pa_channel_map_parse);
         LOAD_FUNC(pa_channel_map_snprint);

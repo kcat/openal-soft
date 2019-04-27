@@ -789,7 +789,8 @@ HRESULT WasapiPlayback::resetProxy()
     CoTaskMemFree(wfx);
     wfx = nullptr;
 
-    REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
+    const REFERENCE_TIME per_time{mDevice->UpdateSize * REFTIME_PER_SEC / mDevice->Frequency};
+    const REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
 
     if(!(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
@@ -986,18 +987,14 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
-    min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
     /* Find the nearest multiple of the period size to the update size */
-    if(min_len < mDevice->UpdateSize)
-        min_len *= maxu((mDevice->UpdateSize + min_len/2) / min_len, 1u);
+    if(min_per < per_time)
+        min_per *= maxu((per_time + min_per/2) / min_per, 1u);
+    min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
+    min_len = minu(min_len, buffer_len/2);
 
     mDevice->UpdateSize = min_len;
     mDevice->BufferSize = buffer_len;
-    if(mDevice->BufferSize <= mDevice->UpdateSize)
-    {
-        ERR("Audio client returned buffer_len < period*2; expect break up\n");
-        mDevice->UpdateSize = buffer_len / 2;
-    }
 
     hr = mClient->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))

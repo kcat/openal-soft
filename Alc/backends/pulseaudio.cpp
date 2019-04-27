@@ -1026,15 +1026,18 @@ ALCboolean PulsePlayback::reset()
     if(mDevice->Frequency != mSpec.rate)
     {
         /* Server updated our playback rate, so modify the buffer attribs
-         * accordingly. */
-        double newlen{clampd(
-            static_cast<double>(mSpec.rate)/mDevice->Frequency*mDevice->BufferSize + 0.5,
-            mDevice->UpdateSize*2, std::numeric_limits<int>::max()/mFrameSize)};
+         * accordingly.
+         */
+        const auto scale = static_cast<double>(mSpec.rate) / mDevice->Frequency;
+        const ALuint perlen{static_cast<ALuint>(clampd(scale*mDevice->UpdateSize + 0.5, 64.0,
+            8192.0))};
+        const ALuint buflen{static_cast<ALuint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2,
+            std::numeric_limits<int>::max()/mFrameSize))};
 
         mAttr.maxlength = -1;
-        mAttr.tlength = static_cast<ALuint>(newlen) * mFrameSize;
+        mAttr.tlength = buflen * mFrameSize;
         mAttr.prebuf = 0;
-        mAttr.minreq = mDevice->UpdateSize * mFrameSize;
+        mAttr.minreq = perlen * mFrameSize;
 
         op = pa_stream_set_buffer_attr(mStream, &mAttr, stream_success_callback, mLoop);
         wait_for_operation(op, mLoop);

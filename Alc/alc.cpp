@@ -1754,6 +1754,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 freq = maxi(freq, MIN_OUTPUT_RATE);
 
+                device->UpdateSize = (device->UpdateSize*freq + device->Frequency/2) /
+                    device->Frequency;
                 device->BufferSize = (device->BufferSize*freq + device->Frequency/2) /
                     device->Frequency;
 
@@ -1763,9 +1765,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             ConfigValueUInt(devname, nullptr, "period_size", &device->UpdateSize);
             device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
-            /* SSE and Neon do best with the update size being a multiple of 4. */
-            if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
-                device->UpdateSize = (device->UpdateSize+3u)&~3u;
 
             ALuint periods{};
             if(ConfigValueUInt(devname, nullptr, "periods", &periods))
@@ -3765,6 +3764,7 @@ START_API_FUNC
             ERR("%uhz request clamped to %uhz minimum\n", freq, MIN_OUTPUT_RATE);
             freq = MIN_OUTPUT_RATE;
         }
+        device->UpdateSize = (device->UpdateSize*freq + device->Frequency/2) / device->Frequency;
         device->BufferSize = (device->BufferSize*freq + device->Frequency/2) / device->Frequency;
         device->Frequency = freq;
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
@@ -3772,8 +3772,6 @@ START_API_FUNC
 
     ConfigValueUInt(deviceName, nullptr, "period_size", &device->UpdateSize);
     device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
-    if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
-        device->UpdateSize = (device->UpdateSize+3u)&~3u;
 
     ALuint periods{};
     if(ConfigValueUInt(deviceName, nullptr, "periods", &periods))

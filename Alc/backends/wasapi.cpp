@@ -582,7 +582,6 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
                 ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
             continue;
         }
-        len -= len%update_size;
 
         BYTE *buffer;
         hr = mRender->GetBuffer(len, &buffer);

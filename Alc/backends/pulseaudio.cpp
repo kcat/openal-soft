@@ -190,8 +190,6 @@ inline pa_stream_flags_t& operator&=(pa_stream_flags_t &lhs, int rhs)
 
 /* Global flags and properties */
 pa_context_flags_t pulse_ctx_flags;
-pa_proplist *prop_filter;
-
 
 pa_mainloop *pulse_mainloop{nullptr};
 
@@ -360,9 +358,8 @@ pa_stream *pulse_connect_stream(const char *device_name, std::unique_lock<std::m
     pa_context *context, pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
     pa_channel_map *chanmap, BackendType type)
 {
-    pa_stream *stream{pa_stream_new_with_proplist(context,
-        (type==BackendType::Playback) ? "Playback Stream" : "Capture Stream", spec, chanmap,
-        prop_filter)};
+    pa_stream *stream{pa_stream_new(context,
+        (type==BackendType::Playback) ? "Playback Stream" : "Capture Stream", spec, chanmap)};
     if(!stream)
     {
         ERR("pa_stream_new_with_proplist() failed: %s\n", pa_strerror(pa_context_errno(context)));
@@ -769,7 +766,7 @@ ALCenum PulsePlayback::open(const ALCchar *name)
     std::unique_lock<std::mutex> plock{pulse_lock};
 
     pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE | PA_STREAM_FIX_CHANNELS};
-    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 1))
         flags |= PA_STREAM_DONT_MOVE;
 
     pa_sample_spec spec{};
@@ -829,7 +826,7 @@ ALCboolean PulsePlayback::reset()
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
         PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_EARLY_REQUESTS};
-    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 1))
         flags |= PA_STREAM_DONT_MOVE;
     if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "adjust-latency", 0))
     {
@@ -1238,7 +1235,7 @@ ALCenum PulseCapture::open(const ALCchar *name)
     mAttr.fragsize = minu(samples, 50*mDevice->Frequency/1000) * pa_frame_size(&mSpec);
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_ADJUST_LATENCY};
-    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 1))
         flags |= PA_STREAM_DONT_MOVE;
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
@@ -1488,15 +1485,6 @@ bool PulseBackendFactory::init()
 
     pa_context *context{connect_context(plock, AL_TRUE)};
     if(!context) return false;
-
-    /* Some libraries (Phonon, Qt) set some pulseaudio properties through
-     * environment variables, which causes all streams in the process to
-     * inherit them. This attempts to filter those properties out by setting
-     * them to 0-length data.
-     */
-    prop_filter = pa_proplist_new();
-    pa_proplist_set(prop_filter, PA_PROP_MEDIA_ROLE, nullptr, 0);
-    pa_proplist_set(prop_filter, "phonon.streamid", nullptr, 0);
 
     pa_context_disconnect(context);
     pa_context_unref(context);

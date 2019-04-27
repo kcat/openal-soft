@@ -338,7 +338,7 @@ surround71 =
 #  device specifier (seen by applications) will not be updated when this
 #  occurs, and neither will the AL device configuration (sample rate, format,
 #  etc).
-#allow-moves = false
+#allow-moves = true
 
 ## fix-rate:
 #  Specifies whether to match the playback stream's sample rate to the device's

@@ -131,8 +131,8 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>93</width>
-        <height>29</height>
+        <width>95</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -423,7 +423,7 @@ frames needed for each mixing update.</string>
           </rect>
          </property>
          <property name="placeholderText">
-          <string>1024</string>
+          <string>20ms</string>
          </property>
         </widget>
        </widget>
@@ -2201,8 +2201,8 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>125</width>
-        <height>29</height>
+        <width>129</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">
@@ -2371,7 +2371,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
      <x>0</x>
      <y>0</y>
      <width>564</width>
-     <height>27</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

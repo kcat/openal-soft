@@ -45,80 +45,103 @@
 namespace {
 
 #ifdef HAVE_DYNLOAD
-void *pa_handle;
+#define PULSE_FUNCS(MAGIC)                                                    \
+    MAGIC(pa_mainloop_new);                                                   \
+    MAGIC(pa_mainloop_free);                                                  \
+    MAGIC(pa_mainloop_set_poll_func);                                         \
+    MAGIC(pa_mainloop_run);                                                   \
+    MAGIC(pa_mainloop_get_api);                                               \
+    MAGIC(pa_context_new);                                                    \
+    MAGIC(pa_context_unref);                                                  \
+    MAGIC(pa_context_get_state);                                              \
+    MAGIC(pa_context_disconnect);                                             \
+    MAGIC(pa_context_set_state_callback);                                     \
+    MAGIC(pa_context_errno);                                                  \
+    MAGIC(pa_context_connect);                                                \
+    MAGIC(pa_context_get_server_info);                                        \
+    MAGIC(pa_context_get_sink_info_by_name);                                  \
+    MAGIC(pa_context_get_sink_info_list);                                     \
+    MAGIC(pa_context_get_source_info_by_name);                                \
+    MAGIC(pa_context_get_source_info_list);                                   \
+    MAGIC(pa_stream_new);                                                     \
+    MAGIC(pa_stream_unref);                                                   \
+    MAGIC(pa_stream_drop);                                                    \
+    MAGIC(pa_stream_get_state);                                               \
+    MAGIC(pa_stream_peek);                                                    \
+    MAGIC(pa_stream_write);                                                   \
+    MAGIC(pa_stream_connect_record);                                          \
+    MAGIC(pa_stream_connect_playback);                                        \
+    MAGIC(pa_stream_readable_size);                                           \
+    MAGIC(pa_stream_writable_size);                                           \
+    MAGIC(pa_stream_is_corked);                                               \
+    MAGIC(pa_stream_cork);                                                    \
+    MAGIC(pa_stream_is_suspended);                                            \
+    MAGIC(pa_stream_get_device_name);                                         \
+    MAGIC(pa_stream_get_latency);                                             \
+    MAGIC(pa_stream_set_write_callback);                                      \
+    MAGIC(pa_stream_set_buffer_attr);                                         \
+    MAGIC(pa_stream_get_buffer_attr);                                         \
+    MAGIC(pa_stream_get_sample_spec);                                         \
+    MAGIC(pa_stream_get_time);                                                \
+    MAGIC(pa_stream_set_read_callback);                                       \
+    MAGIC(pa_stream_set_state_callback);                                      \
+    MAGIC(pa_stream_set_moved_callback);                                      \
+    MAGIC(pa_stream_set_underflow_callback);                                  \
+    MAGIC(pa_stream_new_with_proplist);                                       \
+    MAGIC(pa_stream_disconnect);                                              \
+    MAGIC(pa_stream_set_buffer_attr_callback);                                \
+    MAGIC(pa_stream_begin_write);                                             \
+    MAGIC(pa_channel_map_init_auto);                                          \
+    MAGIC(pa_channel_map_parse);                                              \
+    MAGIC(pa_channel_map_snprint);                                            \
+    MAGIC(pa_channel_map_equal);                                              \
+    MAGIC(pa_channel_map_superset);                                           \
+    MAGIC(pa_operation_get_state);                                            \
+    MAGIC(pa_operation_unref);                                                \
+    MAGIC(pa_sample_spec_valid);                                              \
+    MAGIC(pa_frame_size);                                                     \
+    MAGIC(pa_strerror);                                                       \
+    MAGIC(pa_path_get_filename);                                              \
+    MAGIC(pa_get_binary_name);                                                \
+    MAGIC(pa_xmalloc);                                                        \
+    MAGIC(pa_xfree);
+
+void *pulse_handle;
 #define MAKE_FUNC(x) decltype(x) * p##x
-MAKE_FUNC(pa_context_unref);
-MAKE_FUNC(pa_sample_spec_valid);
-MAKE_FUNC(pa_frame_size);
-MAKE_FUNC(pa_stream_drop);
-MAKE_FUNC(pa_strerror);
-MAKE_FUNC(pa_context_get_state);
-MAKE_FUNC(pa_stream_get_state);
-MAKE_FUNC(pa_stream_peek);
-MAKE_FUNC(pa_context_new);
-MAKE_FUNC(pa_context_disconnect);
-MAKE_FUNC(pa_context_set_state_callback);
-MAKE_FUNC(pa_stream_write);
-MAKE_FUNC(pa_xfree);
-MAKE_FUNC(pa_stream_connect_record);
-MAKE_FUNC(pa_stream_connect_playback);
-MAKE_FUNC(pa_stream_readable_size);
-MAKE_FUNC(pa_stream_writable_size);
-MAKE_FUNC(pa_stream_is_corked);
-MAKE_FUNC(pa_stream_cork);
-MAKE_FUNC(pa_stream_is_suspended);
-MAKE_FUNC(pa_stream_get_device_name);
-MAKE_FUNC(pa_stream_get_latency);
-MAKE_FUNC(pa_path_get_filename);
-MAKE_FUNC(pa_get_binary_name);
-MAKE_FUNC(pa_context_errno);
-MAKE_FUNC(pa_xmalloc);
-MAKE_FUNC(pa_stream_unref);
-MAKE_FUNC(pa_stream_set_write_callback);
-MAKE_FUNC(pa_context_connect);
-MAKE_FUNC(pa_stream_set_buffer_attr);
-MAKE_FUNC(pa_stream_get_buffer_attr);
-MAKE_FUNC(pa_stream_get_sample_spec);
-MAKE_FUNC(pa_stream_get_time);
-MAKE_FUNC(pa_stream_set_read_callback);
-MAKE_FUNC(pa_stream_set_state_callback);
-MAKE_FUNC(pa_stream_set_moved_callback);
-MAKE_FUNC(pa_stream_set_underflow_callback);
-MAKE_FUNC(pa_stream_new_with_proplist);
-MAKE_FUNC(pa_stream_disconnect);
-MAKE_FUNC(pa_channel_map_init_auto);
-MAKE_FUNC(pa_channel_map_parse);
-MAKE_FUNC(pa_channel_map_snprint);
-MAKE_FUNC(pa_channel_map_equal);
-MAKE_FUNC(pa_context_get_server_info);
-MAKE_FUNC(pa_context_get_sink_info_by_name);
-MAKE_FUNC(pa_context_get_sink_info_list);
-MAKE_FUNC(pa_context_get_source_info_by_name);
-MAKE_FUNC(pa_context_get_source_info_list);
-MAKE_FUNC(pa_operation_get_state);
-MAKE_FUNC(pa_operation_unref);
-MAKE_FUNC(pa_proplist_new);
-MAKE_FUNC(pa_proplist_free);
-MAKE_FUNC(pa_proplist_set);
-MAKE_FUNC(pa_channel_map_superset);
-MAKE_FUNC(pa_stream_set_buffer_attr_callback);
-MAKE_FUNC(pa_stream_begin_write);
+PULSE_FUNCS(MAKE_FUNC)
 #undef MAKE_FUNC
 
 #ifndef IN_IDE_PARSER
-#define pa_context_unref ppa_context_unref
-#define pa_sample_spec_valid ppa_sample_spec_valid
-#define pa_frame_size ppa_frame_size
-#define pa_stream_drop ppa_stream_drop
-#define pa_strerror ppa_strerror
-#define pa_context_get_state ppa_context_get_state
-#define pa_stream_get_state ppa_stream_get_state
-#define pa_stream_peek ppa_stream_peek
+#define pa_mainloop_new ppa_mainloop_new
+#define pa_mainloop_free ppa_mainloop_free
+#define pa_mainloop_set_poll_func ppa_mainloop_set_poll_func
+#define pa_mainloop_run ppa_mainloop_run
+#define pa_mainloop_get_api ppa_mainloop_get_api
 #define pa_context_new ppa_context_new
+#define pa_context_unref ppa_context_unref
+#define pa_context_get_state ppa_context_get_state
 #define pa_context_disconnect ppa_context_disconnect
 #define pa_context_set_state_callback ppa_context_set_state_callback
-#define pa_stream_write ppa_stream_write
-#define pa_xfree ppa_xfree
+#define pa_context_errno ppa_context_errno
+#define pa_context_connect ppa_context_connect
+#define pa_context_get_server_info ppa_context_get_server_info
+#define pa_context_get_sink_info_by_name ppa_context_get_sink_info_by_name
+#define pa_context_get_sink_info_list ppa_context_get_sink_info_list
+#define pa_context_get_source_info_by_name ppa_context_get_source_info_by_name
+#define pa_context_get_source_info_list ppa_context_get_source_info_list
+#define pa_stream_new ppa_stream_new
+#define pa_stream_unref ppa_stream_unref
+#define pa_stream_disconnect ppa_stream_disconnect
+#define pa_stream_drop ppa_stream_drop
+#define pa_stream_set_write_callback ppa_stream_set_write_callback
+#define pa_stream_set_buffer_attr ppa_stream_set_buffer_attr
+#define pa_stream_get_buffer_attr ppa_stream_get_buffer_attr
+#define pa_stream_get_sample_spec ppa_stream_get_sample_spec
+#define pa_stream_get_time ppa_stream_get_time
+#define pa_stream_set_read_callback ppa_stream_set_read_callback
+#define pa_stream_set_state_callback ppa_stream_set_state_callback
+#define pa_stream_set_moved_callback ppa_stream_set_moved_callback
+#define pa_stream_set_underflow_callback ppa_stream_set_underflow_callback
 #define pa_stream_connect_record ppa_stream_connect_record
 #define pa_stream_connect_playback ppa_stream_connect_playback
 #define pa_stream_readable_size ppa_stream_readable_size
@@ -128,40 +151,25 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_stream_is_suspended ppa_stream_is_suspended
 #define pa_stream_get_device_name ppa_stream_get_device_name
 #define pa_stream_get_latency ppa_stream_get_latency
-#define pa_path_get_filename ppa_path_get_filename
-#define pa_get_binary_name ppa_get_binary_name
-#define pa_context_errno ppa_context_errno
-#define pa_xmalloc ppa_xmalloc
-#define pa_stream_unref ppa_stream_unref
-#define pa_stream_set_write_callback ppa_stream_set_write_callback
-#define pa_context_connect ppa_context_connect
-#define pa_stream_set_buffer_attr ppa_stream_set_buffer_attr
-#define pa_stream_get_buffer_attr ppa_stream_get_buffer_attr
-#define pa_stream_get_sample_spec ppa_stream_get_sample_spec
-#define pa_stream_get_time ppa_stream_get_time
-#define pa_stream_set_read_callback ppa_stream_set_read_callback
-#define pa_stream_set_state_callback ppa_stream_set_state_callback
-#define pa_stream_set_moved_callback ppa_stream_set_moved_callback
-#define pa_stream_set_underflow_callback ppa_stream_set_underflow_callback
-#define pa_stream_new_with_proplist ppa_stream_new_with_proplist
-#define pa_stream_disconnect ppa_stream_disconnect
+#define pa_stream_set_buffer_attr_callback ppa_stream_set_buffer_attr_callback
+#define pa_stream_begin_write ppa_stream_begin_write*/
 #define pa_channel_map_init_auto ppa_channel_map_init_auto
 #define pa_channel_map_parse ppa_channel_map_parse
 #define pa_channel_map_snprint ppa_channel_map_snprint
 #define pa_channel_map_equal ppa_channel_map_equal
-#define pa_context_get_server_info ppa_context_get_server_info
-#define pa_context_get_sink_info_by_name ppa_context_get_sink_info_by_name
-#define pa_context_get_sink_info_list ppa_context_get_sink_info_list
-#define pa_context_get_source_info_by_name ppa_context_get_source_info_by_name
-#define pa_context_get_source_info_list ppa_context_get_source_info_list
+#define pa_channel_map_superset ppa_channel_map_superset
 #define pa_operation_get_state ppa_operation_get_state
 #define pa_operation_unref ppa_operation_unref
-#define pa_proplist_new ppa_proplist_new
-#define pa_proplist_free ppa_proplist_free
-#define pa_proplist_set ppa_proplist_set
-#define pa_channel_map_superset ppa_channel_map_superset
-#define pa_stream_set_buffer_attr_callback ppa_stream_set_buffer_attr_callback
-#define pa_stream_begin_write ppa_stream_begin_write
+#define pa_sample_spec_valid ppa_sample_spec_valid
+#define pa_frame_size ppa_frame_size
+#define pa_strerror ppa_strerror
+#define pa_stream_get_state ppa_stream_get_state
+#define pa_stream_peek ppa_stream_peek
+#define pa_stream_write ppa_stream_write
+#define pa_xfree ppa_xfree
+#define pa_path_get_filename ppa_path_get_filename
+#define pa_get_binary_name ppa_get_binary_name
+#define pa_xmalloc ppa_xmalloc
 #endif /* IN_IDE_PARSER */
 
 #endif
@@ -1383,7 +1391,7 @@ void PulseCapture::unlock()
 bool PulseBackendFactory::init()
 {
 #ifdef HAVE_DYNLOAD
-    if(!pa_handle)
+    if(!pulse_handle)
     {
         bool ret{true};
         std::string missing_funcs;
@@ -1395,83 +1403,28 @@ bool PulseBackendFactory::init()
 #else
 #define PALIB "libpulse.so.0"
 #endif
-        pa_handle = LoadLib(PALIB);
-        if(!pa_handle)
+        pulse_handle = LoadLib(PALIB);
+        if(!pulse_handle)
         {
             WARN("Failed to load %s\n", PALIB);
             return false;
         }
 
 #define LOAD_FUNC(x) do {                                                     \
-    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pa_handle, #x));        \
+    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));     \
     if(!(p##x)) {                                                             \
         ret = false;                                                          \
         missing_funcs += "\n" #x;                                             \
     }                                                                         \
 } while(0)
-        LOAD_FUNC(pa_context_unref);
-        LOAD_FUNC(pa_sample_spec_valid);
-        LOAD_FUNC(pa_stream_drop);
-        LOAD_FUNC(pa_frame_size);
-        LOAD_FUNC(pa_strerror);
-        LOAD_FUNC(pa_context_get_state);
-        LOAD_FUNC(pa_stream_get_state);
-        LOAD_FUNC(pa_stream_peek);
-        LOAD_FUNC(pa_context_new);
-        LOAD_FUNC(pa_context_disconnect);
-        LOAD_FUNC(pa_context_set_state_callback);
-        LOAD_FUNC(pa_stream_write);
-        LOAD_FUNC(pa_xfree);
-        LOAD_FUNC(pa_stream_connect_record);
-        LOAD_FUNC(pa_stream_connect_playback);
-        LOAD_FUNC(pa_stream_readable_size);
-        LOAD_FUNC(pa_stream_writable_size);
-        LOAD_FUNC(pa_stream_is_corked);
-        LOAD_FUNC(pa_stream_cork);
-        LOAD_FUNC(pa_stream_is_suspended);
-        LOAD_FUNC(pa_stream_get_device_name);
-        LOAD_FUNC(pa_stream_get_latency);
-        LOAD_FUNC(pa_path_get_filename);
-        LOAD_FUNC(pa_get_binary_name);
-        LOAD_FUNC(pa_context_errno);
-        LOAD_FUNC(pa_xmalloc);
-        LOAD_FUNC(pa_stream_unref);
-        LOAD_FUNC(pa_stream_set_write_callback);
-        LOAD_FUNC(pa_context_connect);
-        LOAD_FUNC(pa_stream_set_buffer_attr);
-        LOAD_FUNC(pa_stream_get_buffer_attr);
-        LOAD_FUNC(pa_stream_get_sample_spec);
-        LOAD_FUNC(pa_stream_get_time);
-        LOAD_FUNC(pa_stream_set_read_callback);
-        LOAD_FUNC(pa_stream_set_state_callback);
-        LOAD_FUNC(pa_stream_set_moved_callback);
-        LOAD_FUNC(pa_stream_set_underflow_callback);
-        LOAD_FUNC(pa_stream_new_with_proplist);
-        LOAD_FUNC(pa_stream_disconnect);
-        LOAD_FUNC(pa_channel_map_init_auto);
-        LOAD_FUNC(pa_channel_map_parse);
-        LOAD_FUNC(pa_channel_map_snprint);
-        LOAD_FUNC(pa_channel_map_equal);
-        LOAD_FUNC(pa_context_get_server_info);
-        LOAD_FUNC(pa_context_get_sink_info_by_name);
-        LOAD_FUNC(pa_context_get_sink_info_list);
-        LOAD_FUNC(pa_context_get_source_info_by_name);
-        LOAD_FUNC(pa_context_get_source_info_list);
-        LOAD_FUNC(pa_operation_get_state);
-        LOAD_FUNC(pa_operation_unref);
-        LOAD_FUNC(pa_proplist_new);
-        LOAD_FUNC(pa_proplist_free);
-        LOAD_FUNC(pa_proplist_set);
-        LOAD_FUNC(pa_channel_map_superset);
-        LOAD_FUNC(pa_stream_set_buffer_attr_callback);
-        LOAD_FUNC(pa_stream_begin_write);
+        PULSE_FUNCS(LOAD_FUNC)
 #undef LOAD_FUNC
 
         if(!ret)
         {
             WARN("Missing expected functions:%s\n", missing_funcs.c_str());
-            CloseLib(pa_handle);
-            pa_handle = nullptr;
+            CloseLib(pulse_handle);
+            pulse_handle = nullptr;
             return false;
         }
     }

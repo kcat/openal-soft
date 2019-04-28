@@ -1290,34 +1290,37 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
     std::lock_guard<std::mutex> _{pulse_lock};
     while(todo > 0)
     {
-        size_t rem{todo};
-
         if(mCapLen == 0)
         {
-            pa_stream_state_t state{pa_stream_get_state(mStream)};
-            if(!PA_STREAM_IS_GOOD(state))
+            if(UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire)))
+                break;
+            const pa_stream_state_t state{pa_stream_get_state(mStream)};
+            if(UNLIKELY(!PA_STREAM_IS_GOOD(state)))
             {
                 aluHandleDisconnect(mDevice, "Bad capture state: %u", state);
-                return ALC_INVALID_DEVICE;
+                break;
             }
-            if(pa_stream_peek(mStream, &mCapStore, &mCapLen) < 0)
+            if(UNLIKELY(pa_stream_peek(mStream, &mCapStore, &mCapLen) < 0))
             {
-                ERR("pa_stream_peek() failed: %s\n",
-                    pa_strerror(pa_context_errno(mContext)));
                 aluHandleDisconnect(mDevice, "Failed retrieving capture samples: %s",
                                     pa_strerror(pa_context_errno(mContext)));
-                return ALC_INVALID_DEVICE;
+                break;
             }
+            if(mCapLen == 0) break;
             mCapRemain = mCapLen;
         }
-        rem = minz(rem, mCapRemain);
 
-        memcpy(buffer, mCapStore, rem);
+        const size_t rem{minz(todo, mCapRemain)};
+        if(LIKELY(mCapStore))
+            memcpy(buffer, mCapStore, rem);
+        else
+            memset(buffer, ((mDevice->FmtType==DevFmtUByte) ? 0x80 : 0), rem);
 
         buffer = static_cast<ALbyte*>(buffer) + rem;
         todo -= rem;
 
-        mCapStore = reinterpret_cast<const ALbyte*>(mCapStore) + rem;
+        if(LIKELY(mCapStore))
+            mCapStore = reinterpret_cast<const ALbyte*>(mCapStore) + rem;
         mCapRemain -= rem;
         if(mCapRemain == 0)
         {

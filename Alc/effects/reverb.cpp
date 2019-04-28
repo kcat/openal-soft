@@ -90,15 +90,6 @@ alignas(16) constexpr ALfloat A2B[NUM_LINES][NUM_LINES]{
     { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
 };
 
-inline void ConvertA2B(ALfloat (&dst)[NUM_LINES][BUFFERSIZE],
-    const ALfloat (&src)[NUM_LINES][BUFFERSIZE], const ALsizei todo)
-{
-    for(ALsizei c{0};c < NUM_LINES;c++)
-    {
-        std::fill(std::begin(dst[c]), std::end(dst[c]), 0.0f);
-        MixRowSamples(dst[c], A2B[c], src, NUM_LINES, 0, todo);
-    }
-}
 
 constexpr ALfloat FadeStep{1.0f / FADE_SAMPLES};
 
@@ -404,42 +395,55 @@ struct ReverbState final : public EffectState {
     void MixOutPlain(const ALsizei numOutput, ALfloat (*samplesOut)[BUFFERSIZE],
         const ALsizei todo)
     {
-        /* Convert back to B-Format, and mix the results to output. */
-        ConvertA2B(mTempSamples, mEarlyBuffer, todo);
-        for(ALsizei c{0};c < NUM_LINES;c++)
-            MixSamples(mTempSamples[c], numOutput, samplesOut, mEarly.CurrentGain[c],
-                mEarly.PanGain[c], todo, 0, todo);
+        ASSUME(todo > 0);
 
-        ConvertA2B(mTempSamples, mLateBuffer, todo);
+        /* Convert back to B-Format, and mix the results to output. */
         for(ALsizei c{0};c < NUM_LINES;c++)
-            MixSamples(mTempSamples[c], numOutput, samplesOut, mLate.CurrentGain[c],
+        {
+            std::fill_n(std::begin(mTempSamples[0]), todo, 0.0f);
+            MixRowSamples(mTempSamples[0], A2B[c], mEarlyBuffer, NUM_LINES, 0, todo);
+            MixSamples(mTempSamples[0], numOutput, samplesOut, mEarly.CurrentGain[c],
+                mEarly.PanGain[c], todo, 0, todo);
+        }
+
+        for(ALsizei c{0};c < NUM_LINES;c++)
+        {
+            std::fill_n(std::begin(mTempSamples[0]), todo, 0.0f);
+            MixRowSamples(mTempSamples[0], A2B[c], mLateBuffer, NUM_LINES, 0, todo);
+            MixSamples(mTempSamples[0], numOutput, samplesOut, mLate.CurrentGain[c],
                 mLate.PanGain[c], todo, 0, todo);
+        }
     }
 
     void MixOutAmbiUp(const ALsizei numOutput, ALfloat (*samplesOut)[BUFFERSIZE],
         const ALsizei todo)
     {
         ASSUME(todo > 0);
-        ConvertA2B(mTempSamples, mEarlyBuffer, todo);
+
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
+            std::fill_n(std::begin(mTempSamples[0]), todo, 0.0f);
+            MixRowSamples(mTempSamples[0], A2B[c], mEarlyBuffer, NUM_LINES, 0, todo);
+
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
              */
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            mAmbiSplitter[0][c].applyHfScale(mTempSamples[c], hfscale, todo);
+            mAmbiSplitter[0][c].applyHfScale(mTempSamples[0], hfscale, todo);
 
-            MixSamples(mTempSamples[c], numOutput, samplesOut, mEarly.CurrentGain[c],
+            MixSamples(mTempSamples[0], numOutput, samplesOut, mEarly.CurrentGain[c],
                 mEarly.PanGain[c], todo, 0, todo);
         }
 
-        ConvertA2B(mTempSamples, mLateBuffer, todo);
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
-            const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            mAmbiSplitter[1][c].applyHfScale(mTempSamples[c], hfscale, todo);
+            std::fill_n(std::begin(mTempSamples[0]), todo, 0.0f);
+            MixRowSamples(mTempSamples[0], A2B[c], mLateBuffer, NUM_LINES, 0, todo);
 
-            MixSamples(mTempSamples[c], numOutput, samplesOut, mLate.CurrentGain[c],
+            const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
+            mAmbiSplitter[1][c].applyHfScale(mTempSamples[0], hfscale, todo);
+
+            MixSamples(mTempSamples[0], numOutput, samplesOut, mLate.CurrentGain[c],
                 mLate.PanGain[c], todo, 0, todo);
         }
     }
@@ -1382,8 +1386,12 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
     ALfloat (&afmt)[NUM_LINES][BUFFERSIZE] = mTempSamples;
     for(ALsizei c{0};c < NUM_LINES;c++)
     {
-        std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
+        std::fill_n(std::begin(afmt[c]), samplesToDo, 0.0f);
         MixRowSamples(afmt[c], B2A[c], samplesIn, numInput, 0, samplesToDo);
+
+        /* Band-pass the incoming samples. */
+        mFilter[c].Lp.process(afmt[c], afmt[c], samplesToDo);
+        mFilter[c].Hp.process(afmt[c], afmt[c], samplesToDo);
     }
 
     /* Process reverb for these samples. */
@@ -1399,17 +1407,11 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
         todo = mini(todo, mMaxUpdate[1]);
         ASSUME(todo > 0);
 
-        /* Process the samples for reverb. */
+        /* Feed the initial delay line. */
         for(ALsizei c{0};c < NUM_LINES;c++)
-        {
-            /* Band-pass the incoming samples. */
-            mFilter[c].Lp.process(mEarlyBuffer[0], afmt[c]+base, todo);
-            mFilter[c].Hp.process(mEarlyBuffer[1], mEarlyBuffer[0], todo);
+            mDelay.write(offset, c, afmt[c]+base, todo);
 
-            /* Feed the initial delay line. */
-            mDelay.write(offset, c, mEarlyBuffer[1], todo);
-        }
-
+        /* Process the samples for reverb. */
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
         {
             auto fade = static_cast<ALfloat>(fadeCount);

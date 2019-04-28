@@ -61,7 +61,7 @@ void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, c
 }
 
 template<typename Real>
-void BandSplitterR<Real>::applyHfScale(Real *RESTRICT samples, const Real hfscale, const int count)
+void BandSplitterR<Real>::applyHfScale(Real *samples, const Real hfscale, const int count)
 {
     ASSUME(count > 0);
 
@@ -112,7 +112,7 @@ void SplitterAllpassR<Real>::init(Real f0norm)
 }
 
 template<typename Real>
-void SplitterAllpassR<Real>::process(Real *RESTRICT samples, int count)
+void SplitterAllpassR<Real>::process(Real *samples, int count)
 {
     ASSUME(count > 0);
 
@@ -120,7 +120,7 @@ void SplitterAllpassR<Real>::process(Real *RESTRICT samples, int count)
     Real z1{this->z1};
     auto proc_sample = [coeff,&z1](const Real in) noexcept -> Real
     {
-        Real out{in*coeff + z1};
+        const Real out{in*coeff + z1};
         z1 = in - out*coeff;
         return out;
     };

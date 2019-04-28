@@ -17,7 +17,7 @@ public:
     void init(Real f0norm);
     void clear() noexcept { lp_z1 = lp_z2 = ap_z1 = 0.0f; }
     void process(Real *hpout, Real *lpout, const Real *input, const int count);
-    void applyHfScale(Real *RESTRICT samples, const Real hfscale, const int count);
+    void applyHfScale(Real *samples, const Real hfscale, const int count);
 };
 using BandSplitter = BandSplitterR<float>;
 
@@ -32,7 +32,7 @@ class SplitterAllpassR {
 public:
     void init(Real f0norm);
     void clear() noexcept { z1 = 0.0f; }
-    void process(Real *RESTRICT samples, int count);
+    void process(Real *samples, int count);
 };
 using SplitterAllpass = SplitterAllpassR<float>;
 

@@ -233,9 +233,7 @@ constexpr ChannelMap MonoCfg[1] = {
 
 void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, const ALsizei *RESTRICT chans_per_order)
 {
-    /* NFC is only used when AvgSpeakerDist is greater than 0, and can only be
-     * used when rendering to an ambisonic buffer.
-     */
+    /* NFC is only used when AvgSpeakerDist is greater than 0. */
     const char *devname{device->DeviceName.c_str()};
     if(!GetConfigValueBool(devname, "decoder", "nfc", 1) || !(ctrl_dist > 0.0f))
         return;
@@ -444,9 +442,12 @@ void InitPanning(ALCdevice *device)
     }
 }
 
-void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
+void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    if(conf->FreqBands != 1)
+    static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
+    static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
+
+    if(!hqdec && conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
 
@@ -473,70 +474,25 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
     device->Dry.NumChannels = count;
 
-    TRACE("Enabling %s-order%s ambisonic decoder\n",
-        (conf->ChanMask > AMBI_2ORDER_MASK) ? "third" :
-        (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
-        (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
-    );
-    device->AmbiDecoder = al::make_unique<BFormatDec>(conf, false, count, device->Frequency,
-        speakermap);
-
-    device->RealOut.NumChannels = device->channelsFromFmt();
-
-    InitDistanceComp(device, conf, speakermap);
-}
-
-void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
-{
-    static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
-    static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
-
-    ALsizei order{(conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
-        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
-    device->mAmbiOrder = order;
-
-    ALsizei count;
-    if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
-    {
-        count = static_cast<ALsizei>(AmbiChannelsFromOrder(order));
-        std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
-            std::begin(device->Dry.AmbiMap),
-            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
-        );
-    }
-    else
-    {
-        count = static_cast<ALsizei>(Ambi2DChannelsFromOrder(order));
-        std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
-            std::begin(device->Dry.AmbiMap),
-            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
-        );
-    }
-    device->Dry.NumChannels = count;
-
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
-        (conf->FreqBands == 1) ? "single" : "dual",
+        (!hqdec || conf->FreqBands == 1) ? "single" : "dual",
         (conf->ChanMask > AMBI_2ORDER_MASK) ? "third" :
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder = al::make_unique<BFormatDec>(conf, true, count, device->Frequency,
+    device->AmbiDecoder = al::make_unique<BFormatDec>(conf, hqdec, count, device->Frequency,
         speakermap);
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
-    auto accum_spkr_dist = std::bind(
-        std::plus<float>{}, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2)
-    );
+    auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
+        std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
     const ALfloat avg_dist{
         std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f},
             accum_spkr_dist) / static_cast<ALfloat>(conf->Speakers.size())
     };
-    InitNearFieldCtrl(device, avg_dist,
-        (conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
-        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1,
-        (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? chans_per_order3d : chans_per_order2d
-    );
+    InitNearFieldCtrl(device, avg_dist, order,
+        (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? chans_per_order3d : chans_per_order2d);
 
     InitDistanceComp(device, conf, speakermap);
 }
@@ -624,11 +580,8 @@ void InitHrtfPanning(ALCdevice *device)
     BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints,
         AmbiMatrix, COUNTOF(AmbiPoints), AmbiOrderHFGain);
 
-    if(GetConfigValueBool(device->DeviceName.c_str(), "decoder", "hq-mode", 0))
-    {
-        HrtfEntry *Hrtf{device->mHrtf};
-        InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
-    }
+    HrtfEntry *Hrtf{device->mHrtf};
+    InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
 }
 
 void InitUhjPanning(ALCdevice *device)
@@ -827,10 +780,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
         if(!pconf)
             InitPanning(device);
-        else if(GetConfigValueBool(devname, "decoder", "hq-mode", 0))
-            InitHQPanning(device, pconf, speakermap);
         else
-            InitCustomPanning(device, pconf, speakermap);
+        {
+            int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 0)};
+            InitCustomPanning(device, hqdec, pconf, speakermap);
+        }
 
         /* Enable the stablizer only for formats that have front-left, front-
          * right, and front-center outputs.

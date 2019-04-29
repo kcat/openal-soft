@@ -609,11 +609,11 @@ void MainWindow::loadConfig(const QString &fname)
     QString resampler = settings.value("resampler").toString().trimmed();
     ui->resamplerSlider->setValue(2);
     ui->resamplerLabel->setText(resamplerList[2].name);
-    /* The "cubic" and "sinc8" resamplers are no longer supported. Use "sinc4"
+    /* The "sinc4" and "sinc8" resamplers are no longer supported. Use "cubic"
      * as a fallback.
      */
-    if(resampler == "cubic" || resampler == "sinc8")
-        resampler = "sinc4";
+    if(resampler == "sinc4" || resampler == "sinc8")
+        resampler = "cubic";
     /* The "bsinc" resampler name is an alias for "bsinc12". */
     else if(resampler == "bsinc")
         resampler = "bsinc12";

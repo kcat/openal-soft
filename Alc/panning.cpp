@@ -624,8 +624,11 @@ void InitHrtfPanning(ALCdevice *device)
     BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints,
         AmbiMatrix, COUNTOF(AmbiPoints), AmbiOrderHFGain);
 
-    HrtfEntry *Hrtf{device->mHrtf};
-    InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
+    if(GetConfigValueBool(device->DeviceName.c_str(), "decoder", "hq-mode", 0))
+    {
+        HrtfEntry *Hrtf{device->mHrtf};
+        InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
+    }
 }
 
 void InitUhjPanning(ALCdevice *device)

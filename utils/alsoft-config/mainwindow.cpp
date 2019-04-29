@@ -1144,10 +1144,7 @@ void MainWindow::updatePeriodSizeEdit(int size)
 {
     ui->periodSizeEdit->clear();
     if(size >= 64)
-    {
-        size = (size+32)&~0x3f;
         ui->periodSizeEdit->insert(QString::number(size));
-    }
     enableApplyButton();
 }
 

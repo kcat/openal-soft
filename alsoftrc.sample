@@ -275,17 +275,18 @@ distance-comp = true
 #  creates a more realistic perception of sound distance. Note that the effect
 #  may be stronger or weaker than intended if the application doesn't use or
 #  specify an appropriate unit scale, or if incorrect speaker distances are set
-#  in the decoder configuration file. Requires hq-mode to be enabled.
-nfc = true
+#  in the decoder configuration file.
+nfc = false
 
 ## nfc-ref-delay
-#  Specifies the reference delay value for ambisonic output. When channels is
-#  set to one of the ambi* formats, this option enables NFC-HOA output with the
-#  specified Reference Delay parameter. The specified value can then be shared
-#  with an appropriate NFC-HOA decoder to reproduce correct near-field effects.
-#  Keep in mind that despite being designed for higher-order ambisonics, this
-#  applies to first-order output all the same. When left unset, normal output
-#  is created with no near-field simulation.
+#  Specifies the reference delay value for ambisonic output when NFC filters
+#  are enabled. If channels is set to one of the ambi* formats, this option
+#  enables NFC-HOA output with the specified Reference Delay parameter. The
+#  specified value can then be shared with an appropriate NFC-HOA decoder to
+#  reproduce correct near-field effects. Keep in mind that despite being
+#  designed for higher-order ambisonics, this also applies to first-order
+#  output. When left unset, normal output is created with no near-field
+#  simulation. Requires the nfc option to also be enabled.
 nfc-ref-delay =
 
 ## quad:

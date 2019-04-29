@@ -235,7 +235,7 @@ void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, cons
 {
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
     const char *devname{device->DeviceName.c_str()};
-    if(!GetConfigValueBool(devname, "decoder", "nfc", 1) || !(ctrl_dist > 0.0f))
+    if(!GetConfigValueBool(devname, "decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
         return;
 
     device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);

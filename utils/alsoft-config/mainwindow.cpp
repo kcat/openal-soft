@@ -697,7 +697,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoderHQModeCheckBox->setChecked(hqmode);
     bool distcomp = settings.value("decoder/distance-comp", true).toBool();
     ui->decoderDistCompCheckBox->setChecked(distcomp);
-    bool nfeffects = settings.value("decoder/nfc", true).toBool();
+    bool nfeffects = settings.value("decoder/nfc", false).toBool();
     ui->decoderNFEffectsCheckBox->setChecked(nfeffects);
     double refdelay = settings.value("decoder/nfc-ref-delay", 0.0).toDouble();
     ui->decoderNFRefDelaySpinBox->setValue(refdelay);
@@ -958,7 +958,7 @@ void MainWindow::saveConfig(const QString &fname) const
         ui->decoderDistCompCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
     );
     settings.setValue("decoder/nfc",
-        ui->decoderNFEffectsCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
+        ui->decoderNFEffectsCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
     );
     double refdelay = ui->decoderNFRefDelaySpinBox->value();
     settings.setValue("decoder/nfc-ref-delay",

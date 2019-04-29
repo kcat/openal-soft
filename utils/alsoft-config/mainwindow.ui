@@ -655,7 +655,7 @@ configuration file.</string>
       <property name="text">
        <string>Distance Compensation:</string>
       </property>
-      <property name="checked">
+      <property name="tristate">
        <bool>true</bool>
       </property>
      </widget>
@@ -847,8 +847,7 @@ creates a more realistic perception of sound distance.
 Note that the effect may be stronger or weaker than
 intended if the application doesn't use or specify an
 appropriate unit scale, or if incorrect speaker distances
-are set in the decoder configuration file. Requires High
-Quality Mode to be enabled.</string>
+are set in the decoder configuration file.</string>
       </property>
       <property name="layoutDirection">
        <enum>Qt::RightToLeft</enum>
@@ -856,7 +855,7 @@ Quality Mode to be enabled.</string>
       <property name="text">
        <string>Near-Field Effects:</string>
       </property>
-      <property name="checked">
+      <property name="tristate">
        <bool>true</bool>
       </property>
      </widget>
@@ -1282,7 +1281,7 @@ is not already running.</string>
         <property name="text">
          <string>AutoSpawn Server</string>
         </property>
-        <property name="checked">
+        <property name="tristate">
          <bool>true</bool>
         </property>
        </widget>
@@ -1304,6 +1303,9 @@ to match the new device.</string>
         <property name="text">
          <string>Allow Moving Streams</string>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
        <widget class="QCheckBox" name="pulseFixRateCheckBox">
         <property name="geometry">
@@ -1320,6 +1322,9 @@ rate to match the PulseAudio device.</string>
         </property>
         <property name="text">
          <string>Fix Sample Rate</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
         </property>
        </widget>
        <widget class="QCheckBox" name="pulseAdjLatencyCheckBox">
@@ -1341,6 +1346,9 @@ drop-outs.</string>
         <property name="text">
          <string>Adjust Latency</string>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
       </widget>
       <widget class="QWidget" name="page_7">
@@ -1355,6 +1363,9 @@ drop-outs.</string>
         </property>
         <property name="text">
          <string>AutoSpawn Server</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
         </property>
        </widget>
        <widget class="QGroupBox" name="groupBox_7">
@@ -1497,6 +1508,9 @@ resample pass on top of OpenAL's resampler.</string>
         <property name="text">
          <string>Allow Resampler</string>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
        <widget class="QCheckBox" name="alsaMmapCheckBox">
         <property name="geometry">
@@ -1515,7 +1529,7 @@ during updates.</string>
         <property name="text">
          <string>MMap Buffer</string>
         </property>
-        <property name="checked">
+        <property name="tristate">
          <bool>true</bool>
         </property>
        </widget>

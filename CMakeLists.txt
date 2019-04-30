@@ -1467,6 +1467,7 @@ IF(ALSOFT_UTILS)
     set(UTIL_TARGETS )
 
     ADD_EXECUTABLE(openal-info utils/openal-info.c)
+    TARGET_INCLUDE_DIRECTORIES(openal-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
     TARGET_COMPILE_OPTIONS(openal-info PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(openal-info PRIVATE ${LINKER_FLAGS} OpenAL)
     set(UTIL_TARGETS ${UTIL_TARGETS} openal-info)
@@ -1485,6 +1486,8 @@ IF(ALSOFT_UTILS)
         endif()
         add_executable(makemhr ${MAKEMHR_SRCS})
         target_compile_definitions(makemhr PRIVATE ${CPP_DEFS})
+        target_include_directories(makemhr
+            PRIVATE ${OpenAL_SOURCE_DIR}/common ${OpenAL_BINARY_DIR})
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
         target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
         set(UTIL_TARGETS ${UTIL_TARGETS} makemhr)
@@ -1492,6 +1495,7 @@ IF(ALSOFT_UTILS)
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)
         add_executable(sofa-info ${SOFAINFO_SRCS})
         target_compile_definitions(sofa-info PRIVATE ${CPP_DEFS})
+        target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
     endif()
@@ -1517,6 +1521,7 @@ IF(ALSOFT_TESTS)
       examples/common/alhelpers.c
     )
     TARGET_COMPILE_DEFINITIONS(altonegen PRIVATE ${CPP_DEFS})
+    TARGET_INCLUDE_DIRECTORIES(altonegen PRIVATE ${OpenAL_SOURCE_DIR}/common)
     TARGET_COMPILE_OPTIONS(altonegen PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(altonegen PRIVATE ${LINKER_FLAGS} OpenAL ${MATH_LIB})
 
@@ -1535,13 +1540,12 @@ ENDIF()
 IF(ALSOFT_EXAMPLES)
     # Add a static library with common functions used by multiple targets
     ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
-    TARGET_COMPILE_DEFINITIONS(ex-common PRIVATE ${CPP_DEFS})
+    TARGET_COMPILE_DEFINITIONS(ex-common PUBLIC ${CPP_DEFS})
+    TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
     TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
     TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL)
 
     ADD_EXECUTABLE(alrecord examples/alrecord.c)
-    TARGET_COMPILE_DEFINITIONS(alrecord PRIVATE ${CPP_DEFS})
-    TARGET_COMPILE_OPTIONS(alrecord PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
 
     IF(ALSOFT_INSTALL)
@@ -1557,59 +1561,45 @@ IF(ALSOFT_EXAMPLES)
     IF(SDL2_FOUND)
         IF(SDL_SOUND_FOUND)
             ADD_EXECUTABLE(alplay examples/alplay.c)
-            TARGET_COMPILE_DEFINITIONS(alplay PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alplay
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(alplay PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alplay
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
 
             ADD_EXECUTABLE(alstream examples/alstream.c)
-            TARGET_COMPILE_DEFINITIONS(alstream PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alstream
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(alstream PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alstream
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
 
             ADD_EXECUTABLE(alreverb examples/alreverb.c)
-            TARGET_COMPILE_DEFINITIONS(alreverb PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alreverb
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(alreverb PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alreverb
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
 
             ADD_EXECUTABLE(almultireverb examples/almultireverb.c)
-            TARGET_COMPILE_DEFINITIONS(almultireverb PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(almultireverb
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(almultireverb PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(almultireverb
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common
                 ${MATH_LIB})
 
             ADD_EXECUTABLE(allatency examples/allatency.c)
-            TARGET_COMPILE_DEFINITIONS(allatency PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(allatency
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(allatency PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(allatency
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
 
             ADD_EXECUTABLE(alloopback examples/alloopback.c)
-            TARGET_COMPILE_DEFINITIONS(alloopback PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alloopback
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(alloopback PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alloopback
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
 
             ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
-            TARGET_COMPILE_DEFINITIONS(alhrtf PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alhrtf
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_COMPILE_OPTIONS(alhrtf PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alhrtf
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
 
@@ -1650,10 +1640,8 @@ IF(ALSOFT_EXAMPLES)
         ENDIF()
         IF(FFVER_OK)
             ADD_EXECUTABLE(alffplay examples/alffplay.cpp)
-            TARGET_COMPILE_DEFINITIONS(alffplay PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alffplay
                 PRIVATE ${SDL2_INCLUDE_DIR} ${FFMPEG_INCLUDE_DIRS})
-            TARGET_COMPILE_OPTIONS(alffplay PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alffplay
                 PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ${FFMPEG_LIBRARIES} ex-common)
 

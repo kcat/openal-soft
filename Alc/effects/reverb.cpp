@@ -24,7 +24,8 @@
 #include <cstdlib>
 #include <cmath>
 
-#include <cmath>
+#include <array>
+#include <numeric>
 #include <algorithm>
 #include <functional>
 
@@ -51,21 +52,21 @@ using namespace std::placeholders;
 /* This is the maximum number of samples processed for each inner loop
  * iteration.
  */
-#define MAX_UPDATE_SAMPLES  256
+constexpr int MAX_UPDATE_SAMPLES{256};
 
 /* The number of samples used for cross-faded delay lines.  This can be used
  * to balance the compensation for abrupt line changes and attenuation due to
  * minimally lengthed recursive lines.  Try to keep this below the device
  * update size.
  */
-#define FADE_SAMPLES  128
+constexpr int FADE_SAMPLES{128};
 
 /* The number of spatialized lines or channels to process. Four channels allows
  * for a 3D A-Format response. NOTE: This can't be changed without taking care
  * of the conversion matrices, and a few places where the length arrays are
  * assumed to have 4 elements.
  */
-#define NUM_LINES 4
+constexpr int NUM_LINES{4};
 
 
 /* The B-Format to A-Format conversion matrix. The arrangement of rows is
@@ -154,9 +155,9 @@ constexpr ALfloat DENSITY_SCALE{125000.0f};
  *
  * Assuming an average of 1m, we get the following taps:
  */
-constexpr ALfloat EARLY_TAP_LENGTHS[NUM_LINES]{
+constexpr std::array<ALfloat,NUM_LINES> EARLY_TAP_LENGTHS{{
     0.0000000e+0f, 2.0213520e-4f, 4.2531060e-4f, 6.7171600e-4f
-};
+}};
 
 /* The early all-pass filter lengths are based on the early tap lengths:
  *
@@ -164,9 +165,9 @@ constexpr ALfloat EARLY_TAP_LENGTHS[NUM_LINES]{
  *
  * Where a is the approximate maximum all-pass cycle limit (20).
  */
-const ALfloat EARLY_ALLPASS_LENGTHS[NUM_LINES]{
+constexpr std::array<ALfloat,NUM_LINES> EARLY_ALLPASS_LENGTHS{{
     9.7096800e-5f, 1.0720356e-4f, 1.1836234e-4f, 1.3068260e-4f
-};
+}};
 
 /* The early delay lines are used to transform the primary reflections into
  * the secondary reflections.  The A-format is arranged in such a way that
@@ -190,17 +191,17 @@ const ALfloat EARLY_ALLPASS_LENGTHS[NUM_LINES]{
  *
  * Using an average dimension of 1m, we get:
  */
-constexpr ALfloat EARLY_LINE_LENGTHS[NUM_LINES]{
+constexpr std::array<ALfloat,NUM_LINES> EARLY_LINE_LENGTHS{{
     5.9850400e-4f, 1.0913150e-3f, 1.5376658e-3f, 1.9419362e-3f
-};
+}};
 
 /* The late all-pass filter lengths are based on the late line lengths:
  *
  *     A_i = (5 / 3) L_i / r_1
  */
-constexpr ALfloat LATE_ALLPASS_LENGTHS[NUM_LINES]{
+constexpr std::array<ALfloat,NUM_LINES> LATE_ALLPASS_LENGTHS{{
     1.6182800e-4f, 2.0389060e-4f, 2.8159360e-4f, 3.2365600e-4f
-};
+}};
 
 /* The late lines are used to approximate the decaying cycle of recursive
  * late reflections.
@@ -217,9 +218,9 @@ constexpr ALfloat LATE_ALLPASS_LENGTHS[NUM_LINES]{
  *
  * For our 1m average room, we get:
  */
-constexpr ALfloat LATE_LINE_LENGTHS[NUM_LINES]{
+constexpr std::array<ALfloat,NUM_LINES> LATE_LINE_LENGTHS{{
     1.9419362e-3f, 2.4466860e-3f, 3.3791220e-3f, 3.8838720e-3f
-};
+}};
 
 
 struct DelayLineI {
@@ -514,27 +515,27 @@ bool ReverbState::allocLines(const ALfloat frequency)
      * largest late tap width.  Finally, it must also be extended by the
      * update size (MAX_UPDATE_SAMPLES) for block processing.
      */
-    ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier +
-                   AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
-                   (LATE_LINE_LENGTHS[NUM_LINES-1] - LATE_LINE_LENGTHS[0])*0.25f*multiplier};
+    ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
+        AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
+        (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())*0.25f*multiplier};
     totalSamples += CalcLineLength(length, totalSamples, frequency, MAX_UPDATE_SAMPLES, &mDelay);
 
     /* The early vector all-pass line. */
-    length = EARLY_ALLPASS_LENGTHS[NUM_LINES-1] * multiplier;
+    length = EARLY_ALLPASS_LENGTHS.back() * multiplier;
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mEarly.VecAp.Delay);
 
     /* The early reflection line. */
-    length = EARLY_LINE_LENGTHS[NUM_LINES-1] * multiplier;
+    length = EARLY_LINE_LENGTHS.back() * multiplier;
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mEarly.Delay);
 
     /* The late vector all-pass line. */
-    length = LATE_ALLPASS_LENGTHS[NUM_LINES-1] * multiplier;
+    length = LATE_ALLPASS_LENGTHS.back() * multiplier;
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mLate.VecAp.Delay);
 
     /* The late delay lines are calculated from the largest maximum density
      * line length.
      */
-    length = LATE_LINE_LENGTHS[NUM_LINES-1] * multiplier;
+    length = LATE_LINE_LENGTHS.back() * multiplier;
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mLate.Delay);
 
     totalSamples *= NUM_LINES;
@@ -568,9 +569,8 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
     const ALfloat multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
-    mLateFeedTap = float2int((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
-                              EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier) *
-                             frequency);
+    mLateFeedTap = float2int(
+        (AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier) * frequency);
 
     /* Clear filters and gain coefficients since the delay lines were all just
      * cleared (if not reallocated).
@@ -753,6 +753,10 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
      */
     const ALfloat norm_weight_factor{frequency / AL_EAXREVERB_MAX_HFREFERENCE};
 
+    const ALfloat late_allpass_avg{
+        std::accumulate(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
+        static_cast<float>(LATE_ALLPASS_LENGTHS.size())};
+
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
      * the outgoing signal.  This approximation is used to keep the apparent
@@ -762,11 +766,9 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
      * attenuation coefficient.
      */
     const ALfloat multiplier{CalcDelayLengthMult(density)};
-    ALfloat length{
-        (LATE_LINE_LENGTHS[0] + LATE_LINE_LENGTHS[1] + LATE_LINE_LENGTHS[2] +
-        LATE_LINE_LENGTHS[3]) / 4.0f * multiplier};
-    length += (LATE_ALLPASS_LENGTHS[0] + LATE_ALLPASS_LENGTHS[1] +
-               LATE_ALLPASS_LENGTHS[2] + LATE_ALLPASS_LENGTHS[3]) / 4.0f * multiplier;
+    ALfloat length{std::accumulate(LATE_LINE_LENGTHS.begin(), LATE_LINE_LENGTHS.end(), 0.0f) /
+        static_cast<float>(LATE_LINE_LENGTHS.size()) * multiplier};
+    length += late_allpass_avg * multiplier;
     /* The density gain calculation uses an average decay time weighted by
      * approximate bandwidth. This attempts to compensate for losses of energy
      * that reduce decay time due to scattering into highly attenuated bands.
@@ -802,10 +804,7 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
          * given the current diffusion so we don't have to process a full T60
          * filter for each of its four lines.
          */
-        length += lerp(LATE_ALLPASS_LENGTHS[i],
-                       (LATE_ALLPASS_LENGTHS[0] + LATE_ALLPASS_LENGTHS[1] +
-                        LATE_ALLPASS_LENGTHS[2] + LATE_ALLPASS_LENGTHS[3]) / 4.0f,
-                       diffusion) * multiplier;
+        length += lerp(LATE_ALLPASS_LENGTHS[i], late_allpass_avg, diffusion) * multiplier;
 
         /* Calculate the T60 damping coefficients for each line. */
         T60[i].calcCoeffs(length, lfDecayTime, mfDecayTime, hfDecayTime, lf0norm, hf0norm);
@@ -837,7 +836,7 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
         length = EARLY_TAP_LENGTHS[i]*multiplier;
         mEarlyDelayCoeff[i][1] = CalcDecayCoeff(length, decayTime);
 
-        length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS[0])*0.25f*multiplier;
+        length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front())*0.25f*multiplier;
         mLateDelayTap[i][1] = mLateFeedTap + float2int(length * frequency);
     }
 }
@@ -895,13 +894,13 @@ void ReverbState::update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *
     const alu::Matrix latemat{GetTransformFromVector(LateReverbPan)};
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;
-    for(size_t i{0u};i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         const ALfloat coeffs[MAX_AMBI_CHANNELS]{earlymat[0][i], earlymat[1][i], earlymat[2][i],
             earlymat[3][i]};
         ComputePanGains(target.Main, coeffs, earlyGain, mEarly.PanGain[i]);
     }
-    for(size_t i{0u};i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         const ALfloat coeffs[MAX_AMBI_CHANNELS]{latemat[0][i], latemat[1][i], latemat[2][i],
             latemat[3][i]};

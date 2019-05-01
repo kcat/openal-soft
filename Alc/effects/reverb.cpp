@@ -230,24 +230,17 @@ struct DelayLineI {
     ALfloat (*Line)[NUM_LINES]{nullptr};
 
 
-    /* Basic delay line input/output routines. */
-    inline ALfloat get(const ALsizei offset, const ALsizei c) const noexcept
-    { return Line[offset&Mask][c]; }
-
-    /* Cross-faded delay line output routine.  Instead of interpolating the
-     * offsets, this interpolates (cross-fades) the outputs at each offset.
-     */
-    inline ALfloat getFaded(const ALsizei off0, const ALsizei off1, const ALsizei c,
-        const ALfloat sc0, const ALfloat sc1) const noexcept
-    { return Line[off0&Mask][c]*sc0 + Line[off1&Mask][c]*sc1; }
-
-
-    inline void write(ALsizei offset, const ALsizei c, const ALfloat *RESTRICT in,
-        ALsizei count) const noexcept
+    void write(ALsizei offset, const ALsizei c, const ALfloat *RESTRICT in, const ALsizei count) const noexcept
     {
         ASSUME(count > 0);
-        for(ALsizei i{0};i < count;i++)
-            Line[(offset++)&Mask][c] = in[i];
+        for(ALsizei i{0};i < count;)
+        {
+            offset &= Mask;
+            ALsizei td{mini(Mask+1 - offset, count - i)};
+            do {
+                Line[offset++][c] = in[i++];
+            } while(--td);
+        }
     }
 };
 
@@ -273,7 +266,7 @@ struct T60Filter {
         const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm);
 
     /* Applies the two T60 damping filter sections. */
-    inline void process(ALfloat *samples, const ALsizei todo)
+    void process(ALfloat *samples, const ALsizei todo)
     {
         HFFilter.process(samples, samples, todo);
         LFFilter.process(samples, samples, todo);
@@ -1056,8 +1049,6 @@ inline void VectorPartialScatter(ALfloat *RESTRICT out, const ALfloat *RESTRICT 
     out[2] = xCoeff*in[2] + yCoeff*( in[0] + -in[1]          + in[3]);
     out[3] = xCoeff*in[3] + yCoeff*(-in[0] + -in[1] + -in[2]        );
 }
-#define VectorScatterDelayIn(delay, o, in, xcoeff, ycoeff) \
-    VectorPartialScatter((delay)->Line[(o)&(delay)->Mask], in, xcoeff, ycoeff)
 
 /* Utilizes the above, but reverses the input channels. */
 inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
@@ -1065,14 +1056,21 @@ inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
     const ALfloat (*RESTRICT in)[BUFFERSIZE], const ALsizei count)
 {
     const DelayLineI delay{*Delay};
-    ASSUME(base >= 0);
-    for(ALsizei i{0};i < count;++i)
-    {
-        ALfloat f[NUM_LINES];
-        for(ALsizei j{0};j < NUM_LINES;j++)
-            f[NUM_LINES-1-j] = in[j][base+i];
 
-        VectorScatterDelayIn(&delay, offset++, f, xCoeff, yCoeff);
+    ASSUME(base >= 0);
+
+    for(ALsizei i{0};i < count;)
+    {
+        offset &= delay.Mask;
+        ALsizei td{mini(delay.Mask+1 - offset, count-i)};
+        do {
+            ALfloat f[NUM_LINES];
+            for(ALsizei j{0};j < NUM_LINES;j++)
+                f[NUM_LINES-1-j] = in[j][base+i];
+            ++i;
+
+            VectorPartialScatter(delay.Line[offset++], f, xCoeff, yCoeff);
+        } while(--td);
     }
 }
 
@@ -1097,21 +1095,31 @@ void VecAllpass::processUnfaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei
     ALsizei vap_offset[NUM_LINES];
     for(ALsizei j{0};j < NUM_LINES;j++)
         vap_offset[j] = offset - Offset[j][0];
-    for(ALsizei i{0};i < todo;i++)
+    for(ALsizei i{0};i < todo;)
     {
-        ALfloat f[NUM_LINES];
-
         for(ALsizei j{0};j < NUM_LINES;j++)
-        {
-            ALfloat input = samples[j][i];
-            ALfloat out = delay.get(vap_offset[j]++, j) - feedCoeff*input;
-            f[j] = input + feedCoeff*out;
+            vap_offset[j] &= delay.Mask;
+        offset &= delay.Mask;
 
-            samples[j][i] = out;
-        }
+        ALsizei maxoff{offset};
+        for(ALsizei j{0};j < NUM_LINES;j++)
+            maxoff = maxi(maxoff, vap_offset[j]);
+        ALsizei td{mini(delay.Mask+1 - maxoff, todo - i)};
 
-        VectorScatterDelayIn(&delay, offset, f, xCoeff, yCoeff);
-        ++offset;
+        do {
+            ALfloat f[NUM_LINES];
+            for(ALsizei j{0};j < NUM_LINES;j++)
+            {
+                const ALfloat input{samples[j][i]};
+                const ALfloat out{delay.Line[vap_offset[j]++][j] - feedCoeff*input};
+                f[j] = input + feedCoeff*out;
+
+                samples[j][i] = out;
+            }
+            ++i;
+
+            VectorPartialScatter(delay.Line[offset++], f, xCoeff, yCoeff);
+        } while(--td);
     }
 }
 void VecAllpass::processFaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei offset,
@@ -1129,22 +1137,39 @@ void VecAllpass::processFaded(ALfloat (*RESTRICT samples)[BUFFERSIZE], ALsizei o
         vap_offset[j][0] = offset - Offset[j][0];
         vap_offset[j][1] = offset - Offset[j][1];
     }
-    for(ALsizei i{0};i < todo;i++)
+    for(ALsizei i{0};i < todo;)
     {
-        ALfloat f[NUM_LINES];
-
         for(ALsizei j{0};j < NUM_LINES;j++)
         {
-            ALfloat input{samples[j][i]};
-            ALfloat out{delay.getFaded(vap_offset[j][0]++, vap_offset[j][1]++, j, 1.0f-fade, fade) - feedCoeff*input};
-            f[j] = input + feedCoeff*out;
-
-            samples[j][i] = out;
+            vap_offset[j][0] &= delay.Mask;
+            vap_offset[j][1] &= delay.Mask;
         }
-        fade += FadeStep;
+        offset &= delay.Mask;
 
-        VectorScatterDelayIn(&delay, offset, f, xCoeff, yCoeff);
-        ++offset;
+        ALsizei maxoff{offset};
+        for(ALsizei j{0};j < NUM_LINES;j++)
+            maxoff = maxi(maxoff, maxi(vap_offset[j][0], vap_offset[j][1]));
+        ALsizei td{mini(delay.Mask+1 - maxoff, todo - i)};
+
+        do {
+            fade += FadeStep;
+            ALfloat f[NUM_LINES];
+            for(ALsizei j{0};j < NUM_LINES;j++)
+                f[j] = delay.Line[vap_offset[j][0]++][j]*(1.0f-fade) +
+                    delay.Line[vap_offset[j][1]++][j]*fade;
+
+            for(ALsizei j{0};j < NUM_LINES;j++)
+            {
+                const ALfloat input{samples[j][i]};
+                const ALfloat out{f[j] - feedCoeff*input};
+                f[j] = input + feedCoeff*out;
+
+                samples[j][i] = out;
+            }
+            ++i;
+
+            VectorPartialScatter(delay.Line[offset++], f, xCoeff, yCoeff);
+        } while(--td);
     }
 }
 
@@ -1185,8 +1210,14 @@ void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei t
     {
         ALsizei early_delay_tap{offset - State->mEarlyDelayTap[j][0]};
         const ALfloat coeff{State->mEarlyDelayCoeff[j][0]};
-        for(ALsizei i{0};i < todo;i++)
-            temps[j][i] = main_delay.get(early_delay_tap++, j) * coeff;
+        for(ALsizei i{0};i < todo;)
+        {
+            early_delay_tap &= main_delay.Mask;
+            ALsizei td{mini(main_delay.Mask+1 - early_delay_tap, todo-i)};
+            do {
+                temps[j][i++] = main_delay.Line[early_delay_tap++][j] * coeff;
+            } while(--td);
+        }
     }
 
     /* Apply a vector all-pass, to help color the initial reflections based on
@@ -1199,12 +1230,19 @@ void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei t
      */
     for(ALsizei j{0};j < NUM_LINES;j++)
     {
-        ALint early_feedb_tap{offset - State->mEarly.Offset[j][0]};
-        const ALfloat early_feedb_coeff{State->mEarly.Coeff[j][0]};
+        ALint feedb_tap{offset - State->mEarly.Offset[j][0]};
+        const ALfloat feedb_coeff{State->mEarly.Coeff[j][0]};
 
         ASSUME(base >= 0);
-        for(ALsizei i{0};i < todo;i++)
-            out[j][base+i] = early_delay.get(early_feedb_tap++, j)*early_feedb_coeff + temps[j][i];
+        for(ALsizei i{0};i < todo;)
+        {
+            feedb_tap &= early_delay.Mask;
+            ALsizei td{mini(early_delay.Mask+1 - feedb_tap, todo - i)};
+            do {
+                out[j][base+i] = temps[j][i] + early_delay.Line[feedb_tap++][j]*feedb_coeff;
+                ++i;
+            } while(--td);
+        }
     }
     for(ALsizei j{0};j < NUM_LINES;j++)
         early_delay.write(offset, NUM_LINES-1-j, temps[j], todo);
@@ -1230,20 +1268,26 @@ void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei tod
 
     for(ALsizei j{0};j < NUM_LINES;j++)
     {
-        ALsizei early_delay_tap0 = offset - State->mEarlyDelayTap[j][0];
-        ALsizei early_delay_tap1 = offset - State->mEarlyDelayTap[j][1];
-        ALfloat oldCoeff = State->mEarlyDelayCoeff[j][0];
-        ALfloat oldCoeffStep = -oldCoeff / FADE_SAMPLES;
-        ALfloat newCoeffStep = State->mEarlyDelayCoeff[j][1] / FADE_SAMPLES;
-        ALfloat fadeCount = fade;
+        ALsizei early_delay_tap0{offset - State->mEarlyDelayTap[j][0]};
+        ALsizei early_delay_tap1{offset - State->mEarlyDelayTap[j][1]};
+        const ALfloat oldCoeff{State->mEarlyDelayCoeff[j][0]};
+        const ALfloat oldCoeffStep{-oldCoeff / FADE_SAMPLES};
+        const ALfloat newCoeffStep{State->mEarlyDelayCoeff[j][1] / FADE_SAMPLES};
+        ALfloat fadeCount{fade};
 
-        for(ALsizei i{0};i < todo;i++)
+        for(ALsizei i{0};i < todo;)
         {
-            const ALfloat fade0{oldCoeff + oldCoeffStep*fadeCount};
-            const ALfloat fade1{newCoeffStep*fadeCount};
-            temps[j][i] = main_delay.getFaded(early_delay_tap0++, early_delay_tap1++, j,
-                fade0, fade1);
-            fadeCount += 1.0f;
+            early_delay_tap0 &= main_delay.Mask;
+            early_delay_tap1 &= main_delay.Mask;
+            ALsizei td{mini(main_delay.Mask+1 - maxi(early_delay_tap0, early_delay_tap1), todo-i)};
+            do {
+                fadeCount += 1.0f;
+                const ALfloat fade0{oldCoeff + oldCoeffStep*fadeCount};
+                const ALfloat fade1{newCoeffStep*fadeCount};
+                temps[j][i++] =
+                    main_delay.Line[early_delay_tap0++][j]*fade0 +
+                    main_delay.Line[early_delay_tap1++][j]*fade1;
+            } while(--td);
         }
     }
 
@@ -1259,13 +1303,21 @@ void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei tod
         ALfloat fadeCount{fade};
 
         ASSUME(base >= 0);
-        for(ALsizei i{0};i < todo;i++)
+        for(ALsizei i{0};i < todo;)
         {
-            const ALfloat fade0{feedb_oldCoeff + feedb_oldCoeffStep*fadeCount};
-            const ALfloat fade1{feedb_newCoeffStep*fadeCount};
-            out[j][base+i] = early_delay.getFaded(feedb_tap0++, feedb_tap1++, j, fade0, fade1) +
-                temps[j][i];
-            fadeCount += 1.0f;
+            feedb_tap0 &= early_delay.Mask;
+            feedb_tap1 &= early_delay.Mask;
+            ALsizei td{mini(early_delay.Mask+1 - maxi(feedb_tap0, feedb_tap1), todo - i)};
+
+            do {
+                fadeCount += 1.0f;
+                const ALfloat fade0{feedb_oldCoeff + feedb_oldCoeffStep*fadeCount};
+                const ALfloat fade1{feedb_newCoeffStep*fadeCount};
+                out[j][base+i] = temps[j][i] +
+                    early_delay.Line[feedb_tap0++][j]*fade0 +
+                    early_delay.Line[feedb_tap1++][j]*fade1;
+                ++i;
+            } while(--td);
         }
     }
     for(ALsizei j{0};j < NUM_LINES;j++)
@@ -1309,9 +1361,19 @@ void LateReverb_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
         ALsizei late_feedb_tap{offset - State->mLate.Offset[j][0]};
         const ALfloat midGain{State->mLate.T60[j].MidGain[0]};
         const ALfloat densityGain{State->mLate.DensityGain[0] * midGain};
-        for(ALsizei i{0};i < todo;i++)
-            temps[j][i] = main_delay.get(late_delay_tap++, j)*densityGain +
-                late_delay.get(late_feedb_tap++, j)*midGain;
+        for(ALsizei i{0};i < todo;)
+        {
+            late_delay_tap &= main_delay.Mask;
+            late_feedb_tap &= late_delay.Mask;
+            ALsizei td{mini(
+                mini(main_delay.Mask+1 - late_delay_tap, late_delay.Mask+1 - late_feedb_tap),
+                todo - i)};
+            do {
+                temps[j][i++] =
+                    main_delay.Line[late_delay_tap++][j]*densityGain +
+                    late_delay.Line[late_feedb_tap++][j]*midGain;
+            } while(--td);
+        }
         State->mLate.T60[j].process(temps[j], todo);
     }
 
@@ -1353,16 +1415,28 @@ void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei todo, co
         ALsizei late_feedb_tap1{offset - State->mLate.Offset[j][1]};
         ALfloat fadeCount{fade};
 
-        for(ALsizei i{0};i < todo;i++)
+        for(ALsizei i{0};i < todo;)
         {
-            const ALfloat fade0 = oldDensityGain + oldDensityStep*fadeCount;
-            const ALfloat fade1 = densityStep*fadeCount;
-            const ALfloat gfade0 = oldMidGain + oldMidStep*fadeCount;
-            const ALfloat gfade1 = midStep*fadeCount;
-            temps[j][i] =
-                main_delay.getFaded(late_delay_tap0++, late_delay_tap1++, j, fade0, fade1) +
-                late_delay.getFaded(late_feedb_tap0++, late_feedb_tap1++, j, gfade0, gfade1);
-            fadeCount += 1.0f;
+            late_delay_tap0 &= main_delay.Mask;
+            late_delay_tap1 &= main_delay.Mask;
+            late_feedb_tap0 &= late_delay.Mask;
+            late_feedb_tap1 &= late_delay.Mask;
+            ALsizei td{mini(
+                mini(main_delay.Mask+1 - maxi(late_delay_tap0, late_delay_tap1),
+                    late_delay.Mask+1 - maxi(late_feedb_tap0, late_feedb_tap1)),
+                todo - i)};
+            do {
+                fadeCount += 1.0f;
+                const ALfloat fade0{oldDensityGain + oldDensityStep*fadeCount};
+                const ALfloat fade1{densityStep*fadeCount};
+                const ALfloat gfade0{oldMidGain + oldMidStep*fadeCount};
+                const ALfloat gfade1{midStep*fadeCount};
+                temps[j][i++] =
+                    main_delay.Line[late_delay_tap0++][j]*fade0 +
+                    main_delay.Line[late_delay_tap1++][j]*fade1 +
+                    late_delay.Line[late_feedb_tap0++][j]*gfade0 +
+                    late_delay.Line[late_feedb_tap1++][j]*gfade1;
+            } while(--td);
         }
         State->mLate.T60[j].process(temps[j], todo);
     }
@@ -1456,7 +1530,7 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
 
         base += todo;
     }
-    mOffset = offset;
+    mOffset = offset & 0x3fffffff;
     mFadeCount = fadeCount;
 
     /* Finally, mix early reflections and late reverb. */

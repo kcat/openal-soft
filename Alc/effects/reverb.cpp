@@ -49,11 +49,6 @@ namespace {
 
 using namespace std::placeholders;
 
-/* This is the maximum number of samples processed for each inner loop
- * iteration.
- */
-constexpr int MAX_UPDATE_SAMPLES{256};
-
 /* The number of samples used for cross-faded delay lines.  This can be used
  * to balance the compensation for abrupt line changes and attenuation due to
  * minimally lengthed recursive lines.  Try to keep this below the device
@@ -368,7 +363,7 @@ struct ReverbState final : public EffectState {
     ALsizei mFadeCount{0};
 
     /* Maximum number of samples to process at once. */
-    ALsizei mMaxUpdate[2]{MAX_UPDATE_SAMPLES, MAX_UPDATE_SAMPLES};
+    ALsizei mMaxUpdate[2]{BUFFERSIZE, BUFFERSIZE};
 
     /* The current write offset for all delay lines. */
     ALsizei mOffset{0};
@@ -513,12 +508,12 @@ bool ReverbState::allocLines(const ALfloat frequency)
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
      * largest late tap width.  Finally, it must also be extended by the
-     * update size (MAX_UPDATE_SAMPLES) for block processing.
+     * update size (BUFFERSIZE) for block processing.
      */
     ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
         AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
         (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())*0.25f*multiplier};
-    totalSamples += CalcLineLength(length, totalSamples, frequency, MAX_UPDATE_SAMPLES, &mDelay);
+    totalSamples += CalcLineLength(length, totalSamples, frequency, BUFFERSIZE, &mDelay);
 
     /* The early vector all-pass line. */
     length = EARLY_ALLPASS_LENGTHS.back() * multiplier;
@@ -607,7 +602,7 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
 
     /* Reset counters and offset base. */
     mFadeCount = 0;
-    std::fill(std::begin(mMaxUpdate), std::end(mMaxUpdate), MAX_UPDATE_SAMPLES);
+    std::fill(std::begin(mMaxUpdate), std::end(mMaxUpdate), BUFFERSIZE);
     mOffset = 0;
 
     if(device->mAmbiOrder > 1)
@@ -968,7 +963,7 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, target);
 
     /* Calculate the max update size from the smallest relevant delay. */
-    mMaxUpdate[1] = mini(MAX_UPDATE_SAMPLES, mini(mEarly.Offset[0][1], mLate.Offset[0][1]));
+    mMaxUpdate[1] = mini(BUFFERSIZE, mini(mEarly.Offset[0][1], mLate.Offset[0][1]));
 
     /* Determine if delay-line cross-fading is required. Density is essentially
      * a master control for the feedback delays, so changes the offsets of many
@@ -1477,7 +1472,7 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
             todo = mini(todo, mMaxUpdate[0]);
         }
         todo = mini(todo, mMaxUpdate[1]);
-        ASSUME(todo > 0 && todo <= MAX_UPDATE_SAMPLES);
+        ASSUME(todo > 0 && todo <= BUFFERSIZE);
 
         const ALsizei offset{mOffset + base};
         ASSUME(offset >= 0);

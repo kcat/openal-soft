@@ -2008,7 +2008,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 break;
         }
     }
-    if(gainLimiter != ALC_FALSE)
+    if(gainLimiter == ALC_FALSE)
+        TRACE("Output limiter disabled\n");
+    else
     {
         ALfloat thrshld = 1.0f;
         switch(device->FmtType)
@@ -2029,12 +2031,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(device->DitherDepth > 0.0f)
             thrshld -= 1.0f / device->DitherDepth;
 
-        auto limiter = CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f);
+        const float thrshld_dB{std::log10(thrshld) * 20.0f};
+        auto limiter = CreateDeviceLimiter(device, thrshld_dB);
         /* Convert the lookahead from samples to nanosamples to nanoseconds. */
         device->FixedLatency += nanoseconds{seconds{limiter->getLookAhead()}} / device->Frequency;
         device->Limiter = std::move(limiter);
+        TRACE("Output limiter enabled, %.4fdB limit\n", thrshld_dB);
     }
-    TRACE("Output limiter %s\n", device->Limiter ? "enabled" : "disabled");
 
     aluSelectPostProcess(device);
 

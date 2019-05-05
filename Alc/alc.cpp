@@ -1888,8 +1888,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"", device->Frequency,
         device->UpdateSize, device->BufferSize);
 
-    if(device->Backend->reset() == ALC_FALSE)
+    try {
+        if(device->Backend->reset() == ALC_FALSE)
+            return ALC_INVALID_DEVICE;
+    }
+    catch(std::exception &e) {
+        ERR("Device reset failed: %s\n", e.what());
         return ALC_INVALID_DEVICE;
+    }
 
     if(device->FmtChans != oldChans && (device->Flags&DEVICE_CHANNELS_REQUEST))
     {

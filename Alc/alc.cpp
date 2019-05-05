@@ -3680,20 +3680,22 @@ START_API_FUNC
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
-    /* Create the device backend. */
-    device->Backend = PlaybackBackend.getFactory().createBackend(device.get(),
-        BackendType::Playback);
-    if(!device->Backend)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
+    try {
+        /* Create the device backend. */
+        device->Backend = PlaybackBackend.getFactory().createBackend(device.get(),
+            BackendType::Playback);
 
-    /* Find a playback device to open */
-    ALCenum err{device->Backend->open(deviceName)};
-    if(err != ALC_NO_ERROR)
-    {
-        alcSetError(nullptr, err);
+        /* Find a playback device to open */
+        ALCenum err{device->Backend->open(deviceName)};
+        if(err != ALC_NO_ERROR)
+        {
+            alcSetError(nullptr, err);
+            return nullptr;
+        }
+    }
+    catch(al::backend_exception &e) {
+        WARN("Failed to open playback device: %s\n", e.what());
+        alcSetError(nullptr, e.errorCode());
         return nullptr;
     }
 
@@ -3934,21 +3936,23 @@ START_API_FUNC
     device->UpdateSize = samples;
     device->BufferSize = samples;
 
-    device->Backend = CaptureBackend.getFactory().createBackend(device.get(),
-        BackendType::Capture);
-    if(!device->Backend)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
+    try {
+        device->Backend = CaptureBackend.getFactory().createBackend(device.get(),
+            BackendType::Capture);
 
-    TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
-        DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->Frequency, device->UpdateSize, device->BufferSize);
-    ALCenum err{device->Backend->open(deviceName)};
-    if(err != ALC_NO_ERROR)
-    {
-        alcSetError(nullptr, err);
+        TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
+            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+            device->Frequency, device->UpdateSize, device->BufferSize);
+        ALCenum err{device->Backend->open(deviceName)};
+        if(err != ALC_NO_ERROR)
+        {
+            alcSetError(nullptr, err);
+            return nullptr;
+        }
+    }
+    catch(al::backend_exception &e) {
+        WARN("Failed to open capture device: %s\n", e.what());
+        alcSetError(nullptr, e.errorCode());
         return nullptr;
     }
 
@@ -4108,16 +4112,18 @@ START_API_FUNC
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    device->Backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
-        BackendType::Playback);
-    if(!device->Backend)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
+    try {
+        device->Backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
+            BackendType::Playback);
+
+        // Open the "backend"
+        device->Backend->open("Loopback");
+    }
+    catch(al::backend_exception &e) {
+        WARN("Failed to open loopback device: %s\n", e.what());
+        alcSetError(nullptr, e.errorCode());
         return nullptr;
     }
-
-    // Open the "backend"
-    device->Backend->open("Loopback");
 
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};

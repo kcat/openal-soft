@@ -176,6 +176,44 @@ PULSE_FUNCS(MAKE_FUNC)
 #endif
 
 
+constexpr pa_channel_map MonoChanMap{
+    1, {PA_CHANNEL_POSITION_MONO}
+}, StereoChanMap{
+    2, {PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT}
+}, QuadChanMap{
+    4, {
+        PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
+    }
+}, X51ChanMap{
+    6, {
+        PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+        PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+    }
+}, X51RearChanMap{
+    6, {
+        PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+        PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
+    }
+}, X61ChanMap{
+    7, {
+        PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+        PA_CHANNEL_POSITION_REAR_CENTER,
+        PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+    }
+}, X71ChanMap{
+    8, {
+        PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+        PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT,
+        PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+    }
+};
+
+
 /* *grumble* Don't use enums for bitflags. */
 inline pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
 { return pa_stream_flags_t(int(lhs) | int(rhs)); }
@@ -653,36 +691,13 @@ void PulsePlayback::sinkInfoCallback(pa_context* UNUSED(context), const pa_sink_
         pa_channel_map map;
     };
     static constexpr std::array<ChannelMap,7> chanmaps{{
-        { DevFmtX71, { 8, {
-            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
-            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
-            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT,
-            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
-        } } },
-        { DevFmtX61, { 7, {
-            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
-            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
-            PA_CHANNEL_POSITION_REAR_CENTER,
-            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
-        } } },
-        { DevFmtX51, { 6, {
-            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
-            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
-            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
-        } } },
-        { DevFmtX51Rear, { 6, {
-            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
-            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
-            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
-        } } },
-        { DevFmtQuad, { 4, {
-            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
-            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
-        } } },
-        { DevFmtStereo, { 2, {
-            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT
-        } } },
-        { DevFmtMono, { 1, {PA_CHANNEL_POSITION_MONO} } }
+        { DevFmtX71, X71ChanMap },
+        { DevFmtX61, X61ChanMap },
+        { DevFmtX51, X51ChanMap },
+        { DevFmtX51Rear, X51RearChanMap },
+        { DevFmtQuad, QuadChanMap },
+        { DevFmtStereo, StereoChanMap },
+        { DevFmtMono, MonoChanMap }
     }};
 
     if(eol)
@@ -861,38 +876,34 @@ ALCboolean PulsePlayback::reset()
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{ALC_INVALID_VALUE, "Invalid sample spec"};
 
-    const char *mapname{nullptr};
-    pa_channel_map chanmap;
+    pa_channel_map chanmap{};
     switch(mDevice->FmtChans)
     {
         case DevFmtMono:
-            mapname = "mono";
+            chanmap = MonoChanMap;
             break;
         case DevFmtAmbi3D:
             mDevice->FmtChans = DevFmtStereo;
             /*fall-through*/
         case DevFmtStereo:
-            mapname = "front-left,front-right";
+            chanmap = StereoChanMap;
             break;
         case DevFmtQuad:
-            mapname = "front-left,front-right,rear-left,rear-right";
+            chanmap = QuadChanMap;
             break;
         case DevFmtX51:
-            mapname = "front-left,front-right,front-center,lfe,side-left,side-right";
+            chanmap = X51ChanMap;
             break;
         case DevFmtX51Rear:
-            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
+            chanmap = X51RearChanMap;
             break;
         case DevFmtX61:
-            mapname = "front-left,front-right,front-center,lfe,rear-center,side-left,side-right";
+            chanmap = X61ChanMap;
             break;
         case DevFmtX71:
-            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right";
+            chanmap = X71ChanMap;
             break;
     }
-    if(!pa_channel_map_parse(&chanmap, mapname))
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not build channel map for %s",
-            DevFmtChannelsString(mDevice->FmtChans)};
     SetDefaultWFXChannelOrder(mDevice);
 
     mAttr.maxlength = -1;
@@ -1159,38 +1170,34 @@ ALCenum PulseCapture::open(const ALCchar *name)
                 DevFmtTypeString(mDevice->FmtType)};
     }
 
-    const char *mapname{nullptr};
-    pa_channel_map chanmap;
+    pa_channel_map chanmap{};
     switch(mDevice->FmtChans)
     {
         case DevFmtMono:
-            mapname = "mono";
+            chanmap = MonoChanMap;
             break;
         case DevFmtStereo:
-            mapname = "front-left,front-right";
+            chanmap = StereoChanMap;
             break;
         case DevFmtQuad:
-            mapname = "front-left,front-right,rear-left,rear-right";
+            chanmap = QuadChanMap;
             break;
         case DevFmtX51:
-            mapname = "front-left,front-right,front-center,lfe,side-left,side-right";
+            chanmap = X51ChanMap;
             break;
         case DevFmtX51Rear:
-            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
+            chanmap = X51RearChanMap;
             break;
         case DevFmtX61:
-            mapname = "front-left,front-right,front-center,lfe,rear-center,side-left,side-right";
+            chanmap = X61ChanMap;
             break;
         case DevFmtX71:
-            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right";
+            chanmap = X71ChanMap;
             break;
         case DevFmtAmbi3D:
             throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
                 DevFmtChannelsString(mDevice->FmtChans)};
     }
-    if(!pa_channel_map_parse(&chanmap, mapname))
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not build channel map for %s",
-            DevFmtChannelsString(mDevice->FmtChans)};
 
     mSpec.rate = mDevice->Frequency;
     mSpec.channels = mDevice->channelsFromFmt();

@@ -7,6 +7,13 @@
 #include "AL/alc.h"
 
 
+#ifdef __GNUC__
+#define ALEXCPT_FORMAT(x, y, z) __attribute__((format(x, (y), (z))))
+#else
+#define ALEXCPT_FORMAT(x, y, z)
+#endif
+
+
 namespace al {
 
 class backend_exception final : public std::exception {
@@ -14,7 +21,7 @@ class backend_exception final : public std::exception {
     ALCenum mErrorCode;
 
 public:
-    backend_exception(ALCenum code, const char *msg, ...);
+    backend_exception(ALCenum code, const char *msg, ...) ALEXCPT_FORMAT(printf, 3,4);
 
     const char *what() const noexcept override { return mMessage.c_str(); }
     ALCenum errorCode() const noexcept { return mErrorCode; }

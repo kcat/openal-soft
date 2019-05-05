@@ -38,6 +38,7 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "compat.h"
+#include "alexcpt.h"
 
 #include <pulse/pulseaudio.h>
 
@@ -264,7 +265,7 @@ void wait_for_operation(pa_operation *op, std::unique_lock<std::mutex> &plock)
 }
 
 
-pa_context *connect_context(std::unique_lock<std::mutex> &plock, ALboolean silent)
+pa_context *connect_context(std::unique_lock<std::mutex> &plock)
 {
     const char *name{"OpenAL Soft"};
 
@@ -280,11 +281,7 @@ pa_context *connect_context(std::unique_lock<std::mutex> &plock, ALboolean silen
     }
 
     pa_context *context{pa_context_new(pa_mainloop_get_api(pulse_mainloop), name)};
-    if(!context)
-    {
-        ERR("pa_context_new() failed\n");
-        return nullptr;
-    }
+    if(!context) throw al::backend_exception{ALC_OUT_OF_MEMORY, "pa_context_new() failed"};
 
     pa_context_set_state_callback(context, context_state_callback, nullptr);
 
@@ -308,24 +305,14 @@ pa_context *connect_context(std::unique_lock<std::mutex> &plock, ALboolean silen
 
     if(err < 0)
     {
-        if(!silent)
-            ERR("Context did not connect: %s\n", pa_strerror(err));
         pa_context_unref(context);
-        context = nullptr;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Context did not connect (%s)",
+            pa_strerror(err)};
     }
 
     return context;
 }
 
-
-pa_context *pulse_open(void(*state_cb)(pa_context*,void*), void *ptr)
-{
-    std::unique_lock<std::mutex> plock{pulse_lock};
-    pa_context *context{connect_context(plock, AL_FALSE)};
-    if(LIKELY(context))
-        pa_context_set_state_callback(context, state_cb, ptr);
-    return context;
-}
 
 void pulse_close(pa_context *context, pa_stream *stream)
 {
@@ -366,13 +353,11 @@ pa_stream *pulse_connect_stream(const char *device_name, std::unique_lock<std::m
     pa_context *context, pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
     pa_channel_map *chanmap, BackendType type)
 {
-    pa_stream *stream{pa_stream_new(context,
-        (type==BackendType::Playback) ? "Playback Stream" : "Capture Stream", spec, chanmap)};
+    const char *stream_id{(type==BackendType::Playback) ? "Playback Stream" : "Capture Stream"};
+    pa_stream *stream{pa_stream_new(context, stream_id, spec, chanmap)};
     if(!stream)
-    {
-        ERR("pa_stream_new_with_proplist() failed: %s\n", pa_strerror(pa_context_errno(context)));
-        return nullptr;
-    }
+        throw al::backend_exception{ALC_OUT_OF_MEMORY, "pa_stream_new() failed (%s)",
+            pa_strerror(pa_context_errno(context))};
 
     pa_stream_set_state_callback(stream, stream_state_callback, nullptr);
 
@@ -381,9 +366,9 @@ pa_stream *pulse_connect_stream(const char *device_name, std::unique_lock<std::m
         pa_stream_connect_record(stream, device_name, attr, flags)};
     if(err < 0)
     {
-        ERR("Stream did not connect: %s\n", pa_strerror(err));
         pa_stream_unref(stream);
-        return nullptr;
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s did not connect (%s)", stream_id,
+            pa_strerror(err)};
     }
 
     pa_stream_state_t state;
@@ -391,9 +376,10 @@ pa_stream *pulse_connect_stream(const char *device_name, std::unique_lock<std::m
     {
         if(!PA_STREAM_IS_GOOD(state))
         {
-            ERR("Stream did not get ready: %s\n", pa_strerror(pa_context_errno(context)));
+            int err{pa_context_errno(context)};
             pa_stream_unref(stream);
-            return nullptr;
+            throw al::backend_exception{ALC_INVALID_VALUE, "%s did not get ready (%s)", stream_id,
+                pa_strerror(err)};
         }
 
         pulse_condvar.wait(plock);
@@ -440,23 +426,21 @@ void probePlaybackDevices()
 {
     PlaybackDevices.clear();
 
-    std::unique_lock<std::mutex> plock{pulse_lock};
+    try {
+        std::unique_lock<std::mutex> plock{pulse_lock};
 
-    pa_context *context{connect_context(plock, AL_FALSE)};
-    if(!context) return;
+        pa_context *context{connect_context(plock)};
 
-    pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE | PA_STREAM_FIX_CHANNELS |
-        PA_STREAM_DONT_MOVE};
+        const pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
+            PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE};
 
-    pa_sample_spec spec{};
-    spec.format = PA_SAMPLE_S16NE;
-    spec.rate = 44100;
-    spec.channels = 2;
+        pa_sample_spec spec{};
+        spec.format = PA_SAMPLE_S16NE;
+        spec.rate = 44100;
+        spec.channels = 2;
 
-    pa_stream *stream{pulse_connect_stream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
-        BackendType::Playback)};
-    if(stream)
-    {
+        pa_stream *stream{pulse_connect_stream(nullptr, plock, context, flags, nullptr, &spec,
+            nullptr, BackendType::Playback)};
         pa_operation *op{pa_context_get_sink_info_by_name(context,
             pa_stream_get_device_name(stream), device_sink_callback, nullptr)};
         wait_for_operation(op, plock);
@@ -464,13 +448,16 @@ void probePlaybackDevices()
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
         stream = nullptr;
+
+        op = pa_context_get_sink_info_list(context, device_sink_callback, nullptr);
+        wait_for_operation(op, plock);
+
+        pa_context_disconnect(context);
+        pa_context_unref(context);
     }
-
-    pa_operation *op{pa_context_get_sink_info_list(context, device_sink_callback, nullptr)};
-    wait_for_operation(op, plock);
-
-    pa_context_disconnect(context);
-    pa_context_unref(context);
+    catch(std::exception &e) {
+        ERR("Error enumerating devices: %s\n", e.what());
+    }
 }
 
 
@@ -510,23 +497,21 @@ void probeCaptureDevices()
 {
     CaptureDevices.clear();
 
-    std::unique_lock<std::mutex> plock{pulse_lock};
+    try {
+        std::unique_lock<std::mutex> plock{pulse_lock};
 
-    pa_context *context{connect_context(plock, AL_FALSE)};
-    if(!context) return;
+        pa_context *context{connect_context(plock)};
 
-    pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE | PA_STREAM_FIX_CHANNELS |
-        PA_STREAM_DONT_MOVE};
+        const pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
+            PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE};
 
-    pa_sample_spec spec{};
-    spec.format = PA_SAMPLE_S16NE;
-    spec.rate = 44100;
-    spec.channels = 1;
+        pa_sample_spec spec{};
+        spec.format = PA_SAMPLE_S16NE;
+        spec.rate = 44100;
+        spec.channels = 1;
 
-    pa_stream *stream{pulse_connect_stream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
-        BackendType::Capture)};
-    if(stream)
-    {
+        pa_stream *stream{pulse_connect_stream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
+            BackendType::Capture)};
         pa_operation *op{pa_context_get_source_info_by_name(context,
             pa_stream_get_device_name(stream), device_source_callback, nullptr)};
         wait_for_operation(op, plock);
@@ -534,13 +519,16 @@ void probeCaptureDevices()
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
         stream = nullptr;
+
+        op = pa_context_get_source_info_list(context, device_source_callback, nullptr);
+        wait_for_operation(op, plock);
+
+        pa_context_disconnect(context);
+        pa_context_unref(context);
     }
-
-    pa_operation *op{pa_context_get_source_info_list(context, device_source_callback, nullptr)};
-    wait_for_operation(op, plock);
-
-    pa_context_disconnect(context);
-    pa_context_unref(context);
+    catch(std::exception &e) {
+        ERR("Error enumerating devices: %s\n", e.what());
+    }
 }
 
 
@@ -763,15 +751,15 @@ ALCenum PulsePlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         pulse_name = iter->device_name.c_str();
         dev_name = iter->name.c_str();
     }
 
-    mContext = pulse_open(&PulsePlayback::contextStateCallbackC, this);
-    if(!mContext) return ALC_INVALID_VALUE;
-
     std::unique_lock<std::mutex> plock{pulse_lock};
+
+    mContext = connect_context(plock);
+    pa_context_set_state_callback(mContext, &PulsePlayback::contextStateCallbackC, this);
 
     pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE | PA_STREAM_FIX_CHANNELS};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 1))
@@ -782,21 +770,15 @@ ALCenum PulsePlayback::open(const ALCchar *name)
     spec.rate = 44100;
     spec.channels = 2;
 
-    TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     if(!pulse_name)
     {
         pulse_name = getenv("ALSOFT_PULSE_DEFAULT");
         if(pulse_name && !pulse_name[0]) pulse_name = nullptr;
     }
+    TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     mStream = pulse_connect_stream(pulse_name, plock, mContext, flags, nullptr, &spec, nullptr,
         BackendType::Playback);
-    if(!mStream)
-    {
-        plock.unlock();
-        pulse_close(mContext, mStream);
-        mContext = nullptr;
-        return ALC_INVALID_VALUE;
-    }
+
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
     mFrameSize = pa_frame_size(pa_stream_get_sample_spec(mStream));
 
@@ -877,10 +859,7 @@ ALCboolean PulsePlayback::reset()
     mSpec.channels = mDevice->channelsFromFmt();
 
     if(pa_sample_spec_valid(&mSpec) == 0)
-    {
-        ERR("Invalid sample format\n");
-        return ALC_FALSE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Invalid sample spec"};
 
     const char *mapname{nullptr};
     pa_channel_map chanmap;
@@ -912,10 +891,8 @@ ALCboolean PulsePlayback::reset()
             break;
     }
     if(!pa_channel_map_parse(&chanmap, mapname))
-    {
-        ERR("Failed to build channel map for %s\n", DevFmtChannelsString(mDevice->FmtChans));
-        return ALC_FALSE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not build channel map for %s",
+            DevFmtChannelsString(mDevice->FmtChans)};
     SetDefaultWFXChannelOrder(mDevice);
 
     mAttr.maxlength = -1;
@@ -926,7 +903,6 @@ ALCboolean PulsePlayback::reset()
 
     mStream = pulse_connect_stream(mDeviceName.c_str(), plock, mContext, flags, &mAttr, &mSpec,
         &chanmap, BackendType::Playback);
-    if(!mStream) return ALC_FALSE;
 
     pa_stream_set_state_callback(mStream, &PulsePlayback::streamStateCallbackC, this);
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
@@ -1152,15 +1128,15 @@ ALCenum PulseCapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         pulse_name = iter->device_name.c_str();
         mDevice->DeviceName = iter->name;
     }
 
-    mContext = pulse_open(&PulseCapture::contextStateCallbackC, this);
-    if(!mContext) return ALC_INVALID_VALUE;
-
     std::unique_lock<std::mutex> plock{pulse_lock};
+
+    mContext = connect_context(plock);
+    pa_context_set_state_callback(mContext, &PulseCapture::contextStateCallbackC, this);
 
     switch(mDevice->FmtType)
     {
@@ -1179,8 +1155,8 @@ ALCenum PulseCapture::open(const ALCchar *name)
         case DevFmtByte:
         case DevFmtUShort:
         case DevFmtUInt:
-            ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+                DevFmtTypeString(mDevice->FmtType)};
     }
 
     const char *mapname{nullptr};
@@ -1209,29 +1185,18 @@ ALCenum PulseCapture::open(const ALCchar *name)
             mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right";
             break;
         case DevFmtAmbi3D:
-            ERR("%s capture samples not supported\n", DevFmtChannelsString(mDevice->FmtChans));
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+                DevFmtChannelsString(mDevice->FmtChans)};
     }
     if(!pa_channel_map_parse(&chanmap, mapname))
-    {
-        ERR("Failed to build channel map for %s\n", DevFmtChannelsString(mDevice->FmtChans));
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not build channel map for %s",
+            DevFmtChannelsString(mDevice->FmtChans)};
 
     mSpec.rate = mDevice->Frequency;
     mSpec.channels = mDevice->channelsFromFmt();
 
     if(pa_sample_spec_valid(&mSpec) == 0)
-    {
-        ERR("Invalid sample format\n");
-        return ALC_INVALID_VALUE;
-    }
-
-    if(!pa_channel_map_init_auto(&chanmap, mSpec.channels, PA_CHANNEL_MAP_WAVEEX))
-    {
-        ERR("Couldn't build map for channel count (%d)!\n", mSpec.channels);
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Invalid sample format"};
 
     ALuint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
@@ -1249,7 +1214,6 @@ ALCenum PulseCapture::open(const ALCchar *name)
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     mStream = pulse_connect_stream(pulse_name, plock, mContext, flags, &mAttr, &mSpec, &chanmap,
         BackendType::Capture);
-    if(!mStream) return ALC_INVALID_VALUE;
 
     pa_stream_set_moved_callback(mStream, &PulseCapture::streamMovedCallbackC, this);
     pa_stream_set_state_callback(mStream, &PulseCapture::streamStateCallbackC, this);
@@ -1437,15 +1401,16 @@ bool PulseBackendFactory::init()
     if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", 1))
         pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
-    std::unique_lock<std::mutex> plock{pulse_lock};
-
-    pa_context *context{connect_context(plock, AL_TRUE)};
-    if(!context) return false;
-
-    pa_context_disconnect(context);
-    pa_context_unref(context);
-
-    return true;
+    try {
+        std::unique_lock<std::mutex> plock{pulse_lock};
+        pa_context *context{connect_context(plock)};
+        pa_context_disconnect(context);
+        pa_context_unref(context);
+        return true;
+    }
+    catch(...) {
+        return false;
+    }
 }
 
 bool PulseBackendFactory::querySupport(BackendType type)

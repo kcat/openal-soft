@@ -846,36 +846,6 @@ ALCboolean PulsePlayback::reset()
        !(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
 
-    switch(mDevice->FmtType)
-    {
-        case DevFmtByte:
-            mDevice->FmtType = DevFmtUByte;
-            /* fall-through */
-        case DevFmtUByte:
-            mSpec.format = PA_SAMPLE_U8;
-            break;
-        case DevFmtUShort:
-            mDevice->FmtType = DevFmtShort;
-            /* fall-through */
-        case DevFmtShort:
-            mSpec.format = PA_SAMPLE_S16NE;
-            break;
-        case DevFmtUInt:
-            mDevice->FmtType = DevFmtInt;
-            /* fall-through */
-        case DevFmtInt:
-            mSpec.format = PA_SAMPLE_S32NE;
-            break;
-        case DevFmtFloat:
-            mSpec.format = PA_SAMPLE_FLOAT32NE;
-            break;
-    }
-    mSpec.rate = mDevice->Frequency;
-    mSpec.channels = mDevice->channelsFromFmt();
-
-    if(pa_sample_spec_valid(&mSpec) == 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Invalid sample spec"};
-
     pa_channel_map chanmap{};
     switch(mDevice->FmtChans)
     {
@@ -905,6 +875,35 @@ ALCboolean PulsePlayback::reset()
             break;
     }
     SetDefaultWFXChannelOrder(mDevice);
+
+    switch(mDevice->FmtType)
+    {
+        case DevFmtByte:
+            mDevice->FmtType = DevFmtUByte;
+            /* fall-through */
+        case DevFmtUByte:
+            mSpec.format = PA_SAMPLE_U8;
+            break;
+        case DevFmtUShort:
+            mDevice->FmtType = DevFmtShort;
+            /* fall-through */
+        case DevFmtShort:
+            mSpec.format = PA_SAMPLE_S16NE;
+            break;
+        case DevFmtUInt:
+            mDevice->FmtType = DevFmtInt;
+            /* fall-through */
+        case DevFmtInt:
+            mSpec.format = PA_SAMPLE_S32NE;
+            break;
+        case DevFmtFloat:
+            mSpec.format = PA_SAMPLE_FLOAT32NE;
+            break;
+    }
+    mSpec.rate = mDevice->Frequency;
+    mSpec.channels = mDevice->channelsFromFmt();
+    if(pa_sample_spec_valid(&mSpec) == 0)
+        throw al::backend_exception{ALC_INVALID_VALUE, "Invalid sample spec"};
 
     mAttr.maxlength = -1;
     mAttr.tlength = mDevice->BufferSize * pa_frame_size(&mSpec);
@@ -1149,27 +1148,6 @@ ALCenum PulseCapture::open(const ALCchar *name)
     mContext = connect_context(plock);
     pa_context_set_state_callback(mContext, &PulseCapture::contextStateCallbackC, this);
 
-    switch(mDevice->FmtType)
-    {
-        case DevFmtUByte:
-            mSpec.format = PA_SAMPLE_U8;
-            break;
-        case DevFmtShort:
-            mSpec.format = PA_SAMPLE_S16NE;
-            break;
-        case DevFmtInt:
-            mSpec.format = PA_SAMPLE_S32NE;
-            break;
-        case DevFmtFloat:
-            mSpec.format = PA_SAMPLE_FLOAT32NE;
-            break;
-        case DevFmtByte:
-        case DevFmtUShort:
-        case DevFmtUInt:
-            throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
-                DevFmtTypeString(mDevice->FmtType)};
-    }
-
     pa_channel_map chanmap{};
     switch(mDevice->FmtChans)
     {
@@ -1199,9 +1177,28 @@ ALCenum PulseCapture::open(const ALCchar *name)
                 DevFmtChannelsString(mDevice->FmtChans)};
     }
 
+    switch(mDevice->FmtType)
+    {
+        case DevFmtUByte:
+            mSpec.format = PA_SAMPLE_U8;
+            break;
+        case DevFmtShort:
+            mSpec.format = PA_SAMPLE_S16NE;
+            break;
+        case DevFmtInt:
+            mSpec.format = PA_SAMPLE_S32NE;
+            break;
+        case DevFmtFloat:
+            mSpec.format = PA_SAMPLE_FLOAT32NE;
+            break;
+        case DevFmtByte:
+        case DevFmtUShort:
+        case DevFmtUInt:
+            throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+                DevFmtTypeString(mDevice->FmtType)};
+    }
     mSpec.rate = mDevice->Frequency;
     mSpec.channels = mDevice->channelsFromFmt();
-
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{ALC_INVALID_VALUE, "Invalid sample format"};
 

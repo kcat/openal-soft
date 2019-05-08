@@ -129,57 +129,6 @@ struct BackendInfo {
     BackendFactory& (*getFactory)(void);
 };
 
-BackendInfo BackendList[] = {
-#ifdef HAVE_JACK
-    { "jack", JackBackendFactory::getFactory },
-#endif
-#ifdef HAVE_PULSEAUDIO
-    { "pulse", PulseBackendFactory::getFactory },
-#endif
-#ifdef HAVE_ALSA
-    { "alsa", AlsaBackendFactory::getFactory },
-#endif
-#ifdef HAVE_WASAPI
-    { "wasapi", WasapiBackendFactory::getFactory },
-#endif
-#ifdef HAVE_COREAUDIO
-    { "core", CoreAudioBackendFactory::getFactory },
-#endif
-#ifdef HAVE_OPENSL
-    { "opensl", OSLBackendFactory::getFactory },
-#endif
-#ifdef HAVE_SOLARIS
-    { "solaris", SolarisBackendFactory::getFactory },
-#endif
-#ifdef HAVE_SNDIO
-    { "sndio", SndIOBackendFactory::getFactory },
-#endif
-#ifdef HAVE_OSS
-    { "oss", OSSBackendFactory::getFactory },
-#endif
-#ifdef HAVE_QSA
-    { "qsa", QSABackendFactory::getFactory },
-#endif
-#ifdef HAVE_DSOUND
-    { "dsound", DSoundBackendFactory::getFactory },
-#endif
-#ifdef HAVE_WINMM
-    { "winmm", WinMMBackendFactory::getFactory },
-#endif
-#ifdef HAVE_PORTAUDIO
-    { "port", PortBackendFactory::getFactory },
-#endif
-#ifdef HAVE_SDL2
-    { "sdl2", SDL2BackendFactory::getFactory },
-#endif
-
-    { "null", NullBackendFactory::getFactory },
-#ifdef HAVE_WAVE
-    { "wave", WaveBackendFactory::getFactory },
-#endif
-};
-auto BackendListEnd = std::end(BackendList);
-
 BackendInfo PlaybackBackend;
 BackendInfo CaptureBackend;
 
@@ -920,6 +869,86 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
 }
 #endif
 
+// With the environment variable "ALSOFT_DRIVERS", users can decide which
+// drivers to use in priority and which shoulnd't be used.
+// Examples:
+//   ALSOFT_DRIVERS=pulse      # Use pulse in priority.
+//   ALSOFT_DRIVERS=-pulse     # Do not use pulse.
+//   ALSOFT_DRIVERS=jack,pulse # Use jack in priority, then pulse, otherwise the
+//                             # next available driver.
+//
+// This function parses and applies |ALSOFT_DRIVERS| to |backendlist|, it
+// returns the list of possible backend, sorted by priority.
+static std::vector<BackendInfo>
+ApplyDriversConfig(std::vector<BackendInfo> backendlist,
+                   const char *ALSOFT_DRIVERS)
+{
+    // Parse ALSOFT_DRIVERS.
+    std::vector<std::string> added;
+    std::vector<std::string> removed;
+    const char *current = ALSOFT_DRIVERS;
+    while (true) {
+        // Find the next separator;
+        const char *separator = current;
+        while (*separator != ',' && *separator != '\0') ++separator;
+
+        // Remove extra space before and after the word.
+        const char *first = current;
+        const char *last = separator - 1;
+        while (isspace(*first) && first < last) ++first;
+        while (isspace(*last) && first < last) --last;
+
+        if (*first == '-')
+            removed.emplace_back(first + 1, last + 1);
+        else
+            added.emplace_back(first, last + 1);
+
+        if (*separator == '\0')
+            break;
+
+        current = separator + 1;
+    }
+
+#ifdef HAVE_WASAPI
+    // HACK: For backwards compatibility, convert backend references of mmdevapi
+    // to wasapi. This should eventually be removed.
+    std::replace(added.begin(), added.end(), "mmdevapi", "wasapi");
+    std::replace(removed.begin(), removed.end(), "mmdevapi", "wasapi");
+#endif
+
+    auto find_backend = [&backendlist](const std::string& name)
+    {
+        return std::find_if(std::begin(backendlist), std::end(backendlist),
+          [name](const BackendInfo &backend) { return backend.name == name; });
+    };
+
+    // Remove backends according to user's preferences.
+    for (auto& backend_name : removed)
+    {
+        auto backend = find_backend(backend_name);
+        if (backend == std::end(backendlist))
+            continue;
+        backendlist.erase(backend);
+    }
+
+    // Add user's backends first ...
+    std::vector<BackendInfo> output;
+    for (auto& backend_name : added)
+    {
+        auto backend = find_backend(backend_name);
+        if (backend == std::end(backendlist))
+            continue;
+        output.push_back(*backend);
+        backendlist.erase(backend);
+    }
+
+    // ... and complete with the remaining backends.
+    for (auto& backend : backendlist)
+        output.push_back(backend);
+
+    return output;
+}
+
 static void alc_initconfig(void)
 {
     const char *str{getenv("ALSOFT_LOGLEVEL")};
@@ -943,17 +972,61 @@ static void alc_initconfig(void)
         else ERR("Failed to open log file '%s'\n", str);
     }
 
+    std::vector<BackendInfo> backendlist = {
+#ifdef HAVE_JACK
+        {"jack", JackBackendFactory::getFactory},
+#endif
+#ifdef HAVE_PULSEAUDIO
+        {"pulse", PulseBackendFactory::getFactory},
+#endif
+#ifdef HAVE_ALSA
+        {"alsa", AlsaBackendFactory::getFactory},
+#endif
+#ifdef HAVE_WASAPI
+        {"wasapi", WasapiBackendFactory::getFactory},
+#endif
+#ifdef HAVE_COREAUDIO
+        {"core", CoreAudioBackendFactory::getFactory},
+#endif
+#ifdef HAVE_OPENSL
+        {"opensl", OSLBackendFactory::getFactory},
+#endif
+#ifdef HAVE_SOLARIS
+        {"solaris", SolarisBackendFactory::getFactory},
+#endif
+#ifdef HAVE_SNDIO
+        {"sndio", SndIOBackendFactory::getFactory},
+#endif
+#ifdef HAVE_OSS
+        {"oss", OSSBackendFactory::getFactory},
+#endif
+#ifdef HAVE_QSA
+        {"qsa", QSABackendFactory::getFactory},
+#endif
+#ifdef HAVE_DSOUND
+        {"dsound", DSoundBackendFactory::getFactory},
+#endif
+#ifdef HAVE_WINMM
+        {"winmm", WinMMBackendFactory::getFactory},
+#endif
+#ifdef HAVE_PORTAUDIO
+        {"port", PortBackendFactory::getFactory},
+#endif
+#ifdef HAVE_SDL2
+        {"sdl2", SDL2BackendFactory::getFactory},
+#endif
+        {"null", NullBackendFactory::getFactory},
+#ifdef HAVE_WAVE
+        {"wave", WaveBackendFactory::getFactory},
+#endif
+    };
+
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION,
           ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
     {
         std::string names;
-        if(std::begin(BackendList) != BackendListEnd)
-            names += BackendList[0].name;
-        for(auto backend = std::begin(BackendList)+1;backend != BackendListEnd;++backend)
-        {
-            names += ", ";
-            names += backend->name;
-        }
+        for(auto& backend : backendlist)
+          names += (names.empty() ? "" : ", ") + std::string(backend.name);
         TRACE("Supported backends: %s\n", names.c_str());
     }
     ReadALConfig();
@@ -1052,86 +1125,38 @@ static void alc_initconfig(void)
     if(ConfigValueFloat(nullptr, "reverb", "boost", &valf))
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
 
-    const char *devs{getenv("ALSOFT_DRIVERS")};
-    if((devs && devs[0]) || ConfigValueStr(nullptr, nullptr, "drivers", &devs))
+    const char *ALSOFT_DRIVERS = getenv("ALSOFT_DRIVERS");
+    if ((ALSOFT_DRIVERS && ALSOFT_DRIVERS[0]) ||
+        ConfigValueStr(nullptr, nullptr, "drivers", &ALSOFT_DRIVERS))
     {
-        auto backendlist_cur = std::begin(BackendList);
-
-        bool endlist{true};
-        const char *next = devs;
-        do {
-            devs = next;
-            while(isspace(devs[0]))
-                devs++;
-            next = strchr(devs, ',');
-
-            const bool delitem{devs[0] == '-'};
-            if(devs[0] == '-') devs++;
-
-            if(!devs[0] || devs[0] == ',')
-            {
-                endlist = false;
-                continue;
-            }
-            endlist = true;
-
-            size_t len{next ? (static_cast<size_t>(next-devs)) : strlen(devs)};
-            while(len > 0 && isspace(devs[len-1])) --len;
-#ifdef HAVE_WASAPI
-            /* HACK: For backwards compatibility, convert backend references of
-             * mmdevapi to wasapi. This should eventually be removed.
-             */
-            if(len == 8 && strncmp(devs, "mmdevapi", len) == 0)
-            {
-                devs = "wasapi";
-                len = 6;
-            }
-#endif
-
-            auto find_backend = [devs,len](const BackendInfo &backend) -> bool
-            { return len == strlen(backend.name) && strncmp(backend.name, devs, len) == 0; };
-            auto this_backend = std::find_if(std::begin(BackendList), BackendListEnd,
-                find_backend);
-
-            if(this_backend == BackendListEnd)
-                continue;
-
-            if(delitem)
-                BackendListEnd = std::move(this_backend+1, BackendListEnd, this_backend);
-            else
-                backendlist_cur = std::rotate(backendlist_cur, this_backend, this_backend+1);
-        } while(next++);
-
-        if(endlist)
-            BackendListEnd = backendlist_cur;
+        backendlist = ApplyDriversConfig(std::move(backendlist), ALSOFT_DRIVERS);
     }
 
-    auto init_backend = [](BackendInfo &backend) -> bool
+    for(auto& backend : backendlist)
     {
-        if(PlaybackBackend.name && CaptureBackend.name)
-            return true;
-
         BackendFactory &factory = backend.getFactory();
         if(!factory.init())
         {
             WARN("Failed to initialize backend \"%s\"\n", backend.name);
-            return true;
+            continue;
         }
-
         TRACE("Initialized backend \"%s\"\n", backend.name);
+
         if(!PlaybackBackend.name && factory.querySupport(BackendType::Playback))
         {
             PlaybackBackend = backend;
             TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
         }
+
         if(!CaptureBackend.name && factory.querySupport(BackendType::Capture))
         {
             CaptureBackend = backend;
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
         }
-        return false;
-    };
-    BackendListEnd = std::remove_if(std::begin(BackendList), BackendListEnd, init_backend);
+
+        if(PlaybackBackend.name && CaptureBackend.name)
+            break;
+    }
 
     LoopbackBackendFactory::getFactory().init();
 
@@ -1166,7 +1191,6 @@ static void alc_initconfig(void)
         LoadReverbPreset(str, &DefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
-
 
 /************************************************
  * Device enumeration

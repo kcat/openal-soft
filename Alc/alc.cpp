@@ -178,7 +178,6 @@ BackendInfo BackendList[] = {
     { "wave", WaveBackendFactory::getFactory },
 #endif
 };
-auto BackendListEnd = std::end(BackendList);
 
 BackendInfo PlaybackBackend;
 BackendInfo CaptureBackend;
@@ -943,6 +942,7 @@ static void alc_initconfig(void)
         else ERR("Failed to open log file '%s'\n", str);
     }
 
+    auto BackendListEnd = std::end(BackendList);
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION,
           ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
     {

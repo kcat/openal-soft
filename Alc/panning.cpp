@@ -783,7 +783,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         else
         {
             int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 0)};
-            InitCustomPanning(device, hqdec, pconf, speakermap);
+            InitCustomPanning(device, !!hqdec, pconf, speakermap);
         }
 
         /* Enable the stablizer only for formats that have front-left, front-

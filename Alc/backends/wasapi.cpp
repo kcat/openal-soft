@@ -988,7 +988,7 @@ HRESULT WasapiPlayback::resetProxy()
 
     /* Find the nearest multiple of the period size to the update size */
     if(min_per < per_time)
-        min_per *= maxu((per_time + min_per/2) / min_per, 1u);
+        min_per *= maxi64((per_time + min_per/2) / min_per, 1);
     min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
     min_len = minu(min_len, buffer_len/2);
 

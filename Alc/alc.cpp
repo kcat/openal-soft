@@ -2644,17 +2644,12 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             voice->mStep = old_voice->mStep;
             voice->mResampler = old_voice->mResampler;
 
-            voice->mFlags = old_voice->mFlags;
-
-            std::copy(std::begin(old_voice->mPrevSamples), std::end(old_voice->mPrevSamples),
-                std::begin(voice->mPrevSamples));
-
             voice->mResampleState = old_voice->mResampleState;
 
-            voice->mAmbiScales = old_voice->mAmbiScales;
-            voice->mAmbiSplitter = old_voice->mAmbiSplitter;
-            std::for_each(voice->mAmbiSplitter.begin(),voice->mAmbiSplitter.end(),
-                std::bind(std::mem_fn(&BandSplitter::clear), _1));
+            voice->mFlags = old_voice->mFlags;
+
+            std::copy(old_voice->mResampleData.begin(), old_voice->mResampleData.end(),
+                voice->mResampleData.end());
 
             voice->mDirect = old_voice->mDirect;
             std::copy_n(old_voice->mSend.begin(), s_count, voice->mSend.begin());

@@ -247,15 +247,17 @@ struct ALvoice {
 
     ResamplerFunc mResampler;
 
-    ALuint mFlags;
-
-    using ResamplePaddingArray = std::array<ALfloat,MAX_RESAMPLE_PADDING*2>;
-    alignas(16) std::array<ResamplePaddingArray,MAX_INPUT_CHANNELS> mPrevSamples;
-
     InterpState mResampleState;
 
-    std::array<ALfloat,MAX_INPUT_CHANNELS> mAmbiScales;
-    std::array<BandSplitter,MAX_INPUT_CHANNELS> mAmbiSplitter;
+    ALuint mFlags;
+
+    struct ResampleData {
+        alignas(16) std::array<ALfloat,MAX_RESAMPLE_PADDING*2> mPrevSamples;
+
+        ALfloat mAmbiScale;
+        BandSplitter mAmbiSplitter;
+    };
+    std::array<ResampleData,MAX_INPUT_CHANNELS> mResampleData;
 
     struct {
         int FilterType;

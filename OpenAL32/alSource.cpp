@@ -2906,11 +2906,6 @@ START_API_FUNC
             voice->mSampleSize  = BytesFromFmt((*buffer)->mFmtType);
         }
 
-        /* Clear previous samples. */
-        std::for_each(voice->mPrevSamples.begin(), voice->mPrevSamples.begin()+voice->mNumChannels,
-            [](std::array<ALfloat,MAX_RESAMPLE_PADDING*2> &samples) -> void
-            { std::fill(std::begin(samples), std::end(samples), 0.0f); });
-
         /* Clear the stepping value so the mixer knows not to mix this until
          * the update gets applied.
          */
@@ -2925,30 +2920,44 @@ START_API_FUNC
         if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D) &&
            device->mAmbiOrder > 1)
         {
-            auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
+            const int *OrderFromChan;
             if(voice->mFmtChannels == FmtBFormat2D)
             {
                 static constexpr int Order2DFromChan[MAX_AMBI2D_CHANNELS]{
                     0, 1,1, 2,2, 3,3
                 };
-                const size_t count{Ambi2DChannelsFromOrder(1u)};
-                std::transform(Order2DFromChan, Order2DFromChan+count, voice->mAmbiScales.begin(),
-                    [&scales](size_t idx) -> ALfloat { return scales[idx]; });
+                OrderFromChan = Order2DFromChan;
             }
             else
             {
-                static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
+                static constexpr int Order3DFromChan[MAX_AMBI_CHANNELS]{
                     0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
                 };
-                const size_t count{Ambi2DChannelsFromOrder(1u)};
-                std::transform(OrderFromChan, OrderFromChan+count, voice->mAmbiScales.begin(),
-                    [&scales](size_t idx) -> ALfloat { return scales[idx]; });
+                OrderFromChan = Order3DFromChan;
             }
 
-            voice->mAmbiSplitter[0].init(400.0f / static_cast<ALfloat>(device->Frequency));
-            std::fill_n(voice->mAmbiSplitter.begin()+1, voice->mNumChannels-1,
-                voice->mAmbiSplitter[0]);
+            BandSplitter splitter;
+            splitter.init(400.0f / static_cast<ALfloat>(device->Frequency));
+
+            const auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
+            auto init_ambi = [scales,&OrderFromChan,&splitter](ALvoice::ResampleData &resdata) -> void
+            {
+                resdata.mPrevSamples.fill(0.0f);
+                resdata.mAmbiScale = scales[*(OrderFromChan++)];
+                resdata.mAmbiSplitter = splitter;
+            };
+            std::for_each(voice->mResampleData.begin(),
+                voice->mResampleData.begin()+voice->mNumChannels, init_ambi);
+
             voice->mFlags |= VOICE_IS_AMBISONIC;
+        }
+        else
+        {
+            /* Clear previous samples. */
+            auto clear_prevs = [](ALvoice::ResampleData &resdata) -> void
+            { resdata.mPrevSamples.fill(0.0f); };
+            std::for_each(voice->mResampleData.begin(),
+                voice->mResampleData.begin()+voice->mNumChannels, clear_prevs);
         }
 
         std::fill_n(std::begin(voice->mDirect.Params), voice->mNumChannels, DirectParams{});
@@ -2959,8 +2968,8 @@ START_API_FUNC
 
         if(device->AvgSpeakerDist > 0.0f)
         {
-            ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                         (device->AvgSpeakerDist * device->Frequency);
+            const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+                (device->AvgSpeakerDist * device->Frequency)};
             std::for_each(voice->mDirect.Params+0, voice->mDirect.Params+voice->mNumChannels,
                 [w1](DirectParams &parms) noexcept -> void
                 { parms.NFCtrlFilter.init(w1); }

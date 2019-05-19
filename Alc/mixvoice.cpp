@@ -555,7 +555,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             std::fill(srciter, std::end(SrcData), 0.0f);
 
             auto srcdata_end = std::begin(SrcData) + SrcBufferSize;
-            if(!BufferListItem)
+            if(UNLIKELY(!BufferListItem))
                 srciter = std::copy(
                     voice->mResampleData[chan].mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
                     voice->mResampleData[chan].mPrevSamples.end(), srciter);
@@ -568,20 +568,13 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
             if(UNLIKELY(srciter != srcdata_end))
             {
-                /* If the source buffer wasn't filled, copy the last sample and
-                 * fade it to 0 amplitude. Ideally it should have ended with
-                 * silence, but if not this should help avoid clicks from
-                 * sudden amplitude changes.
+                /* If the source buffer wasn't filled, copy the last sample for
+                 * the remaining buffer. Ideally it should have ended with
+                 * silence, but if not the gain fading should help avoid clicks
+                 * from sudden amplitude changes.
                  */
                 const ALfloat sample{*(srciter-1)};
-                const ALfloat gainstep{1.0f / (BUFFERSIZE*2)};
-                ALfloat step{BUFFERSIZE*2};
-
-                while(srciter != srcdata_end)
-                {
-                    step -= 1.0f;
-                    *(srciter++) = sample * gainstep*step;
-                }
+                std::fill(srciter, srcdata_end, sample);
             }
 
             /* Store the last source samples used for next time. */

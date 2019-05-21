@@ -95,31 +95,23 @@ ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
 void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device = context->Device;
-    ALuint frequency = device->Frequency;
-    ALfloat gainhf, lrpan, spread;
+    const auto frequency = static_cast<ALfloat>(device->Frequency);
 
     mTap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);
-    mTap[1].delay = float2int(props->Echo.LRDelay*frequency + 0.5f);
-    mTap[1].delay += mTap[0].delay;
+    mTap[1].delay = float2int(props->Echo.LRDelay*frequency + 0.5f) + mTap[0].delay;
 
-    spread = props->Echo.Spread;
-    if(spread < 0.0f) lrpan = -1.0f;
-    else lrpan = 1.0f;
-    /* Convert echo spread (where 0 = omni, +/-1 = directional) to coverage
-     * spread (where 0 = point, tau = omni).
-     */
-    spread = asinf(1.0f - fabsf(spread))*4.0f;
+    const ALfloat gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
+    mFilter.setParams(BiquadType::HighShelf, gainhf, LOWPASSFREQREF/frequency,
+        calc_rcpQ_from_slope(gainhf, 1.0f));
 
     mFeedGain = props->Echo.Feedback;
 
-    gainhf = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
-    mFilter.setParams(BiquadType::HighShelf, gainhf, LOWPASSFREQREF/frequency,
-        calc_rcpQ_from_slope(gainhf, 1.0f)
-    );
+    /* Convert echo spread (where 0 = center, +/-1 = sides) to angle. */
+    const ALfloat angle{std::asin(props->Echo.Spread)};
 
     ALfloat coeffs[2][MAX_AMBI_CHANNELS];
-    CalcAngleCoeffs(al::MathDefs<float>::Pi()*-0.5f*lrpan, 0.0f, spread, coeffs[0]);
-    CalcAngleCoeffs(al::MathDefs<float>::Pi()* 0.5f*lrpan, 0.0f, spread, coeffs[1]);
+    CalcAngleCoeffs(-angle, 0.0f, 0.0f, coeffs[0]);
+    CalcAngleCoeffs( angle, 0.0f, 0.0f, coeffs[1]);
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;

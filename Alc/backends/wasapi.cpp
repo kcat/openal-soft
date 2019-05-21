@@ -607,16 +607,17 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
 }
 
 
-ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
+bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
 {
     *out = WAVEFORMATEXTENSIBLE{};
     if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-        *out = *(const WAVEFORMATEXTENSIBLE*)in;
+    {
+        *out = reinterpret_cast<const WAVEFORMATEXTENSIBLE&>(*in);
+        out->Format.cbSize = sizeof(*out) - sizeof(out->Format);
+    }
     else if(in->wFormatTag == WAVE_FORMAT_PCM)
     {
         out->Format = *in;
-        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        out->Format.cbSize = sizeof(*out) - sizeof(*in);
         if(out->Format.nChannels == 1)
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
@@ -628,8 +629,6 @@ ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
     else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
     {
         out->Format = *in;
-        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        out->Format.cbSize = sizeof(*out) - sizeof(*in);
         if(out->Format.nChannels == 1)
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
@@ -641,9 +640,9 @@ ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
     else
     {
         ERR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
-        return ALC_FALSE;
+        return false;
     }
-    return ALC_TRUE;
+    return true;
 }
 
 ALCenum WasapiPlayback::open(const ALCchar *name)
@@ -813,6 +812,7 @@ HRESULT WasapiPlayback::resetProxy()
             ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
+    OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     switch(mDevice->FmtChans)
     {
         case DevFmtMono:
@@ -954,6 +954,8 @@ HRESULT WasapiPlayback::resetProxy()
         {
             ERR("Unhandled format sub-type\n");
             mDevice->FmtType = DevFmtShort;
+            if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
+                OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
             OutputType.Format.wBitsPerSample = 16;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         }

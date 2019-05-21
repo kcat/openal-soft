@@ -81,7 +81,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
         else
         {
             ALfloat coeffs[MAX_AMBI_CHANNELS];
-            CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
+            CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
 
             mOutBuffer = target.Main->Buffer;
             mOutChannels = target.Main->NumChannels;

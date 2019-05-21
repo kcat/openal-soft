@@ -139,7 +139,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
      * delay and depth to allow enough padding for resampling.
      */
     const ALCdevice *device{Context->Device};
-    auto frequency = static_cast<ALfloat>(device->Frequency);
+    const auto frequency = static_cast<ALfloat>(device->Frequency);
     mDelay = maxi(float2int(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f), mindelay);
     mDepth = minf(props->Chorus.Depth * mDelay, static_cast<ALfloat>(mDelay - mindelay));
 
@@ -147,8 +147,8 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
 
     /* Gains for left and right sides */
     ALfloat coeffs[2][MAX_AMBI_CHANNELS];
-    CalcAngleCoeffs(al::MathDefs<float>::Pi()*-0.5f, 0.0f, 0.0f, coeffs[0]);
-    CalcAngleCoeffs(al::MathDefs<float>::Pi()* 0.5f, 0.0f, 0.0f, coeffs[1]);
+    CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f, coeffs[0]);
+    CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f, coeffs[1]);
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;

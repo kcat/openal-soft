@@ -754,7 +754,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
              * input channels of the source sends.
              */
             ALfloat coeffs[MAX_AMBI_CHANNELS];
-            CalcAngleCoeffs(az, ev, Spread, coeffs);
+            CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
 
             for(ALsizei i{0};i < NumSends;i++)
             {

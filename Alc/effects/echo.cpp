@@ -53,10 +53,10 @@ struct EchoState final : public EffectState {
         ALfloat Target[MAX_OUTPUT_CHANNELS]{};
     } mGains[2];
 
+    BiquadFilter mFilter;
     ALfloat mFeedGain{0.0f};
 
-    BiquadFilter mFilter;
-
+    alignas(16) ALfloat mTempBuffer[2][BUFFERSIZE];
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
@@ -122,48 +122,44 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
 void EchoState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
 {
     const auto mask = static_cast<ALsizei>(mSampleBuffer.size()-1);
-    const ALsizei tap1{mTap[0].delay};
-    const ALsizei tap2{mTap[1].delay};
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
     ALsizei offset{mOffset};
+    ALsizei tap1{offset - mTap[0].delay};
+    ALsizei tap2{offset - mTap[1].delay};
     ALfloat z1, z2;
-    ALsizei base;
-    ALsizei c, i;
+
+    ASSUME(samplesToDo > 0);
+    ASSUME(mask > 0);
 
     std::tie(z1, z2) = mFilter.getComponents();
-    for(base = 0;base < samplesToDo;)
+    for(ALsizei i{0};i < samplesToDo;)
     {
-        alignas(16) ALfloat temps[2][128];
-        ALsizei td = mini(128, samplesToDo-base);
+        offset &= mask;
+        tap1 &= mask;
+        tap2 &= mask;
 
-        for(i = 0;i < td;i++)
-        {
+        ALsizei td{mini(mask+1 - maxi(offset, maxi(tap1, tap2)), samplesToDo-i)};
+        do {
             /* Feed the delay buffer's input first. */
-            delaybuf[offset&mask] = samplesIn[0][i+base];
+            delaybuf[offset] = samplesIn[0][i];
 
-            /* First tap */
-            temps[0][i] = delaybuf[(offset-tap1) & mask];
-            /* Second tap */
-            temps[1][i] = delaybuf[(offset-tap2) & mask];
-
-            /* Apply damping to the second tap, then add it to the buffer with
-             * feedback attenuation.
+            /* Get delayed output from the first and second taps. Use the
+             * second tap for feedback.
              */
-            float out{mFilter.processOne(temps[1][i], z1, z2)};
+            mTempBuffer[0][i] = delaybuf[tap1++];
+            mTempBuffer[1][i] = delaybuf[tap2++];
+            const float feedb{mTempBuffer[1][i++]};
 
-            delaybuf[offset&mask] += out * mFeedGain;
-            offset++;
-        }
-
-        for(c = 0;c < 2;c++)
-            MixSamples(temps[c], numOutput, samplesOut, mGains[c].Current, mGains[c].Target,
-                samplesToDo-base, base, td);
-
-        base += td;
+            /* Add feedback to the delay buffer with damping and attenuation. */
+            delaybuf[offset++] += mFilter.processOne(feedb, z1, z2) * mFeedGain;
+        } while(--td);
     }
     mFilter.setComponents(z1, z2);
-
     mOffset = offset;
+
+    for(ALsizei c{0};c < 2;c++)
+        MixSamples(mTempBuffer[c], numOutput, samplesOut, mGains[c].Current, mGains[c].Target,
+            samplesToDo, 0, samplesToDo);
 }
 
 

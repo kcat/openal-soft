@@ -29,20 +29,21 @@ struct HrtfEntry {
     ALuint sampleRate;
     ALsizei irSize;
 
-    /* Base elevation index for the farthest field. */
-    ALsizei evFarBase;
     struct Field {
-        ALubyte evCount;
         ALfloat distance;
+        ALubyte evCount;
     };
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
      * field[fdCount-1] is the nearest.
      */
     ALsizei fdCount;
-    Field *field;
+    const Field *field;
 
-    const ALubyte *azCount;
-    const ALushort *evOffset;
+    struct Elevation {
+        ALushort azCount;
+        ALushort irOffset;
+    };
+    Elevation *elev;
     const ALfloat (*coeffs)[2];
     const ALubyte (*delays)[2];
 

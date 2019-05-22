@@ -214,30 +214,29 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
 
     const auto *field = Hrtf->field;
     const auto *field_end = field + Hrtf->fdCount-1;
-    ALsizei fdoffset{Hrtf->evFarBase};
+    ALsizei ebase{0};
     while(distance < field->distance && field != field_end)
     {
+        ebase += field->evCount;
         ++field;
-        fdoffset -= field->evCount;
     }
-    assert(fdoffset >= 0);
 
     /* Claculate the elevation indinces. */
     const auto elev0 = CalcEvIndex(field->evCount, elevation);
     const ALsizei elev1_idx{mini(elev0.idx+1, field->evCount-1)};
-    const ALsizei ev0offset{Hrtf->evOffset[fdoffset + elev0.idx]};
-    const ALsizei ev1offset{Hrtf->evOffset[fdoffset + elev1_idx]};
+    const ALsizei ir0offset{Hrtf->elev[ebase + elev0.idx].irOffset};
+    const ALsizei ir1offset{Hrtf->elev[ebase + elev1_idx].irOffset};
 
     /* Calculate azimuth indices. */
-    const auto az0 = CalcAzIndex(Hrtf->azCount[fdoffset + elev0.idx], azimuth);
-    const auto az1 = CalcAzIndex(Hrtf->azCount[fdoffset + elev1_idx], azimuth);
+    const auto az0 = CalcAzIndex(Hrtf->elev[ebase + elev0.idx].azCount, azimuth);
+    const auto az1 = CalcAzIndex(Hrtf->elev[ebase + elev1_idx].azCount, azimuth);
 
     /* Calculate the HRIR indices to blend. */
     ALsizei idx[4]{
-        ev0offset + az0.idx,
-        ev0offset + ((az0.idx+1) % Hrtf->azCount[fdoffset + elev0.idx]),
-        ev1offset + az1.idx,
-        ev1offset + ((az1.idx+1) % Hrtf->azCount[fdoffset + elev1_idx])
+        ir0offset + az0.idx,
+        ir0offset + ((az0.idx+1) % Hrtf->elev[ebase + elev0.idx].azCount),
+        ir1offset + az1.idx,
+        ir1offset + ((az1.idx+1) % Hrtf->elev[ebase + elev1_idx].azCount)
     };
 
     /* Calculate bilinear blending weights, attenuated according to the
@@ -307,25 +306,24 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     ASSUME(AmbiCount > 0);
 
     auto &field = Hrtf->field[0];
-    const ALsizei ebase{Hrtf->evFarBase};
     ALsizei min_delay{HRTF_HISTORY_LENGTH};
     ALsizei max_delay{0};
     auto idx = al::vector<ALsizei>(AmbiCount);
-    auto calc_idxs = [Hrtf,ebase,&field,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALsizei
+    auto calc_idxs = [Hrtf,&field,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALsizei
     {
         /* Calculate elevation index. */
-        const auto evidx = ebase + clampi(
+        const auto evidx = clampi(
             static_cast<ALsizei>((90.0f+pt.Elev)*(field.evCount-1)/180.0f + 0.5f),
             0, field.evCount-1);
 
-        const ALsizei azcount{Hrtf->azCount[evidx]};
-        const ALsizei evoffset{Hrtf->evOffset[evidx]};
+        const ALsizei azcount{Hrtf->elev[evidx].azCount};
+        const ALsizei iroffset{Hrtf->elev[evidx].irOffset};
 
         /* Calculate azimuth index for this elevation. */
         const auto azidx = static_cast<ALsizei>((360.0f+pt.Azim)*azcount/360.0f + 0.5f) % azcount;
 
         /* Calculate the index for the impulse response. */
-        ALsizei idx{evoffset + azidx};
+        ALsizei idx{iroffset + azidx};
 
         min_delay = mini(min_delay, mini(Hrtf->delays[idx][0], Hrtf->delays[idx][1]));
         max_delay = maxi(max_delay, maxi(Hrtf->delays[idx][0], Hrtf->delays[idx][1]));
@@ -459,8 +457,8 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
 namespace {
 
 std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const ALsizei fdCount,
-    const ALubyte *evCount, const ALfloat *distance, const ALubyte *azCount,
-    const ALushort *evOffset, ALsizei irCount, const ALfloat (*coeffs)[2],
+    const ALubyte *evCount, const ALfloat *distance, const ALushort *azCount,
+    const ALushort *irOffset, ALsizei irCount, const ALfloat (*coeffs)[2],
     const ALubyte (*delays)[2], const char *filename)
 {
     std::unique_ptr<HrtfEntry> Hrtf;
@@ -469,9 +467,8 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
     size_t total{sizeof(HrtfEntry)};
     total  = RoundUp(total, alignof(HrtfEntry::Field)); /* Align for field infos */
     total += sizeof(HrtfEntry::Field)*fdCount;
-    total += sizeof(Hrtf->azCount[0])*evTotal;
-    total  = RoundUp(total, sizeof(ALushort)); /* Align for ushort fields */
-    total += sizeof(Hrtf->evOffset[0])*evTotal;
+    total  = RoundUp(total, alignof(HrtfEntry::Elevation)); /* Align for elevation infos */
+    total += sizeof(Hrtf->elev[0])*evTotal;
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
@@ -484,7 +481,6 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
         InitRef(&Hrtf->ref, 1u);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
-        Hrtf->evFarBase = std::accumulate(evCount+1, evCount+fdCount, 0);
         Hrtf->fdCount = fdCount;
 
         /* Set up pointers to storage following the main HRTF struct. */
@@ -495,12 +491,9 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
         auto field_ = reinterpret_cast<HrtfEntry::Field*>(base + offset);
         offset += sizeof(field_[0])*fdCount;
 
-        auto azCount_ = reinterpret_cast<ALubyte*>(base + offset);
-        offset += sizeof(azCount_[0])*evTotal;
-
-        offset = RoundUp(offset, sizeof(ALushort)); /* Align for ushort fields */
-        auto evOffset_ = reinterpret_cast<ALushort*>(base + offset);
-        offset += sizeof(evOffset_[0])*evTotal;
+        offset = RoundUp(offset, alignof(HrtfEntry::Elevation)); /* Align for elevation infos */
+        auto elev_ = reinterpret_cast<HrtfEntry::Elevation*>(base + offset);
+        offset += sizeof(elev_[0])*evTotal;
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
         auto coeffs_ = reinterpret_cast<ALfloat(*)[2]>(base + offset);
@@ -514,11 +507,14 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
         /* Copy input data to storage. */
         for(ALsizei i{0};i < fdCount;i++)
         {
-            field_[i].evCount = evCount[i];
             field_[i].distance = distance[i];
+            field_[i].evCount = evCount[i];
         }
-        for(ALsizei i{0};i < evTotal;i++) azCount_[i] = azCount[i];
-        for(ALsizei i{0};i < evTotal;i++) evOffset_[i] = evOffset[i];
+        for(ALsizei i{0};i < evTotal;i++)
+        {
+            elev_[i].azCount = azCount[i];
+            elev_[i].irOffset = irOffset[i];
+        }
         for(ALsizei i{0};i < irSize*irCount;i++)
         {
             coeffs_[i][0] = coeffs[i][0];
@@ -532,8 +528,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
 
         /* Finally, assign the storage pointers. */
         Hrtf->field = field_;
-        Hrtf->azCount = azCount_;
-        Hrtf->evOffset = evOffset_;
+        Hrtf->elev = elev_;
         Hrtf->coeffs = coeffs_;
         Hrtf->delays = delays_;
     }
@@ -631,7 +626,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<ALubyte> azCount(evCount);
+    al::vector<ALushort> azCount(evCount);
     for(ALsizei i{1};i < evCount;i++)
     {
         azCount[i-1] = evOffset[i] - evOffset[i-1];
@@ -723,9 +718,9 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<ALubyte> azCount(evCount);
-    data.read(reinterpret_cast<char*>(azCount.data()), evCount);
-    if(!data || data.eof() || data.gcount() < evCount)
+    al::vector<ALushort> azCount(evCount);
+    std::generate(azCount.begin(), azCount.end(), std::bind(GetLE_ALubyte, std::ref(data)));
+    if(!data || data.eof())
     {
         ERR("Failed reading %s\n", filename);
         return nullptr;
@@ -843,7 +838,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
 
     al::vector<ALfloat> distance(fdCount);
     al::vector<ALubyte> evCount(fdCount);
-    al::vector<ALubyte> azCount;
+    al::vector<ALushort> azCount;
     for(ALsizei f{0};f < fdCount;f++)
     {
         distance[f] = GetLE_ALushort(data) / 1000.0f;
@@ -877,8 +872,9 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
 
         size_t ebase{azCount.size()};
         azCount.resize(ebase + evCount[f]);
-        data.read(reinterpret_cast<char*>(azCount.data()+ebase), evCount[f]);
-        if(!data || data.eof() || data.gcount() < evCount[f])
+        std::generate(azCount.begin()+ebase, azCount.end(),
+            std::bind(GetLE_ALubyte, std::ref(data)));
+        if(!data || data.eof())
         {
             ERR("Failed reading %s\n", filename);
             return nullptr;
@@ -897,31 +893,11 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
             return nullptr;
     }
 
-    al::vector<ALushort> evOffset;
-    evOffset.resize(evCount[0]);
-
+    al::vector<ALushort> evOffset(azCount.size());
     evOffset[0] = 0;
-    ALushort irCount{azCount[0]};
-    for(ALsizei e{1};e < evCount[0];++e)
-    {
-        evOffset[e] = evOffset[e-1] + azCount[e-1];
-        irCount += azCount[e];
-    }
+    std::partial_sum(azCount.cbegin(), azCount.cend()-1, evOffset.begin()+1);
+    const ALsizei irTotal{evOffset.back() + azCount.back()};
 
-    ALsizei irTotal{irCount};
-    for(ALsizei f{1};f < fdCount;f++)
-    {
-        const ALsizei ebase{std::accumulate(evCount.begin(), evCount.begin()+f, 0)};
-        evOffset.resize(ebase + evCount[f]);
-
-        evOffset[ebase] = irTotal;
-        irTotal += azCount[ebase];
-        for(ALsizei e{1};e < evCount[f];++e)
-        {
-            evOffset[ebase+e] = evOffset[ebase+e-1] + azCount[ebase+e-1];
-            irTotal += azCount[ebase+e];
-        }
-    }
     al::vector<std::array<ALfloat,2>> coeffs(irSize*irTotal);
     al::vector<std::array<ALubyte,2>> delays(irTotal);
     if(channelType == CHANTYPE_LEFTONLY)
@@ -1022,8 +998,67 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
         }
     }
 
-    std::reverse(distance.begin(), distance.end());
-    std::reverse(evCount.begin(), evCount.end());
+    if(fdCount > 1)
+    {
+        auto distance_ = al::vector<ALfloat>(distance.size());
+        auto evCount_ = al::vector<ALubyte>(evCount.size());
+        auto azCount_ = al::vector<ALushort>(azCount.size());
+        auto evOffset_ = al::vector<ALushort>(evOffset.size());
+        auto coeffs_ = al::vector<float2>(coeffs.size());
+        auto delays_ = al::vector<std::array<ALubyte,2>>(delays.size());
+
+        /* Simple reverse for the per-field elements. */
+        std::reverse_copy(distance.cbegin(), distance.cend(), distance_.begin());
+        std::reverse_copy(evCount.cbegin(), evCount.cend(), evCount_.begin());
+
+        /* Each field has a group of elevations, which each have an azimuth
+         * count. Reverse the order of the groups, keeping the relative order
+         * of per-group azimuth counts.
+         */
+        auto azcnt_end = azCount_.end();
+        auto copy_azs = [&azCount,&azcnt_end](const size_t ebase, const ALubyte num_evs) -> size_t
+        {
+            auto azcnt_src = azCount.begin()+ebase;
+            azcnt_end = std::copy_backward(azcnt_src, azcnt_src+num_evs, azcnt_end);
+            return ebase + num_evs;
+        };
+        std::accumulate(evCount.cbegin(), evCount.cend(), 0u, copy_azs);
+        assert(azCount_.begin() == azcnt_end);
+
+        /* Reestablish the IR offset for each elevation index, given the new
+         * ordering of elevations.
+         */
+        evOffset_[0] = 0;
+        std::partial_sum(azCount_.cbegin(), azCount_.cend()-1, evOffset_.begin()+1);
+
+        /* Reverse the order of each field's group of IRs. */
+        auto coeffs_end = coeffs_.end();
+        auto delays_end = delays_.end();
+        auto copy_irs = [irSize,&azCount,&coeffs,&delays,&coeffs_end,&delays_end](const size_t ebase, const ALubyte num_evs) -> size_t
+        {
+            const ALsizei abase{std::accumulate(azCount.cbegin(), azCount.cbegin()+ebase, 0)};
+            const ALsizei num_azs{std::accumulate(azCount.cbegin()+ebase,
+                azCount.cbegin() + (ebase+num_evs), 0)};
+
+            coeffs_end = std::copy_backward(coeffs.cbegin() + abase*irSize,
+                coeffs.cbegin() + (abase+num_azs)*irSize, coeffs_end);
+            delays_end = std::copy_backward(delays.cbegin() + abase,
+                delays.cbegin() + (abase+num_azs), delays_end);
+
+            return ebase + num_evs;
+        };
+        std::accumulate(evCount.cbegin(), evCount.cend(), 0u, copy_irs);
+        assert(coeffs_.begin() == coeffs_end);
+        assert(delays_.begin() == delays_end);
+
+        distance = std::move(distance_);
+        evCount = std::move(evCount_);
+        azCount = std::move(azCount_);
+        evOffset = std::move(evOffset_);
+        coeffs = std::move(coeffs_);
+        delays = std::move(delays_);
+    }
+
     return CreateHrtfStore(rate, irSize, fdCount, evCount.data(), distance.data(), azCount.data(),
         evOffset.data(), irTotal, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);

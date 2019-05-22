@@ -339,10 +339,8 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
      */
     static constexpr ALsizei base_delay{DualBand ? 12 : 0};
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
-    BandSplitterR<double> splitter;
-    SplitterAllpassR<double> allpass;
-    splitter.init(xover_norm);
-    allpass.init(xover_norm);
+    BandSplitterR<double> splitter{xover_norm};
+    SplitterAllpassR<double> allpass{xover_norm};
 
     auto tmpres = al::vector<HrirArray<ALdouble>>(NumChannels);
     auto tmpfilt = al::vector<std::array<ALdouble,HRIR_LENGTH*4>>(3);

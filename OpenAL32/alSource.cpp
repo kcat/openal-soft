@@ -2936,8 +2936,7 @@ START_API_FUNC
                 OrderFromChan = Order3DFromChan;
             }
 
-            BandSplitter splitter;
-            splitter.init(400.0f / static_cast<ALfloat>(device->Frequency));
+            BandSplitter splitter{400.0f / static_cast<ALfloat>(device->Frequency)};
 
             const auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
             auto init_ambi = [scales,&OrderFromChan,&splitter](ALvoice::ResampleData &resdata) -> void

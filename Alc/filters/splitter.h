@@ -14,6 +14,10 @@ class BandSplitterR {
     Real ap_z1{0.0f};
 
 public:
+    BandSplitterR() = default;
+    BandSplitterR(const BandSplitterR&) = default;
+    BandSplitterR(Real f0norm) { init(f0norm); }
+
     void init(Real f0norm);
     void clear() noexcept { lp_z1 = lp_z2 = ap_z1 = 0.0f; }
     void process(Real *hpout, Real *lpout, const Real *input, const int count);
@@ -30,6 +34,10 @@ class SplitterAllpassR {
     Real z1{0.0f};
 
 public:
+    SplitterAllpassR() = default;
+    SplitterAllpassR(const SplitterAllpassR&) = default;
+    SplitterAllpassR(Real f0norm) { init(f0norm); }
+
     void init(Real f0norm);
     void clear() noexcept { z1 = 0.0f; }
     void process(Real *samples, int count);

@@ -695,12 +695,14 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
 {
     memset(out, 0, sizeof(*out));
     if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+    {
         *out = *(const WAVEFORMATEXTENSIBLE*)in;
+        out->Format.cbSize = sizeof(*out) - sizeof(out->Format);
+    }
     else if(in->wFormatTag == WAVE_FORMAT_PCM)
     {
         out->Format = *in;
-        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        out->Format.cbSize = sizeof(*out) - sizeof(*in);
+        out->Format.cbSize = 0;
         if(out->Format.nChannels == 1)
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
@@ -712,8 +714,7 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
     else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
     {
         out->Format = *in;
-        out->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        out->Format.cbSize = sizeof(*out) - sizeof(*in);
+        out->Format.cbSize = 0;
         if(out->Format.nChannels == 1)
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
@@ -938,6 +939,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
             ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
+    OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     switch(device->FmtChans)
     {
         case DevFmtMono:
@@ -1079,6 +1081,8 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         {
             ERR("Unhandled format sub-type\n");
             device->FmtType = DevFmtShort;
+            if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
+                OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
             OutputType.Format.wBitsPerSample = 16;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         }

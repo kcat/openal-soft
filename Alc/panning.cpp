@@ -42,6 +42,8 @@
 #include "uhjfilter.h"
 #include "bs2b.h"
 
+#include "alspan.h"
+
 
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromN3D;
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromSN3D;
@@ -325,50 +327,42 @@ auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<int,MAX_A
 
 void InitPanning(ALCdevice *device)
 {
-    const ChannelMap *chanmap{nullptr};
-    ALsizei coeffcount{0};
-    ALsizei count{0};
+    al::span<const ChannelMap> chanmap;
+    ALsizei coeffcount{};
 
     switch(device->FmtChans)
     {
         case DevFmtMono:
-            count = static_cast<ALsizei>(COUNTOF(MonoCfg));
             chanmap = MonoCfg;
             coeffcount = 1;
             break;
 
         case DevFmtStereo:
-            count = static_cast<ALsizei>(COUNTOF(StereoCfg));
             chanmap = StereoCfg;
             coeffcount = 3;
             break;
 
         case DevFmtQuad:
-            count = static_cast<ALsizei>(COUNTOF(QuadCfg));
             chanmap = QuadCfg;
             coeffcount = 3;
             break;
 
         case DevFmtX51:
-            count = static_cast<ALsizei>(COUNTOF(X51SideCfg));
             chanmap = X51SideCfg;
             coeffcount = 5;
             break;
 
         case DevFmtX51Rear:
-            count = static_cast<ALsizei>(COUNTOF(X51RearCfg));
             chanmap = X51RearCfg;
             coeffcount = 5;
             break;
 
         case DevFmtX61:
-            count = static_cast<ALsizei>(COUNTOF(X61Cfg));
             chanmap = X61Cfg;
             coeffcount = 5;
             break;
 
         case DevFmtX71:
-            count = static_cast<ALsizei>(COUNTOF(X71Cfg));
             chanmap = X71Cfg;
             coeffcount = 7;
             break;
@@ -384,12 +378,12 @@ void InitPanning(ALCdevice *device)
         const std::array<float,MAX_AMBI_CHANNELS> &n3dscale = GetAmbiScales(device->mAmbiScale);
 
         /* For DevFmtAmbi3D, the ambisonic order is already set. */
-        count = static_cast<ALsizei>(AmbiChannelsFromOrder(device->mAmbiOrder));
+        const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
         std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
             [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
             { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
         );
-        device->Dry.NumChannels = count;
+        device->Dry.NumChannels = static_cast<ALsizei>(count);
 
         ALfloat nfc_delay{0.0f};
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
@@ -397,7 +391,7 @@ void InitPanning(ALCdevice *device)
             static constexpr ALsizei chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
-                              device->mAmbiOrder, chans_per_order);
+                device->mAmbiOrder, chans_per_order);
         }
 
         device->RealOut.NumChannels = 0;
@@ -406,7 +400,7 @@ void InitPanning(ALCdevice *device)
     {
         ChannelDec chancoeffs[MAX_OUTPUT_CHANNELS]{};
         ALsizei idxmap[MAX_OUTPUT_CHANNELS]{};
-        for(ALsizei i{0};i < count;++i)
+        for(size_t i{0u};i < chanmap.size();++i)
         {
             const ALint idx{GetChannelIdxByName(device->RealOut, chanmap[i].ChanName)};
             if(idx < 0)
@@ -436,7 +430,8 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 3) ? "second" : "first",
             ""
         );
-        device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount, count, chancoeffs, idxmap);
+        device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount,
+            static_cast<ALsizei>(chanmap.size()), chancoeffs, idxmap);
 
         device->RealOut.NumChannels = device->channelsFromFmt();
     }
@@ -553,7 +548,7 @@ void InitHrtfPanning(ALCdevice *device)
     static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
     const ALfloat *AmbiOrderHFGain{AmbiOrderHFGainFOA};
 
-    static_assert(COUNTOF(AmbiPoints) == COUNTOF(AmbiMatrix), "Ambisonic HRTF mismatch");
+    static_assert(al::size(AmbiPoints) == al::size(AmbiMatrix), "Ambisonic HRTF mismatch");
 
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
@@ -578,7 +573,7 @@ void InitHrtfPanning(ALCdevice *device)
     device->RealOut.NumChannels = device->channelsFromFmt();
 
     BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints,
-        AmbiMatrix, COUNTOF(AmbiPoints), AmbiOrderHFGain);
+        AmbiMatrix, al::size(AmbiPoints), AmbiOrderHFGain);
 
     HrtfEntry *Hrtf{device->mHrtf};
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);

@@ -43,6 +43,7 @@
 
 #include "compat.h"
 #include "almalloc.h"
+#include "alspan.h"
 
 
 struct HrtfHandle {
@@ -1185,11 +1186,11 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
 #define IDR_DEFAULT_44100_MHR 1
 #define IDR_DEFAULT_48000_MHR 2
 
-struct ResData { const char *data; size_t size; };
+using ResData = al::span<const char>;
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
 ResData GetResource(int UNUSED(name))
-{ return {nullptr, 0u}; }
+{ return ResData{}; }
 
 #else
 
@@ -1202,7 +1203,7 @@ ResData GetResource(int name)
         return {reinterpret_cast<const char*>(hrtf_default_44100), sizeof(hrtf_default_44100)};
     if(name == IDR_DEFAULT_48000_MHR)
         return {reinterpret_cast<const char*>(hrtf_default_48000), sizeof(hrtf_default_48000)};
-    return {nullptr, 0u};
+    return ResData{};
 }
 #endif
 
@@ -1255,12 +1256,10 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
         for(const auto &fname : SearchDataFiles(".mhr", "openal/hrtf"))
             AddFileEntry(list, fname);
 
-        ResData res{GetResource(IDR_DEFAULT_44100_MHR)};
-        if(res.data != nullptr && res.size > 0)
+        if(!GetResource(IDR_DEFAULT_44100_MHR).empty())
             AddBuiltInEntry(list, "Built-In 44100hz", IDR_DEFAULT_44100_MHR);
 
-        res = GetResource(IDR_DEFAULT_48000_MHR);
-        if(res.data != nullptr && res.size > 0)
+        if(!GetResource(IDR_DEFAULT_48000_MHR).empty())
             AddBuiltInEntry(list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
     }
 
@@ -1305,12 +1304,12 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 
         TRACE("Loading %s...\n", name);
         ResData res{GetResource(residx)};
-        if(!res.data || res.size == 0)
+        if(res.empty())
         {
             ERR("Could not get resource %u, %s\n", residx, name);
             return nullptr;
         }
-        stream = al::make_unique<idstream>(res.data, res.data+res.size);
+        stream = al::make_unique<idstream>(res.begin(), res.end());
     }
     else
     {

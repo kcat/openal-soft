@@ -2,6 +2,8 @@
 #define AL_SPAN_H
 
 #include <cstddef>
+
+#include <array>
 #include <type_traits>
 #include <initializer_list>
 

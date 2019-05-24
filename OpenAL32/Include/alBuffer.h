@@ -95,7 +95,6 @@ struct ALbuffer {
 
     FmtChannels mFmtChannels{};
     FmtType     mFmtType{};
-    ALsizei BytesAlloc{0};
 
     UserFmtType OriginalType{};
     ALsizei OriginalSize{0};

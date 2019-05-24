@@ -235,8 +235,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
                         NameFromUserFmtType(SrcType));
     }
 
-    ALsizei unpackalign{ALBuf->UnpackAlign.load()};
-    ALsizei align{SanitizeAlignment(SrcType, unpackalign)};
+    const ALsizei unpackalign{ALBuf->UnpackAlign.load()};
+    const ALsizei align{SanitizeAlignment(SrcType, unpackalign)};
     if(UNLIKELY(align < 1))
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %d for %s samples",
                       unpackalign, NameFromUserFmtType(SrcType));
@@ -253,7 +253,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     /* Convert the input/source size in bytes to sample frames using the unpack
      * block alignment.
      */
-    ALsizei SrcByteAlign{
+    const ALsizei SrcByteAlign{
         (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels) :
         (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels) :
         (align * FrameSizeFromUserFmt(SrcChannels, SrcType))
@@ -266,7 +266,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     if(UNLIKELY(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align))
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
-    ALsizei frames{size / SrcByteAlign * align};
+    const ALsizei frames{size / SrcByteAlign * align};
 
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
@@ -276,7 +276,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     if(UNLIKELY(frames > std::numeric_limits<ALsizei>::max()/FrameSize))
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
-    ALsizei newsize{frames*FrameSize};
+    size_t newsize{static_cast<size_t>(frames) * FrameSize};
 
     /* Round up to the next 16-byte multiple. This could reallocate only when
      * increasing or the new size is less than half the current, but then the
@@ -284,18 +284,16 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
      * usage, and reporting the real size could cause problems for apps that
      * use AL_SIZE to try to get the buffer's play length.
      */
-    if(LIKELY(newsize <= std::numeric_limits<ALsizei>::max()-15))
-        newsize = (newsize+15) & ~0xf;
-    if(newsize != ALBuf->BytesAlloc)
+    newsize = RoundUp(newsize, 16);
+    if(newsize != ALBuf->mData.size())
     {
-        al::vector<al::byte,16> newdata(newsize);
+        auto newdata = al::vector<al::byte,16>(newsize);
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
-            ALsizei tocopy{std::min(newsize, ALBuf->BytesAlloc)};
+            const size_t tocopy{minz(newdata.size(), ALBuf->mData.size())};
             std::copy_n(ALBuf->mData.begin(), tocopy, newdata.begin());
         }
         ALBuf->mData = std::move(newdata);
-        ALBuf->BytesAlloc = newsize;
     }
 
     if(SrcType == UserFmtIMA4)

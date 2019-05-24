@@ -24,8 +24,11 @@ inline constexpr al::byte operator>>(al::byte lhs, T rhs) noexcept
 { return al::byte(to_integer<unsigned int>(lhs) >> rhs); }
 
 #define AL_DECL_OP(op)                                                        \
+template<typename T, typename std::enable_if<std::is_integral<T>::value,int>::type = 0> \
+inline constexpr al::byte operator op (al::byte lhs, T rhs) noexcept          \
+{ return al::byte(to_integer<unsigned int>(lhs) op rhs); }                    \
 inline constexpr al::byte operator op (al::byte lhs, al::byte rhs) noexcept   \
-{ return al::byte(to_integer<unsigned int>(lhs) op to_integer<unsigned int>(rhs)); }
+{ return al::byte(lhs op to_integer<unsigned int>(rhs)); }
 
 AL_DECL_OP(|)
 AL_DECL_OP(&)
@@ -46,6 +49,9 @@ inline al::byte& operator>>=(al::byte &lhs, T rhs) noexcept
 { lhs = lhs >> rhs; return lhs; }
 
 #define AL_DECL_OP(op)                                                        \
+template<typename T, typename std::enable_if<std::is_integral<T>::value,int>::type = 0> \
+inline al::byte& operator op##= (al::byte &lhs, T rhs) noexcept               \
+{ lhs = lhs op rhs; return lhs; }                                             \
 inline al::byte& operator op##= (al::byte &lhs, al::byte rhs) noexcept        \
 { lhs = lhs op rhs; return lhs; }
 

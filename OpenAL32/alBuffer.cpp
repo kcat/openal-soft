@@ -185,7 +185,7 @@ const ALchar *NameFromUserFmtType(UserFmtType type)
  *
  * Loads the specified data into the buffer, using the specified format.
  */
-void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, UserFmtChannels SrcChannels, UserFmtType SrcType, const ALvoid *data, ALbitfieldSOFT access)
+void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData, ALbitfieldSOFT access)
 {
     if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
@@ -287,7 +287,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     newsize = RoundUp(newsize, 16);
     if(newsize != ALBuf->mData.size())
     {
-        auto newdata = al::vector<al::byte,16>(newsize);
+        auto newdata = al::vector<al::byte,16>(newsize, al::byte{});
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
             const size_t tocopy{minz(newdata.size(), ALBuf->mData.size())};
@@ -299,25 +299,24 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     if(SrcType == UserFmtIMA4)
     {
         assert(DstType == FmtShort);
-        if(data != nullptr && !ALBuf->mData.empty())
+        if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_ALshort_ALima4(reinterpret_cast<ALshort*>(ALBuf->mData.data()),
-                static_cast<const ALubyte*>(data), NumChannels, frames, align);
+                SrcData, NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
         assert(DstType == FmtShort);
-        if(data != nullptr && !ALBuf->mData.empty())
+        if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_ALshort_ALmsadpcm(reinterpret_cast<ALshort*>(ALBuf->mData.data()),
-                static_cast<const ALubyte*>(data), NumChannels, frames, align);
+                SrcData, NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else
     {
         assert(static_cast<long>(SrcType) == static_cast<long>(DstType));
-        if(data != nullptr && !ALBuf->mData.empty())
-            std::copy_n(static_cast<const al::byte*>(data), frames*FrameSize,
-                ALBuf->mData.begin());
+        if(SrcData != nullptr && !ALBuf->mData.empty())
+            std::copy_n(SrcData, frames*FrameSize, ALBuf->mData.begin());
         ALBuf->OriginalAlign = 1;
     }
     ALBuf->OriginalSize = size;
@@ -560,7 +559,8 @@ START_API_FUNC
         if(UNLIKELY(!success))
             alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
-            LoadData(context.get(), albuf, freq, size, srcchannels, srctype, data, flags);
+            LoadData(context.get(), albuf, freq, size, srcchannels, srctype,
+                static_cast<const al::byte*>(data), flags);
     }
 }
 END_API_FUNC
@@ -745,14 +745,13 @@ START_API_FUNC
             void *dst = albuf->mData.data() + offset;
             if(srctype == UserFmtIMA4 && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
-                    static_cast<const ALubyte*>(data), num_chans, length, align);
+                    static_cast<const al::byte*>(data), num_chans, length, align);
             else if(srctype == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
-                    static_cast<const ALubyte*>(data), num_chans, length, align);
+                    static_cast<const al::byte*>(data), num_chans, length, align);
             else
             {
-                assert(static_cast<long>(srctype) ==
-                       static_cast<long>(albuf->mFmtType));
+                assert(static_cast<long>(srctype) == static_cast<long>(albuf->mFmtType));
                 memcpy(dst, data, length * frame_size);
             }
         }

@@ -53,7 +53,8 @@ constexpr int MSADPCMAdaptionCoeff[7][2] = {
     { 392, -232 }
 };
 
-void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
+
+void DecodeIMA4Block(ALshort *dst, const al::byte *src, ALint numchans, ALsizei align)
 {
     ALint sample[MAX_INPUT_CHANNELS]{};
     ALint index[MAX_INPUT_CHANNELS]{};
@@ -61,16 +62,14 @@ void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei a
 
     for(int c{0};c < numchans;c++)
     {
-        sample[c]  = *(src++);
-        sample[c] |= *(src++) << 8;
-        sample[c]  = (sample[c]^0x8000) - 32768;
-        index[c]  = *(src++);
-        index[c] |= *(src++) << 8;
-        index[c]  = (index[c]^0x8000) - 32768;
+        sample[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
+        sample[c] = (sample[c]^0x8000) - 32768;
+        src += 2;
+        index[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
+        index[c] = clampi((index[c]^0x8000) - 32768, 0, 88);
+        src += 2;
 
-        index[c] = clampi(index[c], 0, 88);
-
-        dst[c] = sample[c];
+        *(dst++) = sample[c];
     }
 
     for(int i{1};i < align;i++)
@@ -79,16 +78,15 @@ void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei a
         {
             for(int c{0};c < numchans;c++)
             {
-                code[c]  = *(src++);
-                code[c] |= *(src++) << 8;
-                code[c] |= *(src++) << 16;
-                code[c] |= *(src++) << 24;
+                code[c] = al::to_integer<ALuint>(src[0]) | (al::to_integer<ALuint>(src[1])<< 8) |
+                    (al::to_integer<ALuint>(src[2])<<16) | (al::to_integer<ALuint>(src[3])<<24);
+                src += 4;
             }
         }
 
         for(int c{0};c < numchans;c++)
         {
-            int nibble = code[c]&0xf;
+            const ALuint nibble{code[c]&0xf};
             code[c] >>= 4;
 
             sample[c] += IMA4Codeword[nibble] * IMAStep_size[index[c]] / 8;
@@ -102,7 +100,7 @@ void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei a
     }
 }
 
-void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
+void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, ALint numchans, ALsizei align)
 {
     ALubyte blockpred[MAX_INPUT_CHANNELS]{};
     ALint delta[MAX_INPUT_CHANNELS]{};
@@ -110,26 +108,26 @@ void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsize
 
     for(int c{0};c < numchans;c++)
     {
-        blockpred[c] = *(src++);
-        blockpred[c] = minu(blockpred[c], 6);
+        blockpred[c] = minu(al::to_integer<ALubyte>(src[0]), 6);
+        ++src;
     }
     for(int c{0};c < numchans;c++)
     {
-        delta[c]  = *(src++);
-        delta[c] |= *(src++) << 8;
-        delta[c]  = (delta[c]^0x8000) - 32768;
+        delta[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
+        delta[c] = (delta[c]^0x8000) - 32768;
+        src += 2;
     }
     for(int c{0};c < numchans;c++)
     {
-        samples[c][0]  = *(src++);
-        samples[c][0] |= *(src++) << 8;
-        samples[c][0]  = (samples[c][0]^0x8000) - 32768;
+        samples[c][0] = al::to_integer<short>(src[0]) | (al::to_integer<short>(src[1])<<8);
+        samples[c][0] = (samples[c][0]^0x8000) - 32768;
+        src += 2;
     }
     for(int c{0};c < numchans;c++)
     {
-        samples[c][1]  = *(src++);
-        samples[c][1] |= *(src++) << 8;
-        samples[c][1]  = (samples[c][1]^0x8000) - 0x8000;
+        samples[c][1] = al::to_integer<short>(src[0]) | (al::to_integer<short>(src[1])<<8);
+        samples[c][1] = (samples[c][1]^0x8000) - 32768;
+        src += 2;
     }
 
     /* Second sample is written first. */
@@ -138,28 +136,27 @@ void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsize
     for(int c{0};c < numchans;c++)
         *(dst++) = samples[c][0];
 
+    int num{0};
     for(int i{2};i < align;i++)
     {
         for(int c{0};c < numchans;c++)
         {
-            const ALint num{(i*numchans) + c};
-            ALint nibble, pred;
-
             /* Read the nibble (first is in the upper bits). */
-            if(!(num&1))
-                nibble = (*src>>4)&0x0f;
+            al::byte nibble;
+            if(!(num++ & 1))
+                nibble = *src >> 4;
             else
-                nibble = (*(src++))&0x0f;
+                nibble = *(src++) & 0x0f;
 
-            pred  = (samples[c][0]*MSADPCMAdaptionCoeff[blockpred[c]][0] +
-                     samples[c][1]*MSADPCMAdaptionCoeff[blockpred[c]][1]) / 256;
-            pred += ((nibble^0x08) - 0x08) * delta[c];
+            ALint pred{(samples[c][0]*MSADPCMAdaptionCoeff[blockpred[c]][0] +
+                samples[c][1]*MSADPCMAdaptionCoeff[blockpred[c]][1]) / 256};
+            pred += (al::to_integer<int>(nibble^0x08) - 0x08) * delta[c];
             pred  = clampi(pred, -32768, 32767);
 
             samples[c][1] = samples[c][0];
             samples[c][0] = pred;
 
-            delta[c] = (MSADPCMAdaption[nibble] * delta[c]) / 256;
+            delta[c] = (MSADPCMAdaption[al::to_integer<ALubyte>(nibble)] * delta[c]) / 256;
             delta[c] = maxi(16, delta[c]);
 
             *(dst++) = pred;
@@ -169,7 +166,7 @@ void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsize
 
 } // namespace
 
-void Convert_ALshort_ALima4(ALshort *dst, const ALubyte *src, ALsizei numchans, ALsizei len,
+void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, ALsizei numchans, ALsizei len,
                             ALsizei align)
 {
     const ALsizei byte_align{((align-1)/2 + 4) * numchans};
@@ -183,7 +180,7 @@ void Convert_ALshort_ALima4(ALshort *dst, const ALubyte *src, ALsizei numchans, 
     }
 }
 
-void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALubyte *src, ALsizei numchans, ALsizei len,
+void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, ALsizei numchans, ALsizei len,
                                ALsizei align)
 {
     const ALsizei byte_align{((align-2)/2 + 7) * numchans};

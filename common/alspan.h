@@ -62,8 +62,8 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     constexpr span() noexcept = default;
-    constexpr span(pointer ptr, index_type count) : mData{ptr}, mCount{count} { }
-    constexpr span(pointer first, pointer last) : mData{first}, mCount{std::distance(first, last)} { }
+    constexpr span(pointer ptr, index_type count) : mData{ptr}, mDataEnd{ptr+count} { }
+    constexpr span(pointer first, pointer last) : mData{first}, mDataEnd{last} { }
     template<size_t N>
     constexpr span(element_type (&arr)[N]) noexcept : span{al::data(arr), al::size(arr)} { }
     template<size_t N>
@@ -78,19 +78,19 @@ public:
 
     span& operator=(const span &rhs) noexcept = default;
 
-    constexpr reference front() const { return mData[0]; }
-    constexpr reference back() const { return mData[mCount-1]; }
+    constexpr reference front() const { return *mData; }
+    constexpr reference back() const { return *(mDataEnd-1); }
     constexpr reference operator[](index_type idx) const { return mData[idx]; }
     constexpr pointer data() const noexcept { return mData; }
 
-    constexpr index_type size() const noexcept { return mCount; }
-    constexpr index_type size_bytes() const noexcept { return mCount * sizeof(value_type); }
-    constexpr bool empty() const noexcept { return mCount == 0; }
+    constexpr index_type size() const noexcept { return mDataEnd-mData; }
+    constexpr index_type size_bytes() const noexcept { return (mDataEnd-mData) * sizeof(value_type); }
+    constexpr bool empty() const noexcept { return mData == mDataEnd; }
 
     constexpr iterator begin() const noexcept { return mData; }
-    constexpr iterator end() const noexcept { return mData + mCount; }
+    constexpr iterator end() const noexcept { return mDataEnd; }
     constexpr const_iterator cbegin() const noexcept { return mData; }
-    constexpr const_iterator cend() const noexcept { return mData + mCount; }
+    constexpr const_iterator cend() const noexcept { return mDataEnd; }
 
     constexpr reverse_iterator rbegin() const noexcept { return end(); }
     constexpr reverse_iterator rend() const noexcept { return begin(); }
@@ -99,7 +99,7 @@ public:
 
 private:
     pointer mData{nullptr};
-    index_type mCount{0u};
+    pointer mDataEnd{nullptr};
 };
 
 } // namespace al

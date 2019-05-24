@@ -639,6 +639,7 @@ ENDIF()
 # Common sources used by both the OpenAL implementation library and potentially
 # the OpenAL router.
 SET(COMMON_OBJS
+    common/albyte.h
     common/alcomplex.cpp
     common/alcomplex.h
     common/alexcpt.cpp

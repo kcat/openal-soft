@@ -288,7 +288,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
         newsize = (newsize+15) & ~0xf;
     if(newsize != ALBuf->BytesAlloc)
     {
-        al::vector<ALbyte,16> newdata(newsize);
+        al::vector<al::byte,16> newdata(newsize);
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
             ALsizei tocopy{std::min(newsize, ALBuf->BytesAlloc)};
@@ -318,7 +318,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     {
         assert(static_cast<long>(SrcType) == static_cast<long>(DstType));
         if(data != nullptr && !ALBuf->mData.empty())
-            std::copy_n(static_cast<const ALbyte*>(data), frames*FrameSize, ALBuf->mData.begin());
+            std::copy_n(static_cast<const al::byte*>(data), frames*FrameSize,
+                ALBuf->mData.begin());
         ALBuf->OriginalAlign = 1;
     }
     ALBuf->OriginalSize = size;

@@ -271,17 +271,17 @@ template<> inline ALfloat LoadSample<FmtAlaw>(FmtTypeTraits<FmtAlaw>::Type val)
 { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 
 template<FmtType T>
-inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcstep,
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep,
     const ptrdiff_t samples)
 {
     using SampleType = typename FmtTypeTraits<T>::Type;
 
-    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    const SampleType *RESTRICT ssrc{reinterpret_cast<const SampleType*>(src)};
     for(ALsizei i{0};i < samples;i++)
         dst[i] += LoadSample<T>(ssrc[i*srcstep]);
 }
 
-void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep, FmtType srctype,
+void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtType srctype,
     const ptrdiff_t samples)
 {
 #define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -327,7 +327,7 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
             const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
             CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
-            const ALbyte *Data{buffer->mData.data()};
+            const al::byte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
             LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
@@ -353,7 +353,7 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
             const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
             CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
-            const ALbyte *Data{buffer->mData.data()};
+            const al::byte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
             LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
@@ -379,7 +379,7 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
                     buffer->SampleLen-LoopStart)};
                 CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
-                const ALbyte *Data{buffer->mData.data()};
+                const al::byte *Data{buffer->mData.data()};
                 Data += (LoopStart*NumChannels + chan)*SampleSize;
 
                 LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
@@ -418,7 +418,7 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
             const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
             CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
 
-            const ALbyte *Data{buffer->mData.data()};
+            const al::byte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
             LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);

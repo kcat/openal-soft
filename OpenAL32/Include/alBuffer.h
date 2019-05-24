@@ -8,6 +8,7 @@
 #include "inprogext.h"
 #include "atomic.h"
 #include "vector.h"
+#include "albyte.h"
 
 
 /* User formats */
@@ -86,7 +87,7 @@ inline ALsizei FrameSizeFromFmt(FmtChannels chans, FmtType type)
 
 
 struct ALbuffer {
-    al::vector<ALbyte,16> mData;
+    al::vector<al::byte,16> mData;
 
     ALsizei Frequency{0};
     ALbitfieldSOFT Access{0u};

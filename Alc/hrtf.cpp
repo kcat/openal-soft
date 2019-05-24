@@ -673,12 +673,12 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     /* Mirror the left ear responses to the right ear. */
     for(ALsizei i{0};i < evCount;i++)
     {
-        ALushort evoffset = evOffset[i];
-        ALubyte azcount = azCount[i];
+        const ALushort evoffset{evOffset[i]};
+        const ALushort azcount{azCount[i]};
         for(ALsizei j{0};j < azcount;j++)
         {
-            ALsizei lidx = evoffset + j;
-            ALsizei ridx = evoffset + ((azcount-j) % azcount);
+            const ALsizei lidx{evoffset + j};
+            const ALsizei ridx{evoffset + ((azcount-j) % azcount)};
 
             for(ALsizei k{0};k < irSize;k++)
                 coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
@@ -772,12 +772,12 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
     /* Mirror the left ear responses to the right ear. */
     for(ALsizei i{0};i < evCount;i++)
     {
-        ALushort evoffset = evOffset[i];
-        ALubyte azcount = azCount[i];
+        const ALushort evoffset{evOffset[i]};
+        const ALushort azcount{azCount[i]};
         for(ALsizei j{0};j < azcount;j++)
         {
-            ALsizei lidx = evoffset + j;
-            ALsizei ridx = evoffset + ((azcount-j) % azcount);
+            const ALsizei lidx{evoffset + j};
+            const ALsizei ridx{evoffset + ((azcount-j) % azcount)};
 
             for(ALsizei k{0};k < irSize;k++)
                 coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
@@ -983,12 +983,12 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
         {
             for(ALsizei e{0};e < evCount[f];e++)
             {
-                ALushort evoffset = evOffset[ebase+e];
-                ALubyte azcount = azCount[ebase+e];
+                const ALushort evoffset{evOffset[ebase+e]};
+                const ALushort azcount{azCount[ebase+e]};
                 for(ALsizei a{0};a < azcount;a++)
                 {
-                    ALsizei lidx = evoffset + a;
-                    ALsizei ridx = evoffset + ((azcount-a) % azcount);
+                    const ALsizei lidx{evoffset + a};
+                    const ALsizei ridx{evoffset + ((azcount-a) % azcount)};
 
                     for(ALsizei k{0};k < irSize;k++)
                         coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
@@ -1023,7 +1023,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
             azcnt_end = std::copy_backward(azcnt_src, azcnt_src+num_evs, azcnt_end);
             return ebase + num_evs;
         };
-        std::accumulate(evCount.cbegin(), evCount.cend(), 0u, copy_azs);
+        std::accumulate(evCount.cbegin(), evCount.cend(), size_t{0u}, copy_azs);
         assert(azCount_.begin() == azcnt_end);
 
         /* Reestablish the IR offset for each elevation index, given the new
@@ -1048,7 +1048,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
 
             return ebase + num_evs;
         };
-        std::accumulate(evCount.cbegin(), evCount.cend(), 0u, copy_irs);
+        std::accumulate(evCount.cbegin(), evCount.cend(), size_t{0u}, copy_irs);
         assert(coeffs_.begin() == coeffs_end);
         assert(delays_.begin() == delays_end);
 

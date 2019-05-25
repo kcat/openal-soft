@@ -113,9 +113,6 @@ using BiquadFilter = BiquadFilterR<float>;
 inline float calc_rcpQ_from_slope(float gain, float slope)
 { return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
 
-inline double calc_rcpQ_from_slope(double gain, double slope)
-{ return std::sqrt((gain + 1.0/gain)*(1.0/slope - 1.0) + 2.0); }
-
 /**
  * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the normalized
  * reference frequency and bandwidth.
@@ -126,12 +123,6 @@ inline float calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
 {
     const float w0{al::MathDefs<float>::Tau() * f0norm};
     return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
-}
-
-inline double calc_rcpQ_from_bandwidth(double f0norm, double bandwidth)
-{
-    const double w0{al::MathDefs<double>::Tau() * f0norm};
-    return 2.0*std::sinh(std::log(2.0)/2.0*bandwidth*w0/std::sin(w0));
 }
 
 #endif /* FILTERS_BIQUAD_H */

@@ -280,8 +280,7 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
         const ALfloat mult{blend[c]};
         auto blend_coeffs = [mult](const ALfloat src, const ALfloat coeff) noexcept -> ALfloat
         { return src*mult + coeff; };
-        std::transform<const ALfloat*RESTRICT>(srccoeffs, srccoeffs + irSize*2, coeffout,
-            coeffout, blend_coeffs);
+        std::transform(srccoeffs, srccoeffs + irSize*2, coeffout, coeffout, blend_coeffs);
     }
 }
 

@@ -12,13 +12,15 @@
 #include "hrtfbase.h"
 
 
-static inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei) noexcept
+namespace {
+
+inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei) noexcept
 { return vals[0]; }
-static inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
+inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
+inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
 { return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
+inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
 {
     ASSUME(istate.bsinc.m > 0);
 
@@ -42,9 +44,8 @@ static inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRIC
 
 using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALsizei);
 template<SamplerT &Sampler>
-static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
-                                 ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
-                                 ALsizei numsamples)
+const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
+    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei numsamples)
 {
     ASSUME(numsamples > 0);
     ASSUME(increment > 0);
@@ -61,11 +62,12 @@ static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRI
 
         return ret;
     };
-    std::generate_n<ALfloat*RESTRICT>(dst, numsamples, proc_sample);
+    std::generate_n(dst, numsamples, proc_sample);
 
     return dst;
 }
 
+} // namespace
 
 template<>
 const ALfloat *Resample_<CopyTag,CTag>(const InterpState* UNUSED(state),

@@ -1476,9 +1476,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 }
 
 
-void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFERSIZE],
-                    int lidx, int ridx, int cidx, const ALsizei SamplesToDo,
-                    const ALsizei NumChannels)
+void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*Buffer)[BUFFERSIZE], const int lidx,
+    const int ridx, const int cidx, const ALsizei SamplesToDo, const ALsizei NumChannels)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(NumChannels > 0);
@@ -1506,7 +1505,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
         }
     }
 
-    SplitterAllpass &APFilter = Stablizer->APFilter;
+    const SplitterAllpass &APFilter = Stablizer->APFilter;
     ALfloat (&lsplit)[2][BUFFERSIZE] = Stablizer->LSplit;
     ALfloat (&rsplit)[2][BUFFERSIZE] = Stablizer->RSplit;
     auto &tmpbuf = Stablizer->TempBuf;
@@ -1514,7 +1513,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
     /* This applies the band-splitter, preserving phase at the cost of some
      * delay. The shorter the delay, the more error seeps into the result.
      */
-    auto apply_splitter = [&APFilter,&tmpbuf,SamplesToDo](const ALfloat *RESTRICT Buffer,
+    auto apply_splitter = [&APFilter,&tmpbuf,SamplesToDo](const ALfloat *Buffer,
         ALfloat (&DelayBuf)[FrontStablizer::DelayLength], BandSplitter &Filter,
         ALfloat (&splitbuf)[2][BUFFERSIZE]) -> void
     {
@@ -1665,24 +1664,24 @@ template<> inline ALubyte SampleConv(ALfloat val) noexcept
 { return SampleConv<ALbyte>(val) + 128; }
 
 template<DevFmtType T>
-void Write(const ALfloat (*InBuffer)[BUFFERSIZE], ALvoid *OutBuffer, ALsizei Offset,
-           ALsizei SamplesToDo, ALsizei numchans)
+void Write(const ALfloat (*InBuffer)[BUFFERSIZE], ALvoid *OutBuffer, const ALsizei Offset,
+    const ALsizei SamplesToDo, const ALsizei numchans)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
+    ASSUME(Offset >= 0);
     ASSUME(numchans > 0);
     SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*numchans;
     auto conv_channel = [&outbase,SamplesToDo,numchans](const ALfloat *inbuf) -> void
     {
         ASSUME(SamplesToDo > 0);
         SampleType *out{outbase++};
-        std::for_each<const ALfloat*RESTRICT>(inbuf, inbuf+SamplesToDo,
-            [numchans,&out](const ALfloat s) noexcept -> void
-            {
-                *out = SampleConv<SampleType>(s);
-                out += numchans;
-            }
-        );
+        auto conv_sample = [numchans,&out](const ALfloat s) noexcept -> void
+        {
+            *out = SampleConv<SampleType>(s);
+            out += numchans;
+        };
+        std::for_each(inbuf, inbuf+SamplesToDo, conv_sample);
     };
     std::for_each(InBuffer, InBuffer+numchans, conv_channel);
 }

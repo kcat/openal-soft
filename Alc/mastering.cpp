@@ -464,11 +464,7 @@ void Compressor::process(const ALsizei SamplesToDo, ALfloat (*OutBuffer)[BUFFERS
     {
         ALfloat *buffer{al::assume_aligned<16>(input)};
         const ALfloat *gains{al::assume_aligned<16>(&sideChain[0])};
-        /* Mark the gains "input-1 type" as restrict, so the compiler can
-         * vectorize this loop (otherwise it assumes a write to buffer[n] can
-         * change gains[n+1]).
-         */
-        std::transform<const ALfloat*RESTRICT>(gains, gains+SamplesToDo, buffer, buffer,
+        std::transform(gains, gains+SamplesToDo, buffer, buffer,
             std::bind(std::multiplies<float>{}, _1, _2));
     };
     std::for_each(OutBuffer, OutBuffer+numChans, apply_comp);

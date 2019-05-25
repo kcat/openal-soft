@@ -44,28 +44,37 @@ enum class WaveForm {
     Triangle
 };
 
-void GetTriangleDelays(ALint *delays, ALsizei offset, ALsizei lfo_range, ALfloat lfo_scale,
-                       ALfloat depth, ALsizei delay, ALsizei todo)
+void GetTriangleDelays(ALint *delays, const ALsizei start_offset, const ALsizei lfo_range,
+    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const ALsizei todo)
 {
-    std::generate_n<ALint*RESTRICT>(delays, todo,
-        [&offset,lfo_range,lfo_scale,depth,delay]() -> ALint
-        {
-            offset = (offset+1)%lfo_range;
-            return fastf2i((1.0f - std::abs(2.0f - lfo_scale*offset)) * depth) + delay;
-        }
-    );
+    ASSUME(start_offset >= 0);
+    ASSUME(lfo_range > 0);
+    ASSUME(todo > 0);
+
+    ALsizei offset{start_offset};
+    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALint
+    {
+        offset = (offset+1)%lfo_range;
+        return fastf2i((1.0f - std::abs(2.0f - lfo_scale*offset)) * depth) + delay;
+    };
+    std::generate_n(delays, todo, gen_lfo);
 }
 
-void GetSinusoidDelays(ALint *delays, ALsizei offset, ALsizei lfo_range, ALfloat lfo_scale,
-                       ALfloat depth, ALsizei delay, ALsizei todo)
+void GetSinusoidDelays(ALint *delays, const ALsizei start_offset, const ALsizei lfo_range,
+    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const ALsizei todo)
 {
-    std::generate_n<ALint*RESTRICT>(delays, todo,
-        [&offset,lfo_range,lfo_scale,depth,delay]() -> ALint
-        {
-            offset = (offset+1)%lfo_range;
-            return fastf2i(std::sin(lfo_scale*offset) * depth) + delay;
-        }
-    );
+    ASSUME(start_offset >= 0);
+    ASSUME(lfo_range > 0);
+    ASSUME(todo > 0);
+
+    ALsizei offset{start_offset};
+    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALint
+    {
+        ASSUME(delay >= 0);
+        offset = (offset+1)%lfo_range;
+        return fastf2i(std::sin(lfo_scale*offset) * depth) + delay;
+    };
+    std::generate_n(delays, todo, gen_lfo);
 }
 
 struct ChorusState final : public EffectState {

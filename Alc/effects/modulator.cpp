@@ -128,7 +128,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
-        calc_rcpQ_from_bandwidth(f0norm, 0.75f));
+        BiquadFilter::rcpQFromBandwidth(f0norm, 0.75f));
     for(ALsizei i{1};i < slot->Wet.NumChannels;++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 

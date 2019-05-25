@@ -79,15 +79,13 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
      */
     auto frequency = static_cast<ALfloat>(device->Frequency);
     mLowpass.setParams(BiquadType::LowPass, 1.0f, cutoff / (frequency*4.0f),
-        calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
-    );
+        mLowpass.rcpQFromBandwidth(cutoff / (frequency*4.0f), bandwidth));
 
     cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
     mBandpass.setParams(BiquadType::BandPass, 1.0f, cutoff / (frequency*4.0f),
-        calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
-    );
+        mBandpass.rcpQFromBandwidth(cutoff / (frequency*4.0f), bandwidth));
 
     ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);

@@ -705,9 +705,9 @@ void T60Filter::calcCoeffs(const ALfloat length, const ALfloat lfDecayTime,
 
     MidGain[1] = mfGain;
     LFFilter.setParams(BiquadType::LowShelf, lfGain/mfGain, lf0norm,
-        calc_rcpQ_from_slope(lfGain/mfGain, 1.0f));
+        LFFilter.rcpQFromSlope(lfGain/mfGain, 1.0f));
     HFFilter.setParams(BiquadType::HighShelf, hfGain/mfGain, hf0norm,
-        calc_rcpQ_from_slope(hfGain/mfGain, 1.0f));
+        HFFilter.rcpQFromSlope(hfGain/mfGain, 1.0f));
 }
 
 /* Update the early reflection line lengths and gain coefficients. */
@@ -916,11 +916,11 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
      */
     ALfloat gainhf{maxf(props->Reverb.GainHF, 0.001f)};
     mFilter[0].Lp.setParams(BiquadType::HighShelf, gainhf, hf0norm,
-        calc_rcpQ_from_slope(gainhf, 1.0f));
+        mFilter[0].Lp.rcpQFromSlope(gainhf, 1.0f));
     ALfloat lf0norm{minf(props->Reverb.LFReference / frequency, 0.49f)};
     ALfloat gainlf{maxf(props->Reverb.GainLF, 0.001f)};
     mFilter[0].Hp.setParams(BiquadType::LowShelf, gainlf, lf0norm,
-        calc_rcpQ_from_slope(gainlf, 1.0f));
+        mFilter[0].Hp.rcpQFromSlope(gainlf, 1.0f));
     for(ALsizei i{1};i < NUM_LINES;i++)
     {
         mFilter[i].Lp.copyParamsFrom(mFilter[0].Lp);

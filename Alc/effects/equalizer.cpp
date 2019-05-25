@@ -123,22 +123,22 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
     mChans[0].filter[0].setParams(BiquadType::LowShelf, gain, f0norm,
-        calc_rcpQ_from_slope(gain, 0.75f));
+        BiquadFilter::rcpQFromSlope(gain, 0.75f));
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
     mChans[0].filter[1].setParams(BiquadType::Peaking, gain, f0norm,
-        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid1Width));
+        BiquadFilter::rcpQFromBandwidth(f0norm, props->Equalizer.Mid1Width));
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
     mChans[0].filter[2].setParams(BiquadType::Peaking, gain, f0norm,
-        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid2Width));
+        BiquadFilter::rcpQFromBandwidth(f0norm, props->Equalizer.Mid2Width));
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
     mChans[0].filter[3].setParams(BiquadType::HighShelf, gain, f0norm,
-        calc_rcpQ_from_slope(gain, 0.75f));
+        BiquadFilter::rcpQFromSlope(gain, 0.75f));
 
     /* Copy the filter coefficients for the other input channels. */
     for(ALsizei i{1};i < slot->Wet.NumChannels;++i)

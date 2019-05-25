@@ -57,8 +57,8 @@ public:
      *               BandPass filter types, or the cutoff frequency for the
      *               LowPass and HighPass filter types.
      * \param rcpQ The reciprocal of the Q coefficient for the filter's
-     *             transition band. Can be generated from calc_rcpQ_from_slope
-     *             or calc_rcpQ_from_bandwidth as needed.
+     *             transition band. Can be generated from rcpQFromSlope or
+     *             rcpQFromBandwidth as needed.
      */
     void setParams(BiquadType type, Real gain, Real f0norm, Real rcpQ);
 
@@ -100,29 +100,29 @@ public:
         z2_ = in*b2 - out*a2;
         return out;
     }
+
+    /**
+     * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using
+     * the reference gain and shelf slope parameter.
+     * \param gain 0 < gain
+     * \param slope 0 < slope <= 1
+     */
+    static Real rcpQFromSlope(Real gain, Real slope)
+    { return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
+
+    /**
+     * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the
+     * normalized reference frequency and bandwidth.
+     * \param f0norm 0 < f0norm < 0.5.
+     * \param bandwidth 0 < bandwidth
+     */
+    static Real rcpQFromBandwidth(Real f0norm, Real bandwidth)
+    {
+        const Real w0{al::MathDefs<Real>::Tau() * f0norm};
+        return 2.0f*std::sinh(std::log(Real{2.0f})/2.0f*bandwidth*w0/std::sin(w0));
+    }
 };
 
 using BiquadFilter = BiquadFilterR<float>;
-
-/**
- * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
- * reference gain and shelf slope parameter.
- * \param gain 0 < gain
- * \param slope 0 < slope <= 1
- */
-inline float calc_rcpQ_from_slope(float gain, float slope)
-{ return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
-
-/**
- * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the normalized
- * reference frequency and bandwidth.
- * \param f0norm 0 < f0norm < 0.5.
- * \param bandwidth 0 < bandwidth
- */
-inline float calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
-{
-    const float w0{al::MathDefs<float>::Tau() * f0norm};
-    return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
-}
 
 #endif /* FILTERS_BIQUAD_H */

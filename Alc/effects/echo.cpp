@@ -102,7 +102,7 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
 
     const ALfloat gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParams(BiquadType::HighShelf, gainhf, LOWPASSFREQREF/frequency,
-        calc_rcpQ_from_slope(gainhf, 1.0f));
+        mFilter.rcpQFromSlope(gainhf, 1.0f));
 
     mFeedGain = props->Echo.Feedback;
 

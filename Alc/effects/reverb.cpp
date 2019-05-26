@@ -512,7 +512,7 @@ bool ReverbState::allocLines(const ALfloat frequency)
      */
     ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
         AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
-        (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())*0.25f*multiplier};
+        (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())/float{LATE_LINE_LENGTHS.size()}*multiplier};
     totalSamples += CalcLineLength(length, totalSamples, frequency, BUFFERSIZE, &mDelay);
 
     /* The early vector all-pass line. */
@@ -750,7 +750,7 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
 
     const ALfloat late_allpass_avg{
         std::accumulate(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
-        static_cast<float>(LATE_ALLPASS_LENGTHS.size())};
+        float{LATE_ALLPASS_LENGTHS.size()}};
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -762,7 +762,7 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
      */
     const ALfloat multiplier{CalcDelayLengthMult(density)};
     ALfloat length{std::accumulate(LATE_LINE_LENGTHS.begin(), LATE_LINE_LENGTHS.end(), 0.0f) /
-        static_cast<float>(LATE_LINE_LENGTHS.size()) * multiplier};
+        float{LATE_LINE_LENGTHS.size()} * multiplier};
     length += late_allpass_avg * multiplier;
     /* The density gain calculation uses an average decay time weighted by
      * approximate bandwidth. This attempts to compensate for losses of energy
@@ -831,7 +831,8 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
         length = EARLY_TAP_LENGTHS[i]*multiplier;
         mEarlyDelayCoeff[i][1] = CalcDecayCoeff(length, decayTime);
 
-        length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front())*0.25f*multiplier;
+        length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front()) /
+            float{LATE_LINE_LENGTHS.size()} * multiplier;
         mLateDelayTap[i][1] = mLateFeedTap + float2int(length * frequency);
     }
 }
@@ -1045,12 +1046,10 @@ inline void VectorPartialScatter(ALfloat *RESTRICT out, const ALfloat *RESTRICT 
 }
 
 /* Utilizes the above, but reverses the input channels. */
-inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
-    const ALfloat xCoeff, const ALfloat yCoeff, const ALsizei base,
-    const ALfloat (*RESTRICT in)[BUFFERSIZE], const ALsizei count)
+void VectorScatterRevDelayIn(const DelayLineI delay, ALint offset, const ALfloat xCoeff,
+    const ALfloat yCoeff, const ALsizei base, const ALfloat (*RESTRICT in)[BUFFERSIZE],
+    const ALsizei count)
 {
-    const DelayLineI delay{*Delay};
-
     ASSUME(base >= 0);
     ASSUME(count > 0);
 
@@ -1247,7 +1246,7 @@ void EarlyReflection_Unfaded(ReverbState *State, const ALsizei offset, const ALs
      * bounce to improve the initial diffusion in the late reverb.
      */
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, out, todo);
 }
 void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALfloat fade, const ALsizei base, ALfloat (*RESTRICT out)[BUFFERSIZE])
@@ -1318,7 +1317,7 @@ void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsiz
         early_delay.write(offset, NUM_LINES-1-j, temps[j], todo);
 
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, out, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1380,7 +1379,7 @@ void LateReverb_Unfaded(ReverbState *State, const ALsizei offset, const ALsizei 
         std::copy_n(temps[j], todo, out[j]+base);
 
     /* Finally, scatter and bounce the results to refeed the feedback buffer. */
-    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base, out, todo);
 }
 void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALfloat fade, const ALsizei base, ALfloat (*RESTRICT out)[BUFFERSIZE])
@@ -1440,7 +1439,7 @@ void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei to
     for(ALsizei j{0};j < NUM_LINES;j++)
         std::copy_n(temps[j], todo, out[j]+base);
 
-    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base, out, todo);
 }
 
 void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)

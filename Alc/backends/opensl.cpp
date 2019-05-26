@@ -80,7 +80,7 @@ SLuint32 GetChannelMask(DevFmtChannels chans)
     return 0;
 }
 
-#ifdef SL_DATAFORMAT_PCM_EX
+#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
 SLuint32 GetTypeRepresentation(DevFmtType type)
 {
     switch(type)
@@ -88,13 +88,13 @@ SLuint32 GetTypeRepresentation(DevFmtType type)
         case DevFmtUByte:
         case DevFmtUShort:
         case DevFmtUInt:
-            return SL_PCM_REPRESENTATION_UNSIGNED_INT;
+            return SL_ANDROID_PCM_REPRESENTATION_UNSIGNED_INT;
         case DevFmtByte:
         case DevFmtShort:
         case DevFmtInt:
-            return SL_PCM_REPRESENTATION_SIGNED_INT;
+            return SL_ANDROID_PCM_REPRESENTATION_SIGNED_INT;
         case DevFmtFloat:
-            return SL_PCM_REPRESENTATION_FLOAT;
+            return SL_ANDROID_PCM_REPRESENTATION_FLOAT;
     }
     return 0;
 }
@@ -440,9 +440,9 @@ ALCboolean OpenSLPlayback::reset()
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
     loc_bufq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
 
-#ifdef SL_DATAFORMAT_PCM_EX
-    SLDataFormat_PCM_EX format_pcm;
-    format_pcm.formatType = SL_DATAFORMAT_PCM_EX;
+#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
+    SLAndroidDataFormat_PCM_EX format_pcm{};
+    format_pcm.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
     format_pcm.numChannels = mDevice->channelsFromFmt();
     format_pcm.sampleRate = mDevice->Frequency * 1000;
     format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
@@ -452,7 +452,7 @@ ALCboolean OpenSLPlayback::reset()
                                                SL_BYTEORDER_BIGENDIAN;
     format_pcm.representation = GetTypeRepresentation(mDevice->FmtType);
 #else
-    SLDataFormat_PCM format_pcm;
+    SLDataFormat_PCM format_pcm{};
     format_pcm.formatType = SL_DATAFORMAT_PCM;
     format_pcm.numChannels = mDevice->channelsFromFmt();
     format_pcm.samplesPerSec = mDevice->Frequency * 1000;
@@ -721,9 +721,9 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
         loc_bq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
         loc_bq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
 
-#ifdef SL_DATAFORMAT_PCM_EX
-        SLDataFormat_PCM_EX format_pcm{};
-        format_pcm.formatType = SL_DATAFORMAT_PCM_EX;
+#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
+        SLAndroidDataFormat_PCM_EX format_pcm{};
+        format_pcm.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
         format_pcm.numChannels = mDevice->channelsFromFmt();
         format_pcm.sampleRate = mDevice->Frequency * 1000;
         format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;

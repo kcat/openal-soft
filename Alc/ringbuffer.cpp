@@ -63,7 +63,7 @@ void RingBuffer::reset() noexcept
 {
     mWritePtr.store(0, std::memory_order_relaxed);
     mReadPtr.store(0, std::memory_order_relaxed);
-    std::fill_n(mBuffer, (mSizeMask+1)*mElemSize, 0);
+    std::fill_n(mBuffer, (mSizeMask+1)*mElemSize, al::byte{});
 }
 
 
@@ -107,7 +107,7 @@ size_t RingBuffer::read(void *dest, size_t cnt) noexcept
     read_ptr += n1;
     if(n2 > 0)
     {
-        memcpy(static_cast<char*>(dest) + n1*mElemSize, mBuffer, n2*mElemSize);
+        memcpy(static_cast<al::byte*>(dest) + n1*mElemSize, mBuffer, n2*mElemSize);
         read_ptr += n2;
     }
     mReadPtr.store(read_ptr, std::memory_order_release);
@@ -137,7 +137,7 @@ size_t RingBuffer::peek(void *dest, size_t cnt) const noexcept
 
     memcpy(dest, mBuffer + read_ptr*mElemSize, n1*mElemSize);
     if(n2 > 0)
-        memcpy(static_cast<char*>(dest) + n1*mElemSize, mBuffer, n2*mElemSize);
+        memcpy(static_cast<al::byte*>(dest) + n1*mElemSize, mBuffer, n2*mElemSize);
     return to_read;
 }
 
@@ -166,7 +166,7 @@ size_t RingBuffer::write(const void *src, size_t cnt) noexcept
     write_ptr += n1;
     if(n2 > 0)
     {
-        memcpy(mBuffer, static_cast<const char*>(src) + n1*mElemSize, n2*mElemSize);
+        memcpy(mBuffer, static_cast<const al::byte*>(src) + n1*mElemSize, n2*mElemSize);
         write_ptr += n2;
     }
     mWritePtr.store(write_ptr, std::memory_order_release);
@@ -200,15 +200,15 @@ ll_ringbuffer_data_pair RingBuffer::getReadVector() const noexcept
     {
         /* Two part vector: the rest of the buffer after the current read ptr,
          * plus some from the start of the buffer. */
-        ret.first.buf = const_cast<char*>(&mBuffer[r*mElemSize]);
+        ret.first.buf = const_cast<al::byte*>(&mBuffer[r*mElemSize]);
         ret.first.len = mSizeMask+1 - r;
-        ret.second.buf = const_cast<char*>(mBuffer);
+        ret.second.buf = const_cast<al::byte*>(mBuffer);
         ret.second.len = cnt2 & mSizeMask;
     }
     else
     {
         /* Single part vector: just the rest of the buffer */
-        ret.first.buf = const_cast<char*>(&mBuffer[r*mElemSize]);
+        ret.first.buf = const_cast<al::byte*>(&mBuffer[r*mElemSize]);
         ret.first.len = free_cnt;
         ret.second.buf = nullptr;
         ret.second.len = 0;
@@ -232,14 +232,14 @@ ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
-        ret.first.buf = const_cast<char*>(&mBuffer[w*mElemSize]);
+        ret.first.buf = const_cast<al::byte*>(&mBuffer[w*mElemSize]);
         ret.first.len = mSizeMask+1 - w;
-        ret.second.buf = const_cast<char*>(mBuffer);
+        ret.second.buf = const_cast<al::byte*>(mBuffer);
         ret.second.len = cnt2 & mSizeMask;
     }
     else
     {
-        ret.first.buf = const_cast<char*>(&mBuffer[w*mElemSize]);
+        ret.first.buf = const_cast<al::byte*>(&mBuffer[w*mElemSize]);
         ret.first.len = free_cnt;
         ret.second.buf = nullptr;
         ret.second.len = 0;

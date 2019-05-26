@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include "albyte.h"
 #include "almalloc.h"
 
 
@@ -17,7 +18,7 @@
  */
 
 struct ll_ringbuffer_data {
-    char *buf;
+    al::byte *buf;
     size_t len;
 };
 using ll_ringbuffer_data_pair = std::pair<ll_ringbuffer_data,ll_ringbuffer_data>;
@@ -30,7 +31,7 @@ struct RingBuffer {
     size_t mSizeMask{0u};
     size_t mElemSize{0u};
 
-    alignas(16) char mBuffer[];
+    alignas(16) al::byte mBuffer[];
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
     void reset() noexcept;

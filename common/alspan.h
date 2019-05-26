@@ -97,6 +97,17 @@ public:
     constexpr const_reverse_iterator crbegin() const noexcept { return cend(); }
     constexpr const_reverse_iterator crend() const noexcept { return cbegin(); }
 
+    constexpr span first(size_t count) const
+    { return (count >= size()) ? *this : span{mData, mData+count}; }
+    constexpr span last(size_t count) const
+    { return (count >= size()) ? *this : span{mDataEnd-count, mDataEnd}; }
+    constexpr span subspan(size_t offset, size_t count=static_cast<size_t>(-1)) const
+    {
+        return (offset >= size()) ? span{} :
+            (count >= size()-offset) ? last(count) :
+            span{mData+offset, mData+offset+count};
+    }
+
 private:
     pointer mData{nullptr};
     pointer mDataEnd{nullptr};

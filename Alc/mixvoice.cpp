@@ -42,9 +42,10 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "ringbuffer.h"
-
 #include "cpu_caps.h"
 #include "mixer/defs.h"
+
+#include "alspan.h"
 
 
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
@@ -600,7 +601,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         /* +1 to get the src sample count, include padding. */
         DataSize64 += 1 + MAX_RESAMPLE_PADDING*2;
 
-        auto SrcBufferSize = static_cast<ALsizei>(
+        auto SrcBufferSize = static_cast<ALuint>(
             mini64(DataSize64, BUFFERSIZE + MAX_RESAMPLE_PADDING*2 + 1));
         if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLE_PADDING*2)
         {
@@ -622,26 +623,25 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            auto &SrcData = Device->SourceData;
+            const al::span<ALfloat> SrcData{Device->SourceData, SrcBufferSize};
 
             /* Load the previous samples into the source data first, and clear the rest. */
             auto srciter = std::copy_n(voice->mResampleData[chan].mPrevSamples.begin(),
-                MAX_RESAMPLE_PADDING, std::begin(SrcData));
-            std::fill(srciter, std::end(SrcData), 0.0f);
+                MAX_RESAMPLE_PADDING, SrcData.begin());
+            std::fill(srciter, SrcData.end(), 0.0f);
 
-            auto srcdata_end = std::begin(SrcData) + SrcBufferSize;
             if(UNLIKELY(!BufferListItem))
                 srciter = std::copy(
                     voice->mResampleData[chan].mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
                     voice->mResampleData[chan].mPrevSamples.end(), srciter);
             else if(isstatic)
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
-                    SampleSize, chan, DataPosInt, srciter, srcdata_end);
+                    SampleSize, chan, DataPosInt, srciter, SrcData.end());
             else
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
-                    SampleSize, chan, DataPosInt, srciter, srcdata_end);
+                    SampleSize, chan, DataPosInt, srciter, SrcData.end());
 
-            if(UNLIKELY(srciter != srcdata_end))
+            if(UNLIKELY(srciter != SrcData.end()))
             {
                 /* If the source buffer wasn't filled, copy the last sample for
                  * the remaining buffer. Ideally it should have ended with
@@ -649,7 +649,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                  * from sudden amplitude changes.
                  */
                 const ALfloat sample{*(srciter-1)};
-                std::fill(srciter, srcdata_end, sample);
+                std::fill(srciter, SrcData.end(), sample);
             }
 
             /* Store the last source samples used for next time. */
@@ -665,9 +665,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             {
                 const ALfloat hfscale{voice->mResampleData[chan].mAmbiScale};
                 /* Beware the evil const_cast. It's safe since it's pointing to
-                 * either SrcData or Device->ResampledData (both non-const),
-                 * but the resample method takes its input as const float* and
-                 * may return it without copying to output, making it currently
+                 * either SourceData or ResampledData (both non-const), but the
+                 * resample method takes the source as const float* and may
+                 * return it without copying to output, making it currently
                  * unavoidable.
                  */
                 voice->mResampleData[chan].mAmbiSplitter.applyHfScale(

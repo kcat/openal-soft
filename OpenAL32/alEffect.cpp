@@ -320,11 +320,17 @@ START_API_FUNC
     {
         if(param == AL_EFFECT_TYPE)
         {
-            ALboolean isOk = (value == AL_EFFECT_NULL);
-            for(size_t i{0u};!isOk && i < countof(gEffectList);i++)
+            ALboolean isOk{value == AL_EFFECT_NULL};
+            if(!isOk)
             {
-                if(value == gEffectList[i].val && !DisabledEffects[gEffectList[i].type])
-                    isOk = AL_TRUE;
+                for(const EffectList &effectitem : gEffectList)
+                {
+                    if(value == effectitem.val && !DisabledEffects[effectitem.type])
+                    {
+                        isOk = AL_TRUE;
+                        break;
+                    }
+                }
             }
 
             if(isOk)
@@ -669,8 +675,6 @@ static const struct {
 
 void LoadReverbPreset(const char *name, ALeffect *effect)
 {
-    size_t i;
-
     if(strcasecmp(name, "NONE") == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
@@ -684,15 +688,15 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
         InitEffectParams(effect, AL_EFFECT_NULL);
-    for(i = 0;i < COUNTOF(reverblist);i++)
+    for(const auto &reverbitem : reverblist)
     {
         const EFXEAXREVERBPROPERTIES *props;
 
-        if(strcasecmp(name, reverblist[i].name) != 0)
+        if(strcasecmp(name, reverbitem.name) != 0)
             continue;
 
-        TRACE("Loading reverb '%s'\n", reverblist[i].name);
-        props = &reverblist[i].props;
+        TRACE("Loading reverb '%s'\n", reverbitem.name);
+        props = &reverbitem.props;
         effect->Props.Reverb.Density   = props->flDensity;
         effect->Props.Reverb.Diffusion = props->flDiffusion;
         effect->Props.Reverb.Gain   = props->flGain;

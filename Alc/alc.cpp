@@ -1151,11 +1151,11 @@ static void alc_initconfig(void)
                 continue;
 
             size_t len{next ? static_cast<size_t>(next-str) : strlen(str)};
-            for(size_t n{0u};n < countof(gEffectList);n++)
+            for(const EffectList &effectitem : gEffectList)
             {
-                if(len == strlen(gEffectList[n].name) &&
-                   strncmp(gEffectList[n].name, str, len) == 0)
-                    DisabledEffects[gEffectList[n].type] = AL_TRUE;
+                if(len == strlen(effectitem.name) &&
+                   strncmp(effectitem.name, str, len) == 0)
+                    DisabledEffects[effectitem.type] = AL_TRUE;
             }
         } while(next++);
     }
@@ -1280,14 +1280,13 @@ static ALboolean DecomposeDevFormat(ALenum format, DevFmtChannels *chans, DevFmt
         { AL_FORMAT_71CHN16, DevFmtX71, DevFmtShort },
         { AL_FORMAT_71CHN32, DevFmtX71, DevFmtFloat },
     };
-    ALuint i;
 
-    for(i = 0;i < COUNTOF(list);i++)
+    for(const auto &item : list)
     {
-        if(list[i].format == format)
+        if(item.format == format)
         {
-            *chans = list[i].channels;
-            *type  = list[i].type;
+            *chans = item.channels;
+            *type  = item.type;
             return AL_TRUE;
         }
     }

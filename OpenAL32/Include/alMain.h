@@ -33,12 +33,6 @@
 #include "hrtf.h"
 
 
-template<typename T, size_t N>
-constexpr inline size_t countof(const T(&)[N]) noexcept
-{ return N; }
-#define COUNTOF countof
-
-
 #ifndef UNUSED
 #if defined(__cplusplus)
 #define UNUSED(x)

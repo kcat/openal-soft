@@ -27,6 +27,7 @@
 #include <jni.h>
 
 #include <new>
+#include <array>
 #include <thread>
 #include <functional>
 
@@ -352,8 +353,6 @@ ALCboolean OpenSLPlayback::reset()
     SLDataLocator_OutputMix loc_outmix;
     SLDataSource audioSrc;
     SLDataSink audioSnk;
-    SLInterfaceID ids[2];
-    SLboolean reqs[2];
     SLresult result;
 
     if(mBufferQueueObj)
@@ -437,6 +436,9 @@ ALCboolean OpenSLPlayback::reset()
     mFrameSize = mDevice->frameSizeFromFmt();
 
 
+    const std::array<SLInterfaceID,2> ids{{ SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION }};
+    const std::array<SLboolean,2> reqs{{ SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE }};
+
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
     loc_bufq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
 
@@ -472,13 +474,8 @@ ALCboolean OpenSLPlayback::reset()
     audioSnk.pFormat = nullptr;
 
 
-    ids[0]  = SL_IID_ANDROIDSIMPLEBUFFERQUEUE;
-    reqs[0] = SL_BOOLEAN_TRUE;
-    ids[1]  = SL_IID_ANDROIDCONFIGURATION;
-    reqs[1] = SL_BOOLEAN_FALSE;
-
-    result = VCALL(mEngine,CreateAudioPlayer)(&mBufferQueueObj, &audioSrc, &audioSnk, COUNTOF(ids),
-        ids, reqs);
+    result = VCALL(mEngine,CreateAudioPlayer)(&mBufferQueueObj, &audioSrc, &audioSnk, ids.size(),
+        ids.data(), reqs.data());
     PRINTERR(result, "engine->CreateAudioPlayer");
     if(SL_RESULT_SUCCESS == result)
     {
@@ -704,8 +701,8 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        const SLInterfaceID ids[2] = { SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION };
-        const SLboolean reqs[2] = { SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE };
+        const std::array<SLInterfaceID,2> ids{{ SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION }};
+        const std::array<SLboolean,2> reqs{{ SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE }};
 
         SLDataLocator_IODevice loc_dev{};
         loc_dev.locatorType = SL_DATALOCATOR_IODEVICE;
@@ -747,7 +744,7 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
         audioSnk.pFormat = &format_pcm;
 
         result = VCALL(mEngine,CreateAudioRecorder)(&mRecordObj, &audioSrc, &audioSnk,
-            COUNTOF(ids), ids, reqs);
+            ids.size(), ids.data(), reqs.data());
         PRINTERR(result, "engine->CreateAudioRecorder");
     }
     if(SL_RESULT_SUCCESS == result)

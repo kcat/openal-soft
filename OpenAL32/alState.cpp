@@ -30,6 +30,7 @@
 #include "alu.h"
 #include "alError.h"
 #include "alexcpt.h"
+#include "alspan.h"
 
 #include "backends/base.h"
 
@@ -788,7 +789,7 @@ START_API_FUNC
         alCubicResampler, alBSinc12Resampler,
         alBSinc24Resampler,
     };
-    static_assert(COUNTOF(ResamplerNames) == ResamplerMax+1, "Incorrect ResamplerNames list");
+    static_assert(al::size(ResamplerNames) == ResamplerMax+1, "Incorrect ResamplerNames list");
 
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
@@ -797,7 +798,7 @@ START_API_FUNC
     switch(pname)
     {
     case AL_RESAMPLER_NAME_SOFT:
-        if(index < 0 || static_cast<size_t>(index) >= COUNTOF(ResamplerNames))
+        if(index < 0 || static_cast<size_t>(index) >= al::size(ResamplerNames))
             alSetError(context.get(), AL_INVALID_VALUE, "Resampler name index %d out of range",
                        index);
         else

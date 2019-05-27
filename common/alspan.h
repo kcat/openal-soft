@@ -119,9 +119,6 @@ public:
     constexpr span(const span&) noexcept = default;
 
     span& operator=(const span &rhs) noexcept = default;
-    template<typename U, size_t N, REQUIRES(extent == N && std::is_convertible<U(*)[],element_type(*)[]>::value)>
-    span& operator=(const span<U,N> &rhs) noexcept
-    { mData = rhs.data(); return *this; }
 
     constexpr reference front() const { return *mData; }
     constexpr reference back() const { return *(mData+E-1); }
@@ -216,13 +213,6 @@ public:
     constexpr span(const span&) noexcept = default;
 
     span& operator=(const span &rhs) noexcept = default;
-    template<typename U, size_t N, REQUIRES(std::is_convertible<U(*)[],element_type(*)[]>::value)>
-    span& operator=(const span<U,N> &rhs) noexcept
-    {
-        mData = rhs.data();
-        mDataEnd = mData + rhs.size();
-        return *this;
-    }
 
     constexpr reference front() const { return *mData; }
     constexpr reference back() const { return *(mDataEnd-1); }

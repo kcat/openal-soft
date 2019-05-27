@@ -104,7 +104,7 @@ public:
     constexpr span subspan(size_t offset, size_t count=static_cast<size_t>(-1)) const
     {
         return (offset >= size()) ? span{} :
-            (count >= size()-offset) ? last(count) :
+            (count >= size()-offset) ? span{mData+offset, mDataEnd} :
             span{mData+offset, mData+offset+count};
     }
 

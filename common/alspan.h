@@ -100,7 +100,7 @@ public:
 
     static constexpr size_t extent{E};
 
-    template<REQUIRES(extent == 0)>
+    template<bool allow_def=(extent==0), REQUIRES(allow_def)>
     constexpr span() noexcept { }
     constexpr span(pointer ptr, index_type /*count*/) : mData{ptr} { }
     constexpr span(pointer first, pointer /*last*/) : mData{first} { }

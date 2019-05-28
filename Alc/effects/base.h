@@ -143,7 +143,7 @@ struct EffectTarget {
 struct EffectState {
     RefCount mRef{1u};
 
-    ALfloat (*mOutBuffer)[BUFFERSIZE]{nullptr};
+    FloatBufferLine *mOutBuffer{nullptr};
     ALsizei mOutChannels{0};
 
 

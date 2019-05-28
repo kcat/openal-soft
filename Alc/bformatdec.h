@@ -43,8 +43,8 @@ public:
         const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 
     /* Decodes the ambisonic input to the given output channels. */
-    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels,
-        const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
+    void process(FloatBufferLine *OutBuffer, const ALsizei OutChannels,
+        const FloatBufferLine *InSamples, const ALsizei SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALsizei in_order,

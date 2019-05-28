@@ -305,6 +305,8 @@ struct BFChannelConfig {
  */
 #define BUFFERSIZE 1024
 
+using FloatBufferLine = std::array<float,BUFFERSIZE>;
+
 /* Maximum number of samples to pad on either end of a buffer for resampling.
  * Note that both the beginning and end need padding!
  */
@@ -315,14 +317,14 @@ struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
     std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap;
 
-    ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
+    FloatBufferLine *Buffer{nullptr};
     ALsizei NumChannels{0};
 };
 
 struct RealMixParams {
     std::array<ALint,MaxChannels> ChannelIndex{};
 
-    ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
+    FloatBufferLine *Buffer{nullptr};
     ALsizei NumChannels{0};
 };
 
@@ -405,7 +407,7 @@ struct ALCdevice {
     alignas(16) float2 HrtfAccumData[BUFFERSIZE + HRIR_LENGTH];
 
     /* Mixing buffer used by the Dry mix and Real output. */
-    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> MixBuffer;
+    al::vector<FloatBufferLine, 16> MixBuffer;
 
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;

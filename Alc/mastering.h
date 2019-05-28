@@ -6,7 +6,7 @@
 #include "AL/al.h"
 
 #include "almalloc.h"
-/* For BUFFERSIZE. */
+/* For FloatBufferLine/BUFFERSIZE. */
 #include "alMain.h"
 
 
@@ -65,7 +65,7 @@ struct Compressor {
 
 
     ~Compressor();
-    void process(const ALsizei SamplesToDo, ALfloat (*OutBuffer)[BUFFERSIZE]);
+    void process(const ALsizei SamplesToDo, FloatBufferLine *OutBuffer);
     ALsizei getLookAhead() const noexcept { return mLookAhead; }
 
     DEF_PLACE_NEWDEL()

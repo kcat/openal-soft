@@ -146,7 +146,7 @@ BFormatDec::BFormatDec(const ALsizei inchans, const ALsizei chancount,
 }
 
 
-void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
+void BFormatDec::process(FloatBufferLine *OutBuffer, const ALsizei OutChannels, const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
 {
     ASSUME(OutChannels > 0);
     ASSUME(mNumChannels > 0);
@@ -154,19 +154,19 @@ void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChan
     if(mDualBand)
     {
         for(ALsizei i{0};i < mNumChannels;i++)
-            mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i],
-                              SamplesToDo);
+            mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i].data(),
+                SamplesToDo);
 
         for(ALsizei chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
 
-            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][sHFBand],
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamplesHF[0]),
+            MixRowSamples(OutBuffer[chan].data(), mMatrix.Dual[chan][sHFBand],
+                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mSamplesHF[0]),
                 mNumChannels, 0, SamplesToDo);
-            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][sLFBand],
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamplesLF[0]),
+            MixRowSamples(OutBuffer[chan].data(), mMatrix.Dual[chan][sLFBand],
+                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mSamplesLF[0]),
                 mNumChannels, 0, SamplesToDo);
         }
     }
@@ -177,8 +177,9 @@ void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChan
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
 
-            MixRowSamples(OutBuffer[chan], mMatrix.Single[chan], InSamples,
-                          mNumChannels, 0, SamplesToDo);
+            MixRowSamples(OutBuffer[chan].data(), mMatrix.Single[chan],
+                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(InSamples[0]), mNumChannels, 0,
+                SamplesToDo);
         }
     }
 }

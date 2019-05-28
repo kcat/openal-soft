@@ -133,8 +133,9 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
     ASSUME(lidx >= 0 && ridx >= 0);
 
     DirectHrtfState *state{device->mHrtfState.get()};
-    MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx], device->Dry.Buffer,
-        device->HrtfAccumData, state, device->Dry.NumChannels, SamplesToDo);
+    MixDirectHrtf(device->RealOut.Buffer[lidx].data(), device->RealOut.Buffer[ridx].data(),
+        &reinterpret_cast<float(&)[BUFFERSIZE]>(device->Dry.Buffer[0]), device->HrtfAccumData,
+        state, device->Dry.NumChannels, SamplesToDo);
 }
 
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
@@ -165,8 +166,8 @@ void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
     ASSUME(lidx >= 0 && ridx >= 0);
 
     /* Apply binaural/crossfeed filter */
-    bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx],
-                    device->RealOut.Buffer[ridx], SamplesToDo);
+    bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx].data(),
+        device->RealOut.Buffer[ridx].data(), SamplesToDo);
 }
 
 } // namespace
@@ -1465,14 +1466,17 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo, slot->Wet.Buffer, slot->Wet.NumChannels,
-                state->mOutBuffer, state->mOutChannels);
+            state->process(SamplesToDo,
+                &reinterpret_cast<float(&)[BUFFERSIZE]>(slot->Wet.Buffer[0]),
+                slot->Wet.NumChannels,
+                &reinterpret_cast<float(&)[BUFFERSIZE]>(state->mOutBuffer[0]),
+                state->mOutChannels);
         }
     );
 }
 
 
-void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*Buffer)[BUFFERSIZE], const int lidx,
+void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const int lidx,
     const int ridx, const int cidx, const ALsizei SamplesToDo, const ALsizei NumChannels)
 {
     ASSUME(SamplesToDo > 0);
@@ -1487,16 +1491,17 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*Buffer)[BUFFERSIZE], co
             continue;
 
         auto &DelayBuf = Stablizer->DelayBuf[i];
-        auto buffer_end = Buffer[i] + SamplesToDo;
+        auto buffer_end = Buffer[i].begin() + SamplesToDo;
         if(LIKELY(SamplesToDo >= ALsizei{FrontStablizer::DelayLength}))
         {
-            auto delay_end = std::rotate(Buffer[i], buffer_end - FrontStablizer::DelayLength,
-                buffer_end);
-            std::swap_ranges(Buffer[i], delay_end, std::begin(DelayBuf));
+            auto delay_end = std::rotate(Buffer[i].begin(),
+                buffer_end - FrontStablizer::DelayLength, buffer_end);
+            std::swap_ranges(Buffer[i].begin(), delay_end, std::begin(DelayBuf));
         }
         else
         {
-            auto delay_start = std::swap_ranges(Buffer[i], buffer_end, std::begin(DelayBuf));
+            auto delay_start = std::swap_ranges(Buffer[i].begin(), buffer_end,
+                std::begin(DelayBuf));
             std::rotate(std::begin(DelayBuf), delay_start, std::end(DelayBuf));
         }
     }
@@ -1509,7 +1514,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*Buffer)[BUFFERSIZE], co
     /* This applies the band-splitter, preserving phase at the cost of some
      * delay. The shorter the delay, the more error seeps into the result.
      */
-    auto apply_splitter = [&APFilter,&tmpbuf,SamplesToDo](const ALfloat *Buffer,
+    auto apply_splitter = [&APFilter,&tmpbuf,SamplesToDo](const FloatBufferLine &Buffer,
         ALfloat (&DelayBuf)[FrontStablizer::DelayLength], BandSplitter &Filter,
         ALfloat (&splitbuf)[2][BUFFERSIZE]) -> void
     {
@@ -1520,7 +1525,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*Buffer)[BUFFERSIZE], co
          */
         auto tmpbuf_end = std::begin(tmpbuf) + SamplesToDo;
         std::copy_n(std::begin(DelayBuf), FrontStablizer::DelayLength, tmpbuf_end);
-        std::reverse_copy(Buffer, Buffer+SamplesToDo, std::begin(tmpbuf));
+        std::reverse_copy(Buffer.begin(), Buffer.begin()+SamplesToDo, std::begin(tmpbuf));
         std::copy_n(std::begin(tmpbuf), FrontStablizer::DelayLength, std::begin(DelayBuf));
 
         /* Apply an all-pass on the reversed signal, then reverse the samples
@@ -1568,8 +1573,8 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*Buffer)[BUFFERSIZE], co
     }
 }
 
-void ApplyDistanceComp(ALfloat (*Samples)[BUFFERSIZE], const DistanceComp &distcomp,
-                       const ALsizei SamplesToDo, const ALsizei numchans)
+void ApplyDistanceComp(FloatBufferLine *Samples, const DistanceComp &distcomp,
+    const ALsizei SamplesToDo, const ALsizei numchans)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(numchans > 0);
@@ -1583,7 +1588,7 @@ void ApplyDistanceComp(ALfloat (*Samples)[BUFFERSIZE], const DistanceComp &distc
         if(base < 1)
             continue;
 
-        ALfloat *inout{al::assume_aligned<16>(Samples[c])};
+        ALfloat *inout{al::assume_aligned<16>(Samples[c].data())};
         auto inout_end = inout + SamplesToDo;
         if(LIKELY(SamplesToDo >= base))
         {
@@ -1599,8 +1604,8 @@ void ApplyDistanceComp(ALfloat (*Samples)[BUFFERSIZE], const DistanceComp &distc
     }
 }
 
-void ApplyDither(ALfloat (*Samples)[BUFFERSIZE], ALuint *dither_seed, const ALfloat quant_scale,
-                 const ALsizei SamplesToDo, const ALsizei numchans)
+void ApplyDither(FloatBufferLine *Samples, ALuint *dither_seed, const ALfloat quant_scale,
+    const ALsizei SamplesToDo, const ALsizei numchans)
 {
     ASSUME(numchans > 0);
 
@@ -1610,11 +1615,10 @@ void ApplyDither(ALfloat (*Samples)[BUFFERSIZE], ALuint *dither_seed, const ALfl
      */
     const ALfloat invscale{1.0f / quant_scale};
     ALuint seed{*dither_seed};
-    auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](ALfloat *input) -> void
+    auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](FloatBufferLine &input) -> void
     {
         ASSUME(SamplesToDo > 0);
-        ALfloat *buffer{al::assume_aligned<16>(input)};
-        auto dither_sample = [&seed,invscale,quant_scale](ALfloat sample) noexcept -> ALfloat
+        auto dither_sample = [&seed,invscale,quant_scale](const ALfloat sample) noexcept -> ALfloat
         {
             ALfloat val{sample * quant_scale};
             ALuint rng0{dither_rng(&seed)};
@@ -1622,7 +1626,7 @@ void ApplyDither(ALfloat (*Samples)[BUFFERSIZE], ALuint *dither_seed, const ALfl
             val += static_cast<ALfloat>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
             return fast_roundf(val) * invscale;
         };
-        std::transform(buffer, buffer+SamplesToDo, buffer, dither_sample);
+        std::transform(input.begin(), input.begin()+SamplesToDo, input.begin(), dither_sample);
     };
     std::for_each(Samples, Samples+numchans, dither_channel);
     *dither_seed = seed;
@@ -1660,7 +1664,7 @@ template<> inline ALubyte SampleConv(ALfloat val) noexcept
 { return SampleConv<ALbyte>(val) + 128; }
 
 template<DevFmtType T>
-void Write(const ALfloat (*InBuffer)[BUFFERSIZE], ALvoid *OutBuffer, const ALsizei Offset,
+void Write(const FloatBufferLine *InBuffer, ALvoid *OutBuffer, const ALsizei Offset,
     const ALsizei SamplesToDo, const ALsizei numchans)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
@@ -1668,7 +1672,7 @@ void Write(const ALfloat (*InBuffer)[BUFFERSIZE], ALvoid *OutBuffer, const ALsiz
     ASSUME(Offset >= 0);
     ASSUME(numchans > 0);
     SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*numchans;
-    auto conv_channel = [&outbase,SamplesToDo,numchans](const ALfloat *inbuf) -> void
+    auto conv_channel = [&outbase,SamplesToDo,numchans](const FloatBufferLine &inbuf) -> void
     {
         ASSUME(SamplesToDo > 0);
         SampleType *out{outbase++};
@@ -1677,7 +1681,7 @@ void Write(const ALfloat (*InBuffer)[BUFFERSIZE], ALvoid *OutBuffer, const ALsiz
             *out = SampleConv<SampleType>(s);
             out += numchans;
         };
-        std::for_each(inbuf, inbuf+SamplesToDo, conv_sample);
+        std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);
     };
     std::for_each(InBuffer, InBuffer+numchans, conv_channel);
 }
@@ -1758,7 +1762,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
         if(LIKELY(OutBuffer))
         {
-            ALfloat (*Buffer)[BUFFERSIZE]{device->RealOut.Buffer};
+            FloatBufferLine *Buffer{device->RealOut.Buffer};
             ALsizei Channels{device->RealOut.NumChannels};
 
             /* Finally, interleave and convert samples, writing to the device's

@@ -976,6 +976,6 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
         { return BFChannelConfig{1.0f, acn}; }
     );
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->Wet.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(slot->MixBuffer[0]);
+    slot->Wet.Buffer = slot->MixBuffer.data();
     slot->Wet.NumChannels = static_cast<ALsizei>(count);
 }

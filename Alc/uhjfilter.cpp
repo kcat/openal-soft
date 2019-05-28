@@ -59,7 +59,7 @@ void allpass_process(AllPassState *state, ALfloat *dst, const ALfloat *src, cons
  * know which is the intended result.
  */
 
-void Uhj2Encoder::encode(ALfloat *LeftOut, ALfloat *RightOut, ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
+void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, FloatBufferLine *InSamples, const ALsizei SamplesToDo)
 {
     alignas(16) ALfloat D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat temp[MAX_UPDATE_SAMPLES];
@@ -72,7 +72,7 @@ void Uhj2Encoder::encode(ALfloat *LeftOut, ALfloat *RightOut, ALfloat (*InSample
         ASSUME(todo > 0);
 
         /* D = 0.6554516*Y */
-        const ALfloat *RESTRICT input{al::assume_aligned<16>(InSamples[2]+base)};
+        const ALfloat *RESTRICT input{al::assume_aligned<16>(InSamples[2].data()+base)};
         for(ALsizei i{0};i < todo;i++)
             temp[i] = 0.6554516f*input[i];
         allpass_process(&mFilter1_Y[0], temp, temp, Filter1CoeffSqr[0], todo);
@@ -89,8 +89,8 @@ void Uhj2Encoder::encode(ALfloat *LeftOut, ALfloat *RightOut, ALfloat (*InSample
         mLastY = temp[todo-1];
 
         /* D += j(-0.3420201*W + 0.5098604*X) */
-        const ALfloat *RESTRICT input0{al::assume_aligned<16>(InSamples[0]+base)};
-        const ALfloat *RESTRICT input1{al::assume_aligned<16>(InSamples[1]+base)};
+        const ALfloat *RESTRICT input0{al::assume_aligned<16>(InSamples[0].data()+base)};
+        const ALfloat *RESTRICT input1{al::assume_aligned<16>(InSamples[1].data()+base)};
         for(ALsizei i{0};i < todo;i++)
             temp[i] = -0.3420201f*input0[i] + 0.5098604f*input1[i];
         allpass_process(&mFilter2_WX[0], temp, temp, Filter2CoeffSqr[0], todo);
@@ -113,11 +113,11 @@ void Uhj2Encoder::encode(ALfloat *LeftOut, ALfloat *RightOut, ALfloat (*InSample
         mLastWX = temp[todo-1];
 
         /* Left = (S + D)/2.0 */
-        ALfloat *RESTRICT left = al::assume_aligned<16>(LeftOut+base);
+        ALfloat *RESTRICT left = al::assume_aligned<16>(LeftOut.data()+base);
         for(ALsizei i{0};i < todo;i++)
             left[i] += (S[i] + D[i]) * 0.5f;
         /* Right = (S - D)/2.0 */
-        ALfloat *RESTRICT right = al::assume_aligned<16>(RightOut+base);
+        ALfloat *RESTRICT right = al::assume_aligned<16>(RightOut.data()+base);
         for(ALsizei i{0};i < todo;i++)
             right[i] += (S[i] - D[i]) * 0.5f;
 

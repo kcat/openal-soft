@@ -71,7 +71,7 @@ struct ALeffectslot {
     ALuint id{};
 
     /* Mixing buffer used by the Wet mix. */
-    al::vector<std::array<ALfloat,BUFFERSIZE>,16> MixBuffer;
+    al::vector<FloatBufferLine, 16> MixBuffer;
 
     /* Wet buffer configuration is ACN channel order with N3D scaling.
      * Consequently, effects that only want to work with mono input can use

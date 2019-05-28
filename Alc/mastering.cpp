@@ -97,7 +97,7 @@ void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
 /* Multichannel compression is linked via the absolute maximum of all
  * channels.
  */
-void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, const ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE])
+void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, const FloatBufferLine *OutBuffer)
 {
     const ALsizei index{Comp->mLookAhead};
     const ALsizei numChans{Comp->mNumChans};
@@ -109,9 +109,9 @@ void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, const ALfloat (*R
     auto side_begin = std::begin(Comp->mSideChain) + index;
     std::fill(side_begin, side_begin+SamplesToDo, 0.0f);
 
-    auto fill_max = [SamplesToDo,side_begin](const ALfloat *input) -> void
+    auto fill_max = [SamplesToDo,side_begin](const FloatBufferLine &input) -> void
     {
-        const ALfloat *RESTRICT buffer{al::assume_aligned<16>(input)};
+        const ALfloat *RESTRICT buffer{al::assume_aligned<16>(input.data())};
         auto max_abs = std::bind(maxf, _1, std::bind(static_cast<float(&)(float)>(std::fabs), _2));
         std::transform(side_begin, side_begin+SamplesToDo, buffer, side_begin, max_abs);
     };
@@ -293,7 +293,7 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
  * reaching the offending impulse.  This is best used when operating as a
  * limiter.
  */
-void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE])
+void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
 {
     static constexpr ALsizei mask{BUFFERSIZE - 1};
     const ALsizei numChans{Comp->mNumChans};
@@ -305,7 +305,7 @@ void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RESTRICT
 
     for(ALsizei c{0};c < numChans;c++)
     {
-        ALfloat *RESTRICT inout{al::assume_aligned<16>(OutBuffer[c])};
+        ALfloat *RESTRICT inout{al::assume_aligned<16>(OutBuffer[c].data())};
         ALfloat *RESTRICT delay{al::assume_aligned<16>(Comp->mDelay[c])};
         for(ALsizei i{0};i < SamplesToDo;i++)
         {
@@ -425,7 +425,7 @@ Compressor::~Compressor()
 }
 
 
-void Compressor::process(const ALsizei SamplesToDo, ALfloat (*OutBuffer)[BUFFERSIZE])
+void Compressor::process(const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
 {
     const ALsizei numChans{mNumChans};
 
@@ -435,9 +435,9 @@ void Compressor::process(const ALsizei SamplesToDo, ALfloat (*OutBuffer)[BUFFERS
     const ALfloat preGain{mPreGain};
     if(preGain != 1.0f)
     {
-        auto apply_gain = [SamplesToDo,preGain](ALfloat *input) noexcept -> void
+        auto apply_gain = [SamplesToDo,preGain](FloatBufferLine &input) noexcept -> void
         {
-            ALfloat *buffer{al::assume_aligned<16>(input)};
+            ALfloat *buffer{al::assume_aligned<16>(input.data())};
             std::transform(buffer, buffer+SamplesToDo, buffer,
                 std::bind(std::multiplies<float>{}, _1, preGain));
         };
@@ -460,9 +460,9 @@ void Compressor::process(const ALsizei SamplesToDo, ALfloat (*OutBuffer)[BUFFERS
         SignalDelay(this, SamplesToDo, OutBuffer);
 
     const ALfloat (&sideChain)[BUFFERSIZE*2] = mSideChain;
-    auto apply_comp = [SamplesToDo,&sideChain](ALfloat *input) noexcept -> void
+    auto apply_comp = [SamplesToDo,&sideChain](FloatBufferLine &input) noexcept -> void
     {
-        ALfloat *buffer{al::assume_aligned<16>(input)};
+        ALfloat *buffer{al::assume_aligned<16>(input.data())};
         const ALfloat *gains{al::assume_aligned<16>(&sideChain[0])};
         std::transform(gains, gains+SamplesToDo, buffer, buffer,
             std::bind(std::multiplies<float>{}, _1, _2));

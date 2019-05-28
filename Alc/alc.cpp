@@ -1937,7 +1937,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         num_chans*sizeof(device->MixBuffer[0]));
     device->MixBuffer.resize(num_chans);
 
-    device->Dry.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(device->MixBuffer[0]);
+    device->Dry.Buffer = device->MixBuffer.data();
     if(device->RealOut.NumChannels != 0)
         device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
     else

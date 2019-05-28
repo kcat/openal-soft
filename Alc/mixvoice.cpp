@@ -744,10 +744,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         hrtfparams.Gain = 0.0f;
                         hrtfparams.GainStep = gain / static_cast<ALfloat>(fademix);
 
-                        MixHrtfBlendSamples(
-                            voice->mDirect.Buffer[OutLIdx], voice->mDirect.Buffer[OutRIdx],
-                            HrtfSamples, AccumSamples, OutPos, IrSize, &parms.Hrtf.Old,
-                            &hrtfparams, fademix);
+                        MixHrtfBlendSamples(voice->mDirect.Buffer[OutLIdx].data(),
+                            voice->mDirect.Buffer[OutRIdx].data(), HrtfSamples, AccumSamples,
+                            OutPos, IrSize, &parms.Hrtf.Old, &hrtfparams, fademix);
                         /* Update the old parameters with the result. */
                         parms.Hrtf.Old = parms.Hrtf.Target;
                         if(fademix < Counter)
@@ -778,10 +777,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         hrtfparams.Gain = parms.Hrtf.Old.Gain;
                         hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) /
                             static_cast<ALfloat>(todo);
-                        MixHrtfSamples(
-                            voice->mDirect.Buffer[OutLIdx], voice->mDirect.Buffer[OutRIdx],
-                            HrtfSamples+fademix, AccumSamples+fademix, OutPos+fademix, IrSize,
-                            &hrtfparams, todo);
+                        MixHrtfSamples(voice->mDirect.Buffer[OutLIdx].data(),
+                            voice->mDirect.Buffer[OutRIdx].data(), HrtfSamples+fademix,
+                            AccumSamples+fademix, OutPos+fademix, IrSize, &hrtfparams, todo);
                         /* Store the interpolated gain or the final target gain
                          * depending if the fade is done.
                          */
@@ -803,8 +801,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         SilentTarget : parms.Gains.Target};
 
                     MixSamples(samples, voice->mDirect.ChannelsPerOrder[0],
-                        voice->mDirect.Buffer, parms.Gains.Current, TargetGains, Counter,
-                        OutPos, DstBufferSize);
+                        &reinterpret_cast<float(&)[BUFFERSIZE]>(voice->mDirect.Buffer[0]),
+                        parms.Gains.Current, TargetGains, Counter, OutPos, DstBufferSize);
 
                     ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
                     ALsizei chanoffset{voice->mDirect.ChannelsPerOrder[0]};
@@ -815,8 +813,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                             return;
                         (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
                         MixSamples(nfcsamples, voice->mDirect.ChannelsPerOrder[order],
-                            voice->mDirect.Buffer+chanoffset, parms.Gains.Current+chanoffset,
-                            TargetGains+chanoffset, Counter, OutPos, DstBufferSize);
+                            &reinterpret_cast<float(&)[BUFFERSIZE]>(voice->mDirect.Buffer[chanoffset]),
+                            parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter,
+                            OutPos, DstBufferSize);
                         chanoffset += voice->mDirect.ChannelsPerOrder[order];
                     };
                     apply_nfc(&NfcFilter::process1, 1);
@@ -827,7 +826,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 {
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
-                    MixSamples(samples, voice->mDirect.Channels, voice->mDirect.Buffer,
+                    MixSamples(samples, voice->mDirect.Channels,
+                        &reinterpret_cast<float(&)[BUFFERSIZE]>(voice->mDirect.Buffer[0]),
                         parms.Gains.Current, TargetGains, Counter, OutPos, DstBufferSize);
                 }
             }
@@ -844,7 +844,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
-                MixSamples(samples, send.Channels, send.Buffer, parms.Gains.Current,
+                MixSamples(samples, send.Channels,
+                    &reinterpret_cast<float(&)[BUFFERSIZE]>(send.Buffer[0]), parms.Gains.Current,
                     TargetGains, Counter, OutPos, DstBufferSize);
             };
             std::for_each(voice->mSend.begin(), voice->mSend.end(), mix_send);

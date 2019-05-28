@@ -53,14 +53,18 @@ namespace detail_ {
     using void_t = typename make_void<Ts...>::type;
 
     template<typename T>
-    struct is_span : std::false_type { };
+    struct is_span_ : std::false_type { };
     template<typename T, size_t E>
-    struct is_span<span<T,E>> : std::true_type { };
+    struct is_span_<span<T,E>> : std::true_type { };
+    template<typename T>
+    struct is_span : is_span_<typename std::remove_cv<T>::type> { };
 
     template<typename T>
-    struct is_std_array : std::false_type { };
+    struct is_std_array_ : std::false_type { };
     template<typename T, size_t N>
-    struct is_std_array<std::array<T,N>> : std::true_type { };
+    struct is_std_array_<std::array<T,N>> : std::true_type { };
+    template<typename T>
+    struct is_std_array : is_std_array_<typename std::remove_cv<T>::type> { };
 
     template<typename T, typename = void>
     struct has_size_and_data : std::false_type { };
@@ -72,10 +76,8 @@ namespace detail_ {
 
 #define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),int>::type = 0
 #define IS_VALID_CONTAINER(C)                                                 \
-    !detail_::is_span<typename std::remove_cv<C>::type>::value &&             \
-    !detail_::is_std_array<typename std::remove_cv<C>::type>::value &&        \
-    !std::is_array<typename std::remove_cv<C>::type>::value &&                \
-    detail_::has_size_and_data<typename std::remove_cv<C>::type>::value &&    \
+    !detail_::is_span<C>::value && !detail_::is_std_array<C>::value &&        \
+    !std::is_array<C>::value && detail_::has_size_and_data<C>::value &&       \
     std::is_convertible<typename std::remove_pointer<decltype(al::data(std::declval<C>()))>::type(*)[],element_type(*)[]>::value
 
 template<typename T, size_t E>

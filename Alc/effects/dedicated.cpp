@@ -40,7 +40,7 @@ struct DedicatedState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
 
     DEF_NEWDEL(DedicatedState)
 };
@@ -90,10 +90,11 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
     }
 }
 
-void DedicatedState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void DedicatedState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
-    MixSamples(samplesIn[0], numOutput, samplesOut, mCurrentGains, mTargetGains, samplesToDo, 0,
-        samplesToDo);
+    MixSamples(samplesIn[0].data(), numOutput,
+        &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mCurrentGains, mTargetGains,
+        samplesToDo, 0, samplesToDo);
 }
 
 

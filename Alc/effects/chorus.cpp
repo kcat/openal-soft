@@ -101,7 +101,7 @@ struct ChorusState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
 
     DEF_NEWDEL(ChorusState)
 };
@@ -198,7 +198,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     }
 }
 
-void ChorusState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
     const auto bufmask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     const ALfloat feedback{mFeedback};
@@ -255,8 +255,9 @@ void ChorusState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
         }
 
         for(c = 0;c < 2;c++)
-            MixSamples(temps[c], numOutput, samplesOut, mGains[c].Current, mGains[c].Target,
-                samplesToDo-base, base, todo);
+            MixSamples(temps[c], numOutput,
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mGains[c].Current,
+                mGains[c].Target, samplesToDo-base, base, todo);
 
         base += todo;
     }

@@ -375,16 +375,15 @@ struct ReverbState final : public EffectState {
     alignas(16) ALfloat mEarlyBuffer[NUM_LINES][BUFFERSIZE]{};
     alignas(16) ALfloat mLateBuffer[NUM_LINES][BUFFERSIZE]{};
 
-    using MixOutT = void (ReverbState::*)(const ALsizei numOutput,
-        ALfloat (*samplesOut)[BUFFERSIZE], const ALsizei todo);
+    using MixOutT = void (ReverbState::*)(const ALsizei numOutput, FloatBufferLine *samplesOut,
+        const ALsizei todo);
 
     MixOutT mMixOut{&ReverbState::MixOutPlain};
     std::array<ALfloat,MAX_AMBI_ORDER+1> mOrderScales{};
     std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
 
-    void MixOutPlain(const ALsizei numOutput, ALfloat (*samplesOut)[BUFFERSIZE],
-        const ALsizei todo)
+    void MixOutPlain(const ALsizei numOutput, FloatBufferLine *samplesOut, const ALsizei todo)
     {
         ASSUME(todo > 0);
 
@@ -393,7 +392,8 @@ struct ReverbState final : public EffectState {
         {
             std::fill_n(std::begin(mTempSamples[0]), todo, 0.0f);
             MixRowSamples(mTempSamples[0], A2B[c], mEarlyBuffer, NUM_LINES, 0, todo);
-            MixSamples(mTempSamples[0], numOutput, samplesOut, mEarly.CurrentGain[c],
+            MixSamples(mTempSamples[0], numOutput,
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mEarly.CurrentGain[c],
                 mEarly.PanGain[c], todo, 0, todo);
         }
 
@@ -401,13 +401,13 @@ struct ReverbState final : public EffectState {
         {
             std::fill_n(std::begin(mTempSamples[0]), todo, 0.0f);
             MixRowSamples(mTempSamples[0], A2B[c], mLateBuffer, NUM_LINES, 0, todo);
-            MixSamples(mTempSamples[0], numOutput, samplesOut, mLate.CurrentGain[c],
+            MixSamples(mTempSamples[0], numOutput,
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mLate.CurrentGain[c],
                 mLate.PanGain[c], todo, 0, todo);
         }
     }
 
-    void MixOutAmbiUp(const ALsizei numOutput, ALfloat (*samplesOut)[BUFFERSIZE],
-        const ALsizei todo)
+    void MixOutAmbiUp(const ALsizei numOutput, FloatBufferLine *samplesOut, const ALsizei todo)
     {
         ASSUME(todo > 0);
 
@@ -422,7 +422,8 @@ struct ReverbState final : public EffectState {
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[0][c].applyHfScale(mTempSamples[0], hfscale, todo);
 
-            MixSamples(mTempSamples[0], numOutput, samplesOut, mEarly.CurrentGain[c],
+            MixSamples(mTempSamples[0], numOutput,
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mEarly.CurrentGain[c],
                 mEarly.PanGain[c], todo, 0, todo);
         }
 
@@ -434,7 +435,8 @@ struct ReverbState final : public EffectState {
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].applyHfScale(mTempSamples[0], hfscale, todo);
 
-            MixSamples(mTempSamples[0], numOutput, samplesOut, mLate.CurrentGain[c],
+            MixSamples(mTempSamples[0], numOutput,
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mLate.CurrentGain[c],
                 mLate.PanGain[c], todo, 0, todo);
         }
     }
@@ -448,7 +450,7 @@ struct ReverbState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
 
     DEF_NEWDEL(ReverbState)
 };
@@ -1444,7 +1446,7 @@ void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei to
     VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base, out, todo);
 }
 
-void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
     ALsizei fadeCount{mFadeCount};
 
@@ -1455,7 +1457,9 @@ void ReverbState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesI
     for(ALsizei c{0};c < NUM_LINES;c++)
     {
         std::fill_n(std::begin(afmt[c]), samplesToDo, 0.0f);
-        MixRowSamples(afmt[c], B2A[c], samplesIn, numInput, 0, samplesToDo);
+        MixRowSamples(afmt[c], B2A[c],
+            &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(samplesIn[0]), numInput, 0,
+            samplesToDo);
 
         /* Band-pass the incoming samples. */
         mFilter[c].Lp.process(afmt[c], afmt[c], samplesToDo);

@@ -94,7 +94,7 @@ struct EqualizerState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
 
     DEF_NEWDEL(EqualizerState)
 };
@@ -158,17 +158,18 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void EqualizerState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void EqualizerState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
     ASSUME(numInput > 0);
     for(ALsizei c{0};c < numInput;c++)
     {
-        mChans[c].filter[0].process(mSampleBuffer, samplesIn[c], samplesToDo);
+        mChans[c].filter[0].process(mSampleBuffer, samplesIn[c].data(), samplesToDo);
         mChans[c].filter[1].process(mSampleBuffer, mSampleBuffer, samplesToDo);
         mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
         mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
 
-        MixSamples(mSampleBuffer, numOutput, samplesOut, mChans[c].CurrentGains,
+        MixSamples(mSampleBuffer, numOutput,
+            &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mChans[c].CurrentGains,
             mChans[c].TargetGains, samplesToDo, 0, samplesToDo);
     }
 }

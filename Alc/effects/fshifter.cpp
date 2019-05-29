@@ -83,7 +83,7 @@ struct FshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei numInput, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
 
     DEF_NEWDEL(FshifterState)
 };
@@ -138,7 +138,7 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-void FshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], const ALsizei /*numInput*/, ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], const ALsizei numOutput)
+void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
     static constexpr complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = mBufferOut;
@@ -198,8 +198,8 @@ void FshifterState::process(ALsizei samplesToDo, const ALfloat (*RESTRICT sample
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(BufferOut, numOutput, samplesOut, mCurrentGains, mTargetGains,
-        maxi(samplesToDo, 512), 0, samplesToDo);
+    MixSamples(BufferOut, numOutput, &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]),
+        mCurrentGains, mTargetGains, maxi(samplesToDo, 512), 0, samplesToDo);
 }
 
 

@@ -120,29 +120,29 @@ static inline void ApplyCoeffs(ALsizei Offset, float2 *RESTRICT Values, const AL
 }
 
 template<>
-void MixHrtf_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data,
-    float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
     MixHrtfParams *hrtfparams, const ALsizei BufferSize)
 {
-    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, hrtfparams,
-        BufferSize);
+    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
+        hrtfparams, BufferSize);
 }
 
 template<>
-void MixHrtfBlend_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+void MixHrtfBlend_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
     const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize)
 {
-    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, OutPos, IrSize, oldparams,
-        newparams, BufferSize);
+    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
+        oldparams, newparams, BufferSize);
 }
 
 template<>
-void MixDirectHrtf_<SSETag>(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+void MixDirectHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const FloatBufferLine *InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const ALsizei NumChans, const ALsizei BufferSize)
 {
-    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, data, AccumSamples, State, NumChans,
+    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, NumChans,
         BufferSize);
 }
 

@@ -133,9 +133,8 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
     ASSUME(lidx >= 0 && ridx >= 0);
 
     DirectHrtfState *state{device->mHrtfState.get()};
-    MixDirectHrtf(device->RealOut.Buffer[lidx].data(), device->RealOut.Buffer[ridx].data(),
-        &reinterpret_cast<float(&)[BUFFERSIZE]>(device->Dry.Buffer[0]), device->HrtfAccumData,
-        state, device->Dry.NumChannels, SamplesToDo);
+    MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+        device->Dry.Buffer, device->HrtfAccumData, state, device->Dry.NumChannels, SamplesToDo);
 }
 
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)

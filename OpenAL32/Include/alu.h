@@ -297,14 +297,14 @@ using MixerFunc = void(*)(const ALfloat *data, const ALsizei OutChans,
 using RowMixerFunc = void(*)(ALfloat *OutBuffer, const ALfloat *gains,
     const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos,
     const ALsizei BufferSize);
-using HrtfMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
     MixHrtfParams *hrtfparams, const ALsizei BufferSize);
-using HrtfMixerBlendFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
     const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
-using HrtfDirectMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State,
+using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const FloatBufferLine *InSamples, float2 *RESTRICT AccumSamples, DirectHrtfState *State,
     const ALsizei NumChans, const ALsizei BufferSize);
 
 

@@ -35,11 +35,11 @@ template<typename InstTag>
 void MixRow_(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize);
 
 template<typename InstTag>
-void MixHrtf_(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams, const ALsizei BufferSize);
+void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams, const ALsizei BufferSize);
 template<typename InstTag>
-void MixHrtfBlend_(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat *data, float2 *RESTRICT AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
+void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
 template<typename InstTag>
-void MixDirectHrtf_(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, const ALfloat (*data)[BUFFERSIZE], float2 *RESTRICT AccumSamples, DirectHrtfState *State, const ALsizei NumChans, const ALsizei BufferSize);
+void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const FloatBufferLine *InSamples, float2 *AccumSamples, DirectHrtfState *State, const ALsizei NumChans, const ALsizei BufferSize);
 
 /* Vectorized resampler helpers */
 inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTRICT frac_arr, ALsizei *RESTRICT pos_arr, ALsizei size)

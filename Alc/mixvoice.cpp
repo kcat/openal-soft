@@ -744,9 +744,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         hrtfparams.Gain = 0.0f;
                         hrtfparams.GainStep = gain / static_cast<ALfloat>(fademix);
 
-                        MixHrtfBlendSamples(voice->mDirect.Buffer[OutLIdx].data(),
-                            voice->mDirect.Buffer[OutRIdx].data(), HrtfSamples, AccumSamples,
-                            OutPos, IrSize, &parms.Hrtf.Old, &hrtfparams, fademix);
+                        MixHrtfBlendSamples(voice->mDirect.Buffer[OutLIdx],
+                            voice->mDirect.Buffer[OutRIdx], HrtfSamples, AccumSamples, OutPos,
+                            IrSize, &parms.Hrtf.Old, &hrtfparams, fademix);
                         /* Update the old parameters with the result. */
                         parms.Hrtf.Old = parms.Hrtf.Target;
                         if(fademix < Counter)
@@ -777,8 +777,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         hrtfparams.Gain = parms.Hrtf.Old.Gain;
                         hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) /
                             static_cast<ALfloat>(todo);
-                        MixHrtfSamples(voice->mDirect.Buffer[OutLIdx].data(),
-                            voice->mDirect.Buffer[OutRIdx].data(), HrtfSamples+fademix,
+                        MixHrtfSamples(voice->mDirect.Buffer[OutLIdx],
+                            voice->mDirect.Buffer[OutRIdx], HrtfSamples+fademix,
                             AccumSamples+fademix, OutPos+fademix, IrSize, &hrtfparams, todo);
                         /* Store the interpolated gain or the final target gain
                          * depending if the fade is done.

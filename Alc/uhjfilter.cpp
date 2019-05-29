@@ -66,15 +66,17 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, Fl
 
     ASSUME(SamplesToDo > 0);
 
+    auto winput = InSamples[0].cbegin();
+    auto xinput = InSamples[1].cbegin();
+    auto yinput = InSamples[2].cbegin();
     for(ALsizei base{0};base < SamplesToDo;)
     {
-        ALsizei todo = mini(SamplesToDo - base, MAX_UPDATE_SAMPLES);
+        const ALsizei todo{mini(SamplesToDo - base, MAX_UPDATE_SAMPLES)};
         ASSUME(todo > 0);
 
         /* D = 0.6554516*Y */
-        const ALfloat *RESTRICT input{al::assume_aligned<16>(InSamples[2].data()+base)};
-        for(ALsizei i{0};i < todo;i++)
-            temp[i] = 0.6554516f*input[i];
+        std::transform(yinput+base, yinput+todo, std::begin(temp),
+            [](const float y) noexcept -> float { return 0.6554516f*y; });
         allpass_process(&mFilter1_Y[0], temp, temp, Filter1CoeffSqr[0], todo);
         allpass_process(&mFilter1_Y[1], temp, temp, Filter1CoeffSqr[1], todo);
         allpass_process(&mFilter1_Y[2], temp, temp, Filter1CoeffSqr[2], todo);
@@ -89,10 +91,9 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, Fl
         mLastY = temp[todo-1];
 
         /* D += j(-0.3420201*W + 0.5098604*X) */
-        const ALfloat *RESTRICT input0{al::assume_aligned<16>(InSamples[0].data()+base)};
-        const ALfloat *RESTRICT input1{al::assume_aligned<16>(InSamples[1].data()+base)};
-        for(ALsizei i{0};i < todo;i++)
-            temp[i] = -0.3420201f*input0[i] + 0.5098604f*input1[i];
+        std::transform(winput, winput+todo, xinput, std::begin(temp),
+            [](const float w, const float x) noexcept -> float
+            { return -0.3420201f*w + 0.5098604f*x; });
         allpass_process(&mFilter2_WX[0], temp, temp, Filter2CoeffSqr[0], todo);
         allpass_process(&mFilter2_WX[1], temp, temp, Filter2CoeffSqr[1], todo);
         allpass_process(&mFilter2_WX[2], temp, temp, Filter2CoeffSqr[2], todo);
@@ -101,8 +102,9 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, Fl
             D[i] += temp[i];
 
         /* S = 0.9396926*W + 0.1855740*X */
-        for(ALsizei i{0};i < todo;i++)
-            temp[i] = 0.9396926f*input0[i] + 0.1855740f*input1[i];
+        std::transform(winput, winput+todo, xinput, std::begin(temp),
+            [](const float w, const float x) noexcept -> float
+            { return 0.9396926f*w + 0.1855740f*x; });
         allpass_process(&mFilter1_WX[0], temp, temp, Filter1CoeffSqr[0], todo);
         allpass_process(&mFilter1_WX[1], temp, temp, Filter1CoeffSqr[1], todo);
         allpass_process(&mFilter1_WX[2], temp, temp, Filter1CoeffSqr[2], todo);
@@ -121,6 +123,9 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, Fl
         for(ALsizei i{0};i < todo;i++)
             right[i] += (S[i] - D[i]) * 0.5f;
 
+        winput += todo;
+        xinput += todo;
+        yinput += todo;
         base += todo;
     }
 }

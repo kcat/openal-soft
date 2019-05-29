@@ -50,8 +50,7 @@ struct Compressor {
     alignas(16) ALfloat mCrestFactor[BUFFERSIZE]{};
 
     SlidingHold *mHold{nullptr};
-    ALfloat (*mDelay)[BUFFERSIZE]{nullptr};
-    ALsizei mDelayIndex{0};
+    FloatBufferLine *mDelay{nullptr};
 
     ALfloat mCrestCoeff{0.0f};
     ALfloat mGainEstimate{0.0f};

@@ -295,28 +295,30 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
  */
 void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
 {
-    static constexpr ALsizei mask{BUFFERSIZE - 1};
     const ALsizei numChans{Comp->mNumChans};
-    const ALsizei indexIn{Comp->mDelayIndex};
-    const ALsizei indexOut{Comp->mDelayIndex - Comp->mLookAhead};
+    const ALsizei lookAhead{Comp->mLookAhead};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
+    ASSUME(lookAhead > 0);
 
     for(ALsizei c{0};c < numChans;c++)
     {
-        ALfloat *RESTRICT inout{al::assume_aligned<16>(OutBuffer[c].data())};
-        ALfloat *RESTRICT delay{al::assume_aligned<16>(Comp->mDelay[c])};
-        for(ALsizei i{0};i < SamplesToDo;i++)
-        {
-            const ALfloat sig{inout[i]};
+        ALfloat *inout{al::assume_aligned<16>(OutBuffer[c].data())};
+        ALfloat *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
 
-            inout[i] = delay[(indexOut + i) & mask];
-            delay[(indexIn + i) & mask] = sig;
+        auto inout_end = inout + SamplesToDo;
+        if(LIKELY(SamplesToDo >= lookAhead))
+        {
+            auto delay_end = std::rotate(inout, inout_end - lookAhead, inout_end);
+            std::swap_ranges(inout, delay_end, delaybuf);
+        }
+        else
+        {
+            auto delay_start = std::swap_ranges(inout, inout_end, delaybuf);
+            std::rotate(delaybuf, delay_start, delaybuf + lookAhead);
         }
     }
-
-    Comp->mDelayIndex = (indexIn + SamplesToDo) & mask;
 }
 
 } // namespace
@@ -354,9 +356,10 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
                            const ALfloat Ratio, const ALfloat KneeDb,
                            const ALfloat AttackTime, const ALfloat ReleaseTime)
 {
-    auto lookAhead = static_cast<ALsizei>(
+    const auto lookAhead = static_cast<ALsizei>(
         clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
-    auto hold = static_cast<ALsizei>(clampf(std::round(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1));
+    const auto hold = static_cast<ALsizei>(
+        clampf(std::round(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1));
 
     size_t size{sizeof(Compressor)};
     if(lookAhead > 0)
@@ -398,15 +401,15 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
     {
         if(hold > 1)
         {
-            Comp->mHold = new (reinterpret_cast<void*>(Comp.get() + 1)) SlidingHold{};
+            Comp->mHold = new (static_cast<void*>(Comp.get() + 1)) SlidingHold{};
             Comp->mHold->mValues[0] = -std::numeric_limits<float>::infinity();
             Comp->mHold->mExpiries[0] = hold;
             Comp->mHold->mLength = hold;
-            Comp->mDelay = reinterpret_cast<ALfloat(*)[BUFFERSIZE]>(Comp->mHold + 1);
+            Comp->mDelay = new (static_cast<void*>(Comp->mHold + 1)) FloatBufferLine{};
         }
         else
         {
-            Comp->mDelay = reinterpret_cast<ALfloat(*)[BUFFERSIZE]>(Comp.get() + 1);
+            Comp->mDelay = new (static_cast<void*>(Comp.get() + 1)) FloatBufferLine{};
         }
     }
 
@@ -422,6 +425,9 @@ Compressor::~Compressor()
     if(mHold)
         mHold->~SlidingHold();
     mHold = nullptr;
+    if(mDelay)
+        mDelay->~FloatBufferLine();
+    mDelay = nullptr;
 }
 
 

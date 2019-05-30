@@ -205,10 +205,9 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     const ALsizei avgdelay{(mDelay + (FRACTIONONE>>1)) >> FRACTIONBITS};
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
     ALsizei offset{mOffset};
-    ALsizei i, c;
-    ALsizei base;
 
-    for(base = 0;base < samplesToDo;)
+    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
+    for(ALsizei base{0};base < samplesToDo;)
     {
         const ALsizei todo = mini(256, samplesToDo-base);
         ALint moddelays[2][256];
@@ -230,7 +229,7 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         }
         mLfoOffset = (mLfoOffset+todo) % mLfoRange;
 
-        for(i = 0;i < todo;i++)
+        for(ALsizei i{0};i < todo;i++)
         {
             // Feed the buffer's input first (necessary for delays < 1).
             delaybuf[offset&bufmask] = samplesIn[0][base+i];
@@ -254,10 +253,9 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
             offset++;
         }
 
-        for(c = 0;c < 2;c++)
-            MixSamples(temps[c], numOutput,
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mGains[c].Current,
-                mGains[c].Target, samplesToDo-base, base, todo);
+        for(ALsizei c{0};c < 2;c++)
+            MixSamples(temps[c], output, mGains[c].Current, mGains[c].Target, samplesToDo-base,
+                base, todo);
 
         base += todo;
     }

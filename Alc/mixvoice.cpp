@@ -800,23 +800,23 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
 
-                    MixSamples(samples, voice->mDirect.ChannelsPerOrder[0],
-                        &reinterpret_cast<float(&)[BUFFERSIZE]>(voice->mDirect.Buffer[0]),
-                        parms.Gains.Current, TargetGains, Counter, OutPos, DstBufferSize);
+                    const auto outcount = static_cast<size_t>(voice->mDirect.ChannelsPerOrder[0]);
+                    MixSamples(samples, {voice->mDirect.Buffer, outcount}, parms.Gains.Current,
+                        TargetGains, Counter, OutPos, DstBufferSize);
 
                     ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
-                    ALsizei chanoffset{voice->mDirect.ChannelsPerOrder[0]};
+                    size_t chanoffset{outcount};
                     using FilterProc = void (NfcFilter::*)(float*,const float*,int);
                     auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
                     {
-                        if(voice->mDirect.ChannelsPerOrder[order] < 1)
-                            return;
+                        const auto outcount = static_cast<size_t>(
+                            voice->mDirect.ChannelsPerOrder[order]);
+                        if(outcount < 1) return;
                         (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
-                        MixSamples(nfcsamples, voice->mDirect.ChannelsPerOrder[order],
-                            &reinterpret_cast<float(&)[BUFFERSIZE]>(voice->mDirect.Buffer[chanoffset]),
+                        MixSamples(nfcsamples, {voice->mDirect.Buffer+chanoffset, outcount},
                             parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter,
                             OutPos, DstBufferSize);
-                        chanoffset += voice->mDirect.ChannelsPerOrder[order];
+                        chanoffset += outcount;
                     };
                     apply_nfc(&NfcFilter::process1, 1);
                     apply_nfc(&NfcFilter::process2, 2);
@@ -826,9 +826,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 {
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
-                    MixSamples(samples, voice->mDirect.Channels,
-                        &reinterpret_cast<float(&)[BUFFERSIZE]>(voice->mDirect.Buffer[0]),
-                        parms.Gains.Current, TargetGains, Counter, OutPos, DstBufferSize);
+                    const auto outcount = static_cast<size_t>(voice->mDirect.Channels);
+                    MixSamples(samples, {voice->mDirect.Buffer, outcount}, parms.Gains.Current,
+                        TargetGains, Counter, OutPos, DstBufferSize);
                 }
             }
 
@@ -844,9 +844,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
-                MixSamples(samples, send.Channels,
-                    &reinterpret_cast<float(&)[BUFFERSIZE]>(send.Buffer[0]), parms.Gains.Current,
-                    TargetGains, Counter, OutPos, DstBufferSize);
+                const auto outcount = static_cast<size_t>(send.Channels);
+                MixSamples(samples, {send.Buffer, outcount}, parms.Gains.Current, TargetGains,
+                    Counter, OutPos, DstBufferSize);
             };
             std::for_each(voice->mSend.begin(), voice->mSend.end(), mix_send);
         }

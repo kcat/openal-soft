@@ -32,7 +32,7 @@ template<typename TypeTag, typename InstTag>
 const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen);
 
 template<typename InstTag>
-void Mix_(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
+void Mix_(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer, ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
 template<typename InstTag>
 void MixRow_(FloatBufferLine &OutBuffer, const ALfloat *Gains, const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize);
 

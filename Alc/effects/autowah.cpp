@@ -136,11 +136,9 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
     const ALfloat peak_gain = mPeakGain;
     const ALfloat freq_min = mFreqMinNorm;
     const ALfloat bandwidth = mBandwidthNorm;
-    ALfloat env_delay;
-    ALsizei c, i;
 
-    env_delay = mEnvDelay;
-    for(i = 0;i < samplesToDo;i++)
+    ALfloat env_delay{mEnvDelay};
+    for(ALsizei i{0};i < samplesToDo;i++)
     {
         ALfloat w0, sample, a;
 
@@ -158,8 +156,9 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
     }
     mEnvDelay = env_delay;
 
+    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
     ASSUME(numInput > 0);
-    for(c = 0;c < numInput;++c)
+    for(ALsizei c{0};c < numInput;++c)
     {
         /* This effectively inlines BiquadFilter_setParams for a peaking
          * filter and BiquadFilter_processC. The alpha and cosine components
@@ -167,10 +166,10 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
          * envelope. Because the filter changes for each sample, the
          * coefficients are transient and don't need to be held.
          */
-        ALfloat z1 = mChans[c].Filter.z1;
-        ALfloat z2 = mChans[c].Filter.z2;
+        ALfloat z1{mChans[c].Filter.z1};
+        ALfloat z2{mChans[c].Filter.z2};
 
-        for(i = 0;i < samplesToDo;i++)
+        for(ALsizei i{0};i < samplesToDo;i++)
         {
             const ALfloat alpha = mEnv[i].alpha;
             const ALfloat cos_w0 = mEnv[i].cos_w0;
@@ -194,8 +193,8 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         mChans[c].Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(mBufferOut, numOutput, &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]),
-            mChans[c].CurrentGains, mChans[c].TargetGains, samplesToDo, 0, samplesToDo);
+        MixSamples(mBufferOut, output, mChans[c].CurrentGains, mChans[c].TargetGains, samplesToDo,
+            0, samplesToDo);
     }
 }
 

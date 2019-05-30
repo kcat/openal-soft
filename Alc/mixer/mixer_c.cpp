@@ -144,21 +144,20 @@ void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 
 template<>
-void Mix_<CTag>(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
+void Mix_<CTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
     ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
     const ALsizei BufferSize)
 {
-    ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
 
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
-    for(ALsizei c{0};c < OutChans;c++)
+    for(FloatBufferLine &output : OutBuffer)
     {
-        ALfloat *RESTRICT dst{&OutBuffer[c][OutPos]};
-        ALsizei pos{0};
-        ALfloat gain{CurrentGains[c]};
+        ALfloat *RESTRICT dst{output.data()+OutPos};
+        ALfloat gain{*CurrentGains};
+        const ALfloat diff{*TargetGains - gain};
 
-        const ALfloat diff{TargetGains[c] - gain};
+        ALsizei pos{0};
         if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
         {
             ALsizei minsize{mini(BufferSize, Counter)};
@@ -170,11 +169,13 @@ void Mix_<CTag>(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer
                 step_count += 1.0f;
             }
             if(pos == Counter)
-                gain = TargetGains[c];
+                gain = *TargetGains;
             else
                 gain += step*step_count;
-            CurrentGains[c] = gain;
+            *CurrentGains = gain;
         }
+        ++CurrentGains;
+        ++TargetGains;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;

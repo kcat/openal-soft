@@ -375,7 +375,7 @@ struct ReverbState final : public EffectState {
     alignas(16) FloatBufferLine mEarlyBuffer[NUM_LINES]{};
     alignas(16) FloatBufferLine mLateBuffer[NUM_LINES]{};
 
-    using MixOutT = void (ReverbState::*)(const ALsizei numOutput, FloatBufferLine *samplesOut,
+    using MixOutT = void (ReverbState::*)(const al::span<FloatBufferLine> samplesOut,
         const ALsizei todo);
 
     MixOutT mMixOut{&ReverbState::MixOutPlain};
@@ -383,7 +383,7 @@ struct ReverbState final : public EffectState {
     std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
 
-    void MixOutPlain(const ALsizei numOutput, FloatBufferLine *samplesOut, const ALsizei todo)
+    void MixOutPlain(const al::span<FloatBufferLine> samplesOut, const ALsizei todo)
     {
         ASSUME(todo > 0);
 
@@ -392,8 +392,7 @@ struct ReverbState final : public EffectState {
         {
             std::fill_n(mTempSamples[0].begin(), todo, 0.0f);
             MixRowSamples(mTempSamples[0], A2B[c], mEarlyBuffer, 0, todo);
-            MixSamples(mTempSamples[0].data(), numOutput,
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mEarly.CurrentGain[c],
+            MixSamples(mTempSamples[0].data(), samplesOut, mEarly.CurrentGain[c],
                 mEarly.PanGain[c], todo, 0, todo);
         }
 
@@ -401,13 +400,12 @@ struct ReverbState final : public EffectState {
         {
             std::fill_n(mTempSamples[0].begin(), todo, 0.0f);
             MixRowSamples(mTempSamples[0], A2B[c], mLateBuffer, 0, todo);
-            MixSamples(mTempSamples[0].data(), numOutput,
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mLate.CurrentGain[c],
-                mLate.PanGain[c], todo, 0, todo);
+            MixSamples(mTempSamples[0].data(), samplesOut, mLate.CurrentGain[c], mLate.PanGain[c],
+                todo, 0, todo);
         }
     }
 
-    void MixOutAmbiUp(const ALsizei numOutput, FloatBufferLine *samplesOut, const ALsizei todo)
+    void MixOutAmbiUp(const al::span<FloatBufferLine> samplesOut, const ALsizei todo)
     {
         ASSUME(todo > 0);
 
@@ -422,8 +420,7 @@ struct ReverbState final : public EffectState {
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[0][c].applyHfScale(mTempSamples[0].data(), hfscale, todo);
 
-            MixSamples(mTempSamples[0].data(), numOutput,
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mEarly.CurrentGain[c],
+            MixSamples(mTempSamples[0].data(), samplesOut, mEarly.CurrentGain[c],
                 mEarly.PanGain[c], todo, 0, todo);
         }
 
@@ -435,9 +432,8 @@ struct ReverbState final : public EffectState {
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].applyHfScale(mTempSamples[0].data(), hfscale, todo);
 
-            MixSamples(mTempSamples[0].data(), numOutput,
-                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mLate.CurrentGain[c],
-                mLate.PanGain[c], todo, 0, todo);
+            MixSamples(mTempSamples[0].data(), samplesOut, mLate.CurrentGain[c], mLate.PanGain[c],
+                todo, 0, todo);
         }
     }
 
@@ -1530,7 +1526,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     mFadeCount = fadeCount;
 
     /* Finally, mix early reflections and late reverb. */
-    (this->*mMixOut)(numOutput, samplesOut, samplesToDo);
+    (this->*mMixOut)({samplesOut, samplesOut+numOutput}, samplesToDo);
 }
 
 

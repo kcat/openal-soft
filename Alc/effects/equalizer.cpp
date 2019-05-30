@@ -160,6 +160,7 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
 
 void EqualizerState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
+    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
     ASSUME(numInput > 0);
     for(ALsizei c{0};c < numInput;c++)
     {
@@ -168,9 +169,8 @@ void EqualizerState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
         mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
 
-        MixSamples(mSampleBuffer, numOutput,
-            &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mChans[c].CurrentGains,
-            mChans[c].TargetGains, samplesToDo, 0, samplesToDo);
+        MixSamples(mSampleBuffer, output, mChans[c].CurrentGains, mChans[c].TargetGains,
+            samplesToDo, 0, samplesToDo);
     }
 }
 

@@ -143,10 +143,10 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
 
 void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
-    const ALsizei step = mStep;
-    ALsizei base;
+    const ALsizei step{mStep};
 
-    for(base = 0;base < samplesToDo;)
+    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
+    for(ALsizei base{0};base < samplesToDo;)
     {
         alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
         ALsizei td = mini(MAX_UPDATE_SAMPLES, samplesToDo-base);
@@ -165,8 +165,8 @@ void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *R
             for(i = 0;i < td;i++)
                 temps[i] *= modsamples[i];
 
-            MixSamples(temps, numOutput, &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]),
-                mChans[c].CurrentGains, mChans[c].TargetGains, samplesToDo-base, base, td);
+            MixSamples(temps, output, mChans[c].CurrentGains, mChans[c].TargetGains,
+                samplesToDo-base, base, td);
         }
 
         base += td;

@@ -147,21 +147,20 @@ void MixDirectHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 
 template<>
-void Mix_<SSETag>(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuffer)[BUFFERSIZE],
+void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
     ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
     const ALsizei BufferSize)
 {
-    ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
 
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
-    for(ALsizei c{0};c < OutChans;c++)
+    for(FloatBufferLine &output : OutBuffer)
     {
-        ALfloat *RESTRICT dst{al::assume_aligned<16>(&OutBuffer[c][OutPos])};
-        ALsizei pos{0};
-        ALfloat gain{CurrentGains[c]};
-        const ALfloat diff{TargetGains[c] - gain};
+        ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
+        ALfloat gain{*CurrentGains};
+        const ALfloat diff{*TargetGains - gain};
 
+        ALsizei pos{0};
         if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
         {
             ALsizei minsize{mini(BufferSize, Counter)};
@@ -199,16 +198,18 @@ void Mix_<SSETag>(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuff
                 step_count += 1.0f;
             }
             if(pos == Counter)
-                gain = TargetGains[c];
+                gain = *TargetGains;
             else
                 gain += step*step_count;
-            CurrentGains[c] = gain;
+            *CurrentGains = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
             minsize = mini(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
                 dst[pos] += data[pos]*gain;
         }
+        ++CurrentGains;
+        ++TargetGains;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;

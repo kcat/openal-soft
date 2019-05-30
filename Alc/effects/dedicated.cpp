@@ -92,9 +92,8 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
 
 void DedicatedState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
 {
-    MixSamples(samplesIn[0].data(), numOutput,
-        &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mCurrentGains, mTargetGains,
-        samplesToDo, 0, samplesToDo);
+    MixSamples(samplesIn[0].data(), {samplesOut, samplesOut+numOutput}, mCurrentGains,
+        mTargetGains, samplesToDo, 0, samplesToDo);
 }
 
 

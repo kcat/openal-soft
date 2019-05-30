@@ -293,9 +293,9 @@ struct ALvoice {
 void DeinitVoice(ALvoice *voice) noexcept;
 
 
-using MixerFunc = void(*)(const ALfloat *data, const ALsizei OutChans,
-    ALfloat (*OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains, const ALfloat *TargetGains,
-    const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
+using MixerFunc = void(*)(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
+    ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
+    const ALsizei BufferSize);
 using RowMixerFunc = void(*)(FloatBufferLine &OutBuffer, const ALfloat *gains,
     const al::span<const FloatBufferLine> InSamples, const ALsizei InPos,
     const ALsizei BufferSize);

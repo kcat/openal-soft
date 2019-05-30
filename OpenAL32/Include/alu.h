@@ -296,8 +296,8 @@ void DeinitVoice(ALvoice *voice) noexcept;
 using MixerFunc = void(*)(const ALfloat *data, const ALsizei OutChans,
     ALfloat (*OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains, const ALfloat *TargetGains,
     const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
-using RowMixerFunc = void(*)(ALfloat *OutBuffer, const ALfloat *gains,
-    const ALfloat (*data)[BUFFERSIZE], const ALsizei InChans, const ALsizei InPos,
+using RowMixerFunc = void(*)(FloatBufferLine &OutBuffer, const ALfloat *gains,
+    const al::span<const FloatBufferLine> InSamples, const ALsizei InPos,
     const ALsizei BufferSize);
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,

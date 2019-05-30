@@ -157,29 +157,26 @@ void BFormatDec::process(FloatBufferLine *OutBuffer, const ALsizei OutChannels, 
             mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i].data(),
                 SamplesToDo);
 
+        const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mSamplesHF+mNumChannels};
+        const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mSamplesLF+mNumChannels};
         for(ALsizei chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
 
-            MixRowSamples(OutBuffer[chan].data(), mMatrix.Dual[chan][sHFBand],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mSamplesHF[0]),
-                mNumChannels, 0, SamplesToDo);
-            MixRowSamples(OutBuffer[chan].data(), mMatrix.Dual[chan][sLFBand],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mSamplesLF[0]),
-                mNumChannels, 0, SamplesToDo);
+            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][sHFBand], hfsamples, 0, SamplesToDo);
+            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][sLFBand], lfsamples, 0, SamplesToDo);
         }
     }
     else
     {
+        const al::span<const FloatBufferLine> insamples{InSamples, InSamples+mNumChannels};
         for(ALsizei chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
 
-            MixRowSamples(OutBuffer[chan].data(), mMatrix.Single[chan],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(InSamples[0]), mNumChannels, 0,
-                SamplesToDo);
+            MixRowSamples(OutBuffer[chan], mMatrix.Single[chan], insamples, 0, SamplesToDo);
         }
     }
 }

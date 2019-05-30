@@ -391,9 +391,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempSamples[0].begin(), todo, 0.0f);
-            MixRowSamples(mTempSamples[0].data(), A2B[c],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mEarlyBuffer[0]), NUM_LINES, 0,
-                todo);
+            MixRowSamples(mTempSamples[0], A2B[c], mEarlyBuffer, 0, todo);
             MixSamples(mTempSamples[0].data(), numOutput,
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mEarly.CurrentGain[c],
                 mEarly.PanGain[c], todo, 0, todo);
@@ -402,9 +400,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempSamples[0].begin(), todo, 0.0f);
-            MixRowSamples(mTempSamples[0].data(), A2B[c],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mLateBuffer[0]), NUM_LINES, 0,
-                todo);
+            MixRowSamples(mTempSamples[0], A2B[c], mLateBuffer, 0, todo);
             MixSamples(mTempSamples[0].data(), numOutput,
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(samplesOut[0]), mLate.CurrentGain[c],
                 mLate.PanGain[c], todo, 0, todo);
@@ -418,9 +414,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempSamples[0].begin(), todo, 0.0f);
-            MixRowSamples(mTempSamples[0].data(), A2B[c],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mEarlyBuffer[0]), NUM_LINES, 0,
-                todo);
+            MixRowSamples(mTempSamples[0], A2B[c], mEarlyBuffer, 0, todo);
 
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
@@ -436,9 +430,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempSamples[0].begin(), todo, 0.0f);
-            MixRowSamples(mTempSamples[0].data(), A2B[c],
-                &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(mLateBuffer[0]), NUM_LINES, 0,
-                todo);
+            MixRowSamples(mTempSamples[0], A2B[c], mLateBuffer, 0, todo);
 
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].applyHfScale(mTempSamples[0].data(), hfscale, todo);
@@ -1465,9 +1457,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     for(ALsizei c{0};c < NUM_LINES;c++)
     {
         std::fill_n(afmt[c].begin(), samplesToDo, 0.0f);
-        MixRowSamples(afmt[c].data(), B2A[c],
-            &reinterpret_cast<const ALfloat(&)[BUFFERSIZE]>(samplesIn[0]), numInput, 0,
-            samplesToDo);
+        MixRowSamples(afmt[c], B2A[c], {samplesIn, samplesIn+numInput}, 0, samplesToDo);
 
         /* Band-pass the incoming samples. */
         mFilter[c].Lp.process(afmt[c].data(), afmt[c].data(), samplesToDo);

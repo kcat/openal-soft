@@ -276,20 +276,19 @@ void Mix_<NEONTag>(const ALfloat *data, const ALsizei OutChans, ALfloat (*OutBuf
 }
 
 template<>
-void MixRow_<NEONTag>(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*data)[BUFFERSIZE],
-    const ALsizei InChans, const ALsizei InPos, const ALsizei BufferSize)
+void MixRow_<NEONTag>(FloatBufferLine &OutBuffer, const ALfloat *Gains,
+    const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize)
 {
-    ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
 
-    for(ALsizei c{0};c < InChans;c++)
+    for(const FloatBufferLine &input : InSamples)
     {
-        const ALfloat *RESTRICT src{al::assume_aligned<16>(&data[c][InPos])};
-        ALsizei pos{0};
-        const ALfloat gain{Gains[c]};
+        const ALfloat *RESTRICT src{al::assume_aligned<16>(input.data()+InPos)};
+        const ALfloat gain{*(Gains++)};
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
+        ALsizei pos{0};
         if(LIKELY(BufferSize > 3))
         {
             ALsizei todo{BufferSize >> 2};

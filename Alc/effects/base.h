@@ -4,6 +4,7 @@
 #include "alMain.h"
 
 #include "almalloc.h"
+#include "alspan.h"
 #include "atomic.h"
 
 
@@ -151,7 +152,7 @@ struct EffectState {
 
     virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
-    virtual void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) = 0;
+    virtual void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) = 0;
 
     void IncRef() noexcept;
     void DecRef() noexcept;

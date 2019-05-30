@@ -93,7 +93,7 @@ struct ModulatorState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ModulatorState)
 };
@@ -141,11 +141,10 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
     const ALsizei step{mStep};
 
-    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
     for(ALsizei base{0};base < samplesToDo;)
     {
         alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
@@ -165,7 +164,7 @@ void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *R
             for(i = 0;i < td;i++)
                 temps[i] *= modsamples[i];
 
-            MixSamples(temps, output, mChans[c].CurrentGains, mChans[c].TargetGains,
+            MixSamples(temps, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
                 samplesToDo-base, base, td);
         }
 

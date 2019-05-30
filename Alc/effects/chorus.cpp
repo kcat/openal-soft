@@ -101,7 +101,7 @@ struct ChorusState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ChorusState)
 };
@@ -198,7 +198,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     }
 }
 
-void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
     const auto bufmask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     const ALfloat feedback{mFeedback};
@@ -206,7 +206,6 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
     ALsizei offset{mOffset};
 
-    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
     for(ALsizei base{0};base < samplesToDo;)
     {
         const ALsizei todo = mini(256, samplesToDo-base);
@@ -254,7 +253,7 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         }
 
         for(ALsizei c{0};c < 2;c++)
-            MixSamples(temps[c], output, mGains[c].Current, mGains[c].Target, samplesToDo-base,
+            MixSamples(temps[c], samplesOut, mGains[c].Current, mGains[c].Target, samplesToDo-base,
                 base, todo);
 
         base += todo;

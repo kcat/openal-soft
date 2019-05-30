@@ -50,7 +50,7 @@ struct DistortionState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DistortionState)
 };
@@ -95,14 +95,10 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
-void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
-    ALfloat (*RESTRICT buffer)[BUFFERSIZE] = mBuffer;
-    const ALfloat fc = mEdgeCoeff;
-    ALsizei base;
-    ALsizei i, k;
-
-    for(base = 0;base < samplesToDo;)
+    const ALfloat fc{mEdgeCoeff};
+    for(ALsizei base{0};base < samplesToDo;)
     {
         /* Perform 4x oversampling to avoid aliasing. Oversampling greatly
          * improves distortion quality and allows to implement lowpass and
@@ -114,47 +110,48 @@ void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.
          */
-        for(i = 0;i < todo;i++)
-            buffer[0][i] = !(i&3) ? samplesIn[0][(i>>2)+base] * 4.0f : 0.0f;
+        for(ALsizei i{0};i < todo;i++)
+            mBuffer[0][i] = !(i&3) ? samplesIn[0][(i>>2)+base] * 4.0f : 0.0f;
 
         /* First step, do lowpass filtering of original signal. Additionally
          * perform buffer interpolation and lowpass cutoff for oversampling
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        mLowpass.process(buffer[1], buffer[0], todo);
+        mLowpass.process(mBuffer[1], mBuffer[0], todo);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
          * waveshaping are intended to modify waveform without boost/clipping/
          * attenuation process.
          */
-        for(i = 0;i < todo;i++)
+        for(ALsizei i{0};i < todo;i++)
         {
-            ALfloat smp = buffer[1][i];
+            ALfloat smp{mBuffer[1][i]};
 
             smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
             smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
             smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
 
-            buffer[0][i] = smp;
+            mBuffer[0][i] = smp;
         }
 
         /* Third step, do bandpass filtering of distorted signal. */
-        mBandpass.process(buffer[1], buffer[0], todo);
+        mBandpass.process(mBuffer[1], mBuffer[0], todo);
 
         todo >>= 2;
-        for(k = 0;k < numOutput;k++)
+        const ALfloat *outgains{mGain};
+        for(FloatBufferLine &output : samplesOut)
         {
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.
              */
-            const ALfloat gain{mGain[k]};
+            const ALfloat gain{*(outgains++)};
             if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
-            for(i = 0;i < todo;i++)
-                samplesOut[k][base+i] += gain * buffer[1][i*4];
+            for(ALsizei i{0};i < todo;i++)
+                output[base+i] += gain * mBuffer[1][i*4];
         }
 
         base += todo;

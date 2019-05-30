@@ -153,7 +153,7 @@ struct PshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(PshifterState)
 };
@@ -197,7 +197,7 @@ void PshifterState::update(const ALCcontext* UNUSED(context), const ALeffectslot
     ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -321,8 +321,8 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
     mCount = count;
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(bufferOut, {samplesOut, samplesOut+numOutput}, mCurrentGains, mTargetGains,
-        maxi(samplesToDo, 512), 0, samplesToDo);
+    MixSamples(bufferOut, samplesOut, mCurrentGains, mTargetGains, maxi(samplesToDo, 512), 0,
+        samplesToDo);
 }
 
 

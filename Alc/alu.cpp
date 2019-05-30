@@ -1466,8 +1466,9 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
+            const auto outchans = static_cast<size_t>(state->mOutChannels);
             state->process(SamplesToDo, slot->Wet.Buffer, slot->Wet.NumChannels,
-                state->mOutBuffer, state->mOutChannels);
+                {state->mOutBuffer, outchans});
         }
     );
 }

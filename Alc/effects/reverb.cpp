@@ -446,7 +446,7 @@ struct ReverbState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ReverbState)
 };
@@ -1442,7 +1442,7 @@ void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei to
     VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base, out, todo);
 }
 
-void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
     ALsizei fadeCount{mFadeCount};
 
@@ -1526,7 +1526,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     mFadeCount = fadeCount;
 
     /* Finally, mix early reflections and late reverb. */
-    (this->*mMixOut)({samplesOut, samplesOut+numOutput}, samplesToDo);
+    (this->*mMixOut)(samplesOut, samplesToDo);
 }
 
 

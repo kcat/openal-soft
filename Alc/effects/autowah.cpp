@@ -72,7 +72,7 @@ struct ALautowahState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ALautowahState)
 };
@@ -128,7 +128,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
     const ALfloat attack_rate = mAttackRate;
     const ALfloat release_rate = mReleaseRate;
@@ -156,7 +156,6 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
     }
     mEnvDelay = env_delay;
 
-    const al::span<FloatBufferLine> output{samplesOut, samplesOut+numOutput};
     ASSUME(numInput > 0);
     for(ALsizei c{0};c < numInput;++c)
     {
@@ -193,8 +192,8 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         mChans[c].Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(mBufferOut, output, mChans[c].CurrentGains, mChans[c].TargetGains, samplesToDo,
-            0, samplesToDo);
+        MixSamples(mBufferOut, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
+            samplesToDo, 0, samplesToDo);
     }
 }
 

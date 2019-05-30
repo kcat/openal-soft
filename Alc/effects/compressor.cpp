@@ -52,7 +52,7 @@ struct CompressorState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(CompressorState)
 };
@@ -87,21 +87,18 @@ void CompressorState::update(const ALCcontext* UNUSED(context), const ALeffectsl
     }
 }
 
-void CompressorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void CompressorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
-    ALsizei i, j, k;
-    ALsizei base;
-
-    for(base = 0;base < samplesToDo;)
+    for(ALsizei base{0};base < samplesToDo;)
     {
         ALfloat gains[256];
-        ALsizei td = mini(256, samplesToDo-base);
-        ALfloat env = mEnvFollower;
+        const ALsizei td{mini(256, samplesToDo-base)};
 
         /* Generate the per-sample gains from the signal envelope. */
+        ALfloat env{mEnvFollower};
         if(mEnabled)
         {
-            for(i = 0;i < td;++i)
+            for(ALsizei i{0};i < td;++i)
             {
                 /* Clamp the absolute amplitude to the defined envelope limits,
                  * then attack or release the envelope to reach it.
@@ -125,7 +122,7 @@ void CompressorState::process(const ALsizei samplesToDo, const FloatBufferLine *
              * ensure smooth gain changes when the compressor is turned on and
              * off.
              */
-            for(i = 0;i < td;++i)
+            for(ALsizei i{0};i < td;++i)
             {
                 const ALfloat amplitude{1.0f};
                 if(amplitude > env)
@@ -140,17 +137,17 @@ void CompressorState::process(const ALsizei samplesToDo, const FloatBufferLine *
 
         /* Now compress the signal amplitude to output. */
         ASSUME(numInput > 0);
-        for(j = 0;j < numInput;j++)
+        for(ALsizei j{0};j < numInput;j++)
         {
-            ASSUME(numOutput > 0);
-            for(k = 0;k < numOutput;k++)
+            const ALfloat *outgains{mGain[j]};
+            for(FloatBufferLine &output : samplesOut)
             {
-                const ALfloat gain{mGain[j][k]};
+                const ALfloat gain{*(outgains++)};
                 if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
                     continue;
 
-                for(i = 0;i < td;i++)
-                    samplesOut[k][base+i] += samplesIn[j][base+i] * gains[i] * gain;
+                for(ALsizei i{0};i < td;i++)
+                    output[base+i] += samplesIn[j][base+i] * gains[i] * gain;
             }
         }
 

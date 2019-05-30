@@ -40,7 +40,7 @@ struct DedicatedState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput) override;
+    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DedicatedState)
 };
@@ -90,10 +90,10 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
     }
 }
 
-void DedicatedState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, FloatBufferLine *RESTRICT samplesOut, const ALsizei numOutput)
+void DedicatedState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
-    MixSamples(samplesIn[0].data(), {samplesOut, samplesOut+numOutput}, mCurrentGains,
-        mTargetGains, samplesToDo, 0, samplesToDo);
+    MixSamples(samplesIn[0].data(), samplesOut, mCurrentGains, mTargetGains, samplesToDo, 0,
+        samplesToDo);
 }
 
 

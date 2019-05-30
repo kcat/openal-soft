@@ -1189,7 +1189,7 @@ void VecAllpass::processFaded(const al::span<FloatBufferLine,NUM_LINES> samples,
 void EarlyReflection_Unfaded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALsizei base, const al::span<FloatBufferLine,NUM_LINES> out)
 {
-    const al::span<FloatBufferLine,NUM_LINES> temps{State->mTempSamples};
+    const auto temps = al::span<FloatBufferLine,NUM_LINES>(State->mTempSamples);
     const DelayLineI early_delay{State->mEarly.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1246,12 +1246,13 @@ void EarlyReflection_Unfaded(ReverbState *State, const ALsizei offset, const ALs
      * bounce to improve the initial diffusion in the late reverb.
      */
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base,
+        {out.cbegin(), out.cend()}, todo);
 }
 void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALfloat fade, const ALsizei base, const al::span<FloatBufferLine,NUM_LINES> out)
 {
-    const al::span<FloatBufferLine,NUM_LINES> temps{State->mTempSamples};
+    const auto temps = al::span<FloatBufferLine,NUM_LINES>(State->mTempSamples);
     const DelayLineI early_delay{State->mEarly.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1317,7 +1318,8 @@ void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsiz
         early_delay.write(offset, NUM_LINES-1-j, temps[j].data(), todo);
 
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base,
+        {out.cbegin(), out.cend()}, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1337,7 +1339,7 @@ void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsiz
 void LateReverb_Unfaded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALsizei base, const al::span<FloatBufferLine,NUM_LINES> out)
 {
-    const al::span<FloatBufferLine,NUM_LINES> temps{State->mTempSamples};
+    const auto temps = al::span<FloatBufferLine,NUM_LINES>(State->mTempSamples);
     const DelayLineI late_delay{State->mLate.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1379,12 +1381,13 @@ void LateReverb_Unfaded(ReverbState *State, const ALsizei offset, const ALsizei 
         std::copy_n(temps[j].begin(), todo, out[j].begin()+base);
 
     /* Finally, scatter and bounce the results to refeed the feedback buffer. */
-    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base,
+        {out.cbegin(), out.cend()}, todo);
 }
 void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALfloat fade, const ALsizei base, const al::span<FloatBufferLine,NUM_LINES> out)
 {
-    const al::span<FloatBufferLine,NUM_LINES> temps{State->mTempSamples};
+    const auto temps = al::span<FloatBufferLine,NUM_LINES>(State->mTempSamples);
     const DelayLineI late_delay{State->mLate.Delay};
     const DelayLineI main_delay{State->mDelay};
     const ALfloat mixX{State->mMixX};
@@ -1439,7 +1442,8 @@ void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei to
     for(ALsizei j{0};j < NUM_LINES;j++)
         std::copy_n(temps[j].begin(), todo, out[j].begin()+base);
 
-    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base, out, todo);
+    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, base,
+        {out.cbegin(), out.cend()}, todo);
 }
 
 void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
@@ -1449,7 +1453,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     ASSUME(samplesToDo > 0);
 
     /* Convert B-Format to A-Format for processing. */
-    const al::span<FloatBufferLine,NUM_LINES> afmt{mTempSamples};
+    auto &afmt = mTempSamples;
     for(ALsizei c{0};c < NUM_LINES;c++)
     {
         std::fill_n(afmt[c].begin(), samplesToDo, 0.0f);

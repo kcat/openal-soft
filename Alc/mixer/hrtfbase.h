@@ -102,22 +102,21 @@ inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
 
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const FloatBufferLine *InSamples, float2 *RESTRICT AccumSamples, DirectHrtfState *State,
-    const ALsizei NumChans, const ALsizei BufferSize)
+    const al::span<const FloatBufferLine> InSamples, float2 *RESTRICT AccumSamples,
+    DirectHrtfState *State, const ALsizei BufferSize)
 {
-    ASSUME(NumChans > 0);
     ASSUME(BufferSize > 0);
 
     const ALsizei IrSize{State->IrSize};
     ASSUME(IrSize >= 4);
 
-    for(ALsizei c{0};c < NumChans;++c)
+    auto chanstate = State->Chan.begin();
+    for(const FloatBufferLine &input : InSamples)
     {
-        const FloatBufferLine &input = InSamples[c];
-        const auto &Coeffs = State->Chan[c].Coeffs;
+        const auto &Coeffs = chanstate->Coeffs;
 
-        auto accum_iter = std::copy_n(State->Chan[c].Values.begin(),
-            State->Chan[c].Values.size(), AccumSamples);
+        auto accum_iter = std::copy_n(chanstate->Values.begin(),
+            chanstate->Values.size(), AccumSamples);
         std::fill_n(accum_iter, BufferSize, float2{});
 
         for(ALsizei i{0};i < BufferSize;++i)
@@ -130,8 +129,9 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         for(ALsizei i{0};i < BufferSize;++i)
             RightOut[i] += AccumSamples[i][1];
 
-        std::copy_n(AccumSamples + BufferSize, State->Chan[c].Values.size(),
-            State->Chan[c].Values.begin());
+        std::copy_n(AccumSamples + BufferSize, chanstate->Values.size(),
+            chanstate->Values.begin());
+        ++chanstate;
     }
 }
 

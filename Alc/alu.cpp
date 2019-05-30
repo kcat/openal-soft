@@ -134,7 +134,8 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 
     DirectHrtfState *state{device->mHrtfState.get()};
     MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-        device->Dry.Buffer, device->HrtfAccumData, state, device->Dry.NumChannels, SamplesToDo);
+        {device->Dry.Buffer,device->Dry.Buffer+device->Dry.NumChannels}, device->HrtfAccumData,
+        state, SamplesToDo);
 }
 
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)

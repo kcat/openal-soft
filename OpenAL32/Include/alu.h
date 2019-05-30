@@ -22,8 +22,10 @@
 #include "filters/biquad.h"
 #include "filters/splitter.h"
 #include "filters/nfc.h"
+
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 
 
 enum class DistanceModel;
@@ -304,8 +306,8 @@ using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &Ri
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
     const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const FloatBufferLine *InSamples, float2 *RESTRICT AccumSamples, DirectHrtfState *State,
-    const ALsizei NumChans, const ALsizei BufferSize);
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
+    const ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */

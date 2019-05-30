@@ -6,6 +6,8 @@
 #include "alMain.h"
 #include "alu.h"
 
+#include "alspan.h"
+
 
 struct MixGains;
 struct MixHrtfParams;
@@ -39,7 +41,7 @@ void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat
 template<typename InstTag>
 void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
 template<typename InstTag>
-void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const FloatBufferLine *InSamples, float2 *AccumSamples, DirectHrtfState *State, const ALsizei NumChans, const ALsizei BufferSize);
+void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State, const ALsizei BufferSize);
 
 /* Vectorized resampler helpers */
 inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTRICT frac_arr, ALsizei *RESTRICT pos_arr, ALsizei size)

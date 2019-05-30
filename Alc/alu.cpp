@@ -641,7 +641,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 voice->mDirect.Params[0].NFCtrlFilter.adjust(0.0f);
 
                 voice->mDirect.ChannelsPerOrder[0] = 1;
-                voice->mDirect.ChannelsPerOrder[1] = mini(voice->mDirect.Channels-1, 3);
+                voice->mDirect.ChannelsPerOrder[1] = minz(voice->mDirect.Buffer.size()-1, 3);
                 std::fill(std::begin(voice->mDirect.ChannelsPerOrder)+2,
                           std::end(voice->mDirect.ChannelsPerOrder), 0);
                 voice->mFlags |= VOICE_HAS_NFC;
@@ -697,8 +697,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.
          */
-        voice->mDirect.Buffer = Device->RealOut.Buffer;
-        voice->mDirect.Channels = Device->RealOut.NumChannels;
+        voice->mDirect.Buffer = {Device->RealOut.Buffer,
+            static_cast<size_t>(Device->RealOut.NumChannels)};
 
         for(ALsizei c{0};c < num_channels;c++)
         {
@@ -727,8 +727,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
          */
-        voice->mDirect.Buffer = Device->RealOut.Buffer;
-        voice->mDirect.Channels = Device->RealOut.NumChannels;
+        voice->mDirect.Buffer = {Device->RealOut.Buffer,
+            static_cast<size_t>(Device->RealOut.NumChannels)};
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -970,8 +970,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     const ALCdevice *Device{ALContext->Device};
     ALeffectslot *SendSlots[MAX_SENDS];
 
-    voice->mDirect.Buffer = Device->Dry.Buffer;
-    voice->mDirect.Channels = Device->Dry.NumChannels;
+    voice->mDirect.Buffer = {Device->Dry.Buffer, static_cast<size_t>(Device->Dry.NumChannels)};
     for(ALsizei i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
@@ -980,13 +979,12 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
-            voice->mSend[i].Buffer = nullptr;
-            voice->mSend[i].Channels = 0;
+            voice->mSend[i].Buffer = {};
         }
         else
         {
-            voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
-            voice->mSend[i].Channels = SendSlots[i]->Wet.NumChannels;
+            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer,
+                static_cast<size_t>(SendSlots[i]->Wet.NumChannels)};
         }
     }
 
@@ -1031,8 +1029,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     const ALlistener &Listener = ALContext->Listener;
 
     /* Set mixing buffers and get send parameters. */
-    voice->mDirect.Buffer = Device->Dry.Buffer;
-    voice->mDirect.Channels = Device->Dry.NumChannels;
+    voice->mDirect.Buffer = {Device->Dry.Buffer, static_cast<size_t>(Device->Dry.NumChannels)};
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
@@ -1087,14 +1084,11 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         }
 
         if(!SendSlots[i])
-        {
-            voice->mSend[i].Buffer = nullptr;
-            voice->mSend[i].Channels = 0;
-        }
+            voice->mSend[i].Buffer = {};
         else
         {
-            voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
-            voice->mSend[i].Channels = SendSlots[i]->Wet.NumChannels;
+            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer,
+                static_cast<size_t>(SendSlots[i]->Wet.NumChannels)};
         }
     }
 

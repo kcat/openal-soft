@@ -265,8 +265,7 @@ struct ALvoice {
         int FilterType;
         DirectParams Params[MAX_INPUT_CHANNELS];
 
-        FloatBufferLine *Buffer;
-        ALsizei Channels;
+        al::span<FloatBufferLine> Buffer;
         ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
     } mDirect;
 
@@ -274,8 +273,7 @@ struct ALvoice {
         int FilterType;
         SendParams Params[MAX_INPUT_CHANNELS];
 
-        FloatBufferLine *Buffer;
-        ALsizei Channels;
+        al::span<FloatBufferLine> Buffer;
     };
     al::FlexArray<SendData> mSend;
 

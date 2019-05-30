@@ -561,7 +561,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 parms.Hrtf.Old = parms.Hrtf.Target;
             auto set_current = [chan](ALvoice::SendData &send) -> void
             {
-                if(!send.Buffer)
+                if(send.Buffer.empty())
                     return;
 
                 SendParams &parms = send.Params[chan];
@@ -801,7 +801,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         SilentTarget : parms.Gains.Target};
 
                     const auto outcount = static_cast<size_t>(voice->mDirect.ChannelsPerOrder[0]);
-                    MixSamples(samples, {voice->mDirect.Buffer, outcount}, parms.Gains.Current,
+                    MixSamples(samples, voice->mDirect.Buffer.first(outcount), parms.Gains.Current,
                         TargetGains, Counter, OutPos, DstBufferSize);
 
                     ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
@@ -813,7 +813,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                             voice->mDirect.ChannelsPerOrder[order]);
                         if(outcount < 1) return;
                         (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
-                        MixSamples(nfcsamples, {voice->mDirect.Buffer+chanoffset, outcount},
+                        MixSamples(nfcsamples, voice->mDirect.Buffer.subspan(chanoffset, outcount),
                             parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter,
                             OutPos, DstBufferSize);
                         chanoffset += outcount;
@@ -826,16 +826,15 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 {
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
-                    const auto outcount = static_cast<size_t>(voice->mDirect.Channels);
-                    MixSamples(samples, {voice->mDirect.Buffer, outcount}, parms.Gains.Current,
-                        TargetGains, Counter, OutPos, DstBufferSize);
+                    MixSamples(samples, voice->mDirect.Buffer, parms.Gains.Current, TargetGains,
+                        Counter, OutPos, DstBufferSize);
                 }
             }
 
             ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             auto mix_send = [vstate,Counter,OutPos,DstBufferSize,chan,ResampledData,&FilterBuf](ALvoice::SendData &send) -> void
             {
-                if(!send.Buffer)
+                if(send.Buffer.empty())
                     return;
 
                 SendParams &parms = send.Params[chan];
@@ -844,9 +843,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
-                const auto outcount = static_cast<size_t>(send.Channels);
-                MixSamples(samples, {send.Buffer, outcount}, parms.Gains.Current, TargetGains,
-                    Counter, OutPos, DstBufferSize);
+                MixSamples(samples, send.Buffer, parms.Gains.Current, TargetGains, Counter, OutPos,
+                    DstBufferSize);
             };
             std::for_each(voice->mSend.begin(), voice->mSend.end(), mix_send);
         }

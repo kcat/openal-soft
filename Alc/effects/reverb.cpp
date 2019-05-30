@@ -371,9 +371,9 @@ struct ReverbState final : public EffectState {
     ALsizei mOffset{0};
 
     /* Temporary storage used when processing. */
-    alignas(16) FloatBufferLine mTempSamples[NUM_LINES]{};
-    alignas(16) FloatBufferLine mEarlyBuffer[NUM_LINES]{};
-    alignas(16) FloatBufferLine mLateBuffer[NUM_LINES]{};
+    alignas(16) std::array<FloatBufferLine,NUM_LINES> mTempSamples{};
+    alignas(16) std::array<FloatBufferLine,NUM_LINES> mEarlyBuffer{};
+    alignas(16) std::array<FloatBufferLine,NUM_LINES> mLateBuffer{};
 
     using MixOutT = void (ReverbState::*)(const al::span<FloatBufferLine> samplesOut,
         const ALsizei todo);

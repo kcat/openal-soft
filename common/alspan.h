@@ -116,7 +116,7 @@ public:
     constexpr span(U &cont) : span{al::data(cont), al::size(cont)} { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(U))>
     constexpr span(const U &cont) : span{al::data(cont), al::size(cont)} { }
-    template<typename U, size_t N, REQUIRES(extent == N && std::is_convertible<U(*)[],element_type(*)[]>::value)>
+    template<typename U, size_t N, REQUIRES(!std::is_same<element_type,U>::value && extent == N && std::is_convertible<U(*)[],element_type(*)[]>::value)>
     constexpr span(const span<U,N> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
@@ -210,7 +210,7 @@ public:
     constexpr span(U &cont) : span{al::data(cont), al::size(cont)} { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(U))>
     constexpr span(const U &cont) : span{al::data(cont), al::size(cont)} { }
-    template<typename U, size_t N, REQUIRES(std::is_convertible<U(*)[],element_type(*)[]>::value)>
+    template<typename U, size_t N, REQUIRES((!std::is_same<element_type,U>::value || extent != N) && std::is_convertible<U(*)[],element_type(*)[]>::value)>
     constexpr span(const span<U,N> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 

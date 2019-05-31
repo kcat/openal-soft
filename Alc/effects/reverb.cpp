@@ -699,15 +699,15 @@ void T60Filter::calcCoeffs(const ALfloat length, const ALfloat lfDecayTime,
     const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm,
     const ALfloat hf0norm)
 {
-    const ALfloat lfGain{CalcDecayCoeff(length, lfDecayTime)};
     const ALfloat mfGain{CalcDecayCoeff(length, mfDecayTime)};
-    const ALfloat hfGain{CalcDecayCoeff(length, hfDecayTime)};
+    const ALfloat lfGain{maxf(CalcDecayCoeff(length, lfDecayTime)/mfGain, 0.001f)};
+    const ALfloat hfGain{maxf(CalcDecayCoeff(length, hfDecayTime)/mfGain, 0.001f)};
 
     MidGain[1] = mfGain;
-    LFFilter.setParams(BiquadType::LowShelf, lfGain/mfGain, lf0norm,
-        LFFilter.rcpQFromSlope(lfGain/mfGain, 1.0f));
-    HFFilter.setParams(BiquadType::HighShelf, hfGain/mfGain, hf0norm,
-        HFFilter.rcpQFromSlope(hfGain/mfGain, 1.0f));
+    LFFilter.setParams(BiquadType::LowShelf, lfGain, lf0norm,
+        LFFilter.rcpQFromSlope(lfGain, 1.0f));
+    HFFilter.setParams(BiquadType::HighShelf, hfGain, hf0norm,
+        HFFilter.rcpQFromSlope(hfGain, 1.0f));
 }
 
 /* Update the early reflection line lengths and gain coefficients. */

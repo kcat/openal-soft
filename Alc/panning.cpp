@@ -539,26 +539,65 @@ void InitHrtfPanning(ALCdevice *device)
         { 5.00000000e-02f,  0.00000000e+00f, -8.09016994e-02f, -3.09016994e-02f,  0.00000000e+00f,  0.00000000e+00f,  9.04508497e-02f,  6.45497224e-02f,  1.23279000e-02f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f, -7.94438918e-02f, -1.12611206e-01f,  2.42115150e-02f, -1.25611822e-01f },
         { 5.00000000e-02f,  0.00000000e+00f,  8.09016994e-02f, -3.09016994e-02f,  0.00000000e+00f,  0.00000000e+00f,  9.04508497e-02f, -6.45497224e-02f,  1.23279000e-02f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  7.94438918e-02f, -1.12611206e-01f, -2.42115150e-02f, -1.25611822e-01f }
     };
-    static constexpr ALfloat AmbiOrderHFGainFOA[MAX_AMBI_ORDER+1]{
+    static constexpr ALfloat AmbiOrderHFGain1O[MAX_AMBI_ORDER+1]{
         3.16227766e+00f, 1.82574186e+00f
-    }, AmbiOrderHFGainHOA[MAX_AMBI_ORDER+1]{
+    }, AmbiOrderHFGain2O[MAX_AMBI_ORDER+1]{
         2.35702260e+00f, 1.82574186e+00f, 9.42809042e-01f
-        /*1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f*/
+    }, AmbiOrderHFGain3O[MAX_AMBI_ORDER+1]{
+        1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f
     };
     static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
-    const ALfloat *AmbiOrderHFGain{AmbiOrderHFGainFOA};
+    const ALfloat *AmbiOrderHFGain{AmbiOrderHFGain1O};
 
     static_assert(al::size(AmbiPoints) == al::size(AmbiMatrix), "Ambisonic HRTF mismatch");
 
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
      */
+    device->mRenderMode = HrtfRender;
     ALsizei ambi_order{1};
-    if(device->mRenderMode != HrtfRender)
+    const char *mode;
+    if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode", &mode))
     {
-        ambi_order = 2;
-        AmbiOrderHFGain = AmbiOrderHFGainHOA;
+        if(strcasecmp(mode, "basic") == 0)
+        {
+            ERR("HRTF mode \"%s\" deprecated, substituting \"%s\"\n", mode, "ambi2");
+            mode = "ambi2";
+        }
+
+        if(strcasecmp(mode, "full") == 0)
+            device->mRenderMode = HrtfRender;
+        else if(strcasecmp(mode, "ambi1") == 0)
+        {
+            device->mRenderMode = NormalRender;
+            ambi_order = 1;
+        }
+        else if(strcasecmp(mode, "ambi2") == 0)
+        {
+            device->mRenderMode = NormalRender;
+            ambi_order = 2;
+        }
+        else if(strcasecmp(mode, "ambi3") == 0)
+        {
+            device->mRenderMode = NormalRender;
+            ambi_order = 3;
+        }
+        else
+            ERR("Unexpected hrtf-mode: %s\n", mode);
     }
+    TRACE("%s HRTF rendering enabled, using \"%s\"\n",
+        (device->mRenderMode == HrtfRender) ? "Full" :
+        (ambi_order >= 3) ? "Third-Order" :
+        (ambi_order == 2) ? "Second-Order" :
+        (ambi_order == 1) ? "First-Order" : "Unknown",
+        device->HrtfName.c_str());
+
+    if(ambi_order >= 3)
+        AmbiOrderHFGain = AmbiOrderHFGain3O;
+    else if(ambi_order == 2)
+        AmbiOrderHFGain = AmbiOrderHFGain2O;
+    else if(ambi_order == 1)
+        AmbiOrderHFGain = AmbiOrderHFGain1O;
     device->mAmbiOrder = ambi_order;
 
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
@@ -903,21 +942,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             old_hrtf->DecRef();
         old_hrtf = nullptr;
 
-        device->mRenderMode = HrtfRender;
-        const char *mode;
-        if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode", &mode))
-        {
-            if(strcasecmp(mode, "full") == 0)
-                device->mRenderMode = HrtfRender;
-            else if(strcasecmp(mode, "basic") == 0)
-                device->mRenderMode = NormalRender;
-            else
-                ERR("Unexpected hrtf-mode: %s\n", mode);
-        }
-
-        TRACE("%s HRTF rendering enabled, using \"%s\"\n",
-            ((device->mRenderMode == HrtfRender) ? "Full" : "Basic"), device->HrtfName.c_str()
-        );
         InitHrtfPanning(device);
         return;
     }

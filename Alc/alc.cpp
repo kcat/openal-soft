@@ -2161,12 +2161,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 if(device->AvgSpeakerDist > 0.0f)
                 {
                     /* Reinitialize the NFC filters for new parameters. */
-                    ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                                 (device->AvgSpeakerDist * device->Frequency);
-                    std::for_each(voice->mDirect.Params, voice->mDirect.Params+voice->mNumChannels,
-                        [w1](DirectParams &params) noexcept -> void
-                        { params.NFCtrlFilter.init(w1); }
-                    );
+                    const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+                        (device->AvgSpeakerDist * device->Frequency)};
+                    auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
+                    { chandata.mDryParams.NFCtrlFilter.init(w1); };
+                    std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+                        init_nfc);
                 }
             }
         );
@@ -2591,7 +2591,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    const size_t sizeof_voice{RoundUp(ALvoice::Sizeof(num_sends), 16)};
+    const size_t sizeof_voice{RoundUp(sizeof(ALvoice), 16)};
     const size_t size{sizeof(ALvoice*) + sizeof_voice};
 
     auto voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
@@ -2605,9 +2605,9 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         const ALsizei s_count = mini(old_sends, num_sends);
 
         /* Copy the old voice data to the new storage. */
-        auto copy_voice = [&voice,num_sends,sizeof_voice,s_count](ALvoice *old_voice) -> ALvoice*
+        auto copy_voice = [&voice,s_count](ALvoice *old_voice) -> ALvoice*
         {
-            voice = new (voice) ALvoice{static_cast<size_t>(num_sends)};
+            voice = new (voice) ALvoice{};
 
             /* Make sure the old voice's Update (if any) is cleared so it
              * doesn't get deleted on deinit.
@@ -2647,16 +2647,21 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 
             voice->mFlags = old_voice->mFlags;
 
-            std::copy(old_voice->mResampleData.begin(), old_voice->mResampleData.end(),
-                voice->mResampleData.end());
-
             voice->mDirect = old_voice->mDirect;
-            std::copy_n(old_voice->mSend.begin(), s_count, voice->mSend.begin());
+            voice->mSend = old_voice->mSend;
+            voice->mChans = old_voice->mChans;
+
+            /* Clear old send data/params. */
+            std::fill(voice->mSend.begin()+s_count, voice->mSend.end(), ALvoice::SendData{});
+            auto clear_chan_sends = [s_count](ALvoice::ChannelData &chandata) -> void
+            {
+                std::fill(chandata.mWetParams.begin()+s_count, chandata.mWetParams.end(),
+                    SendParams{});
+            };
+            std::for_each(voice->mChans.begin(), voice->mChans.end(), clear_chan_sends);
 
             /* Set this voice's reference. */
-            ALvoice *ret = voice;
-            /* Increment pointer to the next storage space. */
-            voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voice) + sizeof_voice);
+            ALvoice *ret{voice++};
             return ret;
         };
         viter = std::transform(context->Voices, context->Voices+v_count, viter, copy_voice);
@@ -2666,10 +2671,9 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         std::for_each(context->Voices, voices_end, DeinitVoice);
     }
     /* Finish setting the voices and references. */
-    auto init_voice = [&voice,num_sends,sizeof_voice]() -> ALvoice*
+    auto init_voice = [&voice]() -> ALvoice*
     {
-        ALvoice *ret = new (voice) ALvoice{static_cast<size_t>(num_sends)};
-        voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voice) + sizeof_voice);
+        ALvoice *ret{new (voice++) ALvoice{}};
         return ret;
     };
     std::generate(viter, voices+num_voices, init_voice);

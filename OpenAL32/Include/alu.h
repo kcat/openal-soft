@@ -253,39 +253,33 @@ struct ALvoice {
 
     ALuint mFlags;
 
-    struct ResampleData {
+    struct DirectData {
+        int FilterType;
+        al::span<FloatBufferLine> Buffer;
+        ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
+    };
+    DirectData mDirect;
+
+    struct SendData {
+        int FilterType;
+        al::span<FloatBufferLine> Buffer;
+    };
+    std::array<SendData,MAX_SENDS> mSend;
+
+    struct ChannelData {
         alignas(16) std::array<ALfloat,MAX_RESAMPLE_PADDING*2> mPrevSamples;
 
         ALfloat mAmbiScale;
         BandSplitter mAmbiSplitter;
+
+        DirectParams mDryParams;
+        std::array<SendParams,MAX_SENDS> mWetParams;
     };
-    std::array<ResampleData,MAX_INPUT_CHANNELS> mResampleData;
+    std::array<ChannelData,MAX_INPUT_CHANNELS> mChans;
 
-    struct {
-        int FilterType;
-        DirectParams Params[MAX_INPUT_CHANNELS];
-
-        al::span<FloatBufferLine> Buffer;
-        ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
-    } mDirect;
-
-    struct SendData {
-        int FilterType;
-        SendParams Params[MAX_INPUT_CHANNELS];
-
-        al::span<FloatBufferLine> Buffer;
-    };
-    al::FlexArray<SendData> mSend;
-
-    ALvoice(size_t numsends) : mSend{numsends} { }
+    ALvoice() = default;
     ALvoice(const ALvoice&) = delete;
     ALvoice& operator=(const ALvoice&) = delete;
-
-    static constexpr size_t Sizeof(size_t numsends) noexcept
-    {
-        return maxz(sizeof(ALvoice),
-            al::FlexArray<SendData>::Sizeof(numsends, offsetof(ALvoice, mSend)));
-    }
 };
 
 void DeinitVoice(ALvoice *voice) noexcept;

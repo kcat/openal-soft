@@ -2938,40 +2938,42 @@ START_API_FUNC
             BandSplitter splitter{400.0f / static_cast<ALfloat>(device->Frequency)};
 
             const auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
-            auto init_ambi = [scales,&OrderFromChan,&splitter](ALvoice::ResampleData &resdata) -> void
+            auto init_ambi = [scales,&OrderFromChan,&splitter](ALvoice::ChannelData &chandata) -> void
             {
-                resdata.mPrevSamples.fill(0.0f);
-                resdata.mAmbiScale = scales[*(OrderFromChan++)];
-                resdata.mAmbiSplitter = splitter;
+                chandata.mPrevSamples.fill(0.0f);
+                chandata.mAmbiScale = scales[*(OrderFromChan++)];
+                chandata.mAmbiSplitter = splitter;
             };
-            std::for_each(voice->mResampleData.begin(),
-                voice->mResampleData.begin()+voice->mNumChannels, init_ambi);
+            std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+                init_ambi);
 
             voice->mFlags |= VOICE_IS_AMBISONIC;
         }
         else
         {
             /* Clear previous samples. */
-            auto clear_prevs = [](ALvoice::ResampleData &resdata) -> void
-            { resdata.mPrevSamples.fill(0.0f); };
-            std::for_each(voice->mResampleData.begin(),
-                voice->mResampleData.begin()+voice->mNumChannels, clear_prevs);
+            auto clear_prevs = [](ALvoice::ChannelData &chandata) -> void
+            { chandata.mPrevSamples.fill(0.0f); };
+            std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+                clear_prevs);
         }
 
-        std::fill_n(std::begin(voice->mDirect.Params), voice->mNumChannels, DirectParams{});
-        std::for_each(voice->mSend.begin(), voice->mSend.end(),
-            [voice](ALvoice::SendData &send) -> void
-            { std::fill_n(std::begin(send.Params), voice->mNumChannels, SendParams{}); }
-        );
+        auto clear_params = [device](ALvoice::ChannelData &chandata) -> void
+        {
+            chandata.mDryParams = DirectParams{};
+            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+        };
+        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+            clear_params);
 
         if(device->AvgSpeakerDist > 0.0f)
         {
             const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
                 (device->AvgSpeakerDist * device->Frequency)};
-            std::for_each(voice->mDirect.Params+0, voice->mDirect.Params+voice->mNumChannels,
-                [w1](DirectParams &parms) noexcept -> void
-                { parms.NFCtrlFilter.init(w1); }
-            );
+            auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
+            { chandata.mDryParams.NFCtrlFilter.init(w1); };
+            std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+                init_nfc);
         }
 
         voice->mSourceID.store(source->id, std::memory_order_relaxed);

@@ -554,22 +554,14 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     }
     ASSUME(num_channels > 0);
 
-    std::for_each(std::begin(voice->mDirect.Params),
-        std::begin(voice->mDirect.Params)+num_channels,
-        [](DirectParams &params) -> void
+    std::for_each(voice->mChans.begin(), voice->mChans.begin()+num_channels,
+        [NumSends](ALvoice::ChannelData &chandata) -> void
         {
-            params.Hrtf.Target = HrtfParams{};
-            ClearArray(params.Gains.Target);
-        }
-    );
-    std::for_each(voice->mSend.begin(), voice->mSend.end(),
-        [num_channels](ALvoice::SendData &send) -> void
-        {
-            std::for_each(std::begin(send.Params), std::begin(send.Params)+num_channels,
-                [](SendParams &params) -> void { ClearArray(params.Gains.Target); }
-            );
-        }
-    );
+            chandata.mDryParams.Hrtf.Target = HrtfParams{};
+            ClearArray(chandata.mDryParams.Gains.Target);
+            std::for_each(chandata.mWetParams.begin(), chandata.mWetParams.begin()+NumSends,
+                [](SendParams &params) -> void { ClearArray(params.Gains.Target); });
+        });
 
     voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(isbformat)
@@ -592,7 +584,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
 
                 /* Only need to adjust the first channel of a B-Format source. */
-                voice->mDirect.Params[0].NFCtrlFilter.adjust(w0);
+                voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
 
                 std::copy(std::begin(Device->NumChannelsPerOrder),
                           std::end(Device->NumChannelsPerOrder),
@@ -622,12 +614,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             /* NOTE: W needs to be scaled due to FuMa normalization. */
             const ALfloat &scale0 = AmbiScale::FromFuMa[0];
             ComputePanGains(&Device->Dry, coeffs, DryGain*scale0,
-                voice->mDirect.Params[0].Gains.Target);
+                voice->mChans[0].mDryParams.Gains.Target);
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanGains(&Slot->Wet, coeffs, WetGain[i]*scale0,
-                        voice->mSend[i].Params[0].Gains.Target);
+                        voice->mChans[0].mWetParams[i].Gains.Target);
             }
         }
         else
@@ -638,7 +630,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                  * is what we want for FOA input. The first channel may have
                  * been previously re-adjusted if panned, so reset it.
                  */
-                voice->mDirect.Params[0].NFCtrlFilter.adjust(0.0f);
+                voice->mChans[0].mDryParams.NFCtrlFilter.adjust(0.0f);
 
                 voice->mDirect.ChannelsPerOrder[0] = 1;
                 voice->mDirect.ChannelsPerOrder[1] = minz(voice->mDirect.Buffer.size()-1, 3);
@@ -681,14 +673,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             };
 
             for(ALsizei c{0};c < num_channels;c++)
-                ComputePanGains(&Device->Dry, matrix[c], DryGain,
-                    voice->mDirect.Params[c].Gains.Target);
-            for(ALsizei i{0};i < NumSends;i++)
             {
-                if(const ALeffectslot *Slot{SendSlots[i]})
-                    for(ALsizei c{0};c < num_channels;c++)
+                ComputePanGains(&Device->Dry, matrix[c], DryGain,
+                    voice->mChans[c].mDryParams.Gains.Target);
+
+                for(ALsizei i{0};i < NumSends;i++)
+                {
+                    if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, matrix[c], WetGain[i],
-                            voice->mSend[i].Params[c].Gains.Target);
+                            voice->mChans[c].mWetParams[i].Gains.Target);
+                }
             }
         }
     }
@@ -703,7 +697,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         for(ALsizei c{0};c < num_channels;c++)
         {
             int idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
-            if(idx != -1) voice->mDirect.Params[c].Gains.Target[idx] = DryGain;
+            if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
         }
 
         /* Auxiliary sends still use normal channel panning since they mix to
@@ -718,7 +712,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
-                        voice->mSend[i].Params[c].Gains.Target);
+                        voice->mChans[c].mWetParams[i].Gains.Target);
             }
         }
     }
@@ -739,16 +733,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
              * source direction.
              */
             GetHrtfCoeffs(Device->mHrtf, ev, az, Distance, Spread,
-                voice->mDirect.Params[0].Hrtf.Target.Coeffs,
-                voice->mDirect.Params[0].Hrtf.Target.Delay);
-            voice->mDirect.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
+                voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
+                voice->mChans[0].mDryParams.Hrtf.Target.Delay);
+            voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
             for(ALsizei c{1};c < num_channels;c++)
             {
                 /* Skip LFE */
-                if(chans[c].channel != LFE)
-                    voice->mDirect.Params[c].Hrtf.Target = voice->mDirect.Params[0].Hrtf.Target;
+                if(chans[c].channel == LFE) continue;
+                voice->mChans[c].mDryParams.Hrtf.Target = voice->mChans[0].mDryParams.Hrtf.Target;
             }
 
             /* Calculate the directional coefficients once, which apply to all
@@ -757,16 +751,17 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
 
-            for(ALsizei i{0};i < NumSends;i++)
+            for(ALsizei c{0};c < num_channels;c++)
             {
-                if(const ALeffectslot *Slot{SendSlots[i]})
-                    for(ALsizei c{0};c < num_channels;c++)
-                    {
-                        /* Skip LFE */
-                        if(chans[c].channel != LFE)
-                            ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
-                                voice->mSend[i].Params[c].Gains.Target);
-                    }
+                /* Skip LFE */
+                if(chans[c].channel == LFE)
+                    continue;
+                for(ALsizei i{0};i < NumSends;i++)
+                {
+                    if(const ALeffectslot *Slot{SendSlots[i]})
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
+                            voice->mChans[c].mWetParams[i].Gains.Target);
+                }
             }
         }
         else
@@ -786,9 +781,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                  */
                 GetHrtfCoeffs(Device->mHrtf, chans[c].elevation, chans[c].angle,
                     std::numeric_limits<float>::infinity(), Spread,
-                    voice->mDirect.Params[c].Hrtf.Target.Coeffs,
-                    voice->mDirect.Params[c].Hrtf.Target.Delay);
-                voice->mDirect.Params[c].Hrtf.Target.Gain = DryGain;
+                    voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
+                    voice->mChans[c].mDryParams.Hrtf.Target.Delay);
+                voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain;
 
                 /* Normal panning for auxiliary sends. */
                 ALfloat coeffs[MAX_AMBI_CHANNELS];
@@ -798,7 +793,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
-                            voice->mSend[i].Params[c].Gains.Target);
+                            voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
         }
@@ -822,7 +817,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
                 /* Adjust NFC filters. */
                 for(ALsizei c{0};c < num_channels;c++)
-                    voice->mDirect.Params[c].NFCtrlFilter.adjust(w0);
+                    voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 std::copy(std::begin(Device->NumChannelsPerOrder),
                     std::end(Device->NumChannelsPerOrder),
@@ -851,25 +846,26 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     if(Device->Dry.Buffer == Device->RealOut.Buffer)
                     {
                         int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
-                        if(idx != -1) voice->mDirect.Params[c].Gains.Target[idx] = DryGain;
+                        if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
                     }
                     continue;
                 }
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain * downmix_gain,
-                    voice->mDirect.Params[c].Gains.Target);
+                    voice->mChans[c].mDryParams.Gains.Target);
             }
 
-            for(ALsizei i{0};i < NumSends;i++)
+            for(ALsizei c{0};c < num_channels;c++)
             {
-                if(const ALeffectslot *Slot{SendSlots[i]})
-                    for(ALsizei c{0};c < num_channels;c++)
-                    {
-                        /* Skip LFE */
-                        if(chans[c].channel != LFE)
-                            ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
-                                voice->mSend[i].Params[c].Gains.Target);
-                    }
+                /* Skip LFE */
+                if(chans[c].channel == LFE)
+                    continue;
+                for(ALsizei i{0};i < NumSends;i++)
+                {
+                    if(const ALeffectslot *Slot{SendSlots[i]})
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
+                            voice->mChans[c].mWetParams[i].Gains.Target);
+                }
             }
         }
         else
@@ -884,7 +880,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (Device->AvgSpeakerDist * Frequency)};
 
                 for(ALsizei c{0};c < num_channels;c++)
-                    voice->mDirect.Params[c].NFCtrlFilter.adjust(w0);
+                    voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 std::copy(std::begin(Device->NumChannelsPerOrder),
                     std::end(Device->NumChannelsPerOrder),
@@ -900,7 +896,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     if(Device->Dry.Buffer == Device->RealOut.Buffer)
                     {
                         int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
-                        if(idx != -1) voice->mDirect.Params[c].Gains.Target[idx] = DryGain;
+                        if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
                     }
                     continue;
                 }
@@ -913,12 +909,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 );
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain,
-                    voice->mDirect.Params[c].Gains.Target);
+                    voice->mChans[c].mDryParams.Gains.Target);
                 for(ALsizei i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
-                            voice->mSend[i].Params[c].Gains.Target);
+                            voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
         }
@@ -933,14 +929,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         voice->mDirect.FilterType = AF_None;
         if(gainHF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
         if(gainLF != 1.0f) voice->mDirect.FilterType |= AF_HighPass;
-        voice->mDirect.Params[0].LowPass.setParams(BiquadType::HighShelf,
-            gainHF, hfScale, BiquadFilter::rcpQFromSlope(gainHF, 1.0f));
-        voice->mDirect.Params[0].HighPass.setParams(BiquadType::LowShelf,
-            gainLF, lfScale, BiquadFilter::rcpQFromSlope(gainLF, 1.0f));
+        auto &lowpass = voice->mChans[0].mDryParams.LowPass;
+        auto &highpass = voice->mChans[0].mDryParams.HighPass;
+        lowpass.setParams(BiquadType::HighShelf, gainHF, hfScale,
+            lowpass.rcpQFromSlope(gainHF, 1.0f));
+        highpass.setParams(BiquadType::LowShelf, gainLF, lfScale,
+            highpass.rcpQFromSlope(gainLF, 1.0f));
         for(ALsizei c{1};c < num_channels;c++)
         {
-            voice->mDirect.Params[c].LowPass.copyParamsFrom(voice->mDirect.Params[0].LowPass);
-            voice->mDirect.Params[c].HighPass.copyParamsFrom(voice->mDirect.Params[0].HighPass);
+            voice->mChans[c].mDryParams.LowPass.copyParamsFrom(lowpass);
+            voice->mChans[c].mDryParams.HighPass.copyParamsFrom(highpass);
         }
     }
     for(ALsizei i{0};i < NumSends;i++)
@@ -953,14 +951,17 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         voice->mSend[i].FilterType = AF_None;
         if(gainHF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
         if(gainLF != 1.0f) voice->mSend[i].FilterType |= AF_HighPass;
-        voice->mSend[i].Params[0].LowPass.setParams(BiquadType::HighShelf,
-            gainHF, hfScale, BiquadFilter::rcpQFromSlope(gainHF, 1.0f));
-        voice->mSend[i].Params[0].HighPass.setParams(BiquadType::LowShelf,
-            gainLF, lfScale, BiquadFilter::rcpQFromSlope(gainLF, 1.0f));
+
+        auto &lowpass = voice->mChans[0].mWetParams[i].LowPass;
+        auto &highpass = voice->mChans[0].mWetParams[i].HighPass;
+        lowpass.setParams(BiquadType::HighShelf, gainHF, hfScale,
+            lowpass.rcpQFromSlope(gainHF, 1.0f));
+        highpass.setParams(BiquadType::LowShelf, gainLF, lfScale,
+            highpass.rcpQFromSlope(gainLF, 1.0f));
         for(ALsizei c{1};c < num_channels;c++)
         {
-            voice->mSend[i].Params[c].LowPass.copyParamsFrom(voice->mSend[i].Params[0].LowPass);
-            voice->mSend[i].Params[c].HighPass.copyParamsFrom(voice->mSend[i].Params[0].HighPass);
+            voice->mChans[c].mWetParams[i].LowPass.copyParamsFrom(lowpass);
+            voice->mChans[c].mWetParams[i].HighPass.copyParamsFrom(highpass);
         }
     }
 }

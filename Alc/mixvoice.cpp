@@ -540,8 +540,10 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     ASSUME(increment > 0);
 
     ALCdevice *Device{Context->Device};
+    const ALsizei NumSends{Device->NumAuxSends};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 
+    ASSUME(NumSends >= 0);
     ASSUME(IrSize >= 0);
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
@@ -553,29 +555,29 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         /* No fading, just overwrite the old/current params. */
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            DirectParams &parms = voice->mDirect.Params[chan];
+            ALvoice::ChannelData &chandata = voice->mChans[chan];
+            DirectParams &parms = chandata.mDryParams;
             if(!(voice->mFlags&VOICE_HAS_HRTF))
                 std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
                     std::begin(parms.Gains.Current));
             else
                 parms.Hrtf.Old = parms.Hrtf.Target;
-            auto set_current = [chan](ALvoice::SendData &send) -> void
+            for(ALsizei send{0};send < NumSends;++send)
             {
-                if(send.Buffer.empty())
-                    return;
+                if(voice->mSend[send].Buffer.empty())
+                    continue;
 
-                SendParams &parms = send.Params[chan];
+                SendParams &parms = chandata.mWetParams[chan];
                 std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
                     std::begin(parms.Gains.Current));
-            };
-            std::for_each(voice->mSend.begin(), voice->mSend.end(), set_current);
+            }
         }
     }
     else if((voice->mFlags&VOICE_HAS_HRTF))
     {
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            DirectParams &parms = voice->mDirect.Params[chan];
+            DirectParams &parms = voice->mChans[chan].mDryParams;
             if(!(parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
             {
                 /* The old HRTF params are silent, so overwrite the old
@@ -626,14 +628,14 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             const al::span<ALfloat> SrcData{Device->SourceData, SrcBufferSize};
 
             /* Load the previous samples into the source data first, and clear the rest. */
-            auto srciter = std::copy_n(voice->mResampleData[chan].mPrevSamples.begin(),
+            auto srciter = std::copy_n(voice->mChans[chan].mPrevSamples.begin(),
                 MAX_RESAMPLE_PADDING, SrcData.begin());
             std::fill(srciter, SrcData.end(), 0.0f);
 
             if(UNLIKELY(!BufferListItem))
                 srciter = std::copy(
-                    voice->mResampleData[chan].mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
-                    voice->mResampleData[chan].mPrevSamples.end(), srciter);
+                    voice->mChans[chan].mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
+                    voice->mChans[chan].mPrevSamples.end(), srciter);
             else if(isstatic)
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, srciter, SrcData.end());
@@ -654,8 +656,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
             /* Store the last source samples used for next time. */
             std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                voice->mResampleData[chan].mPrevSamples.size(),
-                voice->mResampleData[chan].mPrevSamples.begin());
+                voice->mChans[chan].mPrevSamples.size(),
+                voice->mChans[chan].mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
             const ALfloat *ResampledData{Resample(&voice->mResampleState,
@@ -663,20 +665,20 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 Device->ResampledData, DstBufferSize)};
             if((voice->mFlags&VOICE_IS_AMBISONIC))
             {
-                const ALfloat hfscale{voice->mResampleData[chan].mAmbiScale};
+                const ALfloat hfscale{voice->mChans[chan].mAmbiScale};
                 /* Beware the evil const_cast. It's safe since it's pointing to
                  * either SourceData or ResampledData (both non-const), but the
                  * resample method takes the source as const float* and may
                  * return it without copying to output, making it currently
                  * unavoidable.
                  */
-                voice->mResampleData[chan].mAmbiSplitter.applyHfScale(
-                    const_cast<ALfloat*>(ResampledData), hfscale, DstBufferSize);
+                voice->mChans[chan].mAmbiSplitter.applyHfScale(const_cast<ALfloat*>(ResampledData),
+                    hfscale, DstBufferSize);
             }
 
             /* Now filter and mix to the appropriate outputs. */
             {
-                DirectParams &parms = voice->mDirect.Params[chan];
+                DirectParams &parms = voice->mChans[chan].mDryParams;
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     Device->FilteredData, ResampledData, DstBufferSize,
                     voice->mDirect.FilterType)};
@@ -832,21 +834,20 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             }
 
             ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
-            auto mix_send = [vstate,Counter,OutPos,DstBufferSize,chan,ResampledData,&FilterBuf](ALvoice::SendData &send) -> void
+            for(ALsizei send{0};send < NumSends;++send)
             {
-                if(send.Buffer.empty())
-                    return;
+                if(voice->mSend[send].Buffer.empty())
+                    continue;
 
-                SendParams &parms = send.Params[chan];
+                SendParams &parms = voice->mChans[chan].mWetParams[send];
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
-                    FilterBuf, ResampledData, DstBufferSize, send.FilterType)};
+                    FilterBuf, ResampledData, DstBufferSize, voice->mSend[send].FilterType)};
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
-                MixSamples(samples, send.Buffer, parms.Gains.Current, TargetGains, Counter, OutPos,
-                    DstBufferSize);
+                MixSamples(samples, voice->mSend[send].Buffer, parms.Gains.Current, TargetGains,
+                    Counter, OutPos, DstBufferSize);
             };
-            std::for_each(voice->mSend.begin(), voice->mSend.end(), mix_send);
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;

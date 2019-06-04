@@ -176,7 +176,6 @@ struct JackPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "JackPlayback::"; }
     DEF_NEWDEL(JackPlayback)
 };
 

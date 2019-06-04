@@ -173,7 +173,6 @@ struct DSoundPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "DSoundPlayback::"; }
     DEF_NEWDEL(DSoundPlayback)
 };
 
@@ -601,7 +600,6 @@ struct DSoundCapture final : public BackendBase {
 
     RingBufferPtr mRing;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "DSoundCapture::"; }
     DEF_NEWDEL(DSoundCapture)
 };
 

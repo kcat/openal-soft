@@ -65,7 +65,6 @@ struct Sdl2Backend final : public BackendBase {
     DevFmtType     mFmtType{};
     ALuint mUpdateSize{0u};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "ALCsdl2Playback::"; }
     DEF_NEWDEL(Sdl2Backend)
 };
 

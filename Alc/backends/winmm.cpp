@@ -147,7 +147,6 @@ struct WinMMPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "WinMMPlayback::"; }
     DEF_NEWDEL(WinMMPlayback)
 };
 
@@ -393,7 +392,6 @@ struct WinMMCapture final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "WinMMCapture::"; }
     DEF_NEWDEL(WinMMCapture)
 };
 

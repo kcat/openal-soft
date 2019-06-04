@@ -58,7 +58,6 @@ struct NullBackend final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "NullBackend::"; }
     DEF_NEWDEL(NullBackend)
 };
 

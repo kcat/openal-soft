@@ -688,13 +688,13 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 void EffectState::IncRef() noexcept
 {
     auto ref = IncrementRef(&mRef);
-    TRACEREF("%p increasing refcount to %u\n", this, ref);
+    TRACEREF("EffectState %p increasing refcount to %u\n", this, ref);
 }
 
 void EffectState::DecRef() noexcept
 {
     auto ref = DecrementRef(&mRef);
-    TRACEREF("%p decreasing refcount to %u\n", this, ref);
+    TRACEREF("EffectState %p decreasing refcount to %u\n", this, ref);
     if(ref == 0) delete this;
 }
 

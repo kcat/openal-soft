@@ -50,7 +50,6 @@ struct HrtfEntry {
     void IncRef();
     void DecRef();
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "HrtfEntry::"; }
     DEF_PLACE_NEWDEL()
 };
 

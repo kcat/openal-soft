@@ -404,7 +404,6 @@ struct AlsaPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "AlsaPlayback::"; }
     DEF_NEWDEL(AlsaPlayback)
 };
 
@@ -878,7 +877,6 @@ struct AlsaCapture final : public BackendBase {
 
     snd_pcm_sframes_t mLastAvail{0};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "AlsaCapture::"; }
     DEF_NEWDEL(AlsaCapture)
 };
 

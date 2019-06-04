@@ -89,7 +89,6 @@ struct PortPlayback final : public BackendBase {
     PaStreamParameters mParams{};
     ALuint mUpdateSize{0u};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "PortPlayback::"; }
     DEF_NEWDEL(PortPlayback)
 };
 
@@ -256,7 +255,6 @@ struct PortCapture final : public BackendBase {
 
     RingBufferPtr mRing{nullptr};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "PortCapture::"; }
     DEF_NEWDEL(PortCapture)
 };
 

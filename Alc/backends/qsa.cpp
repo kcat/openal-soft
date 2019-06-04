@@ -181,7 +181,6 @@ struct PlaybackWrapper final : public BackendBase {
 
     std::unique_ptr<qsa_data> mExtraData;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "PlaybackWrapper::"; }
     DEF_NEWDEL(PlaybackWrapper)
 };
 
@@ -643,7 +642,6 @@ struct CaptureWrapper final : public BackendBase {
 
     std::unique_ptr<qsa_data> mExtraData;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "CaptureWrapper::"; }
     DEF_NEWDEL(CaptureWrapper)
 };
 

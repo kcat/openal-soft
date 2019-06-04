@@ -61,7 +61,6 @@ struct SndioPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "SndioPlayback::"; }
     DEF_NEWDEL(SndioPlayback)
 };
 
@@ -263,7 +262,6 @@ struct SndioCapture final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "SndioCapture::"; }
     DEF_NEWDEL(SndioCapture)
 };
 

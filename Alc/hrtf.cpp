@@ -1365,13 +1365,13 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 void HrtfEntry::IncRef()
 {
     auto ref = IncrementRef(&this->ref);
-    TRACEREF("%p increasing refcount to %u\n", this, ref);
+    TRACEREF("HrtfEntry %p increasing refcount to %u\n", this, ref);
 }
 
 void HrtfEntry::DecRef()
 {
     auto ref = DecrementRef(&this->ref);
-    TRACEREF("%p decreasing refcount to %u\n", this, ref);
+    TRACEREF("HrtfEntry %p decreasing refcount to %u\n", this, ref);
     if(ref == 0)
     {
         std::lock_guard<std::mutex> _{LoadedHrtfLock};

@@ -811,7 +811,7 @@ std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 void ReleaseThreadCtx(ALCcontext *context)
 {
     auto ref = DecrementRef(&context->ref);
-    TRACEREF("%p decreasing refcount to %u\n", context, ref);
+    TRACEREF("ALCcontext %p decreasing refcount to %u\n", context, ref);
     ERR("Context %p current for thread being destroyed, possible leak!\n", context);
 }
 
@@ -2206,7 +2206,7 @@ ALCdevice::ALCdevice(DeviceType type) : Type{type}
  */
 ALCdevice::~ALCdevice()
 {
-    TRACE("%p\n", this);
+    TRACE("Freeing device %p\n", this);
 
     Backend = nullptr;
 
@@ -2240,13 +2240,13 @@ ALCdevice::~ALCdevice()
 static void ALCdevice_IncRef(ALCdevice *device)
 {
     auto ref = IncrementRef(&device->ref);
-    TRACEREF("%p increasing refcount to %u\n", device, ref);
+    TRACEREF("ALCdevice %p increasing refcount to %u\n", device, ref);
 }
 
 static void ALCdevice_DecRef(ALCdevice *device)
 {
     auto ref = DecrementRef(&device->ref);
-    TRACEREF("%p decreasing refcount to %u\n", device, ref);
+    TRACEREF("ALCdevice %p decreasing refcount to %u\n", device, ref);
     if(UNLIKELY(ref == 0)) delete device;
 }
 
@@ -2370,7 +2370,7 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 ALCcontext::~ALCcontext()
 {
-    TRACE("%p\n", this);
+    TRACE("Freeing context %p\n", this);
 
     ALcontextProps *cprops{Update.exchange(nullptr, std::memory_order_relaxed)};
     if(cprops)
@@ -2533,13 +2533,13 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 static void ALCcontext_IncRef(ALCcontext *context)
 {
     auto ref = IncrementRef(&context->ref);
-    TRACEREF("%p increasing refcount to %u\n", context, ref);
+    TRACEREF("ALCcontext %p increasing refcount to %u\n", context, ref);
 }
 
 void ALCcontext_DecRef(ALCcontext *context)
 {
     auto ref = DecrementRef(&context->ref);
-    TRACEREF("%p decreasing refcount to %u\n", context, ref);
+    TRACEREF("ALCcontext %p decreasing refcount to %u\n", context, ref);
     if(UNLIKELY(ref == 0)) delete context;
 }
 

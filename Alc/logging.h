@@ -15,19 +15,18 @@
 
 extern FILE *gLogFile;
 
-constexpr inline const char *CurrentPrefix() noexcept { return ""; }
-#if defined(__GNUC__) && !defined(_WIN32)
-#define AL_PRINT(T, MSG, ...) fprintf(gLogFile, "AL lib: %s %s%s: " MSG, T, CurrentPrefix(), __FUNCTION__ , ## __VA_ARGS__)
+#if !defined(_WIN32)
+#define AL_PRINT(T, ...) fprintf(gLogFile, "AL lib: " T " " __VA_ARGS__)
 #else
-void al_print(const char *type, const char *prefix, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 4,5);
-#define AL_PRINT(T, ...) al_print((T), CurrentPrefix(), __FUNCTION__, __VA_ARGS__)
+void al_print(const char *type, const char *fmt, ...) DECL_FORMAT(printf, 2,3);
+#define AL_PRINT(T, ...) al_print((T), __VA_ARGS__)
 #endif
 
 #ifdef __ANDROID__
 #include <android/log.h>
-#define LOG_ANDROID(T, MSG, ...) __android_log_print(T, "openal", "AL lib: %s%s: " MSG, CurrentPrefix(), __FUNCTION__ , ## __VA_ARGS__)
+#define LOG_ANDROID(T, ...) __android_log_print(T, "openal", "AL lib: " __VA_ARGS__)
 #else
-#define LOG_ANDROID(T, MSG, ...) ((void)0)
+#define LOG_ANDROID(T, ...) ((void)0)
 #endif
 
 enum LogLevel {

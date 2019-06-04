@@ -260,7 +260,6 @@ struct OSSPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "OSSPlayback::"; }
     DEF_NEWDEL(OSSPlayback)
 };
 
@@ -490,7 +489,6 @@ struct OSScapture final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "OSScapture::"; }
     DEF_NEWDEL(OSScapture)
 };
 

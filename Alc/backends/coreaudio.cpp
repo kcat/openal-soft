@@ -63,7 +63,6 @@ struct CoreAudioPlayback final : public BackendBase {
     ALuint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{}; // This is the OpenAL format as a CoreAudio ASBD
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "CoreAudioPlayback::"; }
     DEF_NEWDEL(CoreAudioPlayback)
 };
 
@@ -329,7 +328,6 @@ struct CoreAudioCapture final : public BackendBase {
 
     RingBufferPtr mRing{nullptr};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "CoreAudioCapture::"; }
     DEF_NEWDEL(CoreAudioCapture)
 };
 

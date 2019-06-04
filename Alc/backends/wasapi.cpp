@@ -376,8 +376,6 @@ struct WasapiProxy {
     }
 
     static int messageHandler(std::promise<HRESULT> *promise);
-
-    static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiProxy::"; }
 };
 std::deque<WasapiProxy::Msg> WasapiProxy::mMsgQueue;
 std::mutex WasapiProxy::mMsgQueueLock;
@@ -533,7 +531,6 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiPlayback::"; }
     DEF_NEWDEL(WasapiPlayback)
 };
 
@@ -1113,7 +1110,6 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "WasapiCapture::"; }
     DEF_NEWDEL(WasapiCapture)
 };
 

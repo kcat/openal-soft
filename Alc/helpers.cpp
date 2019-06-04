@@ -336,7 +336,7 @@ const PathNamePair &GetProcBinary()
     else
         ret.fname = wstr_to_utf8(fullpath.data());
 
-    TRACE("Got: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
+    TRACE("Got binary: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
     return ret;
 }
 
@@ -356,7 +356,7 @@ void *GetSymbol(void *handle, const char *name)
 }
 
 
-void al_print(const char *type, const char *prefix, const char *func, const char *fmt, ...)
+void al_print(const char *type, const char *fmt, ...)
 {
     al::vector<char> dynmsg;
     char stcmsg[256];
@@ -376,7 +376,7 @@ void al_print(const char *type, const char *prefix, const char *func, const char
     va_end(args);
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fprintf(gLogFile, "AL lib: %s %s%s: %ls", type, prefix, func, wstr.c_str());
+    fprintf(gLogFile, "AL lib: %s %ls", type, wstr.c_str());
     fflush(gLogFile);
 }
 
@@ -560,7 +560,7 @@ const PathNamePair &GetProcBinary()
     else
         ret.fname = std::string(pathname.cbegin(), pathname.cend());
 
-    TRACE("Got: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
+    TRACE("Got binary: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
     return ret;
 }
 
@@ -592,12 +592,12 @@ void *GetSymbol(void *handle, const char *name)
 
 #endif /* HAVE_DLFCN_H */
 
-void al_print(const char *type, const char *prefix, const char *func, const char *fmt, ...)
+void al_print(const char *type, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
-    fprintf(gLogFile, "AL lib: %s %s%s: ", type, prefix, func);
+    fprintf(gLogFile, "AL lib: %s ", type);
     vfprintf(gLogFile, fmt, ap);
     va_end(ap);
 

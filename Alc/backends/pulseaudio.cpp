@@ -681,7 +681,6 @@ struct PulsePlayback final : public BackendBase {
 
     ALuint mFrameSize{0u};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "PulsePlayback::"; }
     DEF_NEWDEL(PulsePlayback)
 };
 
@@ -1130,7 +1129,6 @@ struct PulseCapture final : public BackendBase {
     pa_stream *mStream{nullptr};
     pa_context *mContext{nullptr};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "PulseCapture::"; }
     DEF_NEWDEL(PulseCapture)
 };
 

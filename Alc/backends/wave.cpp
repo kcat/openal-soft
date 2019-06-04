@@ -98,7 +98,6 @@ struct WaveBackend final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "WaveBackend::"; }
     DEF_NEWDEL(WaveBackend)
 };
 

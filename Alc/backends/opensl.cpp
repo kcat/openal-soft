@@ -174,7 +174,6 @@ struct OpenSLPlayback final : public BackendBase {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "OpenSLPlayback::"; }
     DEF_NEWDEL(OpenSLPlayback)
 };
 
@@ -632,7 +631,6 @@ struct OpenSLCapture final : public BackendBase {
 
     ALsizei mFrameSize{0};
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "OpenSLCapture::"; }
     DEF_NEWDEL(OpenSLCapture)
 };
 

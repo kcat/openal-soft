@@ -147,7 +147,6 @@ struct ALCcontext {
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext();
 
-    static constexpr inline const char *CurrentPrefix() noexcept { return "ALCcontext::"; }
     DEF_NEWDEL(ALCcontext)
 };
 

@@ -66,7 +66,7 @@ struct HrtfHandle {
 
 std::unique_ptr<HrtfHandle> HrtfHandle::Create(size_t fname_len)
 {
-    void *ptr{al_calloc(DEF_ALIGN, HrtfHandle::Sizeof(fname_len))};
+    void *ptr{al_calloc(alignof(HrtfHandle), HrtfHandle::Sizeof(fname_len))};
     return std::unique_ptr<HrtfHandle>{new (ptr) HrtfHandle{fname_len}};
 }
 

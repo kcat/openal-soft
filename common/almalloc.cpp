@@ -3,6 +3,7 @@
 
 #include "almalloc.h"
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #ifdef HAVE_MALLOC_H
@@ -26,6 +27,9 @@
 
 void *al_malloc(size_t alignment, size_t size)
 {
+    assert((alignment & (alignment-1)) == 0);
+    alignment = std::max(alignment, sizeof(void*));
+
 #if defined(HAVE_ALIGNED_ALLOC)
     size = (size+(alignment-1))&~(alignment-1);
     return aligned_alloc(alignment, size);

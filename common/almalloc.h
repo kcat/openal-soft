@@ -39,7 +39,7 @@ int al_is_sane_alignment_allocator(void) noexcept;
 
 namespace al {
 
-template<typename T, size_t alignment=DEF_ALIGN>
+template<typename T, size_t alignment=alignof(T)>
 struct allocator : public std::allocator<T> {
     using size_type = size_t;
     using pointer = T*;
@@ -97,7 +97,7 @@ std::unique_ptr<T> make_unique(ArgsT&&...args)
  * struct, with placement new, to have a run-time-sized array that's embedded
  * with its size.
  */
-template<typename T,size_t alignment=DEF_ALIGN>
+template<typename T, size_t alignment=alignof(T)>
 struct FlexArray {
     const size_t mSize;
     alignas(alignment) T mArray[];

@@ -841,9 +841,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                 stablizer->LFilter.init(scale);
                 stablizer->RFilter = stablizer->LFilter;
 
-                /* Initialize an all-pass filter for the phase corrector. */
-                stablizer->APFilter.init(scale);
-
                 device->Stablizer = std::move(stablizer);
                 /* NOTE: Don't know why this has to be "copied" into a local
                  * static constexpr variable to avoid a reference on

@@ -1499,7 +1499,6 @@ void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const in
         }
     }
 
-    const SplitterAllpass &APFilter = Stablizer->APFilter;
     ALfloat (&lsplit)[2][BUFFERSIZE] = Stablizer->LSplit;
     ALfloat (&rsplit)[2][BUFFERSIZE] = Stablizer->RSplit;
     auto &tmpbuf = Stablizer->TempBuf;
@@ -1507,7 +1506,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const in
     /* This applies the band-splitter, preserving phase at the cost of some
      * delay. The shorter the delay, the more error seeps into the result.
      */
-    auto apply_splitter = [&APFilter,&tmpbuf,SamplesToDo](const FloatBufferLine &Buffer,
+    auto apply_splitter = [&tmpbuf,SamplesToDo](const FloatBufferLine &Buffer,
         ALfloat (&DelayBuf)[FrontStablizer::DelayLength], BandSplitter &Filter,
         ALfloat (&splitbuf)[2][BUFFERSIZE]) -> void
     {
@@ -1522,13 +1521,9 @@ void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const in
         std::copy_n(std::begin(tmpbuf), FrontStablizer::DelayLength, std::begin(DelayBuf));
 
         /* Apply an all-pass on the reversed signal, then reverse the samples
-         * to get the forward signal with a reversed phase shift. Note that the
-         * all-pass filter is copied to a local for use, since each pass is
-         * indepedent because the signal's processed backwards (with a delay
-         * being used to hide discontinuities).
+         * to get the forward signal with a reversed phase shift.
          */
-        SplitterAllpass allpass{APFilter};
-        allpass.process(tmpbuf, SamplesToDo+FrontStablizer::DelayLength);
+        Filter.applyAllpass(tmpbuf, SamplesToDo+FrontStablizer::DelayLength);
         std::reverse(std::begin(tmpbuf), tmpbuf_end+FrontStablizer::DelayLength);
 
         /* Now apply the band-splitter, combining its phase shift with the

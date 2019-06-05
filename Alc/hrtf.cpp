@@ -338,7 +338,6 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     static constexpr ALsizei base_delay{DualBand ? 12 : 0};
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
-    SplitterAllpassR<double> allpass{xover_norm};
 
     auto tmpres = al::vector<HrirArray<ALdouble>>(NumChannels);
     auto tmpfilt = al::vector<std::array<ALdouble,HRIR_LENGTH*4>>(3);
@@ -381,8 +380,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
          * sample array. This produces the forward response with a backwards
          * phase-shift (+n degrees becomes -n degrees).
          */
-        allpass.clear();
-        allpass.process(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
+        splitter.applyAllpass(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
         std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
@@ -408,8 +406,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
         std::transform(fir, fir+Hrtf->irSize, tmpfilt[2].rbegin() + HRIR_LENGTH*3,
             [](const ALfloat (&ir)[2]) noexcept -> ALdouble { return ir[1]; });
 
-        allpass.clear();
-        allpass.process(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
+        splitter.applyAllpass(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
         std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
 
         splitter.clear();

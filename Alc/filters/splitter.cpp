@@ -94,30 +94,13 @@ void BandSplitterR<Real>::applyHfScale(Real *samples, const Real hfscale, const 
     this->ap_z1 = ap_z1;
 }
 
-template class BandSplitterR<float>;
-template class BandSplitterR<double>;
-
-
 template<typename Real>
-void SplitterAllpassR<Real>::init(Real f0norm)
-{
-    const Real w{f0norm * al::MathDefs<Real>::Tau()};
-    const Real cw{std::cos(w)};
-    if(cw > std::numeric_limits<float>::epsilon())
-        coeff = (std::sin(w) - 1.0f) / cw;
-    else
-        coeff = cw * -0.5f;
-
-    z1 = 0.0f;
-}
-
-template<typename Real>
-void SplitterAllpassR<Real>::process(Real *samples, int count)
+void BandSplitterR<Real>::applyAllpass(Real *samples, const int count) const
 {
     ASSUME(count > 0);
 
     const Real coeff{this->coeff};
-    Real z1{this->z1};
+    Real z1{0.0f};
     auto proc_sample = [coeff,&z1](const Real in) noexcept -> Real
     {
         const Real out{in*coeff + z1};
@@ -125,8 +108,8 @@ void SplitterAllpassR<Real>::process(Real *samples, int count)
         return out;
     };
     std::transform(samples, samples+count, samples, proc_sample);
-    this->z1 = z1;
 }
 
-template class SplitterAllpassR<float>;
-template class SplitterAllpassR<double>;
+
+template class BandSplitterR<float>;
+template class BandSplitterR<double>;

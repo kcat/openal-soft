@@ -332,10 +332,10 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     };
     std::transform(AmbiPoints, AmbiPoints+AmbiCount, idx.begin(), calc_idxs);
 
-    /* For dual-band processing, add a 12-sample delay to compensate for the HF
+    /* For dual-band processing, add a 16-sample delay to compensate for the HF
      * scale on the minimum-phase response.
      */
-    static constexpr ALsizei base_delay{DualBand ? 12 : 0};
+    static constexpr ALsizei base_delay{DualBand ? 16 : 0};
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
 
@@ -435,10 +435,10 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     tmpres.clear();
 
     ALsizei max_length{HRIR_LENGTH};
-    /* Increase the IR size by 24 samples with dual-band processing to account
-     * for the head and tail from the HF response scale.
+    /* Increase the IR size by double the base delay with dual-band processing
+     * to account for the head and tail from the HF response scale.
      */
-    const ALsizei irsize{DualBand ? mini(Hrtf->irSize + base_delay*2, max_length) : Hrtf->irSize};
+    const ALsizei irsize{mini(Hrtf->irSize + base_delay*2, max_length)};
     max_length = mini(max_delay-min_delay + irsize, max_length);
 
     /* Round up to the next IR size multiple. */

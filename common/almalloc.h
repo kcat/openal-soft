@@ -39,6 +39,8 @@ int al_is_sane_alignment_allocator(void) noexcept;
 
 namespace al {
 
+#define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),int>::type = 0
+
 template<typename T, size_t alignment=alignof(T)>
 struct allocator : public std::allocator<T> {
     using size_type = size_t;
@@ -85,6 +87,73 @@ inline T* assume_aligned(T *ptr) noexcept
 #endif
 }
 
+template<typename T>
+inline void destroy_at(T *ptr) { ptr->~T(); }
+
+template<typename T>
+inline void destroy(T first, const T end)
+{
+    while(first != end)
+    {
+        destroy_at(std::addressof(*first));
+        ++first;
+    }
+}
+
+template<typename T, typename N, REQUIRES(std::is_integral<N>::value)>
+inline T destroy_n(T first, N count)
+{
+    if(count != 0)
+    {
+        do {
+            destroy_at(std::addressof(*first));
+            ++first;
+        } while(--count);
+    }
+    return first;
+}
+
+
+template<typename T>
+inline void uninitialized_default_construct(T first, const T last)
+{
+    using ValueT = typename std::iterator_traits<T>::value_type;
+    T current{first};
+    try {
+        while(current != last)
+        {
+            ::new (static_cast<void*>(std::addressof(*current))) ValueT;
+            ++current;
+        }
+    }
+    catch(...) {
+        destroy(first, current);
+        throw;
+    }
+}
+
+template<typename T, typename N, REQUIRES(std::is_integral<N>::value)>
+inline T uninitialized_default_construct_n(T first, N count)
+{
+    using ValueT = typename std::iterator_traits<T>::value_type;
+    T current{first};
+    if(count != 0)
+    {
+        try {
+            do {
+                ::new (static_cast<void*>(std::addressof(*current))) ValueT;
+                ++current;
+            } while(--count);
+        }
+        catch(...) {
+            destroy(first, current);
+            throw;
+        }
+    }
+    return current;
+}
+
+
 /* std::make_unique was added with C++14, so until we rely on that, make our
  * own version.
  */
@@ -109,12 +178,9 @@ struct FlexArray {
     }
 
     FlexArray(size_t size) : mSize{size}
-    { new (mArray) T[mSize]; }
+    { uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArray()
-    {
-        for(size_t i{0u};i < mSize;++i)
-            mArray[i].~T();
-    }
+    { destroy_n(mArray, mSize); }
 
     FlexArray(const FlexArray&) = delete;
     FlexArray& operator=(const FlexArray&) = delete;
@@ -142,6 +208,8 @@ struct FlexArray {
 
     DEF_PLACE_NEWDEL()
 };
+
+#undef REQUIRES
 
 } // namespace al
 

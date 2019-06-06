@@ -327,7 +327,7 @@ void FreeFilter(ALCdevice *device, ALfilter *filter)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    filter->~ALfilter();
+    al::destroy_at(filter);
 
     device->FilterList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -647,7 +647,7 @@ FilterSubList::~FilterSubList()
     while(usemask)
     {
         ALsizei idx = CTZ64(usemask);
-        Filters[idx].~ALfilter();
+        al::destroy_at(Filters+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

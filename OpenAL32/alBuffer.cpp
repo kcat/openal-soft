@@ -108,7 +108,7 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    buffer->~ALbuffer();
+    al::destroy_at(buffer);
 
     device->BufferList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -1219,7 +1219,7 @@ BufferSubList::~BufferSubList()
     while(usemask)
     {
         ALsizei idx{CTZ64(usemask)};
-        Buffers[idx].~ALbuffer();
+        al::destroy_at(Buffers+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

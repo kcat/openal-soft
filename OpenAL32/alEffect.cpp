@@ -183,7 +183,7 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    effect->~ALeffect();
+    al::destroy_at(effect);
 
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -518,7 +518,7 @@ EffectSubList::~EffectSubList()
     while(usemask)
     {
         ALsizei idx = CTZ64(usemask);
-        Effects[idx].~ALeffect();
+        al::destroy_at(Effects+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

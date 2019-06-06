@@ -181,7 +181,7 @@ void aluInit(void)
 void DeinitVoice(ALvoice *voice) noexcept
 {
     delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
-    voice->~ALvoice();
+    al::destroy_at(voice);
 }
 
 

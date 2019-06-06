@@ -42,7 +42,7 @@ static int EventThread(ALCcontext *context)
                 RingBuffer *ring_;
                 ~EventAutoDestructor()
                 {
-                    evt_.~AsyncEvent();
+                    al::destroy_at(&evt_);
                     ring_->readAdvance(1);
                 }
             } _{evt, ring};
@@ -99,7 +99,7 @@ static int EventThread(ALCcontext *context)
 void StartEventThrd(ALCcontext *ctx)
 {
     try {
-        ctx->EventThread = std::thread(EventThread, ctx);
+        ctx->EventThread = std::thread{EventThread, ctx};
     }
     catch(std::exception& e) {
         ERR("Failed to start event thread: %s\n", e.what());

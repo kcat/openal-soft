@@ -204,7 +204,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
     ALenum err{InitEffectSlot(slot)};
     if(err != AL_NO_ERROR)
     {
-        slot->~ALeffectslot();
+        al::destroy_at(slot);
         alSetError(context, err, "Effect slot object initialization failed");
         return nullptr;
     }
@@ -225,7 +225,7 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    slot->~ALeffectslot();
+    al::destroy_at(slot);
 
     context->EffectSlotList[lidx].FreeMask |= 1_u64 << slidx;
     context->NumEffectSlots--;
@@ -794,7 +794,7 @@ EffectSlotSubList::~EffectSlotSubList()
     while(usemask)
     {
         ALsizei idx{CTZ64(usemask)};
-        EffectSlots[idx].~ALeffectslot();
+        al::destroy_at(EffectSlots+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

@@ -544,7 +544,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
     }
     backlock.unlock();
 
-    source->~ALsource();
+    al::destroy_at(source);
 
     context->SourceList[lidx].FreeMask |= 1_u64 << slidx;
     context->NumSources--;
@@ -3575,7 +3575,7 @@ SourceSubList::~SourceSubList()
     while(usemask)
     {
         ALsizei idx{CTZ64(usemask)};
-        Sources[idx].~ALsource();
+        al::destroy_at(Sources+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

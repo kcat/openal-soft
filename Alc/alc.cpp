@@ -2462,14 +2462,14 @@ ALCcontext::~ALCcontext()
         auto evt_vec = AsyncEvents->getReadVector();
         while(evt_vec.first.len > 0)
         {
-            reinterpret_cast<AsyncEvent*>(evt_vec.first.buf)->~AsyncEvent();
+            al::destroy_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
             evt_vec.first.buf += sizeof(AsyncEvent);
             evt_vec.first.len -= 1;
             ++count;
         }
         while(evt_vec.second.len > 0)
         {
-            reinterpret_cast<AsyncEvent*>(evt_vec.second.buf)->~AsyncEvent();
+            al::destroy_at(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf));
             evt_vec.second.buf += sizeof(AsyncEvent);
             evt_vec.second.len -= 1;
             ++count;

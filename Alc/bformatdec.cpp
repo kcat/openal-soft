@@ -49,7 +49,7 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<fl
 } // namespace
 
 
-BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
+BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
     const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     mDualBand = allow_2band && (conf->FreqBands == 2);
@@ -119,7 +119,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALs
     }
 }
 
-BFormatDec::BFormatDec(const ALsizei inchans, const ALsizei chancount,
+BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
     const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
     const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
@@ -154,12 +154,12 @@ void BFormatDec::process(FloatBufferLine *OutBuffer, const ALuint OutChannels,
 
     if(mDualBand)
     {
-        for(ALsizei i{0};i < mNumChannels;i++)
+        for(ALuint i{0};i < mNumChannels;i++)
             mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i].data(),
                 SamplesToDo);
 
-        const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mSamplesHF+mNumChannels};
-        const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mSamplesLF+mNumChannels};
+        const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mNumChannels};
+        const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mNumChannels};
         for(ALuint chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
@@ -171,7 +171,7 @@ void BFormatDec::process(FloatBufferLine *OutBuffer, const ALuint OutChannels,
     }
     else
     {
-        const al::span<const FloatBufferLine> insamples{InSamples, InSamples+mNumChannels};
+        const al::span<const FloatBufferLine> insamples{InSamples, mNumChannels};
         for(ALuint chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))

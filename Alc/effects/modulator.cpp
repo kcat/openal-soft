@@ -129,12 +129,12 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     /* Bandwidth value is constant in octaves. */
     mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
         BiquadFilter::rcpQFromBandwidth(f0norm, 0.75f));
-    for(ALsizei i{1};i < slot->Wet.NumChannels;++i)
+    for(ALuint i{1u};i < slot->Wet.NumChannels;++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 
     mOutBuffer = target.Main->Buffer;
     mOutChannels = target.Main->NumChannels;
-    for(ALsizei i{0};i < slot->Wet.NumChannels;++i)
+    for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

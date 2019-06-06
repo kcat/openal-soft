@@ -134,8 +134,7 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 
     DirectHrtfState *state{device->mHrtfState.get()};
     MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-        {device->Dry.Buffer,device->Dry.Buffer+device->Dry.NumChannels}, device->HrtfAccumData,
-        state, SamplesToDo);
+        {device->Dry.Buffer, device->Dry.NumChannels}, device->HrtfAccumData, state, SamplesToDo);
 }
 
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
@@ -982,8 +981,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         }
         else
         {
-            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer,
-                static_cast<size_t>(SendSlots[i]->Wet.NumChannels)};
+            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer, SendSlots[i]->Wet.NumChannels};
         }
     }
 
@@ -1028,7 +1026,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     const ALlistener &Listener = ALContext->Listener;
 
     /* Set mixing buffers and get send parameters. */
-    voice->mDirect.Buffer = {Device->Dry.Buffer, static_cast<size_t>(Device->Dry.NumChannels)};
+    voice->mDirect.Buffer = {Device->Dry.Buffer, Device->Dry.NumChannels};
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
@@ -1085,10 +1083,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         if(!SendSlots[i])
             voice->mSend[i].Buffer = {};
         else
-        {
-            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer,
-                static_cast<size_t>(SendSlots[i]->Wet.NumChannels)};
-        }
+            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer, SendSlots[i]->Wet.NumChannels};
     }
 
     /* Transform source to listener space (convert to head relative) */
@@ -1459,9 +1454,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            const auto outchans = static_cast<size_t>(state->mOutChannels);
             state->process(SamplesToDo, slot->Wet.Buffer, slot->Wet.NumChannels,
-                {state->mOutBuffer, outchans});
+                {state->mOutBuffer, state->mOutChannels});
         }
     );
 }

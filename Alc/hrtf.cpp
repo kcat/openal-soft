@@ -291,7 +291,9 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
     return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{num_chans}};
 }
 
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS], const size_t AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuint NumChannels,
+    const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS],
+    const size_t AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
     static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
@@ -350,7 +352,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
         if(!DualBand)
         {
             /* For single-band decoding, apply the HF scale to the response. */
-            for(ALsizei i{0};i < NumChannels;++i)
+            for(ALuint i{0u};i < NumChannels;++i)
             {
                 const ALdouble mult{ALdouble{AmbiOrderHFGain[OrderFromChan[i]]} *
                     AmbiMatrix[c][i]};
@@ -392,7 +394,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
             static_cast<int>(tmpfilt[2].size()));
 
         /* Apply left ear response with delay and HF scale. */
-        for(ALsizei i{0};i < NumChannels;++i)
+        for(ALuint i{0u};i < NumChannels;++i)
         {
             const ALdouble mult{AmbiMatrix[c][i]};
             const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
@@ -413,7 +415,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
         splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
             static_cast<int>(tmpfilt[2].size()));
 
-        for(ALsizei i{0};i < NumChannels;++i)
+        for(ALuint i{0u};i < NumChannels;++i)
         {
             const ALdouble mult{AmbiMatrix[c][i]};
             const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
@@ -425,7 +427,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsiz
     tmpfilt.clear();
     idx.clear();
 
-    for(ALsizei i{0};i < NumChannels;++i)
+    for(ALuint i{0u};i < NumChannels;++i)
     {
         auto copy_arr = [](const std::array<double,2> &in) noexcept -> std::array<float,2>
         { return std::array<float,2>{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };

@@ -145,7 +145,7 @@ struct EffectState {
     RefCount mRef{1u};
 
     FloatBufferLine *mOutBuffer{nullptr};
-    ALsizei mOutChannels{0};
+    ALuint mOutChannels{0u};
 
 
     virtual ~EffectState() = default;

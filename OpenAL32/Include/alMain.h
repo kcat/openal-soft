@@ -318,7 +318,7 @@ struct MixParams {
     std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap;
 
     FloatBufferLine *Buffer{nullptr};
-    ALsizei NumChannels{0};
+    ALuint NumChannels{0u};
 };
 
 struct RealMixParams {

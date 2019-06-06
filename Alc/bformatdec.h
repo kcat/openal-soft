@@ -32,13 +32,13 @@ class BFormatDec {
     std::array<ALfloat,BUFFERSIZE> *mSamplesHF{nullptr};
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF{nullptr};
 
-    ALsizei mNumChannels{0};
+    ALuint mNumChannels{0u};
     bool mDualBand{false};
 
 public:
-    BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALsizei inchans,
+    BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
         const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
-    BFormatDec(const ALsizei inchans, const ALsizei chancount,
+    BFormatDec(const ALuint inchans, const ALsizei chancount,
         const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
         const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 

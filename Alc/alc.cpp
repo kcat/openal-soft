@@ -1927,7 +1927,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Frequency, device->UpdateSize, device->BufferSize);
 
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
-    TRACE("Channel config, Main: %d, Real: %d\n", device->Dry.NumChannels,
+    TRACE("Channel config, Main: %u, Real: %u\n", device->Dry.NumChannels,
         device->RealOut.NumChannels);
 
     /* Allocate extra channels for any post-filter output. */

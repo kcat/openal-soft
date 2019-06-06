@@ -328,7 +328,7 @@ auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<int,MAX_A
 void InitPanning(ALCdevice *device)
 {
     al::span<const ChannelMap> chanmap;
-    ALsizei coeffcount{};
+    ALuint coeffcount{};
 
     switch(device->FmtChans)
     {
@@ -383,7 +383,7 @@ void InitPanning(ALCdevice *device)
             [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
             { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
         );
-        device->Dry.NumChannels = static_cast<ALsizei>(count);
+        device->Dry.NumChannels = static_cast<ALuint>(count);
 
         ALfloat nfc_delay{0.0f};
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
@@ -417,7 +417,7 @@ void InitPanning(ALCdevice *device)
          * channel count. Built-in speaker decoders are always 2D, so just
          * reverse that calculation.
          */
-        device->mAmbiOrder = (coeffcount-1) / 2;
+        device->mAmbiOrder = static_cast<ALsizei>((coeffcount-1) / 2);
 
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+coeffcount,
             std::begin(device->Dry.AmbiMap),
@@ -450,10 +450,10 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, co
         (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
     device->mAmbiOrder = order;
 
-    ALsizei count;
+    ALuint count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        count = static_cast<ALsizei>(AmbiChannelsFromOrder(order));
+        count = static_cast<ALuint>(AmbiChannelsFromOrder(order));
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -461,7 +461,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, co
     }
     else
     {
-        count = static_cast<ALsizei>(Ambi2DChannelsFromOrder(order));
+        count = static_cast<ALuint>(Ambi2DChannelsFromOrder(order));
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -607,7 +607,7 @@ void InitHrtfPanning(ALCdevice *device)
         std::begin(device->Dry.AmbiMap),
         [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
-    device->Dry.NumChannels = static_cast<ALsizei>(count);
+    device->Dry.NumChannels = static_cast<ALuint>(count);
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
@@ -733,7 +733,7 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
 void ComputePanGains(const MixParams *mix, const ALfloat *RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
     auto ambimap = mix->AmbiMap.cbegin();
-    const ALsizei numchans{mix->NumChannels};
+    const ALuint numchans{mix->NumChannels};
 
     ASSUME(numchans > 0);
     auto iter = std::transform(ambimap, ambimap+numchans, std::begin(gains),
@@ -998,5 +998,5 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
     );
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
     slot->Wet.Buffer = slot->MixBuffer.data();
-    slot->Wet.NumChannels = static_cast<ALsizei>(count);
+    slot->Wet.NumChannels = static_cast<ALuint>(count);
 }

@@ -31,7 +31,11 @@ struct RingBuffer {
     size_t mSizeMask{0u};
     size_t mElemSize{0u};
 
-    alignas(16) al::byte mBuffer[];
+    al::FlexArray<al::byte, 16> mBuffer;
+
+    RingBuffer(const size_t count) : mBuffer{count} { }
+    RingBuffer(const RingBuffer&) = delete;
+    RingBuffer& operator=(const RingBuffer&) = delete;
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
     void reset() noexcept;

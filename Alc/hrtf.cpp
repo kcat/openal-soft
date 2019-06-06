@@ -1101,7 +1101,8 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
 
         LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+1));
         loaded_entry = LoadedHrtfs.end()-1;
-        strcpy((*loaded_entry)->filename.data(), filename.c_str());
+        std::copy(filename.begin(), filename.end(), (*loaded_entry)->filename.begin());
+        (*loaded_entry)->filename.back() = '\0';
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a

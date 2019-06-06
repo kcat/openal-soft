@@ -802,17 +802,15 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
 
-                    const auto outcount = static_cast<size_t>(voice->mDirect.ChannelsPerOrder[0]);
+                    const size_t outcount{Device->NumChannelsPerOrder[0]};
                     MixSamples(samples, voice->mDirect.Buffer.first(outcount), parms.Gains.Current,
                         TargetGains, Counter, OutPos, DstBufferSize);
 
                     ALfloat (&nfcsamples)[BUFFERSIZE] = Device->NfcSampleData;
                     size_t chanoffset{outcount};
                     using FilterProc = void (NfcFilter::*)(float*,const float*,int);
-                    auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](FilterProc process, ALsizei order) -> void
+                    auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,&nfcsamples](const FilterProc process, const size_t outcount) -> void
                     {
-                        const auto outcount = static_cast<size_t>(
-                            voice->mDirect.ChannelsPerOrder[order]);
                         if(outcount < 1) return;
                         (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
                         MixSamples(nfcsamples, voice->mDirect.Buffer.subspan(chanoffset, outcount),
@@ -820,9 +818,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                             OutPos, DstBufferSize);
                         chanoffset += outcount;
                     };
-                    apply_nfc(&NfcFilter::process1, 1);
-                    apply_nfc(&NfcFilter::process2, 2);
-                    apply_nfc(&NfcFilter::process3, 3);
+                    apply_nfc(&NfcFilter::process1, Device->NumChannelsPerOrder[1]);
+                    apply_nfc(&NfcFilter::process2, Device->NumChannelsPerOrder[2]);
+                    apply_nfc(&NfcFilter::process3, Device->NumChannelsPerOrder[3]);
                 }
                 else
                 {

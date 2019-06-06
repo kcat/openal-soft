@@ -233,7 +233,8 @@ constexpr ChannelMap MonoCfg[1] = {
     { BackRight,   { 2.04124145e-1f, -1.08880247e-1f, -1.88586120e-1f,  1.29099444e-1f,  7.45355993e-2f, -3.73460789e-2f,  0.00000000e+0f } },
 };
 
-void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, const ALsizei *RESTRICT chans_per_order)
+void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
+    const ALuint *RESTRICT chans_per_order)
 {
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
     const char *devname{device->DeviceName.c_str()};
@@ -245,7 +246,7 @@ void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, cons
 
     auto iter = std::copy(chans_per_order, chans_per_order+order+1,
         std::begin(device->NumChannelsPerOrder));
-    std::fill(iter, std::end(device->NumChannelsPerOrder), 0);
+    std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
 }
 
 void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
@@ -388,7 +389,7 @@ void InitPanning(ALCdevice *device)
         ALfloat nfc_delay{0.0f};
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
         {
-            static constexpr ALsizei chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
+            static constexpr ALuint chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
                 device->mAmbiOrder, chans_per_order);
@@ -439,8 +440,8 @@ void InitPanning(ALCdevice *device)
 
 void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
-    static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
+    static constexpr ALuint chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
+    static constexpr ALuint chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
 
     if(!hqdec && conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
@@ -546,7 +547,7 @@ void InitHrtfPanning(ALCdevice *device)
     }, AmbiOrderHFGain3O[MAX_AMBI_ORDER+1]{
         1.86508671e+00f, 1.60609389e+00f, 1.14205530e+00f, 5.68379553e-01f
     };
-    static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
+    static constexpr ALuint ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
     const ALfloat *AmbiOrderHFGain{AmbiOrderHFGain1O};
 
     static_assert(al::size(AmbiPoints) == al::size(AmbiMatrix), "Ambisonic HRTF mismatch");
@@ -759,7 +760,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.NumChannels = 0;
-    std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0);
+    std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
 
     device->AvgSpeakerDist = 0.0f;
     device->ChannelDelay.clear();

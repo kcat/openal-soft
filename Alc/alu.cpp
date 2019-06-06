@@ -585,9 +585,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
 
-                std::copy(std::begin(Device->NumChannelsPerOrder),
-                          std::end(Device->NumChannelsPerOrder),
-                          std::begin(voice->mDirect.ChannelsPerOrder));
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 
@@ -631,10 +628,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                  */
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(0.0f);
 
-                voice->mDirect.ChannelsPerOrder[0] = 1;
-                voice->mDirect.ChannelsPerOrder[1] = minz(voice->mDirect.Buffer.size()-1, 3);
-                std::fill(std::begin(voice->mDirect.ChannelsPerOrder)+2,
-                          std::end(voice->mDirect.ChannelsPerOrder), 0);
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 
@@ -816,9 +809,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(ALsizei c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
-                std::copy(std::begin(Device->NumChannelsPerOrder),
-                    std::end(Device->NumChannelsPerOrder),
-                    std::begin(voice->mDirect.ChannelsPerOrder));
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 
@@ -879,9 +869,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(ALsizei c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
-                std::copy(std::begin(Device->NumChannelsPerOrder),
-                    std::end(Device->NumChannelsPerOrder),
-                    std::begin(voice->mDirect.ChannelsPerOrder));
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 

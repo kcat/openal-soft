@@ -256,7 +256,6 @@ struct ALvoice {
     struct DirectData {
         int FilterType;
         al::span<FloatBufferLine> Buffer;
-        ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
     };
     DirectData mDirect;
 

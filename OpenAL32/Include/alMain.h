@@ -411,7 +411,7 @@ struct ALCdevice {
 
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;
-    ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1]{};
+    ALuint NumChannelsPerOrder[MAX_AMBI_ORDER+1]{};
 
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.

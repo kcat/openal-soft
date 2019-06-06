@@ -4,6 +4,7 @@
 #include "almalloc.h"
 
 #include <cassert>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #ifdef HAVE_MALLOC_H
@@ -28,7 +29,7 @@
 void *al_malloc(size_t alignment, size_t size)
 {
     assert((alignment & (alignment-1)) == 0);
-    alignment = std::max(alignment, sizeof(void*));
+    alignment = std::max(alignment, alignof(std::max_align_t));
 
 #if defined(HAVE_ALIGNED_ALLOC)
     size = (size+(alignment-1))&~(alignment-1);
@@ -79,7 +80,7 @@ void al_free(void *ptr) noexcept
 
 size_t al_get_page_size() noexcept
 {
-    static size_t psize = 0;
+    static size_t psize{0u};
     if(UNLIKELY(!psize))
     {
 #ifdef HAVE_SYSCONF
@@ -97,7 +98,7 @@ size_t al_get_page_size() noexcept
             psize = sysinfo.dwPageSize;
         }
 #endif
-        if(!psize) psize = DEF_ALIGN;
+        if(!psize) psize = alignof(std::max_align_t);
     }
     return psize;
 }

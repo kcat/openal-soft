@@ -1284,7 +1284,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             if(buffer != nullptr)
             {
                 /* Add the selected buffer to a one-item queue */
-                auto newlist = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+                auto newlist = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
                     ALbufferlistitem::Sizeof(1u)));
                 newlist->next.store(nullptr, std::memory_order_relaxed);
                 newlist->max_samples = buffer->SampleLen;
@@ -3185,13 +3185,13 @@ START_API_FUNC
 
         if(!BufferListStart)
         {
-            BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+            BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
                 ALbufferlistitem::Sizeof(1u)));
             BufferList = BufferListStart;
         }
         else
         {
-            auto item = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+            auto item = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
                 ALbufferlistitem::Sizeof(1u)));
             BufferList->next.store(item, std::memory_order_relaxed);
             BufferList = item;
@@ -3290,7 +3290,7 @@ START_API_FUNC
     }
 
     std::unique_lock<std::mutex> buflock{device->BufferLock};
-    auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+    auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
         ALbufferlistitem::Sizeof(nb)));
     BufferList = BufferListStart;
     BufferList->next.store(nullptr, std::memory_order_relaxed);

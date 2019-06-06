@@ -15,7 +15,7 @@
 static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 2");
 
 struct SlidingHold {
-    ALfloat mValues[BUFFERSIZE];
+    alignas(16) ALfloat mValues[BUFFERSIZE];
     ALsizei mExpiries[BUFFERSIZE];
     ALsizei mLowerIndex;
     ALsizei mUpperIndex;
@@ -401,15 +401,15 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
     {
         if(hold > 1)
         {
-            Comp->mHold = new (static_cast<void*>(Comp.get() + 1)) SlidingHold{};
+            Comp->mHold = ::new (static_cast<void*>(Comp.get() + 1)) SlidingHold{};
             Comp->mHold->mValues[0] = -std::numeric_limits<float>::infinity();
             Comp->mHold->mExpiries[0] = hold;
             Comp->mHold->mLength = hold;
-            Comp->mDelay = new (static_cast<void*>(Comp->mHold + 1)) FloatBufferLine{};
+            Comp->mDelay = ::new (static_cast<void*>(Comp->mHold + 1)) FloatBufferLine[NumChans];
         }
         else
         {
-            Comp->mDelay = new (static_cast<void*>(Comp.get() + 1)) FloatBufferLine{};
+            Comp->mDelay = ::new (static_cast<void*>(Comp.get() + 1)) FloatBufferLine[NumChans];
         }
     }
 
@@ -423,10 +423,10 @@ std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint 
 Compressor::~Compressor()
 {
     if(mHold)
-        mHold->~SlidingHold();
+        al::destroy_at(mHold);
     mHold = nullptr;
     if(mDelay)
-        mDelay->~FloatBufferLine();
+        al::destroy_n(mDelay, mNumChans);
     mDelay = nullptr;
 }
 

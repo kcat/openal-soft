@@ -17,15 +17,6 @@
 #endif
 
 
-#ifdef __GNUC__
-#define LIKELY(x) __builtin_expect(!!(x), !0)
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
-#define LIKELY(x) (!!(x))
-#define UNLIKELY(x) (!!(x))
-#endif
-
-
 void *al_malloc(size_t alignment, size_t size)
 {
     assert((alignment & (alignment-1)) == 0);
@@ -75,39 +66,5 @@ void al_free(void *ptr) noexcept
         } while(*finder == 0x55);
         free(finder);
     }
-#endif
-}
-
-size_t al_get_page_size() noexcept
-{
-    static size_t psize{0u};
-    if(UNLIKELY(!psize))
-    {
-#ifdef HAVE_SYSCONF
-#if defined(_SC_PAGESIZE)
-        if(!psize) psize = sysconf(_SC_PAGESIZE);
-#elif defined(_SC_PAGE_SIZE)
-        if(!psize) psize = sysconf(_SC_PAGE_SIZE);
-#endif
-#endif /* HAVE_SYSCONF */
-#ifdef _WIN32
-        if(!psize)
-        {
-            SYSTEM_INFO sysinfo{};
-            GetSystemInfo(&sysinfo);
-            psize = sysinfo.dwPageSize;
-        }
-#endif
-        if(!psize) psize = alignof(std::max_align_t);
-    }
-    return psize;
-}
-
-int al_is_sane_alignment_allocator() noexcept
-{
-#if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN) || defined(HAVE__ALIGNED_MALLOC)
-    return 1;
-#else
-    return 0;
 #endif
 }

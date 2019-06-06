@@ -144,8 +144,7 @@ struct EffectTarget {
 struct EffectState {
     RefCount mRef{1u};
 
-    FloatBufferLine *mOutBuffer{nullptr};
-    ALuint mOutChannels{0u};
+    al::span<FloatBufferLine> mOutTarget;
 
 
     virtual ~EffectState() = default;

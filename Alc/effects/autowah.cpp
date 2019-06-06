@@ -119,8 +119,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
     mFreqMinNorm   = MIN_FREQ / device->Frequency;
     mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
 
-    mOutBuffer = target.Main->Buffer;
-    mOutChannels = target.Main->NumChannels;
+    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
     for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);

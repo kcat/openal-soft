@@ -78,8 +78,7 @@ void CompressorState::update(const ALCcontext* UNUSED(context), const ALeffectsl
 {
     mEnabled = props->Compressor.OnOff;
 
-    mOutBuffer = target.Main->Buffer;
-    mOutChannels = target.Main->NumChannels;
+    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
     for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);

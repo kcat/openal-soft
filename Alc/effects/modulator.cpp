@@ -132,8 +132,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     for(ALuint i{1u};i < slot->Wet.NumChannels;++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 
-    mOutBuffer = target.Main->Buffer;
-    mOutChannels = target.Main->NumChannels;
+    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
     for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);

@@ -2062,8 +2062,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
-            state->mOutBuffer = device->Dry.Buffer;
-            state->mOutChannels = device->Dry.NumChannels;
+            state->mOutTarget = {device->Dry.Buffer, device->Dry.NumChannels};
             if(state->deviceUpdate(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
@@ -2085,8 +2084,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 aluInitEffectPanning(slot, device);
 
                 EffectState *state{slot->Effect.State};
-                state->mOutBuffer = device->Dry.Buffer;
-                state->mOutChannels = device->Dry.NumChannels;
+                state->mOutTarget = {device->Dry.Buffer, device->Dry.NumChannels};
                 if(state->deviceUpdate(device) == AL_FALSE)
                     update_failed = AL_TRUE;
                 else

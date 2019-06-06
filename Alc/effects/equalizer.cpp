@@ -149,8 +149,7 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
         mChans[i].filter[3].copyParamsFrom(mChans[0].filter[3]);
     }
 
-    mOutBuffer = target.Main->Buffer;
-    mOutChannels = target.Main->NumChannels;
+    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
     for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);

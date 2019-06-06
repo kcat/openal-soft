@@ -62,8 +62,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
         const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, LFE)};
         if(idx != -1)
         {
-            mOutBuffer = target.RealOut->Buffer;
-            mOutChannels = target.RealOut->NumChannels;
+            mOutTarget = {target.RealOut->Buffer, target.RealOut->NumChannels};
             mTargetGains[idx] = Gain;
         }
     }
@@ -74,8 +73,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
         const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, FrontCenter)};
         if(idx != -1)
         {
-            mOutBuffer = target.RealOut->Buffer;
-            mOutChannels = target.RealOut->NumChannels;
+            mOutTarget = {target.RealOut->Buffer, target.RealOut->NumChannels};
             mTargetGains[idx] = Gain;
         }
         else
@@ -83,8 +81,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
 
-            mOutBuffer = target.Main->Buffer;
-            mOutChannels = target.Main->NumChannels;
+            mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
             ComputePanGains(target.Main, coeffs, Gain, mTargetGains);
         }
     }

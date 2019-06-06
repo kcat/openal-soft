@@ -100,7 +100,7 @@ void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
 void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, const FloatBufferLine *OutBuffer)
 {
     const ALsizei index{Comp->mLookAhead};
-    const ALsizei numChans{Comp->mNumChans};
+    const ALuint numChans{Comp->mNumChans};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
@@ -295,14 +295,14 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
  */
 void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
 {
-    const ALsizei numChans{Comp->mNumChans};
+    const ALuint numChans{Comp->mNumChans};
     const ALsizei lookAhead{Comp->mLookAhead};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
     ASSUME(lookAhead > 0);
 
-    for(ALsizei c{0};c < numChans;c++)
+    for(ALuint c{0};c < numChans;c++)
     {
         ALfloat *inout{al::assume_aligned<16>(OutBuffer[c].data())};
         ALfloat *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
@@ -347,14 +347,12 @@ void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, FloatBufferLine *O
  *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
  *                    automating release time.
  */
-std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
-                           const ALboolean AutoKnee, const ALboolean AutoAttack,
-                           const ALboolean AutoRelease, const ALboolean AutoPostGain,
-                           const ALboolean AutoDeclip, const ALfloat LookAheadTime,
-                           const ALfloat HoldTime, const ALfloat PreGainDb,
-                           const ALfloat PostGainDb, const ALfloat ThresholdDb,
-                           const ALfloat Ratio, const ALfloat KneeDb,
-                           const ALfloat AttackTime, const ALfloat ReleaseTime)
+std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALuint SampleRate,
+    const ALboolean AutoKnee, const ALboolean AutoAttack, const ALboolean AutoRelease,
+    const ALboolean AutoPostGain, const ALboolean AutoDeclip, const ALfloat LookAheadTime,
+    const ALfloat HoldTime, const ALfloat PreGainDb, const ALfloat PostGainDb,
+    const ALfloat ThresholdDb, const ALfloat Ratio, const ALfloat KneeDb, const ALfloat AttackTime,
+    const ALfloat ReleaseTime)
 {
     const auto lookAhead = static_cast<ALsizei>(
         clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
@@ -433,7 +431,7 @@ Compressor::~Compressor()
 
 void Compressor::process(const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
 {
-    const ALsizei numChans{mNumChans};
+    const ALuint numChans{mNumChans};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);

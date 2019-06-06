@@ -1931,9 +1931,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->RealOut.NumChannels);
 
     /* Allocate extra channels for any post-filter output. */
-    const ALsizei num_chans{device->Dry.NumChannels + device->RealOut.NumChannels};
+    const ALuint num_chans{device->Dry.NumChannels + device->RealOut.NumChannels};
 
-    TRACE("Allocating %d channels, %zu bytes\n", num_chans,
+    TRACE("Allocating %u channels, %zu bytes\n", num_chans,
         num_chans*sizeof(device->MixBuffer[0]));
     device->MixBuffer.resize(num_chans);
 

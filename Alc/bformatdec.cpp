@@ -146,7 +146,8 @@ BFormatDec::BFormatDec(const ALsizei inchans, const ALsizei chancount,
 }
 
 
-void BFormatDec::process(FloatBufferLine *OutBuffer, const ALsizei OutChannels, const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
+void BFormatDec::process(FloatBufferLine *OutBuffer, const ALuint OutChannels,
+    const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
 {
     ASSUME(OutChannels > 0);
     ASSUME(mNumChannels > 0);
@@ -159,7 +160,7 @@ void BFormatDec::process(FloatBufferLine *OutBuffer, const ALsizei OutChannels, 
 
         const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mSamplesHF+mNumChannels};
         const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mSamplesLF+mNumChannels};
-        for(ALsizei chan{0};chan < OutChannels;chan++)
+        for(ALuint chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
@@ -171,7 +172,7 @@ void BFormatDec::process(FloatBufferLine *OutBuffer, const ALsizei OutChannels, 
     else
     {
         const al::span<const FloatBufferLine> insamples{InSamples, InSamples+mNumChannels};
-        for(ALsizei chan{0};chan < OutChannels;chan++)
+        for(ALuint chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;

@@ -691,8 +691,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.
          */
-        voice->mDirect.Buffer = {Device->RealOut.Buffer,
-            static_cast<size_t>(Device->RealOut.NumChannels)};
+        voice->mDirect.Buffer = {Device->RealOut.Buffer, Device->RealOut.NumChannels};
 
         for(ALsizei c{0};c < num_channels;c++)
         {
@@ -721,8 +720,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
          */
-        voice->mDirect.Buffer = {Device->RealOut.Buffer,
-            static_cast<size_t>(Device->RealOut.NumChannels)};
+        voice->mDirect.Buffer = {Device->RealOut.Buffer, Device->RealOut.NumChannels};
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -1469,8 +1467,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 }
 
 
-void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const int lidx,
-    const int ridx, const int cidx, const ALsizei SamplesToDo, const ALsizei NumChannels)
+void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const ALuint lidx,
+    const ALuint ridx, const ALuint cidx, const ALsizei SamplesToDo, const ALuint NumChannels)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(NumChannels > 0);
@@ -1478,7 +1476,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const in
     /* Apply a delay to all channels, except the front-left and front-right, so
      * they maintain correct timing.
      */
-    for(ALsizei i{0};i < NumChannels;i++)
+    for(ALuint i{0};i < NumChannels;i++)
     {
         if(i == lidx || i == ridx)
             continue;
@@ -1562,12 +1560,12 @@ void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const in
 }
 
 void ApplyDistanceComp(FloatBufferLine *Samples, const DistanceComp &distcomp,
-    const ALsizei SamplesToDo, const ALsizei numchans)
+    const ALsizei SamplesToDo, const ALuint numchans)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(numchans > 0);
 
-    for(ALsizei c{0};c < numchans;c++)
+    for(ALuint c{0};c < numchans;c++)
     {
         const ALfloat gain{distcomp[c].Gain};
         const ALsizei base{distcomp[c].Length};
@@ -1593,7 +1591,7 @@ void ApplyDistanceComp(FloatBufferLine *Samples, const DistanceComp &distcomp,
 }
 
 void ApplyDither(FloatBufferLine *Samples, ALuint *dither_seed, const ALfloat quant_scale,
-    const ALsizei SamplesToDo, const ALsizei numchans)
+    const ALsizei SamplesToDo, const ALuint numchans)
 {
     ASSUME(numchans > 0);
 
@@ -1652,12 +1650,11 @@ template<> inline ALubyte SampleConv(ALfloat val) noexcept
 { return SampleConv<ALbyte>(val) + 128; }
 
 template<DevFmtType T>
-void Write(const FloatBufferLine *InBuffer, ALvoid *OutBuffer, const ALsizei Offset,
-    const ALsizei SamplesToDo, const ALsizei numchans)
+void Write(const FloatBufferLine *InBuffer, ALvoid *OutBuffer, const size_t Offset,
+    const ALsizei SamplesToDo, const ALuint numchans)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
-    ASSUME(Offset >= 0);
     ASSUME(numchans > 0);
     SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*numchans;
     auto conv_channel = [&outbase,SamplesToDo,numchans](const FloatBufferLine &inbuf) -> void
@@ -1751,7 +1748,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         if(LIKELY(OutBuffer))
         {
             FloatBufferLine *Buffer{device->RealOut.Buffer};
-            ALsizei Channels{device->RealOut.NumChannels};
+            ALuint Channels{device->RealOut.NumChannels};
 
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.

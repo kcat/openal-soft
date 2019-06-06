@@ -23,7 +23,7 @@ struct SlidingHold;
  *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
  */
 struct Compressor {
-    ALsizei mNumChans{0};
+    ALuint mNumChans{0u};
     ALuint mSampleRate{0u};
 
     struct {
@@ -94,13 +94,11 @@ struct Compressor {
  *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
  *                    automating release time.
  */
-std::unique_ptr<Compressor> CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
-    const ALboolean AutoKnee, const ALboolean AutoAttack,
-    const ALboolean AutoRelease, const ALboolean AutoPostGain,
-    const ALboolean AutoDeclip, const ALfloat LookAheadTime,
-    const ALfloat HoldTime, const ALfloat PreGainDb,
-    const ALfloat PostGainDb, const ALfloat ThresholdDb,
-    const ALfloat Ratio, const ALfloat KneeDb,
-    const ALfloat AttackTime, const ALfloat ReleaseTime);
+std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALuint SampleRate,
+    const ALboolean AutoKnee, const ALboolean AutoAttack, const ALboolean AutoRelease,
+    const ALboolean AutoPostGain, const ALboolean AutoDeclip, const ALfloat LookAheadTime,
+    const ALfloat HoldTime, const ALfloat PreGainDb, const ALfloat PostGainDb,
+    const ALfloat ThresholdDb, const ALfloat Ratio, const ALfloat KneeDb, const ALfloat AttackTime,
+    const ALfloat ReleaseTime);
 
 #endif /* MASTERING_H */

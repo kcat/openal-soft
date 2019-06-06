@@ -111,7 +111,6 @@ SET(LIB_REVISION "1")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 
 SET(EXPORT_DECL "")
-SET(ALIGN_DECL "")
 
 
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
@@ -323,11 +322,6 @@ ENDIF()
 # Set visibility/export options if available
 IF(WIN32)
     SET(EXPORT_DECL "__declspec(dllexport)")
-    IF(NOT MINGW)
-        SET(ALIGN_DECL "__declspec(align(x))")
-    ELSE()
-        SET(ALIGN_DECL "__declspec(aligned(x))")
-    ENDIF()
 ELSE()
     SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     # Yes GCC, really don't accept visibility modes you don't support
@@ -350,12 +344,6 @@ ELSE()
         IF(HAVE_VISIBILITY_HIDDEN_SWITCH)
             SET(C_FLAGS ${C_FLAGS} -fvisibility=hidden)
         ENDIF()
-    ENDIF()
-
-    CHECK_C_SOURCE_COMPILES("int foo __attribute__((aligned(16)));
-                             int main() {return 0;}" HAVE_ATTRIBUTE_ALIGNED)
-    IF(HAVE_ATTRIBUTE_ALIGNED)
-        SET(ALIGN_DECL "__attribute__((aligned(x)))")
     ENDIF()
 
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")

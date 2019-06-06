@@ -2,9 +2,6 @@
 #define AL_API  ${EXPORT_DECL}
 #define ALC_API ${EXPORT_DECL}
 
-/* Define any available alignment declaration */
-#define ALIGN(x) ${ALIGN_DECL}
-
 /* Define a restrict macro for non-aliased pointers */
 #define RESTRICT ${RESTRICT_DECL}
 

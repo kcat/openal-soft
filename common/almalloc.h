@@ -158,16 +158,32 @@ std::unique_ptr<T> make_unique(ArgsT&&...args)
  */
 template<typename T, size_t alignment=alignof(T)>
 struct FlexArray {
-    const size_t mSize;
-    alignas(alignment) T mArray[];
+    using element_type = T;
+    using value_type = typename std::remove_cv<T>::type;
+    using index_type = size_t;
+    using difference_type = ptrdiff_t;
 
-    static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
+
+    using iterator = pointer;
+    using const_iterator = const_pointer;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+
+    const index_type mSize;
+    alignas(alignment) element_type mArray[];
+
+    static constexpr index_type Sizeof(index_type count, index_type base=0u) noexcept
     {
         return base +
-            std::max<size_t>(offsetof(FlexArray, mArray) + sizeof(T)*count, sizeof(FlexArray));
+            std::max<index_type>(offsetof(FlexArray, mArray) + sizeof(T)*count, sizeof(FlexArray));
     }
 
-    FlexArray(size_t size) : mSize{size}
+    FlexArray(index_type size) : mSize{size}
     { uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArray()
     { destroy_n(mArray, mSize); }
@@ -175,26 +191,33 @@ struct FlexArray {
     FlexArray(const FlexArray&) = delete;
     FlexArray& operator=(const FlexArray&) = delete;
 
-    size_t size() const noexcept { return mSize; }
+    index_type size() const noexcept { return mSize; }
 
-    T *data() noexcept { return mArray; }
-    const T *data() const noexcept { return mArray; }
+    pointer data() noexcept { return mArray; }
+    const_pointer data() const noexcept { return mArray; }
 
-    T& operator[](size_t i) noexcept { return mArray[i]; }
-    const T& operator[](size_t i) const noexcept { return mArray[i]; }
+    reference operator[](index_type i) noexcept { return mArray[i]; }
+    const_reference operator[](index_type i) const noexcept { return mArray[i]; }
 
-    T& front() noexcept { return mArray[0]; }
-    const T& front() const noexcept { return mArray[0]; }
+    reference front() noexcept { return mArray[0]; }
+    const_reference front() const noexcept { return mArray[0]; }
 
-    T& back() noexcept { return mArray[mSize-1]; }
-    const T& back() const noexcept { return mArray[mSize-1]; }
+    reference back() noexcept { return mArray[mSize-1]; }
+    const_reference back() const noexcept { return mArray[mSize-1]; }
 
-    T *begin() noexcept { return mArray; }
-    const T *begin() const noexcept { return mArray; }
-    const T *cbegin() const noexcept { return mArray; }
-    T *end() noexcept { return mArray + mSize; }
-    const T *end() const noexcept { return mArray + mSize; }
-    const T *cend() const noexcept { return mArray + mSize; }
+    iterator begin() noexcept { return mArray; }
+    const_iterator begin() const noexcept { return mArray; }
+    const_iterator cbegin() const noexcept { return mArray; }
+    iterator end() noexcept { return mArray + mSize; }
+    const_iterator end() const noexcept { return mArray + mSize; }
+    const_iterator cend() const noexcept { return mArray + mSize; }
+
+    reverse_iterator rbegin() noexcept { return end(); }
+    const_reverse_iterator rbegin() const noexcept { return end(); }
+    const_reverse_iterator crbegin() const noexcept { return cend(); }
+    reverse_iterator rend() noexcept { return begin(); }
+    const_reverse_iterator rend() const noexcept { return begin(); }
+    const_reverse_iterator crend() const noexcept { return cbegin(); }
 
     DEF_PLACE_NEWDEL()
 };

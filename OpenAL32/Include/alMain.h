@@ -28,6 +28,7 @@
 #include "vector.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "threads.h"
 #include "ambidefs.h"
 #include "hrtf.h"
@@ -266,8 +267,7 @@ private:
     al::vector<ALfloat,16> mSamples;
 
 public:
-    void resize(size_t new_size) { mSamples.resize(new_size); }
-    void shrink_to_fit() { mSamples.shrink_to_fit(); }
+    void setSampleCount(size_t new_size) { mSamples.resize(new_size); }
     void clear() noexcept
     {
         for(auto &chan : mChannel)
@@ -276,21 +276,13 @@ public:
             chan.Length = 0;
             chan.Buffer = nullptr;
         }
-        mSamples.clear();
+        using SampleVecT = decltype(mSamples);
+        SampleVecT{}.swap(mSamples);
     }
 
-    DistData *begin() noexcept { return std::begin(mChannel); }
-    const DistData *begin() const noexcept { return std::begin(mChannel); }
-    const DistData *cbegin() const noexcept { return std::begin(mChannel); }
-    DistData *end() noexcept { return std::end(mChannel); }
-    const DistData *end() const noexcept { return std::end(mChannel); }
-    const DistData *cend() const noexcept { return std::end(mChannel); }
+    ALfloat *getSamples() noexcept { return mSamples.data(); }
 
-    ALfloat *data() noexcept { return mSamples.data(); }
-    const ALfloat *data() const noexcept { return mSamples.data(); }
-
-    DistData& operator[](size_t o) noexcept { return mChannel[o]; }
-    const DistData& operator[](size_t o) const noexcept { return mChannel[o]; }
+    al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannel; }
 };
 
 struct BFChannelConfig {

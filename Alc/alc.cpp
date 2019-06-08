@@ -1815,7 +1815,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     device->Limiter = nullptr;
     device->ChannelDelay.clear();
-    device->ChannelDelay.shrink_to_fit();
 
     device->Dry.Buffer = nullptr;
     device->Dry.NumChannels = 0;

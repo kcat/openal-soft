@@ -1540,22 +1540,22 @@ void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const AL
     }
 }
 
-void ApplyDistanceComp(FloatBufferLine *Samples, const DistanceComp &distcomp,
-    const ALsizei SamplesToDo, const ALuint numchans)
+void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALsizei SamplesToDo,
+    const DistanceComp::DistData *distcomp)
 {
     ASSUME(SamplesToDo > 0);
-    ASSUME(numchans > 0);
 
-    for(ALuint c{0};c < numchans;c++)
+    for(auto &chanbuffer : Samples)
     {
-        const ALfloat gain{distcomp[c].Gain};
-        const ALsizei base{distcomp[c].Length};
-        ALfloat *distbuf{al::assume_aligned<16>(distcomp[c].Buffer)};
+        const ALfloat gain{distcomp->Gain};
+        const ALsizei base{distcomp->Length};
+        ALfloat *distbuf{al::assume_aligned<16>(distcomp->Buffer)};
+        ++distcomp;
 
         if(base < 1)
             continue;
 
-        ALfloat *inout{al::assume_aligned<16>(Samples[c].data())};
+        ALfloat *inout{al::assume_aligned<16>(chanbuffer.data())};
         auto inout_end = inout + SamplesToDo;
         if(LIKELY(SamplesToDo >= base))
         {
@@ -1716,8 +1716,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             comp->process(SamplesToDo, device->RealOut.Buffer);
 
         /* Apply delays and attenuation for mismatched speaker distances. */
-        ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, SamplesToDo,
-            device->RealOut.NumChannels);
+        ApplyDistanceComp({device->RealOut.Buffer, device->RealOut.NumChannels}, SamplesToDo,
+            device->ChannelDelay.as_span().cbegin());
 
         /* Apply dithering. The compressor should have left enough headroom for
          * the dither noise to not saturate.

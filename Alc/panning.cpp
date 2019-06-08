@@ -251,17 +251,17 @@ void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
 
 void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
+    auto get_max = std::bind(maxf, _1,
+        std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
     const ALfloat maxdist{
-        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f},
-            std::bind(maxf, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2))
-        )
-    };
+        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f}, get_max)};
 
     const char *devname{device->DeviceName.c_str()};
     if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
         return;
 
-    auto srate = static_cast<ALfloat>(device->Frequency);
+    const auto distSampleScale = static_cast<ALfloat>(device->Frequency)/SPEEDOFSOUNDMETRESPERSEC;
+    const auto ChanDelay = device->ChannelDelay.as_span();
     size_t total{0u};
     for(size_t i{0u};i < conf->Speakers.size();i++)
     {
@@ -274,40 +274,36 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
          * phase offsets. This means at 48khz, for instance, the distance delay
          * will be in steps of about 7 millimeters.
          */
-        const ALfloat delay{
-            std::floor((maxdist - speaker.Distance)/SPEEDOFSOUNDMETRESPERSEC*srate + 0.5f)
-        };
-        if(delay >= static_cast<ALfloat>(MAX_DELAY_LENGTH))
-            ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %d)\n",
-                speaker.Name.c_str(), delay, MAX_DELAY_LENGTH);
+        ALfloat delay{std::floor((maxdist - speaker.Distance)*distSampleScale + 0.5f)};
+        if(delay > ALfloat{MAX_DELAY_LENGTH-1})
+        {
+            ERR("Delay for speaker \"%s\" exceeds buffer length (%f > %d)\n",
+                speaker.Name.c_str(), delay, MAX_DELAY_LENGTH-1);
+            delay = ALfloat{MAX_DELAY_LENGTH-1};
+        }
 
-        device->ChannelDelay[chan].Length = static_cast<ALsizei>(clampf(
-            delay, 0.0f, static_cast<ALfloat>(MAX_DELAY_LENGTH-1)
-        ));
-        device->ChannelDelay[chan].Gain = speaker.Distance / maxdist;
+        ChanDelay[chan].Length = static_cast<ALsizei>(delay);
+        ChanDelay[chan].Gain = speaker.Distance / maxdist;
         TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
-            speaker.Name.c_str(), device->ChannelDelay[chan].Length,
-            device->ChannelDelay[chan].Gain
-        );
+            speaker.Name.c_str(), ChanDelay[chan].Length, ChanDelay[chan].Gain);
 
         /* Round up to the next 4th sample, so each channel buffer starts
          * 16-byte aligned.
          */
-        total += RoundUp(device->ChannelDelay[chan].Length, 4);
+        total += RoundUp(ChanDelay[chan].Length, 4);
     }
 
     if(total > 0)
     {
-        device->ChannelDelay.resize(total);
-        device->ChannelDelay[0].Buffer = device->ChannelDelay.data();
+        device->ChannelDelay.setSampleCount(total);
+        ChanDelay[0].Buffer = device->ChannelDelay.getSamples();
         auto set_bufptr = [](const DistanceComp::DistData &last, const DistanceComp::DistData &cur) -> DistanceComp::DistData
         {
             DistanceComp::DistData ret{cur};
             ret.Buffer = last.Buffer + RoundUp(last.Length, 4);
             return ret;
         };
-        std::partial_sum(device->ChannelDelay.begin(), device->ChannelDelay.end(),
-            device->ChannelDelay.begin(), set_bufptr);
+        std::partial_sum(ChanDelay.begin(), ChanDelay.end(), ChanDelay.begin(), set_bufptr);
     }
 }
 

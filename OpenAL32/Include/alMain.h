@@ -263,14 +263,14 @@ public:
     };
 
 private:
-    DistData mChannel[MAX_OUTPUT_CHANNELS];
+    std::array<DistData,MAX_OUTPUT_CHANNELS> mChannels;
     al::vector<ALfloat,16> mSamples;
 
 public:
     void setSampleCount(size_t new_size) { mSamples.resize(new_size); }
     void clear() noexcept
     {
-        for(auto &chan : mChannel)
+        for(auto &chan : mChannels)
         {
             chan.Gain = 1.0f;
             chan.Length = 0;
@@ -282,7 +282,7 @@ public:
 
     ALfloat *getSamples() noexcept { return mSamples.data(); }
 
-    al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannel; }
+    al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannels; }
 };
 
 struct BFChannelConfig {

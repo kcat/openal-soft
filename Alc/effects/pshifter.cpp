@@ -230,7 +230,7 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
 
         /* ANALYSIS */
         /* Apply FFT to FFTbuffer data */
-        complex_fft(mFFTbuffer, STFT_SIZE, -1.0);
+        complex_fft(mFFTbuffer, -1.0);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_HALF_SIZE+1 samples are needed.
@@ -302,7 +302,7 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
             mFFTbuffer[k] = complex_d{};
 
         /* Apply iFFT to buffer data */
-        complex_fft(mFFTbuffer, STFT_SIZE, 1.0);
+        complex_fft(mFFTbuffer, 1.0);
 
         /* Windowing and add to output */
         for(ALsizei k{0};k < STFT_SIZE;k++)

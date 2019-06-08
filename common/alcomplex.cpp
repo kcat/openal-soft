@@ -4,6 +4,7 @@
 #include "alcomplex.h"
 
 #include <cmath>
+#include <algorithm>
 
 namespace {
 
@@ -11,13 +12,14 @@ constexpr double Pi{3.141592653589793238462643383279502884};
 
 } // namespace
 
-void complex_fft(std::complex<double> *FFTBuffer, int FFTSize, double Sign)
+void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 {
+    const size_t fftsize{buffer.size()};
     /* Bit-reversal permutation applied to a sequence of FFTSize items */
-    for(int i{1};i < FFTSize-1;i++)
+    for(size_t i{1u};i < fftsize-1;i++)
     {
-        int j{0};
-        for(int mask{1};mask < FFTSize;mask <<= 1)
+        size_t j{0u};
+        for(size_t mask{1u};mask < fftsize;mask <<= 1)
         {
             if((i&mask) != 0)
                 j++;
@@ -26,25 +28,25 @@ void complex_fft(std::complex<double> *FFTBuffer, int FFTSize, double Sign)
         j >>= 1;
 
         if(i < j)
-            std::swap(FFTBuffer[i], FFTBuffer[j]);
+            std::swap(buffer[i], buffer[j]);
     }
 
     /* Iterative form of DanielsonLanczos lemma */
-    int step{2};
-    for(int i{1};i < FFTSize;i<<=1, step<<=1)
+    size_t step{2u};
+    for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {
-        int step2{step >> 1};
+        const size_t step2{step >> 1};
         double arg{Pi / step2};
 
-        std::complex<double> w{std::cos(arg), std::sin(arg)*Sign};
+        std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};
-        for(int j{0};j < step2;j++)
+        for(size_t j{0};j < step2;j++)
         {
-            for(int k{j};k < FFTSize;k+=step)
+            for(size_t k{j};k < fftsize;k+=step)
             {
-                std::complex<double> temp{FFTBuffer[k+step2] * u};
-                FFTBuffer[k+step2] = FFTBuffer[k] - temp;
-                FFTBuffer[k] += temp;
+                std::complex<double> temp{buffer[k+step2] * u};
+                buffer[k+step2] = buffer[k] - temp;
+                buffer[k] += temp;
             }
 
             u *= w;
@@ -52,25 +54,23 @@ void complex_fft(std::complex<double> *FFTBuffer, int FFTSize, double Sign)
     }
 }
 
-void complex_hilbert(std::complex<double> *Buffer, int size)
+void complex_hilbert(const al::span<std::complex<double>> buffer)
 {
-    const double inverse_size = 1.0/static_cast<double>(size);
+    std::for_each(buffer.begin(), buffer.end(), [](std::complex<double> &c) { c.imag(0.0); });
 
-    for(int i{0};i < size;i++)
-        Buffer[i].imag(0.0);
+    complex_fft(buffer, 1.0);
 
-    complex_fft(Buffer, size, 1.0);
+    const double inverse_size = 1.0/static_cast<double>(buffer.size());
+    auto bufiter = buffer.begin();
+    const auto halfiter = bufiter + (buffer.size()>>1);
 
-    int todo{size>>1};
-    int i{0};
+    *bufiter *= inverse_size; ++bufiter;
+    bufiter = std::transform(bufiter, halfiter, bufiter,
+        [inverse_size](const std::complex<double> &c) -> std::complex<double>
+        { return c * (2.0*inverse_size); });
+    *bufiter *= inverse_size; ++bufiter;
 
-    Buffer[i++] *= inverse_size;
-    while(i < todo)
-        Buffer[i++] *= 2.0*inverse_size;
-    Buffer[i++] *= inverse_size;
+    std::fill(bufiter, buffer.end(), std::complex<double>{});
 
-    for(;i < size;i++)
-        Buffer[i] = std::complex<double>{};
-
-    complex_fft(Buffer, size, -1.0);
+    complex_fft(buffer, -1.0);
 }

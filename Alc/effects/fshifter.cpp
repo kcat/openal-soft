@@ -171,7 +171,7 @@ void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         }
 
         /* Processing signal by Discrete Hilbert Transform (analytical signal). */
-        complex_hilbert(mAnalytic, HIL_SIZE);
+        complex_hilbert(mAnalytic);
 
         /* Windowing and add to output accumulator */
         for(k = 0;k < HIL_SIZE;k++)

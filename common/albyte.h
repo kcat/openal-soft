@@ -73,18 +73,30 @@ class bitfield {
     byte vals[NumElems]{};
 
 public:
-    void set(size_t b) noexcept { vals[b/bits_per_byte] |= 1 << (b%bits_per_byte); }
-    void unset(size_t b) noexcept { vals[b/bits_per_byte] &= ~(1 << (b%bits_per_byte)); }
-    bool get(size_t b) const noexcept
-    { return (vals[b/bits_per_byte] & (1 << (b%bits_per_byte))) != byte{}; }
-
-    template<typename ...Args, REQUIRES(sizeof...(Args) > 0)>
-    void set(size_t b, Args ...args) noexcept
+    template<size_t b>
+    inline void set() noexcept
     {
-        set(b);
-        /* Trick for calling set() on each element of the parameter pack. */
-        using CharArray = char[sizeof...(Args)];
-        (void)(CharArray{ (set(args),'\0')... });
+        static_assert(b < N, "Bit index out of range");
+        vals[b/bits_per_byte] |= 1 << (b%bits_per_byte);
+    }
+    template<size_t b>
+    inline void unset() noexcept
+    {
+        static_assert(b < N, "Bit index out of range");
+        vals[b/bits_per_byte] &= ~(1 << (b%bits_per_byte));
+    }
+    template<size_t b>
+    inline bool get() const noexcept
+    {
+        static_assert(b < N, "Bit index out of range");
+        return (vals[b/bits_per_byte] & (1 << (b%bits_per_byte))) != byte{};
+    }
+
+    template<size_t b, size_t ...args, REQUIRES(sizeof...(args) > 0)>
+    void set() noexcept
+    {
+        set<b>();
+        set<args...>();
     }
 };
 

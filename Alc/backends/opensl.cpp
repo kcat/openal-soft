@@ -361,7 +361,7 @@ ALCboolean OpenSLPlayback::reset()
     mRing = nullptr;
 
 #if 0
-    if(!mDevice->Flags.get(FrequencyRequest))
+    if(!mDevice->Flags.get<FrequencyRequest>())
     {
         /* FIXME: Disabled until I figure out how to get the Context needed for
          * the getSystemService call.

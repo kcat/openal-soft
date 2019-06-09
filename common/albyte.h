@@ -1,6 +1,8 @@
 #ifndef AL_BYTE_H
 #define AL_BYTE_H
 
+#include <cstddef>
+#include <limits>
 #include <type_traits>
 
 namespace al {
@@ -62,6 +64,29 @@ AL_DECL_OP(&)
 AL_DECL_OP(^)
 
 #undef AL_DECL_OP
+
+template<size_t N>
+class bitfield {
+    static constexpr size_t bits_per_byte{std::numeric_limits<unsigned char>::digits};
+    static constexpr size_t NumElems{(N+bits_per_byte-1) / bits_per_byte};
+
+    byte vals[NumElems]{};
+
+public:
+    void set(size_t b) noexcept { vals[b/bits_per_byte] |= 1 << (b%bits_per_byte); }
+    void unset(size_t b) noexcept { vals[b/bits_per_byte] &= ~(1 << (b%bits_per_byte)); }
+    bool get(size_t b) const noexcept
+    { return (vals[b/bits_per_byte] & (1 << (b%bits_per_byte))) != byte{}; }
+
+    template<typename ...Args, REQUIRES(sizeof...(Args) > 0)>
+    void set(size_t b, Args ...args) noexcept
+    {
+        set(b);
+        /* Trick for calling set() on each element of the parameter pack. */
+        using CharArray = char[sizeof...(Args)];
+        (void)(CharArray{ (set(args),'\0')... });
+    }
+};
 
 #undef REQUIRES
 

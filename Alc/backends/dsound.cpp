@@ -359,7 +359,7 @@ ALCboolean DSoundPlayback::reset()
             mDevice->FmtType = DevFmtUByte;
             break;
         case DevFmtFloat:
-            if((mDevice->Flags&DEVICE_SAMPLE_TYPE_REQUEST))
+            if(mDevice->Flags.get(SampleTypeRequest))
                 break;
             /* fall-through */
         case DevFmtUShort:
@@ -380,7 +380,7 @@ ALCboolean DSoundPlayback::reset()
     if(SUCCEEDED(hr))
     {
         speakers = DSSPEAKER_CONFIG(speakers);
-        if(!(mDevice->Flags&DEVICE_CHANNELS_REQUEST))
+        if(!mDevice->Flags.get(ChannelsRequest))
         {
             if(speakers == DSSPEAKER_MONO)
                 mDevice->FmtChans = DevFmtMono;

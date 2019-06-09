@@ -26,6 +26,7 @@
 #include "inprogext.h"
 #include "atomic.h"
 #include "vector.h"
+#include "albyte.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -322,6 +323,22 @@ struct RealMixParams {
 
 using POSTPROCESS = void(*)(ALCdevice *device, const ALsizei SamplesToDo);
 
+enum {
+    // Frequency was requested by the app or config file
+    FrequencyRequest,
+    // Channel configuration was requested by the config file
+    ChannelsRequest,
+    // Sample type was requested by the config file
+    SampleTypeRequest,
+
+    // Specifies if the DSP is paused at user request
+    DevicePaused,
+    // Specifies if the device is currently running
+    DeviceRunning,
+
+    DeviceFlagsCount
+};
+
 struct ALCdevice {
     RefCount ref{1u};
 
@@ -347,7 +364,7 @@ struct ALCdevice {
     std::string DeviceName;
 
     // Device flags
-    ALuint Flags{0u};
+    al::bitfield<DeviceFlagsCount> Flags{};
 
     std::string HrtfName;
     al::vector<EnumeratedHrtf> HrtfList;
@@ -465,20 +482,6 @@ struct ALCdevice {
 
     DEF_NEWDEL(ALCdevice)
 };
-
-// Frequency was requested by the app or config file
-#define DEVICE_FREQUENCY_REQUEST                 (1u<<1)
-// Channel configuration was requested by the config file
-#define DEVICE_CHANNELS_REQUEST                  (1u<<2)
-// Sample type was requested by the config file
-#define DEVICE_SAMPLE_TYPE_REQUEST               (1u<<3)
-
-// Specifies if the DSP is paused at user request
-#define DEVICE_PAUSED                            (1u<<30)
-
-// Specifies if the device is currently running
-#define DEVICE_RUNNING                           (1u<<31)
-
 
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */

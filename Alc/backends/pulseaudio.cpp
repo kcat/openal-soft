@@ -779,7 +779,7 @@ void PulsePlayback::sinkInfoCallback(pa_context* UNUSED(context), const pa_sink_
     );
     if(chanmap != chanmaps.cend())
     {
-        if(!(mDevice->Flags&DEVICE_CHANNELS_REQUEST))
+        if(!mDevice->Flags.get(ChannelsRequest))
             mDevice->FmtChans = chanmap->chans;
     }
     else
@@ -910,7 +910,7 @@ ALCboolean PulsePlayback::reset()
         flags |= PA_STREAM_ADJUST_LATENCY;
     }
     if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "fix-rate", 0) ||
-       !(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
+       !mDevice->Flags.get(FrequencyRequest))
         flags |= PA_STREAM_FIX_RATE;
 
     pa_channel_map chanmap{};

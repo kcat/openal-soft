@@ -725,7 +725,7 @@ ALCboolean AlsaPlayback::reset()
     CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp, mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
     if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", 0) ||
-       !(mDevice->Flags&DEVICE_FREQUENCY_REQUEST))
+       !mDevice->Flags.get(FrequencyRequest))
     {
         if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp, 0) < 0)
             ERR("Failed to disable ALSA resampler\n");

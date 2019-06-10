@@ -117,7 +117,7 @@ struct ALCcontext {
     std::atomic<ALeffectslotProps*> FreeEffectslotProps{nullptr};
 
     std::unique_ptr<al::FlexArray<ALvoice>> Voices{nullptr};
-    std::atomic<ALsizei> VoiceCount{0};
+    std::atomic<ALuint> VoiceCount{0u};
 
     using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};

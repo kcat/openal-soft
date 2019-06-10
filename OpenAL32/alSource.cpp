@@ -58,7 +58,7 @@ using namespace std::placeholders;
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
     ALint idx{source->VoiceIdx};
-    if(idx >= 0 && idx < context->VoiceCount.load(std::memory_order_relaxed))
+    if(idx >= 0 && static_cast<ALuint>(idx) < context->VoiceCount.load(std::memory_order_relaxed))
     {
         ALuint sid{source->id};
         ALvoice &voice = (*context->Voices)[idx];
@@ -2799,7 +2799,7 @@ START_API_FUNC
         {
             /* Allocate more voices to get enough. */
             const size_t alloc_count{need_voices - rem_voices};
-            if(UNLIKELY(context->Voices->size() > std::numeric_limits<size_t>::max()-alloc_count))
+            if(UNLIKELY(context->Voices->size() > std::numeric_limits<ALsizei>::max()-alloc_count))
                 SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
                     "Overflow increasing voice count to %zu + %zu", context->Voices->size(),
                     alloc_count);

@@ -2606,7 +2606,7 @@ void AllocateVoices(ALCcontext *context, size_t num_voices)
         voices.reset(new (ptr) al::FlexArray<ALvoice>{num_voices});
     }
 
-    const ALsizei v_count{mini(context->VoiceCount.load(std::memory_order_relaxed), num_voices)};
+    const size_t v_count{minz(context->VoiceCount.load(std::memory_order_relaxed), num_voices)};
     if(context->Voices)
     {
         /* Copy the old voice data to the new storage. */
@@ -2631,7 +2631,7 @@ void AllocateVoices(ALCcontext *context, size_t num_voices)
     }
 
     context->Voices = std::move(voices);
-    context->VoiceCount.store(v_count, std::memory_order_relaxed);
+    context->VoiceCount.store(static_cast<ALuint>(v_count), std::memory_order_relaxed);
 }
 
 

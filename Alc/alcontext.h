@@ -18,6 +18,7 @@
 #include "alnumeric.h"
 
 #include "alListener.h"
+#include "alu.h"
 
 
 struct ALsource;
@@ -26,7 +27,6 @@ struct ALcontextProps;
 struct ALlistenerProps;
 struct ALvoiceProps;
 struct ALeffectslotProps;
-struct ALvoice;
 struct RingBuffer;
 
 enum class DistanceModel {
@@ -116,9 +116,8 @@ struct ALCcontext {
     std::atomic<ALvoiceProps*> FreeVoiceProps{nullptr};
     std::atomic<ALeffectslotProps*> FreeEffectslotProps{nullptr};
 
-    ALvoice **Voices{nullptr};
+    std::unique_ptr<al::FlexArray<ALvoice>> Voices{nullptr};
     std::atomic<ALsizei> VoiceCount{0};
-    ALsizei MaxVoices{0};
 
     using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};

@@ -532,7 +532,7 @@ struct AsyncEvent {
 };
 
 
-void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);
+void AllocateVoices(ALCcontext *context, size_t num_voices);
 
 
 extern ALint RTPrioLevel;

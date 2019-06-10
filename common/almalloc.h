@@ -175,7 +175,7 @@ struct FlexArray {
 
 
     const index_type mSize;
-    alignas(alignment) element_type mArray[];
+    alignas(alignment) element_type mArray[0];
 
     static constexpr index_type Sizeof(index_type count, index_type base=0u) noexcept
     {

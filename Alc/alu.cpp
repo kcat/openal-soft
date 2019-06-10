@@ -177,13 +177,6 @@ void aluInit(void)
 }
 
 
-void DeinitVoice(ALvoice *voice) noexcept
-{
-    delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
-    al::destroy_at(voice);
-}
-
-
 void aluSelectPostProcess(ALCdevice *device)
 {
     if(device->mHrtf)
@@ -1359,11 +1352,12 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
             { return CalcEffectSlotParams(slot, ctx, cforce) | force; }
         );
 
-        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
-            [ctx,force](ALvoice *voice) -> void
+        std::for_each(ctx->Voices->begin(),
+            ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
+            [ctx,force](ALvoice &voice) -> void
             {
-                ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
-                if(sid) CalcSourceParams(voice, ctx, force);
+                ALuint sid{voice.mSourceID.load(std::memory_order_acquire)};
+                if(sid) CalcSourceParams(&voice, ctx, force);
             }
         );
     }
@@ -1389,15 +1383,16 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     );
 
     /* Process voices that have a playing source. */
-    std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
-        [SamplesToDo,ctx](ALvoice *voice) -> void
+    std::for_each(ctx->Voices->begin(),
+        ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
+        [SamplesToDo,ctx](ALvoice &voice) -> void
         {
-            const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
+            const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
             if(vstate == ALvoice::Stopped) return;
-            const ALuint sid{voice->mSourceID.load(std::memory_order_relaxed)};
-            if(voice->mStep < 1) return;
+            const ALuint sid{voice.mSourceID.load(std::memory_order_relaxed)};
+            if(voice.mStep < 1) return;
 
-            MixVoice(voice, vstate, sid, ctx, SamplesToDo);
+            MixVoice(&voice, vstate, sid, ctx, SamplesToDo);
         }
     );
 
@@ -1788,14 +1783,15 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             }
         }
 
-        auto stop_voice = [](ALvoice *voice) -> void
+        auto stop_voice = [](ALvoice &voice) -> void
         {
-            voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mSourceID.store(0u, std::memory_order_relaxed);
-            voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+            voice.mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+            voice.mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+            voice.mSourceID.store(0u, std::memory_order_relaxed);
+            voice.mPlayState.store(ALvoice::Stopped, std::memory_order_release);
         };
-        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
+        std::for_each(ctx->Voices->begin(),
+            ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
             stop_voice);
 
         ctx = ctx->next.load(std::memory_order_relaxed);

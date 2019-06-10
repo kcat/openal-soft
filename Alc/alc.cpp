@@ -2141,18 +2141,37 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             vprops = next;
         }
 
-        AllocateVoices(context, context->MaxVoices, old_sends);
-        auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
-        std::for_each(context->Voices, voices_end,
-            [device](ALvoice *voice) -> void
+        auto voices = context->Voices.get();
+        auto voices_end = voices->begin() + context->VoiceCount.load(std::memory_order_relaxed);
+        if(device->NumAuxSends < old_sends)
+        {
+            const ALsizei num_sends{device->NumAuxSends};
+            /* Clear extraneous property set sends. */
+            auto clear_sends = [num_sends](ALvoice &voice) -> void
             {
-                delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
+                std::fill(std::begin(voice.mProps.Send)+num_sends, std::end(voice.mProps.Send),
+                    ALvoiceProps::SendData{});
+
+                std::fill(voice.mSend.begin()+num_sends, voice.mSend.end(), ALvoice::SendData{});
+                auto clear_chan_sends = [num_sends](ALvoice::ChannelData &chandata) -> void
+                {
+                    std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
+                        SendParams{});
+                };
+                std::for_each(voice.mChans.begin(), voice.mChans.end(), clear_chan_sends);
+            };
+            std::for_each(voices->begin(), voices_end, clear_sends);
+        }
+        std::for_each(voices->begin(), voices_end,
+            [device](ALvoice &voice) -> void
+            {
+                delete voice.mUpdate.exchange(nullptr, std::memory_order_acq_rel);
 
                 /* Force the voice to stopped if it was stopping. */
                 ALvoice::State vstate{ALvoice::Stopping};
-                voice->mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
+                voice.mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
                     std::memory_order_acquire, std::memory_order_acquire);
-                if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
+                if(voice.mSourceID.load(std::memory_order_relaxed) == 0u)
                     return;
 
                 if(device->AvgSpeakerDist > 0.0f)
@@ -2162,7 +2181,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                         (device->AvgSpeakerDist * device->Frequency)};
                     auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
                     { chandata.mDryParams.NFCtrlFilter.init(w1); };
-                    std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+                    std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
                         init_nfc);
                 }
             }
@@ -2430,11 +2449,8 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
 
-    std::for_each(Voices, Voices + MaxVoices, DeinitVoice);
-    al_free(Voices);
     Voices = nullptr;
     VoiceCount.store(0, std::memory_order_relaxed);
-    MaxVoices = 0;
 
     ALlistenerProps *lprops{Listener.Update.exchange(nullptr, std::memory_order_relaxed)};
     if(lprops)
@@ -2576,109 +2592,46 @@ ContextRef GetContextRef(void)
 }
 
 
-void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
+void AllocateVoices(ALCcontext *context, size_t num_voices)
 {
     ALCdevice *device{context->Device};
     const ALsizei num_sends{device->NumAuxSends};
 
-    if(num_voices == context->MaxVoices && num_sends == old_sends)
+    if(context->Voices && num_voices == context->Voices->size())
         return;
 
-    /* Allocate the voice pointers, voices, and the voices' stored source
-     * property set (including the dynamically-sized Send[] array) in one
-     * chunk.
-     */
-    const size_t sizeof_voice{RoundUp(sizeof(ALvoice), 16)};
-    const size_t size{sizeof(ALvoice*) + sizeof_voice};
+    std::unique_ptr<al::FlexArray<ALvoice>> voices;
+    {
+        void *ptr{al_calloc(16, al::FlexArray<ALvoice>::Sizeof(num_voices))};
+        voices.reset(new (ptr) al::FlexArray<ALvoice>{num_voices});
+    }
 
-    auto voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
-    auto voice = reinterpret_cast<ALvoice*>(reinterpret_cast<char*>(voices) + RoundUp(num_voices*sizeof(ALvoice*), 16));
-
-    auto viter = voices;
+    const ALsizei v_count{mini(context->VoiceCount.load(std::memory_order_relaxed), num_voices)};
     if(context->Voices)
     {
-        const ALsizei v_count = mini(context->VoiceCount.load(std::memory_order_relaxed),
-                                     num_voices);
-        const ALsizei s_count = mini(old_sends, num_sends);
-
         /* Copy the old voice data to the new storage. */
-        auto copy_voice = [&voice,s_count](ALvoice *old_voice) -> ALvoice*
+        auto viter = std::move(context->Voices->begin(), context->Voices->begin()+v_count,
+            voices->begin());
+
+        /* Clear extraneous property set sends. */
+        auto clear_sends = [num_sends](ALvoice &voice) -> void
         {
-            voice = new (voice) ALvoice{};
-
-            /* Make sure the old voice's Update (if any) is cleared so it
-             * doesn't get deleted on deinit.
-             */
-            voice->mUpdate.store(old_voice->mUpdate.exchange(nullptr, std::memory_order_relaxed),
-                std::memory_order_relaxed);
-
-            voice->mSourceID.store(old_voice->mSourceID.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-            voice->mPlayState.store(old_voice->mPlayState.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-
-            voice->mProps = old_voice->mProps;
-            /* Clear extraneous property set sends. */
-            std::fill(std::begin(voice->mProps.Send)+s_count, std::end(voice->mProps.Send),
+            std::fill(std::begin(voice.mProps.Send)+num_sends, std::end(voice.mProps.Send),
                 ALvoiceProps::SendData{});
 
-            voice->mPosition.store(old_voice->mPosition.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-            voice->mPositionFrac.store(old_voice->mPositionFrac.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-
-            voice->mCurrentBuffer.store(old_voice->mCurrentBuffer.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-            voice->mLoopBuffer.store(old_voice->mLoopBuffer.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
-
-            voice->mFrequency = old_voice->mFrequency;
-            voice->mFmtChannels = old_voice->mFmtChannels;
-            voice->mNumChannels = old_voice->mNumChannels;
-            voice->mSampleSize = old_voice->mSampleSize;
-
-            voice->mStep = old_voice->mStep;
-            voice->mResampler = old_voice->mResampler;
-
-            voice->mResampleState = old_voice->mResampleState;
-
-            voice->mFlags = old_voice->mFlags;
-
-            voice->mDirect = old_voice->mDirect;
-            voice->mSend = old_voice->mSend;
-            voice->mChans = old_voice->mChans;
-
-            /* Clear old send data/params. */
-            std::fill(voice->mSend.begin()+s_count, voice->mSend.end(), ALvoice::SendData{});
-            auto clear_chan_sends = [s_count](ALvoice::ChannelData &chandata) -> void
+            std::fill(voice.mSend.begin()+num_sends, voice.mSend.end(), ALvoice::SendData{});
+            auto clear_chan_sends = [num_sends](ALvoice::ChannelData &chandata) -> void
             {
-                std::fill(chandata.mWetParams.begin()+s_count, chandata.mWetParams.end(),
+                std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
                     SendParams{});
             };
-            std::for_each(voice->mChans.begin(), voice->mChans.end(), clear_chan_sends);
-
-            /* Set this voice's reference. */
-            ALvoice *ret{voice++};
-            return ret;
+            std::for_each(voice.mChans.begin(), voice.mChans.end(), clear_chan_sends);
         };
-        viter = std::transform(context->Voices, context->Voices+v_count, viter, copy_voice);
-
-        /* Deinit old voices. */
-        auto voices_end = context->Voices + context->MaxVoices;
-        std::for_each(context->Voices, voices_end, DeinitVoice);
+        std::for_each(voices->begin(), viter, clear_sends);
     }
-    /* Finish setting the voices and references. */
-    auto init_voice = [&voice]() -> ALvoice*
-    {
-        ALvoice *ret{new (voice++) ALvoice{}};
-        return ret;
-    };
-    std::generate(viter, voices+num_voices, init_voice);
 
-    al_free(context->Voices);
-    context->Voices = voices;
-    context->MaxVoices = num_voices;
-    context->VoiceCount = mini(context->VoiceCount.load(std::memory_order_relaxed), num_voices);
+    context->Voices = std::move(voices);
+    context->VoiceCount.store(v_count, std::memory_order_relaxed);
 }
 
 
@@ -3439,7 +3392,7 @@ START_API_FUNC
 
         return nullptr;
     }
-    AllocateVoices(context.get(), 256, dev->NumAuxSends);
+    AllocateVoices(context.get(), 256);
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {

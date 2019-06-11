@@ -54,11 +54,6 @@ namespace {
 struct ConfigEntry {
     std::string key;
     std::string value;
-
-    template<typename T0, typename T1>
-    ConfigEntry(T0&& key_, T1&& val_)
-      : key{std::forward<T0>(key_)}, value{std::forward<T1>(val_)}
-    { }
 };
 al::vector<ConfigEntry> ConfOpts;
 
@@ -272,7 +267,7 @@ void LoadConfigFromFile(std::istream &f)
             ent->value = expdup(value);
         else
         {
-            ConfOpts.emplace_back(std::move(fullKey), expdup(value));
+            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value)});
             ent = ConfOpts.end()-1;
         }
 

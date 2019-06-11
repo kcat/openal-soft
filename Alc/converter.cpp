@@ -15,27 +15,28 @@ namespace {
  * chokes on that given the inline specializations.
  */
 template<DevFmtType T>
-inline ALfloat LoadSample(typename DevFmtTypeTraits<T>::Type val);
+inline ALfloat LoadSample(typename DevFmtTypeTraits<T>::Type val) noexcept;
 
-template<> inline ALfloat LoadSample<DevFmtByte>(DevFmtTypeTraits<DevFmtByte>::Type val)
+template<> inline ALfloat LoadSample<DevFmtByte>(DevFmtTypeTraits<DevFmtByte>::Type val) noexcept
 { return val * (1.0f/128.0f); }
-template<> inline ALfloat LoadSample<DevFmtShort>(DevFmtTypeTraits<DevFmtShort>::Type val)
+template<> inline ALfloat LoadSample<DevFmtShort>(DevFmtTypeTraits<DevFmtShort>::Type val) noexcept
 { return val * (1.0f/32768.0f); }
-template<> inline ALfloat LoadSample<DevFmtInt>(DevFmtTypeTraits<DevFmtInt>::Type val)
+template<> inline ALfloat LoadSample<DevFmtInt>(DevFmtTypeTraits<DevFmtInt>::Type val) noexcept
 { return val * (1.0f/2147483648.0f); }
-template<> inline ALfloat LoadSample<DevFmtFloat>(DevFmtTypeTraits<DevFmtFloat>::Type val)
+template<> inline ALfloat LoadSample<DevFmtFloat>(DevFmtTypeTraits<DevFmtFloat>::Type val) noexcept
 { return val; }
 
-template<> inline ALfloat LoadSample<DevFmtUByte>(DevFmtTypeTraits<DevFmtUByte>::Type val)
+template<> inline ALfloat LoadSample<DevFmtUByte>(DevFmtTypeTraits<DevFmtUByte>::Type val) noexcept
 { return LoadSample<DevFmtByte>(val - 128); }
-template<> inline ALfloat LoadSample<DevFmtUShort>(DevFmtTypeTraits<DevFmtUShort>::Type val)
-{ return LoadSample<DevFmtByte>(val - 32768); }
-template<> inline ALfloat LoadSample<DevFmtUInt>(DevFmtTypeTraits<DevFmtUInt>::Type val)
-{ return LoadSample<DevFmtByte>(val - 2147483648u); }
+template<> inline ALfloat LoadSample<DevFmtUShort>(DevFmtTypeTraits<DevFmtUShort>::Type val) noexcept
+{ return LoadSample<DevFmtShort>(val - 32768); }
+template<> inline ALfloat LoadSample<DevFmtUInt>(DevFmtTypeTraits<DevFmtUInt>::Type val) noexcept
+{ return LoadSample<DevFmtInt>(val - 2147483648u); }
 
 
 template<DevFmtType T>
-inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, size_t srcstep, ALsizei samples)
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, const size_t srcstep,
+    const ALsizei samples) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
@@ -44,7 +45,8 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, size_t srcst
         dst[i] = LoadSample<T>(ssrc[i*srcstep]);
 }
 
-void LoadSamples(ALfloat *dst, const ALvoid *src, size_t srcstep, DevFmtType srctype, ALsizei samples)
+void LoadSamples(ALfloat *dst, const ALvoid *src, const size_t srcstep, const DevFmtType srctype,
+    const ALsizei samples) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
     case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -63,28 +65,28 @@ void LoadSamples(ALfloat *dst, const ALvoid *src, size_t srcstep, DevFmtType src
 
 
 template<DevFmtType T>
-inline typename DevFmtTypeTraits<T>::Type StoreSample(ALfloat);
+inline typename DevFmtTypeTraits<T>::Type StoreSample(ALfloat) noexcept;
 
-template<> inline ALfloat StoreSample<DevFmtFloat>(ALfloat val)
+template<> inline ALfloat StoreSample<DevFmtFloat>(ALfloat val) noexcept
 { return val; }
-template<> inline ALint StoreSample<DevFmtInt>(ALfloat val)
+template<> inline ALint StoreSample<DevFmtInt>(ALfloat val) noexcept
 { return fastf2i(clampf(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
-template<> inline ALshort StoreSample<DevFmtShort>(ALfloat val)
+template<> inline ALshort StoreSample<DevFmtShort>(ALfloat val) noexcept
 { return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
-template<> inline ALbyte StoreSample<DevFmtByte>(ALfloat val)
+template<> inline ALbyte StoreSample<DevFmtByte>(ALfloat val) noexcept
 { return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
 
 /* Define unsigned output variations. */
-template<> inline ALuint StoreSample<DevFmtUInt>(ALfloat val)
+template<> inline ALuint StoreSample<DevFmtUInt>(ALfloat val) noexcept
 { return StoreSample<DevFmtInt>(val) + 2147483648u; }
-template<> inline ALushort StoreSample<DevFmtUShort>(ALfloat val)
+template<> inline ALushort StoreSample<DevFmtUShort>(ALfloat val) noexcept
 { return StoreSample<DevFmtShort>(val) + 32768; }
-template<> inline ALubyte StoreSample<DevFmtUByte>(ALfloat val)
+template<> inline ALubyte StoreSample<DevFmtUByte>(ALfloat val) noexcept
 { return StoreSample<DevFmtByte>(val) + 128; }
 
 template<DevFmtType T>
-inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, size_t dststep,
-                             ALsizei samples)
+inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, const size_t dststep,
+    const ALsizei samples) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
@@ -94,7 +96,8 @@ inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, size_t dsts
 }
 
 
-void StoreSamples(ALvoid *dst, const ALfloat *src, size_t dststep, DevFmtType dsttype, ALsizei samples)
+void StoreSamples(ALvoid *dst, const ALfloat *src, const size_t dststep, const DevFmtType dsttype,
+    const ALsizei samples) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
     case T: StoreSampleArray<T>(dst, src, dststep, samples); break
@@ -113,7 +116,7 @@ void StoreSamples(ALvoid *dst, const ALfloat *src, size_t dststep, DevFmtType ds
 
 
 template<DevFmtType T>
-void Mono2Stereo(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
+void Mono2Stereo(ALfloat *RESTRICT dst, const void *src, const ALsizei frames) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
@@ -123,7 +126,7 @@ void Mono2Stereo(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
 }
 
 template<DevFmtType T>
-void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
+void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, const ALsizei frames) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 

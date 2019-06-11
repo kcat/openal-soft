@@ -4,9 +4,6 @@
 #include "alMain.h"
 #include "logging.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 extern ALboolean TrapALError;
 
@@ -21,9 +18,5 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...) DEC
     alSetError((ctx), (err), __VA_ARGS__);                                     \
     return retval;                                                             \
 } while(0)
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

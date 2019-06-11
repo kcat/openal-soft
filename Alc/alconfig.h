@@ -1,14 +1,8 @@
 #ifndef ALCONFIG_H
 #define ALCONFIG_H
 
-#ifdef __cplusplus
-#define NOEXCEPT noexcept
-extern "C" {
-#else
-#define NOEXCEPT
-#endif
 
-void ReadALConfig(void) NOEXCEPT;
+void ReadALConfig();
 
 int ConfigValueExists(const char *devName, const char *blockName, const char *keyName);
 const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def);
@@ -19,9 +13,5 @@ int ConfigValueInt(const char *devName, const char *blockName, const char *keyNa
 int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret);
 int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret);
 int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* ALCONFIG_H */

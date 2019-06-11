@@ -285,7 +285,7 @@ void LoadConfigFromFile(std::istream &f)
 
 
 #ifdef _WIN32
-void ReadALConfig(void) noexcept
+void ReadALConfig()
 {
     WCHAR buffer[MAX_PATH];
     if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
@@ -321,7 +321,7 @@ void ReadALConfig(void) noexcept
     }
 }
 #else
-void ReadALConfig(void) noexcept
+void ReadALConfig()
 {
     const char *str{"/etc/openal/alsoft.conf"};
 

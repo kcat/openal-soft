@@ -206,45 +206,35 @@ void FillCPUCaps(int capfilter)
 #endif
 #endif
 #ifdef HAVE_NEON
-    FILE *file = fopen("/proc/cpuinfo", "rt");
-    if(!file)
+    al::ifstream file{"/proc/cpuinfo"};
+    if(!file.is_open())
         ERR("Failed to open /proc/cpuinfo, cannot check for NEON support\n");
     else
     {
         std::string features;
-        char buf[256];
 
-        while(fgets(buf, sizeof(buf), file) != nullptr)
+        auto getline = [](std::istream &f, std::string &output) -> bool
         {
-            if(strncmp(buf, "Features\t:", 10) != 0)
-                continue;
+            while(f.good() && f.peek() == '\n')
+                f.ignore();
+            return std::getline(f, output) && !output.empty();
 
-            features = buf+10;
-            while(features.back() != '\n')
-            {
-                if(fgets(buf, sizeof(buf), file) == nullptr)
-                    break;
-                features += buf;
-            }
-            break;
+        };
+        while(getline(file, features))
+        {
+            if(features.compare(0, 10, "Features\t:", 10) == 0)
+                break;
         }
-        fclose(file);
-        file = nullptr;
+        file.close();
 
-        if(!features.empty())
+        size_t extpos{9};
+        while((extpos=features.find("neon", extpos+1)) != std::string::npos)
         {
-            const char *str = features.c_str();
-            while(isspace(str[0])) ++str;
-
-            TRACE("Got features string:%s\n", str);
-            while((str=strstr(str, "neon")) != nullptr)
+            if((extpos == 0 || std::isspace(features[extpos-1])) &&
+                (extpos+4 == features.length() || std::isspace(features[extpos+4])))
             {
-                if(isspace(*(str-1)) && (str[4] == 0 || isspace(str[4])))
-                {
-                    caps |= CPU_CAP_NEON;
-                    break;
-                }
-                ++str;
+                caps |= CPU_CAP_NEON;
+                break;
             }
         }
     }

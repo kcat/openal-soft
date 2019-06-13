@@ -159,12 +159,17 @@ void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
 
 void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
+    /* First, decode the ambisonic mix to the "real" output. */
+    BFormatDec *ambidec{device->AmbiDecoder.get()};
+    ambidec->process(device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
+        SamplesToDo);
+
     /* BS2B is stereo output only. */
     const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
     const int ridx{device->RealOut.ChannelIndex[FrontRight]};
     ASSUME(lidx >= 0 && ridx >= 0);
 
-    /* Apply binaural/crossfeed filter */
+    /* Now apply the BS2B binaural/crossfeed filter. */
     bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx].data(),
         device->RealOut.Buffer[ridx].data(), SamplesToDo);
 }

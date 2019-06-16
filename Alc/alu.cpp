@@ -124,6 +124,13 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
     return MixDirectHrtf_<CTag>;
 }
 
+} // namespace
+
+void aluInit(void)
+{
+    MixDirectHrtf = SelectHrtfMixer();
+}
+
 
 void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 {
@@ -172,28 +179,6 @@ void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
     /* Now apply the BS2B binaural/crossfeed filter. */
     bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx].data(),
         device->RealOut.Buffer[ridx].data(), SamplesToDo);
-}
-
-} // namespace
-
-void aluInit(void)
-{
-    MixDirectHrtf = SelectHrtfMixer();
-}
-
-
-void aluSelectPostProcess(ALCdevice *device)
-{
-    if(device->mHrtf)
-        device->PostProcess = ProcessHrtf;
-    else if(device->AmbiDecoder)
-        device->PostProcess = ProcessAmbiDec;
-    else if(device->Uhj_Encoder)
-        device->PostProcess = ProcessUhj;
-    else if(device->Bs2b)
-        device->PostProcess = ProcessBs2b;
-    else
-        device->PostProcess = nullptr;
 }
 
 

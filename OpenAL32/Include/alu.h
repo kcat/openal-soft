@@ -388,7 +388,10 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
 void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
 
-void aluSelectPostProcess(ALCdevice *device);
+void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo);
+void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo);
+void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo);
+void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo);
 
 /**
  * Calculates ambisonic encoder coefficients using the X, Y, and Z direction

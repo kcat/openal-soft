@@ -1810,14 +1810,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->Flags.get<DeviceRunning>())
         return ALC_NO_ERROR;
 
+    device->AvgSpeakerDist = 0.0f;
     device->Uhj_Encoder = nullptr;
+    device->AmbiDecoder = nullptr;
     device->Bs2b = nullptr;
+    device->PostProcess = nullptr;
 
+    device->Stablizer = nullptr;
     device->Limiter = nullptr;
     device->ChannelDelay.clear();
 
+    device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.Buffer = nullptr;
     device->Dry.NumChannels = 0;
+    std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
+    device->RealOut.ChannelIndex.fill(-1);
     device->RealOut.Buffer = nullptr;
     device->RealOut.NumChannels = 0;
     device->MixBuffer.clear();
@@ -1826,6 +1833,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     UpdateClockBase(device);
     device->FixedLatency = nanoseconds::zero();
 
+    device->DitherDepth = 0.0f;
     device->DitherSeed = DITHER_RNG_SEED;
 
     /*************************************************************************
@@ -1947,10 +1955,47 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",
-          device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
-          device->AuxiliaryEffectSlotMax, device->NumAuxSends);
+        device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
+        device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
-    device->DitherDepth = 0.0f;
+    /* Enable the stablizer only for formats that have front-left, front-right,
+     * and front-center outputs.
+     */
+    switch(device->FmtChans)
+    {
+    case DevFmtX51:
+    case DevFmtX51Rear:
+    case DevFmtX61:
+    case DevFmtX71:
+        if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "front-stablizer", 0))
+        {
+            auto stablizer = al::make_unique<FrontStablizer>();
+            /* Initialize band-splitting filters for the front-left and
+                * front-right channels, with a crossover at 5khz (could be
+                * higher).
+                */
+            const ALfloat scale{static_cast<ALfloat>(5000.0 / device->Frequency)};
+
+            stablizer->LFilter.init(scale);
+            stablizer->RFilter = stablizer->LFilter;
+
+            device->Stablizer = std::move(stablizer);
+            /* NOTE: Don't know why this has to be "copied" into a local static
+             * constexpr variable to avoid a reference on
+             * FrontStablizer::DelayLength...
+             */
+            static constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
+            device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
+        }
+        break;
+    case DevFmtMono:
+    case DevFmtStereo:
+    case DevFmtQuad:
+    case DevFmtAmbi3D:
+        break;
+    }
+    TRACE("Front stablizer %s\n", device->Stablizer ? "enabled" : "disabled");
+
     if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "dither", 1))
     {
         ALint depth = 0;
@@ -2042,8 +2087,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Limiter = std::move(limiter);
         TRACE("Output limiter enabled, %.4fdB limit\n", thrshld_dB);
     }
-
-    aluSelectPostProcess(device);
 
     TRACE("Fixed device latency: %ldns\n", (long)device->FixedLatency.count());
 

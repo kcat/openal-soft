@@ -754,16 +754,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     device->HrtfName.clear();
     device->mRenderMode = NormalRender;
 
-    device->Dry.AmbiMap.fill(BFChannelConfig{});
-    device->Dry.NumChannels = 0;
-    std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
-
-    device->AvgSpeakerDist = 0.0f;
-    device->ChannelDelay.clear();
-
-    device->AmbiDecoder = nullptr;
-    device->Stablizer = nullptr;
-
     if(device->FmtChans != DevFmtStereo)
     {
         if(old_hrtf)
@@ -816,49 +806,10 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 0)};
             InitCustomPanning(device, !!hqdec, pconf, speakermap);
         }
-
-        /* Enable the stablizer only for formats that have front-left, front-
-         * right, and front-center outputs.
-         */
-        switch(device->FmtChans)
-        {
-        case DevFmtX51:
-        case DevFmtX51Rear:
-        case DevFmtX61:
-        case DevFmtX71:
-            if(GetConfigValueBool(devname, nullptr, "front-stablizer", 0))
-            {
-                auto stablizer = al::make_unique<FrontStablizer>();
-                /* Initialize band-splitting filters for the front-left and
-                 * front-right channels, with a crossover at 5khz (could be
-                 * higher).
-                 */
-                const ALfloat scale{static_cast<ALfloat>(5000.0 / device->Frequency)};
-
-                stablizer->LFilter.init(scale);
-                stablizer->RFilter = stablizer->LFilter;
-
-                device->Stablizer = std::move(stablizer);
-                /* NOTE: Don't know why this has to be "copied" into a local
-                 * static constexpr variable to avoid a reference on
-                 * FrontStablizer::DelayLength...
-                 */
-                static constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
-                device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
-            }
-            break;
-        case DevFmtMono:
-        case DevFmtStereo:
-        case DevFmtQuad:
-        case DevFmtAmbi3D:
-            break;
-        }
-        TRACE("Front stablizer %s\n", device->Stablizer ? "enabled" : "disabled");
-
+        if(device->AmbiDecoder)
+            device->PostProcess = ProcessAmbiDec;
         return;
     }
-
-    device->AmbiDecoder = nullptr;
 
     bool headphones{device->IsHeadphones != AL_FALSE};
     if(device->Type != Loopback)
@@ -937,6 +888,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         old_hrtf = nullptr;
 
         InitHrtfPanning(device);
+        device->PostProcess = ProcessHrtf;
         return;
     }
     device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
@@ -958,6 +910,7 @@ no_hrtf:
         bs2b_set_params(device->Bs2b.get(), bs2blevel, device->Frequency);
         TRACE("BS2B enabled\n");
         InitPanning(device);
+        device->PostProcess = ProcessBs2b;
         return;
     }
 
@@ -974,11 +927,13 @@ no_hrtf:
         device->Uhj_Encoder = al::make_unique<Uhj2Encoder>();
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
+        device->PostProcess = ProcessUhj;
         return;
     }
 
     TRACE("Stereo rendering\n");
     InitPanning(device);
+    device->PostProcess = ProcessAmbiDec;
 }
 
 

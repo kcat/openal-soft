@@ -333,12 +333,6 @@ ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels sr
 
 void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALsizei frames) const
 {
-    if(mSrcChans == mDstChans)
-    {
-        LoadSamples(dst, src, 1u, mSrcType, frames*ChannelsFromDevFmt(mSrcChans, 0));
-        return;
-    }
-
     if(mSrcChans == DevFmtStereo && mDstChans == DevFmtMono)
     {
         switch(mSrcType)
@@ -354,7 +348,7 @@ void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALsizei frames) 
 #undef HANDLE_FMT
         }
     }
-    else /*if(mSrcChans == DevFmtMono && mDstChans == DevFmtStereo)*/
+    else if(mSrcChans == DevFmtMono && mDstChans == DevFmtStereo)
     {
         switch(mSrcType)
         {
@@ -369,4 +363,6 @@ void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALsizei frames) 
 #undef HANDLE_FMT
         }
     }
+    else
+        LoadSamples(dst, src, 1u, mSrcType, frames*ChannelsFromDevFmt(mSrcChans, 0));
 }

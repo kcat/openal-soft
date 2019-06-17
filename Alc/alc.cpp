@@ -2516,22 +2516,19 @@ ALCcontext::~ALCcontext()
     {
         count = 0;
         auto evt_vec = AsyncEvents->getReadVector();
-        while(evt_vec.first.len > 0)
+        if(evt_vec.first.len > 0)
         {
-            al::destroy_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
-            evt_vec.first.buf += sizeof(AsyncEvent);
-            evt_vec.first.len -= 1;
-            ++count;
+            al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf), evt_vec.first.len);
+            count += evt_vec.first.len;
         }
-        while(evt_vec.second.len > 0)
+        if(evt_vec.second.len > 0)
         {
-            al::destroy_at(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf));
-            evt_vec.second.buf += sizeof(AsyncEvent);
-            evt_vec.second.len -= 1;
-            ++count;
+            al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf), evt_vec.second.len);
+            count += evt_vec.second.len;
         }
         if(count > 0)
             TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
+        AsyncEvents->readAdvance(count);
     }
 
     ALCdevice_DecRef(Device);

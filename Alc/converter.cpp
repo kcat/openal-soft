@@ -327,8 +327,7 @@ ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels sr
     if(srcChans != dstChans && !((srcChans == DevFmtMono && dstChans == DevFmtStereo) ||
                                  (srcChans == DevFmtStereo && dstChans == DevFmtMono)))
         return nullptr;
-
-    return ChannelConverterPtr{new ChannelConverter{srcType, srcChans, dstChans}};
+    return al::make_unique<ChannelConverter>(srcType, srcChans, dstChans);
 }
 
 void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALsizei frames) const

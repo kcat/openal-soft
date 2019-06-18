@@ -213,7 +213,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
     const ALsizei SrcFrameSize{static_cast<ALsizei>(mChan.size()) * mSrcTypeSize};
     const ALsizei DstFrameSize{static_cast<ALsizei>(mChan.size()) * mDstTypeSize};
     const ALsizei increment{mIncrement};
-    auto SamplesIn = static_cast<const ALbyte*>(*src);
+    auto SamplesIn = static_cast<const al::byte*>(*src);
     ALsizei NumSrcSamples{*srcframes};
 
     FPUCtl mixer_mode{};
@@ -268,8 +268,8 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
-            const ALbyte *SrcSamples = SamplesIn + mSrcTypeSize*chan;
-            ALbyte *DstSamples = static_cast<ALbyte*>(dst) + mDstTypeSize*chan;
+            const al::byte *SrcSamples{SamplesIn + mSrcTypeSize*chan};
+            al::byte *DstSamples = static_cast<al::byte*>(dst) + mDstTypeSize*chan;
 
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.
@@ -311,7 +311,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
         SamplesIn += SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
         NumSrcSamples -= mini(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
 
-        dst = static_cast<ALbyte*>(dst) + DstFrameSize*DstSize;
+        dst = static_cast<al::byte*>(dst) + DstFrameSize*DstSize;
         pos += DstSize;
     }
 

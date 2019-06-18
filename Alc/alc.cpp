@@ -2852,11 +2852,11 @@ static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
     return 29;
 }
 
-static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
+static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCint> values)
 {
     ALCsizei i;
 
-    if(size <= 0 || values == nullptr)
+    if(values.empty())
     {
         alcSetError(device, ALC_INVALID_VALUE);
         return 0;
@@ -2907,7 +2907,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             case ALC_ALL_ATTRIBUTES:
                 i = 0;
-                if(size < NumAttrsForDevice(device))
+                if(values.size() < static_cast<size_t>(NumAttrsForDevice(device)))
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
@@ -2959,7 +2959,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_ALL_ATTRIBUTES:
             i = 0;
-            if(size < NumAttrsForDevice(device))
+            if(values.size() < static_cast<size_t>(NumAttrsForDevice(device)))
                 alcSetError(device, ALC_INVALID_VALUE);
             else
             {
@@ -3144,7 +3144,8 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             { std::lock_guard<std::mutex> _{device->StateLock};
                 device->HrtfList.clear();
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-                values[0] = static_cast<ALCint>(device->HrtfList.size());
+                values[0] = static_cast<ALCint>(minz(device->HrtfList.size(),
+                    std::numeric_limits<ALCint>::max()));
             }
             return 1;
 
@@ -3174,7 +3175,7 @@ START_API_FUNC
     if(size <= 0 || values == nullptr)
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
-        GetIntegerv(dev.get(), param, size, values);
+        GetIntegerv(dev.get(), param, {values, values+size});
 }
 END_API_FUNC
 
@@ -3186,8 +3187,8 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else if(!dev || dev->Type == Capture)
     {
-        al::vector<ALCint> ivals(size);
-        size = GetIntegerv(dev.get(), pname, size, ivals.data());
+        auto ivals = al::vector<ALCint>(size);
+        size = GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()});
         std::copy(ivals.begin(), ivals.begin()+size, values);
     }
     else /* render device */
@@ -3302,8 +3303,8 @@ START_API_FUNC
                 break;
 
             default:
-                al::vector<ALCint> ivals(size);
-                size = GetIntegerv(dev.get(), pname, size, ivals.data());
+                auto ivals = al::vector<ALCint>(size);
+                size = GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()});
                 std::copy(ivals.begin(), ivals.begin()+size, values);
                 break;
         }

@@ -739,7 +739,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                                 static_cast<ALfloat>(Counter)};
                             gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
                         }
-                        MixHrtfParams hrtfparams;
+                        MixHrtfFilter hrtfparams;
                         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
@@ -772,7 +772,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                             gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
                         }
 
-                        MixHrtfParams hrtfparams;
+                        MixHrtfFilter hrtfparams;
                         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];

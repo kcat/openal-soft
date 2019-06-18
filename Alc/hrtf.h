@@ -70,7 +70,7 @@ struct HrtfState {
     alignas(16) HrirArray<ALfloat> Values;
 };
 
-struct HrtfParams {
+struct HrtfFilter {
     alignas(16) HrirArray<ALfloat> Coeffs;
     ALsizei Delay[2];
     ALfloat Gain;

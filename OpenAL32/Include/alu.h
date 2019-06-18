@@ -106,7 +106,7 @@ enum {
 };
 
 
-struct MixHrtfParams {
+struct MixHrtfFilter {
     const HrirArray<ALfloat> *Coeffs;
     ALsizei Delay[2];
     ALfloat Gain;
@@ -121,8 +121,8 @@ struct DirectParams {
     NfcFilter NFCtrlFilter;
 
     struct {
-        HrtfParams Old;
-        HrtfParams Target;
+        HrtfFilter Old;
+        HrtfFilter Target;
         HrtfState State;
     } Hrtf;
 
@@ -330,10 +330,10 @@ using RowMixerFunc = void(*)(FloatBufferLine &OutBuffer, const ALfloat *gains,
     const ALsizei BufferSize);
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    MixHrtfParams *hrtfparams, const ALsizei BufferSize);
+    MixHrtfFilter *hrtfparams, const ALsizei BufferSize);
 using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
+    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const ALsizei BufferSize);
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const ALsizei BufferSize);

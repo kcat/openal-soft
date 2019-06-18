@@ -119,7 +119,7 @@ static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, cons
 template<>
 void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    MixHrtfParams *hrtfparams, const ALsizei BufferSize)
+    MixHrtfFilter *hrtfparams, const ALsizei BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
         hrtfparams, BufferSize);
@@ -128,7 +128,7 @@ void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 template<>
 void MixHrtfBlend_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize)
+    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const ALsizei BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
         oldparams, newparams, BufferSize);

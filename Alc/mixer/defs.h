@@ -10,7 +10,7 @@
 
 
 struct MixGains;
-struct MixHrtfParams;
+struct MixHrtfFilter;
 struct HrtfState;
 struct DirectHrtfState;
 
@@ -37,9 +37,9 @@ template<typename InstTag>
 void MixRow_(FloatBufferLine &OutBuffer, const ALfloat *Gains, const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize);
 
 template<typename InstTag>
-void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, MixHrtfParams *hrtfparams, const ALsizei BufferSize);
+void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, MixHrtfFilter *hrtfparams, const ALsizei BufferSize);
 template<typename InstTag>
-void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfParams *oldparams, MixHrtfParams *newparams, const ALsizei BufferSize);
+void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams, const ALsizei BufferSize);
 template<typename InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State, const ALsizei BufferSize);
 

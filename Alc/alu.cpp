@@ -539,7 +539,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     std::for_each(voice->mChans.begin(), voice->mChans.begin()+num_channels,
         [NumSends](ALvoice::ChannelData &chandata) -> void
         {
-            chandata.mDryParams.Hrtf.Target = HrtfParams{};
+            chandata.mDryParams.Hrtf.Target = HrtfFilter{};
             ClearArray(chandata.mDryParams.Gains.Target);
             std::for_each(chandata.mWetParams.begin(), chandata.mWetParams.begin()+NumSends,
                 [](SendParams &params) -> void { ClearArray(params.Gains.Target); });

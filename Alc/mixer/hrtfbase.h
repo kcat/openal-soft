@@ -14,7 +14,7 @@ using ApplyCoeffsT = void(ALsizei Offset, float2 *RESTRICT Values, const ALsizei
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *RESTRICT AccumSamples, const ALsizei OutPos,
-    const ALsizei IrSize, MixHrtfParams *hrtfparams, const ALsizei BufferSize)
+    const ALsizei IrSize, MixHrtfFilter *hrtfparams, const ALsizei BufferSize)
 {
     ASSUME(OutPos >= 0);
     ASSUME(IrSize >= 4);
@@ -50,7 +50,7 @@ inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *RESTRICT AccumSamples, const ALsizei OutPos,
-    const ALsizei IrSize, const HrtfParams *oldparams, MixHrtfParams *newparams,
+    const ALsizei IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams,
     const ALsizei BufferSize)
 {
     const auto &OldCoeffs = oldparams->Coeffs;

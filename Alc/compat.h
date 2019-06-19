@@ -76,10 +76,10 @@ public:
     ifstream(const wchar_t *filename, std::ios_base::openmode mode = std::ios_base::in);
     ifstream(const std::wstring &filename, std::ios_base::openmode mode = std::ios_base::in)
       : ifstream(filename.c_str(), mode) { }
-
     ifstream(const char *filename, std::ios_base::openmode mode = std::ios_base::in);
     ifstream(const std::string &filename, std::ios_base::openmode mode = std::ios_base::in)
       : ifstream(filename.c_str(), mode) { }
+    ~ifstream() override;
 
     bool is_open() const noexcept { return mStreamBuf.is_open(); }
 };

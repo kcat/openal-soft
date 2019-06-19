@@ -424,6 +424,12 @@ ifstream::ifstream(const char *filename, std::ios_base::openmode mode)
         clear(failbit);
 }
 
+/* This is only here to ensure the compiler doesn't define an implicit
+ * destructor, which it tries to automatically inline and subsequently complain
+ * it can't inline without excessive code growth.
+ */
+ifstream::~ifstream() { }
+
 } // namespace al
 
 const PathNamePair &GetProcBinary()

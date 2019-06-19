@@ -477,7 +477,7 @@ void *GetSymbol(void *handle, const char *name)
 }
 
 
-void al_print(const char *type, const char *fmt, ...)
+void al_print(FILE *logfile, const char *fmt, ...)
 {
     al::vector<char> dynmsg;
     char stcmsg[256];
@@ -497,8 +497,8 @@ void al_print(const char *type, const char *fmt, ...)
     va_end(args);
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fprintf(gLogFile, "AL lib: %s %ls", type, wstr.c_str());
-    fflush(gLogFile);
+    fprintf(logfile, "%ls", wstr.c_str());
+    fflush(logfile);
 }
 
 
@@ -713,16 +713,15 @@ void *GetSymbol(void *handle, const char *name)
 
 #endif /* HAVE_DLFCN_H */
 
-void al_print(const char *type, const char *fmt, ...)
+void al_print(FILE *logfile, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
-    fprintf(gLogFile, "AL lib: %s ", type);
-    vfprintf(gLogFile, fmt, ap);
+    vfprintf(logfile, fmt, ap);
     va_end(ap);
 
-    fflush(gLogFile);
+    fflush(logfile);
 }
 
 

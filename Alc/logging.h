@@ -15,11 +15,11 @@
 
 extern FILE *gLogFile;
 
+void al_print(FILE *logfile, const char *fmt, ...) DECL_FORMAT(printf, 2,3);
 #if !defined(_WIN32)
 #define AL_PRINT(T, ...) fprintf(gLogFile, "AL lib: " T " " __VA_ARGS__)
 #else
-void al_print(const char *type, const char *fmt, ...) DECL_FORMAT(printf, 2,3);
-#define AL_PRINT(T, ...) al_print((T), __VA_ARGS__)
+#define AL_PRINT(T, ...) al_print(gLogFile, "AL lib: " T " " __VA_ARGS__)
 #endif
 
 #ifdef __ANDROID__

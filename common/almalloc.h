@@ -85,7 +85,7 @@ inline void destroy(T first, const T end)
 {
     while(first != end)
     {
-        destroy_at(std::addressof(*first));
+        al::destroy_at(std::addressof(*first));
         ++first;
     }
 }
@@ -96,7 +96,7 @@ inline T destroy_n(T first, N count)
     if(count != 0)
     {
         do {
-            destroy_at(std::addressof(*first));
+            al::destroy_at(std::addressof(*first));
             ++first;
         } while(--count);
     }

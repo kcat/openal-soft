@@ -567,7 +567,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 if(voice->mSend[send].Buffer.empty())
                     continue;
 
-                SendParams &parms = chandata.mWetParams[chan];
+                SendParams &parms = chandata.mWetParams[send];
                 std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
                     std::begin(parms.Gains.Current));
             }

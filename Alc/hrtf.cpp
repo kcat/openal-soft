@@ -1376,18 +1376,16 @@ void HrtfEntry::DecRef()
     {
         std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
-        /* Need to double-check that it's still unused, as another device
-         * could've reacquired this HRTF after its reference went to 0 and
-         * before the lock was taken.
-         */
-        auto iter = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
-            [this](const HrtfHandlePtr &entry) noexcept -> bool
-            { return this == entry->entry.get(); }
-        );
-        if(iter != LoadedHrtfs.end() && ReadRef(&this->ref) == 0)
+        /* Go through and clear all unused HRTFs. */
+        auto delete_unused = [](HrtfHandlePtr &handle) -> void
         {
-            (*iter)->entry = nullptr;
-            TRACE("Unloaded unused HRTF %s\n", (*iter)->filename.data());
-        }
+            HrtfEntry *entry{handle->entry.get()};
+            if(entry && ReadRef(&entry->ref) == 0)
+            {
+                TRACE("Unloading unused HRTF %s\n", handle->filename.data());
+                handle->entry = nullptr;
+            }
+        };
+        std::for_each(LoadedHrtfs.begin(), LoadedHrtfs.end(), delete_unused);
     }
 }

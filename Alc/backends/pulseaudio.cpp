@@ -1117,11 +1117,11 @@ struct PulseCapture final : public BackendBase {
 
     std::string mDeviceName;
 
-    const void *mCapStore{nullptr};
-    size_t mCapLen{0u};
-    size_t mCapRemain{0u};
-
     ALCuint mLastReadable{0u};
+    al::byte mSilentVal{};
+
+    al::span<const al::byte> mCapBuffer;
+    ssize_t mCapLen{0};
 
     pa_buffer_attr mAttr{};
     pa_sample_spec mSpec{};
@@ -1247,6 +1247,7 @@ ALCenum PulseCapture::open(const ALCchar *name)
     switch(mDevice->FmtType)
     {
         case DevFmtUByte:
+            mSilentVal = al::byte(0x80);
             mSpec.format = PA_SAMPLE_U8;
             break;
         case DevFmtShort:
@@ -1317,15 +1318,15 @@ void PulseCapture::stop()
 
 ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 {
-    ALCuint todo{samples * static_cast<ALCuint>(pa_frame_size(&mSpec))};
+    al::span<al::byte> dstbuf{static_cast<al::byte*>(buffer), samples * pa_frame_size(&mSpec)};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
-    mLastReadable -= todo;
+    mLastReadable -= dstbuf.size();
     std::lock_guard<std::mutex> _{pulse_lock};
-    while(todo > 0)
+    while(!dstbuf.empty())
     {
-        if(mCapLen == 0)
+        if(mCapBuffer.empty())
         {
             if(UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire)))
                 break;
@@ -1335,43 +1336,45 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
                 aluHandleDisconnect(mDevice, "Bad capture state: %u", state);
                 break;
             }
-            if(UNLIKELY(pa_stream_peek(mStream, &mCapStore, &mCapLen) < 0))
+            const void *capbuf;
+            size_t caplen;
+            if(UNLIKELY(pa_stream_peek(mStream, &capbuf, &caplen) < 0))
             {
                 aluHandleDisconnect(mDevice, "Failed retrieving capture samples: %s",
-                                    pa_strerror(pa_context_errno(mContext)));
+                    pa_strerror(pa_context_errno(mContext)));
                 break;
             }
-            if(mCapLen == 0) break;
-            mCapRemain = mCapLen;
+            if(caplen == 0) break;
+            if(UNLIKELY(!capbuf))
+                mCapLen = -static_cast<ssize_t>(caplen);
+            else
+                mCapLen = static_cast<ssize_t>(caplen);
+            mCapBuffer = {static_cast<const al::byte*>(capbuf), caplen};
         }
 
-        const size_t rem{minz(todo, mCapRemain)};
-        if(LIKELY(mCapStore))
-            memcpy(buffer, mCapStore, rem);
+        const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
+        if(UNLIKELY(mCapLen < 0))
+            std::fill_n(dstbuf.begin(), rem, mSilentVal);
         else
-            memset(buffer, ((mDevice->FmtType==DevFmtUByte) ? 0x80 : 0), rem);
+            std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
+        dstbuf = dstbuf.subspan(rem);
+        mCapBuffer = mCapBuffer.subspan(rem);
 
-        buffer = static_cast<ALbyte*>(buffer) + rem;
-        todo -= rem;
-
-        if(LIKELY(mCapStore))
-            mCapStore = reinterpret_cast<const ALbyte*>(mCapStore) + rem;
-        mCapRemain -= rem;
-        if(mCapRemain == 0)
+        if(mCapBuffer.empty())
         {
             pa_stream_drop(mStream);
             mCapLen = 0;
         }
     }
-    if(todo > 0)
-        memset(buffer, ((mDevice->FmtType==DevFmtUByte) ? 0x80 : 0), todo);
+    if(!dstbuf.empty())
+        std::fill(dstbuf.begin(), dstbuf.end(), mSilentVal);
 
     return ALC_NO_ERROR;
 }
 
 ALCuint PulseCapture::availableSamples()
 {
-    size_t readable{mCapRemain};
+    size_t readable{mCapBuffer.size()};
 
     if(mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -1382,12 +1385,15 @@ ALCuint PulseCapture::availableSamples()
             ERR("pa_stream_readable_size() failed: %s\n", pa_strerror(got));
             aluHandleDisconnect(mDevice, "Failed getting readable size: %s", pa_strerror(got));
         }
-        else if(got > mCapLen)
-            readable += got - mCapLen;
+        else
+        {
+            const auto caplen = static_cast<size_t>(std::abs(mCapLen));
+            if(got > caplen) readable += got - caplen;
+        }
     }
 
-    if(mLastReadable < readable)
-        mLastReadable = readable;
+    readable = std::min<size_t>(readable, std::numeric_limits<ALCuint>::max());
+    mLastReadable = std::max(mLastReadable, static_cast<ALCuint>(readable));
     return mLastReadable / pa_frame_size(&mSpec);
 }
 

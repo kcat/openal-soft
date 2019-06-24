@@ -625,17 +625,17 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
+            ALvoice::ChannelData &chandata = voice->mChans[chan];
             const al::span<ALfloat> SrcData{Device->SourceData, SrcBufferSize};
 
             /* Load the previous samples into the source data first, and clear the rest. */
-            auto srciter = std::copy_n(voice->mChans[chan].mPrevSamples.begin(),
-                MAX_RESAMPLE_PADDING, SrcData.begin());
+            auto srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLE_PADDING,
+                SrcData.begin());
             std::fill(srciter, SrcData.end(), 0.0f);
 
             if(UNLIKELY(!BufferListItem))
-                srciter = std::copy(
-                    voice->mChans[chan].mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
-                    voice->mChans[chan].mPrevSamples.end(), srciter);
+                srciter = std::copy(chandata.mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
+                    chandata.mPrevSamples.end(), srciter);
             else if(isstatic)
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, srciter, SrcData.end());
@@ -656,8 +656,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
             /* Store the last source samples used for next time. */
             std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                voice->mChans[chan].mPrevSamples.size(),
-                voice->mChans[chan].mPrevSamples.begin());
+                chandata.mPrevSamples.size(), chandata.mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
             const ALfloat *ResampledData{Resample(&voice->mResampleState,
@@ -665,20 +664,20 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 Device->ResampledData, DstBufferSize)};
             if((voice->mFlags&VOICE_IS_AMBISONIC))
             {
-                const ALfloat hfscale{voice->mChans[chan].mAmbiScale};
+                const ALfloat hfscale{chandata.mAmbiScale};
                 /* Beware the evil const_cast. It's safe since it's pointing to
                  * either SourceData or ResampledData (both non-const), but the
                  * resample method takes the source as const float* and may
                  * return it without copying to output, making it currently
                  * unavoidable.
                  */
-                voice->mChans[chan].mAmbiSplitter.applyHfScale(const_cast<ALfloat*>(ResampledData),
-                    hfscale, DstBufferSize);
+                chandata.mAmbiSplitter.applyHfScale(const_cast<ALfloat*>(ResampledData), hfscale,
+                    DstBufferSize);
             }
 
             /* Now filter and mix to the appropriate outputs. */
             {
-                DirectParams &parms = voice->mChans[chan].mDryParams;
+                DirectParams &parms = chandata.mDryParams;
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     Device->FilteredData, ResampledData, DstBufferSize,
                     voice->mDirect.FilterType)};
@@ -837,7 +836,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 if(voice->mSend[send].Buffer.empty())
                     continue;
 
-                SendParams &parms = voice->mChans[chan].mWetParams[send];
+                SendParams &parms = chandata.mWetParams[send];
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     FilterBuf, ResampledData, DstBufferSize, voice->mSend[send].FilterType)};
 

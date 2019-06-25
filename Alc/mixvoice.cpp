@@ -292,35 +292,28 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 }
 
 
-const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
-    ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples, int type)
+const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, ALfloat *dst,
+    const ALfloat *src, ALsizei numsamples, int type)
 {
     switch(type)
     {
         case AF_None:
-            lpfilter->passthru(numsamples);
-            hpfilter->passthru(numsamples);
+            lpfilter->clear();
+            hpfilter->clear();
             break;
 
         case AF_LowPass:
             lpfilter->process(dst, src, numsamples);
-            hpfilter->passthru(numsamples);
+            hpfilter->clear();
             return dst;
         case AF_HighPass:
-            lpfilter->passthru(numsamples);
+            lpfilter->clear();
             hpfilter->process(dst, src, numsamples);
             return dst;
 
         case AF_BandPass:
-            for(ALsizei i{0};i < numsamples;)
-            {
-                ALfloat temp[256];
-                ALsizei todo = mini(256, numsamples-i);
-
-                lpfilter->process(temp, src+i, todo);
-                hpfilter->process(dst+i, temp, todo);
-                i += todo;
-            }
+            lpfilter->process(dst, src, numsamples);
+            hpfilter->process(dst, dst, numsamples);
             return dst;
     }
     return src;

@@ -74,20 +74,6 @@ public:
 
     void process(Real *dst, const Real *src, int numsamples);
 
-    void passthru(int numsamples) noexcept
-    {
-        if(LIKELY(numsamples >= 2))
-        {
-            z1 = 0.0f;
-            z2 = 0.0f;
-        }
-        else if(numsamples == 1)
-        {
-            z1 = z2;
-            z2 = 0.0f;
-        }
-    }
-
     /* Rather hacky. It's just here to support "manual" processing. */
     std::pair<Real,Real> getComponents() const noexcept
     { return {z1, z2}; }

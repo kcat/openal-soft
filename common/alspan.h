@@ -255,7 +255,7 @@ public:
 
     constexpr span subspan(size_t offset, size_t count=dynamic_extent) const
     {
-        return (offset >= size()) ? span{} :
+        return (offset > size()) ? span{} :
             (count >= size()-offset) ? span{mData+offset, mDataEnd} :
             span{mData+offset, mData+offset+count};
     }
@@ -282,7 +282,7 @@ constexpr inline auto span<T,E>::last(size_t count) const -> span<element_type,d
 template<typename T, size_t E>
 constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const -> span<element_type,dynamic_extent>
 {
-    return (offset >= size()) ? span<element_type>{} :
+    return (offset > size()) ? span<element_type>{} :
         (count >= size()-offset) ? span<element_type>{mData+offset, mData+extent} :
         span<element_type>{mData+offset, mData+offset+count};
 }

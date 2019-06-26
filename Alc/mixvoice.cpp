@@ -368,7 +368,7 @@ void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtT
 
 ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
     const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
-    ALfloat *SrcData, const ALfloat *const SrcDataEnd)
+    al::span<ALfloat> SrcBuffer)
 {
     /* TODO: For static sources, loop points are taken from the first buffer
      * (should be adjusted by any buffer offset, to possibly be added later).
@@ -382,91 +382,90 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
     /* If current pos is beyond the loop range, do not loop */
     if(!BufferLoopItem || DataPosInt >= LoopEnd)
     {
-        const ptrdiff_t SizeToDo{SrcDataEnd - SrcData};
-        ASSUME(SizeToDo > 0);
-
         BufferLoopItem = nullptr;
 
-        auto load_buffer = [DataPosInt,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
+        auto load_buffer = [DataPosInt,NumChannels,SampleSize,chan,SrcBuffer](size_t CompLen, const ALbuffer *buffer) -> size_t
         {
             if(DataPosInt >= buffer->SampleLen)
                 return CompLen;
 
             /* Load what's left to play from the buffer */
-            const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
-            CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
+            const size_t DataSize{std::min<size_t>(SrcBuffer.size(),
+                buffer->SampleLen - DataPosInt)};
+            CompLen = std::max(CompLen, DataSize);
 
             const al::byte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-            LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
+            LoadSamples(SrcBuffer.data(), Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
         /* It's impossible to have a buffer list item with no entries. */
         ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0},
-            load_buffer);
+        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
+            size_t{0u}, load_buffer));
     }
     else
     {
-        const ptrdiff_t SizeToDo{std::min<ptrdiff_t>(SrcDataEnd-SrcData, LoopEnd-DataPosInt)};
-        ASSUME(SizeToDo > 0);
+        const al::span<ALfloat> SrcData{SrcBuffer.first(
+            std::min<size_t>(SrcBuffer.size(), LoopEnd - DataPosInt))};
 
-        auto load_buffer = [DataPosInt,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
+        auto load_buffer = [DataPosInt,NumChannels,SampleSize,chan,SrcData](size_t CompLen, const ALbuffer *buffer) -> size_t
         {
             if(DataPosInt >= buffer->SampleLen)
                 return CompLen;
 
             /* Load what's left of this loop iteration */
-            const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
-            CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
+            const size_t DataSize{std::min<size_t>(SrcData.size(),
+                buffer->SampleLen - DataPosInt)};
+            CompLen = std::max(CompLen, DataSize);
 
             const al::byte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-            LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
+            LoadSamples(SrcData.data(), Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
         ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0},
-            load_buffer);
+        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
+            size_t{0u}, load_buffer));
 
-        const auto LoopSize = static_cast<ptrdiff_t>(LoopEnd - LoopStart);
-        while(SrcData != SrcDataEnd)
+        const auto LoopSize = static_cast<size_t>(LoopEnd - LoopStart);
+        while(!SrcBuffer.empty())
         {
-            const ptrdiff_t SizeToDo{std::min<ptrdiff_t>(SrcDataEnd-SrcData, LoopSize)};
-            ASSUME(SizeToDo > 0);
+            const al::span<ALfloat> SrcData{SrcBuffer.first(
+                std::min<size_t>(SrcBuffer.size(), LoopSize))};
 
-            auto load_buffer_loop = [LoopStart,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
+            auto load_buffer_loop = [LoopStart,NumChannels,SampleSize,chan,SrcData](size_t CompLen, const ALbuffer *buffer) -> size_t
             {
                 if(LoopStart >= buffer->SampleLen)
                     return CompLen;
 
-                const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo,
+                const size_t DataSize{std::min<size_t>(SrcData.size(),
                     buffer->SampleLen-LoopStart)};
-                CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
+                CompLen = std::max(CompLen, DataSize);
 
                 const al::byte *Data{buffer->mData.data()};
                 Data += (LoopStart*NumChannels + chan)*SampleSize;
 
-                LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
+                LoadSamples(SrcData.data(), Data, NumChannels, buffer->mFmtType, DataSize);
                 return CompLen;
             };
-            SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0},
-                load_buffer_loop);
+            SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
+                size_t{0u}, load_buffer_loop));
         }
     }
-    return SrcData;
+    return SrcBuffer.begin();
 }
 
 ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
     const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
-    ALfloat *SrcData, const ALfloat *const SrcDataEnd)
+    al::span<ALfloat> SrcBuffer)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
-    while(BufferListItem && SrcData != SrcDataEnd)
+    while(BufferListItem && !SrcBuffer.empty())
     {
         if(DataPosInt >= BufferListItem->max_samples)
         {
@@ -476,36 +475,34 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
             continue;
         }
 
-        const ptrdiff_t SizeToDo{SrcDataEnd - SrcData};
-        ASSUME(SizeToDo > 0);
-        auto load_buffer = [DataPosInt,SrcData,NumChannels,SampleSize,chan,SizeToDo](ptrdiff_t CompLen, const ALbuffer *buffer) -> ptrdiff_t
+        auto load_buffer = [DataPosInt,NumChannels,SampleSize,chan,SrcBuffer](size_t CompLen, const ALbuffer *buffer) -> size_t
         {
             if(!buffer) return CompLen;
             if(DataPosInt >= buffer->SampleLen)
                 return CompLen;
 
-            const ptrdiff_t DataSize{std::min<ptrdiff_t>(SizeToDo, buffer->SampleLen-DataPosInt)};
-            CompLen = std::max<ptrdiff_t>(CompLen, DataSize);
+            const size_t DataSize{std::min<size_t>(SrcBuffer.size(), buffer->SampleLen-DataPosInt)};
+            CompLen = std::max(CompLen, DataSize);
 
             const al::byte *Data{buffer->mData.data()};
             Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-            LoadSamples(SrcData, Data, NumChannels, buffer->mFmtType, DataSize);
+            LoadSamples(SrcBuffer.data(), Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
         ASSUME(BufferListItem->num_buffers > 0);
         auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        SrcData += std::accumulate(BufferListItem->buffers, buffers_end, ptrdiff_t{0u},
-            load_buffer);
+        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
+            size_t{0u}, load_buffer));
 
-        if(SrcData == SrcDataEnd)
+        if(SrcBuffer.empty())
             break;
         DataPosInt = 0;
         BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
         if(!BufferListItem) BufferListItem = BufferLoopItem;
     }
 
-    return SrcData;
+    return SrcBuffer.begin();
 }
 
 } // namespace
@@ -631,10 +628,10 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     chandata.mPrevSamples.end(), srciter);
             else if(isstatic)
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
-                    SampleSize, chan, DataPosInt, srciter, SrcData.end());
+                    SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
             else
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
-                    SampleSize, chan, DataPosInt, srciter, SrcData.end());
+                    SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
 
             if(UNLIKELY(srciter != SrcData.end()))
             {

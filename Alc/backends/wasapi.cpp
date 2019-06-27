@@ -300,6 +300,96 @@ HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vecto
 }
 
 
+bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
+{
+    *out = WAVEFORMATEXTENSIBLE{};
+    if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+    {
+        *out = reinterpret_cast<const WAVEFORMATEXTENSIBLE&>(*in);
+        out->Format.cbSize = sizeof(*out) - sizeof(out->Format);
+    }
+    else if(in->wFormatTag == WAVE_FORMAT_PCM)
+    {
+        out->Format = *in;
+        if(out->Format.nChannels == 1)
+            out->dwChannelMask = MONO;
+        else if(out->Format.nChannels == 2)
+            out->dwChannelMask = STEREO;
+        else
+            ERR("Unhandled PCM channel count: %d\n", out->Format.nChannels);
+        out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+    }
+    else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+    {
+        out->Format = *in;
+        if(out->Format.nChannels == 1)
+            out->dwChannelMask = MONO;
+        else if(out->Format.nChannels == 2)
+            out->dwChannelMask = STEREO;
+        else
+            ERR("Unhandled IEEE float channel count: %d\n", out->Format.nChannels);
+        out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+    }
+    else
+    {
+        ERR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
+        return false;
+    }
+    return true;
+}
+
+void TraceFormat(const char *msg, const WAVEFORMATEX *format)
+{
+    constexpr size_t fmtex_extra_size{sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)};
+    if(format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= fmtex_extra_size)
+    {
+        class GuidPrinter {
+            char mMsg[64];
+
+        public:
+            GuidPrinter(const GUID &guid)
+            {
+                std::snprintf(mMsg, al::size(mMsg),
+                    "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
+                    DWORD{guid.Data1}, guid.Data2, guid.Data3,
+                    guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+                    guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+            }
+            const char *c_str() const { return mMsg; }
+        };
+
+        const WAVEFORMATEXTENSIBLE *fmtex{
+            CONTAINING_RECORD(format, const WAVEFORMATEXTENSIBLE, Format)};
+        TRACE("%s:\n"
+            "    FormatTag      = 0x%04x\n"
+            "    Channels       = %d\n"
+            "    SamplesPerSec  = %lu\n"
+            "    AvgBytesPerSec = %lu\n"
+            "    BlockAlign     = %d\n"
+            "    BitsPerSample  = %d\n"
+            "    Size           = %d\n"
+            "    Samples        = %d\n"
+            "    ChannelMask    = 0x%lx\n"
+            "    SubFormat      = %s\n",
+            msg, fmtex->Format.wFormatTag, fmtex->Format.nChannels, fmtex->Format.nSamplesPerSec,
+            fmtex->Format.nAvgBytesPerSec, fmtex->Format.nBlockAlign, fmtex->Format.wBitsPerSample,
+            fmtex->Format.cbSize, fmtex->Samples.wReserved, fmtex->dwChannelMask,
+            GuidPrinter{fmtex->SubFormat}.c_str());
+    }
+    else
+        TRACE("%s:\n"
+            "    FormatTag      = 0x%04x\n"
+            "    Channels       = %d\n"
+            "    SamplesPerSec  = %lu\n"
+            "    AvgBytesPerSec = %lu\n"
+            "    BlockAlign     = %d\n"
+            "    BitsPerSample  = %d\n"
+            "    Size           = %d\n",
+            msg, format->wFormatTag, format->nChannels, format->nSamplesPerSec,
+            format->nAvgBytesPerSec, format->nBlockAlign, format->wBitsPerSample, format->cbSize);
+}
+
+
 enum class MsgType : unsigned int {
     OpenDevice,
     ResetDevice,
@@ -604,44 +694,6 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
 }
 
 
-bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
-{
-    *out = WAVEFORMATEXTENSIBLE{};
-    if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-    {
-        *out = reinterpret_cast<const WAVEFORMATEXTENSIBLE&>(*in);
-        out->Format.cbSize = sizeof(*out) - sizeof(out->Format);
-    }
-    else if(in->wFormatTag == WAVE_FORMAT_PCM)
-    {
-        out->Format = *in;
-        if(out->Format.nChannels == 1)
-            out->dwChannelMask = MONO;
-        else if(out->Format.nChannels == 2)
-            out->dwChannelMask = STEREO;
-        else
-            ERR("Unhandled PCM channel count: %d\n", out->Format.nChannels);
-        out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-    }
-    else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
-    {
-        out->Format = *in;
-        if(out->Format.nChannels == 1)
-            out->dwChannelMask = MONO;
-        else if(out->Format.nChannels == 2)
-            out->dwChannelMask = STEREO;
-        else
-            ERR("Unhandled IEEE float channel count: %d\n", out->Format.nChannels);
-        out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-    }
-    else
-    {
-        ERR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
-        return false;
-    }
-    return true;
-}
-
 ALCenum WasapiPlayback::open(const ALCchar *name)
 {
     HRESULT hr{S_OK};
@@ -883,6 +935,7 @@ HRESULT WasapiPlayback::resetProxy()
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
                                         OutputType.Format.nBlockAlign;
 
+    TraceFormat("Requesting playback format", &OutputType.Format);
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
     {
@@ -897,6 +950,7 @@ HRESULT WasapiPlayback::resetProxy()
 
     if(wfx != nullptr)
     {
+        TraceFormat("Got playback format", wfx);
         if(!MakeExtensible(&OutputType, wfx))
         {
             CoTaskMemFree(wfx);
@@ -1414,6 +1468,7 @@ HRESULT WasapiCapture::resetProxy()
                                         OutputType.Format.nBlockAlign;
     OutputType.Format.cbSize = sizeof(OutputType) - sizeof(OutputType.Format);
 
+    TraceFormat("Requesting capture format", &OutputType.Format);
     WAVEFORMATEX *wfx;
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
@@ -1427,6 +1482,7 @@ HRESULT WasapiCapture::resetProxy()
 
     if(wfx != nullptr)
     {
+        TraceFormat("Got capture format", wfx);
         if(!(wfx->nChannels == OutputType.Format.nChannels ||
              (wfx->nChannels == 1 && OutputType.Format.nChannels == 2) ||
              (wfx->nChannels == 2 && OutputType.Format.nChannels == 1)))

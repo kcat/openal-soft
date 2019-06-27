@@ -1556,11 +1556,9 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALsizei Sa
     }
 }
 
-void ApplyDither(FloatBufferLine *Samples, ALuint *dither_seed, const ALfloat quant_scale,
-    const ALsizei SamplesToDo, const ALuint numchans)
+void ApplyDither(const al::span<FloatBufferLine> Samples, ALuint *dither_seed,
+    const ALfloat quant_scale, const ALsizei SamplesToDo)
 {
-    ASSUME(numchans > 0);
-
     /* Dithering. Generate whitenoise (uniform distribution of random values
      * between -1 and +1) and add it to the sample values, after scaling up to
      * the desired quantization depth amd before rounding.
@@ -1580,7 +1578,7 @@ void ApplyDither(FloatBufferLine *Samples, ALuint *dither_seed, const ALfloat qu
         };
         std::transform(input.begin(), input.begin()+SamplesToDo, input.begin(), dither_sample);
     };
-    std::for_each(Samples, Samples+numchans, dither_channel);
+    std::for_each(Samples.begin(), Samples.end(), dither_channel);
     *dither_seed = seed;
 }
 
@@ -1616,12 +1614,14 @@ template<> inline ALubyte SampleConv(ALfloat val) noexcept
 { return SampleConv<ALbyte>(val) + 128; }
 
 template<DevFmtType T>
-void Write(const FloatBufferLine *InBuffer, ALvoid *OutBuffer, const size_t Offset,
-    const ALsizei SamplesToDo, const ALuint numchans)
+void Write(const al::span<const FloatBufferLine> InBuffer, ALvoid *OutBuffer, const size_t Offset,
+    const ALsizei SamplesToDo)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
+    const size_t numchans{InBuffer.size()};
     ASSUME(numchans > 0);
+
     SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*numchans;
     auto conv_channel = [&outbase,SamplesToDo,numchans](const FloatBufferLine &inbuf) -> void
     {
@@ -1634,7 +1634,7 @@ void Write(const FloatBufferLine *InBuffer, ALvoid *OutBuffer, const size_t Offs
         };
         std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);
     };
-    std::for_each(InBuffer, InBuffer+numchans, conv_channel);
+    std::for_each(InBuffer.cbegin(), InBuffer.cend(), conv_channel);
 }
 
 } // namespace
@@ -1700,29 +1700,26 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         if(Compressor *comp{device->Limiter.get()})
             comp->process(SamplesToDo, device->RealOut.Buffer);
 
+        const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer,
+            device->RealOut.NumChannels};
         /* Apply delays and attenuation for mismatched speaker distances. */
-        ApplyDistanceComp({device->RealOut.Buffer, device->RealOut.NumChannels}, SamplesToDo,
-            device->ChannelDelay.as_span().cbegin());
+        ApplyDistanceComp(RealOut, SamplesToDo, device->ChannelDelay.as_span().cbegin());
 
         /* Apply dithering. The compressor should have left enough headroom for
          * the dither noise to not saturate.
          */
         if(device->DitherDepth > 0.0f)
-            ApplyDither(device->RealOut.Buffer, &device->DitherSeed, device->DitherDepth,
-                SamplesToDo, device->RealOut.NumChannels);
+            ApplyDither(RealOut, &device->DitherSeed, device->DitherDepth, SamplesToDo);
 
         if(LIKELY(OutBuffer))
         {
-            FloatBufferLine *Buffer{device->RealOut.Buffer};
-            ALuint Channels{device->RealOut.NumChannels};
-
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.
              */
             switch(device->FmtType)
             {
 #define HANDLE_WRITE(T) case T:                                            \
-    Write<T>(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels); break;
+    Write<T>(RealOut, OutBuffer, SamplesDone, SamplesToDo); break;
                 HANDLE_WRITE(DevFmtByte)
                 HANDLE_WRITE(DevFmtUByte)
                 HANDLE_WRITE(DevFmtShort)

@@ -305,12 +305,14 @@ bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
     *out = WAVEFORMATEXTENSIBLE{};
     if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
     {
-        *out = reinterpret_cast<const WAVEFORMATEXTENSIBLE&>(*in);
+        *out = *CONTAINING_RECORD(in, const WAVEFORMATEXTENSIBLE, Format);
         out->Format.cbSize = sizeof(*out) - sizeof(out->Format);
     }
     else if(in->wFormatTag == WAVE_FORMAT_PCM)
     {
         out->Format = *in;
+        out->Format.cbSize = 0;
+        out->Samples.wValidBitsPerSample = out->Format.wBitsPerSample;
         if(out->Format.nChannels == 1)
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)
@@ -322,6 +324,8 @@ bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
     else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
     {
         out->Format = *in;
+        out->Format.cbSize = 0;
+        out->Samples.wValidBitsPerSample = out->Format.wBitsPerSample;
         if(out->Format.nChannels == 1)
             out->dwChannelMask = MONO;
         else if(out->Format.nChannels == 2)

@@ -188,7 +188,7 @@ BackendInfo CaptureBackend;
  * Functions, enums, and errors
  ************************************************/
 #define DECL(x) { #x, (ALCvoid*)(x) }
-constexpr struct {
+const struct {
     const ALCchar *funcName;
     ALCvoid *address;
 } alcFunctions[] = {

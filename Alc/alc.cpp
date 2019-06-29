@@ -1037,15 +1037,15 @@ static void alc_initconfig(void)
     str = getenv("ALSOFT_TRAP_ERROR");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
     {
-        TrapALError  = AL_TRUE;
+        TrapALError  = true;
         TrapALCError = true;
     }
     else
     {
         str = getenv("ALSOFT_TRAP_AL_ERROR");
         if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-            TrapALError = AL_TRUE;
-        TrapALError = GetConfigValueBool(nullptr, nullptr, "trap-al-error", TrapALError);
+            TrapALError = true;
+        TrapALError = !!GetConfigValueBool(nullptr, nullptr, "trap-al-error", TrapALError);
 
         str = getenv("ALSOFT_TRAP_ALC_ERROR");
         if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))

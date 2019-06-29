@@ -34,7 +34,7 @@
 #include "alError.h"
 #include "alexcpt.h"
 
-ALboolean TrapALError = AL_FALSE;
+bool TrapALError{false};
 
 void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
 {

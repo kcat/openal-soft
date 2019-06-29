@@ -5,7 +5,7 @@
 #include "logging.h"
 
 
-extern ALboolean TrapALError;
+extern bool TrapALError;
 
 void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...) DECL_FORMAT(printf, 3, 4);
 

@@ -2748,7 +2748,6 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 START_API_FUNC
 {
     const ALCchar *value = nullptr;
-    DeviceRef dev;
 
     switch(param)
     {
@@ -2781,8 +2780,7 @@ START_API_FUNC
         break;
 
     case ALC_ALL_DEVICES_SPECIFIER:
-        dev = VerifyDevice(Device);
-        if(dev)
+        if(DeviceRef dev{VerifyDevice(Device)})
             value = dev->DeviceName.c_str();
         else
         {
@@ -2792,8 +2790,7 @@ START_API_FUNC
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        dev = VerifyDevice(Device);
-        if(dev)
+        if(DeviceRef dev{VerifyDevice(Device)})
             value = dev->DeviceName.c_str();
         else
         {
@@ -2826,25 +2823,24 @@ START_API_FUNC
         break;
 
     case ALC_EXTENSIONS:
-        dev = VerifyDevice(Device);
-        if(dev) value = alcExtensionList;
-        else value = alcNoDeviceExtList;
+        if(VerifyDevice(Device))
+            value = alcExtensionList;
+        else
+            value = alcNoDeviceExtList;
         break;
 
     case ALC_HRTF_SPECIFIER_SOFT:
-        dev = VerifyDevice(Device);
-        if(!dev)
-            alcSetError(nullptr, ALC_INVALID_DEVICE);
-        else
+        if(DeviceRef dev{VerifyDevice(Device)})
         {
             std::lock_guard<std::mutex> _{dev->StateLock};
             value = (dev->mHrtf ? dev->HrtfName.c_str() : "");
         }
+        else
+            alcSetError(nullptr, ALC_INVALID_DEVICE);
         break;
 
     default:
-        dev = VerifyDevice(Device);
-        alcSetError(dev.get(), ALC_INVALID_ENUM);
+        alcSetError(VerifyDevice(Device).get(), ALC_INVALID_ENUM);
         break;
     }
 

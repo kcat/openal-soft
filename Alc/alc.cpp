@@ -887,40 +887,8 @@ al::vector<ALCcontext*> ContextList;
 
 std::recursive_mutex ListLock;
 
-} // namespace
 
-/* Mixing thread piority level */
-ALint RTPrioLevel;
-
-FILE *gLogFile{stderr};
-#ifdef _DEBUG
-LogLevel gLogLevel{LogWarning};
-#else
-LogLevel gLogLevel{LogError};
-#endif
-
-/************************************************
- * Library initialization
- ************************************************/
-#if defined(_WIN32) && !defined(AL_LIBTYPE_STATIC)
-BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
-{
-    switch(reason)
-    {
-        case DLL_PROCESS_ATTACH:
-            /* Pin the DLL so we won't get unloaded until the process terminates */
-            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-                               (WCHAR*)module, &module);
-            break;
-
-        case DLL_PROCESS_DETACH:
-            break;
-    }
-    return TRUE;
-}
-#endif
-
-static void alc_initconfig(void)
+void alc_initconfig(void)
 {
     const char *str{getenv("ALSOFT_LOGLEVEL")};
     if(str)
@@ -1176,7 +1144,7 @@ static void alc_initconfig(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeAllDevicesList()
+void ProbeAllDevicesList()
 {
     DO_INITCONFIG();
 
@@ -1185,7 +1153,7 @@ static void ProbeAllDevicesList()
     if(PlaybackFactory)
         PlaybackFactory->probe(DevProbe::Playback, &alcAllDevicesList);
 }
-static void ProbeCaptureDeviceList()
+void ProbeCaptureDeviceList()
 {
     DO_INITCONFIG();
 
@@ -1195,6 +1163,38 @@ static void ProbeCaptureDeviceList()
         CaptureFactory->probe(DevProbe::Capture, &alcCaptureDeviceList);
 }
 
+} // namespace
+
+/* Mixing thread piority level */
+ALint RTPrioLevel;
+
+FILE *gLogFile{stderr};
+#ifdef _DEBUG
+LogLevel gLogLevel{LogWarning};
+#else
+LogLevel gLogLevel{LogError};
+#endif
+
+/************************************************
+ * Library initialization
+ ************************************************/
+#if defined(_WIN32) && !defined(AL_LIBTYPE_STATIC)
+BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
+{
+    switch(reason)
+    {
+        case DLL_PROCESS_ATTACH:
+            /* Pin the DLL so we won't get unloaded until the process terminates */
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                               (WCHAR*)module, &module);
+            break;
+
+        case DLL_PROCESS_DETACH:
+            break;
+    }
+    return TRUE;
+}
+#endif
 
 /************************************************
  * Device format information

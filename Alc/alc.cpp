@@ -1176,21 +1176,24 @@ static void alc_initconfig(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeDevices(std::string *list, DevProbe type)
+static void ProbeAllDevicesList()
 {
     DO_INITCONFIG();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    list->clear();
-    if(type == DevProbe::Playback && PlaybackFactory)
-        PlaybackFactory->probe(type, list);
-    else if(type == DevProbe::Capture && CaptureFactory)
-        CaptureFactory->probe(type, list);
+    alcAllDevicesList.clear();
+    if(PlaybackFactory)
+        PlaybackFactory->probe(DevProbe::Playback, &alcAllDevicesList);
 }
-static void ProbeAllDevicesList(void)
-{ ProbeDevices(&alcAllDevicesList, DevProbe::Playback); }
-static void ProbeCaptureDeviceList(void)
-{ ProbeDevices(&alcCaptureDeviceList, DevProbe::Capture); }
+static void ProbeCaptureDeviceList()
+{
+    DO_INITCONFIG();
+
+    std::lock_guard<std::recursive_mutex> _{ListLock};
+    alcCaptureDeviceList.clear();
+    if(CaptureFactory)
+        CaptureFactory->probe(DevProbe::Capture, &alcCaptureDeviceList);
+}
 
 
 /************************************************

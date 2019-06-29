@@ -943,16 +943,21 @@ static void alc_initconfig(void)
         else ERR("Failed to open log file '%s'\n", str);
     }
 
-    TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION,
-          ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
+    TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
+        ALSOFT_GIT_BRANCH);
     {
         std::string names;
-        if(std::begin(BackendList) != BackendListEnd)
-            names += BackendList[0].name;
-        for(auto backend = std::begin(BackendList)+1;backend != BackendListEnd;++backend)
+        if(std::begin(BackendList) == BackendListEnd)
+            names += "(none)";
+        else
         {
-            names += ", ";
-            names += backend->name;
+            const al::span<const BackendInfo> infos{std::begin(BackendList), BackendListEnd};
+            names += infos[0].name;
+            for(const auto &backend : infos.subspan(1))
+            {
+                names += ", ";
+                names += backend.name;
+            }
         }
         TRACE("Supported backends: %s\n", names.c_str());
     }

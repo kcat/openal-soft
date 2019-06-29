@@ -180,8 +180,8 @@ BackendInfo BackendList[] = {
 };
 auto BackendListEnd = std::end(BackendList);
 
-BackendInfo PlaybackBackend;
-BackendInfo CaptureBackend;
+BackendFactory *PlaybackFactory{};
+BackendFactory *CaptureFactory{};
 
 
 /************************************************
@@ -1108,7 +1108,7 @@ static void alc_initconfig(void)
 
     auto init_backend = [](BackendInfo &backend) -> bool
     {
-        if(PlaybackBackend.name && CaptureBackend.name)
+        if(PlaybackFactory && CaptureFactory)
             return true;
 
         BackendFactory &factory = backend.getFactory();
@@ -1119,15 +1119,15 @@ static void alc_initconfig(void)
         }
 
         TRACE("Initialized backend \"%s\"\n", backend.name);
-        if(!PlaybackBackend.name && factory.querySupport(BackendType::Playback))
+        if(!PlaybackFactory && factory.querySupport(BackendType::Playback))
         {
-            PlaybackBackend = backend;
-            TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
+            PlaybackFactory = &factory;
+            TRACE("Added \"%s\" for playback\n", backend.name);
         }
-        if(!CaptureBackend.name && factory.querySupport(BackendType::Capture))
+        if(!CaptureFactory && factory.querySupport(BackendType::Capture))
         {
-            CaptureBackend = backend;
-            TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
+            CaptureFactory = &factory;
+            TRACE("Added \"%s\" for capture\n", backend.name);
         }
         return false;
     };
@@ -1135,9 +1135,9 @@ static void alc_initconfig(void)
 
     LoopbackBackendFactory::getFactory().init();
 
-    if(!PlaybackBackend.name)
+    if(!PlaybackFactory)
         WARN("No playback backend available!\n");
-    if(!CaptureBackend.name)
+    if(!CaptureFactory)
         WARN("No capture backend available!\n");
 
     if(ConfigValueStr(nullptr, nullptr, "excludefx", &str))
@@ -1171,19 +1171,21 @@ static void alc_initconfig(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeDevices(std::string *list, BackendInfo *backendinfo, DevProbe type)
+static void ProbeDevices(std::string *list, DevProbe type)
 {
     DO_INITCONFIG();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
     list->clear();
-    if(backendinfo->getFactory)
-        backendinfo->getFactory().probe(type, list);
+    if(type == DevProbe::Playback && PlaybackFactory)
+        PlaybackFactory->probe(type, list);
+    else if(type == DevProbe::Capture && CaptureFactory)
+        CaptureFactory->probe(type, list);
 }
 static void ProbeAllDevicesList(void)
-{ ProbeDevices(&alcAllDevicesList, &PlaybackBackend, DevProbe::Playback); }
+{ ProbeDevices(&alcAllDevicesList, DevProbe::Playback); }
 static void ProbeCaptureDeviceList(void)
-{ ProbeDevices(&alcCaptureDeviceList, &CaptureBackend, DevProbe::Capture); }
+{ ProbeDevices(&alcCaptureDeviceList, DevProbe::Capture); }
 
 
 /************************************************
@@ -3643,7 +3645,7 @@ START_API_FUNC
 {
     DO_INITCONFIG();
 
-    if(!PlaybackBackend.name)
+    if(!PlaybackFactory)
     {
         alcSetError(nullptr, ALC_INVALID_VALUE);
         return nullptr;
@@ -3677,8 +3679,7 @@ START_API_FUNC
 
     try {
         /* Create the device backend. */
-        device->Backend = PlaybackBackend.getFactory().createBackend(device.get(),
-            BackendType::Playback);
+        device->Backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
 
         /* Find a playback device to open */
         ALCenum err{device->Backend->open(deviceName)};
@@ -3901,7 +3902,7 @@ START_API_FUNC
 {
     DO_INITCONFIG();
 
-    if(!CaptureBackend.name)
+    if(!CaptureFactory)
     {
         alcSetError(nullptr, ALC_INVALID_VALUE);
         return nullptr;
@@ -3930,8 +3931,7 @@ START_API_FUNC
     device->BufferSize = samples;
 
     try {
-        device->Backend = CaptureBackend.getFactory().createBackend(device.get(),
-            BackendType::Capture);
+        device->Backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
 
         TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
             DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),

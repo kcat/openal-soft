@@ -129,9 +129,9 @@ ALCenum PortPlayback::open(const ALCchar *name)
 
     mUpdateSize = mDevice->UpdateSize;
 
-    mParams.device = -1;
-    if(!ConfigValueInt(nullptr, "port", "device", &mParams.device) || mParams.device < 0)
-        mParams.device = Pa_GetDefaultOutputDevice();
+    auto devidopt = ConfigValueInt(nullptr, "port", "device");
+    if(devidopt && *devidopt >= 0) mParams.device = *devidopt;
+    else mParams.device = Pa_GetDefaultOutputDevice();
     mParams.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
     mParams.hostApiSpecificStreamInfo = nullptr;
 
@@ -298,9 +298,9 @@ ALCenum PortCapture::open(const ALCchar *name)
     mRing = CreateRingBuffer(samples, frame_size, false);
     if(!mRing) return ALC_INVALID_VALUE;
 
-    mParams.device = -1;
-    if(!ConfigValueInt(nullptr, "port", "capture", &mParams.device) || mParams.device < 0)
-        mParams.device = Pa_GetDefaultInputDevice();
+    auto devidopt = ConfigValueInt(nullptr, "port", "capture");
+    if(devidopt && *devidopt >= 0) mParams.device = *devidopt;
+    else mParams.device = Pa_GetDefaultOutputDevice();
     mParams.suggestedLatency = 0.0f;
     mParams.hostApiSpecificStreamInfo = nullptr;
 

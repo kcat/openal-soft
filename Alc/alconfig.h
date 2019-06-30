@@ -1,6 +1,7 @@
 #ifndef ALCONFIG_H
 #define ALCONFIG_H
 
+#include "aloptional.h"
 
 void ReadALConfig();
 
@@ -9,7 +10,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
 int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def);
 
 int ConfigValueStr(const char *devName, const char *blockName, const char *keyName, const char **ret);
-int ConfigValueInt(const char *devName, const char *blockName, const char *keyName, int *ret);
+al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName);
 int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret);
 int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret);
 int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret);

@@ -900,18 +900,20 @@ no_hrtf:
 
     device->mRenderMode = StereoPair;
 
-    int bs2blevel{((headphones && hrtf_appreq != Hrtf_Disable) ||
-                   (hrtf_appreq == Hrtf_Enable)) ? 5 : 0};
     if(device->Type != Loopback)
-        ConfigValueInt(device->DeviceName.c_str(), nullptr, "cf_level", &bs2blevel);
-    if(bs2blevel > 0 && bs2blevel <= 6)
     {
-        device->Bs2b = al::make_unique<bs2b>();
-        bs2b_set_params(device->Bs2b.get(), bs2blevel, device->Frequency);
-        TRACE("BS2B enabled\n");
-        InitPanning(device);
-        device->PostProcess = ProcessBs2b;
-        return;
+        if(auto cflevopt = ConfigValueInt(device->DeviceName.c_str(), nullptr, "cf_level"))
+        {
+            if(*cflevopt > 0 && *cflevopt <= 6)
+            {
+                device->Bs2b = al::make_unique<bs2b>();
+                bs2b_set_params(device->Bs2b.get(), *cflevopt, device->Frequency);
+                TRACE("BS2B enabled\n");
+                InitPanning(device);
+                device->PostProcess = ProcessBs2b;
+                return;
+            }
+        }
     }
 
     const char *mode;

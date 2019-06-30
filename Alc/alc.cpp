@@ -1061,11 +1061,12 @@ void alc_initconfig(void)
     FillCPUCaps(capfilter);
 
 #ifdef _WIN32
-    RTPrioLevel = 1;
+#define DEF_MIXER_PRIO 1
 #else
-    RTPrioLevel = 0;
+#define DEF_MIXER_PRIO 0
 #endif
-    ConfigValueInt(nullptr, nullptr, "rt-prio", &RTPrioLevel);
+    RTPrioLevel = ConfigValueInt(nullptr, nullptr, "rt-prio").value_or(DEF_MIXER_PRIO);
+#undef DEF_MIXER_PRIO
 
     aluInit();
     aluInitMixer();
@@ -1864,10 +1865,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(numMono > INT_MAX-numStereo)
             numMono = INT_MAX-numStereo;
         numMono += numStereo;
-        if(ConfigValueInt(devname, nullptr, "sources", &numMono))
+        if(auto srcsopt = ConfigValueInt(devname, nullptr, "sources"))
         {
-            if(numMono <= 0)
-                numMono = 256;
+            if(*srcsopt <= 0) numMono = 256;
+            else numMono = *srcsopt;
         }
         else
             numMono = maxi(numMono, 256);
@@ -1878,8 +1879,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        if(ConfigValueInt(devname, nullptr, "sends", &new_sends))
-            new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
+        if(auto sendsopt = ConfigValueInt(devname, nullptr, "sends"))
+            new_sends = mini(numSends, clampi(*sendsopt, 0, MAX_SENDS));
         else
             new_sends = numSends;
     }
@@ -2075,8 +2076,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "dither", 1))
     {
-        ALint depth = 0;
-        ConfigValueInt(device->DeviceName.c_str(), nullptr, "dither-depth", &depth);
+        ALint depth{
+            ConfigValueInt(device->DeviceName.c_str(), nullptr, "dither-depth").value_or(0)};
         if(depth <= 0)
         {
             switch(device->FmtType)
@@ -3834,10 +3835,8 @@ START_API_FUNC
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
     else device->AuxiliaryEffectSlotMax = minu(device->AuxiliaryEffectSlotMax, INT_MAX);
 
-    if(ConfigValueInt(deviceName, nullptr, "sends", &device->NumAuxSends))
-        device->NumAuxSends = clampi(
-            DEFAULT_SENDS, 0, clampi(device->NumAuxSends, 0, MAX_SENDS)
-        );
+    if(auto sendsopt = ConfigValueInt(deviceName, nullptr, "sends"))
+        device->NumAuxSends = clampi(DEFAULT_SENDS, 0, clampi(*sendsopt, 0, MAX_SENDS));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -4141,10 +4140,8 @@ START_API_FUNC
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
     else device->AuxiliaryEffectSlotMax = minu(device->AuxiliaryEffectSlotMax, INT_MAX);
 
-    if(ConfigValueInt(nullptr, nullptr, "sends", &device->NumAuxSends))
-        device->NumAuxSends = clampi(
-            DEFAULT_SENDS, 0, clampi(device->NumAuxSends, 0, MAX_SENDS)
-        );
+    if(auto sendsopt = ConfigValueInt(nullptr, nullptr, "sends"))
+        device->NumAuxSends = clampi(DEFAULT_SENDS, 0, clampi(*sendsopt, 0, MAX_SENDS));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;

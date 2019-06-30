@@ -501,13 +501,12 @@ int ConfigValueStr(const char *devName, const char *blockName, const char *keyNa
     return 1;
 }
 
-int ConfigValueInt(const char *devName, const char *blockName, const char *keyName, int *ret)
+al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return 0;
+    if(!val[0]) return al::nullopt;
 
-    *ret = std::strtol(val, nullptr, 0);
-    return 1;
+    return al::optional<int>{al::in_place, static_cast<int>(std::strtol(val, nullptr, 0))};
 }
 
 int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret)

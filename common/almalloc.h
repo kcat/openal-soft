@@ -185,13 +185,13 @@ struct FlexArray {
 
     FlexArray(index_type size) : mSize{size}
     { uninitialized_default_construct_n(mArray, mSize); }
-    ~FlexArray()
-    { destroy_n(mArray, mSize); }
+    ~FlexArray() { destroy_n(mArray, mSize); }
 
     FlexArray(const FlexArray&) = delete;
     FlexArray& operator=(const FlexArray&) = delete;
 
     index_type size() const noexcept { return mSize; }
+    bool empty() const noexcept { return mSize == 0; }
 
     pointer data() noexcept { return mArray; }
     const_pointer data() const noexcept { return mArray; }

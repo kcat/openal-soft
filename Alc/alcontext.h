@@ -136,8 +136,6 @@ struct ALCcontext {
     ALCdevice *const Device;
     const ALCchar *ExtensionList{nullptr};
 
-    std::atomic<ALCcontext*> next{nullptr};
-
     ALlistener Listener{};
 
 

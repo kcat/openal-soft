@@ -1658,13 +1658,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         /* For each context on this device, process and mix its sources and
          * effects.
          */
-        ALCcontext *ctx{device->ContextList.load(std::memory_order_acquire)};
-        while(ctx)
-        {
+        for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
             ProcessContext(ctx, SamplesToDo);
-
-            ctx = ctx->next.load(std::memory_order_relaxed);
-        }
 
         /* Increment the clock time. Every second's worth of samples is
          * converted and added to clock base so that large sample counts don't
@@ -1754,8 +1749,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.user.msg))
         evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
 
-    ALCcontext *ctx{device->ContextList.load()};
-    while(ctx)
+    for(ALCcontext *ctx : *device->mContexts.load())
     {
         const ALbitfieldSOFT enabledevt{ctx->EnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))
@@ -1780,7 +1774,5 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         std::for_each(ctx->Voices->begin(),
             ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
             stop_voice);
-
-        ctx = ctx->next.load(std::memory_order_relaxed);
     }
 }

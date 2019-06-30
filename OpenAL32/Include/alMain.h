@@ -461,7 +461,7 @@ struct ALCdevice {
     RefCount MixCount{0u};
 
     // Contexts created on this device
-    std::atomic<ALCcontext*> ContextList{nullptr};
+    std::atomic<al::FlexArray<ALCcontext*>*> mContexts{nullptr};
 
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while

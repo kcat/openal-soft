@@ -879,6 +879,12 @@ constexpr ALCint alcEFXMajorVersion = 1;
 constexpr ALCint alcEFXMinorVersion = 0;
 
 
+/* To avoid extraneous allocations, a 0-sized FlexArray<ALCcontext*> is defined
+ * globally as a sharable object.
+ */
+al::FlexArray<ALCcontext*> EmptyContextArray{0u};
+
+
 /************************************************
  * Device lists
  ************************************************/
@@ -1598,7 +1604,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     DevFmtType oldType;
     ALboolean update_failed;
     ALCsizei hrtf_id = -1;
-    ALCcontext *context;
     ALCuint oldFreq;
     int val;
 
@@ -2105,8 +2110,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
      */
     update_failed = AL_FALSE;
     FPUCtl mixer_mode{};
-    context = device->ContextList.load();
-    while(context)
+    for(ALCcontext *context : *device->mContexts.load())
     {
         if(context->DefaultSlot)
         {
@@ -2246,8 +2250,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         context->Listener.PropsClean.test_and_set(std::memory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
-
-        context = context->next.load(std::memory_order_relaxed);
     }
     mixer_mode.leave();
     if(update_failed)
@@ -2264,7 +2266,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 }
 
 
-ALCdevice::ALCdevice(DeviceType type) : Type{type}
+ALCdevice::ALCdevice(DeviceType type) : Type{type}, mContexts{&EmptyContextArray}
 {
 }
 
@@ -2303,6 +2305,9 @@ ALCdevice::~ALCdevice()
     if(mHrtf)
         mHrtf->DecRef();
     mHrtf = nullptr;
+
+    auto *oldarray = mContexts.exchange(nullptr, std::memory_order_relaxed);
+    if(oldarray != &EmptyContextArray) delete oldarray;
 }
 
 
@@ -2563,29 +2568,44 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     if(GlobalContext.compare_exchange_strong(origctx, nullptr))
         ALCcontext_DecRef(context);
 
-    bool ret{true};
-    { BackendLockGuard _{*device->Backend};
-        origctx = context;
-        ALCcontext *newhead{context->next.load(std::memory_order_relaxed)};
-        if(!device->ContextList.compare_exchange_strong(origctx, newhead))
+    bool ret{};
+    {
+        using ContextArray = al::FlexArray<ALCcontext*>;
+
+        /* First make sure this context exists in the device's list. */
+        auto *oldarray = device->mContexts.load(std::memory_order_acquire);
+        if(auto toremove = std::count(oldarray->begin(), oldarray->end(), context))
         {
-            ALCcontext *list;
-            do {
-                /* origctx is what the desired context failed to match. Try
-                * swapping out the next one in the list.
-                */
-                list = origctx;
-                origctx = context;
-            } while(!list->next.compare_exchange_strong(origctx, newhead));
+            auto alloc_ctx_array = [](const size_t count) -> ContextArray*
+            {
+                if(count == 0) return &EmptyContextArray;
+                void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(count))};
+                return new (ptr) ContextArray{count};
+            };
+            auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
+
+            /* Copy the current/old context handles to the new array, excluding
+             * the given context.
+             */
+            std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
+                std::bind(std::not_equal_to<ALCcontext*>{}, _1, context));
+
+            /* Store the new context array in the device. Wait for any current
+             * mix to finish before deleting the old array.
+             */
+            device->mContexts.store(newarray);
+            if(oldarray != &EmptyContextArray)
+            {
+                while((device->MixCount.load(std::memory_order_acquire)&1))
+                    std::this_thread::yield();
+                delete oldarray;
+            }
+
+            ret = !newarray->empty();
         }
         else
-            ret = !!newhead;
+            ret = !oldarray->empty();
     }
-
-    /* Make sure the context is finished and no longer processing in the mixer
-     * before sending the message queue kill event. The backend's lock does
-     * this, although waiting for a non-odd mix count would work too.
-     */
 
     StopEventThrd(context);
 
@@ -3473,19 +3493,41 @@ START_API_FUNC
     UpdateListenerProps(context.get());
 
     {
-        {
-            std::lock_guard<std::recursive_mutex> _{ListLock};
-            auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
-            ContextList.insert(iter, context.get());
-            ALCcontext_IncRef(context.get());
-        }
+        using ContextArray = al::FlexArray<ALCcontext*>;
 
-        ALCcontext *head = dev->ContextList.load();
-        do {
-            context->next.store(head, std::memory_order_relaxed);
-        } while(!dev->ContextList.compare_exchange_weak(head, context.get()));
+        /* Allocate a new context array, which holds 1 more than the current/
+         * old array.
+         */
+        auto *oldarray = device->mContexts.load();
+        const size_t newcount{oldarray->size()+1};
+        void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(newcount))};
+        auto *newarray = new (ptr) ContextArray{newcount};
+
+        /* Copy the current/old context handles to the new array, appending the
+         * new context.
+         */
+        auto iter = std::copy(oldarray->begin(), oldarray->end(), newarray->begin());
+        *iter = context.get();
+
+        /* Store the new context array in the device. Wait for any current mix
+         * to finish before deleting the old array.
+         */
+        dev->mContexts.store(newarray);
+        if(oldarray != &EmptyContextArray)
+        {
+            while((dev->MixCount.load(std::memory_order_acquire)&1))
+                std::this_thread::yield();
+            delete oldarray;
+        }
     }
     statelock.unlock();
+
+    {
+        std::lock_guard<std::recursive_mutex> _{ListLock};
+        auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
+        ContextList.insert(iter, context.get());
+        ALCcontext_IncRef(context.get());
+    }
 
     if(context->DefaultSlot)
     {
@@ -3867,24 +3909,19 @@ START_API_FUNC
      * respective lists.
      */
     DeviceList.erase(iter);
-    ALCcontext *ctx{device->ContextList.load()};
-    while(ctx != nullptr)
+    for(ALCcontext *ctx : *device->mContexts.load())
     {
-        ALCcontext *next = ctx->next.load(std::memory_order_relaxed);
         auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), ctx);
         if(iter != ContextList.cend() && *iter == ctx)
             ContextList.erase(iter);
-        ctx = next;
     }
     listlock.unlock();
 
-    ctx = device->ContextList.load(std::memory_order_relaxed);
-    while(ctx != nullptr)
+    al::FlexArray<ALCcontext*> *contexts;
+    while(!(contexts=device->mContexts.load(std::memory_order_relaxed))->empty())
     {
-        ALCcontext *next = ctx->next.load(std::memory_order_relaxed);
-        WARN("Releasing context %p\n", ctx);
-        ReleaseContext(ctx, device);
-        ctx = next;
+        WARN("Releasing context %p\n", contexts->front());
+        ReleaseContext(contexts->front(), device);
     }
     if(device->Flags.get<DeviceRunning>())
         device->Backend->stop();
@@ -4221,7 +4258,7 @@ START_API_FUNC
     if(!dev->Flags.get<DevicePaused>())
         return;
     dev->Flags.unset<DevicePaused>();
-    if(dev->ContextList.load() == nullptr)
+    if(dev->mContexts.load()->empty())
         return;
 
     if(dev->Backend->start() == ALC_FALSE)

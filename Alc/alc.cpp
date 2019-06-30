@@ -1824,7 +1824,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->UpdateSize = DEFAULT_UPDATE_SIZE;
             device->Frequency = DEFAULT_OUTPUT_RATE;
 
-            ConfigValueUInt(devname, nullptr, "frequency", &freq);
+            freq = ConfigValueUInt(devname, nullptr, "frequency").value_or(freq);
             if(freq < 1)
                 device->Flags.unset<FrequencyRequest>();
             else
@@ -1840,12 +1840,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->Flags.set<FrequencyRequest>();
             }
 
-            ConfigValueUInt(devname, nullptr, "period_size", &device->UpdateSize);
-            device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
+            if(auto persizeopt = ConfigValueUInt(devname, nullptr, "period_size"))
+                device->UpdateSize = clampu(*persizeopt, 64, 8192);
 
-            ALuint periods{};
-            if(ConfigValueUInt(devname, nullptr, "periods", &periods))
-                device->BufferSize = device->UpdateSize * clampu(periods, 2, 16);
+            if(auto peropt = ConfigValueUInt(devname, nullptr, "periods"))
+                device->BufferSize = device->UpdateSize * clampu(*peropt, 2, 16);
             else
                 device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
         }
@@ -3805,8 +3804,7 @@ START_API_FUNC
         }
     }
 
-    ALuint freq{};
-    if(ConfigValueUInt(deviceName, nullptr, "frequency", &freq) && freq > 0)
+    if(ALuint freq{ConfigValueUInt(deviceName, nullptr, "frequency").value_or(0)})
     {
         if(freq < MIN_OUTPUT_RATE)
         {
@@ -3819,21 +3817,24 @@ START_API_FUNC
         device->Flags.set<FrequencyRequest>();
     }
 
-    ConfigValueUInt(deviceName, nullptr, "period_size", &device->UpdateSize);
-    device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
+    if(auto persizeopt = ConfigValueUInt(deviceName, nullptr, "period_size"))
+        device->UpdateSize = clampu(*persizeopt, 64, 8192);
 
-    ALuint periods{};
-    if(ConfigValueUInt(deviceName, nullptr, "periods", &periods))
-        device->BufferSize = device->UpdateSize * clampu(periods, 2, 16);
+    if(auto peropt = ConfigValueUInt(deviceName, nullptr, "periods"))
+        device->BufferSize = device->UpdateSize * clampu(*peropt, 2, 16);
     else
         device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
 
-    ConfigValueUInt(deviceName, nullptr, "sources", &device->SourcesMax);
-    if(device->SourcesMax == 0) device->SourcesMax = 256;
+    if(auto srcsopt = ConfigValueUInt(deviceName, nullptr, "sources"))
+    {
+        if(*srcsopt > 0) device->SourcesMax = *srcsopt;
+    }
 
-    ConfigValueUInt(deviceName, nullptr, "slots", &device->AuxiliaryEffectSlotMax);
-    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
-    else device->AuxiliaryEffectSlotMax = minu(device->AuxiliaryEffectSlotMax, INT_MAX);
+    if(auto slotsopt = ConfigValueUInt(deviceName, nullptr, "slots"))
+    {
+        if(*slotsopt > 0)
+            device->AuxiliaryEffectSlotMax = minu(*slotsopt, INT_MAX);
+    }
 
     if(auto sendsopt = ConfigValueInt(deviceName, nullptr, "sends"))
         device->NumAuxSends = clampi(DEFAULT_SENDS, 0, clampi(*sendsopt, 0, MAX_SENDS));
@@ -4133,12 +4134,16 @@ START_API_FUNC
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
 
-    ConfigValueUInt(nullptr, nullptr, "sources", &device->SourcesMax);
-    if(device->SourcesMax == 0) device->SourcesMax = 256;
+    if(auto srcsopt = ConfigValueUInt(nullptr, nullptr, "sources"))
+    {
+        if(*srcsopt > 0) device->SourcesMax = *srcsopt;
+    }
 
-    ConfigValueUInt(nullptr, nullptr, "slots", &device->AuxiliaryEffectSlotMax);
-    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
-    else device->AuxiliaryEffectSlotMax = minu(device->AuxiliaryEffectSlotMax, INT_MAX);
+    if(auto slotsopt = ConfigValueUInt(nullptr, nullptr, "slots"))
+    {
+        if(*slotsopt > 0)
+            device->AuxiliaryEffectSlotMax = minu(*slotsopt, INT_MAX);
+    }
 
     if(auto sendsopt = ConfigValueInt(nullptr, nullptr, "sends"))
         device->NumAuxSends = clampi(DEFAULT_SENDS, 0, clampi(*sendsopt, 0, MAX_SENDS));

@@ -11,7 +11,7 @@ int GetConfigValueBool(const char *devName, const char *blockName, const char *k
 
 int ConfigValueStr(const char *devName, const char *blockName, const char *keyName, const char **ret);
 al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName);
-int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret);
+al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName);
 int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret);
 int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret);
 

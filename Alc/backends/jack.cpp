@@ -203,9 +203,9 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
     mDevice->UpdateSize = numframes;
     mDevice->BufferSize = numframes*2;
 
-    ALuint bufsize{mDevice->UpdateSize};
-    if(ConfigValueUInt(mDevice->DeviceName.c_str(), "jack", "buffer-size", &bufsize))
-        bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+    const char *devname{mDevice->DeviceName.c_str()};
+    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
     mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 
     TRACE("%u / %u buffer\n", mDevice->UpdateSize, mDevice->BufferSize);
@@ -374,9 +374,9 @@ ALCboolean JackPlayback::reset()
     mDevice->UpdateSize = jack_get_buffer_size(mClient);
     mDevice->BufferSize = mDevice->UpdateSize * 2;
 
-    ALuint bufsize{mDevice->UpdateSize};
-    if(ConfigValueUInt(mDevice->DeviceName.c_str(), "jack", "buffer-size", &bufsize))
-        bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+    const char *devname{mDevice->DeviceName.c_str()};
+    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
     mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 
     /* Force 32-bit float output. */

@@ -509,13 +509,13 @@ al::optional<int> ConfigValueInt(const char *devName, const char *blockName, con
     return al::optional<int>{al::in_place, static_cast<int>(std::strtol(val, nullptr, 0))};
 }
 
-int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret)
+al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName)
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return 0;
+    if(!val[0]) return al::nullopt;
 
-    *ret = std::strtoul(val, nullptr, 0);
-    return 1;
+    return al::optional<unsigned int>{al::in_place,
+        static_cast<unsigned int>(std::strtoul(val, nullptr, 0))};
 }
 
 int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret)

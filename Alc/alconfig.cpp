@@ -492,13 +492,12 @@ int ConfigValueExists(const char *devName, const char *blockName, const char *ke
     return val[0] != 0;
 }
 
-int ConfigValueStr(const char *devName, const char *blockName, const char *keyName, const char **ret)
+al::optional<std::string> ConfigValueStr(const char *devName, const char *blockName, const char *keyName)
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return 0;
+    if(!val[0]) return al::nullopt;
 
-    *ret = val;
-    return 1;
+    return al::optional<std::string>{al::in_place, val};
 }
 
 al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)

@@ -553,9 +553,9 @@ void InitHrtfPanning(ALCdevice *device)
      */
     device->mRenderMode = HrtfRender;
     ALsizei ambi_order{1};
-    const char *mode;
-    if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode", &mode))
+    if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode"))
     {
+        const char *mode{modeopt->c_str()};
         if(strcasecmp(mode, "basic") == 0)
         {
             ERR("HRTF mode \"%s\" deprecated, substituting \"%s\"\n", mode, "ambi2");
@@ -783,11 +783,10 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         AmbDecConf conf{};
         if(layout)
         {
-            const char *fname;
-            if(ConfigValueStr(devname, "decoder", layout, &fname))
+            if(auto decopt = ConfigValueStr(devname, "decoder", layout))
             {
-                if(!conf.load(fname))
-                    ERR("Failed to load layout file %s\n", fname);
+                if(!conf.load(decopt->c_str()))
+                    ERR("Failed to load layout file %s\n", decopt->c_str());
                 else if(conf.Speakers.size() > MAX_OUTPUT_CHANNELS)
                     ERR("Unsupported speaker count %zu (max %d)\n", conf.Speakers.size(),
                         MAX_OUTPUT_CHANNELS);
@@ -814,9 +813,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     bool headphones{device->IsHeadphones != AL_FALSE};
     if(device->Type != Loopback)
     {
-        const char *mode;
-        if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode", &mode))
+        if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode"))
         {
+            const char *mode{modeopt->c_str()};
             if(strcasecmp(mode, "headphones") == 0)
                 headphones = true;
             else if(strcasecmp(mode, "speakers") == 0)
@@ -916,9 +915,9 @@ no_hrtf:
         }
     }
 
-    const char *mode;
-    if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding", &mode))
+    if(auto encopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding"))
     {
+        const char *mode{encopt->c_str()};
         if(strcasecmp(mode, "uhj") == 0)
             device->mRenderMode = NormalRender;
         else if(strcasecmp(mode, "panpot") != 0)

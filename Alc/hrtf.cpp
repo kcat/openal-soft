@@ -1214,9 +1214,9 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     al::vector<EnumeratedHrtf> list;
 
     bool usedefaults{true};
-    const char *pathlist{""};
-    if(ConfigValueStr(devname, nullptr, "hrtf-paths", &pathlist))
+    if(auto pathopt = ConfigValueStr(devname, nullptr, "hrtf-paths"))
     {
+        const char *pathlist{pathopt->c_str()};
         while(pathlist && *pathlist)
         {
             const char *next, *end;
@@ -1262,20 +1262,22 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
             AddBuiltInEntry(list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
     }
 
-    const char *defaulthrtf{""};
-    if(!list.empty() && ConfigValueStr(devname, nullptr, "default-hrtf", &defaulthrtf))
+    if(!list.empty())
     {
-        auto iter = std::find_if(list.begin(), list.end(),
-            [defaulthrtf](const EnumeratedHrtf &entry) -> bool
-            { return entry.name == defaulthrtf; }
-        );
-        if(iter == list.end())
-            WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
-        else if(iter != list.begin())
+        if(auto defhrtfopt = ConfigValueStr(devname, nullptr, "default-hrtf"))
         {
-            EnumeratedHrtf entry{*iter};
-            list.erase(iter);
-            list.insert(list.begin(), entry);
+            auto iter = std::find_if(list.begin(), list.end(),
+                [&defhrtfopt](const EnumeratedHrtf &entry) -> bool
+                { return entry.name == *defhrtfopt; }
+            );
+            if(iter == list.end())
+                WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
+            else if(iter != list.begin())
+            {
+                EnumeratedHrtf entry{std::move(*iter)};
+                list.erase(iter);
+                list.insert(list.begin(), std::move(entry));
+            }
         }
     }
 

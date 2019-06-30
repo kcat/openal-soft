@@ -155,10 +155,9 @@ ResamplerFunc SelectResampler(Resampler resampler)
 
 void aluInitMixer()
 {
-    const char *str;
-
-    if(ConfigValueStr(nullptr, nullptr, "resampler", &str))
+    if(auto resopt = ConfigValueStr(nullptr, nullptr, "resampler"))
     {
+        const char *str{resopt->c_str()};
         if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
             ResamplerDefault = PointResampler;
         else if(strcasecmp(str, "linear") == 0)

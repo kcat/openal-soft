@@ -1024,8 +1024,9 @@ void alc_initconfig(void)
 #ifdef HAVE_NEON
     capfilter |= CPU_CAP_NEON;
 #endif
-    if(ConfigValueStr(nullptr, nullptr, "disable-cpu-exts", &str))
+    if(auto cpuopt = ConfigValueStr(nullptr, nullptr, "disable-cpu-exts"))
     {
+        str = cpuopt->c_str();
         if(strcasecmp(str, "all") == 0)
             capfilter = 0;
         else
@@ -1094,15 +1095,20 @@ void alc_initconfig(void)
     if(ConfigValueFloat(nullptr, "reverb", "boost", &valf))
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
 
-    const char *devs{getenv("ALSOFT_DRIVERS")};
-    if((devs && devs[0]) || ConfigValueStr(nullptr, nullptr, "drivers", &devs))
+    auto devopt = ConfigValueStr(nullptr, nullptr, "drivers");
+    if(const char *devs{getenv("ALSOFT_DRIVERS")})
+    {
+        if(devs[0])
+            devopt = al::optional<std::string>{al::in_place, devs};
+    }
+    if(devopt)
     {
         auto backendlist_cur = std::begin(BackendList);
 
         bool endlist{true};
-        const char *next = devs;
+        const char *next{devopt->c_str()};
         do {
-            devs = next;
+            const char *devs{next};
             while(isspace(devs[0]))
                 devs++;
             next = strchr(devs, ',');
@@ -1182,9 +1188,9 @@ void alc_initconfig(void)
     if(!CaptureFactory)
         WARN("No capture backend available!\n");
 
-    if(ConfigValueStr(nullptr, nullptr, "excludefx", &str))
+    if(auto exclopt = ConfigValueStr(nullptr, nullptr, "excludefx"))
     {
-        const char *next = str;
+        const char *next{exclopt->c_str()};
         do {
             str = next;
             next = strchr(str, ',');
@@ -1203,9 +1209,10 @@ void alc_initconfig(void)
     }
 
     InitEffect(&DefaultEffect);
-    str = getenv("ALSOFT_DEFAULT_REVERB");
-    if((str && str[0]) || ConfigValueStr(nullptr, nullptr, "default-reverb", &str))
-        LoadReverbPreset(str, &DefaultEffect);
+    auto defrevopt = ConfigValueStr(nullptr, nullptr, "default-reverb");
+    if((str=getenv("ALSOFT_DEFAULT_REVERB")) && str[0])
+        defrevopt = al::optional<std::string>{al::in_place, str};
+    if(defrevopt) LoadReverbPreset(defrevopt->c_str(), &DefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
 
@@ -1919,9 +1926,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->HrtfStatus = ALC_HRTF_DISABLED_SOFT;
     if(device->Type != Loopback)
     {
-        const char *hrtf;
-        if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf", &hrtf))
+        if(auto hrtfopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf"))
         {
+            const char *hrtf{hrtfopt->c_str()};
             if(strcasecmp(hrtf, "true") == 0)
                 hrtf_userreq = Hrtf_Enable;
             else if(strcasecmp(hrtf, "false") == 0)
@@ -3743,8 +3750,7 @@ START_API_FUNC
     }
 
     deviceName = device->DeviceName.c_str();
-    const ALCchar *fmt{};
-    if(ConfigValueStr(deviceName, nullptr, "channels", &fmt))
+    if(auto chanopt = ConfigValueStr(deviceName, nullptr, "channels"))
     {
         static constexpr struct ChannelMap {
             const char name[16];
@@ -3763,6 +3769,7 @@ START_API_FUNC
             { "ambi3", DevFmtAmbi3D, 3 },
         };
 
+        const ALCchar *fmt{chanopt->c_str()};
         auto iter = std::find_if(std::begin(chanlist), std::end(chanlist),
             [fmt](const ChannelMap &entry) -> bool
             { return strcasecmp(entry.name, fmt) == 0; }
@@ -3776,7 +3783,7 @@ START_API_FUNC
             device->Flags.set<ChannelsRequest>();
         }
     }
-    if(ConfigValueStr(deviceName, nullptr, "sample-type", &fmt))
+    if(auto typeopt = ConfigValueStr(deviceName, nullptr, "sample-type"))
     {
         static constexpr struct TypeMap {
             const char name[16];
@@ -3791,6 +3798,7 @@ START_API_FUNC
             { "float32", DevFmtFloat  },
         };
 
+        const ALCchar *fmt{typeopt->c_str()};
         auto iter = std::find_if(std::begin(typelist), std::end(typelist),
             [fmt](const TypeMap &entry) -> bool
             { return strcasecmp(entry.name, fmt) == 0; }
@@ -3842,8 +3850,9 @@ START_API_FUNC
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    if(ConfigValueStr(deviceName, nullptr, "ambi-format", &fmt))
+    if(auto ambiopt = ConfigValueStr(deviceName, nullptr, "ambi-format"))
     {
+        const ALCchar *fmt{ambiopt->c_str()};
         if(strcasecmp(fmt, "fuma") == 0)
         {
             if(device->mAmbiOrder > 3)

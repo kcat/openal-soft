@@ -207,11 +207,6 @@ ALSA_FUNCS(MAKE_FUNC);
 struct DevMap {
     std::string name;
     std::string device_name;
-
-    template<typename StrT0, typename StrT1>
-    DevMap(StrT0&& name_, StrT1&& devname_)
-      : name{std::forward<StrT0>(name_)}, device_name{std::forward<StrT1>(devname_)}
-    { }
 };
 
 al::vector<DevMap> PlaybackDevices;
@@ -233,10 +228,9 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
     snd_pcm_info_t *pcminfo;
     snd_pcm_info_malloc(&pcminfo);
 
-    devlist.emplace_back(alsaDevice,
+    devlist.emplace_back(DevMap{alsaDevice,
         GetConfigValue(nullptr, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ? "device" : "capture",
-            "default")
-    );
+            "default")});
 
     if(stream == SND_PCM_STREAM_PLAYBACK)
     {
@@ -254,15 +248,15 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             }
 
             const char *oldsep{sep++};
-            devlist.emplace_back(std::string(customdevs, oldsep),
-                next ? std::string(sep, next++) : std::string(sep));
+            devlist.emplace_back(DevMap{std::string(customdevs, oldsep),
+                next ? std::string(sep, next++) : std::string(sep)});
             const auto &entry = devlist.back();
             TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
         }
     }
 
-    const char *main_prefix{"plughw:"};
-    ConfigValueStr(nullptr, "alsa", prefix_name(stream), &main_prefix);
+    const std::string main_prefix{
+        ConfigValueStr(nullptr, "alsa", prefix_name(stream)).value_or("plughw:")};
 
     int card{-1};
     int err{snd_card_next(&card)};
@@ -288,9 +282,8 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         name = prefix_name(stream);
         name += '-';
         name += cardid;
-
-        const char *card_prefix{main_prefix};
-        ConfigValueStr(nullptr, "alsa", name.c_str(), &card_prefix);
+        const std::string card_prefix{
+            ConfigValueStr(nullptr, "alsa", name.c_str()).value_or(main_prefix)};
 
         int dev{-1};
         while(1)
@@ -315,8 +308,8 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             name += cardid;
             name += '-';
             name += std::to_string(dev);
-            const char *device_prefix{card_prefix};
-            ConfigValueStr(nullptr, "alsa", name.c_str(), &device_prefix);
+            const std::string device_prefix{
+                ConfigValueStr(nullptr, "alsa", name.c_str()).value_or(card_prefix)};
 
             /* "CardName, PcmName (CARD=cardid,DEV=dev)" */
             name = cardname;
@@ -335,7 +328,7 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             device += ",DEV=";
             device += std::to_string(dev);
             
-            devlist.emplace_back(std::move(name), std::move(device));
+            devlist.emplace_back(DevMap{std::move(name), std::move(device)});
             const auto &entry = devlist.back();
             TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
         }

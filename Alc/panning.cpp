@@ -382,13 +382,13 @@ void InitPanning(ALCdevice *device)
         );
         device->Dry.NumChannels = static_cast<ALuint>(count);
 
-        ALfloat nfc_delay{0.0f};
-        if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
+        ALfloat nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
+        if(nfc_delay > 0.0f)
         {
             static constexpr ALuint chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
-            InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
-                device->mAmbiOrder, chans_per_order);
+            InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
+                chans_per_order);
         }
 
         device->RealOut.NumChannels = 0;

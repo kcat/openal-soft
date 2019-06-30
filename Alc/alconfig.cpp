@@ -517,23 +517,22 @@ al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *bloc
         static_cast<unsigned int>(std::strtoul(val, nullptr, 0))};
 }
 
-int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret)
+al::optional<float> ConfigValueFloat(const char *devName, const char *blockName, const char *keyName)
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return 0;
+    if(!val[0]) return al::nullopt;
 
-    *ret = std::strtof(val, nullptr);
-    return 1;
+    return al::optional<float>{al::in_place, std::strtof(val, nullptr)};
 }
 
-int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret)
+al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, const char *keyName)
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return 0;
+    if(!val[0]) return al::nullopt;
 
-    *ret = (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
-            strcasecmp(val, "on") == 0 || atoi(val) != 0);
-    return 1;
+    return al::optional<bool>{al::in_place,
+        strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
+        strcasecmp(val, "on") == 0 || atoi(val) != 0};
 }
 
 int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)

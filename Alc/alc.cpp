@@ -1091,9 +1091,11 @@ void alc_initconfig(void)
         TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", TrapALCError);
     }
 
-    float valf{};
-    if(ConfigValueFloat(nullptr, "reverb", "boost", &valf))
+    if(auto boostopt = ConfigValueFloat(nullptr, "reverb", "boost"))
+    {
+        const float valf{std::isfinite(*boostopt) ? clampf(*boostopt, -24.0f, 24.0f) : 0.0f};
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
+    }
 
     auto devopt = ConfigValueStr(nullptr, nullptr, "drivers");
     if(const char *devs{getenv("ALSOFT_DRIVERS")})
@@ -1675,7 +1677,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALboolean update_failed;
     ALCsizei hrtf_id = -1;
     ALCuint oldFreq;
-    int val;
 
     if((!attrList || !attrList[0]) && device->Type == Loopback)
     {
@@ -2116,8 +2117,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
               device->DitherDepth);
 
     device->LimiterState = gainLimiter;
-    if(ConfigValueBool(device->DeviceName.c_str(), nullptr, "output-limiter", &val))
-        gainLimiter = val ? ALC_TRUE : ALC_FALSE;
+    if(auto limopt = ConfigValueBool(device->DeviceName.c_str(), nullptr, "output-limiter"))
+        gainLimiter = *limopt ? ALC_TRUE : ALC_FALSE;
 
     /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
      * ALC_FALSE. For ALC_DONT_CARE_SOFT, use the limiter for integer-based
@@ -3487,14 +3488,14 @@ START_API_FUNC
 
     InitContext(context.get());
 
-    ALfloat valf{};
-    if(ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust", &valf))
+    if(auto volopt = ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust"))
     {
+        const ALfloat valf{*volopt};
         if(!std::isfinite(valf))
             ERR("volume-adjust must be finite: %f\n", valf);
         else
         {
-            ALfloat db = clampf(valf, -24.0f, 24.0f);
+            const ALfloat db{clampf(valf, -24.0f, 24.0f)};
             if(db != valf)
                 WARN("volume-adjust clamped: %f, range: +/-%f\n", valf, 24.0f);
             context->GainBoost = std::pow(10.0f, db/20.0f);

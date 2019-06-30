@@ -1337,7 +1337,8 @@ ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
     return 0;
 }
 
-static ALboolean DecomposeDevFormat(ALenum format, DevFmtChannels *chans, DevFmtType *type)
+struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
+static al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
 {
     static const struct {
         ALenum format;
@@ -1372,14 +1373,10 @@ static ALboolean DecomposeDevFormat(ALenum format, DevFmtChannels *chans, DevFmt
     for(const auto &item : list)
     {
         if(item.format == format)
-        {
-            *chans = item.channels;
-            *type  = item.type;
-            return AL_TRUE;
-        }
+            return al::optional<DevFmtPair>{al::in_place, DevFmtPair{item.channels, item.type}};
     }
 
-    return AL_FALSE;
+    return al::nullopt;
 }
 
 static ALCboolean IsValidALCType(ALCenum type)
@@ -3975,12 +3972,16 @@ START_API_FUNC
 
     DeviceRef device{new ALCdevice{Capture}};
 
-    device->Frequency = frequency;
-    if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
+    auto decompfmt = DecomposeDevFormat(format);
+    if(!decompfmt)
     {
         alcSetError(nullptr, ALC_INVALID_ENUM);
         return nullptr;
     }
+
+    device->Frequency = frequency;
+    device->FmtChans = decompfmt->chans;
+    device->FmtType = decompfmt->type;
     device->Flags.set<FrequencyRequest, ChannelsRequest, SampleTypeRequest>();
 
     device->UpdateSize = samples;

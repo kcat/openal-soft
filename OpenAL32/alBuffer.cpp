@@ -40,6 +40,7 @@
 #include "alBuffer.h"
 #include "sample_cvt.h"
 #include "alexcpt.h"
+#include "aloptional.h"
 
 
 namespace {
@@ -332,8 +333,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     ALBuf->LoopEnd = ALBuf->SampleLen;
 }
 
-using DecompResult = std::tuple<bool, UserFmtChannels, UserFmtType>;
-DecompResult DecomposeUserFormat(ALenum format)
+struct DecompResult { UserFmtChannels channels; UserFmtType type; };
+al::optional<DecompResult> DecomposeUserFormat(ALenum format)
 {
     struct FormatMap {
         ALenum format;
@@ -398,18 +399,12 @@ DecompResult DecomposeUserFormat(ALenum format)
         { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
     }};
 
-    DecompResult ret{};
     for(const auto &fmt : UserFmtList)
     {
         if(fmt.format == format)
-        {
-            std::get<0>(ret) = true;
-            std::get<1>(ret) = fmt.channels;
-            std::get<2>(ret) = fmt.type;
-            break;
-        }
+            return al::optional<DecompResult>{al::in_place, DecompResult{fmt.channels, fmt.type}};
     }
-    return ret;
+    return al::nullopt;
 }
 
 } // namespace
@@ -551,15 +546,11 @@ START_API_FUNC
                    "Declaring persistently mapped storage without read or write access");
     else
     {
-        UserFmtType srctype{UserFmtUByte};
-        UserFmtChannels srcchannels{UserFmtMono};
-        bool success;
-
-        std::tie(success, srcchannels, srctype) = DecomposeUserFormat(format);
-        if(UNLIKELY(!success))
+        auto usrfmt = DecomposeUserFormat(format);
+        if(UNLIKELY(!usrfmt))
             alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
-            LoadData(context.get(), albuf, freq, size, srcchannels, srctype,
+            LoadData(context.get(), albuf, freq, size, usrfmt->channels, usrfmt->type,
                 static_cast<const al::byte*>(data), flags);
     }
 }
@@ -688,23 +679,19 @@ START_API_FUNC
         return;
     }
 
-    UserFmtType srctype{UserFmtUByte};
-    UserFmtChannels srcchannels{UserFmtMono};
-    bool success;
-    std::tie(success, srcchannels, srctype) = DecomposeUserFormat(format);
-    if(UNLIKELY(!success))
+    auto usrfmt = DecomposeUserFormat(format);
+    if(UNLIKELY(!usrfmt))
     {
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         return;
     }
 
     ALsizei unpack_align{albuf->UnpackAlign.load()};
-    ALsizei align{SanitizeAlignment(srctype, unpack_align)};
+    ALsizei align{SanitizeAlignment(usrfmt->type, unpack_align)};
     if(UNLIKELY(align < 1))
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
-    else if (UNLIKELY(static_cast<long>(srcchannels) !=
-                          static_cast<long>(albuf->mFmtChannels) ||
-                      srctype != albuf->OriginalType))
+    else if(UNLIKELY(long{usrfmt->channels} != long{albuf->mFmtChannels} ||
+                     usrfmt->type != albuf->OriginalType))
         alSetError(context.get(), AL_INVALID_ENUM,
                    "Unpacking data with mismatched format");
     else if(UNLIKELY(align != albuf->OriginalAlign))
@@ -743,15 +730,15 @@ START_API_FUNC
             length = length/byte_align * align;
 
             void *dst = albuf->mData.data() + offset;
-            if(srctype == UserFmtIMA4 && albuf->mFmtType == FmtShort)
+            if(usrfmt->type == UserFmtIMA4 && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
                     static_cast<const al::byte*>(data), num_chans, length, align);
-            else if(srctype == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
+            else if(usrfmt->type == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
                     static_cast<const al::byte*>(data), num_chans, length, align);
             else
             {
-                assert(static_cast<long>(srctype) == static_cast<long>(albuf->mFmtType));
+                assert(long{usrfmt->type} == static_cast<long>(albuf->mFmtType));
                 memcpy(dst, data, length * frame_size);
             }
         }

@@ -106,9 +106,11 @@ IF(NOT LIBTYPE)
 ENDIF()
 
 SET(LIB_MAJOR_VERSION "1")
-SET(LIB_MINOR_VERSION "19")
+SET(LIB_MINOR_VERSIONA "1")
+SET(LIB_MINOR_VERSIONB "9")
 SET(LIB_REVISION "1")
-SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
+SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSIONA}${LIB_MINOR_VERSIONB}.${LIB_REVISION}")
+SET(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSIONA},${LIB_MINOR_VERSIONB},${LIB_REVISION})
 
 SET(EXPORT_DECL "")
 
@@ -1130,6 +1132,7 @@ IF(GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
     ADD_CUSTOM_TARGET(build_version
         ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
                          -D LIB_VERSION=${LIB_VERSION}
+                         -D LIB_VERSION_NUM=${LIB_VERSION_NUM}
                          -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
                          -D DST=${OpenAL_BINARY_DIR}/version.h
                          -P ${OpenAL_SOURCE_DIR}/version.cmake
@@ -1282,8 +1285,10 @@ ELSE()
         ENDIF()
     ENDIF()
 
+    SET(RC_CONFIG resources/openal32.rc)
     IF(WIN32 AND ALSOFT_BUILD_ROUTER)
         ADD_LIBRARY(OpenAL SHARED
+            resources/router.rc
             router/router.cpp
             router/router.h
             router/alc.cpp
@@ -1311,9 +1316,10 @@ ELSE()
 
         SET(LIBNAME "soft_oal")
         SET(IMPL_TARGET soft_oal)
+        SET(RC_CONFIG resources/soft_oal.rc)
     ENDIF()
 
-    ADD_LIBRARY(${IMPL_TARGET} SHARED ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
+    ADD_LIBRARY(${IMPL_TARGET} SHARED ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG})
     IF(WIN32)
         SET_TARGET_PROPERTIES(${IMPL_TARGET} PROPERTIES PREFIX "")
     ENDIF()

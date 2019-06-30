@@ -182,8 +182,8 @@ public:
 
     operator bool() const noexcept { return mCtx != nullptr; }
 
-    ALCcontext* operator->() noexcept { return mCtx; }
-    ALCcontext* get() noexcept { return mCtx; }
+    ALCcontext* operator->() const noexcept { return mCtx; }
+    ALCcontext* get() const noexcept { return mCtx; }
 
     ALCcontext* release() noexcept
     {
@@ -192,6 +192,13 @@ public:
         return ret;
     }
 };
+
+inline bool operator==(const ContextRef &lhs, const ALCcontext *rhs) noexcept
+{ return lhs.get() == rhs; }
+inline bool operator!=(const ContextRef &lhs, const ALCcontext *rhs) noexcept
+{ return !(lhs == rhs); }
+inline bool operator<(const ContextRef &lhs, const ALCcontext *rhs) noexcept
+{ return lhs.get() < rhs; }
 
 ContextRef GetContextRef(void);
 

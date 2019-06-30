@@ -885,11 +885,73 @@ constexpr ALCint alcEFXMinorVersion = 0;
 al::FlexArray<ALCcontext*> EmptyContextArray{0u};
 
 
+void ALCdevice_IncRef(ALCdevice *device)
+{
+    auto ref = IncrementRef(&device->ref);
+    TRACEREF("ALCdevice %p increasing refcount to %u\n", device, ref);
+}
+
+void ALCdevice_DecRef(ALCdevice *device)
+{
+    auto ref = DecrementRef(&device->ref);
+    TRACEREF("ALCdevice %p decreasing refcount to %u\n", device, ref);
+    if(UNLIKELY(ref == 0)) delete device;
+}
+
+/* Simple RAII device reference. Takes the reference of the provided ALCdevice,
+ * and decrements it when leaving scope. Movable (transfer reference) but not
+ * copyable (no new references).
+ */
+class DeviceRef {
+    ALCdevice *mDev{nullptr};
+
+    void reset() noexcept
+    {
+        if(mDev)
+            ALCdevice_DecRef(mDev);
+        mDev = nullptr;
+    }
+
+public:
+    DeviceRef() noexcept = default;
+    DeviceRef(DeviceRef&& rhs) noexcept : mDev{rhs.mDev}
+    { rhs.mDev = nullptr; }
+    explicit DeviceRef(ALCdevice *dev) noexcept : mDev(dev) { }
+    ~DeviceRef() { reset(); }
+
+    DeviceRef& operator=(const DeviceRef&) = delete;
+    DeviceRef& operator=(DeviceRef&& rhs) noexcept
+    {
+        std::swap(mDev, rhs.mDev);
+        return *this;
+    }
+
+    operator bool() const noexcept { return mDev != nullptr; }
+
+    ALCdevice* operator->() const noexcept { return mDev; }
+    ALCdevice* get() const noexcept { return mDev; }
+
+    ALCdevice* release() noexcept
+    {
+        ALCdevice *ret{mDev};
+        mDev = nullptr;
+        return ret;
+    }
+};
+
+inline bool operator==(const DeviceRef &lhs, const ALCdevice *rhs) noexcept
+{ return lhs.get() == rhs; }
+inline bool operator!=(const DeviceRef &lhs, const ALCdevice *rhs) noexcept
+{ return !(lhs == rhs); }
+inline bool operator<(const DeviceRef &lhs, const ALCdevice *rhs) noexcept
+{ return lhs.get() < rhs; }
+
+
 /************************************************
  * Device lists
  ************************************************/
-al::vector<ALCdevice*> DeviceList;
-al::vector<ALCcontext*> ContextList;
+al::vector<DeviceRef> DeviceList;
+al::vector<ContextRef> ContextList;
 
 std::recursive_mutex ListLock;
 
@@ -2311,63 +2373,6 @@ ALCdevice::~ALCdevice()
 }
 
 
-static void ALCdevice_IncRef(ALCdevice *device)
-{
-    auto ref = IncrementRef(&device->ref);
-    TRACEREF("ALCdevice %p increasing refcount to %u\n", device, ref);
-}
-
-static void ALCdevice_DecRef(ALCdevice *device)
-{
-    auto ref = DecrementRef(&device->ref);
-    TRACEREF("ALCdevice %p decreasing refcount to %u\n", device, ref);
-    if(UNLIKELY(ref == 0)) delete device;
-}
-
-/* Simple RAII device reference. Takes the reference of the provided ALCdevice,
- * and decrements it when leaving scope. Movable (transfer reference) but not
- * copyable (no new references).
- */
-class DeviceRef {
-    ALCdevice *mDev{nullptr};
-
-    void reset() noexcept
-    {
-        if(mDev)
-            ALCdevice_DecRef(mDev);
-        mDev = nullptr;
-    }
-
-public:
-    DeviceRef() noexcept = default;
-    DeviceRef(DeviceRef&& rhs) noexcept : mDev{rhs.mDev}
-    { rhs.mDev = nullptr; }
-    explicit DeviceRef(ALCdevice *dev) noexcept : mDev(dev) { }
-    ~DeviceRef() { reset(); }
-
-    DeviceRef& operator=(const DeviceRef&) = delete;
-    DeviceRef& operator=(DeviceRef&& rhs) noexcept
-    {
-        reset();
-        mDev = rhs.mDev;
-        rhs.mDev = nullptr;
-        return *this;
-    }
-
-    operator bool() const noexcept { return mDev != nullptr; }
-
-    ALCdevice* operator->() noexcept { return mDev; }
-    ALCdevice* get() noexcept { return mDev; }
-
-    ALCdevice* release() noexcept
-    {
-        ALCdevice *ret{mDev};
-        mDev = nullptr;
-        return ret;
-    }
-};
-
-
 /* VerifyDevice
  *
  * Checks if the device handle is valid, and returns a new reference if so.
@@ -2378,8 +2383,8 @@ static DeviceRef VerifyDevice(ALCdevice *device)
     auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
     if(iter != DeviceList.cend() && *iter == device)
     {
-        ALCdevice_IncRef(*iter);
-        return DeviceRef{*iter};
+        ALCdevice_IncRef(iter->get());
+        return DeviceRef{iter->get()};
     }
     return DeviceRef{};
 }
@@ -2609,7 +2614,6 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 
     StopEventThrd(context);
 
-    ALCcontext_DecRef(context);
     return ret;
 }
 
@@ -2636,8 +2640,8 @@ static ContextRef VerifyContext(ALCcontext *context)
     auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
     if(iter != ContextList.cend() && *iter == context)
     {
-        ALCcontext_IncRef(*iter);
-        return ContextRef{*iter};
+        ALCcontext_IncRef(iter->get());
+        return ContextRef{iter->get()};
     }
     return ContextRef{};
 }
@@ -3525,8 +3529,8 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
-        ContextList.insert(iter, context.get());
         ALCcontext_IncRef(context.get());
+        ContextList.insert(iter, ContextRef{context.get()});
     }
 
     if(context->DefaultSlot)
@@ -3550,8 +3554,8 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 START_API_FUNC
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-    auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
-    if(iter == ContextList.cend() || *iter != context)
+    auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
+    if(iter == ContextList.end() || *iter != context)
     {
         listlock.unlock();
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
@@ -3560,20 +3564,17 @@ START_API_FUNC
     /* Hold an extra reference to this context so it remains valid until the
      * ListLock is released.
      */
-    ALCcontext_IncRef(*iter);
-    ContextRef ctx{*iter};
+    ContextRef ctx{std::move(*iter)};
     ContextList.erase(iter);
 
-    if(ALCdevice *Device{ctx->Device})
+    ALCdevice *Device{ctx->Device};
+
+    std::lock_guard<std::mutex> _{Device->StateLock};
+    if(!ReleaseContext(ctx.get(), Device) && Device->Flags.get<DeviceRunning>())
     {
-        std::lock_guard<std::mutex> _{Device->StateLock};
-        if(!ReleaseContext(ctx.get(), Device) && Device->Flags.get<DeviceRunning>())
-        {
-            Device->Backend->stop();
-            Device->Flags.unset<DeviceRunning>();
-        }
+        Device->Backend->stop();
+        Device->Flags.unset<DeviceRunning>();
     }
-    listlock.unlock();
 }
 END_API_FUNC
 
@@ -3875,8 +3876,8 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        DeviceList.insert(iter, device.get());
         ALCdevice_IncRef(device.get());
+        DeviceList.insert(iter, DeviceRef{device.get()});
     }
 
     TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
@@ -3892,43 +3893,47 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 START_API_FUNC
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-    auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
-    if(iter == DeviceList.cend() || *iter != device)
+    auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
+    if(iter == DeviceList.end() || *iter != device)
     {
         alcSetError(nullptr, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     if((*iter)->Type == Capture)
     {
-        alcSetError(*iter, ALC_INVALID_DEVICE);
+        alcSetError(iter->get(), ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
-    std::unique_lock<std::mutex> statelock{device->StateLock};
 
     /* Erase the device, and any remaining contexts left on it, from their
      * respective lists.
      */
+    DeviceRef dev{std::move(*iter)};
     DeviceList.erase(iter);
-    for(ALCcontext *ctx : *device->mContexts.load())
+
+    std::unique_lock<std::mutex> statelock{dev->StateLock};
+    al::vector<ContextRef> orphanctxs;
+    for(ALCcontext *ctx : *dev->mContexts.load())
     {
-        auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), ctx);
-        if(iter != ContextList.cend() && *iter == ctx)
+        auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);
+        if(iter != ContextList.end() && *iter == ctx)
+        {
+            orphanctxs.emplace_back(std::move(*iter));
             ContextList.erase(iter);
+        }
     }
     listlock.unlock();
 
-    al::FlexArray<ALCcontext*> *contexts;
-    while(!(contexts=device->mContexts.load(std::memory_order_relaxed))->empty())
+    for(ContextRef &context : orphanctxs)
     {
-        WARN("Releasing context %p\n", contexts->front());
-        ReleaseContext(contexts->front(), device);
+        WARN("Releasing context %p\n", context.get());
+        ReleaseContext(context.get(), dev.get());
     }
-    if(device->Flags.get<DeviceRunning>())
-        device->Backend->stop();
-    device->Flags.unset<DeviceRunning>();
-    statelock.unlock();
+    orphanctxs.clear();
 
-    ALCdevice_DecRef(device);
+    if(dev->Flags.get<DeviceRunning>())
+        dev->Backend->stop();
+    dev->Flags.unset<DeviceRunning>();
 
     return ALC_TRUE;
 }
@@ -3993,8 +3998,8 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        DeviceList.insert(iter, device.get());
         ALCdevice_IncRef(device.get());
+        DeviceList.insert(iter, DeviceRef{device.get()});
     }
 
     TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
@@ -4006,28 +4011,26 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 START_API_FUNC
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-    auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
-    if(iter == DeviceList.cend() || *iter != device)
+    auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
+    if(iter == DeviceList.end() || *iter != device)
     {
         alcSetError(nullptr, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     if((*iter)->Type != Capture)
     {
-        alcSetError(*iter, ALC_INVALID_DEVICE);
+        alcSetError(iter->get(), ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
 
+    DeviceRef dev{std::move(*iter)};
     DeviceList.erase(iter);
     listlock.unlock();
 
-    { std::lock_guard<std::mutex> _{device->StateLock};
-        if(device->Flags.get<DeviceRunning>())
-            device->Backend->stop();
-        device->Flags.unset<DeviceRunning>();
-    }
-
-    ALCdevice_DecRef(device);
+    std::lock_guard<std::mutex> _{dev->StateLock};
+    if(dev->Flags.get<DeviceRunning>())
+        dev->Backend->stop();
+    dev->Flags.unset<DeviceRunning>();
 
     return ALC_TRUE;
 }
@@ -4162,8 +4165,8 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        DeviceList.insert(iter, device.get());
         ALCdevice_IncRef(device.get());
+        DeviceList.insert(iter, DeviceRef{device.get()});
     }
 
     TRACE("Created device %p\n", device.get());

@@ -26,20 +26,18 @@ public:
     optional(const optional &rhs) : mHasValue{rhs.mHasValue}
     {
         if(mHasValue)
-            new (std::addressof(mValue)) T{*rhs};
+            std::uninitialized_copy_n(std::addressof(*rhs), 1, std::addressof(mValue));
     }
     template<REQUIRES(std::is_move_constructible<T>::value)>
     optional(optional&& rhs) : mHasValue{rhs.mHasValue}
     {
         if(mHasValue)
-            new (std::addressof(mValue)) T{std::move(*rhs)};
+            al::uninitialized_move_n(std::addressof(*rhs), 1, std::addressof(mValue));
     }
     template<typename... Args>
     explicit optional(in_place_t, Args&& ...args)
       : mHasValue{true}, mValue{std::forward<Args>(args)...}
     { }
-    template<REQUIRES(!std::is_copy_constructible<T>::value)>
-    optional(const optional&) noexcept = delete;
     ~optional() { reset(); }
 
     optional& operator=(nullopt_t) noexcept { reset(); return *this; }
@@ -52,7 +50,7 @@ public:
             mValue = *rhs;
         else
         {
-            new (std::addressof(mValue)) T{*rhs};
+            std::uninitialized_copy_n(std::addressof(*rhs), 1, std::addressof(mValue));
             mHasValue = true;
         }
         return *this;
@@ -66,13 +64,11 @@ public:
             mValue = std::move(*rhs);
         else
         {
-            new (std::addressof(mValue)) T{std::move(*rhs)};
+            al::uninitialized_move_n(std::addressof(*rhs), 1, std::addressof(mValue));
             mHasValue = true;
         }
         return *this;
     }
-    template<REQUIRES(!std::is_copy_constructible<T>::value || !std::is_copy_assignable<T>::value)>
-    optional& operator=(const optional&) = delete;
 
     const T* operator->() const { return std::addressof(mValue); }
     T* operator->() { return std::addressof(mValue); }

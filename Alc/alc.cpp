@@ -3723,7 +3723,6 @@ START_API_FUNC
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->UpdateSize = DEFAULT_UPDATE_SIZE;
     device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
-    device->LimiterState = ALC_TRUE;
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;

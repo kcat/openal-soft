@@ -40,7 +40,7 @@ public:
     optional(const optional&) noexcept = delete;
     ~optional() { reset(); }
 
-    optional& operator=(nullopt_t) noexcept { reset(); }
+    optional& operator=(nullopt_t) noexcept { reset(); return *this; }
     template<REQUIRES(std::is_copy_constructible<T>::value && std::is_copy_assignable<T>::value)>
     optional& operator=(const optional &rhs)
     {

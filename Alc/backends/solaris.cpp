@@ -52,7 +52,7 @@ namespace {
 
 constexpr ALCchar solaris_device[] = "Solaris Default";
 
-const char *solaris_driver = "/dev/audio";
+std::string solaris_driver{"/dev/audio"};
 
 
 struct SolarisBackend final : public BackendBase {
@@ -149,10 +149,10 @@ ALCenum SolarisBackend::open(const ALCchar *name)
     else if(strcmp(name, solaris_device) != 0)
         return ALC_INVALID_VALUE;
 
-    mFd = ::open(solaris_driver, O_WRONLY);
+    mFd = ::open(solaris_driver.c_str(), O_WRONLY);
     if(mFd == -1)
     {
-        ERR("Could not open %s: %s\n", solaris_driver, strerror(errno));
+        ERR("Could not open %s: %s\n", solaris_driver.c_str(), strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
@@ -267,7 +267,8 @@ BackendFactory &SolarisBackendFactory::getFactory()
 
 bool SolarisBackendFactory::init()
 {
-    ConfigValueStr(nullptr, "solaris", "device", &solaris_driver);
+    if(auto devopt = ConfigValueStr(nullptr, "solaris", "device"))
+        solaris_driver = std::move(*devopt);
     return true;
 }
 
@@ -282,7 +283,7 @@ void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
         {
 #ifdef HAVE_STAT
             struct stat buf;
-            if(stat(solaris_driver, &buf) == 0)
+            if(stat(solaris_driver.c_str(), &buf) == 0)
 #endif
                 outnames->append(solaris_device, sizeof(solaris_device));
         }

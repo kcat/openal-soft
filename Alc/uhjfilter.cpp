@@ -75,7 +75,7 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, Fl
         ASSUME(todo > 0);
 
         /* D = 0.6554516*Y */
-        std::transform(yinput+base, yinput+todo, std::begin(temp),
+        std::transform(yinput, yinput+todo, std::begin(temp),
             [](const float y) noexcept -> float { return 0.6554516f*y; });
         allpass_process(&mFilter1_Y[0], temp, temp, Filter1CoeffSqr[0], todo);
         allpass_process(&mFilter1_Y[1], temp, temp, Filter1CoeffSqr[1], todo);

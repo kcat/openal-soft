@@ -124,7 +124,7 @@ enum Channel {
 
 
 /* Device formats */
-enum DevFmtType {
+enum DevFmtType : ALenum {
     DevFmtByte   = ALC_BYTE_SOFT,
     DevFmtUByte  = ALC_UNSIGNED_BYTE_SOFT,
     DevFmtShort  = ALC_SHORT_SOFT,
@@ -135,7 +135,7 @@ enum DevFmtType {
 
     DevFmtTypeDefault = DevFmtFloat
 };
-enum DevFmtChannels {
+enum DevFmtChannels : ALenum {
     DevFmtMono   = ALC_MONO_SOFT,
     DevFmtStereo = ALC_STEREO_SOFT,
     DevFmtQuad   = ALC_QUAD_SOFT,
@@ -145,7 +145,7 @@ enum DevFmtChannels {
     DevFmtAmbi3D = ALC_BFORMAT3D_SOFT,
 
     /* Similar to 5.1, except using rear channels instead of sides */
-    DevFmtX51Rear = 0x80000000,
+    DevFmtX51Rear = 0x70000000,
 
     DevFmtChannelsDefault = DevFmtStereo
 };

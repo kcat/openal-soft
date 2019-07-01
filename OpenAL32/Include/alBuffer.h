@@ -12,7 +12,7 @@
 
 
 /* User formats */
-enum UserFmtType {
+enum UserFmtType : unsigned char {
     UserFmtUByte,
     UserFmtShort,
     UserFmtFloat,
@@ -22,7 +22,7 @@ enum UserFmtType {
     UserFmtIMA4,
     UserFmtMSADPCM,
 };
-enum UserFmtChannels {
+enum UserFmtChannels : unsigned char {
     UserFmtMono,
     UserFmtStereo,
     UserFmtRear,
@@ -41,7 +41,7 @@ inline ALsizei FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type)
 
 
 /* Storable formats */
-enum FmtType {
+enum FmtType : unsigned char {
     FmtUByte  = UserFmtUByte,
     FmtShort  = UserFmtShort,
     FmtFloat  = UserFmtFloat,
@@ -49,7 +49,7 @@ enum FmtType {
     FmtMulaw  = UserFmtMulaw,
     FmtAlaw   = UserFmtAlaw,
 };
-enum FmtChannels {
+enum FmtChannels : unsigned char {
     FmtMono   = UserFmtMono,
     FmtStereo = UserFmtStereo,
     FmtRear   = UserFmtRear,

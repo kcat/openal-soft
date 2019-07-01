@@ -80,17 +80,12 @@
 namespace {
 
 constexpr char DefaultName[] = "OSS Default";
-const char *DefaultPlayback{"/dev/dsp"};
-const char *DefaultCapture{"/dev/dsp"};
+std::string DefaultPlayback{"/dev/dsp"};
+std::string DefaultCapture{"/dev/dsp"};
 
 struct DevMap {
     std::string name;
     std::string device_name;
-
-    template<typename StrT0, typename StrT1>
-    DevMap(StrT0&& name_, StrT1&& devname_)
-      : name{std::forward<StrT0>(name_)}, device_name{std::forward<StrT1>(devname_)}
-    { }
 };
 
 bool checkName(const al::vector<DevMap> &list, const std::string &name)
@@ -111,7 +106,7 @@ al::vector<DevMap> CaptureDevices;
 #define DSP_CAP_INPUT 0x00010000
 void ALCossListPopulate(al::vector<DevMap> *devlist, int type)
 {
-    devlist->emplace_back(DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
+    devlist->emplace_back(DevMap{DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback});
 }
 
 #else
@@ -156,7 +151,7 @@ void ALCossListAppend(al::vector<DevMap> *list, const char *handle, size_t hlen,
         newname += std::to_string(++count);
     }
 
-    list->emplace_back(std::move(newname), std::move(devname));
+    list->emplace_back(DevMap{std::move(newname), std::move(devname)});
     const DevMap &entry = list->back();
 
     TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
@@ -212,7 +207,7 @@ done:
         close(fd);
     fd = -1;
 
-    const char *defdev{(type_flag==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback};
+    const char *defdev{((type_flag==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback).c_str()};
     auto iter = std::find_if(devlist->cbegin(), devlist->cend(),
         [defdev](const DevMap &entry) -> bool
         { return entry.device_name == defdev; }
@@ -331,7 +326,7 @@ int OSSPlayback::mixerProc()
 
 ALCenum OSSPlayback::open(const ALCchar *name)
 {
-    const char *devname{DefaultPlayback};
+    const char *devname{DefaultPlayback.c_str()};
     if(!name)
         name = DefaultName;
     else
@@ -548,7 +543,7 @@ int OSScapture::recordProc()
 
 ALCenum OSScapture::open(const ALCchar *name)
 {
-    const char *devname{DefaultCapture};
+    const char *devname{DefaultCapture.c_str()};
     if(!name)
         name = DefaultName;
     else
@@ -700,8 +695,10 @@ BackendFactory &OSSBackendFactory::getFactory()
 
 bool OSSBackendFactory::init()
 {
-    ConfigValueStr(nullptr, "oss", "device", &DefaultPlayback);
-    ConfigValueStr(nullptr, "oss", "capture", &DefaultCapture);
+    if(auto devopt = ConfigValueStr(nullptr, "oss", "device"))
+        DefaultPlayback = std::move(*devopt);
+    if(auto capopt = ConfigValueStr(nullptr, "oss", "capture"))
+        DefaultCapture = std::move(*capopt);
 
     return true;
 }

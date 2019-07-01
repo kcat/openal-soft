@@ -142,16 +142,14 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
 
 void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
-    const ALsizei step{mStep};
-
     for(ALsizei base{0};base < samplesToDo;)
     {
         alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
         ALsizei td = mini(MAX_UPDATE_SAMPLES, samplesToDo-base);
         ALsizei c, i;
 
-        mGetSamples(modsamples, mIndex, step, td);
-        mIndex += (step*td) & WAVEFORM_FRACMASK;
+        mGetSamples(modsamples, mIndex, mStep, td);
+        mIndex += (mStep*td) & WAVEFORM_FRACMASK;
         mIndex &= WAVEFORM_FRACMASK;
 
         ASSUME(numInput > 0);

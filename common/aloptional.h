@@ -34,9 +34,25 @@ public:
         if(mHasValue)
             al::uninitialized_move_n(std::addressof(*rhs), 1, std::addressof(mValue));
     }
-    template<typename... Args>
-    explicit optional(in_place_t, Args&& ...args)
-      : mHasValue{true}, mValue{std::forward<Args>(args)...}
+    template<typename... Args, REQUIRES(std::is_constructible<T, Args...>::value)>
+    explicit optional(in_place_t, Args&& ...args) : mHasValue{true}
+      , mValue{std::forward<Args>(args)...}
+    { }
+    template<typename U, typename... Args, REQUIRES(std::is_constructible<T, std::initializer_list<U>&, Args...>::value)>
+    explicit optional(in_place_t, std::initializer_list<U> il, Args&& ...args)
+      : mHasValue{true}, mValue{il, std::forward<Args>(args)...}
+    { }
+    template<typename U=value_type, REQUIRES(std::is_constructible<T, U&&>::value &&
+        !std::is_same<typename std::decay<U>::type, in_place_t>::value &&
+        !std::is_same<typename std::decay<U>::type, optional<T>>::value &&
+        std::is_constructible<U&&, T>::value)>
+    constexpr explicit optional(U&& value) : mHasValue{true}, mValue{std::forward<U>(value)}
+    { }
+    template<typename U=value_type, REQUIRES(std::is_constructible<T, U&&>::value &&
+        !std::is_same<typename std::decay<U>::type, in_place_t>::value &&
+        !std::is_same<typename std::decay<U>::type, optional<T>>::value &&
+        !std::is_constructible<U&&, T>::value)>
+    constexpr optional(U&& value) : mHasValue{true}, mValue{std::forward<U>(value)}
     { }
     ~optional() { reset(); }
 
@@ -65,6 +81,22 @@ public:
         else
         {
             al::uninitialized_move_n(std::addressof(*rhs), 1, std::addressof(mValue));
+            mHasValue = true;
+        }
+        return *this;
+    }
+    template<typename U=T, REQUIRES(std::is_constructible<T, U>::value &&
+        std::is_assignable<T&, U>::value &&
+        !std::is_same<typename std::decay<U>::type, optional<T>>::value &&
+        (!std::is_same<typename std::decay<U>::type, T>::value ||
+        !std::is_scalar<U>::value))>
+    optional& operator=(U&& rhs)
+    {
+        if(*this)
+            mValue = std::forward<U>(rhs);
+        else
+        {
+            ::new (std::addressof(mValue)) T{std::forward<U>(rhs)};
             mHasValue = true;
         }
         return *this;

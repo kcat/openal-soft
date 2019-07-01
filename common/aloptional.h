@@ -3,6 +3,8 @@
 
 #include <type_traits>
 
+#include "almalloc.h"
+
 namespace al {
 
 #define REQUIRES(...) bool _rt=true, typename std::enable_if<_rt && (__VA_ARGS__),int>::type = 0
@@ -24,13 +26,13 @@ public:
     optional(const optional &rhs) : mHasValue{rhs.mHasValue}
     {
         if(mHasValue)
-            new (&mValue) T{*rhs};
+            new (std::addressof(mValue)) T{*rhs};
     }
     template<REQUIRES(std::is_move_constructible<T>::value)>
     optional(optional&& rhs) : mHasValue{rhs.mHasValue}
     {
         if(mHasValue)
-            new (&mValue) T{std::move(*rhs)};
+            new (std::addressof(mValue)) T{std::move(*rhs)};
     }
     template<typename... Args>
     explicit optional(in_place_t, Args&& ...args)
@@ -46,9 +48,11 @@ public:
     {
         if(!rhs)
             reset();
+        else if(*this)
+            mValue = *rhs;
         else
         {
-            mValue = *rhs;
+            new (std::addressof(mValue)) T{*rhs};
             mHasValue = true;
         }
         return *this;
@@ -58,9 +62,11 @@ public:
     {
         if(!rhs)
             reset();
+        else if(*this)
+            mValue = std::move(*rhs);
         else
         {
-            mValue = std::move(*rhs);
+            new (std::addressof(mValue)) T{std::move(*rhs)};
             mHasValue = true;
         }
         return *this;
@@ -68,8 +74,8 @@ public:
     template<REQUIRES(!std::is_copy_constructible<T>::value || !std::is_copy_assignable<T>::value)>
     optional& operator=(const optional&) = delete;
 
-    const T* operator->() const { return &mValue; }
-    T* operator->() { return &mValue; }
+    const T* operator->() const { return std::addressof(mValue); }
+    T* operator->() { return std::addressof(mValue); }
     const T& operator*() const& { return mValue; }
     T& operator*() & { return mValue; }
     const T&& operator*() const&& { return std::move(mValue); }
@@ -93,7 +99,7 @@ public:
     void reset() noexcept
     {
         if(mHasValue)
-            mValue.~T();
+            al::destroy_at(std::addressof(mValue));
         mHasValue = false;
     }
 

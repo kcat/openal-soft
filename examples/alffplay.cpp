@@ -1861,7 +1861,7 @@ int main(int argc, char *argv[])
             }
         }
         else if(strcmp(argv[fileidx], "-novideo") == 0)
-            DisableVideo = false;
+            DisableVideo = true;
         else
             break;
     }

@@ -102,6 +102,7 @@ const std::string AppName{"alffplay"};
 
 bool EnableDirectOut{false};
 bool EnableWideStereo{false};
+bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 
@@ -1572,7 +1573,7 @@ int MovieState::parse_handler()
     for(unsigned int i = 0;i < mFormatCtx->nb_streams;i++)
     {
         auto codecpar = mFormatCtx->streams[i]->codecpar;
-        if(codecpar->codec_type == AVMEDIA_TYPE_VIDEO && video_index < 0)
+        if(codecpar->codec_type == AVMEDIA_TYPE_VIDEO && !DisableVideo && video_index < 0)
             video_index = streamComponentOpen(i);
         else if(codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audio_index < 0)
             audio_index = streamComponentOpen(i);
@@ -1859,6 +1860,8 @@ int main(int argc, char *argv[])
                 EnableWideStereo = true;
             }
         }
+        else if(strcmp(argv[fileidx], "-novideo") == 0)
+            DisableVideo = false;
         else
             break;
     }

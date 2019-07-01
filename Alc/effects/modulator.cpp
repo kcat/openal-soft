@@ -121,7 +121,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
         mGetSamples = Modulate<Sin>;
     else if(props->Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
         mGetSamples = Modulate<Saw>;
-    else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
+    else /*if(props->Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         mGetSamples = Modulate<Square>;
 
     ALfloat f0norm{props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency)};

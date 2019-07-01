@@ -1101,7 +1101,7 @@ void alc_initconfig(void)
     if(const char *devs{getenv("ALSOFT_DRIVERS")})
     {
         if(devs[0])
-            devopt = al::optional<std::string>{al::in_place, devs};
+            devopt = devs;
     }
     if(devopt)
     {
@@ -1213,7 +1213,7 @@ void alc_initconfig(void)
     InitEffect(&DefaultEffect);
     auto defrevopt = ConfigValueStr(nullptr, nullptr, "default-reverb");
     if((str=getenv("ALSOFT_DEFAULT_REVERB")) && str[0])
-        defrevopt = al::optional<std::string>{al::in_place, str};
+        defrevopt = str;
     if(defrevopt) LoadReverbPreset(defrevopt->c_str(), &DefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
@@ -1373,7 +1373,7 @@ static al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     for(const auto &item : list)
     {
         if(item.format == format)
-            return al::optional<DevFmtPair>{al::in_place, DevFmtPair{item.channels, item.type}};
+            return al::optional<DevFmtPair>{{item.channels, item.type}};
     }
 
     return al::nullopt;

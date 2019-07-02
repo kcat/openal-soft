@@ -402,7 +402,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
     for(const auto &fmt : UserFmtList)
     {
         if(fmt.format == format)
-            return al::optional<DecompResult>{{fmt.channels, fmt.type}};
+            return al::make_optional(DecompResult{fmt.channels, fmt.type});
     }
     return al::nullopt;
 }

@@ -139,6 +139,18 @@ private:
     };
 };
 
+template<typename T>
+inline optional<typename std::decay<T>::type> make_optional(T&& arg)
+{ return optional<typename std::decay<T>::type>{in_place, std::forward<T>(arg)}; }
+
+template<typename T, typename... Args>
+inline optional<T> make_optional(Args&& ...args)
+{ return optional<T>{in_place, std::forward<Args>(args)...}; }
+
+template<typename T, typename U, typename... Args>
+inline optional<T> make_optional(std::initializer_list<U> il, Args&& ...args)
+{ return optional<T>{in_place, il, std::forward<Args>(args)...}; }
+
 #undef REQUIRES
 
 } // namespace al

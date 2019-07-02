@@ -1373,7 +1373,7 @@ static al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     for(const auto &item : list)
     {
         if(item.format == format)
-            return al::optional<DevFmtPair>{{item.channels, item.type}};
+            return al::make_optional(DevFmtPair{item.channels, item.type});
     }
 
     return al::nullopt;

@@ -1999,16 +1999,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     if(device->Frequency != oldFreq && device->Flags.get<FrequencyRequest>())
     {
-        ERR("Failed to set %uhz, got %uhz instead\n", oldFreq, device->Frequency);
+        WARN("Failed to set %uhz, got %uhz instead\n", oldFreq, device->Frequency);
         device->Flags.unset<FrequencyRequest>();
-    }
-
-    if((device->UpdateSize&3) != 0)
-    {
-        if((CPUCapFlags&CPU_CAP_SSE))
-            WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
-        if((CPUCapFlags&CPU_CAP_NEON))
-            WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
     TRACE("Post-reset: %s, %s, %uhz, %u / %u buffer\n",

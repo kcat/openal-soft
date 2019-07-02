@@ -17,23 +17,28 @@ constexpr in_place_t in_place{};
 
 template<typename T>
 class optional {
+    bool mHasValue{false};
+    union {
+        char mDummy[sizeof(T)]{};
+        T mValue;
+    };
+
+    template<typename... Args>
+    void DoConstruct(Args&& ...args)
+    {
+        ::new (std::addressof(mValue)) T{std::forward<Args>(args)...};
+        mHasValue = true;
+    }
+
 public:
     using value_type = T;
 
     optional() noexcept = default;
     optional(nullopt_t) noexcept { }
     template<REQUIRES(std::is_copy_constructible<T>::value)>
-    optional(const optional &rhs) : mHasValue{rhs.mHasValue}
-    {
-        if(mHasValue)
-            std::uninitialized_copy_n(std::addressof(*rhs), 1, std::addressof(mValue));
-    }
+    optional(const optional &rhs) { if(rhs) DoConstruct(*rhs); }
     template<REQUIRES(std::is_move_constructible<T>::value)>
-    optional(optional&& rhs) : mHasValue{rhs.mHasValue}
-    {
-        if(mHasValue)
-            al::uninitialized_move_n(std::addressof(*rhs), 1, std::addressof(mValue));
-    }
+    optional(optional&& rhs) { if(rhs) DoConstruct(std::move(*rhs)); }
     template<typename... Args, REQUIRES(std::is_constructible<T, Args...>::value)>
     explicit optional(in_place_t, Args&& ...args) : mHasValue{true}
       , mValue{std::forward<Args>(args)...}
@@ -65,10 +70,7 @@ public:
         else if(*this)
             mValue = *rhs;
         else
-        {
-            std::uninitialized_copy_n(std::addressof(*rhs), 1, std::addressof(mValue));
-            mHasValue = true;
-        }
+            DoConstruct(*rhs);
         return *this;
     }
     template<REQUIRES(std::is_move_constructible<T>::value && std::is_move_assignable<T>::value)>
@@ -79,10 +81,7 @@ public:
         else if(*this)
             mValue = std::move(*rhs);
         else
-        {
-            al::uninitialized_move_n(std::addressof(*rhs), 1, std::addressof(mValue));
-            mHasValue = true;
-        }
+            DoConstruct(std::move(*rhs));
         return *this;
     }
     template<typename U=T, REQUIRES(std::is_constructible<T, U>::value &&
@@ -95,10 +94,7 @@ public:
         if(*this)
             mValue = std::forward<U>(rhs);
         else
-        {
-            ::new (std::addressof(mValue)) T{std::forward<U>(rhs)};
-            mHasValue = true;
-        }
+            DoConstruct(std::forward<U>(rhs));
         return *this;
     }
 
@@ -130,13 +126,6 @@ public:
             al::destroy_at(std::addressof(mValue));
         mHasValue = false;
     }
-
-private:
-    bool mHasValue{false};
-    union {
-        char mDummy[sizeof(T)]{};
-        T mValue;
-    };
 };
 
 template<typename T>

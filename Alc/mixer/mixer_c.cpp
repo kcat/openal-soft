@@ -14,13 +14,13 @@
 
 namespace {
 
-inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei) noexcept
+inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei)
 { return vals[0]; }
-inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
+inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
+inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac)
 { return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
-inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALsizei frac) noexcept
+inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALsizei frac)
 {
     ASSUME(istate.bsinc.m > 0);
 

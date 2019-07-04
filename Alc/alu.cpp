@@ -147,7 +147,7 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
 {
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process(device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
+    ambidec->process({device->RealOut.Buffer, device->RealOut.NumChannels}, device->Dry.Buffer,
         SamplesToDo);
 }
 
@@ -168,7 +168,7 @@ void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process(device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
+    ambidec->process({device->RealOut.Buffer, device->RealOut.NumChannels}, device->Dry.Buffer,
         SamplesToDo);
 
     /* BS2B is stereo output only. */

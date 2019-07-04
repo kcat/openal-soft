@@ -62,7 +62,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
         const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, LFE)};
         if(idx != -1)
         {
-            mOutTarget = {target.RealOut->Buffer, target.RealOut->NumChannels};
+            mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;
         }
     }
@@ -73,7 +73,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
         const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, FrontCenter)};
         if(idx != -1)
         {
-            mOutTarget = {target.RealOut->Buffer, target.RealOut->NumChannels};
+            mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;
         }
         else

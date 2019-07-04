@@ -120,15 +120,9 @@ void AllocChannels(ALCdevice *device, const ALuint main_chans, const ALuint real
     device->Dry.Buffer = device->MixBuffer.data();
     device->Dry.NumChannels = main_chans;
     if(real_chans != 0)
-    {
-        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
-        device->RealOut.NumChannels = real_chans;
-    }
+        device->RealOut.Buffer = {device->Dry.Buffer+device->Dry.NumChannels, real_chans};
     else
-    {
-        device->RealOut.Buffer = device->Dry.Buffer;
-        device->RealOut.NumChannels = device->Dry.NumChannels;
-    }
+        device->RealOut.Buffer = {device->Dry.Buffer, device->Dry.NumChannels};
 }
 
 

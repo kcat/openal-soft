@@ -317,8 +317,7 @@ struct MixParams {
 struct RealMixParams {
     std::array<ALint,MaxChannels> ChannelIndex{};
 
-    FloatBufferLine *Buffer{nullptr};
-    ALuint NumChannels{0u};
+    al::span<FloatBufferLine> Buffer;
 };
 
 using POSTPROCESS = void(*)(ALCdevice *device, const ALsizei SamplesToDo);

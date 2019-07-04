@@ -147,8 +147,7 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
 {
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process({device->RealOut.Buffer, device->RealOut.NumChannels}, device->Dry.Buffer,
-        SamplesToDo);
+    ambidec->process(device->RealOut.Buffer, device->Dry.Buffer, SamplesToDo);
 }
 
 void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
@@ -168,8 +167,7 @@ void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process({device->RealOut.Buffer, device->RealOut.NumChannels}, device->Dry.Buffer,
-        SamplesToDo);
+    ambidec->process(device->RealOut.Buffer, device->Dry.Buffer, SamplesToDo);
 
     /* BS2B is stereo output only. */
     const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
@@ -666,7 +664,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.
          */
-        voice->mDirect.Buffer = {Device->RealOut.Buffer, Device->RealOut.NumChannels};
+        voice->mDirect.Buffer = Device->RealOut.Buffer;
 
         for(ALsizei c{0};c < num_channels;c++)
         {
@@ -695,7 +693,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
          */
-        voice->mDirect.Buffer = {Device->RealOut.Buffer, Device->RealOut.NumChannels};
+        voice->mDirect.Buffer = Device->RealOut.Buffer;
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -813,7 +811,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    if(Device->Dry.Buffer == Device->RealOut.Buffer)
+                    if(Device->Dry.Buffer == Device->RealOut.Buffer.data())
                     {
                         int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
@@ -860,7 +858,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    if(Device->Dry.Buffer == Device->RealOut.Buffer)
+                    if(Device->Dry.Buffer == Device->RealOut.Buffer.data())
                     {
                         int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
@@ -1678,6 +1676,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
          */
         if(LIKELY(device->PostProcess))
             device->PostProcess(device, SamplesToDo);
+        const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
 
         /* Apply front image stablization for surround sound, if applicable. */
         if(device->Stablizer)
@@ -1687,16 +1686,14 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             const int cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
-            ApplyStablizer(device->Stablizer.get(), device->RealOut.Buffer, lidx, ridx, cidx,
-                SamplesToDo, device->RealOut.NumChannels);
+            ApplyStablizer(device->Stablizer.get(), RealOut.data(), lidx, ridx, cidx, SamplesToDo,
+                static_cast<ALuint>(RealOut.size()));
         }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */
         if(Compressor *comp{device->Limiter.get()})
-            comp->process(SamplesToDo, device->RealOut.Buffer);
+            comp->process(SamplesToDo, RealOut.data());
 
-        const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer,
-            device->RealOut.NumChannels};
         /* Apply delays and attenuation for mismatched speaker distances. */
         ApplyDistanceComp(RealOut, SamplesToDo, device->ChannelDelay.as_span().cbegin());
 

@@ -90,7 +90,7 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
+    mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 

@@ -1903,8 +1903,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->ChannelDelay.clear();
 
     device->Dry.AmbiMap.fill(BFChannelConfig{});
-    device->Dry.Buffer = nullptr;
-    device->Dry.NumChannels = 0;
+    device->Dry.Buffer = {};
     std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
     device->RealOut.ChannelIndex.fill(-1);
     device->RealOut.Buffer = {};
@@ -2158,7 +2157,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
-            state->mOutTarget = {device->Dry.Buffer, device->Dry.NumChannels};
+            state->mOutTarget = device->Dry.Buffer;
             if(state->deviceUpdate(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
@@ -2180,7 +2179,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 aluInitEffectPanning(slot, device);
 
                 EffectState *state{slot->Effect.State};
-                state->mOutTarget = {device->Dry.Buffer, device->Dry.NumChannels};
+                state->mOutTarget = device->Dry.Buffer;
                 if(state->deviceUpdate(device) == AL_FALSE)
                     update_failed = AL_TRUE;
                 else

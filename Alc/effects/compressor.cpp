@@ -78,8 +78,8 @@ void CompressorState::update(const ALCcontext* UNUSED(context), const ALeffectsl
 {
     mEnabled = props->Compressor.OnOff;
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
-    for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
+    mOutTarget = target.Main->Buffer;
+    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mGain[i]);

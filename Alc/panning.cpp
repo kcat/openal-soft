@@ -116,13 +116,17 @@ void AllocChannels(ALCdevice *device, const ALuint main_chans, const ALuint real
     TRACE("Allocating %u channels, %zu bytes\n", num_chans,
         num_chans*sizeof(device->MixBuffer[0]));
     device->MixBuffer.resize(num_chans);
+    al::span<FloatBufferLine> buffer{device->MixBuffer.data(), device->MixBuffer.size()};
 
-    device->Dry.Buffer = device->MixBuffer.data();
-    device->Dry.NumChannels = main_chans;
+    device->Dry.Buffer = buffer.first(main_chans);
+    buffer = buffer.subspan(main_chans);
     if(real_chans != 0)
-        device->RealOut.Buffer = {device->Dry.Buffer+device->Dry.NumChannels, real_chans};
+    {
+        device->RealOut.Buffer = buffer.first(real_chans);
+        buffer = buffer.subspan(real_chans);
+    }
     else
-        device->RealOut.Buffer = {device->Dry.Buffer, device->Dry.NumChannels};
+        device->RealOut.Buffer = device->Dry.Buffer;
 }
 
 
@@ -850,8 +854,7 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
         { return BFChannelConfig{1.0f, acn}; }
     );
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->Wet.Buffer = slot->MixBuffer.data();
-    slot->Wet.NumChannels = static_cast<ALuint>(count);
+    slot->Wet.Buffer = {slot->MixBuffer.data(), slot->MixBuffer.size()};
 }
 
 
@@ -950,10 +953,8 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
 void ComputePanGains(const MixParams *mix, const ALfloat *RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
     auto ambimap = mix->AmbiMap.cbegin();
-    const ALuint numchans{mix->NumChannels};
 
-    ASSUME(numchans > 0);
-    auto iter = std::transform(ambimap, ambimap+numchans, std::begin(gains),
+    auto iter = std::transform(ambimap, ambimap+mix->Buffer.size(), std::begin(gains),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
         {
             ASSUME(chanmap.Index >= 0);

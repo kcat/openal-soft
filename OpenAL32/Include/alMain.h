@@ -308,10 +308,9 @@ using FloatBufferLine = std::array<float,BUFFERSIZE>;
 
 struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
-    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap;
+    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap{};
 
-    FloatBufferLine *Buffer{nullptr};
-    ALuint NumChannels{0u};
+    al::span<FloatBufferLine> Buffer;
 };
 
 struct RealMixParams {

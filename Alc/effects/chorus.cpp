@@ -159,7 +159,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f, coeffs[0]);
     CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f, coeffs[1]);
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
+    mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs[0], Slot->Params.Gain, mGains[0].Target);
     ComputePanGains(target.Main, coeffs[1], Slot->Params.Gain, mGains[1].Target);
 

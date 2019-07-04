@@ -81,7 +81,7 @@ void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslo
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
 
-            mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
+            mOutTarget = target.Main->Buffer;
             ComputePanGains(target.Main, coeffs, Gain, mTargetGains);
         }
     }

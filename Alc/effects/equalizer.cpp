@@ -141,7 +141,7 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
         BiquadFilter::rcpQFromSlope(gain, 0.75f));
 
     /* Copy the filter coefficients for the other input channels. */
-    for(ALuint i{1u};i < slot->Wet.NumChannels;++i)
+    for(size_t i{1u};i < slot->Wet.Buffer.size();++i)
     {
         mChans[i].filter[0].copyParamsFrom(mChans[0].filter[0]);
         mChans[i].filter[1].copyParamsFrom(mChans[0].filter[1]);
@@ -149,8 +149,8 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
         mChans[i].filter[3].copyParamsFrom(mChans[0].filter[3]);
     }
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
-    for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
+    mOutTarget = target.Main->Buffer;
+    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

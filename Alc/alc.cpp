@@ -2008,24 +2008,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Frequency, device->UpdateSize, device->BufferSize);
 
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
-    TRACE("Channel config, Main: %u, Real: %u\n", device->Dry.NumChannels,
-        device->RealOut.NumChannels);
-
-    /* Allocate extra channels for any post-filter output. */
-    const ALuint num_chans{device->Dry.NumChannels + device->RealOut.NumChannels};
-
-    TRACE("Allocating %u channels, %zu bytes\n", num_chans,
-        num_chans*sizeof(device->MixBuffer[0]));
-    device->MixBuffer.resize(num_chans);
-
-    device->Dry.Buffer = device->MixBuffer.data();
-    if(device->RealOut.NumChannels != 0)
-        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
-    else
-    {
-        device->RealOut.Buffer = device->Dry.Buffer;
-        device->RealOut.NumChannels = device->Dry.NumChannels;
-    }
 
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",

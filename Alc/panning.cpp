@@ -106,6 +106,32 @@ inline const char *GetLabelFromChannel(Channel channel)
 }
 
 
+void AllocChannels(ALCdevice *device, const ALuint main_chans, const ALuint real_chans)
+{
+    TRACE("Channel config, Main: %u, Real: %u\n", main_chans, real_chans);
+
+    /* Allocate extra channels for any post-filter output. */
+    const ALuint num_chans{main_chans + real_chans};
+
+    TRACE("Allocating %u channels, %zu bytes\n", num_chans,
+        num_chans*sizeof(device->MixBuffer[0]));
+    device->MixBuffer.resize(num_chans);
+
+    device->Dry.Buffer = device->MixBuffer.data();
+    device->Dry.NumChannels = main_chans;
+    if(real_chans != 0)
+    {
+        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
+        device->RealOut.NumChannels = real_chans;
+    }
+    else
+    {
+        device->RealOut.Buffer = device->Dry.Buffer;
+        device->RealOut.NumChannels = device->Dry.NumChannels;
+    }
+}
+
+
 struct ChannelMap {
     Channel ChanName;
     ALfloat Config[MAX_AMBI2D_CHANNELS];
@@ -380,7 +406,7 @@ void InitPanning(ALCdevice *device)
             [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
             { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
         );
-        device->Dry.NumChannels = static_cast<ALuint>(count);
+        AllocChannels(device, static_cast<ALuint>(count), 0);
 
         ALfloat nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
         if(nfc_delay > 0.0f)
@@ -390,8 +416,6 @@ void InitPanning(ALCdevice *device)
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
                 chans_per_order);
         }
-
-        device->RealOut.NumChannels = 0;
     }
     else
     {
@@ -420,7 +444,7 @@ void InitPanning(ALCdevice *device)
             std::begin(device->Dry.AmbiMap),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
-        device->Dry.NumChannels = coeffcount;
+        AllocChannels(device, coeffcount, device->channelsFromFmt());
 
         TRACE("Enabling %s-order%s ambisonic decoder\n",
             (coeffcount > 5) ? "third" :
@@ -429,8 +453,6 @@ void InitPanning(ALCdevice *device)
         );
         device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount,
             static_cast<ALsizei>(chanmap.size()), chancoeffs, idxmap);
-
-        device->RealOut.NumChannels = device->channelsFromFmt();
     }
 }
 
@@ -464,7 +486,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, co
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
     }
-    device->Dry.NumChannels = count;
+    AllocChannels(device, count, device->channelsFromFmt());
 
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (!hqdec || conf->FreqBands == 1) ? "single" : "dual",
@@ -474,8 +496,6 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, co
     );
     device->AmbiDecoder = al::make_unique<BFormatDec>(conf, hqdec, count, device->Frequency,
         speakermap);
-
-    device->RealOut.NumChannels = device->channelsFromFmt();
 
     auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
@@ -604,12 +624,10 @@ void InitHrtfPanning(ALCdevice *device)
         std::begin(device->Dry.AmbiMap),
         [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
-    device->Dry.NumChannels = static_cast<ALuint>(count);
+    AllocChannels(device, static_cast<ALuint>(count), device->channelsFromFmt());
 
-    device->RealOut.NumChannels = device->channelsFromFmt();
-
-    BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints,
-        AmbiMatrix, al::size(AmbiPoints), AmbiOrderHFGain);
+    BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), static_cast<ALuint>(count),
+        AmbiPoints, AmbiMatrix, al::size(AmbiPoints), AmbiOrderHFGain);
 
     HrtfEntry *Hrtf{device->mHrtf};
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
@@ -627,9 +645,7 @@ void InitUhjPanning(ALCdevice *device)
         [](const ALsizei &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f/AmbiScale::FromFuMa[acn], acn}; }
     );
-    device->Dry.NumChannels = count;
-
-    device->RealOut.NumChannels = device->channelsFromFmt();
+    AllocChannels(device, ALuint{count}, device->channelsFromFmt());
 }
 
 } // namespace

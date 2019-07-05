@@ -1132,7 +1132,7 @@ application or system to determine if it should be used.</string>
        </rect>
       </property>
       <property name="title">
-       <string>HRTF  Quality</string>
+       <string>HRTF Render Method</string>
       </property>
       <widget class="QLabel" name="label_31">
        <property name="geometry">
@@ -1163,7 +1163,7 @@ application or system to determine if it should be used.</string>
         <string>Quality</string>
        </property>
       </widget>
-      <widget class="QSlider" name="hrtfqualitySlider">
+      <widget class="QSlider" name="hrtfmodeSlider">
        <property name="geometry">
         <rect>
          <x>80</x>
@@ -1176,7 +1176,7 @@ application or system to determine if it should be used.</string>
         <enum>Qt::Horizontal</enum>
        </property>
       </widget>
-      <widget class="QLabel" name="hrtfqualityLabel">
+      <widget class="QLabel" name="hrtfmodeLabel">
        <property name="geometry">
         <rect>
          <x>50</x>

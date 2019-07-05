@@ -277,7 +277,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     for(count = 0;hrtfModeList[count].name[0];count++) {
     }
-    ui->hrtfqualitySlider->setRange(0, count-1);
+    ui->hrtfmodeSlider->setRange(0, count-1);
     ui->hrtfStateComboBox->adjustSize();
 
 #if !defined(HAVE_NEON) && !defined(HAVE_SSE)
@@ -378,7 +378,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->preferredHrtfComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
-    connect(ui->hrtfqualitySlider, SIGNAL(valueChanged(int)), this, SLOT(updateHrtfModeLabel(int)));
+    connect(ui->hrtfmodeSlider, SIGNAL(valueChanged(int)), this, SLOT(updateHrtfModeLabel(int)));
 
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
     connect(ui->hrtfRemoveButton, SIGNAL(clicked()), this, SLOT(removeHrtfFile()));
@@ -739,16 +739,16 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     QString hrtfmode = settings.value("hrtf-mode").toString().trimmed();
-    ui->hrtfqualitySlider->setValue(3);
-    ui->hrtfqualityLabel->setText(hrtfModeList[3].name);
+    ui->hrtfmodeSlider->setValue(3);
+    ui->hrtfmodeLabel->setText(hrtfModeList[3].name);
     /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
     if(hrtfmode == "basic") hrtfmode = "ambi2";
     for(int i = 0;hrtfModeList[i].name[0];i++)
     {
         if(hrtfmode == hrtfModeList[i].value)
         {
-            ui->hrtfqualitySlider->setValue(i);
-            ui->hrtfqualityLabel->setText(hrtfModeList[i].name);
+            ui->hrtfmodeSlider->setValue(i);
+            ui->hrtfmodeLabel->setText(hrtfModeList[i].name);
             break;
         }
     }
@@ -1001,7 +1001,7 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("neon");
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
 
-    settings.setValue("hrtf-mode", hrtfModeList[ui->hrtfqualitySlider->value()].value);
+    settings.setValue("hrtf-mode", hrtfModeList[ui->hrtfmodeSlider->value()].value);
 
     if(ui->hrtfStateComboBox->currentIndex() == 1)
         settings.setValue("hrtf", "true");
@@ -1240,7 +1240,7 @@ void MainWindow::updateJackBufferSizeSlider()
 
 void MainWindow::updateHrtfModeLabel(int num)
 {
-    ui->hrtfqualityLabel->setText(hrtfModeList[num].name);
+    ui->hrtfmodeLabel->setText(hrtfModeList[num].name);
     enableApplyButton();
 }
 

@@ -124,6 +124,14 @@ static const struct NameValuePair {
     { "Furse-Malham", "fuma" },
 
     { "", "" }
+}, hrtfModeList[] = {
+    { "1st Order Ambisonic", "ambi1" },
+    { "2nd Order Ambisonic", "ambi2" },
+    { "3rd Order Ambisonic", "ambi3" },
+    { "Default (Full)", "" },
+    { "Full", "full" },
+
+    { "", "" }
 };
 
 static QString getDefaultConfigName()
@@ -267,6 +275,9 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     ui->resamplerSlider->setRange(0, count-1);
 
+    for(count = 0;hrtfModeList[count].name[0];count++) {
+    }
+    ui->hrtfqualitySlider->setRange(0, count-1);
     ui->hrtfStateComboBox->adjustSize();
 
 #if !defined(HAVE_NEON) && !defined(HAVE_SSE)
@@ -367,6 +378,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->preferredHrtfComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
+    connect(ui->hrtfqualitySlider, SIGNAL(valueChanged(int)), this, SLOT(updateHrtfModeLabel(int)));
+
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
     connect(ui->hrtfRemoveButton, SIGNAL(clicked()), this, SLOT(removeHrtfFile()));
     connect(ui->hrtfFileList, SIGNAL(itemSelectionChanged()), this, SLOT(updateHrtfRemoveButton()));
@@ -725,6 +738,21 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
+    QString hrtfmode = settings.value("hrtf-mode").toString().trimmed();
+    ui->hrtfqualitySlider->setValue(3);
+    ui->hrtfqualityLabel->setText(hrtfModeList[3].name);
+    /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
+    if(hrtfmode == "basic") hrtfmode = "ambi2";
+    for(int i = 0;hrtfModeList[i].name[0];i++)
+    {
+        if(hrtfmode == hrtfModeList[i].value)
+        {
+            ui->hrtfqualitySlider->setValue(i);
+            ui->hrtfqualityLabel->setText(hrtfModeList[i].name);
+            break;
+        }
+    }
+
     QStringList hrtf_paths = settings.value("hrtf-paths").toStringList();
     if(hrtf_paths.size() == 1)
         hrtf_paths = hrtf_paths[0].split(QChar(','));
@@ -973,6 +1001,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("neon");
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
 
+    settings.setValue("hrtf-mode", hrtfModeList[ui->hrtfqualitySlider->value()].value);
+
     if(ui->hrtfStateComboBox->currentIndex() == 1)
         settings.setValue("hrtf", "true");
     else if(ui->hrtfStateComboBox->currentIndex() == 2)
@@ -1204,6 +1234,13 @@ void MainWindow::updateJackBufferSizeSlider()
     int value = ui->jackBufferSizeLine->text().toInt();
     int pos = static_cast<int>(floor(log2(value) + 0.5));
     ui->jackBufferSizeSlider->setSliderPosition(pos);
+    enableApplyButton();
+}
+
+
+void MainWindow::updateHrtfModeLabel(int num)
+{
+    ui->hrtfqualityLabel->setText(hrtfModeList[num].name);
     enableApplyButton();
 }
 

@@ -1429,16 +1429,16 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 }
 
 
-void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const ALuint lidx,
-    const ALuint ridx, const ALuint cidx, const ALsizei SamplesToDo, const ALuint NumChannels)
+void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> Buffer,
+    const ALuint lidx, const ALuint ridx, const ALuint cidx, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
-    ASSUME(NumChannels > 0);
 
     /* Apply a delay to all channels, except the front-left and front-right, so
      * they maintain correct timing.
      */
-    for(ALuint i{0};i < NumChannels;i++)
+    const size_t NumChannels{Buffer.size()};
+    for(size_t i{0u};i < NumChannels;i++)
     {
         if(i == lidx || i == ridx)
             continue;
@@ -1684,8 +1684,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             const int cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
-            ApplyStablizer(device->Stablizer.get(), RealOut.data(), lidx, ridx, cidx, SamplesToDo,
-                static_cast<ALuint>(RealOut.size()));
+            ApplyStablizer(device->Stablizer.get(), RealOut, lidx, ridx, cidx, SamplesToDo);
         }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */

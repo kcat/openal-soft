@@ -1705,9 +1705,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->Flags.unset<DeviceRunning>();
         }
 
-        auto numMono = static_cast<ALsizei>(device->NumMonoSources);
-        auto numStereo = static_cast<ALsizei>(device->NumStereoSources);
-        auto numSends = ALsizei{old_sends};
+        ALuint numMono{device->NumMonoSources};
+        ALuint numStereo{device->NumStereoSources};
+        ALsizei numSends{old_sends};
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
@@ -1747,13 +1747,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             case ALC_MONO_SOURCES:
                 numMono = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_MONO_SOURCES, numMono);
-                numMono = maxi(numMono, 0);
+                if(numMono > INT_MAX) numMono = 0;
                 break;
 
             case ALC_STEREO_SOURCES:
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                numStereo = maxi(numStereo, 0);
+                if(numStereo > INT_MAX) numStereo = 0;
                 break;
 
             case ALC_MAX_AUXILIARY_SENDS:
@@ -1869,14 +1869,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(numMono > INT_MAX-numStereo)
             numMono = INT_MAX-numStereo;
         numMono += numStereo;
-        if(auto srcsopt = ConfigValueInt(devname, nullptr, "sources"))
+        if(auto srcsopt = ConfigValueUInt(devname, nullptr, "sources"))
         {
             if(*srcsopt <= 0) numMono = 256;
             else numMono = *srcsopt;
         }
         else
-            numMono = maxi(numMono, 256);
-        numStereo = mini(numStereo, numMono);
+            numMono = maxu(numMono, 256);
+        numStereo = minu(numStereo, numMono);
         numMono -= numStereo;
         device->SourcesMax = numMono + numStereo;
 
@@ -2024,10 +2024,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "front-stablizer", 0))
         {
             auto stablizer = al::make_unique<FrontStablizer>();
-            /* Initialize band-splitting filters for the front-left and
-                * front-right channels, with a crossover at 5khz (could be
-                * higher).
-                */
+            /* Initialize band-splitting filters for the front-left and front-
+             * right channels, with a crossover at 5khz (could be higher).
+             */
             const ALfloat scale{static_cast<ALfloat>(5000.0 / device->Frequency)};
 
             stablizer->LFilter.init(scale);

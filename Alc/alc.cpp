@@ -1684,26 +1684,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
-        ALCenum alayout = AL_NONE;
-        ALCenum ascale = AL_NONE;
-        ALCenum schans = AL_NONE;
-        ALCenum stype = AL_NONE;
-        ALCsizei attrIdx = 0;
-        ALCsizei aorder = 0;
-        ALCuint freq = 0;
-
-        const char *devname{nullptr};
-        const bool loopback{device->Type == Loopback};
-        if(!loopback)
-        {
-            devname = device->DeviceName.c_str();
-            /* If a context is already running on the device, stop playback so
-             * the device attributes can be updated.
-             */
-            if(device->Flags.get<DeviceRunning>())
-                device->Backend->stop();
-            device->Flags.unset<DeviceRunning>();
-        }
+        ALCenum alayout{AL_NONE};
+        ALCenum ascale{AL_NONE};
+        ALCenum schans{AL_NONE};
+        ALCenum stype{AL_NONE};
+        ALCsizei attrIdx{0};
+        ALCsizei aorder{0};
+        ALCuint freq{0u};
 
         ALuint numMono{device->NumMonoSources};
         ALuint numStereo{device->NumStereoSources};
@@ -1792,6 +1779,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 #undef TRACE_ATTR
 
+        const bool loopback{device->Type == Loopback};
         if(loopback)
         {
             if(!schans || !stype || !freq)
@@ -1817,14 +1805,20 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
         }
 
+        /* If a context is already running on the device, stop playback so the
+         * device attributes can be updated.
+         */
         if(device->Flags.get<DeviceRunning>())
             device->Backend->stop();
         device->Flags.unset<DeviceRunning>();
 
         UpdateClockBase(device);
 
+        const char *devname{nullptr};
         if(!loopback)
         {
+            devname = device->DeviceName.c_str();
+
             device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
             device->UpdateSize = DEFAULT_UPDATE_SIZE;
             device->Frequency = DEFAULT_OUTPUT_RATE;

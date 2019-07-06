@@ -2746,17 +2746,22 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Playing %d sources", n);
     if(n == 0) return;
 
+    al::vector<ALsource*> extra_sources;
+    std::array<ALsource*,16> source_storage;
+    ALsource **srchandles{source_storage.data()};
+    if(UNLIKELY(static_cast<ALuint>(n) > source_storage.size()))
+    {
+        extra_sources.resize(n);
+        srchandles = extra_sources.data();
+    }
+
     std::lock_guard<std::mutex> _{context->SourceLock};
-    auto sources_end = sources+n;
-    auto bad_sid = std::find_if_not(sources, sources_end,
-        [&context](ALuint sid) -> bool
-        {
-            ALsource *source{LookupSource(context.get(), sid)};
-            return LIKELY(source != nullptr);
-        }
-    );
-    if(UNLIKELY(bad_sid != sources+n))
-        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", *bad_sid);
+    for(ALsizei i{0};i < n;i++)
+    {
+        srchandles[i] = LookupSource(context.get(), sources[i]);
+        if(!srchandles[i])
+            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+    }
 
     ALCdevice *device{context->Device};
     BackendLockGuard __{*device->Backend};
@@ -2764,10 +2769,9 @@ START_API_FUNC
     if(UNLIKELY(!device->Connected.load(std::memory_order_acquire)))
     {
         /* TODO: Send state change event? */
-        std::for_each(sources, sources_end,
-            [&context](ALuint sid) -> void
+        std::for_each(srchandles, srchandles+n,
+            [&context](ALsource *source) -> void
             {
-                ALsource *source{LookupSource(context.get(), sid)};
                 source->OffsetType = AL_NONE;
                 source->Offset = 0.0;
                 source->state = AL_STOPPED;
@@ -2811,9 +2815,8 @@ START_API_FUNC
         context->VoiceCount.fetch_add(need_voices, std::memory_order_relaxed);
     }
 
-    auto start_source = [&context,device](ALuint sid) -> void
+    auto start_source = [&context,device](ALsource *source) -> void
     {
-        ALsource *source{LookupSource(context.get(), sid)};
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */
@@ -2985,7 +2988,7 @@ START_API_FUNC
 
         SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
     };
-    std::for_each(sources, sources_end, start_source);
+    std::for_each(srchandles, srchandles+n, start_source);
 }
 END_API_FUNC
 
@@ -3005,18 +3008,27 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Pausing %d sources", n);
     if(n == 0) return;
 
+    al::vector<ALsource*> extra_sources;
+    std::array<ALsource*,16> source_storage;
+    ALsource **srchandles{source_storage.data()};
+    if(UNLIKELY(static_cast<ALuint>(n) > source_storage.size()))
+    {
+        extra_sources.resize(n);
+        srchandles = extra_sources.data();
+    }
+
     std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context.get(), sources[i]))
+        srchandles[i] = LookupSource(context.get(), sources[i]);
+        if(!srchandles[i])
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->Device};
     BackendLockGuard __{*device->Backend};
-    for(ALsizei i{0};i < n;i++)
+    auto pause_source = [&context](ALsource *source) -> void
     {
-        ALsource *source{LookupSource(context.get(), sources[i])};
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice)
         {
@@ -3030,7 +3042,8 @@ START_API_FUNC
             source->state = AL_PAUSED;
             SendStateChangeEvent(context.get(), source->id, AL_PAUSED);
         }
-    }
+    };
+    std::for_each(srchandles, srchandles+n, pause_source);
 }
 END_API_FUNC
 
@@ -3050,18 +3063,27 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Stopping %d sources", n);
     if(n == 0) return;
 
+    al::vector<ALsource*> extra_sources;
+    std::array<ALsource*,16> source_storage;
+    ALsource **srchandles{source_storage.data()};
+    if(UNLIKELY(static_cast<ALuint>(n) > source_storage.size()))
+    {
+        extra_sources.resize(n);
+        srchandles = extra_sources.data();
+    }
+
     std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context.get(), sources[i]))
+        srchandles[i] = LookupSource(context.get(), sources[i]);
+        if(!srchandles[i])
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->Device};
     BackendLockGuard __{*device->Backend};
-    for(ALsizei i{0};i < n;i++)
+    auto stop_source = [&context](ALsource *source) -> void
     {
-        ALsource *source{LookupSource(context.get(), sources[i])};
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice != nullptr)
         {
@@ -3082,7 +3104,8 @@ START_API_FUNC
         }
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
-    }
+    };
+    std::for_each(srchandles, srchandles+n, stop_source);
 }
 END_API_FUNC
 
@@ -3102,18 +3125,27 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Rewinding %d sources", n);
     if(n == 0) return;
 
+    al::vector<ALsource*> extra_sources;
+    std::array<ALsource*,16> source_storage;
+    ALsource **srchandles{source_storage.data()};
+    if(UNLIKELY(static_cast<ALuint>(n) > source_storage.size()))
+    {
+        extra_sources.resize(n);
+        srchandles = extra_sources.data();
+    }
+
     std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context.get(), sources[i]))
+        srchandles[i] = LookupSource(context.get(), sources[i]);
+        if(!srchandles[i])
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->Device};
     BackendLockGuard __{*device->Backend};
-    for(ALsizei i{0};i < n;i++)
+    auto rewind_source = [&context](ALsource *source) -> void
     {
-        ALsource *source{LookupSource(context.get(), sources[i])};
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice != nullptr)
         {
@@ -3133,7 +3165,8 @@ START_API_FUNC
         }
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
-    }
+    };
+    std::for_each(srchandles, srchandles+n, rewind_source);
 }
 END_API_FUNC
 

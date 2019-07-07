@@ -394,8 +394,8 @@ struct ALCdevice {
     /* Rendering mode. */
     RenderMode mRenderMode{NormalRender};
 
-    /* The average speaker distance as determined by the ambdec configuration
-     * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
+    /* The average speaker distance as determined by the ambdec configuration,
+     * HRTF data set, or the NFC-HOA reference delay. Only used for NFC.
      */
     ALfloat AvgSpeakerDist{0.0f};
 

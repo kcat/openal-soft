@@ -265,7 +265,6 @@ struct AudioState {
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
     std::atomic_flag mConnected;
-    std::atomic<bool> mPrepared{false};
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
     ALsizei mBufferIdx{0};
@@ -295,7 +294,6 @@ struct AudioState {
         return getClockNoLock();
     }
 
-    bool isBufferFilled() const { return mPrepared.load(); }
     void startPlayback();
 
     int getSync();
@@ -350,7 +348,6 @@ struct VideoState {
     VideoState(MovieState &movie) : mMovie(movie) { }
 
     nanoseconds getClock();
-    bool isBufferFilled();
 
     static Uint32 SDLCALL sdl_refresh_timer_cb(Uint32 interval, void *opaque);
     void schedRefresh(milliseconds delay);
@@ -368,7 +365,6 @@ struct MovieState {
     SyncMaster mAVSyncType{SyncMaster::Default};
 
     microseconds mClockBase{0};
-    std::atomic<bool> mPlaying{false};
 
     std::mutex mSendMtx;
     std::condition_variable mSendCond;
@@ -430,7 +426,7 @@ nanoseconds AudioState::getClockNoLock()
         // The clock is simply the current device time relative to the recorded
         // start time. We can also subtract the latency to get more a accurate
         // position of where the audio device actually is in the output stream.
-        std::max(device_time - mDeviceStartTime - latency, nanoseconds::zero());
+        return device_time - mDeviceStartTime - latency;
     }
 
     /* The source-based clock is based on 4 components:
@@ -532,8 +528,7 @@ int AudioState::getSync()
         return 0;
 
     /* Constrain the per-update difference to avoid exceedingly large skips */
-    diff = std::min<nanoseconds>(std::max<nanoseconds>(diff, -AudioSampleCorrectionMax),
-                                 AudioSampleCorrectionMax);
+    diff = std::min<nanoseconds>(diff, AudioSampleCorrectionMax);
     return static_cast<int>(std::chrono::duration_cast<seconds>(diff*mCodecCtx->sample_rate).count());
 }
 
@@ -991,6 +986,13 @@ int AudioState::handler()
 #endif
         samples = av_malloc(buffer_len);
 
+    {
+        int64_t devtime{};
+        alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()), ALC_DEVICE_CLOCK_SOFT,
+            1, &devtime);
+        mDeviceStartTime = nanoseconds{devtime} - mCurrentPts;
+    }
+
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
           mConnected.test_and_set(std::memory_order_relaxed))
     {
@@ -1000,9 +1002,9 @@ int AudioState::handler()
         while(processed > 0)
         {
             std::array<ALuint,4> bids;
-            alSourceUnqueueBuffers(mSource, std::min<ALsizei>(bids.size(), processed),
-                                   bids.data());
-            processed -= std::min<ALsizei>(bids.size(), processed);
+            const ALsizei todq{std::min<ALsizei>(bids.size(), processed)};
+            alSourceUnqueueBuffers(mSource, todq, bids.data());
+            processed -= todq;
         }
 
         /* Refill the buffer queue. */
@@ -1011,19 +1013,23 @@ int AudioState::handler()
         while(static_cast<ALuint>(queued) < mBuffers.size())
         {
             ALuint bufid = mBuffers[mBufferIdx];
-
-            uint8_t *ptr = reinterpret_cast<uint8_t*>(samples
+            uint8_t *ptr = static_cast<uint8_t*>(samples);
 #ifdef AL_SOFT_map_buffer
-                ? samples : alMapBufferSOFT(bufid, 0, buffer_len, AL_MAP_WRITE_BIT_SOFT)
+            bool mapped{false};
+            if(!ptr)
+            {
+                ptr = static_cast<uint8_t*>(alMapBufferSOFT(bufid, 0, buffer_len,
+                    AL_MAP_WRITE_BIT_SOFT));
+                if(!ptr) break;
+                mapped = true;
+            }
 #endif
-            );
-            if(!ptr) break;
 
             /* Read the next chunk of data, filling the buffer, and queue it on
              * the source */
             bool got_audio = readAudio(ptr, buffer_len);
 #ifdef AL_SOFT_map_buffer
-            if(!samples) alUnmapBufferSOFT(bufid);
+            if(mapped) alUnmapBufferSOFT(bufid);
 #endif
             if(!got_audio) break;
 
@@ -1063,12 +1069,7 @@ int AudioState::handler()
 
         /* (re)start the source if needed, and wait for a buffer to finish */
         if(state != AL_PLAYING && state != AL_PAUSED)
-        {
-            if(mMovie.mPlaying.load(std::memory_order_relaxed))
-                startPlayback();
-            else
-                mPrepared.store(true);
-        }
+            startPlayback();
 
         mSrcCond.wait_for(srclock, sleep_time);
     }
@@ -1097,12 +1098,6 @@ nanoseconds VideoState::getClock()
     /* NOTE: This returns incorrect times while not playing. */
     auto delta = get_avtime() - mCurrentPtsTime;
     return mCurrentPts + delta;
-}
-
-bool VideoState::isBufferFilled()
-{
-    std::unique_lock<std::mutex> lock(mPictQMutex);
-    return mPictQSize >= mPictQ.size();
 }
 
 Uint32 SDLCALL VideoState::sdl_refresh_timer_cb(Uint32 /*interval*/, void *opaque)
@@ -1175,11 +1170,6 @@ void VideoState::refreshTimer(SDL_Window *screen, SDL_Renderer *renderer)
             return;
         }
         schedRefresh(milliseconds(100));
-        return;
-    }
-    if(!mMovie.mPlaying.load(std::memory_order_relaxed))
-    {
-        schedRefresh(milliseconds(1));
         return;
     }
 
@@ -1498,8 +1488,6 @@ void MovieState::setTitle(SDL_Window *window)
 
 nanoseconds MovieState::getClock()
 {
-    if(!mPlaying.load(std::memory_order_relaxed))
-        return nanoseconds::zero();
     return get_avtime() - mClockBase;
 }
 
@@ -1569,6 +1557,11 @@ int MovieState::parse_handler()
     /* Dump information about file onto standard error */
     av_dump_format(mFormatCtx.get(), 0, mFilename.c_str(), 0);
 
+    /* Set the base time 500ms ahead of the current av time. */
+    mClockBase = get_avtime() + milliseconds{500};
+    mVideo.mCurrentPtsTime = mClockBase;
+    mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
+
     /* Find the first video and audio streams */
     for(unsigned int i = 0;i < mFormatCtx->nb_streams;i++)
     {
@@ -1635,23 +1628,10 @@ int MovieState::parse_handler()
             if(queue_size == 0 || (queue_size < MAX_QUEUE_SIZE && !input_finished))
                 break;
 
-            if(!mPlaying.load(std::memory_order_relaxed))
-            {
-                if((!mAudio.mCodecCtx || mAudio.isBufferFilled()) &&
-                   (!mVideo.mCodecCtx || mVideo.isBufferFilled()))
-                {
-                    /* Set the base time 50ms ahead of the current av time. */
-                    mClockBase = get_avtime() + milliseconds(50);
-                    mVideo.mCurrentPtsTime = mClockBase;
-                    mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
-                    mAudio.startPlayback();
-                    mPlaying.store(std::memory_order_release);
-                }
-            }
             /* Nothing to send or get for now, wait a bit and try again. */
             { std::unique_lock<std::mutex> lock(mSendMtx);
                 if(mSendDataGood.test_and_set(std::memory_order_relaxed))
-                    mSendCond.wait_for(lock, milliseconds(10));
+                    mSendCond.wait_for(lock, milliseconds{10});
             }
         } while(!mQuit.load(std::memory_order_relaxed));
     }

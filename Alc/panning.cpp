@@ -258,17 +258,17 @@ constexpr ChannelMap MonoCfg[1] = {
 };
 
 void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
-    const ALuint *RESTRICT chans_per_order)
+    const al::span<const ALuint,MAX_AMBI_ORDER+1> chans_per_order)
 {
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
     const char *devname{device->DeviceName.c_str()};
     if(!GetConfigValueBool(devname, "decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
         return;
 
-    device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);
+    device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
     TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
-    auto iter = std::copy(chans_per_order, chans_per_order+order+1,
+    auto iter = std::copy(chans_per_order.begin(), chans_per_order.begin()+order+1,
         std::begin(device->NumChannelsPerOrder));
     std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
 }
@@ -410,7 +410,6 @@ void InitPanning(ALCdevice *device)
         if(nfc_delay > 0.0f)
         {
             static constexpr ALuint chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
-            nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
                 chans_per_order);
         }

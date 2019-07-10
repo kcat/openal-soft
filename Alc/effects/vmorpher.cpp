@@ -57,7 +57,7 @@ inline ALfloat Saw(ALsizei index)
 
 inline ALfloat Triangle(ALsizei index)
 {
-    return (std::fabsf(static_cast<ALfloat>(index) * (al::MathDefs<float>::Tau() / WAVEFORM_FRACONE) -
+    return (std::fabs(static_cast<ALfloat>(index) * (al::MathDefs<float>::Tau() / WAVEFORM_FRACONE) -
         al::MathDefs<float>::Pi()) / al::MathDefs<float>::Pi())*0.5f+0.5f;
 }
 
@@ -79,7 +79,7 @@ void Oscillate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei
 
 struct FormantFilter
 {
-    inline void FormantFilter::process(const ALfloat* samplesIn, ALfloat* samplesOut, const ALsizei numInput)
+    inline void process(const ALfloat* samplesIn, ALfloat* samplesOut, const ALsizei numInput)
     {
         const float g = std::tan(al::MathDefs<float>::Pi() * f0norm);
         const float h = 1.0f / (1 + (g / Q_FACTOR) + (g * g));
@@ -98,7 +98,7 @@ struct FormantFilter
         }
     }
 
-    void clear()
+    inline void clear()
     {
         s1 = 0.0f;
         s2 = 0.0f;

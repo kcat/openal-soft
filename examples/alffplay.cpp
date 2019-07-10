@@ -372,7 +372,7 @@ struct VideoState {
 
     static Uint32 SDLCALL sdl_refresh_timer_cb(Uint32 interval, void *opaque);
     void schedRefresh(milliseconds delay);
-    void display(SDL_Window *screen, SDL_Renderer *renderer);
+    void display(SDL_Window *screen, SDL_Renderer *renderer, Picture *vp);
     void refreshTimer(SDL_Window *screen, SDL_Renderer *renderer);
     void updatePicture(SDL_Window *screen, SDL_Renderer *renderer);
     bool queuePicture(nanoseconds pts, AVFrame *frame);
@@ -1106,6 +1106,7 @@ finish:
 nanoseconds VideoState::getClock()
 {
     /* NOTE: This returns incorrect times while not playing. */
+    std::lock_guard<std::mutex> _{mPictQMutex};
     auto delta = get_avtime() - mCurrentPtsTime;
     return mCurrentPts + delta;
 }
@@ -1126,10 +1127,8 @@ void VideoState::schedRefresh(milliseconds delay)
 }
 
 /* Called by VideoState::refreshTimer to display the next video frame. */
-void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
+void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, Picture *vp)
 {
-    Picture *vp = &mPictQ[mPictQRead];
-
     if(!vp->mImage)
         return;
 
@@ -1197,8 +1196,6 @@ retry:
     }
 
     Picture *vp = &mPictQ[mPictQRead];
-    mCurrentPts = vp->mPts;
-    mCurrentPtsTime = get_avtime();
 
     /* Get delay using the frame pts and the pts from last frame. */
     auto delay = vp->mPts - mFrameLastPts;
@@ -1236,6 +1233,9 @@ retry:
     {
         /* We don't have time to handle this picture, just skip to the next one. */
         lock.lock();
+        mCurrentPts = vp->mPts;
+        mCurrentPtsTime = get_avtime();
+
         mPictQRead = (mPictQRead+1)%mPictQ.size();
         --mPictQSize; --mPictQPrepSize;
         mPictQCond.notify_all();
@@ -1244,10 +1244,13 @@ retry:
     schedRefresh(std::chrono::duration_cast<milliseconds>(actual_delay));
 
     /* Show the picture! */
-    display(screen, renderer);
+    display(screen, renderer, vp);
 
     /* Update queue for next picture. */
     lock.lock();
+    mCurrentPts = vp->mPts;
+    mCurrentPtsTime = get_avtime();
+
     mPictQRead = (mPictQRead+1)%mPictQ.size();
     --mPictQSize; --mPictQPrepSize;
     lock.unlock();
@@ -1662,7 +1665,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     /* Register all formats and codecs */
+#if !(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100))
     av_register_all();
+#endif
     /* Initialize networking protocols */
     avformat_network_init();
 

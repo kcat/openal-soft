@@ -1399,7 +1399,7 @@ int VideoState::handler()
                 avcodec_send_packet(mCodecCtx.get(), nullptr);
         }
         /* Decode video frame */
-        int ret = avcodec_receive_frame(mCodecCtx.get(), decoded_frame.get());
+        int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame.get())};
         if(ret == AVERROR_EOF) break;
         if(ret < 0)
         {
@@ -1438,8 +1438,8 @@ int MovieState::decode_interrupt_cb(void *ctx)
 
 bool MovieState::prepare()
 {
-    AVIOContext *avioctx = nullptr;
-    AVIOInterruptCB intcb = { decode_interrupt_cb, this };
+    AVIOContext *avioctx{nullptr};
+    AVIOInterruptCB intcb{decode_interrupt_cb, this};
     if(avio_open2(&avioctx, mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr))
     {
         std::cerr<< "Failed to open "<<mFilename <<std::endl;
@@ -1450,7 +1450,7 @@ bool MovieState::prepare()
     /* Open movie file. If avformat_open_input fails it will automatically free
      * this context, so don't set it onto a smart pointer yet.
      */
-    AVFormatContext *fmtctx = avformat_alloc_context();
+    AVFormatContext *fmtctx{avformat_alloc_context()};
     fmtctx->pb = mIOContext.get();
     fmtctx->interrupt_callback = intcb;
     if(avformat_open_input(&fmtctx, mFilename.c_str(), nullptr, nullptr) != 0)
@@ -1467,9 +1467,9 @@ bool MovieState::prepare()
         return false;
     }
 
-    mVideo.schedRefresh(milliseconds(40));
+    mVideo.schedRefresh(milliseconds{40});
 
-    mParseThread = std::thread(std::mem_fn(&MovieState::parse_handler), this);
+    mParseThread = std::thread{std::mem_fn(&MovieState::parse_handler), this};
     return true;
 }
 
@@ -1508,17 +1508,17 @@ int MovieState::streamComponentOpen(int stream_index)
     /* Get a pointer to the codec context for the stream, and open the
      * associated codec.
      */
-    AVCodecCtxPtr avctx(avcodec_alloc_context3(nullptr));
+    AVCodecCtxPtr avctx{avcodec_alloc_context3(nullptr)};
     if(!avctx) return -1;
 
     if(avcodec_parameters_to_context(avctx.get(), mFormatCtx->streams[stream_index]->codecpar))
         return -1;
 
-    AVCodec *codec = avcodec_find_decoder(avctx->codec_id);
+    AVCodec *codec{avcodec_find_decoder(avctx->codec_id)};
     if(!codec || avcodec_open2(avctx.get(), codec, nullptr) < 0)
     {
         std::cerr<< "Unsupported codec: "<<avcodec_get_name(avctx->codec_id)
-                 << " (0x"<<std::hex<<avctx->codec_id<<std::dec<<")" <<std::endl;
+            << " (0x"<<std::hex<<avctx->codec_id<<std::dec<<")" <<std::endl;
         return -1;
     }
 
@@ -1554,7 +1554,7 @@ int MovieState::parse_handler()
     av_dump_format(mFormatCtx.get(), 0, mFilename.c_str(), 0);
 
     /* Find the first video and audio streams */
-    for(unsigned int i = 0;i < mFormatCtx->nb_streams;i++)
+    for(unsigned int i{0u};i < mFormatCtx->nb_streams;i++)
     {
         auto codecpar = mFormatCtx->streams[i]->codecpar;
         if(codecpar->codec_type == AVMEDIA_TYPE_VIDEO && !DisableVideo && video_index < 0)
@@ -1611,7 +1611,7 @@ int MovieState::parse_handler()
         mAudioThread.join();
 
     mVideo.mEOS = true;
-    std::unique_lock<std::mutex> lock(mVideo.mPictQMutex);
+    std::unique_lock<std::mutex> lock{mVideo.mPictQMutex};
     while(!mVideo.mFinalUpdate)
         mVideo.mPictQCond.wait(lock);
     lock.unlock();
@@ -1642,7 +1642,7 @@ inline std::ostream &operator<<(std::ostream &os, const PrettyTime &rhs)
     }
 
     // Only handle up to hour formatting
-    if(t >= hours(1))
+    if(t >= hours{1})
         os << duration_cast<hours>(t).count() << 'h' << std::setfill('0') << std::setw(2)
            << (duration_cast<minutes>(t).count() % 60) << 'm';
     else
@@ -1678,25 +1678,25 @@ int main(int argc, char *argv[])
     }
 
     /* Make a window to put our video */
-    SDL_Window *screen = SDL_CreateWindow(AppName.c_str(), 0, 0, 640, 480, SDL_WINDOW_RESIZABLE);
+    SDL_Window *screen{SDL_CreateWindow(AppName.c_str(), 0, 0, 640, 480, SDL_WINDOW_RESIZABLE)};
     if(!screen)
     {
         std::cerr<< "SDL: could not set video mode - exiting" <<std::endl;
         return 1;
     }
     /* Make a renderer to handle the texture image surface and rendering. */
-    Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-    SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, render_flags);
+    Uint32 render_flags{SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC};
+    SDL_Renderer *renderer{SDL_CreateRenderer(screen, -1, render_flags)};
     if(renderer)
     {
         SDL_RendererInfo rinf{};
-        bool ok = false;
+        bool ok{false};
 
         /* Make sure the renderer supports IYUV textures. If not, fallback to a
          * software renderer. */
         if(SDL_GetRendererInfo(renderer, &rinf) == 0)
         {
-            for(Uint32 i = 0;!ok && i < rinf.num_texture_formats;i++)
+            for(Uint32 i{0u};!ok && i < rinf.num_texture_formats;i++)
                 ok = (rinf.texture_formats[i] == SDL_PIXELFORMAT_IYUV);
         }
         if(!ok)
@@ -1768,7 +1768,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    int fileidx = 0;
+    int fileidx{0};
     for(;fileidx < argc;++fileidx)
     {
         if(strcmp(argv[fileidx], "-direct") == 0)
@@ -1799,7 +1799,7 @@ int main(int argc, char *argv[])
 
     while(fileidx < argc && !movState)
     {
-        movState = std::unique_ptr<MovieState>(new MovieState(argv[fileidx++]));
+        movState = std::unique_ptr<MovieState>{new MovieState{argv[fileidx++]}};
         if(!movState->prepare()) movState = nullptr;
     }
     if(!movState)
@@ -1812,12 +1812,12 @@ int main(int argc, char *argv[])
     /* Default to going to the next movie at the end of one. */
     enum class EomAction {
         Next, Quit
-    } eom_action = EomAction::Next;
-    seconds last_time(-1);
-    SDL_Event event;
+    } eom_action{EomAction::Next};
+    seconds last_time{-1};
+    SDL_Event event{};
     while(1)
     {
-        int have_evt = SDL_WaitEventTimeout(&event, 10);
+        int have_evt{SDL_WaitEventTimeout(&event, 10)};
 
         auto cur_time = std::chrono::duration_cast<seconds>(movState->getMasterClock());
         if(cur_time != last_time)
@@ -1882,7 +1882,7 @@ int main(int argc, char *argv[])
                     movState = nullptr;
                     while(fileidx < argc && !movState)
                     {
-                        movState = std::unique_ptr<MovieState>(new MovieState(argv[fileidx++]));
+                        movState = std::unique_ptr<MovieState>{new MovieState{argv[fileidx++]}};
                         if(!movState->prepare()) movState = nullptr;
                     }
                     if(movState)

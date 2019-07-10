@@ -38,7 +38,7 @@
 #include "effects/base.h"
 
 
-const EffectList gEffectList[14]{
+const EffectList gEffectList[15]{
     { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
     { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },
     { "autowah",    AUTOWAH_EFFECT,    AL_EFFECT_AUTOWAH },
@@ -51,6 +51,7 @@ const EffectList gEffectList[14]{
     { "fshifter",   FSHIFTER_EFFECT,   AL_EFFECT_FREQUENCY_SHIFTER },
     { "modulator",  MODULATOR_EFFECT,  AL_EFFECT_RING_MODULATOR },
     { "pshifter",   PSHIFTER_EFFECT,   AL_EFFECT_PITCH_SHIFTER },
+    { "vmorpher",   VMORPHER_EFFECT,   AL_EFFECT_VOCAL_MORPHER },
     { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
     { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_DIALOGUE },
 };
@@ -76,6 +77,7 @@ constexpr struct FactoryItem {
     { AL_EFFECT_FREQUENCY_SHIFTER, FshifterStateFactory_getFactory },
     { AL_EFFECT_RING_MODULATOR, ModulatorStateFactory_getFactory },
     { AL_EFFECT_PITCH_SHIFTER, PshifterStateFactory_getFactory},
+    { AL_EFFECT_VOCAL_MORPHER, VmorpherStateFactory_getFactory},
     { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedStateFactory_getFactory },
     { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory }
 };

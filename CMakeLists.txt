@@ -697,6 +697,7 @@ SET(ALC_OBJS
     Alc/effects/modulator.cpp
     Alc/effects/null.cpp
     Alc/effects/pshifter.cpp
+    Alc/effects/vmorpher.cpp
     Alc/effects/reverb.cpp
     Alc/filters/biquad.h
     Alc/filters/biquad.cpp

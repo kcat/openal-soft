@@ -322,7 +322,7 @@ struct AudioState {
     int decodeFrame();
     bool readAudio(uint8_t *samples, int length);
 
-    int handler();
+    int handler(const milliseconds start_delay);
 };
 
 struct VideoState {
@@ -339,7 +339,7 @@ struct VideoState {
     nanoseconds mFrameLastDelay{0};
     nanoseconds mCurrentPts{0};
     /* time (av_gettime) at which we updated mCurrentPts - used to have running video pts */
-    microseconds mCurrentPtsTime{0};
+    microseconds mCurrentPtsTime{microseconds::min()};
 
     /* Swscale context for format conversion */
     SwsContextPtr mSwscaleCtx;
@@ -376,7 +376,7 @@ struct VideoState {
     void refreshTimer(SDL_Window *screen, SDL_Renderer *renderer);
     void updatePicture(SDL_Window *screen, SDL_Renderer *renderer);
     bool queuePicture(nanoseconds pts, AVFrame *frame);
-    int handler();
+    int handler(const milliseconds start_delay);
 };
 
 struct MovieState {
@@ -385,7 +385,7 @@ struct MovieState {
 
     SyncMaster mAVSyncType{SyncMaster::Default};
 
-    microseconds mClockBase{0};
+    microseconds mClockBase{microseconds::min()};
 
     std::atomic<bool> mQuit{false};
 
@@ -706,14 +706,14 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
                                            ALsizei length, const ALchar *message,
                                            void *userParam)
 {
-    AudioState *self = static_cast<AudioState*>(userParam);
+    auto self = static_cast<AudioState*>(userParam);
 
     if(eventType == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
     {
         /* Temporarily lock the source mutex to ensure it's not between
          * checking the processed count and going to sleep.
          */
-        std::unique_lock<std::mutex>(self->mSrcMutex).unlock();
+        std::unique_lock<std::mutex>{self->mSrcMutex}.unlock();
         self->mSrcCond.notify_one();
         return;
     }
@@ -738,7 +738,8 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 
     if(eventType == AL_EVENT_TYPE_DISCONNECTED_SOFT)
     {
-        { std::lock_guard<std::mutex> lock(self->mSrcMutex);
+        {
+            std::lock_guard<std::mutex> lock{self->mSrcMutex};
             self->mConnected.clear(std::memory_order_release);
         }
         self->mSrcCond.notify_one();
@@ -746,11 +747,20 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 }
 #endif
 
-int AudioState::handler()
+int AudioState::handler(const milliseconds /*start_delay*/)
 {
-    std::unique_lock<std::mutex> srclock(mSrcMutex);
-    milliseconds sleep_time = AudioBufferTime / 3;
+    std::unique_lock<std::mutex> srclock{mSrcMutex};
+    milliseconds sleep_time{AudioBufferTime / 3};
     ALenum fmt;
+
+    if(alcGetInteger64vSOFT)
+    {
+        int64_t devtime{};
+        alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()), ALC_DEVICE_CLOCK_SOFT,
+            1, &devtime);
+        mDeviceStartTime = nanoseconds{devtime} - mCurrentPts;
+    }
+    srclock.unlock();
 
 #ifdef AL_SOFT_events
     const std::array<ALenum,6> evt_types{{
@@ -999,13 +1009,7 @@ int AudioState::handler()
 #endif
         samples = av_malloc(buffer_len);
 
-    {
-        int64_t devtime{};
-        alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()), ALC_DEVICE_CLOCK_SOFT,
-            1, &devtime);
-        mDeviceStartTime = nanoseconds{devtime} - mCurrentPts;
-    }
-
+    srclock.lock();
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
           mConnected.test_and_set(std::memory_order_relaxed))
     {
@@ -1086,10 +1090,10 @@ int AudioState::handler()
 
     alSourceRewind(mSource);
     alSourcei(mSource, AL_BUFFER, 0);
+    srclock.unlock();
 
 finish:
     av_freep(&samples);
-    srclock.unlock();
 
 #ifdef AL_SOFT_events
     if(alEventControlSOFT)
@@ -1107,6 +1111,8 @@ nanoseconds VideoState::getClock()
 {
     /* NOTE: This returns incorrect times while not playing. */
     std::lock_guard<std::mutex> _{mPictQMutex};
+    if(mCurrentPtsTime == microseconds::min())
+        return nanoseconds::zero();
     auto delta = get_avtime() - mCurrentPtsTime;
     return mCurrentPts + delta;
 }
@@ -1217,7 +1223,7 @@ retry:
 
         /* Skip or repeat the frame. Take delay into account. */
         auto sync_threshold = std::min<nanoseconds>(delay, VideoSyncThreshold);
-        if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
+        if(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold)
         {
             if(diff <= -sync_threshold)
                 delay = nanoseconds::zero();
@@ -1381,8 +1387,14 @@ bool VideoState::queuePicture(nanoseconds pts, AVFrame *frame)
     return true;
 }
 
-int VideoState::handler()
+int VideoState::handler(const milliseconds start_delay)
 {
+    {
+        std::lock_guard<std::mutex> _{mPictQMutex};
+        mCurrentPtsTime = get_avtime();
+        mFrameTimer = mCurrentPtsTime + start_delay;
+    }
+
     AVFramePtr decoded_frame{av_frame_alloc()};
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
@@ -1485,6 +1497,8 @@ void MovieState::setTitle(SDL_Window *window)
 
 nanoseconds MovieState::getClock()
 {
+    if(mClockBase == microseconds::min())
+        return nanoseconds::zero();
     return get_avtime() - mClockBase;
 }
 
@@ -1570,14 +1584,13 @@ int MovieState::parse_handler()
     }
 
     /* Set the base time 500ms ahead of the current av time. */
-    mClockBase = get_avtime() + milliseconds{500};
-    mVideo.mCurrentPtsTime = mClockBase;
-    mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
+    constexpr milliseconds start_delay{500};
+    mClockBase = get_avtime() + start_delay;
 
     if(audio_index >= 0)
-        mAudioThread = std::thread{std::mem_fn(&AudioState::handler), &mAudio};
+        mAudioThread = std::thread{std::mem_fn(&AudioState::handler), &mAudio, start_delay};
     if(video_index >= 0)
-        mVideoThread = std::thread{std::mem_fn(&VideoState::handler), &mVideo};
+        mVideoThread = std::thread{std::mem_fn(&VideoState::handler), &mVideo, start_delay};
 
     /* Main packet reading/dispatching loop */
     while(!mQuit.load(std::memory_order_relaxed))

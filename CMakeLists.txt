@@ -25,7 +25,6 @@ SET(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
 
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckLibraryExists)
-INCLUDE(CheckSharedFunctionExists)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckSymbolExists)
@@ -697,8 +696,8 @@ SET(ALC_OBJS
     Alc/effects/modulator.cpp
     Alc/effects/null.cpp
     Alc/effects/pshifter.cpp
-    Alc/effects/vmorpher.cpp
     Alc/effects/reverb.cpp
+    Alc/effects/vmorpher.cpp
     Alc/filters/biquad.h
     Alc/filters/biquad.cpp
     Alc/filters/nfc.cpp
@@ -944,16 +943,14 @@ IF(HAVE_WINDOWS_H)
 
     # Check MMSystem backend
     CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
-    IF(HAVE_MMSYSTEM_H)
-        CHECK_SHARED_FUNCTION_EXISTS(waveOutOpen "windows.h;mmsystem.h" winmm "" HAVE_LIBWINMM)
-        IF(HAVE_LIBWINMM)
-            OPTION(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
-            IF(ALSOFT_BACKEND_WINMM)
-                SET(HAVE_WINMM 1)
-                SET(BACKENDS  "${BACKENDS} WinMM,")
-                SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.cpp Alc/backends/winmm.h)
-                SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
-            ENDIF()
+    FIND_LIBRARY(WINMM_LIBRARY NAMES winmm)
+    IF(HAVE_MMSYSTEM_H AND WINMM_LIBRARY)
+        OPTION(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
+        IF(ALSOFT_BACKEND_WINMM)
+            SET(HAVE_WINMM 1)
+            SET(BACKENDS  "${BACKENDS} WinMM,")
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.cpp Alc/backends/winmm.h)
+            SET(EXTRA_LIBS ${WINMM_LIBRARY} ${EXTRA_LIBS})
         ENDIF()
     ENDIF()
 

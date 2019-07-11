@@ -46,7 +46,7 @@ find_path(OPENSL_ANDROID_INCLUDE_DIR NAMES SLES/OpenSLES_Android.h
           DOC "The OpenSL Android include directory"
 )
 
-find_library(OPENSL_LIBRARY NAMES OpenSL
+find_library(OPENSL_LIBRARY NAMES OpenSLES
              DOC "The OpenSL library"
 )
 

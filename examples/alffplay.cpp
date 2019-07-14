@@ -370,7 +370,6 @@ struct VideoState {
 
     void display(SDL_Window *screen, SDL_Renderer *renderer);
     void updateVideo(SDL_Window *screen, SDL_Renderer *renderer);
-    bool queuePicture(nanoseconds pts, AVFrame *frame);
     int handler();
 };
 
@@ -1295,29 +1294,6 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
     }
 }
 
-bool VideoState::queuePicture(nanoseconds pts, AVFrame *frame)
-{
-    /* Wait until we have space for a new pic */
-    std::unique_lock<std::mutex> lock{mPictQMutex};
-    while(mPictQSize >= (mPictQ.size()-1) && !mMovie.mQuit.load(std::memory_order_relaxed))
-        mPictQCond.wait(lock);
-
-    if(mMovie.mQuit.load(std::memory_order_relaxed))
-        return false;
-
-    /* Put the frame in the queue to be loaded into a texture (and eventually
-     * displayed) by the rendering thread.
-     */
-    Picture *vp{&mPictQ[mPictQWrite]};
-    av_frame_move_ref(vp->mFrame.get(), frame);
-    vp->mPts = pts;
-
-    mPictQWrite = (mPictQWrite+1)%mPictQ.size();
-    ++mPictQSize;
-
-    return true;
-}
-
 int VideoState::handler()
 {
     {
@@ -1329,9 +1305,9 @@ int VideoState::handler()
         [](Picture &pict) -> void
         { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
 
-    AVFramePtr decoded_frame{av_frame_alloc()};
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
+        Picture *vp{&mPictQ[mPictQWrite]};
         {
             std::unique_lock<std::mutex> lock{mPackets.getMutex()};
             AVPacket *lastpkt{};
@@ -1345,7 +1321,8 @@ int VideoState::handler()
                 avcodec_send_packet(mCodecCtx.get(), nullptr);
         }
         /* Decode video frame */
-        int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame.get())};
+        AVFrame *decoded_frame{vp->mFrame.get()};
+        int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame)};
         if(ret == AVERROR_EOF) break;
         if(ret < 0)
         {
@@ -1357,19 +1334,27 @@ int VideoState::handler()
         if(decoded_frame->best_effort_timestamp != AV_NOPTS_VALUE)
             mCurrentPts = std::chrono::duration_cast<nanoseconds>(
                 seconds_d64{av_q2d(mStream->time_base)*decoded_frame->best_effort_timestamp});
-        nanoseconds pts{mCurrentPts};
+        vp->mPts = mCurrentPts;
 
         /* Update the video clock to the next expected PTS. */
         auto frame_delay = av_q2d(mCodecCtx->time_base);
         frame_delay += decoded_frame->repeat_pict * (frame_delay * 0.5);
         mCurrentPts += std::chrono::duration_cast<nanoseconds>(seconds_d64{frame_delay});
 
-        if(!queuePicture(pts, decoded_frame.get()))
-            break;
+        /* Put the frame in the queue to be loaded into a texture and displayed
+         * by the rendering thread.
+         */
+        std::unique_lock<std::mutex> lock{mPictQMutex};
+        mPictQWrite = (mPictQWrite+1)%mPictQ.size();
+        ++mPictQSize;
+
+        /* Wait until we have space for a new pic */
+        while(mPictQSize >= (mPictQ.size()-1) && !mMovie.mQuit.load(std::memory_order_relaxed))
+            mPictQCond.wait(lock);
     }
     mEOS = true;
 
-    std::unique_lock<std::mutex> lock(mPictQMutex);
+    std::unique_lock<std::mutex> lock{mPictQMutex};
     while(!mFinalUpdate)
         mPictQCond.wait(lock);
 
@@ -1515,8 +1500,8 @@ int MovieState::parse_handler()
         mQuit = true;
     }
 
-    /* Set the base time 500ms ahead of the current av time. */
-    mClockBase = get_avtime() + milliseconds{500};
+    /* Set the base time 750ms ahead of the current av time. */
+    mClockBase = get_avtime() + milliseconds{750};
 
     if(audio_index >= 0)
         mAudioThread = std::thread{std::mem_fn(&AudioState::handler), &mAudio};
@@ -1534,12 +1519,12 @@ int MovieState::parse_handler()
         if(packet.stream_index == video_index)
         {
             while(!mQuit.load(std::memory_order_acquire) && !video_queue.put(&packet))
-                std::this_thread::sleep_for(milliseconds{50});
+                std::this_thread::sleep_for(milliseconds{100});
         }
         else if(packet.stream_index == audio_index)
         {
             while(!mQuit.load(std::memory_order_acquire) && !audio_queue.put(&packet))
-                std::this_thread::sleep_for(milliseconds{50});
+                std::this_thread::sleep_for(milliseconds{100});
         }
 
         av_packet_unref(&packet);

@@ -338,6 +338,7 @@ struct VideoState {
      */
     nanoseconds mDisplayPts{0};
     microseconds mDisplayPtsTime{microseconds::min()};
+    std::mutex mDispPtsMutex;
 
     /* Swscale context for format conversion */
     SwsContextPtr mSwscaleCtx;
@@ -1104,7 +1105,7 @@ finish:
 nanoseconds VideoState::getClock()
 {
     /* NOTE: This returns incorrect times while not playing. */
-    std::lock_guard<std::mutex> _{mPictQMutex};
+    std::lock_guard<std::mutex> _{mDispPtsMutex};
     if(mDisplayPtsTime == microseconds::min())
         return nanoseconds::zero();
     auto delta = get_avtime() - mDisplayPtsTime;
@@ -1154,19 +1155,20 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
  */
 void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 {
-    std::unique_lock<std::mutex> lock{mPictQMutex};
     Picture *vp{&mPictQ[mPictQRead]};
+
+    std::unique_lock<std::mutex> lock{mPictQMutex};
     auto clocktime = mMovie.getMasterClock();
 
     bool updated{false};
     while(mPictQSize > 0)
     {
         size_t nextIdx{(mPictQRead+1)%mPictQ.size()};
-        Picture *newvp{&mPictQ[nextIdx]};
-        if(clocktime < newvp->mPts)
+        Picture *nextvp{&mPictQ[nextIdx]};
+        if(clocktime < nextvp->mPts)
             break;
 
-        vp = newvp;
+        vp = nextvp;
         updated = true;
 
         mPictQRead = nextIdx;
@@ -1181,6 +1183,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
         return;
     }
     lock.unlock();
+
     if(updated)
     {
         mPictQCond.notify_all();
@@ -1264,7 +1267,6 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
                 SDL_UnlockTexture(mImage);
             }
         }
-        av_frame_unref(vp->mFrame.get());
     }
 
     /* Show the picture! */
@@ -1272,17 +1274,13 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 
     if(updated)
     {
-        lock.lock();
+        auto disp_time = get_avtime();
+
+        std::lock_guard<std::mutex> _{mDispPtsMutex};
         mDisplayPts = vp->mPts;
-        mDisplayPtsTime = get_avtime();
-        if(mEOS.load(std::memory_order_acquire) && mPictQSize == 0)
-        {
-            mFinalUpdate = true;
-            mPictQCond.notify_all();
-        }
-        lock.unlock();
+        mDisplayPtsTime = disp_time;
     }
-    else if(mEOS.load(std::memory_order_acquire))
+    if(mEOS.load(std::memory_order_acquire))
     {
         lock.lock();
         if(mPictQSize == 0)
@@ -1297,7 +1295,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 int VideoState::handler()
 {
     {
-        std::lock_guard<std::mutex> _{mPictQMutex};
+        std::lock_guard<std::mutex> _{mDispPtsMutex};
         mDisplayPtsTime = get_avtime();
     }
 

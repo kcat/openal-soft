@@ -343,36 +343,32 @@ struct VideoState {
     SwsContextPtr mSwscaleCtx;
 
     struct Picture {
-        SDL_Texture *mImage{nullptr};
-        int mWidth{0}, mHeight{0}; /* Logical image size (actual size may be larger) */
         AVFramePtr mFrame{};
         nanoseconds mPts{nanoseconds::min()};
-        bool mUpdated{false};
-
-        Picture() = default;
-        Picture(Picture&&) = delete;
-        ~Picture()
-        {
-            if(mImage)
-                SDL_DestroyTexture(mImage);
-            mImage = nullptr;
-        }
-        Picture& operator=(Picture&&) = delete;
     };
     std::array<Picture,VIDEO_PICTURE_QUEUE_SIZE> mPictQ;
     size_t mPictQSize{0u}, mPictQRead{0u}, mPictQWrite{1u};
-    size_t mPictQPrepSize{0u}, mPictQPrep{1u};
     std::mutex mPictQMutex;
     std::condition_variable mPictQCond;
+
+    SDL_Texture *mImage{nullptr};
+    int mWidth{0}, mHeight{0}; /* Logical image size (actual size may be larger) */
+
     bool mFirstUpdate{true};
     std::atomic<bool> mEOS{false};
     std::atomic<bool> mFinalUpdate{false};
 
     VideoState(MovieState &movie) : mMovie(movie) { }
+    ~VideoState()
+    {
+        if(mImage)
+            SDL_DestroyTexture(mImage);
+        mImage = nullptr;
+    }
 
     nanoseconds getClock();
 
-    void display(SDL_Window *screen, SDL_Renderer *renderer, Picture *vp);
+    void display(SDL_Window *screen, SDL_Renderer *renderer);
     void updateVideo(SDL_Window *screen, SDL_Renderer *renderer);
     bool queuePicture(nanoseconds pts, AVFrame *frame);
     int handler();
@@ -1117,9 +1113,9 @@ nanoseconds VideoState::getClock()
 }
 
 /* Called by VideoState::updateVideo to display the next video frame. */
-void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, Picture *vp)
+void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
 {
-    if(!vp->mImage)
+    if(!mImage)
         return;
 
     float aspect_ratio;
@@ -1147,9 +1143,9 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, Picture *vp
     x = (win_w - w) / 2;
     y = (win_h - h) / 2;
 
-    SDL_Rect src_rect{ 0, 0, vp->mWidth, vp->mHeight };
+    SDL_Rect src_rect{ 0, 0, mWidth, mHeight };
     SDL_Rect dst_rect{ x, y, w, h };
-    SDL_RenderCopy(renderer, vp->mImage, &src_rect, &dst_rect);
+    SDL_RenderCopy(renderer, mImage, &src_rect, &dst_rect);
     SDL_RenderPresent(renderer);
 }
 
@@ -1160,34 +1156,57 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, Picture *vp
 void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 {
     std::unique_lock<std::mutex> lock{mPictQMutex};
-    while(mPictQPrep != mPictQWrite && !mMovie.mQuit.load(std::memory_order_relaxed))
+    Picture *vp{&mPictQ[mPictQRead]};
+    auto clocktime = mMovie.getMasterClock();
+
+    bool updated{false};
+    while(mPictQSize > 0)
     {
-        Picture *vp{&mPictQ[mPictQPrep]};
-        bool fmt_updated{false};
+        size_t nextIdx{(mPictQRead+1)%mPictQ.size()};
+        Picture *newvp{&mPictQ[nextIdx]};
+        if(clocktime < newvp->mPts)
+            break;
+
+        vp = newvp;
+        updated = true;
+
+        mPictQRead = nextIdx;
+        --mPictQSize;
+    }
+    if(mMovie.mQuit.load(std::memory_order_relaxed))
+    {
+        if(mEOS)
+            mFinalUpdate = true;
         lock.unlock();
+        mPictQCond.notify_all();
+        return;
+    }
+    lock.unlock();
+    if(updated)
+    {
+        mPictQCond.notify_all();
 
         /* allocate or resize the buffer! */
-        if(!vp->mImage || vp->mWidth != mCodecCtx->width || vp->mHeight != mCodecCtx->height)
+        bool fmt_updated{false};
+        if(!mImage || mWidth != mCodecCtx->width || mHeight != mCodecCtx->height)
         {
             fmt_updated = true;
-            if(vp->mImage)
-                SDL_DestroyTexture(vp->mImage);
-            vp->mImage = SDL_CreateTexture(
-                renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING,
-                mCodecCtx->coded_width, mCodecCtx->coded_height
-            );
-            if(!vp->mImage)
+            if(mImage)
+                SDL_DestroyTexture(mImage);
+            mImage = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING,
+                mCodecCtx->coded_width, mCodecCtx->coded_height);
+            if(!mImage)
                 std::cerr<< "Failed to create YV12 texture!" <<std::endl;
-            vp->mWidth = mCodecCtx->width;
-            vp->mHeight = mCodecCtx->height;
+            mWidth = mCodecCtx->width;
+            mHeight = mCodecCtx->height;
 
-            if(mFirstUpdate && vp->mWidth > 0 && vp->mHeight > 0)
+            if(mFirstUpdate && mWidth > 0 && mHeight > 0)
             {
                 /* For the first update, set the window size to the video size. */
                 mFirstUpdate = false;
 
-                int w = vp->mWidth;
-                int h = vp->mHeight;
+                int w{mWidth};
+                int h{mHeight};
                 if(mCodecCtx->sample_aspect_ratio.den != 0)
                 {
                     double aspect_ratio = av_q2d(mCodecCtx->sample_aspect_ratio);
@@ -1200,19 +1219,19 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
             }
         }
 
-        if(vp->mImage)
+        if(mImage)
         {
             AVFrame *frame{vp->mFrame.get()};
             void *pixels{nullptr};
             int pitch{0};
 
             if(mCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P)
-                SDL_UpdateYUVTexture(vp->mImage, nullptr,
+                SDL_UpdateYUVTexture(mImage, nullptr,
                     frame->data[0], frame->linesize[0],
                     frame->data[1], frame->linesize[1],
                     frame->data[2], frame->linesize[2]
                 );
-            else if(SDL_LockTexture(vp->mImage, nullptr, &pixels, &pitch) != 0)
+            else if(SDL_LockTexture(mImage, nullptr, &pixels, &pitch) != 0)
                 std::cerr<< "Failed to lock texture" <<std::endl;
             else
             {
@@ -1243,52 +1262,14 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 
                 sws_scale(mSwscaleCtx.get(), reinterpret_cast<uint8_t**>(frame->data), frame->linesize,
                     0, h, pict_data, pict_linesize);
-                SDL_UnlockTexture(vp->mImage);
+                SDL_UnlockTexture(mImage);
             }
         }
-        vp->mUpdated = true;
         av_frame_unref(vp->mFrame.get());
-
-        mPictQPrep = (mPictQPrep+1)%mPictQ.size();
-        ++mPictQPrepSize;
-
-        lock.lock();
     }
-
-    Picture *vp{&mPictQ[mPictQRead]};
-    auto clocktime = mMovie.getMasterClock();
-
-    bool updated{false};
-    while(mPictQPrepSize > 0 && !mMovie.mQuit.load(std::memory_order_relaxed))
-    {
-        size_t nextIdx{(mPictQRead+1)%mPictQ.size()};
-        Picture *newvp{&mPictQ[nextIdx]};
-        if(clocktime < newvp->mPts || !newvp->mUpdated)
-            break;
-
-        newvp->mUpdated = false;
-        if(!newvp->mImage)
-            std::swap(vp->mImage, newvp->mImage);
-        vp = newvp;
-        updated = true;
-
-        mPictQRead = nextIdx;
-        --mPictQSize; --mPictQPrepSize;
-    }
-    if(mMovie.mQuit.load(std::memory_order_relaxed))
-    {
-        if(mEOS)
-            mFinalUpdate = true;
-        lock.unlock();
-        mPictQCond.notify_all();
-        return;
-    }
-    lock.unlock();
-    if(updated)
-        mPictQCond.notify_all();
 
     /* Show the picture! */
-    display(screen, renderer, vp);
+    display(screen, renderer);
 
     if(updated)
     {
@@ -1634,7 +1615,7 @@ int main(int argc, char *argv[])
     /* Initialize networking protocols */
     avformat_network_init();
 
-    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER))
+    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
     {
         std::cerr<< "Could not initialize SDL - <<"<<SDL_GetError() <<std::endl;
         return 1;

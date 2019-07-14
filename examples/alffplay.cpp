@@ -348,14 +348,14 @@ struct VideoState {
         nanoseconds mPts{nanoseconds::min()};
     };
     std::array<Picture,VIDEO_PICTURE_QUEUE_SIZE> mPictQ;
-    size_t mPictQSize{0u}, mPictQRead{0u}, mPictQWrite{1u};
+    std::atomic<size_t> mPictQRead{0u}, mPictQWrite{1u};
     std::mutex mPictQMutex;
     std::condition_variable mPictQCond;
 
     SDL_Texture *mImage{nullptr};
     int mWidth{0}, mHeight{0}; /* Logical image size (actual size may be larger) */
-
     bool mFirstUpdate{true};
+
     std::atomic<bool> mEOS{false};
     std::atomic<bool> mFinalUpdate{false};
 
@@ -1155,37 +1155,38 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
  */
 void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 {
-    Picture *vp{&mPictQ[mPictQRead]};
+    size_t read_idx{mPictQRead.load(std::memory_order_relaxed)};
+    Picture *vp{&mPictQ[read_idx]};
 
-    std::unique_lock<std::mutex> lock{mPictQMutex};
     auto clocktime = mMovie.getMasterClock();
-
     bool updated{false};
-    while(mPictQSize > 0)
+    while(1)
     {
-        size_t nextIdx{(mPictQRead+1)%mPictQ.size()};
-        Picture *nextvp{&mPictQ[nextIdx]};
+        size_t next_idx{(read_idx+1)%mPictQ.size()};
+        if(next_idx == mPictQWrite.load(std::memory_order_acquire))
+            break;
+        Picture *nextvp{&mPictQ[next_idx]};
         if(clocktime < nextvp->mPts)
             break;
 
         vp = nextvp;
         updated = true;
-
-        mPictQRead = nextIdx;
-        --mPictQSize;
+        read_idx = next_idx;
     }
     if(mMovie.mQuit.load(std::memory_order_relaxed))
     {
         if(mEOS)
             mFinalUpdate = true;
-        lock.unlock();
+        mPictQRead.store(read_idx, std::memory_order_release);
+        std::unique_lock<std::mutex>{mPictQMutex}.unlock();
         mPictQCond.notify_all();
         return;
     }
-    lock.unlock();
 
     if(updated)
     {
+        mPictQRead.store(read_idx, std::memory_order_release);
+        std::unique_lock<std::mutex>{mPictQMutex}.unlock();
         mPictQCond.notify_all();
 
         /* allocate or resize the buffer! */
@@ -1282,13 +1283,12 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
     }
     if(mEOS.load(std::memory_order_acquire))
     {
-        lock.lock();
-        if(mPictQSize == 0)
+        if((read_idx+1)%mPictQ.size() == mPictQWrite.load(std::memory_order_acquire))
         {
             mFinalUpdate = true;
+            std::unique_lock<std::mutex>{mPictQMutex}.unlock();
             mPictQCond.notify_all();
         }
-        lock.unlock();
     }
 }
 
@@ -1305,7 +1305,9 @@ int VideoState::handler()
 
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
-        Picture *vp{&mPictQ[mPictQWrite]};
+        size_t write_idx{mPictQWrite.load(std::memory_order_relaxed)};
+        Picture *vp{&mPictQ[write_idx]};
+
         {
             std::unique_lock<std::mutex> lock{mPackets.getMutex()};
             AVPacket *lastpkt{};
@@ -1342,19 +1344,22 @@ int VideoState::handler()
         /* Put the frame in the queue to be loaded into a texture and displayed
          * by the rendering thread.
          */
-        std::unique_lock<std::mutex> lock{mPictQMutex};
-        mPictQWrite = (mPictQWrite+1)%mPictQ.size();
-        ++mPictQSize;
+        write_idx = (write_idx+1)%mPictQ.size();
+        mPictQWrite.store(write_idx, std::memory_order_release);
 
-        /* Wait until we have space for a new pic */
-        while(mPictQSize >= (mPictQ.size()-1) && !mMovie.mQuit.load(std::memory_order_relaxed))
-            mPictQCond.wait(lock);
+        if(write_idx == mPictQRead.load(std::memory_order_acquire))
+        {
+            /* Wait until we have space for a new pic */
+            std::unique_lock<std::mutex> lock{mPictQMutex};
+            while(write_idx == mPictQRead.load(std::memory_order_acquire) &&
+                !mMovie.mQuit.load(std::memory_order_relaxed))
+                mPictQCond.wait(lock);
+        }
     }
     mEOS = true;
 
     std::unique_lock<std::mutex> lock{mPictQMutex};
-    while(!mFinalUpdate)
-        mPictQCond.wait(lock);
+    while(!mFinalUpdate) mPictQCond.wait(lock);
 
     return 0;
 }
@@ -1655,7 +1660,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    { auto device = alcGetContextsDevice(alcGetCurrentContext());
+    {
+        auto device = alcGetContextsDevice(alcGetCurrentContext());
         if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
         {
             std::cout<< "Found ALC_SOFT_device_clock" <<std::endl;
@@ -1740,7 +1746,7 @@ int main(int argc, char *argv[])
     enum class EomAction {
         Next, Quit
     } eom_action{EomAction::Next};
-    seconds last_time{-1};
+    seconds last_time{seconds::min()};
     while(1)
     {
         SDL_Event event{};
@@ -1750,7 +1756,7 @@ int main(int argc, char *argv[])
         if(cur_time != last_time)
         {
             auto end_time = std::chrono::duration_cast<seconds>(movState->getDuration());
-            std::cout<< "\r "<<PrettyTime{cur_time}<<" / "<<PrettyTime{end_time} <<std::flush;
+            std::cout<< "    \r "<<PrettyTime{cur_time}<<" / "<<PrettyTime{end_time} <<std::flush;
             last_time = cur_time;
         }
 
@@ -1795,7 +1801,7 @@ int main(int argc, char *argv[])
 
                 case FF_MOVIE_DONE_EVENT:
                     std::cout<<'\n';
-                    last_time = seconds(-1);
+                    last_time = seconds::min();
                     if(eom_action != EomAction::Quit)
                     {
                         movState = nullptr;

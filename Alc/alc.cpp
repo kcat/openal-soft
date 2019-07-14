@@ -617,9 +617,7 @@ constexpr struct {
     DECL(AL_EFFECT_FLANGER),
     DECL(AL_EFFECT_PITCH_SHIFTER),
     DECL(AL_EFFECT_FREQUENCY_SHIFTER),
-#if 0
     DECL(AL_EFFECT_VOCAL_MORPHER),
-#endif
     DECL(AL_EFFECT_RING_MODULATOR),
     DECL(AL_EFFECT_AUTOWAH),
     DECL(AL_EFFECT_COMPRESSOR),
@@ -1101,7 +1099,7 @@ void alc_initconfig(void)
     if(const char *devs{getenv("ALSOFT_DRIVERS")})
     {
         if(devs[0])
-            devopt = al::optional<std::string>{al::in_place, devs};
+            devopt = devs;
     }
     if(devopt)
     {
@@ -1213,7 +1211,7 @@ void alc_initconfig(void)
     InitEffect(&DefaultEffect);
     auto defrevopt = ConfigValueStr(nullptr, nullptr, "default-reverb");
     if((str=getenv("ALSOFT_DEFAULT_REVERB")) && str[0])
-        defrevopt = al::optional<std::string>{al::in_place, str};
+        defrevopt = str;
     if(defrevopt) LoadReverbPreset(defrevopt->c_str(), &DefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
@@ -1373,7 +1371,7 @@ static al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     for(const auto &item : list)
     {
         if(item.format == format)
-            return al::optional<DevFmtPair>{al::in_place, DevFmtPair{item.channels, item.type}};
+            return al::make_optional(DevFmtPair{item.channels, item.type});
     }
 
     return al::nullopt;
@@ -1637,9 +1635,9 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
 {
-    return CompressorInit(device->RealOut.NumChannels, device->Frequency,
-        AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f,
-        0.0f, 0.0f, threshold, INFINITY, 0.0f, 0.020f, 0.200f);
+    return CompressorInit(static_cast<ALuint>(device->RealOut.Buffer.size()), device->Frequency,
+        AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f, 0.0f, 0.0f, threshold,
+        INFINITY, 0.0f, 0.020f, 0.200f);
 }
 
 /* UpdateClockBase
@@ -1684,30 +1682,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
-        ALCenum alayout = AL_NONE;
-        ALCenum ascale = AL_NONE;
-        ALCenum schans = AL_NONE;
-        ALCenum stype = AL_NONE;
-        ALCsizei attrIdx = 0;
-        ALCsizei aorder = 0;
-        ALCuint freq = 0;
+        ALCenum alayout{AL_NONE};
+        ALCenum ascale{AL_NONE};
+        ALCenum schans{AL_NONE};
+        ALCenum stype{AL_NONE};
+        ALCsizei attrIdx{0};
+        ALCsizei aorder{0};
+        ALCuint freq{0u};
 
-        const char *devname{nullptr};
-        const bool loopback{device->Type == Loopback};
-        if(!loopback)
-        {
-            devname = device->DeviceName.c_str();
-            /* If a context is already running on the device, stop playback so
-             * the device attributes can be updated.
-             */
-            if(device->Flags.get<DeviceRunning>())
-                device->Backend->stop();
-            device->Flags.unset<DeviceRunning>();
-        }
-
-        auto numMono = static_cast<ALsizei>(device->NumMonoSources);
-        auto numStereo = static_cast<ALsizei>(device->NumStereoSources);
-        auto numSends = ALsizei{old_sends};
+        ALuint numMono{device->NumMonoSources};
+        ALuint numStereo{device->NumStereoSources};
+        ALsizei numSends{old_sends};
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
@@ -1747,13 +1732,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             case ALC_MONO_SOURCES:
                 numMono = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_MONO_SOURCES, numMono);
-                numMono = maxi(numMono, 0);
+                if(numMono > INT_MAX) numMono = 0;
                 break;
 
             case ALC_STEREO_SOURCES:
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                numStereo = maxi(numStereo, 0);
+                if(numStereo > INT_MAX) numStereo = 0;
                 break;
 
             case ALC_MAX_AUXILIARY_SENDS:
@@ -1792,6 +1777,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 #undef TRACE_ATTR
 
+        const bool loopback{device->Type == Loopback};
         if(loopback)
         {
             if(!schans || !stype || !freq)
@@ -1817,14 +1803,20 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
         }
 
+        /* If a context is already running on the device, stop playback so the
+         * device attributes can be updated.
+         */
         if(device->Flags.get<DeviceRunning>())
             device->Backend->stop();
         device->Flags.unset<DeviceRunning>();
 
         UpdateClockBase(device);
 
+        const char *devname{nullptr};
         if(!loopback)
         {
+            devname = device->DeviceName.c_str();
+
             device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
             device->UpdateSize = DEFAULT_UPDATE_SIZE;
             device->Frequency = DEFAULT_OUTPUT_RATE;
@@ -1869,14 +1861,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(numMono > INT_MAX-numStereo)
             numMono = INT_MAX-numStereo;
         numMono += numStereo;
-        if(auto srcsopt = ConfigValueInt(devname, nullptr, "sources"))
+        if(auto srcsopt = ConfigValueUInt(devname, nullptr, "sources"))
         {
             if(*srcsopt <= 0) numMono = 256;
             else numMono = *srcsopt;
         }
         else
-            numMono = maxi(numMono, 256);
-        numStereo = mini(numStereo, numMono);
+            numMono = maxu(numMono, 256);
+        numStereo = minu(numStereo, numMono);
         numMono -= numStereo;
         device->SourcesMax = numMono + numStereo;
 
@@ -1903,12 +1895,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->ChannelDelay.clear();
 
     device->Dry.AmbiMap.fill(BFChannelConfig{});
-    device->Dry.Buffer = nullptr;
-    device->Dry.NumChannels = 0;
+    device->Dry.Buffer = {};
     std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
     device->RealOut.ChannelIndex.fill(-1);
-    device->RealOut.Buffer = nullptr;
-    device->RealOut.NumChannels = 0;
+    device->RealOut.Buffer = {};
     device->MixBuffer.clear();
     device->MixBuffer.shrink_to_fit();
 
@@ -1999,16 +1989,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     if(device->Frequency != oldFreq && device->Flags.get<FrequencyRequest>())
     {
-        ERR("Failed to set %uhz, got %uhz instead\n", oldFreq, device->Frequency);
+        WARN("Failed to set %uhz, got %uhz instead\n", oldFreq, device->Frequency);
         device->Flags.unset<FrequencyRequest>();
-    }
-
-    if((device->UpdateSize&3) != 0)
-    {
-        if((CPUCapFlags&CPU_CAP_SSE))
-            WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
-        if((CPUCapFlags&CPU_CAP_NEON))
-            WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
     TRACE("Post-reset: %s, %s, %uhz, %u / %u buffer\n",
@@ -2016,24 +1998,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Frequency, device->UpdateSize, device->BufferSize);
 
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
-    TRACE("Channel config, Main: %u, Real: %u\n", device->Dry.NumChannels,
-        device->RealOut.NumChannels);
-
-    /* Allocate extra channels for any post-filter output. */
-    const ALuint num_chans{device->Dry.NumChannels + device->RealOut.NumChannels};
-
-    TRACE("Allocating %u channels, %zu bytes\n", num_chans,
-        num_chans*sizeof(device->MixBuffer[0]));
-    device->MixBuffer.resize(num_chans);
-
-    device->Dry.Buffer = device->MixBuffer.data();
-    if(device->RealOut.NumChannels != 0)
-        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
-    else
-    {
-        device->RealOut.Buffer = device->Dry.Buffer;
-        device->RealOut.NumChannels = device->Dry.NumChannels;
-    }
 
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",
@@ -2052,10 +2016,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "front-stablizer", 0))
         {
             auto stablizer = al::make_unique<FrontStablizer>();
-            /* Initialize band-splitting filters for the front-left and
-                * front-right channels, with a crossover at 5khz (could be
-                * higher).
-                */
+            /* Initialize band-splitting filters for the front-left and front-
+             * right channels, with a crossover at 5khz (could be higher).
+             */
             const ALfloat scale{static_cast<ALfloat>(5000.0 / device->Frequency)};
 
             stablizer->LFilter.init(scale);
@@ -2185,7 +2148,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
-            state->mOutTarget = {device->Dry.Buffer, device->Dry.NumChannels};
+            state->mOutTarget = device->Dry.Buffer;
             if(state->deviceUpdate(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
@@ -2207,7 +2170,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 aluInitEffectPanning(slot, device);
 
                 EffectState *state{slot->Effect.State};
-                state->mOutTarget = {device->Dry.Buffer, device->Dry.NumChannels};
+                state->mOutTarget = device->Dry.Buffer;
                 if(state->deviceUpdate(device) == AL_FALSE)
                     update_failed = AL_TRUE;
                 else
@@ -3723,7 +3686,6 @@ START_API_FUNC
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->UpdateSize = DEFAULT_UPDATE_SIZE;
     device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
-    device->LimiterState = ALC_TRUE;
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;

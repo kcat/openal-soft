@@ -144,6 +144,49 @@ inline T uninitialized_default_construct_n(T first, N count)
 }
 
 
+template<typename T0, typename T1>
+inline T1 uninitialized_move(T0 first, const T0 last, const T1 output)
+{
+    using ValueT = typename std::iterator_traits<T1>::value_type;
+    T1 current{output};
+    try {
+        while(first != last)
+        {
+            ::new (static_cast<void*>(std::addressof(*current))) ValueT{std::move(*first)};
+            ++current;
+            ++first;
+        }
+    }
+    catch(...) {
+        destroy(output, current);
+        throw;
+    }
+    return current;
+}
+
+template<typename T0, typename N, typename T1, REQUIRES(std::is_integral<N>::value)>
+inline T1 uninitialized_move_n(T0 first, N count, const T1 output)
+{
+    using ValueT = typename std::iterator_traits<T1>::value_type;
+    T1 current{output};
+    if(count != 0)
+    {
+        try {
+            do {
+                ::new (static_cast<void*>(std::addressof(*current))) ValueT{std::move(*first)};
+                ++current;
+                ++first;
+            } while(--count);
+        }
+        catch(...) {
+            destroy(output, current);
+            throw;
+        }
+    }
+    return current;
+}
+
+
 /* std::make_unique was added with C++14, so until we rely on that, make our
  * own version.
  */

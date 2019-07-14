@@ -497,7 +497,7 @@ al::optional<std::string> ConfigValueStr(const char *devName, const char *blockN
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return al::nullopt;
 
-    return al::optional<std::string>{al::in_place, val};
+    return al::make_optional<std::string>(val);
 }
 
 al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)
@@ -505,7 +505,7 @@ al::optional<int> ConfigValueInt(const char *devName, const char *blockName, con
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return al::nullopt;
 
-    return al::optional<int>{al::in_place, static_cast<int>(std::strtol(val, nullptr, 0))};
+    return al::make_optional(static_cast<int>(std::strtol(val, nullptr, 0)));
 }
 
 al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName)
@@ -513,8 +513,7 @@ al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *bloc
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return al::nullopt;
 
-    return al::optional<unsigned int>{al::in_place,
-        static_cast<unsigned int>(std::strtoul(val, nullptr, 0))};
+    return al::make_optional(static_cast<unsigned int>(std::strtoul(val, nullptr, 0)));
 }
 
 al::optional<float> ConfigValueFloat(const char *devName, const char *blockName, const char *keyName)
@@ -522,7 +521,7 @@ al::optional<float> ConfigValueFloat(const char *devName, const char *blockName,
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return al::nullopt;
 
-    return al::optional<float>{al::in_place, std::strtof(val, nullptr)};
+    return al::make_optional(std::strtof(val, nullptr));
 }
 
 al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, const char *keyName)
@@ -530,9 +529,9 @@ al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, c
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return al::nullopt;
 
-    return al::optional<bool>{al::in_place,
+    return al::make_optional(
         strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
-        strcasecmp(val, "on") == 0 || atoi(val) != 0};
+        strcasecmp(val, "on") == 0 || atoi(val) != 0);
 }
 
 int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)

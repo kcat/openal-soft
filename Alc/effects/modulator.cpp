@@ -121,7 +121,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
         mGetSamples = Modulate<Sin>;
     else if(props->Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
         mGetSamples = Modulate<Saw>;
-    else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
+    else /*if(props->Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         mGetSamples = Modulate<Square>;
 
     ALfloat f0norm{props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency)};
@@ -129,11 +129,11 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     /* Bandwidth value is constant in octaves. */
     mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
         BiquadFilter::rcpQFromBandwidth(f0norm, 0.75f));
-    for(ALuint i{1u};i < slot->Wet.NumChannels;++i)
+    for(size_t i{1u};i < slot->Wet.Buffer.size();++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
-    for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
+    mOutTarget = target.Main->Buffer;
+    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

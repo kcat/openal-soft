@@ -140,15 +140,14 @@ void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
     ASSUME(lidx >= 0 && ridx >= 0);
 
     DirectHrtfState *state{device->mHrtfState.get()};
-    MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-        {device->Dry.Buffer, device->Dry.NumChannels}, device->HrtfAccumData, state, SamplesToDo);
+    MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx], device->Dry.Buffer,
+        device->HrtfAccumData, state, SamplesToDo);
 }
 
 void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
 {
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process(device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
-        SamplesToDo);
+    ambidec->process(device->RealOut.Buffer, device->Dry.Buffer.data(), SamplesToDo);
 }
 
 void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
@@ -161,15 +160,14 @@ void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
     /* Encode to stereo-compatible 2-channel UHJ output. */
     Uhj2Encoder *uhj2enc{device->Uhj_Encoder.get()};
     uhj2enc->encode(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-        device->Dry.Buffer, SamplesToDo);
+        device->Dry.Buffer.data(), SamplesToDo);
 }
 
 void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
     BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process(device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
-        SamplesToDo);
+    ambidec->process(device->RealOut.Buffer, device->Dry.Buffer.data(), SamplesToDo);
 
     /* BS2B is stereo output only. */
     const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
@@ -666,7 +664,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.
          */
-        voice->mDirect.Buffer = {Device->RealOut.Buffer, Device->RealOut.NumChannels};
+        voice->mDirect.Buffer = Device->RealOut.Buffer;
 
         for(ALsizei c{0};c < num_channels;c++)
         {
@@ -695,7 +693,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
          */
-        voice->mDirect.Buffer = {Device->RealOut.Buffer, Device->RealOut.NumChannels};
+        voice->mDirect.Buffer = Device->RealOut.Buffer;
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
@@ -813,7 +811,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    if(Device->Dry.Buffer == Device->RealOut.Buffer)
+                    if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
                         int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
@@ -860,7 +858,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    if(Device->Dry.Buffer == Device->RealOut.Buffer)
+                    if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
                         int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
@@ -938,7 +936,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     const ALCdevice *Device{ALContext->Device};
     ALeffectslot *SendSlots[MAX_SENDS];
 
-    voice->mDirect.Buffer = {Device->Dry.Buffer, static_cast<size_t>(Device->Dry.NumChannels)};
+    voice->mDirect.Buffer = Device->Dry.Buffer;
     for(ALsizei i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
@@ -950,9 +948,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
             voice->mSend[i].Buffer = {};
         }
         else
-        {
-            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer, SendSlots[i]->Wet.NumChannels};
-        }
+            voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
     }
 
     /* Calculate the stepping value */
@@ -996,7 +992,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     const ALlistener &Listener = ALContext->Listener;
 
     /* Set mixing buffers and get send parameters. */
-    voice->mDirect.Buffer = {Device->Dry.Buffer, Device->Dry.NumChannels};
+    voice->mDirect.Buffer = Device->Dry.Buffer;
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
@@ -1053,7 +1049,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         if(!SendSlots[i])
             voice->mSend[i].Buffer = {};
         else
-            voice->mSend[i].Buffer = {SendSlots[i]->Wet.Buffer, SendSlots[i]->Wet.NumChannels};
+            voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
     }
 
     /* Transform source to listener space (convert to head relative) */
@@ -1426,23 +1422,23 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo, slot->Wet.Buffer, slot->Wet.NumChannels,
-                state->mOutTarget);
+            state->process(SamplesToDo, slot->Wet.Buffer.data(),
+                static_cast<ALsizei>(slot->Wet.Buffer.size()), state->mOutTarget);
         }
     );
 }
 
 
-void ApplyStablizer(FrontStablizer *Stablizer, FloatBufferLine *Buffer, const ALuint lidx,
-    const ALuint ridx, const ALuint cidx, const ALsizei SamplesToDo, const ALuint NumChannels)
+void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> Buffer,
+    const ALuint lidx, const ALuint ridx, const ALuint cidx, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
-    ASSUME(NumChannels > 0);
 
     /* Apply a delay to all channels, except the front-left and front-right, so
      * they maintain correct timing.
      */
-    for(ALuint i{0};i < NumChannels;i++)
+    const size_t NumChannels{Buffer.size()};
+    for(size_t i{0u};i < NumChannels;i++)
     {
         if(i == lidx || i == ridx)
             continue;
@@ -1678,6 +1674,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
          */
         if(LIKELY(device->PostProcess))
             device->PostProcess(device, SamplesToDo);
+        const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
 
         /* Apply front image stablization for surround sound, if applicable. */
         if(device->Stablizer)
@@ -1687,16 +1684,13 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             const int cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
-            ApplyStablizer(device->Stablizer.get(), device->RealOut.Buffer, lidx, ridx, cidx,
-                SamplesToDo, device->RealOut.NumChannels);
+            ApplyStablizer(device->Stablizer.get(), RealOut, lidx, ridx, cidx, SamplesToDo);
         }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */
         if(Compressor *comp{device->Limiter.get()})
-            comp->process(SamplesToDo, device->RealOut.Buffer);
+            comp->process(SamplesToDo, RealOut.data());
 
-        const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer,
-            device->RealOut.NumChannels};
         /* Apply delays and attenuation for mismatched speaker distances. */
         ApplyDistanceComp(RealOut, SamplesToDo, device->ChannelDelay.as_span().cbegin());
 

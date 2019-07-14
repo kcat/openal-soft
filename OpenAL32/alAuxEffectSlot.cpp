@@ -643,7 +643,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         FPUCtl mixer_mode{};
         ALCdevice *Device{Context->Device};
         std::unique_lock<std::mutex> statelock{Device->StateLock};
-        State->mOutTarget = {Device->Dry.Buffer, Device->Dry.NumChannels};
+        State->mOutTarget = Device->Dry.Buffer;
         if(State->deviceUpdate(Device) == AL_FALSE)
         {
             statelock.unlock();

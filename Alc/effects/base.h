@@ -110,6 +110,15 @@ union EffectProps {
     } Pshifter;
 
     struct {
+        ALfloat Rate;
+        ALint PhonemeA;
+        ALint PhonemeB;
+        ALint PhonemeACoarseTuning;
+        ALint PhonemeBCoarseTuning;
+        ALint Waveform;
+    } Vmorpher;
+
+    struct {
         ALfloat Gain;
     } Dedicated;
 };
@@ -180,6 +189,7 @@ EffectStateFactory *FlangerStateFactory_getFactory(void);
 EffectStateFactory *FshifterStateFactory_getFactory(void);
 EffectStateFactory *ModulatorStateFactory_getFactory(void);
 EffectStateFactory *PshifterStateFactory_getFactory(void);
+EffectStateFactory* VmorpherStateFactory_getFactory(void);
 
 EffectStateFactory *DedicatedStateFactory_getFactory(void);
 

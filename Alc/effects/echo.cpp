@@ -113,7 +113,7 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
     CalcAngleCoeffs(-angle, 0.0f, 0.0f, coeffs[0]);
     CalcAngleCoeffs( angle, 0.0f, 0.0f, coeffs[1]);
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
+    mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs[0], slot->Params.Gain, mGains[0].Target);
     ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }

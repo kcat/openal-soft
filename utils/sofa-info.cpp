@@ -207,9 +207,7 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
         mysofa_c2s(&aers[i]);
     }
 
-    uint fdCount{GetUniquelySortedElems(m, aers.data(), 2,
-        (const float*[3]){ nullptr, nullptr, nullptr }, (const float[3]){ 0.1f, 0.1f, 0.001f },
-        elems.data())};
+    uint fdCount{GetUniquelySortedElems(m, aers.data(), 2, { nullptr, nullptr, nullptr }, { 0.1f, 0.1f, 0.001f }, elems.data())};
     if(fdCount > (m / 3))
     {
         fprintf(stdout, "Incompatible layout (inumerable radii).\n");
@@ -223,9 +221,7 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
     for(uint fi{0u};fi < fdCount;fi++)
     {
         float dist{fds[fi].mDistance};
-        uint evCount{GetUniquelySortedElems(m, aers.data(), 1,
-            (const float*[3]){ nullptr, nullptr, &dist }, (const float[3]){ 0.1f, 0.1f, 0.001f },
-            elems.data())};
+        uint evCount{GetUniquelySortedElems(m, aers.data(), 1, { nullptr, nullptr, &dist }, { 0.1f, 0.1f, 0.001f }, elems.data())};
 
         if(evCount > (m / 3))
         {
@@ -268,9 +264,7 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
         for(uint ei{evStart};ei < evCount;ei++)
         {
             float ev{-90.0f + ei * 180.0f / (evCount - 1)};
-            uint azCount{GetUniquelySortedElems(m, aers.data(), 0,
-                (const float*[3]){ nullptr, &ev, &dist }, (const float[3]){ 0.1f, 0.1f, 0.001f },
-                elems.data())};
+            uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist }, { 0.1f, 0.1f, 0.001f }, elems.data())};
 
             if(azCount > (m / 3))
             {

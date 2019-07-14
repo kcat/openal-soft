@@ -146,12 +146,9 @@ BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
 }
 
 
-void BFormatDec::process(FloatBufferLine *OutBuffer, const ALuint OutChannels,
+void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
 {
-    ASSUME(OutChannels > 0);
-    ASSUME(mNumChannels > 0);
-
     if(mDualBand)
     {
         for(ALuint i{0};i < mNumChannels;i++)
@@ -160,24 +157,30 @@ void BFormatDec::process(FloatBufferLine *OutBuffer, const ALuint OutChannels,
 
         const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mNumChannels};
         const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mNumChannels};
-        for(ALuint chan{0};chan < OutChannels;chan++)
+        ALfloat (*mixmtx)[sNumBands][MAX_AMBI_CHANNELS]{mMatrix.Dual};
+        ALuint enabled{mEnabled};
+        for(FloatBufferLine &outbuf : OutBuffer)
         {
-            if(UNLIKELY(!(mEnabled&(1<<chan))))
-                continue;
-
-            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][sHFBand], hfsamples, 0, SamplesToDo);
-            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][sLFBand], lfsamples, 0, SamplesToDo);
+            if(LIKELY(enabled&1))
+            {
+                MixRowSamples(outbuf, (*mixmtx)[sHFBand], hfsamples, 0, SamplesToDo);
+                MixRowSamples(outbuf, (*mixmtx)[sLFBand], lfsamples, 0, SamplesToDo);
+            }
+            ++mixmtx;
+            enabled >>= 1;
         }
     }
     else
     {
         const al::span<const FloatBufferLine> insamples{InSamples, mNumChannels};
-        for(ALuint chan{0};chan < OutChannels;chan++)
+        ALfloat (*mixmtx)[MAX_AMBI_CHANNELS]{mMatrix.Single};
+        ALuint enabled{mEnabled};
+        for(FloatBufferLine &outbuf : OutBuffer)
         {
-            if(UNLIKELY(!(mEnabled&(1<<chan))))
-                continue;
-
-            MixRowSamples(OutBuffer[chan], mMatrix.Single[chan], insamples, 0, SamplesToDo);
+            if(LIKELY(enabled&1))
+                MixRowSamples(outbuf, *mixmtx, insamples, 0, SamplesToDo);
+            ++mixmtx;
+            enabled >>= 1;
         }
     }
 }

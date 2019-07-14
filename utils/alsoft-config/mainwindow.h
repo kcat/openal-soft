@@ -43,6 +43,7 @@ private slots:
     void updateJackBufferSizeEdit(int size);
     void updateJackBufferSizeSlider();
 
+    void updateHrtfModeLabel(int num);
     void addHrtfFile();
     void removeHrtfFile();
 

@@ -119,8 +119,8 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
     mFreqMinNorm   = MIN_FREQ / device->Frequency;
     mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
-    for(ALuint i{0u};i < slot->Wet.NumChannels;++i)
+    mOutTarget = target.Main->Buffer;
+    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

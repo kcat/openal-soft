@@ -889,7 +889,7 @@ void ReverbState::update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *
     const alu::Matrix earlymat{GetTransformFromVector(ReflectionsPan)};
     const alu::Matrix latemat{GetTransformFromVector(LateReverbPan)};
 
-    mOutTarget = {target.Main->Buffer, target.Main->NumChannels};
+    mOutTarget = target.Main->Buffer;
     for(ALsizei i{0};i < NUM_LINES;i++)
     {
         const ALfloat coeffs[MAX_AMBI_CHANNELS]{earlymat[0][i], earlymat[1][i], earlymat[2][i],

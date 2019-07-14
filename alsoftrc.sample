@@ -272,7 +272,7 @@
 #  configuration files for the appropriate speaker configuration you intend to
 #  use (see the quad, surround51, etc options below). Currently, up to third-
 #  order decoding is supported.
-hq-mode = false
+#hq-mode = false
 
 ## distance-comp:
 #  Enables compensation for the speakers' relative distances to the listener.
@@ -280,7 +280,7 @@ hq-mode = false
 #  behave as though they are all equidistant, which is important for proper
 #  playback of 3D sound rendering. Requires the proper distances to be
 #  specified in the decoder configuration file.
-distance-comp = true
+#distance-comp = true
 
 ## nfc:
 #  Enables near-field control filters. This simulates and compensates for low-
@@ -289,7 +289,7 @@ distance-comp = true
 #  may be stronger or weaker than intended if the application doesn't use or
 #  specify an appropriate unit scale, or if incorrect speaker distances are set
 #  in the decoder configuration file.
-nfc = false
+#nfc = false
 
 ## nfc-ref-delay
 #  Specifies the reference delay value for ambisonic output when NFC filters
@@ -300,29 +300,29 @@ nfc = false
 #  designed for higher-order ambisonics, this also applies to first-order
 #  output. When left unset, normal output is created with no near-field
 #  simulation. Requires the nfc option to also be enabled.
-nfc-ref-delay =
+#nfc-ref-delay =
 
 ## quad:
 #  Decoder configuration file for Quadraphonic channel output. See
 #  docs/ambdec.txt for a description of the file format.
-quad =
+#quad =
 
 ## surround51:
 #  Decoder configuration file for 5.1 Surround (Side and Rear) channel output.
 #  See docs/ambdec.txt for a description of the file format.
-surround51 =
+#surround51 =
 
 ## surround61:
 #  Decoder configuration file for 6.1 Surround channel output. See
 #  docs/ambdec.txt for a description of the file format.
-surround61 =
+#surround61 =
 
 ## surround71:
 #  Decoder configuration file for 7.1 Surround channel output. See
 #  docs/ambdec.txt for a description of the file format. Note: This can be used
 #  to enable 3D7.1 with the appropriate configuration and speaker placement,
 #  see docs/3D7.1.txt.
-surround71 =
+#surround71 =
 
 ##
 ## Reverb effect stuff (includes EAX reverb)

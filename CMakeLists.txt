@@ -25,7 +25,6 @@ SET(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
 
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckLibraryExists)
-INCLUDE(CheckSharedFunctionExists)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckSymbolExists)
@@ -698,6 +697,7 @@ SET(ALC_OBJS
     Alc/effects/null.cpp
     Alc/effects/pshifter.cpp
     Alc/effects/reverb.cpp
+    Alc/effects/vmorpher.cpp
     Alc/filters/biquad.h
     Alc/filters/biquad.cpp
     Alc/filters/nfc.cpp
@@ -938,21 +938,29 @@ OPTION(ALSOFT_REQUIRE_WINMM "Require Windows Multimedia backend" OFF)
 OPTION(ALSOFT_REQUIRE_DSOUND "Require DirectSound backend" OFF)
 OPTION(ALSOFT_REQUIRE_WASAPI "Require WASAPI backend" OFF)
 IF(HAVE_WINDOWS_H)
+    SET(WINSDK_LIB_DIRS )
+    SET(WINSDK_INCLUDE_DIRS )
+    FIND_PACKAGE(WindowsSDK)
+    IF(WINDOWSSDK_FOUND)
+        get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
+        get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
+    ENDIF()
+
     SET(OLD_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS})
     SET(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -D_WIN32_WINNT=0x0502)
 
     # Check MMSystem backend
     CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
-    IF(HAVE_MMSYSTEM_H)
-        CHECK_SHARED_FUNCTION_EXISTS(waveOutOpen "windows.h;mmsystem.h" winmm "" HAVE_LIBWINMM)
-        IF(HAVE_LIBWINMM)
-            OPTION(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
-            IF(ALSOFT_BACKEND_WINMM)
-                SET(HAVE_WINMM 1)
-                SET(BACKENDS  "${BACKENDS} WinMM,")
-                SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.cpp Alc/backends/winmm.h)
-                SET(EXTRA_LIBS winmm ${EXTRA_LIBS})
-            ENDIF()
+    FIND_LIBRARY(WINMM_LIBRARY NAMES winmm
+        PATHS ${WINSDK_LIB_DIRS}
+        PATH_SUFFIXES lib lib/x86 lib/x64)
+    IF(HAVE_MMSYSTEM_H AND WINMM_LIBRARY)
+        OPTION(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
+        IF(ALSOFT_BACKEND_WINMM)
+            SET(HAVE_WINMM 1)
+            SET(BACKENDS  "${BACKENDS} WinMM,")
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.cpp Alc/backends/winmm.h)
+            SET(EXTRA_LIBS ${WINMM_LIBRARY} ${EXTRA_LIBS})
         ENDIF()
     ENDIF()
 
@@ -1079,17 +1087,15 @@ ENDIF()
 
 # Check for OpenSL (Android) backend
 OPTION(ALSOFT_REQUIRE_OPENSL "Require OpenSL backend" OFF)
-CHECK_INCLUDE_FILES("SLES/OpenSLES.h;SLES/OpenSLES_Android.h" HAVE_SLES_OPENSLES_ANDROID_H)
-IF(HAVE_SLES_OPENSLES_ANDROID_H)
-    CHECK_SHARED_FUNCTION_EXISTS(slCreateEngine "SLES/OpenSLES.h" OpenSLES "" HAVE_LIBOPENSLES)
-    IF(HAVE_LIBOPENSLES)
-        OPTION(ALSOFT_BACKEND_OPENSL "Enable OpenSL backend" ON)
-        IF(ALSOFT_BACKEND_OPENSL)
-            SET(HAVE_OPENSL 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/opensl.cpp Alc/backends/opensl.h)
-            SET(BACKENDS  "${BACKENDS} OpenSL,")
-            SET(EXTRA_LIBS OpenSLES ${EXTRA_LIBS})
-        ENDIF()
+FIND_PACKAGE(OpenSL)
+IF(OPENSL_FOUND)
+    OPTION(ALSOFT_BACKEND_OPENSL "Enable OpenSL backend" ON)
+    IF(ALSOFT_BACKEND_OPENSL)
+        SET(HAVE_OPENSL 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/opensl.cpp Alc/backends/opensl.h)
+        SET(BACKENDS  "${BACKENDS} OpenSL,")
+        SET(EXTRA_LIBS ${OPENSL_LIBRARIES} ${EXTRA_LIBS})
+        SET(INC_PATHS ${INC_PATHS} ${OPENSL_INCLUDE_DIRS})
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_OPENSL AND NOT HAVE_OPENSL)

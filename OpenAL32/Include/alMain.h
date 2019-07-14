@@ -308,17 +308,15 @@ using FloatBufferLine = std::array<float,BUFFERSIZE>;
 
 struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
-    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap;
+    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap{};
 
-    FloatBufferLine *Buffer{nullptr};
-    ALuint NumChannels{0u};
+    al::span<FloatBufferLine> Buffer;
 };
 
 struct RealMixParams {
     std::array<ALint,MaxChannels> ChannelIndex{};
 
-    FloatBufferLine *Buffer{nullptr};
-    ALuint NumChannels{0u};
+    al::span<FloatBufferLine> Buffer;
 };
 
 using POSTPROCESS = void(*)(ALCdevice *device, const ALsizei SamplesToDo);
@@ -396,8 +394,8 @@ struct ALCdevice {
     /* Rendering mode. */
     RenderMode mRenderMode{NormalRender};
 
-    /* The average speaker distance as determined by the ambdec configuration
-     * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
+    /* The average speaker distance as determined by the ambdec configuration,
+     * HRTF data set, or the NFC-HOA reference delay. Only used for NFC.
      */
     ALfloat AvgSpeakerDist{0.0f};
 

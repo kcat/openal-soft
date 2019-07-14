@@ -317,6 +317,7 @@ int main(int argc, char **argv)
         recorder.mRecTime, (recorder.mRecTime != 1.0f) ? "s" : ""
     );
 
+    err = ALC_NO_ERROR;
     alcCaptureStart(recorder.mDevice);
     while((double)recorder.mDataSize/(double)recorder.mSampleRate < recorder.mRecTime &&
           (err=alcGetError(recorder.mDevice)) == ALC_NO_ERROR && !ferror(recorder.mFile))

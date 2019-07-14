@@ -170,9 +170,8 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         mysofa_c2s(&aers[i]);
     }
 
-    const uint fdCount{GetUniquelySortedElems(m, aers.data(), 2,
-        (const double*[3]){ nullptr, nullptr, nullptr }, (const double[3]){ 0.1, 0.1, 0.001 },
-        elems.data())};
+    const uint fdCount{GetUniquelySortedElems(m, aers.data(), 2, { nullptr, nullptr, nullptr },
+        { 0.1, 0.1, 0.001 }, elems.data())};
     if(fdCount > MAX_FD_COUNT)
     {
         fprintf(stdout, "Incompatible layout (inumerable radii).\n");
@@ -181,7 +180,6 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 
     double distances[MAX_FD_COUNT]{};
     uint evCounts[MAX_FD_COUNT]{};
-    uint evStarts[MAX_FD_COUNT]{};
     auto azCounts = std::vector<uint>(MAX_FD_COUNT * MAX_EV_COUNT);
     for(uint fi{0u};fi < fdCount;fi++)
     {
@@ -201,9 +199,8 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
     for(uint fi{0u};fi < fdCount;fi++)
     {
         const double dist{distances[fi]};
-        uint evCount{GetUniquelySortedElems(m, aers.data(), 1,
-            (const double*[3]){ nullptr, nullptr, &dist }, (const double[3]){ 0.1, 0.1, 0.001 },
-            elems.data())};
+        uint evCount{GetUniquelySortedElems(m, aers.data(), 1, { nullptr, nullptr, &dist },
+            { 0.1, 0.1, 0.001 }, elems.data())};
 
         if(evCount > MAX_EV_COUNT)
         {
@@ -239,14 +236,12 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         }
 
         evCounts[fi] = evCount;
-        evStarts[fi] = evStart;
 
         for(uint ei{evStart};ei < evCount;ei++)
         {
             const double ev{-90.0 + ei*180.0/(evCount - 1)};
-            const uint azCount{GetUniquelySortedElems(m, aers.data(), 0,
-                (const double*[3]){ nullptr, &ev, &dist }, (const double[3]){ 0.1, 0.1, 0.001 },
-                elems.data())};
+            const uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist },
+                { 0.1, 0.1, 0.001 }, elems.data())};
 
             if(azCount > MAX_AZ_COUNT)
             {

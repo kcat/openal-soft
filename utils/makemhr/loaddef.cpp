@@ -24,6 +24,7 @@
 #include <cstring>
 #include <cstdarg>
 #include <limits>
+#include <algorithm>
 
 #include "mysofa.h"
 

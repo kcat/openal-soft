@@ -2770,7 +2770,7 @@ START_API_FUNC
     {
         /* TODO: Send state change event? */
         std::for_each(srchandles, srchandles+n,
-            [&context](ALsource *source) -> void
+            [](ALsource *source) -> void
             {
                 source->OffsetType = AL_NONE;
                 source->Offset = 0.0;

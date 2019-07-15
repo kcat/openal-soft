@@ -2019,7 +2019,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             /* Initialize band-splitting filters for the front-left and front-
              * right channels, with a crossover at 5khz (could be higher).
              */
-            const ALfloat scale{static_cast<ALfloat>(5000.0 / device->Frequency)};
+            const ALfloat scale{5000.0f / static_cast<ALfloat>(device->Frequency)};
 
             stablizer->LFilter.init(scale);
             stablizer->RFilter = stablizer->LFilter;

@@ -140,7 +140,7 @@ struct VmorpherState final : public EffectState {
     DEF_NEWDEL(VmorpherState)
 };
 
-ALboolean VmorpherState::deviceUpdate(const ALCdevice *device)
+ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 {
     for(auto &e : mChans)
     {

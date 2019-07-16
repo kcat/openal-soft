@@ -22,7 +22,6 @@
 
 #include <cmath>
 #include <cstdlib>
-
 #include <algorithm>
 #include <functional>
 
@@ -32,7 +31,6 @@
 #include "alError.h"
 #include "alu.h"
 #include "vecmat.h"
-
 
 namespace {
 
@@ -81,6 +79,9 @@ struct FormantFilter
 {
     inline void process(const ALfloat* samplesIn, ALfloat* samplesOut, const ALsizei numInput)
     {
+        /* A state variable filter from a topology-preserving transform.
+         * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
+         */
         const float g = std::tan(al::MathDefs<float>::Pi() * f0norm);
         const float h = 1.0f / (1 + (g / Q_FACTOR) + (g * g));
 
@@ -110,11 +111,13 @@ struct FormantFilter
     float s2;
 };
 
+
 struct VmorpherState final : public EffectState {
     struct {
-        /* Effect parameters */
-        FormantFilter FormantsA[NUM_FORMANTS];
-        FormantFilter FormantsB[NUM_FORMANTS];
+        struct {
+          /* Effect parameters */
+          FormantFilter Formants[NUM_FORMANTS];
+        } Filters[2];
 
         /* Effect gains for each channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
@@ -126,6 +129,7 @@ struct VmorpherState final : public EffectState {
     ALsizei mIndex{0};
     ALsizei mStep{1};
 
+    /* Effects buffers */
     ALfloat mSampleBufferA[MAX_UPDATE_SAMPLES]{};
     ALfloat mSampleBufferB[MAX_UPDATE_SAMPLES]{};
 
@@ -136,16 +140,17 @@ struct VmorpherState final : public EffectState {
     DEF_NEWDEL(VmorpherState)
 };
 
-ALboolean VmorpherState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean VmorpherState::deviceUpdate(const ALCdevice *device)
 {
     for(auto &e : mChans)
     {
-        std::for_each(std::begin(e.FormantsA), std::end(e.FormantsA),
+        std::for_each(std::begin(e.Filters[0].Formants), std::end(e.Filters[0].Formants),
                       std::mem_fn(&FormantFilter::clear));
-        std::for_each(std::begin(e.FormantsB), std::end(e.FormantsB),
+        std::for_each(std::begin(e.Filters[1].Formants), std::end(e.Filters[1].Formants),
                       std::mem_fn(&FormantFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
+
     return AL_TRUE;
 }
 
@@ -166,139 +171,144 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     else /*if(props->Vmorpher.Waveform == AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE)*/
         mGetSamples = Oscillate<Triangle>;
 
-    /* Using soprano formant set of values to better match mid-range frequency space.
+    auto& vowelA = mChans[0].Filters[0].Formants;
+    auto& vowelB = mChans[0].Filters[1].Formants;
+
+    /* Using soprano formant set of values to
+     * better match mid-range frequency space.
+     *
      * See: https://www.classes.cs.uchicago.edu/archive/1999/spring/CS295/Computing_Resources/Csound/CsManual3.48b1.HTML/Appendices/table3.html
      */
     switch(props->Vmorpher.PhonemeA)
     {
         case AL_VOCAL_MORPHER_PHONEME_A:
-            mChans[0].FormantsA[0].f0norm = 800  / frequency;
-            mChans[0].FormantsA[1].f0norm = 1150 / frequency;
-            mChans[0].FormantsA[2].f0norm = 2900 / frequency;
-            mChans[0].FormantsA[3].f0norm = 3900 / frequency;
+            vowelA[0].f0norm = 800  / frequency;
+            vowelA[1].f0norm = 1150 / frequency;
+            vowelA[2].f0norm = 2900 / frequency;
+            vowelA[3].f0norm = 3900 / frequency;
 
-            mChans[0].FormantsA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsA[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
-            mChans[0].FormantsA[2].fGain = 0.025118f; /* std::pow(10.0f, -32 / 20.0f); */
-            mChans[0].FormantsA[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
+            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelA[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
+            vowelA[2].fGain = 0.025118f; /* std::pow(10.0f, -32 / 20.0f); */
+            vowelA[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_E:
-            mChans[0].FormantsA[0].f0norm = 350  / frequency;
-            mChans[0].FormantsA[1].f0norm = 2000 / frequency;
-            mChans[0].FormantsA[2].f0norm = 2800 / frequency;
-            mChans[0].FormantsA[3].f0norm = 3600 / frequency;
+            vowelA[0].f0norm = 350  / frequency;
+            vowelA[1].f0norm = 2000 / frequency;
+            vowelA[2].f0norm = 2800 / frequency;
+            vowelA[3].f0norm = 3600 / frequency;
 
-            mChans[0].FormantsA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsA[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
-            mChans[0].FormantsA[2].fGain = 0.177827f; /* std::pow(10.0f, -15 / 20.0f); */
-            mChans[0].FormantsA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
+            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelA[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
+            vowelA[2].fGain = 0.177827f; /* std::pow(10.0f, -15 / 20.0f); */
+            vowelA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_I:
-            mChans[0].FormantsA[0].f0norm = 270  / frequency;
-            mChans[0].FormantsA[1].f0norm = 2140 / frequency;
-            mChans[0].FormantsA[2].f0norm = 2950 / frequency;
-            mChans[0].FormantsA[3].f0norm = 3900 / frequency;
+            vowelA[0].f0norm = 270  / frequency;
+            vowelA[1].f0norm = 2140 / frequency;
+            vowelA[2].f0norm = 2950 / frequency;
+            vowelA[3].f0norm = 3900 / frequency;
 
-            mChans[0].FormantsA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsA[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
-            mChans[0].FormantsA[2].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
-            mChans[0].FormantsA[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
+            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelA[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
+            vowelA[2].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
+            vowelA[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_O:
-            mChans[0].FormantsA[0].f0norm = 450  / frequency;
-            mChans[0].FormantsA[1].f0norm = 800  / frequency;
-            mChans[0].FormantsA[2].f0norm = 2830 / frequency;
-            mChans[0].FormantsA[3].f0norm = 3800 / frequency;
+            vowelA[0].f0norm = 450  / frequency;
+            vowelA[1].f0norm = 800  / frequency;
+            vowelA[2].f0norm = 2830 / frequency;
+            vowelA[3].f0norm = 3800 / frequency;
 
-            mChans[0].FormantsA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsA[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
-            mChans[0].FormantsA[2].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
-            mChans[0].FormantsA[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
+            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelA[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
+            vowelA[2].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
+            vowelA[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_U:
-            mChans[0].FormantsA[0].f0norm = 325  / frequency;
-            mChans[0].FormantsA[1].f0norm = 700  / frequency;
-            mChans[0].FormantsA[2].f0norm = 2700 / frequency;
-            mChans[0].FormantsA[3].f0norm = 3800 / frequency;
+            vowelA[0].f0norm = 325  / frequency;
+            vowelA[1].f0norm = 700  / frequency;
+            vowelA[2].f0norm = 2700 / frequency;
+            vowelA[3].f0norm = 3800 / frequency;
 
-            mChans[0].FormantsA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsA[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
-            mChans[0].FormantsA[2].fGain = 0.017782f; /* std::pow(10.0f, -35 / 20.0f); */
-            mChans[0].FormantsA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
+            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelA[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
+            vowelA[2].fGain = 0.017782f; /* std::pow(10.0f, -35 / 20.0f); */
+            vowelA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
             break;
     }
 
     switch(props->Vmorpher.PhonemeB)
     {
         case AL_VOCAL_MORPHER_PHONEME_A:
-            mChans[0].FormantsB[0].f0norm = 800  / frequency;
-            mChans[0].FormantsB[1].f0norm = 1150 / frequency;
-            mChans[0].FormantsB[2].f0norm = 2900 / frequency;
-            mChans[0].FormantsB[3].f0norm = 3900 / frequency;
+            vowelB[0].f0norm = 800  / frequency;
+            vowelB[1].f0norm = 1150 / frequency;
+            vowelB[2].f0norm = 2900 / frequency;
+            vowelB[3].f0norm = 3900 / frequency;
 
-            mChans[0].FormantsB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsB[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
-            mChans[0].FormantsB[2].fGain = 0.025118f; /* std::pow(10.0f, -32 / 20.0f); */
-            mChans[0].FormantsB[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
+            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelB[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
+            vowelB[2].fGain = 0.025118f; /* std::pow(10.0f, -32 / 20.0f); */
+            vowelB[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_E:
-            mChans[0].FormantsB[0].f0norm = 350  / frequency;
-            mChans[0].FormantsB[1].f0norm = 2000 / frequency;
-            mChans[0].FormantsB[2].f0norm = 2800 / frequency;
-            mChans[0].FormantsB[3].f0norm = 3600 / frequency;
+            vowelB[0].f0norm = 350  / frequency;
+            vowelB[1].f0norm = 2000 / frequency;
+            vowelB[2].f0norm = 2800 / frequency;
+            vowelB[3].f0norm = 3600 / frequency;
 
-            mChans[0].FormantsB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsB[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
-            mChans[0].FormantsB[2].fGain = 0.177827f; /* std::pow(10.0f, -15 / 20.0f); */
-            mChans[0].FormantsB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
+            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelB[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
+            vowelB[2].fGain = 0.177827f; /* std::pow(10.0f, -15 / 20.0f); */
+            vowelB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_I:
-            mChans[0].FormantsB[0].f0norm = 270  / frequency;
-            mChans[0].FormantsB[1].f0norm = 2140 / frequency;
-            mChans[0].FormantsB[2].f0norm = 2950 / frequency;
-            mChans[0].FormantsB[3].f0norm = 3900 / frequency;
+            vowelB[0].f0norm = 270  / frequency;
+            vowelB[1].f0norm = 2140 / frequency;
+            vowelB[2].f0norm = 2950 / frequency;
+            vowelB[3].f0norm = 3900 / frequency;
 
-            mChans[0].FormantsB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsB[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
-            mChans[0].FormantsB[2].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
-            mChans[0].FormantsB[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
+            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelB[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
+            vowelB[2].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
+            vowelB[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_O:
-            mChans[0].FormantsB[0].f0norm = 450  / frequency;
-            mChans[0].FormantsB[1].f0norm = 800  / frequency;
-            mChans[0].FormantsB[2].f0norm = 2830 / frequency;
-            mChans[0].FormantsB[3].f0norm = 3800 / frequency;
+            vowelB[0].f0norm = 450  / frequency;
+            vowelB[1].f0norm = 800  / frequency;
+            vowelB[2].f0norm = 2830 / frequency;
+            vowelB[3].f0norm = 3800 / frequency;
 
-            mChans[0].FormantsB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsB[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
-            mChans[0].FormantsB[2].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
-            mChans[0].FormantsB[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
+            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelB[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
+            vowelB[2].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
+            vowelB[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_U:
-            mChans[0].FormantsB[0].f0norm = 325  / frequency;
-            mChans[0].FormantsB[1].f0norm = 700  / frequency;
-            mChans[0].FormantsB[2].f0norm = 2700 / frequency;
-            mChans[0].FormantsB[3].f0norm = 3800 / frequency;
+            vowelB[0].f0norm = 325  / frequency;
+            vowelB[1].f0norm = 700  / frequency;
+            vowelB[2].f0norm = 2700 / frequency;
+            vowelB[3].f0norm = 3800 / frequency;
 
-            mChans[0].FormantsB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            mChans[0].FormantsB[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
-            mChans[0].FormantsB[2].fGain = 0.017782f; /* std::pow(10.0f, -35 / 20.0f); */
-            mChans[0].FormantsB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
+            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
+            vowelB[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
+            vowelB[2].fGain = 0.017782f; /* std::pow(10.0f, -35 / 20.0f); */
+            vowelB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
             break;
     }
 
     /* Copy the filter coefficients for the other input channels. */
     for(ALuint i{1u};i < slot->Wet.Buffer.size();++i)
     {
-        mChans[i].FormantsA[0] = mChans[0].FormantsA[0];
-        mChans[i].FormantsA[1] = mChans[0].FormantsA[0];
-        mChans[i].FormantsA[2] = mChans[0].FormantsA[0];
-        mChans[i].FormantsA[3] = mChans[0].FormantsA[0];
+        mChans[i].Filters[0].Formants[0] = vowelA[0];
+        mChans[i].Filters[0].Formants[1] = vowelA[1];
+        mChans[i].Filters[0].Formants[2] = vowelA[2];
+        mChans[i].Filters[0].Formants[3] = vowelA[3];
 
-        mChans[i].FormantsB[0] = mChans[0].FormantsB[0];
-        mChans[i].FormantsB[1] = mChans[0].FormantsB[0];
-        mChans[i].FormantsB[2] = mChans[0].FormantsB[0];
-        mChans[i].FormantsB[3] = mChans[0].FormantsB[0];
+        mChans[i].Filters[1].Formants[0] = vowelB[0];
+        mChans[i].Filters[1].Formants[1] = vowelB[1];
+        mChans[i].Filters[1].Formants[2] = vowelB[2];
+        mChans[i].Filters[1].Formants[3] = vowelB[3];
     }
 
     mOutTarget = target.Main->Buffer;
@@ -332,23 +342,27 @@ void VmorpherState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
                 mSampleBufferB[i] = 0.0f;
             }
 
+            auto& vowelA = mChans[c].Filters[0].Formants;
+            auto& vowelB = mChans[c].Filters[1].Formants;
+
             /* Process first vowel. */
-            mChans[c].FormantsA[0].process(&samplesIn[c][base], mSampleBufferA, td);
-            mChans[c].FormantsA[1].process(&samplesIn[c][base], mSampleBufferA, td);
-            mChans[c].FormantsA[2].process(&samplesIn[c][base], mSampleBufferA, td);
-            mChans[c].FormantsA[3].process(&samplesIn[c][base], mSampleBufferA, td);
+            vowelA[0].process(&samplesIn[c][base], mSampleBufferA, td);
+            vowelA[1].process(&samplesIn[c][base], mSampleBufferA, td);
+            vowelA[2].process(&samplesIn[c][base], mSampleBufferA, td);
+            vowelA[3].process(&samplesIn[c][base], mSampleBufferA, td);
 
             /* Process second vowel. */
-            mChans[c].FormantsB[0].process(&samplesIn[c][base], mSampleBufferB, td);
-            mChans[c].FormantsB[1].process(&samplesIn[c][base], mSampleBufferB, td);
-            mChans[c].FormantsB[2].process(&samplesIn[c][base], mSampleBufferB, td);
-            mChans[c].FormantsB[3].process(&samplesIn[c][base], mSampleBufferB, td);
+            vowelB[0].process(&samplesIn[c][base], mSampleBufferB, td);
+            vowelB[1].process(&samplesIn[c][base], mSampleBufferB, td);
+            vowelB[2].process(&samplesIn[c][base], mSampleBufferB, td);
+            vowelB[3].process(&samplesIn[c][base], mSampleBufferB, td);
 
             alignas(16) ALfloat samplesBlended[MAX_UPDATE_SAMPLES];
 
             for (ALsizei i{0};i < td;i++)
                 samplesBlended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
 
+            /* Now, mix the processed sound data to the output. */
             MixSamples(samplesBlended, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
                 samplesToDo-base, base, td);
         }
@@ -363,31 +377,31 @@ void Vmorpher_setParami(EffectProps* props, ALCcontext *context, ALenum param, A
     switch(param)
     {
         case AL_VOCAL_MORPHER_WAVEFORM:
-            if(val < AL_VOCAL_MORPHER_MIN_WAVEFORM || val > AL_VOCAL_MORPHER_MAX_WAVEFORM)
+            if(!(val >= AL_VOCAL_MORPHER_MIN_WAVEFORM && val <= AL_VOCAL_MORPHER_MAX_WAVEFORM))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher waveform out of range");
             props->Vmorpher.Waveform = val;
             break;
 
         case AL_VOCAL_MORPHER_PHONEMEA:
-            if(val < AL_VOCAL_MORPHER_MIN_PHONEMEA || val > AL_VOCAL_MORPHER_MAX_PHONEMEA)
+            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEA && val <= AL_VOCAL_MORPHER_MAX_PHONEMEA))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-a out of range");
             props->Vmorpher.PhonemeA = val;
             break;
 
         case AL_VOCAL_MORPHER_PHONEMEB:
-            if(val < AL_VOCAL_MORPHER_MIN_PHONEMEB || val > AL_VOCAL_MORPHER_MAX_PHONEMEB)
+            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEB && val <= AL_VOCAL_MORPHER_MAX_PHONEMEB))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-b out of range");
             props->Vmorpher.PhonemeB = val;
             break;
 
         case AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING:
-            if(val < AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING || val > AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING)
+            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING && val <= AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-a coarse tuning out of range");
             props->Vmorpher.PhonemeACoarseTuning = val;
             break;
 
         case AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING:
-            if(val < AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING || val > AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING)
+            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING && val <= AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-b coarse tuning out of range");
             props->Vmorpher.PhonemeBCoarseTuning = val;
             break;
@@ -403,7 +417,7 @@ void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, A
     switch(param)
     {
         case AL_VOCAL_MORPHER_RATE:
-            if(val < AL_VOCAL_MORPHER_MIN_RATE || val > AL_VOCAL_MORPHER_MAX_RATE)
+            if(!(val >= AL_VOCAL_MORPHER_MIN_RATE && val <= AL_VOCAL_MORPHER_MAX_RATE))
               SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher rate out of range");
             props->Vmorpher.Rate = val;
             break;

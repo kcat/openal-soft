@@ -80,6 +80,14 @@ void Oscillate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei
 
 struct FormantFilter
 {
+    ALfloat f0norm{0.0f};
+    ALfloat fGain{1.0f};
+    ALfloat s1{0.0f};
+    ALfloat s2{0.0f};
+
+    FormantFilter() = default;
+    FormantFilter(ALfloat f0norm_, ALfloat gain) : f0norm{f0norm_}, fGain{gain} { }
+
     inline void process(const ALfloat* samplesIn, ALfloat* samplesOut, const ALsizei numInput)
     {
         /* A state variable filter from a topology-preserving transform.
@@ -107,11 +115,6 @@ struct FormantFilter
         s1 = 0.0f;
         s2 = 0.0f;
     }
-
-    ALfloat f0norm;
-    ALfloat fGain;
-    ALfloat s1;
-    ALfloat s2;
 };
 
 
@@ -138,8 +141,59 @@ struct VmorpherState final : public EffectState {
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
+    static std::array<FormantFilter,4> getFiltersByPhoneme(ALenum phoneme, ALfloat frequency, ALfloat pitch);
+
     DEF_NEWDEL(VmorpherState)
 };
+
+std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(ALenum phoneme, ALfloat frequency, ALfloat pitch)
+{
+    /* Using soprano formant set of values to
+     * better match mid-range frequency space.
+     *
+     * See: https://www.classes.cs.uchicago.edu/archive/1999/spring/CS295/Computing_Resources/Csound/CsManual3.48b1.HTML/Appendices/table3.html
+     */
+    switch(phoneme)
+    {
+        case AL_VOCAL_MORPHER_PHONEME_A:
+            return {{
+                {( 800 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+                {(1150 * pitch) / frequency, 0.501187f}, /* std::pow(10.0f,  -6 / 20.0f); */
+                {(2900 * pitch) / frequency, 0.025118f}, /* std::pow(10.0f, -32 / 20.0f); */
+                {(3900 * pitch) / frequency, 0.100000f}  /* std::pow(10.0f, -20 / 20.0f); */
+            }};
+        case AL_VOCAL_MORPHER_PHONEME_E:
+            return {{
+                {( 350 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+                {(2000 * pitch) / frequency, 0.100000f}, /* std::pow(10.0f, -20 / 20.0f); */
+                {(2800 * pitch) / frequency, 0.177827f}, /* std::pow(10.0f, -15 / 20.0f); */
+                {(3600 * pitch) / frequency, 0.009999f}  /* std::pow(10.0f, -40 / 20.0f); */
+            }};
+        case AL_VOCAL_MORPHER_PHONEME_I:
+            return {{
+                {( 270 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+                {(2140 * pitch) / frequency, 0.251188f}, /* std::pow(10.0f, -12 / 20.0f); */
+                {(2950 * pitch) / frequency, 0.050118f}, /* std::pow(10.0f, -26 / 20.0f); */
+                {(3900 * pitch) / frequency, 0.050118f}  /* std::pow(10.0f, -26 / 20.0f); */
+            }};
+        case AL_VOCAL_MORPHER_PHONEME_O:
+            return {{
+                {( 450 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+                {( 800 * pitch) / frequency, 0.281838f}, /* std::pow(10.0f, -11 / 20.0f); */
+                {(2830 * pitch) / frequency, 0.079432f}, /* std::pow(10.0f, -22 / 20.0f); */
+                {(3800 * pitch) / frequency, 0.079432f}  /* std::pow(10.0f, -22 / 20.0f); */
+            }};
+        case AL_VOCAL_MORPHER_PHONEME_U:
+            return {{
+                {( 325 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+                {( 700 * pitch) / frequency, 0.158489f}, /* std::pow(10.0f, -16 / 20.0f); */
+                {(2700 * pitch) / frequency, 0.017782f}, /* std::pow(10.0f, -35 / 20.0f); */
+                {(3800 * pitch) / frequency, 0.009999f}  /* std::pow(10.0f, -40 / 20.0f); */
+            }};
+    }
+    return {};
+}
+
 
 ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 {
@@ -171,151 +225,21 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     else /*if(props->Vmorpher.Waveform == AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE)*/
         mGetSamples = Oscillate<Triangle>;
 
-    auto& vowelA = mChans[0].Formants[VOWEL_A_INDEX];
-    auto& vowelB = mChans[0].Formants[VOWEL_B_INDEX];
-
     const ALfloat pitchA{fastf2i(std::pow(2.0f, props->Vmorpher.PhonemeACoarseTuning*100.0f / 2400.0f)*FRACTIONONE) * (1.0f/FRACTIONONE)};
     const ALfloat pitchB{fastf2i(std::pow(2.0f, props->Vmorpher.PhonemeBCoarseTuning*100.0f / 2400.0f)*FRACTIONONE) * (1.0f/FRACTIONONE)};
 
-    /* Using soprano formant set of values to
-     * better match mid-range frequency space.
-     *
-     * See: https://www.classes.cs.uchicago.edu/archive/1999/spring/CS295/Computing_Resources/Csound/CsManual3.48b1.HTML/Appendices/table3.html
-     */
-    switch(props->Vmorpher.PhonemeA)
+    auto vowelA = getFiltersByPhoneme(props->Vmorpher.PhonemeA, frequency, pitchA);
+    auto vowelB = getFiltersByPhoneme(props->Vmorpher.PhonemeB, frequency, pitchB);
+
+    /* Copy the filter coefficients to the input channels. */
+    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
-        case AL_VOCAL_MORPHER_PHONEME_A:
-            vowelA[0].f0norm =  (800 * pitchA) / frequency;
-            vowelA[1].f0norm = (1150 * pitchA) / frequency;
-            vowelA[2].f0norm = (2900 * pitchA) / frequency;
-            vowelA[3].f0norm = (3900 * pitchA) / frequency;
-
-            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelA[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
-            vowelA[2].fGain = 0.025118f; /* std::pow(10.0f, -32 / 20.0f); */
-            vowelA[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_E:
-            vowelA[0].f0norm =  (350 * pitchA) / frequency;
-            vowelA[1].f0norm = (2000 * pitchA) / frequency;
-            vowelA[2].f0norm = (2800 * pitchA) / frequency;
-            vowelA[3].f0norm = (3600 * pitchA) / frequency;
-
-            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelA[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
-            vowelA[2].fGain = 0.177827f; /* std::pow(10.0f, -15 / 20.0f); */
-            vowelA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_I:
-            vowelA[0].f0norm =  (270 * pitchA) / frequency;
-            vowelA[1].f0norm = (2140 * pitchA) / frequency;
-            vowelA[2].f0norm = (2950 * pitchA) / frequency;
-            vowelA[3].f0norm = (3900 * pitchA) / frequency;
-
-            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelA[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
-            vowelA[2].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
-            vowelA[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_O:
-            vowelA[0].f0norm =  (450 * pitchA) / frequency;
-            vowelA[1].f0norm =  (800 * pitchA) / frequency;
-            vowelA[2].f0norm = (2830 * pitchA) / frequency;
-            vowelA[3].f0norm = (3800 * pitchA) / frequency;
-
-            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelA[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
-            vowelA[2].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
-            vowelA[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_U:
-            vowelA[0].f0norm =  (325 * pitchA) / frequency;
-            vowelA[1].f0norm =  (700 * pitchA) / frequency;
-            vowelA[2].f0norm = (2700 * pitchA) / frequency;
-            vowelA[3].f0norm = (3800 * pitchA) / frequency;
-
-            vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelA[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
-            vowelA[2].fGain = 0.017782f; /* std::pow(10.0f, -35 / 20.0f); */
-            vowelA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
-            break;
-    }
-
-    switch(props->Vmorpher.PhonemeB)
-    {
-        case AL_VOCAL_MORPHER_PHONEME_A:
-            vowelB[0].f0norm =  (800 * pitchB) / frequency;
-            vowelB[1].f0norm = (1150 * pitchB) / frequency;
-            vowelB[2].f0norm = (2900 * pitchB) / frequency;
-            vowelB[3].f0norm = (3900 * pitchB) / frequency;
-
-            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelB[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
-            vowelB[2].fGain = 0.025118f; /* std::pow(10.0f, -32 / 20.0f); */
-            vowelB[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_E:
-            vowelB[0].f0norm =  (350 * pitchB) / frequency;
-            vowelB[1].f0norm = (2000 * pitchB) / frequency;
-            vowelB[2].f0norm = (2800 * pitchB) / frequency;
-            vowelB[3].f0norm = (3600 * pitchB) / frequency;
-
-            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelB[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
-            vowelB[2].fGain = 0.177827f; /* std::pow(10.0f, -15 / 20.0f); */
-            vowelB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_I:
-            vowelB[0].f0norm =  (270 * pitchB) / frequency;
-            vowelB[1].f0norm = (2140 * pitchB) / frequency;
-            vowelB[2].f0norm = (2950 * pitchB) / frequency;
-            vowelB[3].f0norm = (3900 * pitchB) / frequency;
-
-            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelB[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
-            vowelB[2].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
-            vowelB[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_O:
-            vowelB[0].f0norm =  (450 * pitchB) / frequency;
-            vowelB[1].f0norm =  (800 * pitchB) / frequency;
-            vowelB[2].f0norm = (2830 * pitchB) / frequency;
-            vowelB[3].f0norm = (3800 * pitchB) / frequency;
-
-            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelB[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
-            vowelB[2].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
-            vowelB[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
-            break;
-        case AL_VOCAL_MORPHER_PHONEME_U:
-            vowelB[0].f0norm =  (325 * pitchB) / frequency;
-            vowelB[1].f0norm =  (700 * pitchB) / frequency;
-            vowelB[2].f0norm = (2700 * pitchB) / frequency;
-            vowelB[3].f0norm = (3800 * pitchB) / frequency;
-
-            vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
-            vowelB[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
-            vowelB[2].fGain = 0.017782f; /* std::pow(10.0f, -35 / 20.0f); */
-            vowelB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
-            break;
-    }
-
-    /* Copy the filter coefficients for the other input channels. */
-    for(ALuint i{1u};i < slot->Wet.Buffer.size();++i)
-    {
-        mChans[i].Formants[VOWEL_A_INDEX][0] = vowelA[0];
-        mChans[i].Formants[VOWEL_A_INDEX][1] = vowelA[1];
-        mChans[i].Formants[VOWEL_A_INDEX][2] = vowelA[2];
-        mChans[i].Formants[VOWEL_A_INDEX][3] = vowelA[3];
-
-        mChans[i].Formants[VOWEL_B_INDEX][0] = vowelB[0];
-        mChans[i].Formants[VOWEL_B_INDEX][1] = vowelB[1];
-        mChans[i].Formants[VOWEL_B_INDEX][2] = vowelB[2];
-        mChans[i].Formants[VOWEL_B_INDEX][3] = vowelB[3];
+        std::copy(vowelA.begin(), vowelA.end(), std::begin(mChans[i].Formants[VOWEL_A_INDEX]));
+        std::copy(vowelB.begin(), vowelB.end(), std::begin(mChans[i].Formants[VOWEL_B_INDEX]));
     }
 
     mOutTarget = target.Main->Buffer;
-    for(ALuint i{0u};i < slot->Wet.Buffer.size();++i)
+    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
         auto coeffs = GetAmbiIdentityRow(i);
         ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mChans[i].TargetGains);

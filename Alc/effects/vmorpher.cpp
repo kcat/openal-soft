@@ -30,13 +30,16 @@
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "alu.h"
-#include "vecmat.h"
 
 namespace {
 
 #define MAX_UPDATE_SAMPLES 128
-#define Q_FACTOR 5.0f
-#define NUM_FORMANTS 4
+#define NUM_FORMANTS       4
+#define NUM_FILTERS        2
+#define Q_FACTOR           5.0f
+
+#define VOWEL_A_INDEX      0
+#define VOWEL_B_INDEX      1
 
 #define WAVEFORM_FRACBITS  24
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
@@ -82,14 +85,14 @@ struct FormantFilter
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
          */
-        const float g = std::tan(al::MathDefs<float>::Pi() * f0norm);
-        const float h = 1.0f / (1 + (g / Q_FACTOR) + (g * g));
+        const ALfloat g = std::tan(al::MathDefs<float>::Pi() * f0norm);
+        const ALfloat h = 1.0f / (1 + (g / Q_FACTOR) + (g * g));
 
         for (ALsizei i{0};i < numInput;i++)
         {
-            const float H = h * (samplesIn[i] - (1.0f / Q_FACTOR + g) * s1 - s2);
-            const float B = g * H + s1;
-            const float L = g * B + s2;
+            const ALfloat H = h * (samplesIn[i] - (1.0f / Q_FACTOR + g) * s1 - s2);
+            const ALfloat B = g * H + s1;
+            const ALfloat L = g * B + s2;
 
             s1 = g * H + B;
             s2 = g * B + L;
@@ -105,19 +108,17 @@ struct FormantFilter
         s2 = 0.0f;
     }
 
-    float f0norm;
-    float fGain;
-    float s1;
-    float s2;
+    ALfloat f0norm;
+    ALfloat fGain;
+    ALfloat s1;
+    ALfloat s2;
 };
 
 
 struct VmorpherState final : public EffectState {
     struct {
-        struct {
-          /* Effect parameters */
-          FormantFilter Formants[NUM_FORMANTS];
-        } Filters[2];
+        /* Effect parameters */
+        FormantFilter Formants[NUM_FILTERS][NUM_FORMANTS];
 
         /* Effect gains for each channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
@@ -144,9 +145,9 @@ ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 {
     for(auto &e : mChans)
     {
-        std::for_each(std::begin(e.Filters[0].Formants), std::end(e.Filters[0].Formants),
+        std::for_each(std::begin(e.Formants[VOWEL_A_INDEX]), std::end(e.Formants[VOWEL_A_INDEX]),
                       std::mem_fn(&FormantFilter::clear));
-        std::for_each(std::begin(e.Filters[1].Formants), std::end(e.Filters[1].Formants),
+        std::for_each(std::begin(e.Formants[VOWEL_B_INDEX]), std::end(e.Formants[VOWEL_B_INDEX]),
                       std::mem_fn(&FormantFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
@@ -156,10 +157,9 @@ ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 
 void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device = context->Device;
-    const ALfloat frequency = static_cast<ALfloat>(device->Frequency);
-
-    const float step{props->Vmorpher.Rate / static_cast<ALfloat>(device->Frequency)};
+    const ALCdevice *device{context->Device};
+    const ALfloat frequency{static_cast<ALfloat>(device->Frequency)};
+    const ALfloat step{props->Vmorpher.Rate / static_cast<ALfloat>(device->Frequency)};
     mStep = fastf2i(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
 
     if(mStep == 0)
@@ -171,8 +171,11 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     else /*if(props->Vmorpher.Waveform == AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE)*/
         mGetSamples = Oscillate<Triangle>;
 
-    auto& vowelA = mChans[0].Filters[0].Formants;
-    auto& vowelB = mChans[0].Filters[1].Formants;
+    auto& vowelA = mChans[0].Formants[VOWEL_A_INDEX];
+    auto& vowelB = mChans[0].Formants[VOWEL_B_INDEX];
+
+    const ALfloat pitchA{fastf2i(std::pow(2.0f, props->Vmorpher.PhonemeACoarseTuning*100.0f / 2400.0f)*FRACTIONONE) * (1.0f/FRACTIONONE)};
+    const ALfloat pitchB{fastf2i(std::pow(2.0f, props->Vmorpher.PhonemeBCoarseTuning*100.0f / 2400.0f)*FRACTIONONE) * (1.0f/FRACTIONONE)};
 
     /* Using soprano formant set of values to
      * better match mid-range frequency space.
@@ -182,10 +185,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     switch(props->Vmorpher.PhonemeA)
     {
         case AL_VOCAL_MORPHER_PHONEME_A:
-            vowelA[0].f0norm = 800  / frequency;
-            vowelA[1].f0norm = 1150 / frequency;
-            vowelA[2].f0norm = 2900 / frequency;
-            vowelA[3].f0norm = 3900 / frequency;
+            vowelA[0].f0norm =  (800 * pitchA) / frequency;
+            vowelA[1].f0norm = (1150 * pitchA) / frequency;
+            vowelA[2].f0norm = (2900 * pitchA) / frequency;
+            vowelA[3].f0norm = (3900 * pitchA) / frequency;
 
             vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelA[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
@@ -193,10 +196,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelA[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_E:
-            vowelA[0].f0norm = 350  / frequency;
-            vowelA[1].f0norm = 2000 / frequency;
-            vowelA[2].f0norm = 2800 / frequency;
-            vowelA[3].f0norm = 3600 / frequency;
+            vowelA[0].f0norm =  (350 * pitchA) / frequency;
+            vowelA[1].f0norm = (2000 * pitchA) / frequency;
+            vowelA[2].f0norm = (2800 * pitchA) / frequency;
+            vowelA[3].f0norm = (3600 * pitchA) / frequency;
 
             vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelA[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
@@ -204,10 +207,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelA[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_I:
-            vowelA[0].f0norm = 270  / frequency;
-            vowelA[1].f0norm = 2140 / frequency;
-            vowelA[2].f0norm = 2950 / frequency;
-            vowelA[3].f0norm = 3900 / frequency;
+            vowelA[0].f0norm =  (270 * pitchA) / frequency;
+            vowelA[1].f0norm = (2140 * pitchA) / frequency;
+            vowelA[2].f0norm = (2950 * pitchA) / frequency;
+            vowelA[3].f0norm = (3900 * pitchA) / frequency;
 
             vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelA[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
@@ -215,10 +218,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelA[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_O:
-            vowelA[0].f0norm = 450  / frequency;
-            vowelA[1].f0norm = 800  / frequency;
-            vowelA[2].f0norm = 2830 / frequency;
-            vowelA[3].f0norm = 3800 / frequency;
+            vowelA[0].f0norm =  (450 * pitchA) / frequency;
+            vowelA[1].f0norm =  (800 * pitchA) / frequency;
+            vowelA[2].f0norm = (2830 * pitchA) / frequency;
+            vowelA[3].f0norm = (3800 * pitchA) / frequency;
 
             vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelA[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
@@ -226,10 +229,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelA[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_U:
-            vowelA[0].f0norm = 325  / frequency;
-            vowelA[1].f0norm = 700  / frequency;
-            vowelA[2].f0norm = 2700 / frequency;
-            vowelA[3].f0norm = 3800 / frequency;
+            vowelA[0].f0norm =  (325 * pitchA) / frequency;
+            vowelA[1].f0norm =  (700 * pitchA) / frequency;
+            vowelA[2].f0norm = (2700 * pitchA) / frequency;
+            vowelA[3].f0norm = (3800 * pitchA) / frequency;
 
             vowelA[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelA[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
@@ -241,10 +244,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     switch(props->Vmorpher.PhonemeB)
     {
         case AL_VOCAL_MORPHER_PHONEME_A:
-            vowelB[0].f0norm = 800  / frequency;
-            vowelB[1].f0norm = 1150 / frequency;
-            vowelB[2].f0norm = 2900 / frequency;
-            vowelB[3].f0norm = 3900 / frequency;
+            vowelB[0].f0norm =  (800 * pitchB) / frequency;
+            vowelB[1].f0norm = (1150 * pitchB) / frequency;
+            vowelB[2].f0norm = (2900 * pitchB) / frequency;
+            vowelB[3].f0norm = (3900 * pitchB) / frequency;
 
             vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelB[1].fGain = 0.501187f; /* std::pow(10.0f,  -6 / 20.0f); */
@@ -252,10 +255,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelB[3].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_E:
-            vowelB[0].f0norm = 350  / frequency;
-            vowelB[1].f0norm = 2000 / frequency;
-            vowelB[2].f0norm = 2800 / frequency;
-            vowelB[3].f0norm = 3600 / frequency;
+            vowelB[0].f0norm =  (350 * pitchB) / frequency;
+            vowelB[1].f0norm = (2000 * pitchB) / frequency;
+            vowelB[2].f0norm = (2800 * pitchB) / frequency;
+            vowelB[3].f0norm = (3600 * pitchB) / frequency;
 
             vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelB[1].fGain = 0.100000f; /* std::pow(10.0f, -20 / 20.0f); */
@@ -263,10 +266,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelB[3].fGain = 0.009999f; /* std::pow(10.0f, -40 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_I:
-            vowelB[0].f0norm = 270  / frequency;
-            vowelB[1].f0norm = 2140 / frequency;
-            vowelB[2].f0norm = 2950 / frequency;
-            vowelB[3].f0norm = 3900 / frequency;
+            vowelB[0].f0norm =  (270 * pitchB) / frequency;
+            vowelB[1].f0norm = (2140 * pitchB) / frequency;
+            vowelB[2].f0norm = (2950 * pitchB) / frequency;
+            vowelB[3].f0norm = (3900 * pitchB) / frequency;
 
             vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelB[1].fGain = 0.251188f; /* std::pow(10.0f, -12 / 20.0f); */
@@ -274,10 +277,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelB[3].fGain = 0.050118f; /* std::pow(10.0f, -26 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_O:
-            vowelB[0].f0norm = 450  / frequency;
-            vowelB[1].f0norm = 800  / frequency;
-            vowelB[2].f0norm = 2830 / frequency;
-            vowelB[3].f0norm = 3800 / frequency;
+            vowelB[0].f0norm =  (450 * pitchB) / frequency;
+            vowelB[1].f0norm =  (800 * pitchB) / frequency;
+            vowelB[2].f0norm = (2830 * pitchB) / frequency;
+            vowelB[3].f0norm = (3800 * pitchB) / frequency;
 
             vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelB[1].fGain = 0.281838f; /* std::pow(10.0f, -11 / 20.0f); */
@@ -285,10 +288,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
             vowelB[3].fGain = 0.079432f; /* std::pow(10.0f, -22 / 20.0f); */
             break;
         case AL_VOCAL_MORPHER_PHONEME_U:
-            vowelB[0].f0norm = 325  / frequency;
-            vowelB[1].f0norm = 700  / frequency;
-            vowelB[2].f0norm = 2700 / frequency;
-            vowelB[3].f0norm = 3800 / frequency;
+            vowelB[0].f0norm =  (325 * pitchB) / frequency;
+            vowelB[1].f0norm =  (700 * pitchB) / frequency;
+            vowelB[2].f0norm = (2700 * pitchB) / frequency;
+            vowelB[3].f0norm = (3800 * pitchB) / frequency;
 
             vowelB[0].fGain = 1.000000f; /* std::pow(10.0f,   0 / 20.0f); */
             vowelB[1].fGain = 0.158489f; /* std::pow(10.0f, -16 / 20.0f); */
@@ -300,15 +303,15 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     /* Copy the filter coefficients for the other input channels. */
     for(ALuint i{1u};i < slot->Wet.Buffer.size();++i)
     {
-        mChans[i].Filters[0].Formants[0] = vowelA[0];
-        mChans[i].Filters[0].Formants[1] = vowelA[1];
-        mChans[i].Filters[0].Formants[2] = vowelA[2];
-        mChans[i].Filters[0].Formants[3] = vowelA[3];
+        mChans[i].Formants[VOWEL_A_INDEX][0] = vowelA[0];
+        mChans[i].Formants[VOWEL_A_INDEX][1] = vowelA[1];
+        mChans[i].Formants[VOWEL_A_INDEX][2] = vowelA[2];
+        mChans[i].Formants[VOWEL_A_INDEX][3] = vowelA[3];
 
-        mChans[i].Filters[1].Formants[0] = vowelB[0];
-        mChans[i].Filters[1].Formants[1] = vowelB[1];
-        mChans[i].Filters[1].Formants[2] = vowelB[2];
-        mChans[i].Filters[1].Formants[3] = vowelB[3];
+        mChans[i].Formants[VOWEL_B_INDEX][0] = vowelB[0];
+        mChans[i].Formants[VOWEL_B_INDEX][1] = vowelB[1];
+        mChans[i].Formants[VOWEL_B_INDEX][2] = vowelB[2];
+        mChans[i].Formants[VOWEL_B_INDEX][3] = vowelB[3];
     }
 
     mOutTarget = target.Main->Buffer;
@@ -342,8 +345,8 @@ void VmorpherState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
                 mSampleBufferB[i] = 0.0f;
             }
 
-            auto& vowelA = mChans[c].Filters[0].Formants;
-            auto& vowelB = mChans[c].Filters[1].Formants;
+            auto& vowelA = mChans[c].Formants[VOWEL_A_INDEX];
+            auto& vowelB = mChans[c].Formants[VOWEL_B_INDEX];
 
             /* Process first vowel. */
             vowelA[0].process(&samplesIn[c][base], mSampleBufferA, td);
@@ -486,12 +489,12 @@ struct VmorpherStateFactory final : public EffectStateFactory {
 EffectProps VmorpherStateFactory::getDefaultProps() const noexcept
 {
     EffectProps props{};
-    props.Vmorpher.Rate = AL_VOCAL_MORPHER_DEFAULT_RATE;
-    props.Vmorpher.PhonemeA = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA;
-    props.Vmorpher.PhonemeB = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB;
+    props.Vmorpher.Rate                 = AL_VOCAL_MORPHER_DEFAULT_RATE;
+    props.Vmorpher.PhonemeA             = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA;
+    props.Vmorpher.PhonemeB             = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB;
     props.Vmorpher.PhonemeACoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING;
     props.Vmorpher.PhonemeBCoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING;
-    props.Vmorpher.Waveform = AL_VOCAL_MORPHER_DEFAULT_WAVEFORM;
+    props.Vmorpher.Waveform             = AL_VOCAL_MORPHER_DEFAULT_WAVEFORM;
     return props;
 }
 

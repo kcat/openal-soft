@@ -188,6 +188,21 @@ class PacketQueue {
     size_t mTotalSize{0};
     bool mFinished{false};
 
+    AVPacket *getPacket(std::unique_lock<std::mutex> &lock)
+    {
+        while(mPackets.empty() && !mFinished)
+            mCondVar.wait(lock);
+        return mPackets.empty() ? nullptr : &mPackets.front();
+    }
+
+    void pop()
+    {
+        AVPacket *pkt = &mPackets.front();
+        mTotalSize -= pkt->size;
+        av_packet_unref(pkt);
+        mPackets.pop_front();
+    }
+
 public:
     ~PacketQueue()
     {
@@ -197,6 +212,22 @@ public:
         mTotalSize = 0;
     }
 
+    void sendTo(AVCodecContext *codecctx)
+    {
+        std::unique_lock<std::mutex> lock{mMutex};
+        AVPacket *lastpkt{};
+        while((lastpkt=getPacket(lock)) != nullptr)
+        {
+            const int ret{avcodec_send_packet(codecctx, lastpkt)};
+            if(ret == AVERROR(EAGAIN)) return;
+            if(ret < 0)
+                std::cerr<< "Failed to send packet: "<<ret <<std::endl;
+            pop();
+        }
+        if(!lastpkt)
+            avcodec_send_packet(codecctx, nullptr);
+    }
+
     void setFinished()
     {
         {
@@ -204,13 +235,6 @@ public:
             mFinished = true;
         }
         mCondVar.notify_one();
-    }
-
-    AVPacket *getPacket(std::unique_lock<std::mutex> &lock)
-    {
-        while(mPackets.empty() && !mFinished)
-            mCondVar.wait(lock);
-        return mPackets.empty() ? nullptr : &mPackets.front();
     }
 
     bool put(const AVPacket *pkt)
@@ -232,16 +256,6 @@ public:
         mCondVar.notify_one();
         return true;
     }
-
-    void pop()
-    {
-        AVPacket *pkt = &mPackets.front();
-        mTotalSize -= pkt->size;
-        av_packet_unref(pkt);
-        mPackets.pop_front();
-    }
-
-    std::mutex &getMutex() noexcept { return mMutex; }
 };
 
 
@@ -547,33 +561,21 @@ int AudioState::decodeFrame()
 {
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
-        {
-            std::unique_lock<std::mutex> lock{mPackets.getMutex()};
-            AVPacket *lastpkt{};
-            while((lastpkt=mPackets.getPacket(lock)) != nullptr)
-            {
-                const int ret{avcodec_send_packet(mCodecCtx.get(), lastpkt)};
-                if(ret == AVERROR(EAGAIN)) break;
-                if(ret < 0)
-                    std::cerr<< "Failed to send packet: "<<ret <<std::endl;
-                mPackets.pop();
-            }
-            if(!lastpkt)
-                avcodec_send_packet(mCodecCtx.get(), nullptr);
-        }
         const int ret{avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get())};
-        if(ret == AVERROR_EOF) break;
         if(ret < 0)
         {
-            std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
-            break;
+            if(ret == AVERROR_EOF) break;
+            if(ret != AVERROR(EAGAIN))
+            {
+                std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
+                break;
+            }
         }
 
+        mPackets.sendTo(mCodecCtx.get());
+
         if(mDecodedFrame->nb_samples <= 0)
-        {
-            av_frame_unref(mDecodedFrame.get());
             continue;
-        }
 
         /* If provided, update w/ pts */
         if(mDecodedFrame->best_effort_timestamp != AV_NOPTS_VALUE)
@@ -1006,6 +1008,9 @@ int AudioState::handler()
 #endif
         samples = av_malloc(buffer_len);
 
+    /* Prefill the codec buffer. */
+    mPackets.sendTo(mCodecCtx.get());
+
     srclock.lock();
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
           mConnected.test_and_set(std::memory_order_relaxed))
@@ -1305,39 +1310,20 @@ int VideoState::handler()
         [](Picture &pict) -> void
         { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
 
+    /* Prefill the codec buffer. */
+    mPackets.sendTo(mCodecCtx.get());
+
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
+        size_t write_idx{mPictQWrite.load(std::memory_order_relaxed)};
+        Picture *vp{&mPictQ[write_idx]};
+
+        /* Decode video frame. */
+        AVFrame *decoded_frame{vp->mFrame.get()};
+        const int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame)};
+        if(ret == AVERROR_EOF) break;
+        if(ret == 0)
         {
-            std::unique_lock<std::mutex> lock{mPackets.getMutex()};
-            AVPacket *lastpkt{};
-            while((lastpkt=mPackets.getPacket(lock)) != nullptr)
-            {
-                const int ret{avcodec_send_packet(mCodecCtx.get(), lastpkt)};
-                if(ret == AVERROR(EAGAIN)) break;
-                if(ret < 0)
-                    std::cerr<< "Failed to send packet: "<<ret <<std::endl;
-                mPackets.pop();
-            }
-            if(!lastpkt)
-                avcodec_send_packet(mCodecCtx.get(), nullptr);
-        }
-
-        while(!mMovie.mQuit.load(std::memory_order_relaxed))
-        {
-            size_t write_idx{mPictQWrite.load(std::memory_order_relaxed)};
-            Picture *vp{&mPictQ[write_idx]};
-
-            /* Decode video frame. */
-            AVFrame *decoded_frame{vp->mFrame.get()};
-            const int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame)};
-            if(ret == AVERROR_EOF) goto finished;
-            if(ret == AVERROR(EAGAIN)) break;
-            if(ret < 0)
-            {
-                std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
-                break;
-            }
-
             /* Get the PTS for this frame. */
             if(decoded_frame->best_effort_timestamp != AV_NOPTS_VALUE)
                 mCurrentPts = std::chrono::duration_cast<nanoseconds>(
@@ -1354,18 +1340,21 @@ int VideoState::handler()
              */
             write_idx = (write_idx+1)%mPictQ.size();
             mPictQWrite.store(write_idx, std::memory_order_release);
+        }
+        else if(ret != AVERROR(EAGAIN))
+            std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
 
-            if(write_idx == mPictQRead.load(std::memory_order_acquire))
-            {
-                /* Wait until we have space for a new pic */
-                std::unique_lock<std::mutex> lock{mPictQMutex};
-                while(write_idx == mPictQRead.load(std::memory_order_acquire) &&
-                    !mMovie.mQuit.load(std::memory_order_relaxed))
-                    mPictQCond.wait(lock);
-            }
+        mPackets.sendTo(mCodecCtx.get());
+
+        if(write_idx == mPictQRead.load(std::memory_order_acquire))
+        {
+            /* Wait until we have space for a new pic */
+            std::unique_lock<std::mutex> lock{mPictQMutex};
+            while(write_idx == mPictQRead.load(std::memory_order_acquire) &&
+                !mMovie.mQuit.load(std::memory_order_relaxed))
+                mPictQCond.wait(lock);
         }
     }
-finished:
     mEOS = true;
 
     std::unique_lock<std::mutex> lock{mPictQMutex};

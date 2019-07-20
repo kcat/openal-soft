@@ -748,18 +748,9 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 
 int AudioState::handler()
 {
-    std::unique_lock<std::mutex> srclock{mSrcMutex};
+    std::unique_lock<std::mutex> srclock{mSrcMutex, std::defer_lock};
     milliseconds sleep_time{AudioBufferTime / 3};
     ALenum fmt;
-
-    if(alcGetInteger64vSOFT)
-    {
-        int64_t devtime{};
-        alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()), ALC_DEVICE_CLOCK_SOFT,
-            1, &devtime);
-        mDeviceStartTime = nanoseconds{devtime} - mCurrentPts;
-    }
-    srclock.unlock();
 
 #ifdef AL_SOFT_events
     const std::array<ALenum,6> evt_types{{
@@ -1012,6 +1003,13 @@ int AudioState::handler()
     mPackets.sendTo(mCodecCtx.get());
 
     srclock.lock();
+    if(alcGetInteger64vSOFT)
+    {
+        int64_t devtime{};
+        alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()), ALC_DEVICE_CLOCK_SOFT,
+            1, &devtime);
+        mDeviceStartTime = nanoseconds{devtime} - mCurrentPts;
+    }
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
           mConnected.test_and_set(std::memory_order_relaxed))
     {
@@ -1301,17 +1299,17 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
 
 int VideoState::handler()
 {
-    {
-        std::lock_guard<std::mutex> _{mDispPtsMutex};
-        mDisplayPtsTime = get_avtime();
-    }
-
     std::for_each(mPictQ.begin(), mPictQ.end(),
         [](Picture &pict) -> void
         { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
 
     /* Prefill the codec buffer. */
     mPackets.sendTo(mCodecCtx.get());
+
+    {
+        std::lock_guard<std::mutex> _{mDispPtsMutex};
+        mDisplayPtsTime = get_avtime();
+    }
 
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {

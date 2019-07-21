@@ -345,8 +345,6 @@ struct VideoState {
 
     PacketQueue<14*1024*1024> mPackets;
 
-    /* The expected pts of the next frame to decode. */
-    nanoseconds mCurrentPts{0};
     /* The pts of the currently displayed frame, and the time (av_gettime) it
      * was last updated - used to have running video pts
      */
@@ -1311,12 +1309,13 @@ int VideoState::handler()
         mDisplayPtsTime = get_avtime();
     }
 
+    auto current_pts = nanoseconds::zero();
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
         size_t write_idx{mPictQWrite.load(std::memory_order_relaxed)};
         Picture *vp{&mPictQ[write_idx]};
 
-        /* Decode video frame. */
+        /* Retrieve video frame. */
         AVFrame *decoded_frame{vp->mFrame.get()};
         const int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame)};
         if(ret == AVERROR_EOF) break;
@@ -1324,14 +1323,14 @@ int VideoState::handler()
         {
             /* Get the PTS for this frame. */
             if(decoded_frame->best_effort_timestamp != AV_NOPTS_VALUE)
-                mCurrentPts = std::chrono::duration_cast<nanoseconds>(
+                current_pts = std::chrono::duration_cast<nanoseconds>(
                     seconds_d64{av_q2d(mStream->time_base)*decoded_frame->best_effort_timestamp});
-            vp->mPts = mCurrentPts;
+            vp->mPts = current_pts;
 
             /* Update the video clock to the next expected PTS. */
             auto frame_delay = av_q2d(mCodecCtx->time_base);
             frame_delay += decoded_frame->repeat_pict * (frame_delay * 0.5);
-            mCurrentPts += std::chrono::duration_cast<nanoseconds>(seconds_d64{frame_delay});
+            current_pts += std::chrono::duration_cast<nanoseconds>(seconds_d64{frame_delay});
 
             /* Put the frame in the queue to be loaded into a texture and
              * displayed by the rendering thread.

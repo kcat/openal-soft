@@ -383,7 +383,7 @@ struct VideoState {
     nanoseconds getClock();
 
     void display(SDL_Window *screen, SDL_Renderer *renderer);
-    void updateVideo(SDL_Window *screen, SDL_Renderer *renderer);
+    void updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool redraw);
     int handler();
 };
 
@@ -1158,7 +1158,7 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
  * handles updating the textures of decoded frames and displaying the latest
  * frame.
  */
-void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
+void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool redraw)
 {
     size_t read_idx{mPictQRead.load(std::memory_order_relaxed)};
     Picture *vp{&mPictQ[read_idx]};
@@ -1273,10 +1273,15 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer)
                 SDL_UnlockTexture(mImage);
             }
         }
+
+        redraw = true;
     }
 
-    /* Show the picture! */
-    display(screen, renderer);
+    if(redraw)
+    {
+        /* Show the picture! */
+        display(screen, renderer);
+    }
 
     if(updated)
     {
@@ -1766,6 +1771,7 @@ int main(int argc, char *argv[])
             last_time = cur_time;
         }
 
+        bool force_redraw{false};
         if(have_evt) do {
             switch(event.type)
             {
@@ -1793,6 +1799,11 @@ int main(int argc, char *argv[])
                         case SDL_WINDOWEVENT_RESIZED:
                             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                             SDL_RenderFillRect(renderer, nullptr);
+                            force_redraw = true;
+                            break;
+
+                        case SDL_WINDOWEVENT_EXPOSED:
+                            force_redraw = true;
                             break;
 
                         default:
@@ -1841,7 +1852,7 @@ int main(int argc, char *argv[])
             }
         } while(SDL_PollEvent(&event));
 
-        movState->mVideo.updateVideo(screen, renderer);
+        movState->mVideo.updateVideo(screen, renderer, force_redraw);
     }
 
     std::cerr<< "SDL_WaitEvent error - "<<SDL_GetError() <<std::endl;

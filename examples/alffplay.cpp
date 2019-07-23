@@ -212,20 +212,21 @@ public:
         mTotalSize = 0;
     }
 
-    void sendTo(AVCodecContext *codecctx)
+    int sendTo(AVCodecContext *codecctx)
     {
         std::unique_lock<std::mutex> lock{mMutex};
-        AVPacket *lastpkt{};
-        while((lastpkt=getPacket(lock)) != nullptr)
+
+        AVPacket *pkt{getPacket(lock)};
+        if(!pkt) return avcodec_send_packet(codecctx, nullptr);
+
+        const int ret{avcodec_send_packet(codecctx, pkt)};
+        if(ret != AVERROR(EAGAIN))
         {
-            const int ret{avcodec_send_packet(codecctx, lastpkt)};
-            if(ret == AVERROR(EAGAIN)) return;
             if(ret < 0)
                 std::cerr<< "Failed to send packet: "<<ret <<std::endl;
             pop();
         }
-        if(!lastpkt)
-            avcodec_send_packet(codecctx, nullptr);
+        return ret;
     }
 
     void setFinished()
@@ -559,18 +560,15 @@ int AudioState::decodeFrame()
 {
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
-        const int ret{avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get())};
-        if(ret < 0)
+        int ret;
+        while((ret=avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get())) == AVERROR(EAGAIN))
+            mPackets.sendTo(mCodecCtx.get());
+        if(ret != 0)
         {
             if(ret == AVERROR_EOF) break;
-            if(ret != AVERROR(EAGAIN))
-            {
-                std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
-                break;
-            }
+            std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
+            continue;
         }
-
-        mPackets.sendTo(mCodecCtx.get());
 
         if(mDecodedFrame->nb_samples <= 0)
             continue;
@@ -998,7 +996,11 @@ int AudioState::handler()
         samples = av_malloc(buffer_len);
 
     /* Prefill the codec buffer. */
-    mPackets.sendTo(mCodecCtx.get());
+    do {
+        const int ret{mPackets.sendTo(mCodecCtx.get())};
+        if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            break;
+    } while(1);
 
     srclock.lock();
     if(alcGetInteger64vSOFT)
@@ -1302,7 +1304,11 @@ int VideoState::handler()
         { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
 
     /* Prefill the codec buffer. */
-    mPackets.sendTo(mCodecCtx.get());
+    do {
+        const int ret{mPackets.sendTo(mCodecCtx.get())};
+        if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            break;
+    } while(1);
 
     {
         std::lock_guard<std::mutex> _{mDispPtsMutex};
@@ -1317,30 +1323,34 @@ int VideoState::handler()
 
         /* Retrieve video frame. */
         AVFrame *decoded_frame{vp->mFrame.get()};
-        const int ret{avcodec_receive_frame(mCodecCtx.get(), decoded_frame)};
-        if(ret == AVERROR_EOF) break;
-        if(ret == 0)
+        int ret;
+        while((ret=avcodec_receive_frame(mCodecCtx.get(), decoded_frame)) == AVERROR(EAGAIN))
+            mPackets.sendTo(mCodecCtx.get());
+        if(ret != 0)
         {
-            /* Get the PTS for this frame. */
-            if(decoded_frame->best_effort_timestamp != AV_NOPTS_VALUE)
-                current_pts = std::chrono::duration_cast<nanoseconds>(
-                    seconds_d64{av_q2d(mStream->time_base)*decoded_frame->best_effort_timestamp});
-            vp->mPts = current_pts;
-
-            /* Update the video clock to the next expected PTS. */
-            auto frame_delay = av_q2d(mCodecCtx->time_base);
-            frame_delay += decoded_frame->repeat_pict * (frame_delay * 0.5);
-            current_pts += std::chrono::duration_cast<nanoseconds>(seconds_d64{frame_delay});
-
-            /* Put the frame in the queue to be loaded into a texture and
-             * displayed by the rendering thread.
-             */
-            write_idx = (write_idx+1)%mPictQ.size();
-            mPictQWrite.store(write_idx, std::memory_order_release);
-        }
-        else if(ret != AVERROR(EAGAIN))
+            if(ret == AVERROR_EOF) break;
             std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
+            continue;
+        }
 
+        /* Get the PTS for this frame. */
+        if(decoded_frame->best_effort_timestamp != AV_NOPTS_VALUE)
+            current_pts = std::chrono::duration_cast<nanoseconds>(
+                seconds_d64{av_q2d(mStream->time_base)*decoded_frame->best_effort_timestamp});
+        vp->mPts = current_pts;
+
+        /* Update the video clock to the next expected PTS. */
+        auto frame_delay = av_q2d(mCodecCtx->time_base);
+        frame_delay += decoded_frame->repeat_pict * (frame_delay * 0.5);
+        current_pts += std::chrono::duration_cast<nanoseconds>(seconds_d64{frame_delay});
+
+        /* Put the frame in the queue to be loaded into a texture and displayed
+         * by the rendering thread.
+         */
+        write_idx = (write_idx+1)%mPictQ.size();
+        mPictQWrite.store(write_idx, std::memory_order_release);
+
+        /* Send a packet now so it's hopefully ready by the time it's needed. */
         mPackets.sendTo(mCodecCtx.get());
 
         if(write_idx == mPictQRead.load(std::memory_order_acquire))

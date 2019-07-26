@@ -17,12 +17,14 @@
 #endif
 
 
+#define ALIGNED_ALLOC_AVAILABLE (__STDC_VERSION__ >= 201112L || __cplusplus >= 201703L)
+
 void *al_malloc(size_t alignment, size_t size)
 {
     assert((alignment & (alignment-1)) == 0);
     alignment = std::max(alignment, alignof(std::max_align_t));
 
-#if defined(HAVE_ALIGNED_ALLOC)
+#if ALIGNED_ALLOC_AVAILABLE
     size = (size+(alignment-1))&~(alignment-1);
     return aligned_alloc(alignment, size);
 #elif defined(HAVE_POSIX_MEMALIGN)
@@ -53,7 +55,7 @@ void *al_calloc(size_t alignment, size_t size)
 
 void al_free(void *ptr) noexcept
 {
-#if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN)
+#if ALIGNED_ALLOC_AVAILABLE || defined(HAVE_POSIX_MEMALIGN)
     free(ptr);
 #elif defined(HAVE__ALIGNED_MALLOC)
     _aligned_free(ptr);

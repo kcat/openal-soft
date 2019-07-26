@@ -11,9 +11,6 @@
 /* Define if we have the sysconf function */
 #cmakedefine HAVE_SYSCONF
 
-/* Define if we have the C11 aligned_alloc function */
-#cmakedefine HAVE_ALIGNED_ALLOC
-
 /* Define if we have the posix_memalign function */
 #cmakedefine HAVE_POSIX_MEMALIGN
 

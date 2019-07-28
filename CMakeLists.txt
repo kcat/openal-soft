@@ -243,9 +243,6 @@ ELSE()
         SET(C_FLAGS ${C_FLAGS} -fno-math-errno)
     ENDIF()
 
-    CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
-                             int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
-
     option(ALSOFT_STATIC_LIBGCC "Force -static-libgcc for static GCC runtimes" OFF)
     if(ALSOFT_STATIC_LIBGCC)
         set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
@@ -474,7 +471,6 @@ IF(HAVE_INTRIN_H)
         }" HAVE_BITSCANFORWARD_INTRINSIC)
 ENDIF()
 
-CHECK_SYMBOL_EXISTS(sysconf          unistd.h HAVE_SYSCONF)
 CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 CHECK_SYMBOL_EXISTS(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)

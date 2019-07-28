@@ -8,9 +8,6 @@
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 
-/* Define if we have the sysconf function */
-#cmakedefine HAVE_SYSCONF
-
 /* Define if we have the posix_memalign function */
 #cmakedefine HAVE_POSIX_MEMALIGN
 
@@ -85,9 +82,6 @@
 
 /* Define to the size of a long long int type */
 #cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
-
-/* Define if we have GCC's destructor attribute */
-#cmakedefine HAVE_GCC_DESTRUCTOR
 
 /* Define if we have GCC's format attribute */
 #cmakedefine HAVE_GCC_FORMAT

@@ -59,44 +59,39 @@
  *  1999
  */
 
+#define _UNICODE
 #include "config.h"
 
-#define _UNICODE
+#include "makemhr.h"
+
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <complex>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstdarg>
-#include <cstddef>
 #include <cstring>
-#include <climits>
-#include <cstdint>
-#include <cctype>
-#include <cmath>
-#ifdef HAVE_STRINGS_H
-#include <strings.h>
-#endif
+#include <functional>
+#include <limits>
+#include <memory>
+#include <numeric>
+#include <thread>
+#include <utility>
+#include <vector>
+
 #ifdef HAVE_GETOPT
 #include <unistd.h>
 #else
 #include "../getopt.h"
 #endif
 
-#include <atomic>
-#include <limits>
-#include <vector>
-#include <chrono>
-#include <thread>
-#include <complex>
-#include <numeric>
-#include <algorithm>
-#include <functional>
-
-#include "mysofa.h"
-
-#include "makemhr.h"
 #include "loaddef.h"
 #include "loadsofa.h"
 
 #include "win_main_utf8.h"
+
 
 namespace {
 

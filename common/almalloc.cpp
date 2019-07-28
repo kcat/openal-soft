@@ -10,11 +10,6 @@
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
 
 
 #define ALIGNED_ALLOC_AVAILABLE (__STDC_VERSION__ >= 201112L || __cplusplus >= 201703L)

@@ -20,30 +20,37 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <ctype.h>
+#include "hrtf.h"
 
-#include <mutex>
-#include <array>
-#include <vector>
-#include <memory>
-#include <istream>
-#include <numeric>
 #include <algorithm>
+#include <array>
+#include <cassert>
+#include <cctype>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <functional>
+#include <fstream>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <numeric>
+#include <utility>
 
 #include "AL/al.h"
-#include "AL/alc.h"
-#include "alMain.h"
-#include "alSource.h"
-#include "alu.h"
-#include "hrtf.h"
-#include "alconfig.h"
-#include "filters/splitter.h"
 
-#include "compat.h"
+#include "alMain.h"
+#include "alconfig.h"
 #include "almalloc.h"
+#include "alnumeric.h"
+#include "aloptional.h"
 #include "alspan.h"
+#include "compat.h"
+#include "filters/splitter.h"
+#include "logging.h"
+#include "math_defs.h"
+#include "opthelpers.h"
 
 
 struct HrtfHandle {

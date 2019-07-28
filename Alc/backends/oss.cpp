@@ -22,32 +22,37 @@
 
 #include "backends/oss.h"
 
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <cstdlib>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <atomic>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <memory.h>
-#include <unistd.h>
-#include <cerrno>
-#include <poll.h>
-#include <cmath>
-
-#include <atomic>
-#include <thread>
-#include <vector>
-#include <string>
-#include <algorithm>
+#include <exception>
 #include <functional>
+#include <memory>
+#include <new>
+#include <string>
+#include <thread>
+#include <utility>
+
+#include "AL/al.h"
 
 #include "alMain.h"
-#include "alu.h"
 #include "alconfig.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "aloptional.h"
+#include "alu.h"
+#include "logging.h"
 #include "ringbuffer.h"
-#include "compat.h"
+#include "threads.h"
+#include "vector.h"
 
 #include <sys/soundcard.h>
 

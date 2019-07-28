@@ -1,44 +1,35 @@
 #ifndef _ALU_H_
 #define _ALU_H_
 
-#include <limits.h>
-#include <math.h>
-#ifdef HAVE_FLOAT_H
-#include <float.h>
-#endif
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>
-#endif
-
-#include <cmath>
 #include <array>
+#include <atomic>
+#include <cmath>
+#include <cstddef>
 
-#include "alMain.h"
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+
 #include "alBuffer.h"
-
+#include "alMain.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "ambidefs.h"
+#include "filters/biquad.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
 #include "hrtf.h"
 #include "logging.h"
-#include "math_defs.h"
-#include "filters/biquad.h"
-#include "filters/splitter.h"
-#include "filters/nfc.h"
 
-#include "almalloc.h"
-#include "alnumeric.h"
-#include "alspan.h"
+struct ALbufferlistitem;
+struct ALeffectslot;
+struct BSincTable;
 
 
 enum class DistanceModel;
 
 #define MAX_PITCH  255
 #define MAX_SENDS  16
-
-
-struct BSincTable;
-struct ALsource;
-struct ALbufferlistitem;
-struct ALvoice;
-struct ALeffectslot;
 
 
 #define DITHER_RNG_SEED 22222

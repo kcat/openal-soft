@@ -22,6 +22,9 @@
 
 #include "backends/wasapi.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -56,6 +59,7 @@
 #include "ringbuffer.h"
 #include "compat.h"
 #include "converter.h"
+#include "threads.h"
 
 
 /* Some headers seem to define these as macros for __uuidof, which is annoying

@@ -22,18 +22,19 @@
 
 #include "backends/null.h"
 
-#include <cstdlib>
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#endif
-
+#include <exception>
+#include <atomic>
 #include <chrono>
-#include <thread>
+#include <cstdint>
+#include <cstring>
 #include <functional>
+#include <thread>
 
 #include "alMain.h"
+#include "almalloc.h"
 #include "alu.h"
-#include "compat.h"
+#include "logging.h"
+#include "threads.h"
 
 
 namespace {

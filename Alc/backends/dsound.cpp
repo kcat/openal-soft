@@ -22,6 +22,9 @@
 
 #include "backends/dsound.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -34,6 +37,7 @@
 #endif
 
 #include <atomic>
+#include <cassert>
 #include <thread>
 #include <string>
 #include <vector>
@@ -44,6 +48,7 @@
 #include "alu.h"
 #include "ringbuffer.h"
 #include "compat.h"
+#include "threads.h"
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;

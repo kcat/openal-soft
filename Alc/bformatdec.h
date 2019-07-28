@@ -1,11 +1,17 @@
 #ifndef BFORMATDEC_H
 #define BFORMATDEC_H
 
-#include "alMain.h"
-#include "filters/splitter.h"
-#include "ambidefs.h"
-#include "almalloc.h"
+#include <array>
+#include <cstddef>
 
+#include "AL/al.h"
+
+#include "alMain.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "ambidefs.h"
+#include "filters/splitter.h"
+#include "vector.h"
 
 struct AmbDecConf;
 
@@ -27,10 +33,10 @@ class BFormatDec {
     /* NOTE: BandSplitter filters are unused with single-band decoding */
     BandSplitter mXOver[MAX_AMBI_CHANNELS];
 
-    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> mSamples;
+    al::vector<FloatBufferLine, 16> mSamples;
     /* These two alias into Samples */
-    std::array<ALfloat,BUFFERSIZE> *mSamplesHF{nullptr};
-    std::array<ALfloat,BUFFERSIZE> *mSamplesLF{nullptr};
+    FloatBufferLine *mSamplesHF{nullptr};
+    FloatBufferLine *mSamplesLF{nullptr};
 
     ALuint mNumChannels{0u};
     bool mDualBand{false};

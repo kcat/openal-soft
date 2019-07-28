@@ -1,13 +1,13 @@
 
 #include "config.h"
 
+#include "biquad.h"
+
+#include <algorithm>
+#include <cassert>
 #include <cmath>
 
-#include "AL/alc.h"
-#include "AL/al.h"
-
-#include "alMain.h"
-#include "biquad.h"
+#include "opthelpers.h"
 
 
 template<typename Real>

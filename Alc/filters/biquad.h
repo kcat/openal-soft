@@ -4,7 +4,6 @@
 #include <cmath>
 #include <utility>
 
-#include "AL/al.h"
 #include "math_defs.h"
 
 

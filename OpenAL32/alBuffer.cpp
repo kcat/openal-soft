@@ -20,27 +20,39 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <cstdio>
-#include <cassert>
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
-
-#include <tuple>
-#include <array>
-#include <vector>
-#include <limits>
-#include <algorithm>
-
-#include "alMain.h"
-#include "alcontext.h"
-#include "alu.h"
-#include "alError.h"
 #include "alBuffer.h"
-#include "sample_cvt.h"
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <utility>
+
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+
+#include "alError.h"
+#include "alMain.h"
+#include "albyte.h"
+#include "alcontext.h"
 #include "alexcpt.h"
+#include "almalloc.h"
+#include "alnumeric.h"
 #include "aloptional.h"
+#include "atomic.h"
+#include "inprogext.h"
+#include "opthelpers.h"
+#include "sample_cvt.h"
+#include "vector.h"
 
 
 namespace {

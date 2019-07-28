@@ -20,35 +20,56 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <climits>
-#include <cfloat>
+#include "alSource.h"
 
-#include <cmath>
-#include <thread>
-#include <limits>
-#include <numeric>
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <chrono>
+#include <climits>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
 #include <functional>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <numeric>
+#include <thread>
+#include <type_traits>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
+#include "AL/efx.h"
 
+#include "alAuxEffectSlot.h"
+#include "alBuffer.h"
+#include "alError.h"
+#include "alFilter.h"
 #include "alMain.h"
 #include "alcontext.h"
-#include "alError.h"
-#include "alSource.h"
-#include "alBuffer.h"
-#include "alFilter.h"
-#include "alAuxEffectSlot.h"
-#include "ringbuffer.h"
-#include "bformatdec.h"
-
-#include "backends/base.h"
-
-#include "threads.h"
 #include "alexcpt.h"
 #include "almalloc.h"
+#include "alnumeric.h"
+#include "alu.h"
+#include "ambidefs.h"
+#include "atomic.h"
+#include "backends/base.h"
+#include "bformatdec.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
+#include "inprogext.h"
+#include "logging.h"
+#include "math_defs.h"
+#include "opthelpers.h"
+#include "ringbuffer.h"
+#include "threads.h"
+#include "vector.h"
 
 
 namespace {

@@ -22,20 +22,28 @@
 
 #include "backends/wave.h"
 
-#include <cstdlib>
-#include <cstdio>
-#include <memory.h>
+#include <algorithm>
+#include <atomic>
 #include <cerrno>
-
 #include <chrono>
-#include <thread>
-#include <vector>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <exception>
 #include <functional>
+#include <thread>
+
+#include "AL/al.h"
 
 #include "alMain.h"
-#include "alu.h"
 #include "alconfig.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "alu.h"
 #include "compat.h"
+#include "logging.h"
+#include "threads.h"
+#include "vector.h"
 
 
 namespace {

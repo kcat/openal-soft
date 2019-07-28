@@ -1,26 +1,23 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <array>
-#include <vector>
-#include <numeric>
-#include <algorithm>
-#include <functional>
-
 #include "bformatdec.h"
+
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <iterator>
+#include <numeric>
+
+#include "almalloc.h"
+#include "alu.h"
 #include "ambdec.h"
 #include "filters/splitter.h"
-#include "alu.h"
-
-#include "threads.h"
-#include "almalloc.h"
+#include "opthelpers.h"
 
 
 namespace {
-
-using namespace std::placeholders;
-
 
 constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_ORDER+1] = {
     1.00000000e+00f, 1.00000000e+00f

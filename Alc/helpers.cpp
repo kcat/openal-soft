@@ -28,14 +28,15 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <ctime>
+#include <algorithm>
 #include <cerrno>
 #include <cstdarg>
-#include <cctype>
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <mutex>
+#include <string>
+
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
@@ -95,35 +96,19 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #ifdef HAVE_SYS_SYSCONF_H
 #include <sys/sysconf.h>
 #endif
-#ifdef HAVE_FLOAT_H
-#include <cfloat>
-#endif
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>
-#endif
 
 #ifndef _WIN32
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <fcntl.h>
 #include <unistd.h>
 #elif defined(_WIN32_IE)
 #include <shlobj.h>
 #endif
 
-#include <mutex>
-#include <vector>
-#include <string>
-#include <algorithm>
-
 #include "alMain.h"
-#include "alu.h"
+#include "almalloc.h"
+#include "compat.h"
 #include "cpu_caps.h"
 #include "fpu_modes.h"
-#include "vector.h"
-#include "compat.h"
-#include "threads.h"
+#include "logging.h"
 
 
 #if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \

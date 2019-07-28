@@ -1,38 +1,41 @@
 #ifndef AL_MAIN_H
 #define AL_MAIN_H
 
-#include <string.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <math.h>
-#include <limits.h>
-
-#ifdef HAVE_STRINGS_H
-#include <strings.h>
-#endif
-
-#include <array>
-#include <vector>
-#include <string>
-#include <chrono>
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstddef>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "inprogext.h"
-#include "atomic.h"
-#include "vector.h"
 #include "albyte.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "threads.h"
 #include "ambidefs.h"
+#include "atomic.h"
 #include "hrtf.h"
+#include "inprogext.h"
+#include "vector.h"
+
+class BFormatDec;
+struct ALbuffer;
+struct ALeffect;
+struct ALfilter;
+struct BackendBase;
+struct Compressor;
+struct EffectState;
+struct FrontStablizer;
+struct Uhj2Encoder;
+struct bs2b;
 
 
 #ifndef UNUSED
@@ -57,23 +60,6 @@ static const union {
 } EndianTest = { 1 };
 #define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
 #endif
-
-
-struct HrtfEntry;
-struct HrtfHandle;
-struct EnumeratedHrtf;
-struct DirectHrtfState;
-struct FrontStablizer;
-struct Compressor;
-struct BackendBase;
-struct ALbuffer;
-struct ALeffect;
-struct ALfilter;
-struct EffectState;
-struct Uhj2Encoder;
-class BFormatDec;
-class AmbiUpsampler;
-struct bs2b;
 
 
 #define MIN_OUTPUT_RATE      8000

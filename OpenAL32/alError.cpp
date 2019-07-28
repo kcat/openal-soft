@@ -20,19 +20,32 @@
 
 #include "config.h"
 
+#include "alError.h"
+
+#include <atomic>
 #include <csignal>
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
+#include <mutex>
 
 #ifdef HAVE_WINDOWS_H
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
 
+#include "AL/al.h"
+#include "AL/alc.h"
+
 #include "alMain.h"
 #include "alcontext.h"
-#include "alError.h"
 #include "alexcpt.h"
+#include "almalloc.h"
+#include "inprogext.h"
+#include "logging.h"
+#include "opthelpers.h"
+#include "vector.h"
+
 
 bool TrapALError{false};
 

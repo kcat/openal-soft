@@ -20,32 +20,47 @@
 
 #include "config.h"
 
-#include <cmath>
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <cctype>
-#include <cassert>
-
+#include <iterator>
+#include <memory>
+#include <new>
 #include <numeric>
-#include <algorithm>
+#include <string>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alMain.h"
-#include "alcontext.h"
-#include "alSource.h"
 #include "alBuffer.h"
-#include "alListener.h"
-#include "alAuxEffectSlot.h"
-#include "sample_cvt.h"
-#include "alu.h"
+#include "alMain.h"
+#include "alSource.h"
+#include "albyte.h"
 #include "alconfig.h"
-#include "ringbuffer.h"
-#include "cpu_caps.h"
-#include "mixer/defs.h"
-
+#include "alcontext.h"
+#include "alnumeric.h"
+#include "aloptional.h"
 #include "alspan.h"
+#include "alu.h"
+#include "cpu_caps.h"
+#include "filters/biquad.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
+#include "hrtf.h"
+#include "inprogext.h"
+#include "logging.h"
+#include "mixer/defs.h"
+#include "opthelpers.h"
+#include "ringbuffer.h"
+#include "threads.h"
+#include "vector.h"
 
 
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,

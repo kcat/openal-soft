@@ -22,22 +22,33 @@
 
 #include "backends/alsa.h"
 
-#include <cstdlib>
-#include <cstdio>
-#include <memory.h>
-
-#include <atomic>
-#include <thread>
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <cerrno>
+#include <chrono>
+#include <cstring>
+#include <exception>
 #include <functional>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+
+#include "AL/al.h"
 
 #include "alMain.h"
-#include "alu.h"
+#include "albyte.h"
 #include "alconfig.h"
-#include "ringbuffer.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "aloptional.h"
+#include "alu.h"
 #include "compat.h"
+#include "logging.h"
+#include "ringbuffer.h"
+#include "threads.h"
+#include "vector.h"
 
 #include <alsa/asoundlib.h>
 

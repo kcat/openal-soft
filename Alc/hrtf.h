@@ -2,15 +2,19 @@
 #define ALC_HRTF_H
 
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <string>
 
 #include "AL/al.h"
-#include "AL/alc.h"
 
-#include "vector.h"
 #include "almalloc.h"
+#include "ambidefs.h"
+#include "atomic.h"
+#include "vector.h"
 
+
+struct HrtfHandle;
 
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
@@ -20,8 +24,6 @@
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
 
-
-struct HrtfHandle;
 
 struct HrtfEntry {
     RefCount ref;

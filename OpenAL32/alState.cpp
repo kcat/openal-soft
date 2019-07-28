@@ -22,17 +22,26 @@
 
 #include "version.h"
 
-#include <stdlib.h>
+#include <atomic>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <mutex>
 
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+
+#include "alError.h"
 #include "alMain.h"
 #include "alcontext.h"
-#include "alu.h"
-#include "alError.h"
 #include "alexcpt.h"
+#include "almalloc.h"
 #include "alspan.h"
-
-#include "backends/base.h"
+#include "alu.h"
+#include "atomic.h"
+#include "inprogext.h"
+#include "opthelpers.h"
 
 
 namespace {

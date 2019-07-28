@@ -20,17 +20,28 @@
 
 #include "config.h"
 
-#include <cstdlib>
-
-#include <cmath>
 #include <algorithm>
+#include <climits>
+#include <cmath>
+#include <cstdlib>
+#include <iterator>
 
-#include "alMain.h"
-#include "alcontext.h"
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/efx.h"
+
 #include "alAuxEffectSlot.h"
 #include "alError.h"
+#include "alMain.h"
+#include "alcontext.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "alspan.h"
 #include "alu.h"
-#include "filters/biquad.h"
+#include "ambidefs.h"
+#include "effects/base.h"
+#include "math_defs.h"
+#include "opthelpers.h"
 #include "vector.h"
 
 

@@ -20,22 +20,33 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <cmath>
-#include <cfloat>
+#include "alEffect.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
+#include "AL/efx-presets.h"
+#include "AL/efx.h"
 
+#include "alError.h"
 #include "alMain.h"
 #include "alcontext.h"
-#include "alEffect.h"
-#include "alError.h"
 #include "alexcpt.h"
-
+#include "almalloc.h"
+#include "alnumeric.h"
 #include "effects/base.h"
+#include "logging.h"
+#include "opthelpers.h"
+#include "vector.h"
 
 
 const EffectList gEffectList[15]{
@@ -538,8 +549,6 @@ EffectStateFactory *getFactoryByType(ALenum type)
     return (iter != std::end(FactoryList)) ? iter->GetFactory() : nullptr;
 }
 
-
-#include "AL/efx-presets.h"
 
 #define DECL(x) { #x, EFX_REVERB_PRESET_##x }
 static const struct {

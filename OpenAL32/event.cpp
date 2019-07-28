@@ -2,18 +2,30 @@
 #include "config.h"
 
 #include <algorithm>
+#include <atomic>
+#include <cstring>
+#include <exception>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <string>
+#include <thread>
 
-#include "AL/alc.h"
 #include "AL/al.h"
-#include "AL/alext.h"
+#include "AL/alc.h"
 
-#include "alMain.h"
-#include "alcontext.h"
 #include "alError.h"
-#include "alAuxEffectSlot.h"
+#include "alMain.h"
+#include "albyte.h"
+#include "alcontext.h"
+#include "alexcpt.h"
+#include "almalloc.h"
+#include "effects/base.h"
+#include "inprogext.h"
+#include "logging.h"
+#include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "alexcpt.h"
 
 
 static int EventThread(ALCcontext *context)

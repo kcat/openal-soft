@@ -20,36 +20,62 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <assert.h>
+#include "alu.h"
 
-#include <cmath>
-#include <limits>
-#include <numeric>
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <chrono>
+#include <climits>
+#include <cmath>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <new>
+#include <numeric>
+#include <utility>
 
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/efx.h"
+
+#include "alAuxEffectSlot.h"
+#include "alBuffer.h"
+#include "alEffect.h"
+#include "alListener.h"
 #include "alMain.h"
 #include "alcontext.h"
-#include "alSource.h"
-#include "alBuffer.h"
-#include "alListener.h"
-#include "alAuxEffectSlot.h"
-#include "alu.h"
-#include "bs2b.h"
-#include "hrtf.h"
-#include "mastering.h"
-#include "uhjfilter.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "alspan.h"
+#include "ambidefs.h"
+#include "atomic.h"
 #include "bformatdec.h"
-#include "ringbuffer.h"
-#include "filters/splitter.h"
-
-#include "mixer/defs.h"
-#include "fpu_modes.h"
+#include "bs2b.h"
 #include "cpu_caps.h"
+#include "effects/base.h"
+#include "filters/biquad.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
+#include "fpu_modes.h"
+#include "hrtf.h"
+#include "inprogext.h"
+#include "mastering.h"
+#include "math_defs.h"
+#include "mixer/defs.h"
+#include "opthelpers.h"
+#include "ringbuffer.h"
+#include "threads.h"
+#include "uhjfilter.h"
+#include "vecmat.h"
+#include "vector.h"
+
 #include "bsinc_inc.h"
 
 

@@ -92,12 +92,6 @@
 /* Define if we have GCC's format attribute */
 #cmakedefine HAVE_GCC_FORMAT
 
-/* Define if we have stdint.h */
-#cmakedefine HAVE_STDINT_H
-
-/* Define if we have windows.h */
-#cmakedefine HAVE_WINDOWS_H
-
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 
@@ -109,9 +103,6 @@
 
 /* Define if we have dirent.h */
 #cmakedefine HAVE_DIRENT_H
-
-/* Define if we have strings.h */
-#cmakedefine HAVE_STRINGS_H
 
 /* Define if we have cpuid.h */
 #cmakedefine HAVE_CPUID_H
@@ -127,15 +118,6 @@
 
 /* Define if we have initguid.h */
 #cmakedefine HAVE_INITGUID_H
-
-/* Define if we have ieeefp.h */
-#cmakedefine HAVE_IEEEFP_H
-
-/* Define if we have float.h */
-#cmakedefine HAVE_FLOAT_H
-
-/* Define if we have fenv.h */
-#cmakedefine HAVE_FENV_H
 
 /* Define if we have GCC's __get_cpuid() */
 #cmakedefine HAVE_GCC_GET_CPUID

@@ -27,10 +27,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <SDL_sound.h>
+#include "SDL_sound.h"
+#include "SDL_audio.h"
+#include "SDL_stdinc.h"
 
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "common/alhelpers.h"

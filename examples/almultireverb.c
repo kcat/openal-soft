@@ -29,15 +29,18 @@
  * listener.
  */
 
-#include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
 
-#include <SDL_sound.h>
+#include "SDL_sound.h"
+#include "SDL_audio.h"
+#include "SDL_stdinc.h"
 
 #include "AL/al.h"
 #include "AL/alc.h"
-#include "AL/alext.h"
+#include "AL/efx.h"
 #include "AL/efx-presets.h"
 
 #include "common/alhelpers.h"

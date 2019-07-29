@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <math.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"

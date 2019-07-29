@@ -8,29 +8,44 @@
 #include <functional>
 #include <algorithm>
 #include <iostream>
+#include <utility>
 #include <iomanip>
+#include <cstdint>
 #include <cstring>
-#include <limits>
-#include <thread>
-#include <chrono>
+#include <cstdlib>
 #include <atomic>
+#include <cerrno>
+#include <chrono>
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <thread>
 #include <vector>
-#include <mutex>
-#include <deque>
 #include <array>
 #include <cmath>
-#include <string>
+#include <deque>
+#include <mutex>
+#include <ratio>
 
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavformat/avio.h"
-#include "libavutil/time.h"
+#include "libavformat/version.h"
+#include "libavutil/avutil.h"
+#include "libavutil/error.h"
+#include "libavutil/frame.h"
+#include "libavutil/mem.h"
 #include "libavutil/pixfmt.h"
-#include "libavutil/avstring.h"
+#include "libavutil/rational.h"
+#include "libavutil/samplefmt.h"
+#include "libavutil/time.h"
+#include "libavutil/version.h"
 #include "libavutil/channel_layout.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
+
+struct SwsContext;
 }
 
 #include "SDL.h"

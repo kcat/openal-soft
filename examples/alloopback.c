@@ -26,11 +26,14 @@
  * output handling.
  */
 
-#include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 
-#include <SDL.h>
+#include "SDL.h"
+#include "SDL_audio.h"
+#include "SDL_error.h"
+#include "SDL_stdinc.h"
 
 #include "AL/al.h"
 #include "AL/alc.h"

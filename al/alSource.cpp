@@ -59,6 +59,7 @@
 #include "atomic.h"
 #include "backends/base.h"
 #include "bformatdec.h"
+#include "event.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "inprogext.h"

@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include "event.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cstring>
@@ -16,7 +18,6 @@
 
 #include "alError.h"
 #include "albyte.h"
-#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"

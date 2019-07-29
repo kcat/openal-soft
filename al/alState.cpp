@@ -33,13 +33,13 @@
 #include "AL/alext.h"
 
 #include "alError.h"
-#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "alu.h"
 #include "atomic.h"
+#include "event.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 

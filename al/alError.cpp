@@ -37,10 +37,10 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
+#include "event.h"
 #include "inprogext.h"
 #include "logging.h"
 #include "opthelpers.h"

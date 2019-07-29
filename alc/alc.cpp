@@ -74,6 +74,7 @@
 #include "compat.h"
 #include "cpu_caps.h"
 #include "effects/base.h"
+#include "event.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "fpu_modes.h"

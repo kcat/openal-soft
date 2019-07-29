@@ -622,6 +622,7 @@ SET(OPENAL_OBJS
     al/alSource.h
     al/alState.cpp
     al/event.cpp
+    al/event.h
 )
 SET(ALC_OBJS
     alc/alc.cpp

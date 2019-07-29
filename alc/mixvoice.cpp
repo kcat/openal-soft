@@ -50,6 +50,7 @@
 #include "alspan.h"
 #include "alu.h"
 #include "cpu_caps.h"
+#include "event.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"

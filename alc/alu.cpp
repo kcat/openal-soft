@@ -60,6 +60,7 @@
 #include "bs2b.h"
 #include "cpu_caps.h"
 #include "effects/base.h"
+#include "event.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"

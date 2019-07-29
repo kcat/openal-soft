@@ -127,7 +127,7 @@ bool checkName(const al::vector<DevMap> &list, const std::string &name)
     ) != list.cend();
 }
 
-BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUSED(drvname), void *data)
+BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, void *data)
 {
     if(!guid)
         return TRUE;

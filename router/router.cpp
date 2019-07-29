@@ -25,7 +25,7 @@ FILE *LogFile;
 static void LoadDriverList(void);
 
 
-BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reserved))
+BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
 {
     const char *str;
 

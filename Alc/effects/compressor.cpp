@@ -74,7 +74,7 @@ ALboolean CompressorState::deviceUpdate(const ALCdevice *device)
     return AL_TRUE;
 }
 
-void CompressorState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void CompressorState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     mEnabled = props->Compressor.OnOff;
 

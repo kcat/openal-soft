@@ -88,7 +88,7 @@ struct FshifterState final : public EffectState {
     DEF_NEWDEL(FshifterState)
 };
 
-ALboolean FshifterState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean FshifterState::deviceUpdate(const ALCdevice*)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount     = FIFO_LATENCY;

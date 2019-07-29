@@ -29,9 +29,8 @@
 
 
 template<>
-const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState* UNUSED(state),
-  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-  ALfloat *RESTRICT dst, ALsizei dstlen)
+const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState*, const ALfloat *RESTRICT src,
+    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const __m128i increment4{_mm_set1_epi32(increment*4)};
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};

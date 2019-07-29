@@ -15,9 +15,8 @@
 
 
 template<>
-const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState* UNUSED(state),
-  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-  ALfloat *RESTRICT dst, ALsizei dstlen)
+const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RESTRICT src,
+    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);

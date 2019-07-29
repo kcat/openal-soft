@@ -77,7 +77,7 @@ struct ALautowahState final : public EffectState {
     DEF_NEWDEL(ALautowahState)
 };
 
-ALboolean ALautowahState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean ALautowahState::deviceUpdate(const ALCdevice*)
 {
     /* (Re-)initializing parameters and clear the buffers. */
 

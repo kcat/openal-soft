@@ -29,7 +29,7 @@ BackendBase::~BackendBase() = default;
 ALCboolean BackendBase::reset()
 { return ALC_FALSE; }
 
-ALCenum BackendBase::captureSamples(void* UNUSED(buffer), ALCuint UNUSED(samples))
+ALCenum BackendBase::captureSamples(void*, ALCuint)
 { return ALC_INVALID_DEVICE; }
 
 ALCuint BackendBase::availableSamples()

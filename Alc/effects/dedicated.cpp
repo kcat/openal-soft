@@ -45,13 +45,13 @@ struct DedicatedState final : public EffectState {
     DEF_NEWDEL(DedicatedState)
 };
 
-ALboolean DedicatedState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean DedicatedState::deviceUpdate(const ALCdevice*)
 {
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
     return AL_TRUE;
 }
 
-void DedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);
 

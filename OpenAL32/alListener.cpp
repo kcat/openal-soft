@@ -154,7 +154,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
+AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint /*value*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

@@ -55,7 +55,7 @@ struct DistortionState final : public EffectState {
     DEF_NEWDEL(DistortionState)
 };
 
-ALboolean DistortionState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean DistortionState::deviceUpdate(const ALCdevice*)
 {
     mLowpass.clear();
     mBandpass.clear();

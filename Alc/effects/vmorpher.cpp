@@ -47,22 +47,21 @@ namespace {
 
 inline ALfloat Sin(ALsizei index)
 {
-    return (std::sin(static_cast<ALfloat>(index) *
-        (al::MathDefs<float>::Tau() / ALfloat{WAVEFORM_FRACONE})))*0.5f+0.5f;
+    constexpr ALfloat scale{al::MathDefs<float>::Tau() / ALfloat{WAVEFORM_FRACONE}};
+    return std::sin(static_cast<ALfloat>(index) * scale)*0.5f + 0.5f;
 }
 
 inline ALfloat Saw(ALsizei index)
 {
-    return (static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f)*0.5f+0.5f;
+    return static_cast<ALfloat>(index) / ALfloat{WAVEFORM_FRACONE};
 }
 
 inline ALfloat Triangle(ALsizei index)
 {
-    return (std::fabs(static_cast<ALfloat>(index) * (al::MathDefs<float>::Tau() / WAVEFORM_FRACONE) -
-        al::MathDefs<float>::Pi()) / al::MathDefs<float>::Pi())*0.5f+0.5f;
+    return std::fabs(static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f);
 }
 
-inline ALfloat Half(ALsizei UNUSED(index))
+inline ALfloat Half(ALsizei)
 {
     return 0.5f;
 }

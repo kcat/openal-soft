@@ -496,7 +496,7 @@ pa_stream *pulse_connect_stream(const char *device_name, std::unique_lock<std::m
 }
 
 
-void device_sink_callback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void* /*pdata*/)
+void device_sink_callback(pa_context*, const pa_sink_info *info, int eol, void*)
 {
     if(eol)
     {
@@ -567,7 +567,7 @@ void probePlaybackDevices()
 }
 
 
-void device_source_callback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void* /*pdata*/)
+void device_source_callback(pa_context*, const pa_source_info *info, int eol, void*)
 {
     if(eol)
     {
@@ -751,7 +751,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes)
 void PulsePlayback::sinkInfoCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
 { static_cast<PulsePlayback*>(pdata)->sinkInfoCallback(context, info, eol); }
 
-void PulsePlayback::sinkInfoCallback(pa_context* UNUSED(context), const pa_sink_info *info, int eol)
+void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int eol)
 {
     struct ChannelMap {
         DevFmtChannels chans;
@@ -798,7 +798,7 @@ void PulsePlayback::sinkInfoCallback(pa_context* UNUSED(context), const pa_sink_
 void PulsePlayback::sinkNameCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
 { static_cast<PulsePlayback*>(pdata)->sinkNameCallback(context, info, eol); }
 
-void PulsePlayback::sinkNameCallback(pa_context* UNUSED(context), const pa_sink_info *info, int eol)
+void PulsePlayback::sinkNameCallback(pa_context*, const pa_sink_info *info, int eol)
 {
     if(eol)
     {
@@ -1171,7 +1171,7 @@ void PulseCapture::streamStateCallback(pa_stream *stream)
 void PulseCapture::sourceNameCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata)
 { static_cast<PulseCapture*>(pdata)->sourceNameCallback(context, info, eol); }
 
-void PulseCapture::sourceNameCallback(pa_context* UNUSED(context), const pa_source_info *info, int eol)
+void PulseCapture::sourceNameCallback(pa_context*, const pa_source_info *info, int eol)
 {
     if(eol)
     {

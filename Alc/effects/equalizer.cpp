@@ -99,7 +99,7 @@ struct EqualizerState final : public EffectState {
     DEF_NEWDEL(EqualizerState)
 };
 
-ALboolean EqualizerState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean EqualizerState::deviceUpdate(const ALCdevice*)
 {
     for(auto &e : mChans)
     {

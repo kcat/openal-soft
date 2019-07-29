@@ -181,7 +181,7 @@ ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
     return AL_TRUE;
 }
 
-void PshifterState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const float pitch{std::pow(2.0f,
         static_cast<ALfloat>(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f

@@ -81,9 +81,8 @@ OSStatus CoreAudioPlayback::MixerProcC(void *inRefCon,
         inBusNumber, inNumberFrames, ioData);
 }
 
-OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags* UNUSED(ioActionFlags),
-    const AudioTimeStamp* UNUSED(inTimeStamp), UInt32 UNUSED(inBusNumber),
-    UInt32 UNUSED(inNumberFrames), AudioBufferList *ioData)
+OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*,
+    const AudioTimeStamp*, UInt32, UInt32, AudioBufferList *ioData)
 {
     lock();
     aluMixData(mDevice, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize/mFrameSize);
@@ -347,9 +346,9 @@ OSStatus CoreAudioCapture::RecordProcC(void *inRefCon,
         inBusNumber, inNumberFrames, ioData);
 }
 
-OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags* UNUSED(ioActionFlags),
-    const AudioTimeStamp *inTimeStamp, UInt32 UNUSED(inBusNumber), UInt32 inNumberFrames,
-    AudioBufferList* UNUSED(ioData))
+OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
+    const AudioTimeStamp *inTimeStamp, UInt32, UInt32 inNumberFrames,
+    AudioBufferList*)
 {
     AudioUnitRenderActionFlags flags = 0;
     union {

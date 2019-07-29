@@ -759,9 +759,9 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint UNUSED(buffer),
-  ALuint UNUSED(samplerate), ALenum UNUSED(internalformat), ALsizei UNUSED(samples),
-  ALenum UNUSED(channels), ALenum UNUSED(type), const ALvoid *UNUSED(data))
+AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint /*buffer*/, ALuint /*samplerate*/,
+    ALenum /*internalformat*/, ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/,
+    const ALvoid* /*data*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -771,9 +771,8 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint UNUSED(buffer),
-  ALsizei UNUSED(offset), ALsizei UNUSED(samples),
-  ALenum UNUSED(channels), ALenum UNUSED(type), const ALvoid *UNUSED(data))
+AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint /*buffer*/, ALsizei /*offset*/,
+    ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, const ALvoid* /*data*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -783,9 +782,8 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint UNUSED(buffer),
-  ALsizei UNUSED(offset), ALsizei UNUSED(samples),
-  ALenum UNUSED(channels), ALenum UNUSED(type), ALvoid *UNUSED(data))
+AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint /*buffer*/, ALsizei /*offset*/,
+    ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, ALvoid* /*data*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -795,7 +793,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum UNUSED(format))
+AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -807,7 +805,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat UNUSED(value))
+AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat /*value*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -826,7 +824,8 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat UNUSED(value1), ALfloat UNUSED(value2), ALfloat UNUSED(value3))
+AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param,
+    ALfloat /*value1*/, ALfloat /*value2*/, ALfloat /*value3*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -901,7 +900,8 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint UNUSED(value1), ALint UNUSED(value2), ALint UNUSED(value3))
+AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param,
+    ALint /*value1*/, ALint /*value2*/, ALint /*value3*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

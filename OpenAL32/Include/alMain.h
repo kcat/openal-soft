@@ -38,19 +38,6 @@ struct Uhj2Encoder;
 struct bs2b;
 
 
-#ifndef UNUSED
-#if defined(__cplusplus)
-#define UNUSED(x)
-#elif defined(__GNUC__)
-#define UNUSED(x) UNUSED_##x __attribute__((unused))
-#elif defined(__LCLINT__)
-#define UNUSED(x) /*@unused@*/ x
-#else
-#define UNUSED(x) x
-#endif
-#endif
-
-
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
 #define IS_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #else

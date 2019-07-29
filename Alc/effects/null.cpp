@@ -34,20 +34,21 @@ NullState::NullState() = default;
  */
 NullState::~NullState() = default;
 
-/* This updates the device-dependant effect state. This is called on
+/* This updates the device-dependant effect state. This is called on state
  * initialization and any time the device parameters (e.g. playback frequency,
  * format) have been changed. Will always be followed by a call to the update
  * method, if successful.
  */
-ALboolean NullState::deviceUpdate(const ALCdevice* UNUSED(device))
+ALboolean NullState::deviceUpdate(const ALCdevice* /*device*/)
 {
     return AL_TRUE;
 }
 
-/* This updates the effect state. This is called any time the effect is
- * (re)loaded into a slot.
+/* This updates the effect state with new properties. This is called any time
+ * the effect is (re)loaded into a slot.
  */
-void NullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const EffectProps* UNUSED(props), const EffectTarget UNUSED(target))
+void NullState::update(const ALCcontext* /*context*/, const ALeffectslot* /*slot*/,
+    const EffectProps* /*props*/, const EffectTarget /*target*/)
 {
 }
 
@@ -55,12 +56,14 @@ void NullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UN
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-void NullState::process(const ALsizei /*samplesToDo*/, const FloatBufferLine *RESTRICT /*samplesIn*/, const ALsizei /*numInput*/, const al::span<FloatBufferLine> /*samplesOut*/)
+void NullState::process(const ALsizei /*samplesToDo*/,
+    const FloatBufferLine *RESTRICT /*samplesIn*/, const ALsizei /*numInput*/,
+    const al::span<FloatBufferLine> /*samplesOut*/)
 {
 }
 
 
-void NullEffect_setParami(EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void NullEffect_setParami(EffectProps* /*props*/, ALCcontext *context, ALenum param, ALint /*val*/)
 {
     switch(param)
     {
@@ -76,7 +79,7 @@ void NullEffect_setParamiv(EffectProps *props, ALCcontext *context, ALenum param
         NullEffect_setParami(props, context, param, vals[0]);
     }
 }
-void NullEffect_setParamf(EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+void NullEffect_setParamf(EffectProps* /*props*/, ALCcontext *context, ALenum param, ALfloat /*val*/)
 {
     switch(param)
     {
@@ -93,7 +96,7 @@ void NullEffect_setParamfv(EffectProps *props, ALCcontext *context, ALenum param
     }
 }
 
-void NullEffect_getParami(const EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALint* UNUSED(val))
+void NullEffect_getParami(const EffectProps* /*props*/, ALCcontext *context, ALenum param, ALint* /*val*/)
 {
     switch(param)
     {
@@ -109,7 +112,7 @@ void NullEffect_getParamiv(const EffectProps *props, ALCcontext *context, ALenum
         NullEffect_getParami(props, context, param, vals);
     }
 }
-void NullEffect_getParamf(const EffectProps *UNUSED(props), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
+void NullEffect_getParamf(const EffectProps* /*props*/, ALCcontext *context, ALenum param, ALfloat* /*val*/)
 {
     switch(param)
     {

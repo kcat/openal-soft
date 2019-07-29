@@ -169,8 +169,7 @@ void CALLBACK WinMMPlayback::waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR i
  * Posts a message to 'WinMMPlayback::mixerProc' everytime a WaveOut Buffer is
  * completed and returns to the application (for more data)
  */
-void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT UNUSED(device), UINT msg,
-    DWORD_PTR UNUSED(param1), DWORD_PTR UNUSED(param2))
+void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT, UINT msg, DWORD_PTR, DWORD_PTR)
 {
     if(msg != WOM_DONE) return;
     mWritable.fetch_add(1, std::memory_order_acq_rel);
@@ -414,8 +413,7 @@ void CALLBACK WinMMCapture::waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR inst
  * Posts a message to 'WinMMCapture::captureProc' everytime a WaveIn Buffer is
  * completed and returns to the application (with more data).
  */
-void CALLBACK WinMMCapture::waveInProc(HWAVEIN UNUSED(device), UINT msg,
-    DWORD_PTR UNUSED(param1), DWORD_PTR UNUSED(param2))
+void CALLBACK WinMMCapture::waveInProc(HWAVEIN, UINT msg, DWORD_PTR, DWORD_PTR)
 {
     if(msg != WIM_DATA) return;
     mReadable.fetch_add(1, std::memory_order_acq_rel);

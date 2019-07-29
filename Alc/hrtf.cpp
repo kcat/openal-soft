@@ -1195,7 +1195,7 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
 using ResData = al::span<const char>;
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
-ResData GetResource(int UNUSED(name))
+ResData GetResource(int /*name*/)
 { return ResData{}; }
 
 #else

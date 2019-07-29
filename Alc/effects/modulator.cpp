@@ -59,7 +59,7 @@ inline ALfloat Square(ALsizei index)
     return static_cast<ALfloat>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
 }
 
-inline ALfloat One(ALsizei UNUSED(index))
+inline ALfloat One(ALsizei)
 {
     return 1.0f;
 }
@@ -98,7 +98,7 @@ struct ModulatorState final : public EffectState {
     DEF_NEWDEL(ModulatorState)
 };
 
-ALboolean ModulatorState::deviceUpdate(const ALCdevice *UNUSED(device))
+ALboolean ModulatorState::deviceUpdate(const ALCdevice*)
 {
     for(auto &e : mChans)
     {

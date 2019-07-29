@@ -198,7 +198,7 @@ OpenSLPlayback::~OpenSLPlayback()
 void OpenSLPlayback::processC(SLAndroidSimpleBufferQueueItf bq, void *context)
 { static_cast<OpenSLPlayback*>(context)->process(bq); }
 
-void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf UNUSED(bq))
+void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf)
 {
     /* A note on the ringbuffer usage: The buffer queue seems to hold on to the
      * pointer passed to the Enqueue method, rather than copying the audio.
@@ -650,7 +650,7 @@ OpenSLCapture::~OpenSLCapture()
 void OpenSLCapture::processC(SLAndroidSimpleBufferQueueItf bq, void *context)
 { static_cast<OpenSLCapture*>(context)->process(bq); }
 
-void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf UNUSED(bq))
+void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf)
 {
     /* A new chunk has been written into the ring buffer, advance it. */
     mRing->writeAdvance(1);

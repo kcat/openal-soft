@@ -109,9 +109,9 @@ int PortPlayback::writeCallbackC(const void *inputBuffer, void *outputBuffer,
         framesPerBuffer, timeInfo, statusFlags);
 }
 
-int PortPlayback::writeCallback(const void* UNUSED(inputBuffer), void *outputBuffer,
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* UNUSED(timeInfo),
-    const PaStreamCallbackFlags UNUSED(statusFlags))
+int PortPlayback::writeCallback(const void*, void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo*,
+    const PaStreamCallbackFlags)
 {
     lock();
     aluMixData(mDevice, outputBuffer, framesPerBuffer);
@@ -275,9 +275,9 @@ int PortCapture::readCallbackC(const void *inputBuffer, void *outputBuffer,
         framesPerBuffer, timeInfo, statusFlags);
 }
 
-int PortCapture::readCallback(const void *inputBuffer, void *UNUSED(outputBuffer),
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
-    const PaStreamCallbackFlags UNUSED(statusFlags))
+int PortCapture::readCallback(const void *inputBuffer, void*,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo*,
+    const PaStreamCallbackFlags)
 {
     mRing->write(inputBuffer, framesPerBuffer);
     return 0;

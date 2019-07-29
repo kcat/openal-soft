@@ -70,9 +70,8 @@ const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
 } // namespace
 
 template<>
-const ALfloat *Resample_<CopyTag,CTag>(const InterpState* UNUSED(state),
-    const ALfloat *RESTRICT src, ALsizei UNUSED(frac), ALint UNUSED(increment),
-    ALfloat *RESTRICT dst, ALsizei dstlen)
+const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRICT src, ALsizei,
+    ALint, ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     ASSUME(dstlen > 0);
 #if defined(HAVE_SSE) || defined(HAVE_NEON)

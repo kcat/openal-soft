@@ -1,11 +1,11 @@
 #ifndef AL_SPAN_H
 #define AL_SPAN_H
 
-#include <cstddef>
-
 #include <array>
-#include <type_traits>
+#include <cstddef>
 #include <initializer_list>
+#include <iterator>
+#include <type_traits>
 
 namespace al {
 

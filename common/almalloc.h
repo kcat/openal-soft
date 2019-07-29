@@ -1,11 +1,14 @@
 #ifndef AL_MALLOC_H
 #define AL_MALLOC_H
 
-#include <stddef.h>
-
-#include <memory>
-#include <limits>
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <new>
+#include <type_traits>
+#include <utility>
 
 
 void *al_malloc(size_t alignment, size_t size);

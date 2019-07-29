@@ -1,7 +1,9 @@
 #ifndef AL_OPTIONAL_H
 #define AL_OPTIONAL_H
 
+#include <initializer_list>
 #include <type_traits>
+#include <utility>
 
 #include "almalloc.h"
 

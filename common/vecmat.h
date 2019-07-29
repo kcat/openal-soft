@@ -1,12 +1,11 @@
 #ifndef COMMON_VECMAT_H
 #define COMMON_VECMAT_H
 
-#include <cmath>
 #include <array>
+#include <cmath>
+#include <cstddef>
 #include <limits>
-#include <algorithm>
 
-#include "math_defs.h"
 
 namespace alu {
 
@@ -19,11 +18,11 @@ public:
       : mVals{{a, b, c, d}}
     { }
     Vector(const Vector &rhs) noexcept
-    { std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin()); }
+    { mVals = rhs.mVals; }
 
     Vector& operator=(const Vector &rhs) noexcept
     {
-        std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin());
+        mVals = rhs.mVals;
         return *this;
     }
 
@@ -67,11 +66,11 @@ public:
       : mVals{{{{aa, ab, ac, ad}}, {{ba, bb, bc, bd}}, {{ca, cb, cc, cd}}, {{da, db, dc, dd}}}}
     { }
     Matrix(const Matrix &rhs) noexcept
-    { std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin()); }
+    { mVals = rhs.mVals; }
 
     Matrix& operator=(const Matrix &rhs) noexcept
     {
-        std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin());
+        mVals = rhs.mVals;
         return *this;
     }
 

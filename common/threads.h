@@ -1,10 +1,6 @@
 #ifndef AL_THREADS_H
 #define AL_THREADS_H
 
-#include <time.h>
-
-#include <mutex>
-
 #if defined(__GNUC__) && defined(__i386__)
 /* force_align_arg_pointer is required for proper function arguments aligning
  * when SSE code is used. Some systems (Windows, QNX) do not guarantee our

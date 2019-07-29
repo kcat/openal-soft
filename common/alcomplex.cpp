@@ -3,14 +3,13 @@
 
 #include "alcomplex.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <utility>
 
-namespace {
+#include "math_defs.h"
 
-constexpr double Pi{3.141592653589793238462643383279502884};
-
-} // namespace
 
 void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 {
@@ -36,7 +35,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {
         const size_t step2{step >> 1};
-        double arg{Pi / step2};
+        double arg{al::MathDefs<double>::Pi() / step2};
 
         std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};

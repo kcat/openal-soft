@@ -22,11 +22,12 @@
 
 #include "threads.h"
 
-#include <limits>
 #include <system_error>
 
 
 #ifdef _WIN32
+
+#include <limits>
 
 void althrd_setname(const char *name)
 {
@@ -86,7 +87,7 @@ bool semaphore::try_wait() noexcept
 
 #else
 
-#include <cerrno>
+#if defined(HAVE_PTHREAD_SETNAME_NP) || defined(HAVE_PTHREAD_SET_NAME_NP)
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
@@ -94,20 +95,21 @@ bool semaphore::try_wait() noexcept
 
 void althrd_setname(const char *name)
 {
-#if defined(HAVE_PTHREAD_SETNAME_NP)
-#if defined(PTHREAD_SETNAME_NP_ONE_PARAM)
+#if defined(HAVE_PTHREAD_SET_NAME_NP)
+    pthread_set_name_np(pthread_self(), name);
+#elif defined(PTHREAD_SETNAME_NP_ONE_PARAM)
     pthread_setname_np(name);
 #elif defined(PTHREAD_SETNAME_NP_THREE_PARAMS)
     pthread_setname_np(pthread_self(), "%s", (void*)name);
 #else
     pthread_setname_np(pthread_self(), name);
 #endif
-#elif defined(HAVE_PTHREAD_SET_NAME_NP)
-    pthread_set_name_np(pthread_self(), name);
-#else
-    (void)name;
-#endif
 }
+
+#else
+
+void althrd_setname(const char*) { }
+#endif
 
 namespace al {
 
@@ -133,6 +135,8 @@ bool semaphore::try_wait() noexcept
 { return dispatch_semaphore_wait(mSem, DISPATCH_TIME_NOW) == 0; }
 
 #else /* !__APPLE__ */
+
+#include <cerrno>
 
 semaphore::semaphore(unsigned int initial)
 {

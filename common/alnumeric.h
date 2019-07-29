@@ -1,7 +1,8 @@
 #ifndef AL_NUMERIC_H
 #define AL_NUMERIC_H
 
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif

@@ -619,21 +619,21 @@ SET(COMMON_OBJS
     common/vecmat.h
 )
 SET(OPENAL_OBJS
-    OpenAL32/Include/alAuxEffectSlot.h
     OpenAL32/alAuxEffectSlot.cpp
-    OpenAL32/Include/alBuffer.h
+    OpenAL32/alAuxEffectSlot.h
     OpenAL32/alBuffer.cpp
-    OpenAL32/Include/alEffect.h
+    OpenAL32/alBuffer.h
     OpenAL32/alEffect.cpp
-    OpenAL32/Include/alError.h
+    OpenAL32/alEffect.h
     OpenAL32/alError.cpp
+    OpenAL32/alError.h
     OpenAL32/alExtension.cpp
-    OpenAL32/Include/alFilter.h
     OpenAL32/alFilter.cpp
-    OpenAL32/Include/alListener.h
+    OpenAL32/alFilter.h
     OpenAL32/alListener.cpp
-    OpenAL32/Include/alSource.h
+    OpenAL32/alListener.h
     OpenAL32/alSource.cpp
+    OpenAL32/alSource.h
     OpenAL32/alState.cpp
     OpenAL32/event.cpp
 )
@@ -1313,7 +1313,7 @@ TARGET_INCLUDE_DIRECTORIES(${IMPL_TARGET}
     ${INC_PATHS}
     ${OpenAL_BINARY_DIR}
     ${OpenAL_SOURCE_DIR}/alc
-    ${OpenAL_SOURCE_DIR}/OpenAL32/Include
+    ${OpenAL_SOURCE_DIR}/OpenAL32
     ${OpenAL_SOURCE_DIR}/common
 )
 

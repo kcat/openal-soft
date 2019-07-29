@@ -30,7 +30,6 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
-#include <cstdlib>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -39,7 +38,6 @@
 #include <new>
 #include <numeric>
 #include <thread>
-#include <type_traits>
 #include <utility>
 
 #include "AL/al.h"
@@ -69,7 +67,6 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "vector.h"
 
 
 namespace {

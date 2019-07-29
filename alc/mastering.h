@@ -5,12 +5,12 @@
 
 #include "AL/al.h"
 
-#include "almalloc.h"
 /* For FloatBufferLine/BUFFERSIZE. */
 #include "alcmain.h"
-
+#include "almalloc.h"
 
 struct SlidingHold;
+
 
 /* General topology and basic automation was based on the following paper:
  *

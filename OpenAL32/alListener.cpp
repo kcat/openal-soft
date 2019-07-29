@@ -20,15 +20,20 @@
 
 #include "config.h"
 
-#include <cmath>
-
-#include "alcmain.h"
-#include "alcontext.h"
-#include "alu.h"
-#include "alError.h"
 #include "alListener.h"
-#include "alSource.h"
+
+#include <cmath>
+#include <mutex>
+
+#include "AL/efx.h"
+
+#include "alError.h"
+#include "alcontext.h"
 #include "alexcpt.h"
+#include "almalloc.h"
+#include "atomic.h"
+#include "opthelpers.h"
+
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!context->DeferUpdates.load(std::memory_order_acquire))                \

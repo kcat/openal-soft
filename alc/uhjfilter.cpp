@@ -4,8 +4,11 @@
 #include "uhjfilter.h"
 
 #include <algorithm>
+#include <iterator>
 
-#include "alu.h"
+#include "alnumeric.h"
+#include "opthelpers.h"
+
 
 namespace {
 

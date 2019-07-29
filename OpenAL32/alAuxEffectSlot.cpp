@@ -20,25 +20,31 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <cmath>
+#include "alAuxEffectSlot.h"
 
-#include <thread>
 #include <algorithm>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <thread>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "alEffect.h"
+#include "alError.h"
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alAuxEffectSlot.h"
-#include "alError.h"
-#include "alListener.h"
-#include "alSource.h"
-
-#include "fpu_modes.h"
 #include "alexcpt.h"
 #include "almalloc.h"
+#include "alnumeric.h"
+#include "alspan.h"
+#include "alu.h"
+#include "fpu_modes.h"
+#include "inprogext.h"
+#include "logging.h"
+#include "opthelpers.h"
 
 
 namespace {

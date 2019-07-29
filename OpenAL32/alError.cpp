@@ -22,17 +22,17 @@
 
 #include "alError.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <atomic>
 #include <csignal>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <mutex>
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"

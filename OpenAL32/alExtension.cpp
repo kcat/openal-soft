@@ -20,17 +20,18 @@
 
 #include "config.h"
 
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
-#include <cctype>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alcmain.h"
-#include "alcontext.h"
 #include "alError.h"
+#include "alcontext.h"
 #include "alexcpt.h"
+#include "opthelpers.h"
+
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 START_API_FUNC

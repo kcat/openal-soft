@@ -1,19 +1,23 @@
-#ifndef _AL_SOURCE_H_
-#define _AL_SOURCE_H_
+#ifndef AL_SOURCE_H
+#define AL_SOURCE_H
 
 #include <array>
+#include <atomic>
+#include <cstddef>
 
-#include "alcmain.h"
+#include "AL/al.h"
+#include "AL/alc.h"
+
+#include "alcontext.h"
+#include "alnumeric.h"
 #include "alu.h"
-#include "hrtf.h"
-#include "almalloc.h"
-#include "atomic.h"
-
-#define DEFAULT_SENDS  2
+#include "vector.h"
 
 struct ALbuffer;
-struct ALsource;
 struct ALeffectslot;
+
+
+#define DEFAULT_SENDS  2
 
 
 struct ALbufferlistitem {

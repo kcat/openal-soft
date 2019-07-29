@@ -20,16 +20,25 @@
 
 #include "config.h"
 
-#include <cstdlib>
+#include "alFilter.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <new>
 
+#include "AL/efx.h"
+
+#include "alError.h"
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alu.h"
-#include "alFilter.h"
-#include "alError.h"
 #include "alexcpt.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "opthelpers.h"
+#include "vector.h"
 
 
 namespace {

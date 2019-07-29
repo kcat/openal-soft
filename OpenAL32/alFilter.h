@@ -1,8 +1,8 @@
-#ifndef _AL_FILTER_H_
-#define _AL_FILTER_H_
+#ifndef AL_FILTER_H
+#define AL_FILTER_H
 
-#include "AL/alc.h"
 #include "AL/al.h"
+#include "AL/alc.h"
 
 
 #define LOWPASSFREQREF  (5000.0f)

@@ -1,17 +1,20 @@
-#ifndef _AL_AUXEFFECTSLOT_H_
-#define _AL_AUXEFFECTSLOT_H_
+#ifndef AL_AUXEFFECTSLOT_H
+#define AL_AUXEFFECTSLOT_H
 
-#include <array>
+#include <atomic>
+#include <cstddef>
+
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/efx.h"
 
 #include "alcmain.h"
-#include "alEffect.h"
-#include "ambidefs.h"
-#include "effects/base.h"
-
 #include "almalloc.h"
 #include "atomic.h"
+#include "effects/base.h"
+#include "vector.h"
 
-
+struct ALeffect;
 struct ALeffectslot;
 
 

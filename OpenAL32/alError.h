@@ -1,7 +1,9 @@
-#ifndef _AL_ERROR_H_
-#define _AL_ERROR_H_
+#ifndef AL_ERROR_H
+#define AL_ERROR_H
 
-#include "alcmain.h"
+#include "AL/al.h"
+#include "AL/alc.h"
+
 #include "logging.h"
 
 

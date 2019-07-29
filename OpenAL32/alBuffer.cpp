@@ -27,7 +27,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <limits>
@@ -40,9 +40,9 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alcmain.h"
 #include "alError.h"
 #include "albyte.h"
+#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
@@ -51,7 +51,6 @@
 #include "atomic.h"
 #include "inprogext.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 
 namespace {

@@ -1,14 +1,15 @@
-#ifndef _AL_BUFFER_H_
-#define _AL_BUFFER_H_
+#ifndef AL_BUFFER_H
+#define AL_BUFFER_H
 
-#include "AL/alc.h"
+#include <atomic>
+
 #include "AL/al.h"
-#include "AL/alext.h"
 
-#include "inprogext.h"
-#include "atomic.h"
-#include "vector.h"
 #include "albyte.h"
+#include "almalloc.h"
+#include "atomic.h"
+#include "inprogext.h"
+#include "vector.h"
 
 
 /* User formats */

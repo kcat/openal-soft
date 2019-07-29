@@ -1,14 +1,20 @@
+
 #include "config.h"
 
-#include <cmath>
-#include <limits>
-#include <algorithm>
-#include <functional>
-
 #include "mastering.h"
-#include "alu.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <limits>
+#include <new>
+
 #include "almalloc.h"
-#include "math_defs.h"
+#include "alnumeric.h"
+#include "alu.h"
+#include "opthelpers.h"
 
 
 /* These structures assume BUFFERSIZE is a power of 2. */

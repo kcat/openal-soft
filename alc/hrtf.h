@@ -13,8 +13,8 @@
 #include "atomic.h"
 #include "vector.h"
 
-
 struct HrtfHandle;
+
 
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)

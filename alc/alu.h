@@ -1,5 +1,5 @@
-#ifndef _ALU_H_
-#define _ALU_H_
+#ifndef ALU_H
+#define ALU_H
 
 #include <array>
 #include <atomic>

@@ -1,11 +1,16 @@
 #ifndef CONVERTER_H
 #define CONVERTER_H
 
+#include <cstddef>
 #include <memory>
 
+#include "AL/al.h"
+
 #include "alcmain.h"
-#include "alu.h"
 #include "almalloc.h"
+#include "alnumeric.h"
+#include "alu.h"
+
 
 struct SampleConverter {
     DevFmtType mSrcType{};

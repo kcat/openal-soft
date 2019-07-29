@@ -4,7 +4,10 @@
 #include "converter.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <iterator>
 
+#include "albyte.h"
 #include "fpu_modes.h"
 #include "mixer/defs.h"
 

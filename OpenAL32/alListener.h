@@ -1,13 +1,12 @@
-#ifndef _AL_LISTENER_H_
-#define _AL_LISTENER_H_
+#ifndef AL_LISTENER_H
+#define AL_LISTENER_H
 
 #include <array>
+#include <atomic>
 
-#include "AL/alc.h"
 #include "AL/al.h"
-#include "AL/alext.h"
+#include "AL/alc.h"
 
-#include "atomic.h"
 #include "vecmat.h"
 
 enum class DistanceModel;

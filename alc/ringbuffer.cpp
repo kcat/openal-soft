@@ -20,17 +20,13 @@
 
 #include "config.h"
 
-#include <cstring>
-#include <cstdlib>
-#include <climits>
+#include "ringbuffer.h"
 
 #include <algorithm>
+#include <climits>
+#include <cstdint>
 
-#include "ringbuffer.h"
-#include "atomic.h"
-#include "threads.h"
 #include "almalloc.h"
-#include "compat.h"
 
 
 RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)

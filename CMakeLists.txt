@@ -419,7 +419,7 @@ IF(NOT HAVE_GUIDDEF_H)
     CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)
 ENDIF()
 
-# Some systems need libm for some of the following math functions to work
+# Some systems need libm for some math functions to work
 SET(MATH_LIB )
 CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)
 IF(HAVE_LIBM)
@@ -498,23 +498,12 @@ ENDIF()
 
 
 IF(NOT WIN32)
-    CHECK_SYMBOL_EXISTS(gettimeofday sys/time.h HAVE_GETTIMEOFDAY)
-    IF(NOT HAVE_GETTIMEOFDAY)
-        MESSAGE(FATAL_ERROR "No timing function found!")
-    ENDIF()
-
-    CHECK_SYMBOL_EXISTS(nanosleep time.h HAVE_NANOSLEEP)
-    IF(NOT HAVE_NANOSLEEP)
-        MESSAGE(FATAL_ERROR "No sleep function found!")
-    ENDIF()
-
-    # We need pthreads outside of Windows
+    # We need pthreads outside of Windows, for semaphores. It's also used to
+    # set the priority and name of threads, when possible.
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
     IF(NOT HAVE_PTHREAD_H)
         MESSAGE(FATAL_ERROR "PThreads is required for non-Windows builds!")
     ENDIF()
-    # Some systems need pthread_np.h to get recursive mutexes
-    CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
 
     CHECK_C_COMPILER_FLAG(-pthread HAVE_PTHREAD)
     IF(HAVE_PTHREAD)
@@ -530,6 +519,8 @@ IF(NOT WIN32)
 
     CHECK_SYMBOL_EXISTS(pthread_setschedparam pthread.h HAVE_PTHREAD_SETSCHEDPARAM)
 
+    # Some systems need pthread_np.h to get pthread_setname_np
+    CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
     IF(HAVE_PTHREAD_NP_H)
         CHECK_SYMBOL_EXISTS(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
         IF(NOT HAVE_PTHREAD_SETNAME_NP)
@@ -580,11 +571,6 @@ int main()
                 PTHREAD_SETNAME_NP_THREE_PARAMS
             )
         ENDIF()
-    ENDIF()
-
-    CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
-    IF(HAVE_LIBRT)
-        SET(EXTRA_LIBS rt ${EXTRA_LIBS})
     ENDIF()
 ENDIF()
 
@@ -1500,15 +1486,21 @@ IF(ALSOFT_UTILS)
     MESSAGE(STATUS "")
 ENDIF()
 
+IF(ALSOFT_EXAMPLES OR ALSOFT_TESTS)
+    # Add a static library with common functions used by multiple targets
+    ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
+    TARGET_COMPILE_DEFINITIONS(ex-common PUBLIC ${CPP_DEFS})
+    TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
+    TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
+    TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL)
+ENDIF()
+
 IF(ALSOFT_TESTS)
-    ADD_EXECUTABLE(altonegen
-      examples/altonegen.c
-      examples/common/alhelpers.c
-    )
+    ADD_EXECUTABLE(altonegen examples/altonegen.c)
     TARGET_COMPILE_DEFINITIONS(altonegen PRIVATE ${CPP_DEFS})
     TARGET_INCLUDE_DIRECTORIES(altonegen PRIVATE ${OpenAL_SOURCE_DIR}/common)
     TARGET_COMPILE_OPTIONS(altonegen PRIVATE ${C_FLAGS})
-    TARGET_LINK_LIBRARIES(altonegen PRIVATE ${LINKER_FLAGS} OpenAL ${MATH_LIB})
+    TARGET_LINK_LIBRARIES(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common)
 
     IF(ALSOFT_INSTALL)
         INSTALL(TARGETS altonegen
@@ -1523,13 +1515,6 @@ IF(ALSOFT_TESTS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
-    # Add a static library with common functions used by multiple targets
-    ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
-    TARGET_COMPILE_DEFINITIONS(ex-common PUBLIC ${CPP_DEFS})
-    TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
-    TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
-    TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL)
-
     ADD_EXECUTABLE(alrecord examples/alrecord.c)
     TARGET_LINK_LIBRARIES(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
 

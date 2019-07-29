@@ -22,15 +22,19 @@
 
 #include "backends/sdl2.h"
 
-#include <stdlib.h>
-#include <SDL2/SDL.h>
-
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 
+#include "AL/al.h"
+
 #include "alcmain.h"
+#include "almalloc.h"
 #include "alu.h"
-#include "threads.h"
-#include "compat.h"
+#include "logging.h"
+
+#include <SDL2/SDL.h>
 
 
 namespace {

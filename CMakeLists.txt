@@ -638,62 +638,62 @@ SET(OPENAL_OBJS
     OpenAL32/event.cpp
 )
 SET(ALC_OBJS
-    Alc/alc.cpp
-    Alc/alcmain.h
-    Alc/alu.cpp
-    Alc/alu.h
-    Alc/alconfig.cpp
-    Alc/alconfig.h
-    Alc/alcontext.h
-    Alc/ambidefs.h
-    Alc/bs2b.cpp
-    Alc/bs2b.h
-    Alc/converter.cpp
-    Alc/converter.h
-    Alc/inprogext.h
-    Alc/mastering.cpp
-    Alc/mastering.h
-    Alc/ringbuffer.cpp
-    Alc/ringbuffer.h
-    Alc/effects/base.h
-    Alc/effects/autowah.cpp
-    Alc/effects/chorus.cpp
-    Alc/effects/compressor.cpp
-    Alc/effects/dedicated.cpp
-    Alc/effects/distortion.cpp
-    Alc/effects/echo.cpp
-    Alc/effects/equalizer.cpp
-    Alc/effects/fshifter.cpp
-    Alc/effects/modulator.cpp
-    Alc/effects/null.cpp
-    Alc/effects/pshifter.cpp
-    Alc/effects/reverb.cpp
-    Alc/effects/vmorpher.cpp
-    Alc/filters/biquad.h
-    Alc/filters/biquad.cpp
-    Alc/filters/nfc.cpp
-    Alc/filters/nfc.h
-    Alc/filters/splitter.cpp
-    Alc/filters/splitter.h
-    Alc/helpers.cpp
-    Alc/compat.h
-    Alc/cpu_caps.h
-    Alc/fpu_modes.h
-    Alc/logging.h
-    Alc/vector.h
-    Alc/hrtf.cpp
-    Alc/hrtf.h
-    Alc/uhjfilter.cpp
-    Alc/uhjfilter.h
-    Alc/ambdec.cpp
-    Alc/ambdec.h
-    Alc/bformatdec.cpp
-    Alc/bformatdec.h
-    Alc/panning.cpp
-    Alc/mixvoice.cpp
-    Alc/mixer/defs.h
-    Alc/mixer/hrtfbase.h
-    Alc/mixer/mixer_c.cpp
+    alc/alc.cpp
+    alc/alcmain.h
+    alc/alu.cpp
+    alc/alu.h
+    alc/alconfig.cpp
+    alc/alconfig.h
+    alc/alcontext.h
+    alc/ambidefs.h
+    alc/bs2b.cpp
+    alc/bs2b.h
+    alc/converter.cpp
+    alc/converter.h
+    alc/inprogext.h
+    alc/mastering.cpp
+    alc/mastering.h
+    alc/ringbuffer.cpp
+    alc/ringbuffer.h
+    alc/effects/base.h
+    alc/effects/autowah.cpp
+    alc/effects/chorus.cpp
+    alc/effects/compressor.cpp
+    alc/effects/dedicated.cpp
+    alc/effects/distortion.cpp
+    alc/effects/echo.cpp
+    alc/effects/equalizer.cpp
+    alc/effects/fshifter.cpp
+    alc/effects/modulator.cpp
+    alc/effects/null.cpp
+    alc/effects/pshifter.cpp
+    alc/effects/reverb.cpp
+    alc/effects/vmorpher.cpp
+    alc/filters/biquad.h
+    alc/filters/biquad.cpp
+    alc/filters/nfc.cpp
+    alc/filters/nfc.h
+    alc/filters/splitter.cpp
+    alc/filters/splitter.h
+    alc/helpers.cpp
+    alc/compat.h
+    alc/cpu_caps.h
+    alc/fpu_modes.h
+    alc/logging.h
+    alc/vector.h
+    alc/hrtf.cpp
+    alc/hrtf.h
+    alc/uhjfilter.cpp
+    alc/uhjfilter.h
+    alc/ambdec.cpp
+    alc/ambdec.h
+    alc/bformatdec.cpp
+    alc/bformatdec.h
+    alc/panning.cpp
+    alc/mixvoice.cpp
+    alc/mixer/defs.h
+    alc/mixer/hrtfbase.h
+    alc/mixer/mixer_c.cpp
 )
 
 
@@ -713,9 +713,9 @@ IF(HAVE_XMMINTRIN_H AND HAVE_EMMINTRIN_H)
     IF(ALSOFT_CPUEXT_SSE AND ALSOFT_CPUEXT_SSE2)
         SET(HAVE_SSE 1)
         SET(HAVE_SSE2 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse.cpp Alc/mixer/mixer_sse2.cpp)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_sse.cpp alc/mixer/mixer_sse2.cpp)
         IF(SSE2_SWITCH)
-            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse.cpp Alc/mixer/mixer_sse2.cpp
+            SET_SOURCE_FILES_PROPERTIES(alc/mixer/mixer_sse.cpp alc/mixer/mixer_sse2.cpp
                 PROPERTIES COMPILE_FLAGS "${SSE2_SWITCH}")
         ENDIF()
         SET(CPU_EXTS "${CPU_EXTS}, SSE, SSE2")
@@ -733,9 +733,9 @@ IF(HAVE_EMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE3 "Enable SSE3 support" ON)
     IF(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE3)
         SET(HAVE_SSE3 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse3.cpp)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_sse3.cpp)
         IF(SSE2_SWITCH)
-            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse3.cpp PROPERTIES
+            SET_SOURCE_FILES_PROPERTIES(alc/mixer/mixer_sse3.cpp PROPERTIES
                                         COMPILE_FLAGS "${SSE3_SWITCH}")
         ENDIF()
         SET(CPU_EXTS "${CPU_EXTS}, SSE3")
@@ -750,9 +750,9 @@ IF(HAVE_SMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE4_1 "Enable SSE4.1 support" ON)
     IF(HAVE_SSE3 AND ALSOFT_CPUEXT_SSE4_1)
         SET(HAVE_SSE4_1 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse41.cpp)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_sse41.cpp)
         IF(SSE4_1_SWITCH)
-            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse41.cpp PROPERTIES
+            SET_SOURCE_FILES_PROPERTIES(alc/mixer/mixer_sse41.cpp PROPERTIES
                                         COMPILE_FLAGS "${SSE4_1_SWITCH}")
         ENDIF()
         SET(CPU_EXTS "${CPU_EXTS}, SSE4.1")
@@ -768,9 +768,9 @@ IF(HAVE_ARM_NEON_H)
     OPTION(ALSOFT_CPUEXT_NEON "Enable ARM Neon support" ON)
     IF(ALSOFT_CPUEXT_NEON)
         SET(HAVE_NEON 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_neon.cpp)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_neon.cpp)
         IF(FPU_NEON_SWITCH)
-            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_neon.cpp PROPERTIES
+            SET_SOURCE_FILES_PROPERTIES(alc/mixer/mixer_neon.cpp PROPERTIES
                                         COMPILE_FLAGS "${FPU_NEON_SWITCH}")
         ENDIF()
         SET(CPU_EXTS "${CPU_EXTS}, Neon")
@@ -809,13 +809,13 @@ ENDIF()
 
 SET(BACKENDS "")
 SET(ALC_OBJS  ${ALC_OBJS}
-    Alc/backends/base.cpp
-    Alc/backends/base.h
+    alc/backends/base.cpp
+    alc/backends/base.h
     # Default backends, always available
-    Alc/backends/loopback.cpp
-    Alc/backends/loopback.h
-    Alc/backends/null.cpp
-    Alc/backends/null.h
+    alc/backends/loopback.cpp
+    alc/backends/loopback.h
+    alc/backends/null.cpp
+    alc/backends/null.h
 )
 
 # Check ALSA backend
@@ -826,7 +826,7 @@ IF(ALSA_FOUND)
     IF(ALSOFT_BACKEND_ALSA)
         SET(HAVE_ALSA 1)
         SET(BACKENDS  "${BACKENDS} ALSA${IS_LINKED},")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/alsa.cpp Alc/backends/alsa.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/alsa.cpp alc/backends/alsa.h)
         ADD_BACKEND_LIBS(${ALSA_LIBRARIES})
         SET(INC_PATHS ${INC_PATHS} ${ALSA_INCLUDE_DIRS})
     ENDIF()
@@ -843,7 +843,7 @@ IF(OSS_FOUND)
     IF(ALSOFT_BACKEND_OSS)
         SET(HAVE_OSS 1)
         SET(BACKENDS  "${BACKENDS} OSS,")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/oss.cpp Alc/backends/oss.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/oss.cpp alc/backends/oss.h)
         IF(OSS_LIBRARIES)
             SET(EXTRA_LIBS ${OSS_LIBRARIES} ${EXTRA_LIBS})
         ENDIF()
@@ -862,7 +862,7 @@ IF(AUDIOIO_FOUND)
     IF(ALSOFT_BACKEND_SOLARIS)
         SET(HAVE_SOLARIS 1)
         SET(BACKENDS  "${BACKENDS} Solaris,")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/solaris.cpp Alc/backends/solaris.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/solaris.cpp alc/backends/solaris.h)
         SET(INC_PATHS ${INC_PATHS} ${AUDIOIO_INCLUDE_DIRS})
     ENDIF()
 ENDIF()
@@ -878,7 +878,7 @@ IF(SOUNDIO_FOUND)
     IF(ALSOFT_BACKEND_SNDIO)
         SET(HAVE_SNDIO 1)
         SET(BACKENDS  "${BACKENDS} SndIO (linked),")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/sndio.cpp Alc/backends/sndio.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/sndio.cpp alc/backends/sndio.h)
         SET(EXTRA_LIBS ${SOUNDIO_LIBRARIES} ${EXTRA_LIBS})
         SET(INC_PATHS ${INC_PATHS} ${SOUNDIO_INCLUDE_DIRS})
     ENDIF()
@@ -895,7 +895,7 @@ IF(QSA_FOUND)
     IF(ALSOFT_BACKEND_QSA)
         SET(HAVE_QSA 1)
         SET(BACKENDS  "${BACKENDS} QSA (linked),")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/qsa.cpp Alc/backends/qsa.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/qsa.cpp alc/backends/qsa.h)
         SET(EXTRA_LIBS ${QSA_LIBRARIES} ${EXTRA_LIBS})
         SET(INC_PATHS ${INC_PATHS} ${QSA_INCLUDE_DIRS})
     ENDIF()
@@ -930,7 +930,7 @@ IF(WIN32)
         IF(ALSOFT_BACKEND_WINMM)
             SET(HAVE_WINMM 1)
             SET(BACKENDS  "${BACKENDS} WinMM,")
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/winmm.cpp Alc/backends/winmm.h)
+            SET(ALC_OBJS  ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
             SET(EXTRA_LIBS ${WINMM_LIBRARY} ${EXTRA_LIBS})
         ENDIF()
     ENDIF()
@@ -942,7 +942,7 @@ IF(WIN32)
         IF(ALSOFT_BACKEND_DSOUND)
             SET(HAVE_DSOUND 1)
             SET(BACKENDS  "${BACKENDS} DirectSound${IS_LINKED},")
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/dsound.cpp Alc/backends/dsound.h)
+            SET(ALC_OBJS  ${ALC_OBJS} alc/backends/dsound.cpp alc/backends/dsound.h)
             ADD_BACKEND_LIBS(${DSOUND_LIBRARIES})
             SET(INC_PATHS ${INC_PATHS} ${DSOUND_INCLUDE_DIRS})
         ENDIF()
@@ -955,7 +955,7 @@ IF(WIN32)
         IF(ALSOFT_BACKEND_WASAPI)
             SET(HAVE_WASAPI 1)
             SET(BACKENDS  "${BACKENDS} WASAPI,")
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/wasapi.cpp Alc/backends/wasapi.h)
+            SET(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
         ENDIF()
     ENDIF()
 
@@ -980,7 +980,7 @@ IF(PORTAUDIO_FOUND)
     IF(ALSOFT_BACKEND_PORTAUDIO)
         SET(HAVE_PORTAUDIO 1)
         SET(BACKENDS  "${BACKENDS} PortAudio${IS_LINKED},")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/portaudio.cpp Alc/backends/portaudio.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/portaudio.cpp alc/backends/portaudio.h)
         ADD_BACKEND_LIBS(${PORTAUDIO_LIBRARIES})
         SET(INC_PATHS ${INC_PATHS} ${PORTAUDIO_INCLUDE_DIRS})
     ENDIF()
@@ -997,7 +997,7 @@ IF(PULSEAUDIO_FOUND)
     IF(ALSOFT_BACKEND_PULSEAUDIO)
         SET(HAVE_PULSEAUDIO 1)
         SET(BACKENDS  "${BACKENDS} PulseAudio${IS_LINKED},")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/pulseaudio.cpp Alc/backends/pulseaudio.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/pulseaudio.cpp alc/backends/pulseaudio.h)
         ADD_BACKEND_LIBS(${PULSEAUDIO_LIBRARIES})
         SET(INC_PATHS ${INC_PATHS} ${PULSEAUDIO_INCLUDE_DIRS})
     ENDIF()
@@ -1014,7 +1014,7 @@ IF(JACK_FOUND)
     IF(ALSOFT_BACKEND_JACK)
         SET(HAVE_JACK 1)
         SET(BACKENDS  "${BACKENDS} JACK${IS_LINKED},")
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/jack.cpp Alc/backends/jack.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/jack.cpp alc/backends/jack.h)
         ADD_BACKEND_LIBS(${JACK_LIBRARIES})
         SET(INC_PATHS ${INC_PATHS} ${JACK_INCLUDE_DIRS})
     ENDIF()
@@ -1033,7 +1033,7 @@ IF(COREAUDIO_FRAMEWORK)
     OPTION(ALSOFT_BACKEND_COREAUDIO "Enable CoreAudio backend" ON)
     IF(ALSOFT_BACKEND_COREAUDIO)
         SET(HAVE_COREAUDIO 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/coreaudio.cpp Alc/backends/coreaudio.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/coreaudio.cpp alc/backends/coreaudio.h)
         SET(BACKENDS  "${BACKENDS} CoreAudio,")
         SET(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} ${EXTRA_LIBS})
         SET(EXTRA_LIBS /System/Library/Frameworks/AudioUnit.framework ${EXTRA_LIBS})
@@ -1063,7 +1063,7 @@ IF(OPENSL_FOUND)
     OPTION(ALSOFT_BACKEND_OPENSL "Enable OpenSL backend" ON)
     IF(ALSOFT_BACKEND_OPENSL)
         SET(HAVE_OPENSL 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/opensl.cpp Alc/backends/opensl.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/opensl.cpp alc/backends/opensl.h)
         SET(BACKENDS  "${BACKENDS} OpenSL,")
         SET(EXTRA_LIBS ${OPENSL_LIBRARIES} ${EXTRA_LIBS})
         SET(INC_PATHS ${INC_PATHS} ${OPENSL_INCLUDE_DIRS})
@@ -1081,7 +1081,7 @@ IF(SDL2_FOUND)
     OPTION(ALSOFT_BACKEND_SDL2 "Enable SDL2 backend" OFF)
     IF(ALSOFT_BACKEND_SDL2)
         SET(HAVE_SDL2 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/sdl2.cpp Alc/backends/sdl2.h)
+        SET(ALC_OBJS  ${ALC_OBJS} alc/backends/sdl2.cpp alc/backends/sdl2.h)
         SET(BACKENDS  "${BACKENDS} SDL2,")
         SET(EXTRA_LIBS ${SDL2_LIBRARY} ${EXTRA_LIBS})
         SET(INC_PATHS ${INC_PATHS} ${SDL2_INCLUDE_DIR})
@@ -1095,7 +1095,7 @@ ENDIF()
 OPTION(ALSOFT_BACKEND_WAVE "Enable Wave Writer backend" ON)
 IF(ALSOFT_BACKEND_WAVE)
     SET(HAVE_WAVE 1)
-    SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/wave.cpp Alc/backends/wave.h)
+    SET(ALC_OBJS  ${ALC_OBJS} alc/backends/wave.cpp alc/backends/wave.h)
     SET(BACKENDS  "${BACKENDS} WaveFile,")
 ENDIF()
 
@@ -1312,7 +1312,7 @@ TARGET_INCLUDE_DIRECTORIES(${IMPL_TARGET}
   PRIVATE
     ${INC_PATHS}
     ${OpenAL_BINARY_DIR}
-    ${OpenAL_SOURCE_DIR}/Alc
+    ${OpenAL_SOURCE_DIR}/alc
     ${OpenAL_SOURCE_DIR}/OpenAL32/Include
     ${OpenAL_SOURCE_DIR}/common
 )

@@ -7,7 +7,7 @@
 
 #include "almalloc.h"
 /* For FloatBufferLine/BUFFERSIZE. */
-#include "alMain.h"
+#include "alcmain.h"
 
 
 struct SlidingHold;

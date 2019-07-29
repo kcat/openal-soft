@@ -43,7 +43,7 @@
 
 #include "AL/al.h"
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"

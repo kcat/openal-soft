@@ -1,8 +1,7 @@
 #ifndef EFFECTS_BASE_H
 #define EFFECTS_BASE_H
 
-#include "alMain.h"
-
+#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"

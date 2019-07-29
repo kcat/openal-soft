@@ -6,7 +6,7 @@
 
 #include "AL/al.h"
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"

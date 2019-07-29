@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "converter.h"

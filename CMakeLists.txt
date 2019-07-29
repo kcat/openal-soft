@@ -619,9 +619,6 @@ SET(COMMON_OBJS
     common/vecmat.h
 )
 SET(OPENAL_OBJS
-    OpenAL32/Include/alMain.h
-    OpenAL32/Include/alu.h
-
     OpenAL32/Include/alAuxEffectSlot.h
     OpenAL32/alAuxEffectSlot.cpp
     OpenAL32/Include/alBuffer.h
@@ -642,7 +639,9 @@ SET(OPENAL_OBJS
 )
 SET(ALC_OBJS
     Alc/alc.cpp
+    Alc/alcmain.h
     Alc/alu.cpp
+    Alc/alu.h
     Alc/alconfig.cpp
     Alc/alconfig.h
     Alc/alcontext.h

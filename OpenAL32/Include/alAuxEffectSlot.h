@@ -3,7 +3,7 @@
 
 #include <array>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alEffect.h"
 #include "ambidefs.h"
 #include "effects/base.h"

@@ -25,7 +25,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alcontext.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"

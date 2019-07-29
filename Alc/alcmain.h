@@ -1,5 +1,5 @@
-#ifndef AL_MAIN_H
-#define AL_MAIN_H
+#ifndef ALC_MAIN_H
+#define ALC_MAIN_H
 
 #include <algorithm>
 #include <array>

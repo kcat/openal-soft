@@ -15,8 +15,8 @@
 #include "AL/alc.h"
 
 #include "alError.h"
-#include "alMain.h"
 #include "albyte.h"
+#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"

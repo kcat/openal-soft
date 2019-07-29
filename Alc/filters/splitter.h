@@ -1,7 +1,7 @@
 #ifndef FILTER_SPLITTER_H
 #define FILTER_SPLITTER_H
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "almalloc.h"
 
 

@@ -11,7 +11,7 @@
 #include "AL/alext.h"
 
 #include "alBuffer.h"
-#include "alMain.h"
+#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"

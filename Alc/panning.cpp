@@ -32,7 +32,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "alconfig.h"

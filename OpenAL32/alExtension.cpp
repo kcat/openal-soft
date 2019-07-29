@@ -27,7 +27,7 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alcontext.h"
 #include "alError.h"
 #include "alexcpt.h"

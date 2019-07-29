@@ -40,7 +40,7 @@
 #include "AL/alc.h"
 
 #include "alBuffer.h"
-#include "alMain.h"
+#include "alcmain.h"
 #include "alSource.h"
 #include "albyte.h"
 #include "alconfig.h"

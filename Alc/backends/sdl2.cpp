@@ -27,7 +27,7 @@
 
 #include <string>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "threads.h"
 #include "compat.h"

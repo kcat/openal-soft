@@ -28,6 +28,8 @@
 
 #include "config.h"
 
+#include "alconfig.h"
+
 #include <cstdlib>
 #include <cctype>
 #include <cstring>
@@ -43,8 +45,7 @@
 #include <string>
 #include <algorithm>
 
-#include "alMain.h"
-#include "alconfig.h"
+#include "alcmain.h"
 #include "logging.h"
 #include "compat.h"
 

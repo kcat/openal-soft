@@ -4,7 +4,7 @@
 
 #include <limits>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "alSource.h"
 #include "alAuxEffectSlot.h"

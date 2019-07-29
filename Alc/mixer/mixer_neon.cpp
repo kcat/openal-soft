@@ -6,7 +6,7 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "hrtf.h"
 #include "defs.h"

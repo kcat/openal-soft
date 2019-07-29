@@ -33,7 +33,7 @@
 #include "AL/alext.h"
 
 #include "alError.h"
-#include "alMain.h"
+#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"

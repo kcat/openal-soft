@@ -54,7 +54,7 @@
 #include <functional>
 #include <condition_variable>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "compat.h"

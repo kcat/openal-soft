@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "threads.h"

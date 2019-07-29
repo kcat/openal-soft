@@ -31,8 +31,8 @@
 #include "AL/efx.h"
 
 #include "alAuxEffectSlot.h"
+#include "alcmain.h"
 #include "alError.h"
-#include "alMain.h"
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"

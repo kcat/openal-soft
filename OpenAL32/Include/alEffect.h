@@ -1,7 +1,7 @@
 #ifndef _AL_EFFECT_H_
 #define _AL_EFFECT_H_
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "effects/base.h"
 
 

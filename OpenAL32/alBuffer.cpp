@@ -40,8 +40,8 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alcmain.h"
 #include "alError.h"
-#include "alMain.h"
 #include "albyte.h"
 #include "alcontext.h"
 #include "alexcpt.h"

@@ -3,9 +3,9 @@
 
 #include "AL/alc.h"
 #include "AL/al.h"
-#include "alMain.h"
-#include "alu.h"
 
+#include "alcmain.h"
+#include "alu.h"
 #include "alspan.h"
 
 

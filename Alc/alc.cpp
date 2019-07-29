@@ -52,11 +52,11 @@
 #include "AL/efx.h"
 
 #include "alAuxEffectSlot.h"
+#include "alcmain.h"
 #include "alEffect.h"
 #include "alError.h"
 #include "alFilter.h"
 #include "alListener.h"
-#include "alMain.h"
 #include "alSource.h"
 #include "albyte.h"
 #include "alconfig.h"

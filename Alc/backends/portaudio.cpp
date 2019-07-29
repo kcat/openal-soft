@@ -26,7 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
 #include "ringbuffer.h"

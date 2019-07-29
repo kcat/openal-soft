@@ -1,7 +1,7 @@
 #ifndef _AL_ERROR_H_
 #define _AL_ERROR_H_
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "logging.h"
 
 

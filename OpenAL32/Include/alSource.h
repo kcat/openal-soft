@@ -3,7 +3,7 @@
 
 #include <array>
 
-#include "alMain.h"
+#include "alcmain.h"
 #include "alu.h"
 #include "hrtf.h"
 #include "almalloc.h"

@@ -47,9 +47,9 @@
 
 #include "alAuxEffectSlot.h"
 #include "alBuffer.h"
+#include "alcmain.h"
 #include "alEffect.h"
 #include "alListener.h"
-#include "alMain.h"
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"

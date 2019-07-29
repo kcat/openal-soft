@@ -51,7 +51,7 @@
 #include "alBuffer.h"
 #include "alError.h"
 #include "alFilter.h"
-#include "alMain.h"
+#include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"

@@ -37,8 +37,8 @@
 #include "AL/efx-presets.h"
 #include "AL/efx.h"
 
+#include "alcmain.h"
 #include "alError.h"
-#include "alMain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"

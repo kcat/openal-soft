@@ -55,7 +55,7 @@ static int EventThread(ALCcontext *context)
                 RingBuffer *ring_;
                 ~EventAutoDestructor()
                 {
-                    al::destroy_at(&evt_);
+                    al::destroy_at(std::addressof(evt_));
                     ring_->readAdvance(1);
                 }
             } _{evt, ring};
@@ -84,8 +84,7 @@ static int EventThread(ALCcontext *context)
                     (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>";
                 context->EventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
                     evt.u.srcstate.state, static_cast<ALsizei>(msg.length()), msg.c_str(),
-                    context->EventParam
-                );
+                    context->EventParam);
             }
             else if(evt.EnumType == EventType_BufferCompleted)
             {
@@ -96,14 +95,12 @@ static int EventThread(ALCcontext *context)
                 else msg += " buffers completed";
                 context->EventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.u.bufcomp.id,
                     evt.u.bufcomp.count, static_cast<ALsizei>(msg.length()), msg.c_str(),
-                    context->EventParam
-                );
+                    context->EventParam);
             }
             else if((enabledevts&evt.EnumType) == evt.EnumType)
                 context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
                     static_cast<ALsizei>(strlen(evt.u.user.msg)), evt.u.user.msg,
-                    context->EventParam
-                );
+                    context->EventParam);
         } while(evt_data.len != 0);
     }
     return 0;

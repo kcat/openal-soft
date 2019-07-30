@@ -461,9 +461,6 @@ struct ALCdevice {
 #define RECORD_THREAD_NAME "alsoft-record"
 
 
-void AllocateVoices(ALCcontext *context, size_t num_voices);
-
-
 extern ALint RTPrioLevel;
 void SetRTPriority(void);
 

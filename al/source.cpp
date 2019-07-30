@@ -2828,7 +2828,7 @@ START_API_FUNC
                     alloc_count);
 
             const size_t newcount{context->mVoices->size() + alloc_count};
-            AllocateVoices(context.get(), newcount);
+            context->allocVoices(newcount);
         }
 
         context->mVoiceCount.fetch_add(need_voices, std::memory_order_relaxed);

@@ -775,7 +775,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCcontext_DeferUpdates(context.get());
+    context->deferUpdates();
 }
 END_API_FUNC
 
@@ -785,7 +785,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCcontext_ProcessUpdates(context.get());
+    context->processUpdates();
 }
 END_API_FUNC
 

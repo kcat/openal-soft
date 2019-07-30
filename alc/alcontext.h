@@ -144,15 +144,25 @@ struct ALCcontext {
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext();
 
+    void decRef() noexcept;
+
+    void allocVoices(size_t num_voices);
+
+    /**
+     * Defers/suspends updates for the given context's listener and sources.
+     * This does *NOT* stop mixing, but rather prevents certain property
+     * changes from taking effect.
+     */
+    void deferUpdates() noexcept
+    { mDeferUpdates.store(true); }
+
+    /** Resumes update processing after being deferred. */
+    void processUpdates();
+
     DEF_NEWDEL(ALCcontext)
 };
 
-void ALCcontext_DecRef(ALCcontext *context);
-
 void UpdateContextProps(ALCcontext *context);
-
-void ALCcontext_DeferUpdates(ALCcontext *context);
-void ALCcontext_ProcessUpdates(ALCcontext *context);
 
 
 /* Simple RAII context reference. Takes the reference of the provided
@@ -165,7 +175,7 @@ class ContextRef {
     void reset() noexcept
     {
         if(mCtx)
-            ALCcontext_DecRef(mCtx);
+            mCtx->decRef();
         mCtx = nullptr;
     }
 

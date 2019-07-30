@@ -1591,44 +1591,29 @@ void SetDefaultChannelOrder(ALCdevice *device)
 }
 
 
-/* ALCcontext_DeferUpdates
- *
- * Defers/suspends updates for the given context's listener and sources. This
- * does *NOT* stop mixing, but rather prevents certain property changes from
- * taking effect.
- */
-void ALCcontext_DeferUpdates(ALCcontext *context)
+void ALCcontext::processUpdates()
 {
-    context->mDeferUpdates.store(true);
-}
-
-/* ALCcontext_ProcessUpdates
- *
- * Resumes update processing after being deferred.
- */
-void ALCcontext_ProcessUpdates(ALCcontext *context)
-{
-    std::lock_guard<std::mutex> _{context->mPropLock};
-    if(context->mDeferUpdates.exchange(false))
+    std::lock_guard<std::mutex> _{mPropLock};
+    if(mDeferUpdates.exchange(false))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.
          */
-        context->mHoldUpdates.store(true, std::memory_order_release);
-        while((context->mUpdateCount.load(std::memory_order_acquire)&1) != 0)
+        mHoldUpdates.store(true, std::memory_order_release);
+        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0)
             std::this_thread::yield();
 
-        if(!context->mPropsClean.test_and_set(std::memory_order_acq_rel))
-            UpdateContextProps(context);
-        if(!context->mListener.PropsClean.test_and_set(std::memory_order_acq_rel))
-            UpdateListenerProps(context);
-        UpdateAllEffectSlotProps(context);
-        UpdateAllSourceProps(context);
+        if(!mPropsClean.test_and_set(std::memory_order_acq_rel))
+            UpdateContextProps(this);
+        if(!mListener.PropsClean.test_and_set(std::memory_order_acq_rel))
+            UpdateListenerProps(this);
+        UpdateAllEffectSlotProps(this);
+        UpdateAllSourceProps(this);
 
         /* Now with all updates declared, let the mixer continue applying them
          * so they all happen at once.
          */
-        context->mHoldUpdates.store(false, std::memory_order_release);
+        mHoldUpdates.store(false, std::memory_order_release);
     }
 }
 
@@ -2559,12 +2544,12 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     {
         WARN("%p released while current on thread\n", context);
         LocalContext.set(nullptr);
-        ALCcontext_DecRef(context);
+        context->decRef();
     }
 
     ALCcontext *origctx{context};
     if(GlobalContext.compare_exchange_strong(origctx, nullptr))
-        ALCcontext_DecRef(context);
+        context->decRef();
 
     bool ret{};
     {
@@ -2616,11 +2601,11 @@ static void ALCcontext_IncRef(ALCcontext *context)
     TRACEREF("ALCcontext %p increasing refcount to %u\n", context, ref);
 }
 
-void ALCcontext_DecRef(ALCcontext *context)
+void ALCcontext::decRef() noexcept
 {
-    auto ref = DecrementRef(&context->mRef);
-    TRACEREF("ALCcontext %p decreasing refcount to %u\n", context, ref);
-    if(UNLIKELY(ref == 0)) delete context;
+    auto ref = DecrementRef(&mRef);
+    TRACEREF("ALCcontext %p decreasing refcount to %u\n", this, ref);
+    if(UNLIKELY(ref == 0)) delete this;
 }
 
 /* VerifyContext
@@ -2659,12 +2644,11 @@ ContextRef GetContextRef(void)
 }
 
 
-void AllocateVoices(ALCcontext *context, size_t num_voices)
+void ALCcontext::allocVoices(size_t num_voices)
 {
-    ALCdevice *device{context->mDevice};
-    const ALsizei num_sends{device->NumAuxSends};
+    const ALsizei num_sends{mDevice->NumAuxSends};
 
-    if(context->mVoices && num_voices == context->mVoices->size())
+    if(mVoices && num_voices == mVoices->size())
         return;
 
     std::unique_ptr<al::FlexArray<ALvoice>> voices;
@@ -2673,12 +2657,11 @@ void AllocateVoices(ALCcontext *context, size_t num_voices)
         voices.reset(new (ptr) al::FlexArray<ALvoice>{num_voices});
     }
 
-    const size_t v_count{minz(context->mVoiceCount.load(std::memory_order_relaxed), num_voices)};
-    if(context->mVoices)
+    const size_t v_count{minz(mVoiceCount.load(std::memory_order_relaxed), num_voices)};
+    if(mVoices)
     {
         /* Copy the old voice data to the new storage. */
-        auto viter = std::move(context->mVoices->begin(), context->mVoices->begin()+v_count,
-            voices->begin());
+        auto viter = std::move(mVoices->begin(), mVoices->begin()+v_count, voices->begin());
 
         /* Clear extraneous property set sends. */
         auto clear_sends = [num_sends](ALvoice &voice) -> void
@@ -2697,8 +2680,8 @@ void AllocateVoices(ALCcontext *context, size_t num_voices)
         std::for_each(voices->begin(), viter, clear_sends);
     }
 
-    context->mVoices = std::move(voices);
-    context->mVoiceCount.store(static_cast<ALuint>(v_count), std::memory_order_relaxed);
+    mVoices = std::move(voices);
+    mVoiceCount.store(static_cast<ALuint>(v_count), std::memory_order_relaxed);
 }
 
 
@@ -2734,7 +2717,7 @@ START_API_FUNC
     if(!ctx)
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
     else
-        ALCcontext_DeferUpdates(ctx.get());
+        ctx->deferUpdates();
 }
 END_API_FUNC
 
@@ -2752,7 +2735,7 @@ START_API_FUNC
     if(!ctx)
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
     else
-        ALCcontext_ProcessUpdates(ctx.get());
+        ctx->processUpdates();
 }
 END_API_FUNC
 
@@ -3452,11 +3435,9 @@ START_API_FUNC
         alcSetError(dev.get(), err);
         if(err == ALC_INVALID_DEVICE)
             aluHandleDisconnect(dev.get(), "Device update failure");
-        statelock.unlock();
-
         return nullptr;
     }
-    AllocateVoices(context.get(), 256);
+    context->allocVoices(256);
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {

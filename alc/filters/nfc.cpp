@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-#include "alcmain.h"
+#include "opthelpers.h"
 
 
 /* Near-field control filters are the basis for handling the near-field effect.

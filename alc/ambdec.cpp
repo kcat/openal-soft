@@ -3,17 +3,15 @@
 
 #include "ambdec.h"
 
-#include <cctype>
-#include <cstring>
 #include <algorithm>
-
-#include <limits>
-#include <string>
-#include <fstream>
+#include <cctype>
+#include <cstddef>
+#include <iterator>
 #include <sstream>
+#include <string>
 
-#include "logging.h"
 #include "compat.h"
+#include "logging.h"
 
 
 namespace {

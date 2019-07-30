@@ -3,11 +3,13 @@
 
 #include "splitter.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
-#include <algorithm>
 
 #include "math_defs.h"
+#include "opthelpers.h"
+
 
 template<typename Real>
 void BandSplitterR<Real>::init(Real f0norm)

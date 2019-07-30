@@ -1,6 +1,5 @@
-#include "config.h"
 
-#include <cstdlib>
+#include "config.h"
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -8,7 +7,9 @@
 #include "al/auxeffectslot.h"
 #include "al/error.h"
 #include "alcmain.h"
-#include "alcontext.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "effects/base.h"
 
 
 namespace {

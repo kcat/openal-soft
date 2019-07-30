@@ -1,10 +1,12 @@
 #ifndef ALC_BACKENDS_BASE_H
 #define ALC_BACKENDS_BASE_H
 
-#include <memory>
 #include <chrono>
-#include <string>
+#include <memory>
 #include <mutex>
+#include <string>
+
+#include "AL/alc.h"
 
 #include "alcmain.h"
 

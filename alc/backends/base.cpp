@@ -1,14 +1,16 @@
 
 #include "config.h"
 
-#include <cstdlib>
+#include "base.h"
 
+#include <atomic>
 #include <thread>
 
-#include "alcmain.h"
-#include "alu.h"
+#include "AL/al.h"
 
-#include "backends/base.h"
+#include "alcmain.h"
+#include "alnumeric.h"
+#include "atomic.h"
 
 
 ClockLatency GetClockLatency(ALCdevice *device)

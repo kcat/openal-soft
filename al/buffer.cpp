@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "alBuffer.h"
+#include "buffer.h"
 
 #include <algorithm>
 #include <array>
@@ -40,7 +40,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alError.h"
 #include "albyte.h"
 #include "alcmain.h"
 #include "alcontext.h"
@@ -49,6 +48,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "atomic.h"
+#include "error.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 

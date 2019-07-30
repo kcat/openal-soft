@@ -10,7 +10,7 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alBuffer.h"
+#include "al/buffer.h"
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"

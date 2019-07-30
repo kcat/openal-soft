@@ -9,8 +9,6 @@
 #include "alcmain.h"
 #include "alu.h"
 
-#include "alSource.h"
-#include "alAuxEffectSlot.h"
 #include "defs.h"
 #include "hrtfbase.h"
 

@@ -25,11 +25,11 @@
 
 #include <algorithm>
 
+#include "al/auxeffectslot.h"
+#include "al/error.h"
+#include "al/filter.h"
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alFilter.h"
-#include "alAuxEffectSlot.h"
-#include "alError.h"
 #include "alu.h"
 #include "filters/biquad.h"
 #include "vector.h"

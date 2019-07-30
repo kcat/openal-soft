@@ -29,12 +29,12 @@
 #include <algorithm>
 #include <functional>
 
+#include "al/auxeffectslot.h"
+#include "al/error.h"
+#include "al/listener.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
-#include "alAuxEffectSlot.h"
-#include "alListener.h"
-#include "alError.h"
 #include "bformatdec.h"
 #include "filters/biquad.h"
 #include "vector.h"

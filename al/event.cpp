@@ -16,12 +16,12 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alError.h"
 #include "albyte.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "effects/base.h"
+#include "error.h"
 #include "inprogext.h"
 #include "logging.h"
 #include "opthelpers.h"

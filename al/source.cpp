@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "alSource.h"
+#include "source.h"
 
 #include <algorithm>
 #include <array>
@@ -45,10 +45,6 @@
 #include "AL/alext.h"
 #include "AL/efx.h"
 
-#include "alAuxEffectSlot.h"
-#include "alBuffer.h"
-#include "alError.h"
-#include "alFilter.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
@@ -57,9 +53,13 @@
 #include "alu.h"
 #include "ambidefs.h"
 #include "atomic.h"
+#include "auxeffectslot.h"
 #include "backends/base.h"
 #include "bformatdec.h"
+#include "buffer.h"
+#include "error.h"
 #include "event.h"
+#include "filter.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "inprogext.h"

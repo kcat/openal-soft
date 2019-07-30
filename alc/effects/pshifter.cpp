@@ -30,13 +30,12 @@
 #include <complex>
 #include <algorithm>
 
+#include "al/auxeffectslot.h"
+#include "al/error.h"
 #include "alcmain.h"
-#include "alcontext.h"
-#include "alAuxEffectSlot.h"
-#include "alError.h"
-#include "alu.h"
-
 #include "alcomplex.h"
+#include "alcontext.h"
+#include "alu.h"
 
 
 namespace {

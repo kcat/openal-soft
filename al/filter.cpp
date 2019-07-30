@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "alFilter.h"
+#include "filter.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -31,12 +31,12 @@
 
 #include "AL/efx.h"
 
-#include "alError.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "error.h"
 #include "opthelpers.h"
 #include "vector.h"
 

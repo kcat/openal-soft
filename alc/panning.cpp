@@ -32,8 +32,8 @@
 #include <algorithm>
 #include <functional>
 
+#include "al/auxeffectslot.h"
 #include "alcmain.h"
-#include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "alconfig.h"
 #include "ambdec.h"

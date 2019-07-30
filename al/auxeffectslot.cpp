@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "alAuxEffectSlot.h"
+#include "auxeffectslot.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -32,8 +32,6 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alEffect.h"
-#include "alError.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
@@ -41,6 +39,8 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alu.h"
+#include "effect.h"
+#include "error.h"
 #include "fpu_modes.h"
 #include "inprogext.h"
 #include "logging.h"

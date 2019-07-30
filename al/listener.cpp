@@ -20,18 +20,18 @@
 
 #include "config.h"
 
-#include "alListener.h"
+#include "listener.h"
 
 #include <cmath>
 #include <mutex>
 
 #include "AL/efx.h"
 
-#include "alError.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "atomic.h"
+#include "error.h"
 #include "opthelpers.h"
 
 

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "alEffect.h"
+#include "effect.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -37,13 +37,13 @@
 #include "AL/efx-presets.h"
 #include "AL/efx.h"
 
-#include "alError.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "effects/base.h"
+#include "error.h"
 #include "logging.h"
 #include "opthelpers.h"
 #include "vector.h"

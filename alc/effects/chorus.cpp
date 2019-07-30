@@ -30,9 +30,9 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "alAuxEffectSlot.h"
+#include "al/auxeffectslot.h"
+#include "al/error.h"
 #include "alcmain.h"
-#include "alError.h"
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"

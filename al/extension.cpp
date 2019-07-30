@@ -27,9 +27,9 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alError.h"
 #include "alcontext.h"
 #include "alexcpt.h"
+#include "error.h"
 #include "opthelpers.h"
 
 

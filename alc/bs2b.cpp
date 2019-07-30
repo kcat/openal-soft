@@ -23,9 +23,9 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstring>
 #include <algorithm>
+#include <cmath>
+#include <iterator>
 
 #include "bs2b.h"
 #include "math_defs.h"
@@ -35,7 +35,7 @@
 static void init(struct bs2b *bs2b)
 {
     float Fc_lo, Fc_hi;
-    float G_lo,  G_hi;
+    float G_lo, G_hi;
     float x, g;
 
     switch(bs2b->level)
@@ -127,60 +127,55 @@ int bs2b_get_srate(struct bs2b *bs2b)
 
 void bs2b_clear(struct bs2b *bs2b)
 {
-    std::fill(std::begin(bs2b->last_sample), std::end(bs2b->last_sample), bs2b::t_last_sample{});
+    std::fill(std::begin(bs2b->history), std::end(bs2b->history), bs2b::t_last_sample{});
 } /* bs2b_clear */
 
-void bs2b_cross_feed(struct bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo)
+void bs2b_cross_feed(struct bs2b *bs2b, float *Left, float *Right, int SamplesToDo)
 {
+    const float a0_lo{bs2b->a0_lo};
+    const float b1_lo{bs2b->b1_lo};
+    const float a0_hi{bs2b->a0_hi};
+    const float a1_hi{bs2b->a1_hi};
+    const float b1_hi{bs2b->b1_hi};
     float lsamples[128][2];
     float rsamples[128][2];
-    int base;
 
-    for(base = 0;base < SamplesToDo;)
+    for(int base{0};base < SamplesToDo;)
     {
-        int todo = std::min(128, SamplesToDo-base);
-        int i;
+        const int todo{std::min(128, SamplesToDo-base)};
 
         /* Process left input */
-        lsamples[0][0] = bs2b->a0_lo*Left[0] +
-                         bs2b->b1_lo*bs2b->last_sample[0].lo;
-        lsamples[0][1] = bs2b->a0_hi*Left[0] +
-                         bs2b->a1_hi*bs2b->last_sample[0].asis +
-                         bs2b->b1_hi*bs2b->last_sample[0].hi;
-        for(i = 1;i < todo;i++)
+        float z_lo{bs2b->history[0].lo};
+        float z_hi{bs2b->history[0].hi};
+        for(int i{0};i < todo;i++)
         {
-            lsamples[i][0] = bs2b->a0_lo*Left[i] +
-                             bs2b->b1_lo*lsamples[i-1][0];
-            lsamples[i][1] = bs2b->a0_hi*Left[i] +
-                             bs2b->a1_hi*Left[i-1] +
-                             bs2b->b1_hi*lsamples[i-1][1];
+            lsamples[i][0] = a0_lo*Left[i] + z_lo;
+            z_lo = b1_lo*lsamples[i][0];
+
+            lsamples[i][1] = a0_hi*Left[i] + z_hi;
+            z_hi = a1_hi*Left[i] + b1_hi*lsamples[i][1];
         }
-        bs2b->last_sample[0].asis = Left[i-1];
-        bs2b->last_sample[0].lo = lsamples[i-1][0];
-        bs2b->last_sample[0].hi = lsamples[i-1][1];
+        bs2b->history[0].lo = z_lo;
+        bs2b->history[0].hi = z_hi;
 
         /* Process right input */
-        rsamples[0][0] = bs2b->a0_lo*Right[0] +
-                         bs2b->b1_lo*bs2b->last_sample[1].lo;
-        rsamples[0][1] = bs2b->a0_hi*Right[0] +
-                         bs2b->a1_hi*bs2b->last_sample[1].asis +
-                         bs2b->b1_hi*bs2b->last_sample[1].hi;
-        for(i = 1;i < todo;i++)
+        z_lo = bs2b->history[1].lo;
+        z_hi = bs2b->history[1].hi;
+        for(int i{0};i < todo;i++)
         {
-            rsamples[i][0] = bs2b->a0_lo*Right[i] +
-                             bs2b->b1_lo*rsamples[i-1][0];
-            rsamples[i][1] = bs2b->a0_hi*Right[i] +
-                             bs2b->a1_hi*Right[i-1] +
-                             bs2b->b1_hi*rsamples[i-1][1];
+            rsamples[i][0] = a0_lo*Right[i] + z_lo;
+            z_lo = b1_lo*rsamples[i][0];
+
+            rsamples[i][1] = a0_hi*Right[i] + z_hi;
+            z_hi = a1_hi*Right[i] + b1_hi*rsamples[i][1];
         }
-        bs2b->last_sample[1].asis = Right[i-1];
-        bs2b->last_sample[1].lo = rsamples[i-1][0];
-        bs2b->last_sample[1].hi = rsamples[i-1][1];
+        bs2b->history[1].lo = z_lo;
+        bs2b->history[1].hi = z_hi;
 
         /* Crossfeed */
-        for(i = 0;i < todo;i++)
+        for(int i{0};i < todo;i++)
             *(Left++) = lsamples[i][1] + rsamples[i][0];
-        for(i = 0;i < todo;i++)
+        for(int i{0};i < todo;i++)
             *(Right++) = rsamples[i][1] + lsamples[i][0];
 
         base += todo;

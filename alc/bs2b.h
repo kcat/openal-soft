@@ -57,14 +57,13 @@ struct bs2b {
     float a1_hi;
     float b1_hi;
 
-    /* Buffer of last filtered sample.
+    /* Buffer of filter history
      * [0] - first channel, [1] - second channel
      */
     struct t_last_sample {
-        float asis;
         float lo;
         float hi;
-    } last_sample[2];
+    } history[2];
 
     DEF_NEWDEL(bs2b)
 };
@@ -85,6 +84,6 @@ int bs2b_get_srate(bs2b *bs2b);
 /* Clear buffer */
 void bs2b_clear(bs2b *bs2b);
 
-void bs2b_cross_feed(bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo);
+void bs2b_cross_feed(bs2b *bs2b, float *Left, float *Right, int SamplesToDo);
 
 #endif /* BS2B_H */

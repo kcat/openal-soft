@@ -73,70 +73,70 @@ struct EffectSlotSubList {
 };
 
 struct ALCcontext {
-    RefCount ref{1u};
+    RefCount mRef{1u};
 
-    al::vector<SourceSubList> SourceList;
-    ALuint NumSources{0};
-    std::mutex SourceLock;
+    al::vector<SourceSubList> mSourceList;
+    ALuint mNumSources{0};
+    std::mutex mSourceLock;
 
-    al::vector<EffectSlotSubList> EffectSlotList;
-    ALuint NumEffectSlots{0u};
-    std::mutex EffectSlotLock;
+    al::vector<EffectSlotSubList> mEffectSlotList;
+    ALuint mNumEffectSlots{0u};
+    std::mutex mEffectSlotLock;
 
-    std::atomic<ALenum> LastError{AL_NO_ERROR};
+    std::atomic<ALenum> mLastError{AL_NO_ERROR};
 
     DistanceModel mDistanceModel{DistanceModel::Default};
-    ALboolean SourceDistanceModel{AL_FALSE};
+    ALboolean mSourceDistanceModel{AL_FALSE};
 
-    ALfloat DopplerFactor{1.0f};
-    ALfloat DopplerVelocity{1.0f};
-    ALfloat SpeedOfSound{};
-    ALfloat MetersPerUnit{1.0f};
+    ALfloat mDopplerFactor{1.0f};
+    ALfloat mDopplerVelocity{1.0f};
+    ALfloat mSpeedOfSound{};
+    ALfloat mMetersPerUnit{1.0f};
 
-    std::atomic_flag PropsClean;
-    std::atomic<bool> DeferUpdates{false};
+    std::atomic_flag mPropsClean;
+    std::atomic<bool> mDeferUpdates{false};
 
-    std::mutex PropLock;
+    std::mutex mPropLock;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
      */
-    RefCount UpdateCount{0u};
-    std::atomic<bool> HoldUpdates{false};
+    RefCount mUpdateCount{0u};
+    std::atomic<bool> mHoldUpdates{false};
 
-    ALfloat GainBoost{1.0f};
+    ALfloat mGainBoost{1.0f};
 
-    std::atomic<ALcontextProps*> Update{nullptr};
+    std::atomic<ALcontextProps*> mUpdate{nullptr};
 
     /* Linked lists of unused property containers, free to use for future
      * updates.
      */
-    std::atomic<ALcontextProps*> FreeContextProps{nullptr};
-    std::atomic<ALlistenerProps*> FreeListenerProps{nullptr};
-    std::atomic<ALvoiceProps*> FreeVoiceProps{nullptr};
-    std::atomic<ALeffectslotProps*> FreeEffectslotProps{nullptr};
+    std::atomic<ALcontextProps*> mFreeContextProps{nullptr};
+    std::atomic<ALlistenerProps*> mFreeListenerProps{nullptr};
+    std::atomic<ALvoiceProps*> mFreeVoiceProps{nullptr};
+    std::atomic<ALeffectslotProps*> mFreeEffectslotProps{nullptr};
 
-    std::unique_ptr<al::FlexArray<ALvoice>> Voices{nullptr};
-    std::atomic<ALuint> VoiceCount{0u};
+    std::unique_ptr<al::FlexArray<ALvoice>> mVoices{nullptr};
+    std::atomic<ALuint> mVoiceCount{0u};
 
     using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
-    std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};
+    std::atomic<ALeffectslotArray*> mActiveAuxSlots{nullptr};
 
-    std::thread EventThread;
-    al::semaphore EventSem;
-    std::unique_ptr<RingBuffer> AsyncEvents;
-    std::atomic<ALbitfieldSOFT> EnabledEvts{0u};
-    std::mutex EventCbLock;
-    ALEVENTPROCSOFT EventCb{};
-    void *EventParam{nullptr};
+    std::thread mEventThread;
+    al::semaphore mEventSem;
+    std::unique_ptr<RingBuffer> mAsyncEvents;
+    std::atomic<ALbitfieldSOFT> mEnabledEvts{0u};
+    std::mutex mEventCbLock;
+    ALEVENTPROCSOFT mEventCb{};
+    void *mEventParam{nullptr};
 
     /* Default effect slot */
-    std::unique_ptr<ALeffectslot> DefaultSlot;
+    std::unique_ptr<ALeffectslot> mDefaultSlot;
 
-    ALCdevice *const Device;
-    const ALCchar *ExtensionList{nullptr};
+    ALCdevice *const mDevice;
+    const ALCchar *mExtensionList{nullptr};
 
-    ALlistener Listener{};
+    ALlistener mListener{};
 
 
     ALCcontext(ALCdevice *device);

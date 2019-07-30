@@ -279,10 +279,10 @@ alu::Vector operator*(const alu::Matrix &mtx, const alu::Vector &vec) noexcept
 
 bool CalcContextParams(ALCcontext *Context)
 {
-    ALcontextProps *props{Context->Update.exchange(nullptr, std::memory_order_acq_rel)};
+    ALcontextProps *props{Context->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
-    ALlistener &Listener = Context->Listener;
+    ALlistener &Listener = Context->mListener;
     Listener.Params.MetersPerUnit = props->MetersPerUnit;
 
     Listener.Params.DopplerFactor = props->DopplerFactor;
@@ -294,13 +294,13 @@ bool CalcContextParams(ALCcontext *Context)
     Listener.Params.SourceDistanceModel = props->SourceDistanceModel;
     Listener.Params.mDistanceModel = props->mDistanceModel;
 
-    AtomicReplaceHead(Context->FreeContextProps, props);
+    AtomicReplaceHead(Context->mFreeContextProps, props);
     return true;
 }
 
 bool CalcListenerParams(ALCcontext *Context)
 {
-    ALlistener &Listener = Context->Listener;
+    ALlistener &Listener = Context->mListener;
 
     ALlistenerProps *props{Listener.Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
@@ -328,9 +328,9 @@ bool CalcListenerParams(ALCcontext *Context)
     const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
     Listener.Params.Velocity = Listener.Params.Matrix * vel;
 
-    Listener.Params.Gain = props->Gain * Context->GainBoost;
+    Listener.Params.Gain = props->Gain * Context->mGainBoost;
 
-    AtomicReplaceHead(Context->FreeListenerProps, props);
+    AtomicReplaceHead(Context->mFreeListenerProps, props);
     return true;
 }
 
@@ -391,14 +391,14 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             /* Otherwise, if it would be deleted, send it off with a release
              * event.
              */
-            RingBuffer *ring{context->AsyncEvents.get()};
+            RingBuffer *ring{context->mAsyncEvents.get()};
             auto evt_vec = ring->getWriteVector();
             if(LIKELY(evt_vec.first.len > 0))
             {
                 AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
                 evt->u.mEffectState = oldstate;
                 ring->writeAdvance(1);
-                context->EventSem.post();
+                context->mEventSem.post();
             }
             else
             {
@@ -411,7 +411,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             }
         }
 
-        AtomicReplaceHead(context->FreeEffectslotProps, props);
+        AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
 
     EffectTarget output;
@@ -419,7 +419,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         output = EffectTarget{&target->Wet, nullptr};
     else
     {
-        ALCdevice *device{context->Device};
+        ALCdevice *device{context->mDevice};
         output = EffectTarget{&device->Dry, &device->RealOut};
     }
     state->update(context, slot, &slot->Params.mEffectProps, output);
@@ -960,7 +960,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
 void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device{ALContext->Device};
+    const ALCdevice *Device{ALContext->mDevice};
     ALeffectslot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -968,7 +968,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->DefaultSlot.get();
+            SendSlots[i] = ALContext->mDefaultSlot.get();
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
@@ -992,7 +992,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     voice->mResampler = SelectResampler(props->mResampler);
 
     /* Calculate gains */
-    const ALlistener &Listener = ALContext->Listener;
+    const ALlistener &Listener = ALContext->mListener;
     ALfloat DryGain{clampf(props->Gain, props->MinGain, props->MaxGain)};
     DryGain *= props->Direct.Gain * Listener.Params.Gain;
     DryGain  = minf(DryGain, GAIN_MIX_MAX);
@@ -1014,9 +1014,9 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
 
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device{ALContext->Device};
+    const ALCdevice *Device{ALContext->mDevice};
     const ALsizei NumSends{Device->NumAuxSends};
-    const ALlistener &Listener = ALContext->Listener;
+    const ALlistener &Listener = ALContext->mListener;
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -1029,7 +1029,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->DefaultSlot.get();
+            SendSlots[i] = ALContext->mDefaultSlot.get();
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
@@ -1342,7 +1342,7 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     {
         voice->mProps = *props;
 
-        AtomicReplaceHead(context->FreeVoiceProps, props);
+        AtomicReplaceHead(context->mFreeVoiceProps, props);
     }
 
     if((voice->mProps.mSpatializeMode == SpatializeAuto && voice->mFmtChannels == FmtMono) ||
@@ -1355,8 +1355,8 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 
 void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
 {
-    IncrementRef(&ctx->UpdateCount);
-    if(LIKELY(!ctx->HoldUpdates.load(std::memory_order_acquire)))
+    IncrementRef(&ctx->mUpdateCount);
+    if(LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire)))
     {
         bool cforce{CalcContextParams(ctx)};
         bool force{CalcListenerParams(ctx) || cforce};
@@ -1365,8 +1365,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
             { return CalcEffectSlotParams(slot, ctx, cforce) | force; }
         );
 
-        std::for_each(ctx->Voices->begin(),
-            ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
+        std::for_each(ctx->mVoices->begin(),
+            ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
             [ctx,force](ALvoice &voice) -> void
             {
                 ALuint sid{voice.mSourceID.load(std::memory_order_acquire)};
@@ -1374,14 +1374,14 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
             }
         );
     }
-    IncrementRef(&ctx->UpdateCount);
+    IncrementRef(&ctx->mUpdateCount);
 }
 
 void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    const ALeffectslotArray *auxslots{ctx->ActiveAuxSlots.load(std::memory_order_acquire)};
+    const ALeffectslotArray *auxslots{ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
 
     /* Process pending propery updates for objects on the context. */
     ProcessParamUpdates(ctx, auxslots);
@@ -1396,8 +1396,8 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     );
 
     /* Process voices that have a playing source. */
-    std::for_each(ctx->Voices->begin(),
-        ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
+    std::for_each(ctx->mVoices->begin(),
+        ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
         [SamplesToDo,ctx](ALvoice &voice) -> void
         {
             const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
@@ -1772,16 +1772,16 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
 
     for(ALCcontext *ctx : *device->mContexts.load())
     {
-        const ALbitfieldSOFT enabledevt{ctx->EnabledEvts.load(std::memory_order_acquire)};
+        const ALbitfieldSOFT enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))
         {
-            RingBuffer *ring{ctx->AsyncEvents.get()};
+            RingBuffer *ring{ctx->mAsyncEvents.get()};
             auto evt_data = ring->getWriteVector().first;
             if(evt_data.len > 0)
             {
                 new (evt_data.buf) AsyncEvent{evt};
                 ring->writeAdvance(1);
-                ctx->EventSem.post();
+                ctx->mEventSem.post();
             }
         }
 
@@ -1792,8 +1792,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             voice.mSourceID.store(0u, std::memory_order_relaxed);
             voice.mPlayState.store(ALvoice::Stopped, std::memory_order_release);
         };
-        std::for_each(ctx->Voices->begin(),
-            ctx->Voices->begin() + ctx->VoiceCount.load(std::memory_order_acquire),
+        std::for_each(ctx->mVoices->begin(),
+            ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
             stop_voice);
     }
 }

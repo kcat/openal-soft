@@ -77,10 +77,10 @@ using namespace std::placeholders;
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
     ALint idx{source->VoiceIdx};
-    if(idx >= 0 && static_cast<ALuint>(idx) < context->VoiceCount.load(std::memory_order_relaxed))
+    if(idx >= 0 && static_cast<ALuint>(idx) < context->mVoiceCount.load(std::memory_order_relaxed))
     {
         ALuint sid{source->id};
-        ALvoice &voice = (*context->Voices)[idx];
+        ALvoice &voice = (*context->mVoices)[idx];
         if(voice.mSourceID.load(std::memory_order_acquire) == sid)
             return &voice;
     }
@@ -91,7 +91,7 @@ inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
-    ALvoiceProps *props{context->FreeVoiceProps.load(std::memory_order_acquire)};
+    ALvoiceProps *props{context->mFreeVoiceProps.load(std::memory_order_acquire)};
     if(!props)
         props = new ALvoiceProps{};
     else
@@ -99,7 +99,7 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
         ALvoiceProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
-        } while(context->FreeVoiceProps.compare_exchange_weak(props, next,
+        } while(context->mFreeVoiceProps.compare_exchange_weak(props, next,
                 std::memory_order_acq_rel, std::memory_order_acquire) == 0);
     }
 
@@ -164,7 +164,7 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        AtomicReplaceHead(context->FreeVoiceProps, props);
+        AtomicReplaceHead(context->mFreeVoiceProps, props);
     }
 }
 
@@ -176,7 +176,7 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
  */
 int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     const ALbufferlistitem *Current;
     uint64_t readPos;
     ALuint refcount;
@@ -222,7 +222,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
  */
 ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     const ALbufferlistitem *Current;
     uint64_t readPos;
     ALuint refcount;
@@ -282,7 +282,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
  */
 ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     const ALbufferlistitem *Current;
     ALuint readPos;
     ALsizei readPosFrac;
@@ -484,21 +484,21 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
 
 ALsource *AllocSource(ALCcontext *context)
 {
-    ALCdevice *device{context->Device};
-    std::lock_guard<std::mutex> _{context->SourceLock};
-    if(context->NumSources >= device->SourcesMax)
+    ALCdevice *device{context->mDevice};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
+    if(context->mNumSources >= device->SourcesMax)
     {
         alSetError(context, AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
         return nullptr;
     }
-    auto sublist = std::find_if(context->SourceList.begin(), context->SourceList.end(),
+    auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
         [](const SourceSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
-    auto lidx = static_cast<ALsizei>(std::distance(context->SourceList.begin(), sublist));
+    auto lidx = static_cast<ALsizei>(std::distance(context->mSourceList.begin(), sublist));
     ALsource *source;
     ALsizei slidx;
-    if(LIKELY(sublist != context->SourceList.end()))
+    if(LIKELY(sublist != context->mSourceList.end()))
     {
         slidx = CTZ64(sublist->FreeMask);
         source = sublist->Sources + slidx;
@@ -508,19 +508,19 @@ ALsource *AllocSource(ALCcontext *context)
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(context->SourceList.size() >= 1<<25))
+        if(UNLIKELY(context->mSourceList.size() >= 1<<25))
         {
             alSetError(context, AL_OUT_OF_MEMORY, "Too many sources allocated");
             return nullptr;
         }
-        context->SourceList.emplace_back();
-        sublist = context->SourceList.end() - 1;
+        context->mSourceList.emplace_back();
+        sublist = context->mSourceList.end() - 1;
 
         sublist->FreeMask = ~0_u64;
         sublist->Sources = static_cast<ALsource*>(al_calloc(16, sizeof(ALsource)*64));
         if(UNLIKELY(!sublist->Sources))
         {
-            context->SourceList.pop_back();
+            context->mSourceList.pop_back();
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate source batch");
             return nullptr;
         }
@@ -534,7 +534,7 @@ ALsource *AllocSource(ALCcontext *context)
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;
 
-    context->NumSources += 1;
+    context->mNumSources += 1;
     sublist->FreeMask &= ~(1_u64 << slidx);
 
     return source;
@@ -546,7 +546,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     BackendUniqueLock backlock{*device->Backend};
     if(ALvoice *voice{GetSourceVoice(source, context)})
     {
@@ -565,8 +565,8 @@ void FreeSource(ALCcontext *context, ALsource *source)
 
     al::destroy_at(source);
 
-    context->SourceList[lidx].FreeMask |= 1_u64 << slidx;
-    context->NumSources--;
+    context->mSourceList[lidx].FreeMask |= 1_u64 << slidx;
+    context->mNumSources--;
 }
 
 
@@ -575,9 +575,9 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= context->SourceList.size()))
+    if(UNLIKELY(lidx >= context->mSourceList.size()))
         return nullptr;
-    SourceSubList &sublist{context->SourceList[lidx]};
+    SourceSubList &sublist{context->mSourceList[lidx]};
     if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.Sources + slidx;
@@ -614,9 +614,9 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= context->EffectSlotList.size()))
+    if(UNLIKELY(lidx >= context->mEffectSlotList.size()))
         return nullptr;
-    EffectSlotSubList &sublist{context->EffectSlotList[lidx]};
+    EffectSlotSubList &sublist{context->mEffectSlotList[lidx]};
     if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
         return nullptr;
     return sublist.EffectSlots + slidx;
@@ -715,7 +715,7 @@ inline ALenum GetSourceState(ALsource *source, ALvoice *voice)
  */
 inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 {
-    return !context->DeferUpdates.load(std::memory_order_acquire) &&
+    return !context->mDeferUpdates.load(std::memory_order_acquire) &&
            IsPlayingOrPaused(source);
 }
 
@@ -723,14 +723,14 @@ inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 /** Can only be called while the mixer is locked! */
 void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
 {
-    ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
+    ALbitfieldSOFT enabledevt{context->mEnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
     /* The mixer may have queued a state change that's not yet been processed,
      * and we don't want state change messages to occur out of order, so send
      * it through the async queue to ensure proper ordering.
      */
-    RingBuffer *ring{context->AsyncEvents.get()};
+    RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
@@ -738,7 +738,7 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = state;
     ring->writeAdvance(1);
-    context->EventSem.post();
+    context->mEventSem.post();
 }
 
 
@@ -1127,7 +1127,7 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
             if(IsPlayingOrPaused(Source))
             {
-                ALCdevice *device{Context->Device};
+                ALCdevice *device{Context->mDevice};
                 BackendLockGuard _{*device->Backend};
                 /* Double-check that the source is still playing while we have
                  * the lock.
@@ -1230,7 +1230,7 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
 ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values)
 {
-    ALCdevice *device{Context->Device};
+    ALCdevice *device{Context->mDevice};
     ALbuffer *buffer{nullptr};
     ALfilter *filter{nullptr};
     ALeffectslot *slot{nullptr};
@@ -1348,7 +1348,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
             if(IsPlayingOrPaused(Source))
             {
-                ALCdevice *device{Context->Device};
+                ALCdevice *device{Context->mDevice};
                 BackendLockGuard _{*device->Backend};
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
@@ -1423,7 +1423,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                      *values == AL_EXPONENT_DISTANCE_CLAMPED);
 
             Source->mDistanceModel = static_cast<DistanceModel>(*values);
-            if(Context->SourceDistanceModel)
+            if(Context->mSourceDistanceModel)
                 UpdateSourceProps(Source, Context);
             return AL_TRUE;
 
@@ -1443,7 +1443,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
 
         case AL_AUXILIARY_SEND_FILTER:
-            slotlock = std::unique_lock<std::mutex>{Context->EffectSlotLock};
+            slotlock = std::unique_lock<std::mutex>{Context->mEffectSlotLock};
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != nullptr))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
@@ -1664,7 +1664,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
 
 ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALdouble *values)
 {
-    ALCdevice *device{Context->Device};
+    ALCdevice *device{Context->mDevice};
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
     ALint ivals[3];
@@ -1997,7 +1997,7 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
 
 ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64SOFT *values)
 {
-    ALCdevice *device = Context->Device;
+    ALCdevice *device = Context->mDevice;
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
     ALdouble dvals[6];
@@ -2172,7 +2172,7 @@ START_API_FUNC
     if(n < 0)
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Deleting %d sources", n);
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
 
     /* Check that all Sources are valid */
     const ALuint *sources_end = sources + n;
@@ -2207,7 +2207,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
     {
-        std::lock_guard<std::mutex> _{context->SourceLock};
+        std::lock_guard<std::mutex> _{context->mSourceLock};
         if(LookupSource(context.get(), source) != nullptr)
             return AL_TRUE;
     }
@@ -2222,8 +2222,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2240,8 +2240,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2261,8 +2261,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2282,8 +2282,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2303,8 +2303,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2325,8 +2325,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2357,8 +2357,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2375,8 +2375,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2396,8 +2396,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2417,8 +2417,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2435,8 +2435,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2456,8 +2456,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<std::mutex> __{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2477,7 +2477,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2500,7 +2500,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2527,7 +2527,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2558,7 +2558,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2577,7 +2577,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2604,7 +2604,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2624,7 +2624,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2643,7 +2643,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2670,7 +2670,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2690,7 +2690,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2709,7 +2709,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2736,7 +2736,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2774,7 +2774,7 @@ START_API_FUNC
         srchandles = extra_sources.data();
     }
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
@@ -2782,7 +2782,7 @@ START_API_FUNC
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     BackendLockGuard __{*device->Backend};
     /* If the device is disconnected, go right to stopped. */
     if(UNLIKELY(!device->Connected.load(std::memory_order_acquire)))
@@ -2800,9 +2800,9 @@ START_API_FUNC
     }
 
     /* Count the number of reusable voices. */
-    auto voices_end = context->Voices->begin() +
-        context->VoiceCount.load(std::memory_order_relaxed);
-    auto free_voices = std::accumulate(context->Voices->begin(), voices_end, ALsizei{0},
+    auto voices_end = context->mVoices->begin() +
+        context->mVoiceCount.load(std::memory_order_relaxed);
+    auto free_voices = std::accumulate(context->mVoices->begin(), voices_end, ALsizei{0},
         [](const ALsizei count, const ALvoice &voice) noexcept -> ALsizei
         {
             if(voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped &&
@@ -2815,23 +2815,23 @@ START_API_FUNC
     {
         /* Increment the number of voices to handle the request. */
         const ALuint need_voices{static_cast<ALuint>(n) - free_voices};
-        const size_t rem_voices{context->Voices->size() -
-            context->VoiceCount.load(std::memory_order_relaxed)};
+        const size_t rem_voices{context->mVoices->size() -
+            context->mVoiceCount.load(std::memory_order_relaxed)};
 
         if(UNLIKELY(need_voices > rem_voices))
         {
             /* Allocate more voices to get enough. */
             const size_t alloc_count{need_voices - rem_voices};
-            if(UNLIKELY(context->Voices->size() > std::numeric_limits<ALsizei>::max()-alloc_count))
+            if(UNLIKELY(context->mVoices->size() > std::numeric_limits<ALsizei>::max()-alloc_count))
                 SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
-                    "Overflow increasing voice count to %zu + %zu", context->Voices->size(),
+                    "Overflow increasing voice count to %zu + %zu", context->mVoices->size(),
                     alloc_count);
 
-            const size_t newcount{context->Voices->size() + alloc_count};
+            const size_t newcount{context->mVoices->size() + alloc_count};
             AllocateVoices(context.get(), newcount);
         }
 
-        context->VoiceCount.fetch_add(need_voices, std::memory_order_relaxed);
+        context->mVoiceCount.fetch_add(need_voices, std::memory_order_relaxed);
     }
 
     auto start_source = [&context,device](ALsource *source) -> void
@@ -2886,9 +2886,9 @@ START_API_FUNC
         }
 
         /* Look for an unused voice to play this source with. */
-        auto voices_end = context->Voices->begin() +
-            context->VoiceCount.load(std::memory_order_relaxed);
-        voice = std::find_if(context->Voices->begin(), voices_end,
+        auto voices_end = context->mVoices->begin() +
+            context->mVoiceCount.load(std::memory_order_relaxed);
+        voice = std::find_if(context->mVoices->begin(), voices_end,
             [](const ALvoice &voice) noexcept -> bool
             {
                 return voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped &&
@@ -2896,7 +2896,7 @@ START_API_FUNC
             }
         );
         assert(voice != voices_end);
-        auto vidx = static_cast<ALint>(std::distance(context->Voices->begin(), voice));
+        auto vidx = static_cast<ALint>(std::distance(context->mVoices->begin(), voice));
         voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
@@ -3036,7 +3036,7 @@ START_API_FUNC
         srchandles = extra_sources.data();
     }
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
@@ -3044,7 +3044,7 @@ START_API_FUNC
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     BackendLockGuard __{*device->Backend};
     auto pause_source = [&context](ALsource *source) -> void
     {
@@ -3091,7 +3091,7 @@ START_API_FUNC
         srchandles = extra_sources.data();
     }
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
@@ -3099,7 +3099,7 @@ START_API_FUNC
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     BackendLockGuard __{*device->Backend};
     auto stop_source = [&context](ALsource *source) -> void
     {
@@ -3153,7 +3153,7 @@ START_API_FUNC
         srchandles = extra_sources.data();
     }
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
@@ -3161,7 +3161,7 @@ START_API_FUNC
             SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     BackendLockGuard __{*device->Backend};
     auto rewind_source = [&context](ALsource *source) -> void
     {
@@ -3200,7 +3200,7 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffers", nb);
     if(nb == 0) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(UNLIKELY(!source))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
@@ -3210,7 +3210,7 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     ALbuffer *BufferFmt{nullptr};
     ALbufferlistitem *BufferList{source->queue};
     while(BufferList)
@@ -3319,7 +3319,7 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffer layers", nb);
     if(nb == 0) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(UNLIKELY(!source))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
@@ -3329,7 +3329,7 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     ALbuffer *BufferFmt{nullptr};
     ALbufferlistitem *BufferList{source->queue};
     while(BufferList)
@@ -3429,7 +3429,7 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing %d buffers", nb);
     if(nb == 0) return;
 
-    std::lock_guard<std::mutex> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(UNLIKELY(!source))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
@@ -3611,9 +3611,9 @@ ALsource::~ALsource()
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
-    auto voices_end = context->Voices->begin() +
-        context->VoiceCount.load(std::memory_order_relaxed);
-    std::for_each(context->Voices->begin(), voices_end,
+    auto voices_end = context->mVoices->begin() +
+        context->mVoiceCount.load(std::memory_order_relaxed);
+    std::for_each(context->mVoices->begin(), voices_end,
         [context](ALvoice &voice) -> void
         {
             ALuint sid{voice.mSourceID.load(std::memory_order_acquire)};

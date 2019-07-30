@@ -279,7 +279,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
 
 ALfilter *AllocFilter(ALCcontext *context)
 {
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
     auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
         [](const FilterSubList &entry) noexcept -> bool
@@ -411,7 +411,7 @@ START_API_FUNC
     if(UNLIKELY(n == 0))
         return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
@@ -449,7 +449,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
     {
-        ALCdevice *device{context->Device};
+        ALCdevice *device{context->mDevice};
         std::lock_guard<std::mutex> _{device->FilterLock};
         if(!filter || LookupFilter(device, filter))
             return AL_TRUE;
@@ -465,7 +465,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -503,7 +503,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -523,7 +523,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -543,7 +543,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -563,7 +563,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -595,7 +595,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -615,7 +615,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
@@ -635,7 +635,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};

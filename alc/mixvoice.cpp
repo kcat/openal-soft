@@ -291,10 +291,10 @@ constexpr ALshort aLawDecompressionTable[256] = {
 
 void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 {
-    ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
+    ALbitfieldSOFT enabledevt{context->mEnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    RingBuffer *ring{context->AsyncEvents.get()};
+    RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
@@ -303,7 +303,7 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     evt->u.srcstate.state = AL_STOPPED;
 
     ring->writeAdvance(1);
-    context->EventSem.post();
+    context->mEventSem.post();
 }
 
 
@@ -544,7 +544,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     ASSUME(SampleSize > 0);
     ASSUME(increment > 0);
 
-    ALCdevice *Device{Context->Device};
+    ALCdevice *Device{Context->mDevice};
     const ALsizei NumSends{Device->NumAuxSends};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 
@@ -929,10 +929,10 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     std::atomic_thread_fence(std::memory_order_release);
 
     /* Send any events now, after the position/buffer info was updated. */
-    ALbitfieldSOFT enabledevt{Context->EnabledEvts.load(std::memory_order_acquire)};
+    ALbitfieldSOFT enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
     {
-        RingBuffer *ring{Context->AsyncEvents.get()};
+        RingBuffer *ring{Context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0)
         {
@@ -940,7 +940,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             evt->u.bufcomp.id = SourceID;
             evt->u.bufcomp.count = buffers_done;
             ring->writeAdvance(1);
-            Context->EventSem.post();
+            Context->mEventSem.post();
         }
     }
 

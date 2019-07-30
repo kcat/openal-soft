@@ -110,7 +110,7 @@ ALboolean ModulatorState::deviceUpdate(const ALCdevice*)
 
 void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->Device};
+    const ALCdevice *device{context->mDevice};
 
     const float step{props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency)};
     mStep = fastf2i(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));

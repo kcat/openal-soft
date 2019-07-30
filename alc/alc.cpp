@@ -833,7 +833,7 @@ std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 /* Thread-local current context */
 void ReleaseThreadCtx(ALCcontext *context)
 {
-    auto ref = DecrementRef(&context->ref);
+    auto ref = DecrementRef(&context->mRef);
     TRACEREF("ALCcontext %p decreasing refcount to %u\n", context, ref);
     ERR("Context %p current for thread being destroyed, possible leak!\n", context);
 }
@@ -1599,7 +1599,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
  */
 void ALCcontext_DeferUpdates(ALCcontext *context)
 {
-    context->DeferUpdates.store(true);
+    context->mDeferUpdates.store(true);
 }
 
 /* ALCcontext_ProcessUpdates
@@ -1608,19 +1608,19 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
  */
 void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
-    std::lock_guard<std::mutex> _{context->PropLock};
-    if(context->DeferUpdates.exchange(false))
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    if(context->mDeferUpdates.exchange(false))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.
          */
-        context->HoldUpdates.store(true, std::memory_order_release);
-        while((context->UpdateCount.load(std::memory_order_acquire)&1) != 0)
+        context->mHoldUpdates.store(true, std::memory_order_release);
+        while((context->mUpdateCount.load(std::memory_order_acquire)&1) != 0)
             std::this_thread::yield();
 
-        if(!context->PropsClean.test_and_set(std::memory_order_acq_rel))
+        if(!context->mPropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateContextProps(context);
-        if(!context->Listener.PropsClean.test_and_set(std::memory_order_acq_rel))
+        if(!context->mListener.PropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
@@ -1628,7 +1628,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         /* Now with all updates declared, let the mixer continue applying them
          * so they all happen at once.
          */
-        context->HoldUpdates.store(false, std::memory_order_release);
+        context->mHoldUpdates.store(false, std::memory_order_release);
     }
 }
 
@@ -2167,9 +2167,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
-        if(context->DefaultSlot)
+        if(context->mDefaultSlot)
         {
-            ALeffectslot *slot = context->DefaultSlot.get();
+            ALeffectslot *slot = context->mDefaultSlot.get();
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
@@ -2180,9 +2180,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 UpdateEffectSlotProps(slot, context);
         }
 
-        std::unique_lock<std::mutex> proplock{context->PropLock};
-        std::unique_lock<std::mutex> slotlock{context->EffectSlotLock};
-        for(auto &sublist : context->EffectSlotList)
+        std::unique_lock<std::mutex> proplock{context->mPropLock};
+        std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
+        for(auto &sublist : context->mEffectSlotList)
         {
             uint64_t usemask = ~sublist.FreeMask;
             while(usemask)
@@ -2204,8 +2204,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         slotlock.unlock();
 
-        std::unique_lock<std::mutex> srclock{context->SourceLock};
-        for(auto &sublist : context->SourceList)
+        std::unique_lock<std::mutex> srclock{context->mSourceLock};
+        for(auto &sublist : context->mSourceList)
         {
             uint64_t usemask = ~sublist.FreeMask;
             while(usemask)
@@ -2245,7 +2245,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
          * auxiliary sends is changing. Active sources will have updates
          * respecified in UpdateAllSourceProps.
          */
-        ALvoiceProps *vprops{context->FreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel)};
+        ALvoiceProps *vprops{context->mFreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel)};
         while(vprops)
         {
             ALvoiceProps *next = vprops->next.load(std::memory_order_relaxed);
@@ -2253,8 +2253,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             vprops = next;
         }
 
-        auto voices = context->Voices.get();
-        auto voices_end = voices->begin() + context->VoiceCount.load(std::memory_order_relaxed);
+        auto voices = context->mVoices.get();
+        auto voices_end = voices->begin() + context->mVoiceCount.load(std::memory_order_relaxed);
         if(device->NumAuxSends < old_sends)
         {
             const ALsizei num_sends{device->NumAuxSends};
@@ -2300,9 +2300,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         );
         srclock.unlock();
 
-        context->PropsClean.test_and_set(std::memory_order_release);
+        context->mPropsClean.test_and_set(std::memory_order_release);
         UpdateContextProps(context);
-        context->Listener.PropsClean.test_and_set(std::memory_order_release);
+        context->mListener.PropsClean.test_and_set(std::memory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
     }
@@ -2383,9 +2383,9 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 }
 
 
-ALCcontext::ALCcontext(ALCdevice *device) : Device{device}
+ALCcontext::ALCcontext(ALCdevice *device) : mDevice{device}
 {
-    PropsClean.test_and_set(std::memory_order_relaxed);
+    mPropsClean.test_and_set(std::memory_order_relaxed);
 }
 
 /* InitContext
@@ -2394,43 +2394,43 @@ ALCcontext::ALCcontext(ALCdevice *device) : Device{device}
  */
 static ALvoid InitContext(ALCcontext *Context)
 {
-    ALlistener &listener = Context->Listener;
+    ALlistener &listener = Context->mListener;
     ALeffectslotArray *auxslots;
 
     //Validate Context
-    if(!Context->DefaultSlot)
+    if(!Context->mDefaultSlot)
         auxslots = ALeffectslot::CreatePtrArray(0);
     else
     {
         auxslots = ALeffectslot::CreatePtrArray(1);
-        (*auxslots)[0] = Context->DefaultSlot.get();
+        (*auxslots)[0] = Context->mDefaultSlot.get();
     }
-    Context->ActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
+    Context->mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 
     //Set globals
     Context->mDistanceModel = DistanceModel::Default;
-    Context->SourceDistanceModel = AL_FALSE;
-    Context->DopplerFactor = 1.0f;
-    Context->DopplerVelocity = 1.0f;
-    Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
-    Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
+    Context->mSourceDistanceModel = AL_FALSE;
+    Context->mDopplerFactor = 1.0f;
+    Context->mDopplerVelocity = 1.0f;
+    Context->mSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    Context->mMetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
 
-    Context->ExtensionList = alExtList;
+    Context->mExtensionList = alExtList;
 
 
     listener.Params.Matrix = alu::Matrix::Identity();
     listener.Params.Velocity = alu::Vector{};
     listener.Params.Gain = listener.Gain;
-    listener.Params.MetersPerUnit = Context->MetersPerUnit;
-    listener.Params.DopplerFactor = Context->DopplerFactor;
-    listener.Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
+    listener.Params.MetersPerUnit = Context->mMetersPerUnit;
+    listener.Params.DopplerFactor = Context->mDopplerFactor;
+    listener.Params.SpeedOfSound = Context->mSpeedOfSound * Context->mDopplerVelocity;
     listener.Params.ReverbSpeedOfSound = listener.Params.SpeedOfSound *
                                          listener.Params.MetersPerUnit;
-    listener.Params.SourceDistanceModel = Context->SourceDistanceModel;
+    listener.Params.SourceDistanceModel = Context->mSourceDistanceModel;
     listener.Params.mDistanceModel = Context->mDistanceModel;
 
 
-    Context->AsyncEvents = CreateRingBuffer(511, sizeof(AsyncEvent), false);
+    Context->mAsyncEvents = CreateRingBuffer(511, sizeof(AsyncEvent), false);
     StartEventThrd(Context);
 }
 
@@ -2444,14 +2444,14 @@ ALCcontext::~ALCcontext()
 {
     TRACE("Freeing context %p\n", this);
 
-    ALcontextProps *cprops{Update.exchange(nullptr, std::memory_order_relaxed)};
+    ALcontextProps *cprops{mUpdate.exchange(nullptr, std::memory_order_relaxed)};
     if(cprops)
     {
         TRACE("Freed unapplied context update %p\n", cprops);
         al_free(cprops);
     }
     size_t count{0};
-    cprops = FreeContextProps.exchange(nullptr, std::memory_order_acquire);
+    cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
     while(cprops)
     {
         ALcontextProps *next{cprops->next.load(std::memory_order_relaxed)};
@@ -2461,17 +2461,17 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
 
-    count = std::accumulate(SourceList.cbegin(), SourceList.cend(), size_t{0u},
+    count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
         { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
         WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
-    SourceList.clear();
-    NumSources = 0;
+    mSourceList.clear();
+    mNumSources = 0;
 
     count = 0;
-    ALeffectslotProps *eprops{FreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
+    ALeffectslotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
     while(eprops)
     {
         ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
@@ -2482,20 +2482,20 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    delete ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed);
-    DefaultSlot = nullptr;
+    delete mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed);
+    mDefaultSlot = nullptr;
 
-    count = std::accumulate(EffectSlotList.cbegin(), EffectSlotList.cend(), size_t{0u},
+    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
         { return cur + POPCNT64(~sublist.FreeMask); }
     );
     if(count > 0)
         WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
-    EffectSlotList.clear();
-    NumEffectSlots = 0;
+    mEffectSlotList.clear();
+    mNumEffectSlots = 0;
 
     count = 0;
-    ALvoiceProps *vprops{FreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
+    ALvoiceProps *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
     while(vprops)
     {
         ALvoiceProps *next{vprops->next.load(std::memory_order_relaxed)};
@@ -2505,17 +2505,17 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
 
-    Voices = nullptr;
-    VoiceCount.store(0, std::memory_order_relaxed);
+    mVoices = nullptr;
+    mVoiceCount.store(0, std::memory_order_relaxed);
 
-    ALlistenerProps *lprops{Listener.Update.exchange(nullptr, std::memory_order_relaxed)};
+    ALlistenerProps *lprops{mListener.Update.exchange(nullptr, std::memory_order_relaxed)};
     if(lprops)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);
         al_free(lprops);
     }
     count = 0;
-    lprops = FreeListenerProps.exchange(nullptr, std::memory_order_acquire);
+    lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
     while(lprops)
     {
         ALlistenerProps *next{lprops->next.load(std::memory_order_relaxed)};
@@ -2525,10 +2525,10 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu listener property object%s\n", count, (count==1)?"":"s");
 
-    if(AsyncEvents)
+    if(mAsyncEvents)
     {
         count = 0;
-        auto evt_vec = AsyncEvents->getReadVector();
+        auto evt_vec = mAsyncEvents->getReadVector();
         if(evt_vec.first.len > 0)
         {
             al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf), evt_vec.first.len);
@@ -2541,10 +2541,10 @@ ALCcontext::~ALCcontext()
         }
         if(count > 0)
             TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
-        AsyncEvents->readAdvance(count);
+        mAsyncEvents->readAdvance(count);
     }
 
-    ALCdevice_DecRef(Device);
+    ALCdevice_DecRef(mDevice);
 }
 
 /* ReleaseContext
@@ -2612,13 +2612,13 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 
 static void ALCcontext_IncRef(ALCcontext *context)
 {
-    auto ref = IncrementRef(&context->ref);
+    auto ref = IncrementRef(&context->mRef);
     TRACEREF("ALCcontext %p increasing refcount to %u\n", context, ref);
 }
 
 void ALCcontext_DecRef(ALCcontext *context)
 {
-    auto ref = DecrementRef(&context->ref);
+    auto ref = DecrementRef(&context->mRef);
     TRACEREF("ALCcontext %p decreasing refcount to %u\n", context, ref);
     if(UNLIKELY(ref == 0)) delete context;
 }
@@ -2661,10 +2661,10 @@ ContextRef GetContextRef(void)
 
 void AllocateVoices(ALCcontext *context, size_t num_voices)
 {
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     const ALsizei num_sends{device->NumAuxSends};
 
-    if(context->Voices && num_voices == context->Voices->size())
+    if(context->mVoices && num_voices == context->mVoices->size())
         return;
 
     std::unique_ptr<al::FlexArray<ALvoice>> voices;
@@ -2673,11 +2673,11 @@ void AllocateVoices(ALCcontext *context, size_t num_voices)
         voices.reset(new (ptr) al::FlexArray<ALvoice>{num_voices});
     }
 
-    const size_t v_count{minz(context->VoiceCount.load(std::memory_order_relaxed), num_voices)};
-    if(context->Voices)
+    const size_t v_count{minz(context->mVoiceCount.load(std::memory_order_relaxed), num_voices)};
+    if(context->mVoices)
     {
         /* Copy the old voice data to the new storage. */
-        auto viter = std::move(context->Voices->begin(), context->Voices->begin()+v_count,
+        auto viter = std::move(context->mVoices->begin(), context->mVoices->begin()+v_count,
             voices->begin());
 
         /* Clear extraneous property set sends. */
@@ -2697,8 +2697,8 @@ void AllocateVoices(ALCcontext *context, size_t num_voices)
         std::for_each(voices->begin(), viter, clear_sends);
     }
 
-    context->Voices = std::move(voices);
-    context->VoiceCount.store(static_cast<ALuint>(v_count), std::memory_order_relaxed);
+    context->mVoices = std::move(voices);
+    context->mVoiceCount.store(static_cast<ALuint>(v_count), std::memory_order_relaxed);
 }
 
 
@@ -3444,7 +3444,7 @@ START_API_FUNC
     dev->LastError.store(ALC_NO_ERROR);
 
     ContextRef context{new ALCcontext{dev.get()}};
-    ALCdevice_IncRef(context->Device);
+    ALCdevice_IncRef(context->mDevice);
 
     ALCenum err{UpdateDeviceParams(dev.get(), attrList)};
     if(err != ALC_NO_ERROR)
@@ -3461,12 +3461,12 @@ START_API_FUNC
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
     {
         void *ptr{al_calloc(16, sizeof(ALeffectslot))};
-        context->DefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
-        if(InitEffectSlot(context->DefaultSlot.get()) == AL_NO_ERROR)
-            aluInitEffectPanning(context->DefaultSlot.get(), dev.get());
+        context->mDefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
+        if(InitEffectSlot(context->mDefaultSlot.get()) == AL_NO_ERROR)
+            aluInitEffectPanning(context->mDefaultSlot.get(), dev.get());
         else
         {
-            context->DefaultSlot = nullptr;
+            context->mDefaultSlot = nullptr;
             ERR("Failed to initialize the default effect slot\n");
         }
     }
@@ -3483,8 +3483,8 @@ START_API_FUNC
             const ALfloat db{clampf(valf, -24.0f, 24.0f)};
             if(db != valf)
                 WARN("volume-adjust clamped: %f, range: +/-%f\n", valf, 24.0f);
-            context->GainBoost = std::pow(10.0f, db/20.0f);
-            TRACE("volume-adjust gain: %f\n", context->GainBoost);
+            context->mGainBoost = std::pow(10.0f, db/20.0f);
+            TRACE("volume-adjust gain: %f\n", context->mGainBoost);
         }
     }
     UpdateListenerProps(context.get());
@@ -3526,10 +3526,10 @@ START_API_FUNC
         ContextList.insert(iter, ContextRef{context.get()});
     }
 
-    if(context->DefaultSlot)
+    if(context->mDefaultSlot)
     {
-        if(InitializeEffect(context.get(), context->DefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
-            UpdateEffectSlotProps(context->DefaultSlot.get(), context.get());
+        if(InitializeEffect(context.get(), context->mDefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
+            UpdateEffectSlotProps(context->mDefaultSlot.get(), context.get());
         else
             ERR("Failed to initialize the default effect\n");
     }
@@ -3560,7 +3560,7 @@ START_API_FUNC
     ContextRef ctx{std::move(*iter)};
     ContextList.erase(iter);
 
-    ALCdevice *Device{ctx->Device};
+    ALCdevice *Device{ctx->mDevice};
 
     std::lock_guard<std::mutex> _{Device->StateLock};
     if(!ReleaseContext(ctx.get(), Device) && Device->Flags.get<DeviceRunning>())
@@ -3671,7 +3671,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return nullptr;
     }
-    return ctx->Device;
+    return ctx->mDevice;
 }
 END_API_FUNC
 

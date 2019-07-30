@@ -36,7 +36,7 @@
 
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(!context->DeferUpdates.load(std::memory_order_acquire))                \
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
         UpdateListenerProps(context.get());                                   \
     else                                                                      \
         listener.PropsClean.clear(std::memory_order_release);                 \
@@ -49,8 +49,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
     case AL_GAIN:
@@ -64,11 +64,11 @@ START_API_FUNC
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SETERR_RETURN(context.get(), AL_INVALID_VALUE,,
                           "Listener meters per unit out of range");
-        context->MetersPerUnit = value;
-        if(!context->DeferUpdates.load(std::memory_order_acquire))
+        context->mMetersPerUnit = value;
+        if(!context->mDeferUpdates.load(std::memory_order_acquire))
             UpdateContextProps(context.get());
         else
-            context->PropsClean.clear(std::memory_order_release);
+            context->mPropsClean.clear(std::memory_order_release);
         break;
 
     default:
@@ -83,8 +83,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
     case AL_POSITION:
@@ -133,8 +133,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values) SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "NULL pointer");
     switch(param)
     {
@@ -165,7 +165,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
     default:
@@ -188,7 +188,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
     default:
@@ -225,7 +225,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -243,8 +243,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -254,7 +254,7 @@ START_API_FUNC
         break;
 
     case AL_METERS_PER_UNIT:
-        *value = context->MetersPerUnit;
+        *value = context->mMetersPerUnit;
         break;
 
     default:
@@ -269,8 +269,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -312,8 +312,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -341,7 +341,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -358,8 +358,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -396,8 +396,8 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALlistener &listener = context->Listener;
-    std::lock_guard<std::mutex> _{context->PropLock};
+    ALlistener &listener = context->mListener;
+    std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -422,7 +422,7 @@ END_API_FUNC
 void UpdateListenerProps(ALCcontext *context)
 {
     /* Get an unused proprty container, or allocate a new one as needed. */
-    ALlistenerProps *props{context->FreeListenerProps.load(std::memory_order_acquire)};
+    ALlistenerProps *props{context->mFreeListenerProps.load(std::memory_order_acquire)};
     if(!props)
         props = static_cast<ALlistenerProps*>(al_calloc(16, sizeof(*props)));
     else
@@ -430,12 +430,12 @@ void UpdateListenerProps(ALCcontext *context)
         ALlistenerProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
-        } while(context->FreeListenerProps.compare_exchange_weak(props, next,
+        } while(context->mFreeListenerProps.compare_exchange_weak(props, next,
                 std::memory_order_seq_cst, std::memory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
-    ALlistener &listener = context->Listener;
+    ALlistener &listener = context->mListener;
     props->Position = listener.Position;
     props->Velocity = listener.Velocity;
     props->OrientAt = listener.OrientAt;
@@ -449,6 +449,6 @@ void UpdateListenerProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        AtomicReplaceHead(context->FreeListenerProps, props);
+        AtomicReplaceHead(context->mFreeListenerProps, props);
     }
 }

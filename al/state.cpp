@@ -80,10 +80,10 @@ START_API_FUNC
 END_API_FUNC
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(!context->DeferUpdates.load(std::memory_order_acquire))                \
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
         UpdateContextProps(context.get());                                    \
     else                                                                      \
-        context->PropsClean.clear(std::memory_order_release);                 \
+        context->mPropsClean.clear(std::memory_order_release);                \
 } while(0)
 
 
@@ -93,11 +93,11 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        context->SourceDistanceModel = AL_TRUE;
+        context->mSourceDistanceModel = AL_TRUE;
         DO_UPDATEPROPS();
         break;
 
@@ -113,11 +113,11 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        context->SourceDistanceModel = AL_FALSE;
+        context->mSourceDistanceModel = AL_FALSE;
         DO_UPDATEPROPS();
         break;
 
@@ -133,12 +133,12 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     ALboolean value{AL_FALSE};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        value = context->SourceDistanceModel;
+        value = context->mSourceDistanceModel;
         break;
 
     default:
@@ -155,17 +155,17 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     ALboolean value{AL_FALSE};
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        if(context->DopplerFactor != 0.0f)
+        if(context->mDopplerFactor != 0.0f)
             value = AL_TRUE;
         break;
 
     case AL_DOPPLER_VELOCITY:
-        if(context->DopplerVelocity != 0.0f)
+        if(context->mDopplerVelocity != 0.0f)
             value = AL_TRUE;
         break;
 
@@ -175,17 +175,17 @@ START_API_FUNC
         break;
 
     case AL_SPEED_OF_SOUND:
-        if(context->SpeedOfSound != 0.0f)
+        if(context->mSpeedOfSound != 0.0f)
             value = AL_TRUE;
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->DeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates.load(std::memory_order_acquire))
             value = AL_TRUE;
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        if(GAIN_MIX_MAX/context->GainBoost != 0.0f)
+        if(GAIN_MIX_MAX/context->mGainBoost != 0.0f)
             value = AL_TRUE;
         break;
 
@@ -212,16 +212,16 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     ALdouble value{0.0};
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = static_cast<ALdouble>(context->DopplerFactor);
+        value = static_cast<ALdouble>(context->mDopplerFactor);
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = static_cast<ALdouble>(context->DopplerVelocity);
+        value = static_cast<ALdouble>(context->mDopplerVelocity);
         break;
 
     case AL_DISTANCE_MODEL:
@@ -229,16 +229,16 @@ START_API_FUNC
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = static_cast<ALdouble>(context->SpeedOfSound);
+        value = static_cast<ALdouble>(context->mSpeedOfSound);
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->DeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates.load(std::memory_order_acquire))
             value = static_cast<ALdouble>(AL_TRUE);
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = static_cast<ALdouble>GAIN_MIX_MAX/context->GainBoost;
+        value = static_cast<ALdouble>GAIN_MIX_MAX/context->mGainBoost;
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -263,16 +263,16 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0f;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     ALfloat value{0.0f};
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = context->DopplerFactor;
+        value = context->mDopplerFactor;
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = context->DopplerVelocity;
+        value = context->mDopplerVelocity;
         break;
 
     case AL_DISTANCE_MODEL:
@@ -280,16 +280,16 @@ START_API_FUNC
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = context->SpeedOfSound;
+        value = context->mSpeedOfSound;
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->DeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates.load(std::memory_order_acquire))
             value = static_cast<ALfloat>(AL_TRUE);
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = GAIN_MIX_MAX/context->GainBoost;
+        value = GAIN_MIX_MAX/context->mGainBoost;
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -314,16 +314,16 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     ALint value{0};
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = static_cast<ALint>(context->DopplerFactor);
+        value = static_cast<ALint>(context->mDopplerFactor);
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = static_cast<ALint>(context->DopplerVelocity);
+        value = static_cast<ALint>(context->mDopplerVelocity);
         break;
 
     case AL_DISTANCE_MODEL:
@@ -331,16 +331,16 @@ START_API_FUNC
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = static_cast<ALint>(context->SpeedOfSound);
+        value = static_cast<ALint>(context->mSpeedOfSound);
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->DeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates.load(std::memory_order_acquire))
             value = static_cast<ALint>(AL_TRUE);
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = static_cast<ALint>(GAIN_MIX_MAX/context->GainBoost);
+        value = static_cast<ALint>(GAIN_MIX_MAX/context->mGainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -365,16 +365,16 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     ALint64SOFT value{0};
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = (ALint64SOFT)context->DopplerFactor;
+        value = (ALint64SOFT)context->mDopplerFactor;
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = (ALint64SOFT)context->DopplerVelocity;
+        value = (ALint64SOFT)context->mDopplerVelocity;
         break;
 
     case AL_DISTANCE_MODEL:
@@ -382,16 +382,16 @@ START_API_FUNC
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = (ALint64SOFT)context->SpeedOfSound;
+        value = (ALint64SOFT)context->mSpeedOfSound;
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->DeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates.load(std::memory_order_acquire))
             value = (ALint64SOFT)AL_TRUE;
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = (ALint64SOFT)(GAIN_MIX_MAX/context->GainBoost);
+        value = (ALint64SOFT)(GAIN_MIX_MAX/context->mGainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -416,16 +416,16 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
 
-    std::lock_guard<std::mutex> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->mPropLock};
     void *value{nullptr};
     switch(pname)
     {
     case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-        value = reinterpret_cast<void*>(context->EventCb);
+        value = reinterpret_cast<void*>(context->mEventCb);
         break;
 
     case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
-        value = context->EventParam;
+        value = context->mEventParam;
         break;
 
     default:
@@ -650,7 +650,7 @@ START_API_FUNC
         break;
 
     case AL_EXTENSIONS:
-        value = context->ExtensionList;
+        value = context->mExtensionList;
         break;
 
     case AL_NO_ERROR:
@@ -694,8 +694,8 @@ START_API_FUNC
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->PropLock};
-        context->DopplerFactor = value;
+        std::lock_guard<std::mutex> _{context->mPropLock};
+        context->mDopplerFactor = value;
         DO_UPDATEPROPS();
     }
 }
@@ -707,24 +707,24 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    if((context->EnabledEvts.load(std::memory_order_relaxed)&EventType_Deprecated))
+    if((context->mEnabledEvts.load(std::memory_order_relaxed)&EventType_Deprecated))
     {
         static constexpr ALCchar msg[] =
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
         const ALsizei msglen = static_cast<ALsizei>(strlen(msg));
-        std::lock_guard<std::mutex> _{context->EventCbLock};
-        ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
-        if((enabledevts&EventType_Deprecated) && context->EventCb)
-            (*context->EventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
-                                context->EventParam);
+        std::lock_guard<std::mutex> _{context->mEventCbLock};
+        ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
+        if((enabledevts&EventType_Deprecated) && context->mEventCb)
+            (*context->mEventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
+                                context->mEventParam);
     }
 
     if(!(value >= 0.0f && std::isfinite(value)))
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->PropLock};
-        context->DopplerVelocity = value;
+        std::lock_guard<std::mutex> _{context->mPropLock};
+        context->mDopplerVelocity = value;
         DO_UPDATEPROPS();
     }
 }
@@ -740,8 +740,8 @@ START_API_FUNC
         alSetError(context.get(), AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->PropLock};
-        context->SpeedOfSound = value;
+        std::lock_guard<std::mutex> _{context->mPropLock};
+        context->mSpeedOfSound = value;
         DO_UPDATEPROPS();
     }
 }
@@ -760,9 +760,9 @@ START_API_FUNC
         alSetError(context.get(), AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->PropLock};
+        std::lock_guard<std::mutex> _{context->mPropLock};
         context->mDistanceModel = static_cast<DistanceModel>(value);
-        if(!context->SourceDistanceModel)
+        if(!context->mSourceDistanceModel)
             DO_UPDATEPROPS();
     }
 }
@@ -825,7 +825,7 @@ END_API_FUNC
 void UpdateContextProps(ALCcontext *context)
 {
     /* Get an unused proprty container, or allocate a new one as needed. */
-    ALcontextProps *props{context->FreeContextProps.load(std::memory_order_acquire)};
+    ALcontextProps *props{context->mFreeContextProps.load(std::memory_order_acquire)};
     if(!props)
         props = static_cast<ALcontextProps*>(al_calloc(16, sizeof(*props)));
     else
@@ -833,27 +833,27 @@ void UpdateContextProps(ALCcontext *context)
         ALcontextProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
-        } while(context->FreeContextProps.compare_exchange_weak(props, next,
+        } while(context->mFreeContextProps.compare_exchange_weak(props, next,
                 std::memory_order_seq_cst, std::memory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
-    props->MetersPerUnit = context->MetersPerUnit;
+    props->MetersPerUnit = context->mMetersPerUnit;
 
-    props->DopplerFactor = context->DopplerFactor;
-    props->DopplerVelocity = context->DopplerVelocity;
-    props->SpeedOfSound = context->SpeedOfSound;
+    props->DopplerFactor = context->mDopplerFactor;
+    props->DopplerVelocity = context->mDopplerVelocity;
+    props->SpeedOfSound = context->mSpeedOfSound;
 
-    props->SourceDistanceModel = context->SourceDistanceModel;
+    props->SourceDistanceModel = context->mSourceDistanceModel;
     props->mDistanceModel = context->mDistanceModel;
 
     /* Set the new container for updating internal parameters. */
-    props = context->Update.exchange(props, std::memory_order_acq_rel);
+    props = context->mUpdate.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        AtomicReplaceHead(context->FreeContextProps, props);
+        AtomicReplaceHead(context->mFreeContextProps, props);
     }
 }

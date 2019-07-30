@@ -139,7 +139,7 @@ void InitEffectParams(ALeffect *effect, ALenum type)
 
 ALeffect *AllocEffect(ALCcontext *context)
 {
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
         [](const EffectSubList &entry) noexcept -> bool
@@ -270,7 +270,7 @@ START_API_FUNC
     if(UNLIKELY(n == 0))
         return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
@@ -308,7 +308,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
     {
-        ALCdevice *device{context->Device};
+        ALCdevice *device{context->mDevice};
         std::lock_guard<std::mutex> _{device->EffectLock};
         if(!effect || LookupEffect(device, effect))
             return AL_TRUE;
@@ -323,7 +323,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
@@ -373,7 +373,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
@@ -393,7 +393,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
@@ -413,7 +413,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
@@ -433,7 +433,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
@@ -465,7 +465,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
@@ -485,7 +485,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
@@ -505,7 +505,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device{context->Device};
+    ALCdevice *device{context->mDevice};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};

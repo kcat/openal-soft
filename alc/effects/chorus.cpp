@@ -158,7 +158,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
      */
-    const ALCdevice *device{Context->Device};
+    const ALCdevice *device{Context->mDevice};
     const auto frequency = static_cast<ALfloat>(device->Frequency);
     mDelay = maxi(float2int(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f), mindelay);
     mDepth = minf(props->Chorus.Depth * mDelay, static_cast<ALfloat>(mDelay - mindelay));

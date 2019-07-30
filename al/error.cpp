@@ -82,14 +82,14 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     }
 
     ALenum curerr{AL_NO_ERROR};
-    context->LastError.compare_exchange_strong(curerr, errorCode);
-    if((context->EnabledEvts.load(std::memory_order_relaxed)&EventType_Error))
+    context->mLastError.compare_exchange_strong(curerr, errorCode);
+    if((context->mEnabledEvts.load(std::memory_order_relaxed)&EventType_Error))
     {
-        std::lock_guard<std::mutex> _{context->EventCbLock};
-        ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
-        if((enabledevts&EventType_Error) && context->EventCb)
-            (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
-                                context->EventParam);
+        std::lock_guard<std::mutex> _{context->mEventCbLock};
+        ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
+        if((enabledevts&EventType_Error) && context->mEventCb)
+            (*context->mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
+                                context->mEventParam);
     }
 }
 
@@ -113,6 +113,6 @@ START_API_FUNC
         return deferror;
     }
 
-    return context->LastError.exchange(AL_NO_ERROR);
+    return context->mLastError.exchange(AL_NO_ERROR);
 }
 END_API_FUNC

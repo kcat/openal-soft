@@ -43,7 +43,7 @@ START_API_FUNC
         SETERR_RETURN(context.get(), AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
 
     size_t len{strlen(extName)};
-    const char *ptr{context->ExtensionList};
+    const char *ptr{context->mExtensionList};
     while(ptr && *ptr)
     {
         if(strncasecmp(ptr, extName, len) == 0 &&

@@ -36,7 +36,7 @@ const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState*, const ALfloat *RES
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};
     const __m128i fracMask4{_mm_set1_epi32(FRACTIONMASK)};
 
-    ASSUME(frac > 0);
+    ASSUME(frac >= 0);
     ASSUME(increment > 0);
     ASSUME(dstlen >= 0);
 

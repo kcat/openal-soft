@@ -48,7 +48,6 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "atomic.h"
-#include "error.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 
@@ -269,7 +268,7 @@ ALbuffer *AllocBuffer(ALCcontext *context)
          */
         if(UNLIKELY(device->BufferList.size() >= 1<<25))
         {
-            alSetError(context, AL_OUT_OF_MEMORY, "Too many buffers allocated");
+            context->setError(AL_OUT_OF_MEMORY, "Too many buffers allocated");
             return nullptr;
         }
         device->BufferList.emplace_back();
@@ -279,7 +278,7 @@ ALbuffer *AllocBuffer(ALCcontext *context)
         if(UNLIKELY(!sublist->Buffers))
         {
             device->BufferList.pop_back();
-            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
+            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
             return nullptr;
         }
 
@@ -611,7 +610,7 @@ START_API_FUNC
 
     if(UNLIKELY(n < 0))
     {
-        alSetError(context.get(), AL_INVALID_VALUE, "Generating %d buffers", n);
+        context->setError(AL_INVALID_VALUE, "Generating %d buffers", n);
         return;
     }
 
@@ -651,7 +650,7 @@ START_API_FUNC
 
     if(UNLIKELY(n < 0))
     {
-        alSetError(context.get(), AL_INVALID_VALUE, "Deleting %d buffers", n);
+        context->setError(AL_INVALID_VALUE, "Deleting %d buffers", n);
         return;
     }
     if(UNLIKELY(n == 0))
@@ -669,12 +668,12 @@ START_API_FUNC
             ALbuffer *ALBuf = LookupBuffer(device, bid);
             if(UNLIKELY(!ALBuf))
             {
-                alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", bid);
+                context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", bid);
                 return true;
             }
             if(UNLIKELY(ReadRef(&ALBuf->ref) != 0))
             {
-                alSetError(context.get(), AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
+                context->setError(AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
                 return true;
             }
             return false;
@@ -726,22 +725,22 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(size < 0))
-        alSetError(context.get(), AL_INVALID_VALUE, "Negative storage size %d", size);
+        context->setError(AL_INVALID_VALUE, "Negative storage size %d", size);
     else if(UNLIKELY(freq < 1))
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid sample rate %d", freq);
+        context->setError(AL_INVALID_VALUE, "Invalid sample rate %d", freq);
     else if(UNLIKELY((flags&INVALID_STORAGE_MASK) != 0))
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid storage flags 0x%x",
-                   flags&INVALID_STORAGE_MASK);
+        context->setError(AL_INVALID_VALUE, "Invalid storage flags 0x%x",
+            flags&INVALID_STORAGE_MASK);
     else if(UNLIKELY((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS)))
-        alSetError(context.get(), AL_INVALID_VALUE,
-                   "Declaring persistently mapped storage without read or write access");
+        context->setError(AL_INVALID_VALUE,
+            "Declaring persistently mapped storage without read or write access");
     else
     {
         auto usrfmt = DecomposeUserFormat(format);
         if(UNLIKELY(!usrfmt))
-            alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+            context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
             LoadData(context.get(), albuf, freq, size, usrfmt->channels, usrfmt->type,
                 static_cast<const al::byte*>(data), flags);
@@ -760,33 +759,33 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY((access&INVALID_MAP_FLAGS) != 0))
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid map flags 0x%x", access&INVALID_MAP_FLAGS);
+        context->setError(AL_INVALID_VALUE, "Invalid map flags 0x%x", access&INVALID_MAP_FLAGS);
     else if(UNLIKELY(!(access&MAP_READ_WRITE_FLAGS)))
-        alSetError(context.get(), AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
-                   buffer);
+        context->setError(AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
+            buffer);
     else
     {
         ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
         if(UNLIKELY(ReadRef(&albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)))
-            alSetError(context.get(), AL_INVALID_OPERATION,
-                       "Mapping in-use buffer %u without persistent mapping", buffer);
+            context->setError(AL_INVALID_OPERATION,
+                "Mapping in-use buffer %u without persistent mapping", buffer);
         else if(UNLIKELY(albuf->MappedAccess != 0))
-            alSetError(context.get(), AL_INVALID_OPERATION, "Mapping already-mapped buffer %u", buffer);
+            context->setError(AL_INVALID_OPERATION, "Mapping already-mapped buffer %u", buffer);
         else if(UNLIKELY((unavailable&AL_MAP_READ_BIT_SOFT)))
-            alSetError(context.get(), AL_INVALID_VALUE,
-                       "Mapping buffer %u for reading without read access", buffer);
+            context->setError(AL_INVALID_VALUE,
+                "Mapping buffer %u for reading without read access", buffer);
         else if(UNLIKELY((unavailable&AL_MAP_WRITE_BIT_SOFT)))
-            alSetError(context.get(), AL_INVALID_VALUE,
-                       "Mapping buffer %u for writing without write access", buffer);
+            context->setError(AL_INVALID_VALUE,
+                "Mapping buffer %u for writing without write access", buffer);
         else if(UNLIKELY((unavailable&AL_MAP_PERSISTENT_BIT_SOFT)))
-            alSetError(context.get(), AL_INVALID_VALUE,
-                       "Mapping buffer %u persistently without persistent access", buffer);
+            context->setError(AL_INVALID_VALUE,
+                "Mapping buffer %u persistently without persistent access", buffer);
         else if(UNLIKELY(offset < 0 || offset >= albuf->OriginalSize ||
                          length <= 0 || length > albuf->OriginalSize - offset))
-            alSetError(context.get(), AL_INVALID_VALUE, "Mapping invalid range %d+%d for buffer %u",
-                       offset, length, buffer);
+            context->setError(AL_INVALID_VALUE, "Mapping invalid range %d+%d for buffer %u",
+                offset, length, buffer);
         else
         {
             void *retval = albuf->mData.data() + offset;
@@ -812,9 +811,9 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(albuf->MappedAccess == 0)
-        alSetError(context.get(), AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
+        context->setError(AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
     else
     {
         albuf->MappedAccess = 0;
@@ -835,15 +834,15 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT)))
-        alSetError(context.get(), AL_INVALID_OPERATION,
-                   "Flushing buffer %u while not mapped for writing", buffer);
+        context->setError(AL_INVALID_OPERATION, "Flushing buffer %u while not mapped for writing",
+            buffer);
     else if(UNLIKELY(offset < albuf->MappedOffset ||
                      offset >= albuf->MappedOffset+albuf->MappedSize ||
                      length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset))
-        alSetError(context.get(), AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u",
-                   offset, length, buffer);
+        context->setError(AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u", offset,
+            length, buffer);
     else
     {
         /* FIXME: Need to use some method of double-buffering for the mixer and
@@ -868,32 +867,30 @@ START_API_FUNC
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
     {
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
         return;
     }
 
     auto usrfmt = DecomposeUserFormat(format);
     if(UNLIKELY(!usrfmt))
     {
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+        context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         return;
     }
 
     ALsizei unpack_align{albuf->UnpackAlign.load()};
     ALsizei align{SanitizeAlignment(usrfmt->type, unpack_align)};
     if(UNLIKELY(align < 1))
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
+        context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
     else if(UNLIKELY(long{usrfmt->channels} != long{albuf->mFmtChannels} ||
                      usrfmt->type != albuf->OriginalType))
-        alSetError(context.get(), AL_INVALID_ENUM,
-                   "Unpacking data with mismatched format");
+        context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
     else if(UNLIKELY(align != albuf->OriginalAlign))
-        alSetError(context.get(), AL_INVALID_VALUE,
-                "Unpacking data with alignment %u does not match original alignment %u",
-                align, albuf->OriginalAlign);
+        context->setError(AL_INVALID_VALUE,
+            "Unpacking data with alignment %u does not match original alignment %u", align,
+            albuf->OriginalAlign);
     else if(UNLIKELY(albuf->MappedAccess != 0))
-        alSetError(context.get(), AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u",
-                buffer);
+        context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
     else
     {
         ALsizei num_chans{ChannelsFromFmt(albuf->mFmtChannels)};
@@ -906,14 +903,14 @@ START_API_FUNC
 
         if(UNLIKELY(offset < 0 || length < 0 || offset > albuf->OriginalSize ||
                     length > albuf->OriginalSize-offset))
-            alSetError(context.get(), AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
-                        offset, length, buffer);
+            context->setError(AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
+                offset, length, buffer);
         else if(UNLIKELY((offset%byte_align) != 0))
-            alSetError(context.get(), AL_INVALID_VALUE,
+            context->setError(AL_INVALID_VALUE,
                 "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
                 offset, byte_align, align);
         else if(UNLIKELY((length%byte_align) != 0))
-            alSetError(context.get(), AL_INVALID_VALUE,
+            context->setError(AL_INVALID_VALUE,
                 "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
                 length, byte_align, align);
         else
@@ -948,7 +945,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    alSetError(context.get(), AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
+    context->setError(AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
 }
 END_API_FUNC
 
@@ -959,7 +956,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    alSetError(context.get(), AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
+    context->setError(AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
 }
 END_API_FUNC
 
@@ -970,7 +967,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    alSetError(context.get(), AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
+    context->setError(AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
 }
 END_API_FUNC
 
@@ -980,7 +977,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(!context) return AL_FALSE;
 
-    alSetError(context.get(), AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
+    context->setError(AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
     return AL_FALSE;
 }
 END_API_FUNC
@@ -996,11 +993,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1016,11 +1013,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1035,13 +1032,13 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1058,25 +1055,25 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         if(UNLIKELY(value < 0))
-            alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
+            context->setError(AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
         else
             albuf->UnpackAlign.store(value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(UNLIKELY(value < 0))
-            alSetError(context.get(), AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
+            context->setError(AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
         else
             albuf->PackAlign.store(value);
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1092,11 +1089,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1123,18 +1120,18 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
         if(UNLIKELY(ReadRef(&albuf->ref) != 0))
-            alSetError(context.get(), AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
-                       buffer);
+            context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
+                buffer);
         else if(UNLIKELY(values[0] >= values[1] || values[0] < 0 || values[1] > albuf->SampleLen))
-            alSetError(context.get(), AL_INVALID_VALUE, "Invalid loop point range %d -> %d o buffer %u",
-                       values[0], values[1], buffer);
+            context->setError(AL_INVALID_VALUE, "Invalid loop point range %d -> %d on buffer %u",
+                values[0], values[1], buffer);
         else
         {
             albuf->LoopStart = values[0];
@@ -1143,8 +1140,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
-                   param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1161,13 +1157,13 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1182,13 +1178,13 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value1 || !value2 || !value3))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1210,13 +1206,13 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1232,9 +1228,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_FREQUENCY:
@@ -1262,7 +1258,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1276,13 +1272,13 @@ START_API_FUNC
     ALCdevice *device = context->mDevice;
     std::lock_guard<std::mutex> _{device->BufferLock};
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value1 || !value2 || !value3))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
 }
 END_API_FUNC
@@ -1312,9 +1308,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
@@ -1323,8 +1319,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
-                   param);
+        context->setError(AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x", param);
     }
 }
 END_API_FUNC

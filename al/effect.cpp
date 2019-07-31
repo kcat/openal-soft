@@ -43,7 +43,6 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "effects/base.h"
-#include "error.h"
 #include "logging.h"
 #include "opthelpers.h"
 #include "vector.h"
@@ -161,7 +160,7 @@ ALeffect *AllocEffect(ALCcontext *context)
          */
         if(UNLIKELY(device->EffectList.size() >= 1<<25))
         {
-            alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
+            context->setError(AL_OUT_OF_MEMORY, "Too many effects allocated");
             return nullptr;
         }
         device->EffectList.emplace_back();
@@ -171,7 +170,7 @@ ALeffect *AllocEffect(ALCcontext *context)
         if(UNLIKELY(!sublist->Effects))
         {
             device->EffectList.pop_back();
-            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
+            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
             return nullptr;
         }
 
@@ -224,7 +223,7 @@ START_API_FUNC
 
     if(UNLIKELY(n < 0))
     {
-        alSetError(context.get(), AL_INVALID_VALUE, "Generating %d effects", n);
+        context->setError(AL_INVALID_VALUE, "Generating %d effects", n);
         return;
     }
 
@@ -264,7 +263,7 @@ START_API_FUNC
 
     if(UNLIKELY(n < 0))
     {
-        alSetError(context.get(), AL_INVALID_VALUE, "Deleting %d effects", n);
+        context->setError(AL_INVALID_VALUE, "Deleting %d effects", n);
         return;
     }
     if(UNLIKELY(n == 0))
@@ -282,7 +281,7 @@ START_API_FUNC
             ALeffect *effect{LookupEffect(device, eid)};
             if(UNLIKELY(!effect))
             {
-                alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", eid);
+                context->setError(AL_INVALID_NAME, "Invalid effect ID %u", eid);
                 return true;
             }
             return false;
@@ -328,7 +327,7 @@ START_API_FUNC
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         if(param == AL_EFFECT_TYPE)
@@ -349,7 +348,7 @@ START_API_FUNC
             if(isOk)
                 InitEffectParams(aleffect, value);
             else
-                alSetError(context.get(), AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
+                context->setError(AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
         }
         else
         {
@@ -378,7 +377,7 @@ START_API_FUNC
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -398,7 +397,7 @@ START_API_FUNC
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -418,7 +417,7 @@ START_API_FUNC
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -438,7 +437,7 @@ START_API_FUNC
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         if(param == AL_EFFECT_TYPE)
@@ -470,7 +469,7 @@ START_API_FUNC
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -490,7 +489,7 @@ START_API_FUNC
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -510,7 +509,7 @@ START_API_FUNC
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */

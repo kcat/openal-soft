@@ -612,7 +612,6 @@ SET(OPENAL_OBJS
     al/effect.cpp
     al/effect.h
     al/error.cpp
-    al/error.h
     al/extension.cpp
     al/filter.cpp
     al/filter.h

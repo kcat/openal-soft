@@ -23,7 +23,6 @@
 #include <cstdlib>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -166,16 +165,16 @@ void Compressor_setParami(EffectProps *props, ALCcontext *context, ALenum param,
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
+                param);
     }
 }
 void Compressor_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
 { Compressor_setParami(props, context, param, vals[0]); }
 void Compressor_setParamf(EffectProps*, ALCcontext *context, ALenum param, ALfloat)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
 void Compressor_setParamfv(EffectProps*, ALCcontext *context, ALenum param, const ALfloat*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
 void Compressor_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
 { 
@@ -186,16 +185,16 @@ void Compressor_getParami(const EffectProps *props, ALCcontext *context, ALenum 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
+                param);
     }
 }
 void Compressor_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { Compressor_getParami(props, context, param, vals); }
 void Compressor_getParamf(const EffectProps*, ALCcontext *context, ALenum param, ALfloat*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
 void Compressor_getParamfv(const EffectProps*, ALCcontext *context, ALenum param, ALfloat*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(Compressor);
 

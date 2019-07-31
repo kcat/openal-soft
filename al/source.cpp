@@ -57,7 +57,6 @@
 #include "backends/base.h"
 #include "bformatdec.h"
 #include "buffer.h"
-#include "error.h"
 #include "event.h"
 #include "filter.h"
 #include "filters/nfc.h"
@@ -488,7 +487,7 @@ ALsource *AllocSource(ALCcontext *context)
     std::lock_guard<std::mutex> _{context->mSourceLock};
     if(context->mNumSources >= device->SourcesMax)
     {
-        alSetError(context, AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
+        context->setError(AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
         return nullptr;
     }
     auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
@@ -510,7 +509,7 @@ ALsource *AllocSource(ALCcontext *context)
          */
         if(UNLIKELY(context->mSourceList.size() >= 1<<25))
         {
-            alSetError(context, AL_OUT_OF_MEMORY, "Too many sources allocated");
+            context->setError(AL_OUT_OF_MEMORY, "Too many sources allocated");
             return nullptr;
         }
         context->mSourceList.emplace_back();
@@ -521,7 +520,7 @@ ALsource *AllocSource(ALCcontext *context)
         if(UNLIKELY(!sublist->Sources))
         {
             context->mSourceList.pop_back();
-            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate source batch");
+            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate source batch");
             return nullptr;
         }
 
@@ -993,7 +992,7 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
 #define CHECKVAL(x) do {                                                      \
     if(!(x))                                                                  \
     {                                                                         \
-        alSetError(Context, AL_INVALID_VALUE, "Value out of range");          \
+        Context->setError(AL_INVALID_VALUE, "Value out of range");            \
         return AL_FALSE;                                                      \
     }                                                                         \
 } while(0)
@@ -1225,7 +1224,8 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source float property 0x%04x", prop);
+    Context->setError(AL_INVALID_ENUM, "Invalid source float property 0x%04x", prop);
+    return AL_FALSE;
 }
 
 ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values)
@@ -1548,8 +1548,8 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer property 0x%04x",
-                  prop);
+    Context->setError(AL_INVALID_ENUM, "Invalid source integer property 0x%04x", prop);
+    return AL_FALSE;
 }
 
 ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint64SOFT *values)
@@ -1651,8 +1651,8 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer64 property 0x%04x",
-                  prop);
+    Context->setError(AL_INVALID_ENUM, "Invalid source integer64 property 0x%04x", prop);
+    return AL_FALSE;
 }
 
 #undef CHECKVAL
@@ -1824,8 +1824,8 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source double property 0x%04x",
-                  prop);
+    Context->setError(AL_INVALID_ENUM, "Invalid source double property 0x%04x", prop);
+    return AL_FALSE;
 }
 
 ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint *values)
@@ -1991,8 +1991,8 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer property 0x%04x",
-                  prop);
+    Context->setError(AL_INVALID_ENUM, "Invalid source integer property 0x%04x", prop);
+    return AL_FALSE;
 }
 
 ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64SOFT *values)
@@ -2123,8 +2123,8 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer64 property 0x%04x",
-                  prop);
+    Context->setError(AL_INVALID_ENUM, "Invalid source integer64 property 0x%04x", prop);
+    return AL_FALSE;
 }
 
 } // namespace
@@ -2136,7 +2136,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        alSetError(context.get(), AL_INVALID_VALUE, "Generating %d sources", n);
+        context->setError(AL_INVALID_VALUE, "Generating %d sources", n);
     else if(n == 1)
     {
         ALsource *source = AllocSource(context.get());
@@ -2170,7 +2170,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Deleting %d sources", n);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Deleting %d sources", n);
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
 
@@ -2181,7 +2181,7 @@ START_API_FUNC
         {
             if(!LookupSource(context.get(), sid))
             {
-                alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", sid);
+                context->setError(AL_INVALID_NAME, "Invalid source ID %u", sid);
                 return false;
             }
             return true;
@@ -2226,9 +2226,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(FloatValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
@@ -2244,9 +2244,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(FloatValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
         ALfloat fvals[3] = { value1, value2, value3 };
@@ -2265,11 +2265,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(FloatValsByProp(param) < 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
@@ -2286,9 +2286,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(DoubleValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
     {
         ALfloat fval = static_cast<ALfloat>(value);
@@ -2307,9 +2307,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(DoubleValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else {
         ALfloat fvals[3] = {static_cast<ALfloat>(value1),
                             static_cast<ALfloat>(value2),
@@ -2329,14 +2329,14 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
         ALint count{DoubleValsByProp(param)};
         if(count < 1 || count > 6)
-            alSetError(context.get(), AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
         else
         {
             ALfloat fvals[6];
@@ -2361,9 +2361,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(IntValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
@@ -2379,9 +2379,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(IntValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
         ALint ivals[3] = { value1, value2, value3 };
@@ -2400,11 +2400,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) < 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
@@ -2421,9 +2421,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(Int64ValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
@@ -2439,9 +2439,9 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(Int64ValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
         ALint64SOFT i64vals[3] = { value1, value2, value3 };
@@ -2460,11 +2460,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) < 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
 }
@@ -2480,11 +2480,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(FloatValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
     {
         ALdouble dval;
@@ -2503,11 +2503,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(FloatValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
         ALdouble dvals[3];
@@ -2530,14 +2530,14 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
         ALint count{FloatValsByProp(param)};
         if(count < 1 && count > 6)
-            alSetError(context.get(), AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
         else
         {
             ALdouble dvals[6];
@@ -2561,11 +2561,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(DoubleValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
         GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), value);
 }
@@ -2580,11 +2580,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(DoubleValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
         ALdouble dvals[3];
@@ -2607,11 +2607,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(DoubleValsByProp(param) < 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
         GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
@@ -2627,11 +2627,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), value);
 }
@@ -2646,11 +2646,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
         ALint ivals[3];
@@ -2673,11 +2673,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) < 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
@@ -2693,11 +2693,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) != 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), value);
 }
@@ -2712,11 +2712,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) != 3)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
         ALint64SOFT i64vals[3];
@@ -2739,11 +2739,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
-        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
+        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) < 1)
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
 }
@@ -2762,7 +2762,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Playing %d sources", n);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Playing %d sources", n);
     if(n == 0) return;
 
     al::vector<ALsource*> extra_sources;
@@ -2779,7 +2779,7 @@ START_API_FUNC
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
         if(!srchandles[i])
-            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->mDevice};
@@ -2823,7 +2823,7 @@ START_API_FUNC
             /* Allocate more voices to get enough. */
             const size_t alloc_count{need_voices - rem_voices};
             if(UNLIKELY(context->mVoices->size() > std::numeric_limits<ALsizei>::max()-alloc_count))
-                SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
+                SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
                     "Overflow increasing voice count to %zu + %zu", context->mVoices->size(),
                     alloc_count);
 
@@ -3024,7 +3024,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Pausing %d sources", n);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Pausing %d sources", n);
     if(n == 0) return;
 
     al::vector<ALsource*> extra_sources;
@@ -3041,7 +3041,7 @@ START_API_FUNC
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
         if(!srchandles[i])
-            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->mDevice};
@@ -3079,7 +3079,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Stopping %d sources", n);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Stopping %d sources", n);
     if(n == 0) return;
 
     al::vector<ALsource*> extra_sources;
@@ -3096,7 +3096,7 @@ START_API_FUNC
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
         if(!srchandles[i])
-            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->mDevice};
@@ -3141,7 +3141,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Rewinding %d sources", n);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Rewinding %d sources", n);
     if(n == 0) return;
 
     al::vector<ALsource*> extra_sources;
@@ -3158,7 +3158,7 @@ START_API_FUNC
     {
         srchandles[i] = LookupSource(context.get(), sources[i]);
         if(!srchandles[i])
-            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
     ALCdevice *device{context->mDevice};
@@ -3197,17 +3197,17 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(nb < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffers", nb);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Queueing %d buffers", nb);
     if(nb == 0) return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(UNLIKELY(!source))
-        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
+        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     /* Can't queue on a Static Source */
     if(UNLIKELY(source->SourceType == AL_STATIC))
-        SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
     ALCdevice *device{context->mDevice};
@@ -3232,8 +3232,7 @@ START_API_FUNC
         ALbuffer *buffer{nullptr};
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
         {
-            alSetError(context.get(), AL_INVALID_NAME, "Queueing invalid buffer ID %u",
-                       buffers[i]);
+            context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
             goto buffer_error;
         }
 
@@ -3260,8 +3259,8 @@ START_API_FUNC
 
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
         {
-            alSetError(context.get(), AL_INVALID_OPERATION,
-                       "Queueing non-persistently mapped buffer %u", buffer->id);
+            context->setError(AL_INVALID_OPERATION, "Queueing non-persistently mapped buffer %u",
+                buffer->id);
             goto buffer_error;
         }
 
@@ -3271,8 +3270,7 @@ START_API_FUNC
                 BufferFmt->mFmtChannels != buffer->mFmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
-            alSetError(context.get(), AL_INVALID_OPERATION,
-                       "Queueing buffer with mismatched format");
+            context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
@@ -3316,17 +3314,17 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(nb < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffer layers", nb);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Queueing %d buffer layers", nb);
     if(nb == 0) return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(UNLIKELY(!source))
-        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
+        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     /* Can't queue on a Static Source */
     if(UNLIKELY(source->SourceType == AL_STATIC))
-        SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
     ALCdevice *device{context->mDevice};
@@ -3356,8 +3354,7 @@ START_API_FUNC
         ALbuffer *buffer{nullptr};
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
         {
-            alSetError(context.get(), AL_INVALID_NAME, "Queueing invalid buffer ID %u",
-                       buffers[i]);
+            context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
             goto buffer_error;
         }
 
@@ -3370,8 +3367,8 @@ START_API_FUNC
 
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
         {
-            alSetError(context.get(), AL_INVALID_OPERATION,
-                       "Queueing non-persistently mapped buffer %u", buffer->id);
+            context->setError(AL_INVALID_OPERATION, "Queueing non-persistently mapped buffer %u",
+                buffer->id);
             goto buffer_error;
         }
 
@@ -3381,8 +3378,7 @@ START_API_FUNC
                 BufferFmt->mFmtChannels != buffer->mFmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
-            alSetError(context.get(), AL_INVALID_OPERATION,
-                       "Queueing buffer with mismatched format");
+            context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
@@ -3426,19 +3422,19 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(nb < 0)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing %d buffers", nb);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffers", nb);
     if(nb == 0) return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(UNLIKELY(!source))
-        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
+        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     if(UNLIKELY(source->Looping))
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
     if(UNLIKELY(source->SourceType != AL_STREAMING))
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,,
-            "Unqueueing from a non-streaming source %u", src);
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from a non-streaming source %u",
+            src);
 
     /* Make sure enough buffers have been processed to unqueue. */
     ALbufferlistitem *BufferList{source->queue};
@@ -3449,7 +3445,7 @@ START_API_FUNC
     else if(source->state == AL_INITIAL)
         Current = BufferList;
     if(UNLIKELY(BufferList == Current))
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing pending buffers");
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing pending buffers");
 
     ALsizei i{BufferList->num_buffers};
     while(i < nb)
@@ -3459,7 +3455,7 @@ START_API_FUNC
          */
         ALbufferlistitem *next{BufferList->next.load(std::memory_order_relaxed)};
         if(UNLIKELY(!next) || UNLIKELY(next == Current))
-            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing pending buffers");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing pending buffers");
         BufferList = next;
 
         i += BufferList->num_buffers;

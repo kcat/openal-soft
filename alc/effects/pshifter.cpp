@@ -31,7 +31,6 @@
 #include <algorithm>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcomplex.h"
 #include "alcontext.h"
@@ -325,9 +324,9 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
 
 
 void Pshifter_setParamf(EffectProps*, ALCcontext *context, ALenum param, ALfloat)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
 void Pshifter_setParamfv(EffectProps*, ALCcontext *context, ALenum param, const ALfloat*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x", param); }
 
 void Pshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
 {
@@ -346,7 +345,8 @@ void Pshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, A
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
+                param);
     }
 }
 void Pshifter_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -364,16 +364,17 @@ void Pshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum pa
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
+                param);
     }
 }
 void Pshifter_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
 { Pshifter_getParami(props, context, param, vals); }
 
 void Pshifter_getParamf(const EffectProps*, ALCcontext *context, ALenum param, ALfloat*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
 void Pshifter_getParamfv(const EffectProps*, ALCcontext *context, ALenum param, ALfloat*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(Pshifter);
 

@@ -26,7 +26,6 @@
 #include <algorithm>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -226,16 +225,16 @@ void ALautowah_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
     }
 }
 void ALautowah_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { ALautowah_setParamf(props, context, param, vals[0]); }
 
 void ALautowah_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
 void ALautowah_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
 void ALautowah_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
@@ -258,7 +257,7 @@ void ALautowah_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param);
     }
 
 }
@@ -266,9 +265,9 @@ void ALautowah_getParamfv(const EffectProps *props, ALCcontext *context, ALenum 
 { ALautowah_getParamf(props, context, param, vals); }
 
 void ALautowah_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param); }
 void ALautowah_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(ALautowah);
 

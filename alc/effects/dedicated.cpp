@@ -25,7 +25,6 @@
 #include <algorithm>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -95,9 +94,9 @@ void DedicatedState::process(const ALsizei samplesToDo, const FloatBufferLine *R
 
 
 void Dedicated_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid dedicated integer property 0x%04x", param); }
 void Dedicated_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid dedicated integer-vector property 0x%04x", param); }
 void Dedicated_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -109,16 +108,16 @@ void Dedicated_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid dedicated float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid dedicated float property 0x%04x", param);
     }
 }
 void Dedicated_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Dedicated_setParamf(props, context, param, vals[0]); }
 
 void Dedicated_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid dedicated integer property 0x%04x", param); }
 void Dedicated_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid dedicated integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid dedicated integer-vector property 0x%04x", param); }
 void Dedicated_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
@@ -128,7 +127,7 @@ void Dedicated_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid dedicated float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid dedicated float property 0x%04x", param);
     }
 }
 void Dedicated_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

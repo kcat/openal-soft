@@ -9,16 +9,16 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
-#include "inprogext.h"
-
-#include "atomic.h"
-#include "vector.h"
-#include "threads.h"
-#include "almalloc.h"
-#include "alnumeric.h"
 
 #include "al/listener.h"
+#include "almalloc.h"
+#include "alnumeric.h"
 #include "alu.h"
+#include "atomic.h"
+#include "inprogext.h"
+#include "logging.h"
+#include "threads.h"
+#include "vector.h"
 
 
 struct ALsource;
@@ -159,8 +159,16 @@ struct ALCcontext {
     /** Resumes update processing after being deferred. */
     void processUpdates();
 
+    void setError(ALenum errorCode, const char *msg, ...) DECL_FORMAT(printf, 3, 4);
+
     DEF_NEWDEL(ALCcontext)
 };
+
+#define SETERR_RETURN(ctx, err, retval, ...) do {                             \
+    (ctx)->setError((err), __VA_ARGS__);                                      \
+    return retval;                                                            \
+} while(0)
+
 
 void UpdateContextProps(ALCcontext *context);
 
@@ -223,5 +231,8 @@ struct ALcontextProps {
 
     std::atomic<ALcontextProps*> next;
 };
+
+
+extern bool TrapALError;
 
 #endif /* ALCONTEXT_H */

@@ -21,7 +21,6 @@
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "effects/base.h"
-#include "error.h"
 #include "inprogext.h"
 #include "logging.h"
 #include "opthelpers.h"
@@ -145,9 +144,9 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    if(count < 0) SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Controlling %d events", count);
+    if(count < 0) SETERR_RETURN(context, AL_INVALID_VALUE,, "Controlling %d events", count);
     if(count == 0) return;
-    if(!types) SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "NULL pointer");
+    if(!types) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
 
     ALbitfieldSOFT flags{0};
     const ALenum *types_end = types+count;
@@ -172,7 +171,7 @@ START_API_FUNC
         }
     );
     if(bad_type != types_end)
-        SETERR_RETURN(context.get(), AL_INVALID_ENUM,, "Invalid event type 0x%04x", *bad_type);
+        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid event type 0x%04x", *bad_type);
 
     if(enable)
     {

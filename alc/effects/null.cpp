@@ -5,8 +5,8 @@
 #include "AL/alc.h"
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
+#include "alcontext.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "effects/base.h"
@@ -69,7 +69,7 @@ void NullEffect_setParami(EffectProps* /*props*/, ALCcontext *context, ALenum pa
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
     }
 }
 void NullEffect_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -85,7 +85,7 @@ void NullEffect_setParamf(EffectProps* /*props*/, ALCcontext *context, ALenum pa
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
     }
 }
 void NullEffect_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -102,7 +102,7 @@ void NullEffect_getParami(const EffectProps* /*props*/, ALCcontext *context, ALe
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
     }
 }
 void NullEffect_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -118,7 +118,7 @@ void NullEffect_getParamf(const EffectProps* /*props*/, ALCcontext *context, ALe
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
+        context->setError(AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
     }
 }
 void NullEffect_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

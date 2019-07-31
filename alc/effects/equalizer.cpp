@@ -27,7 +27,6 @@
 #include <functional>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -174,9 +173,9 @@ void EqualizerState::process(const ALsizei samplesToDo, const FloatBufferLine *R
 
 
 void Equalizer_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
 void Equalizer_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
 void Equalizer_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -242,16 +241,16 @@ void Equalizer_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
 void Equalizer_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Equalizer_setParamf(props, context, param, vals[0]); }
 
 void Equalizer_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
 void Equalizer_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
 void Equalizer_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
@@ -297,7 +296,7 @@ void Equalizer_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
 void Equalizer_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

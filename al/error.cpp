@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "error.h"
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -49,7 +47,7 @@
 
 bool TrapALError{false};
 
-void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
+void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 {
     auto message = al::vector<char>(256);
 
@@ -69,7 +67,7 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     else msg = "<internal error constructing message>";
     msglen = static_cast<int>(strlen(msg));
 
-    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n", context, errorCode, msg);
+    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n", this, errorCode, msg);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -82,14 +80,13 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     }
 
     ALenum curerr{AL_NO_ERROR};
-    context->mLastError.compare_exchange_strong(curerr, errorCode);
-    if((context->mEnabledEvts.load(std::memory_order_relaxed)&EventType_Error))
+    mLastError.compare_exchange_strong(curerr, errorCode);
+    if((mEnabledEvts.load(std::memory_order_relaxed)&EventType_Error))
     {
-        std::lock_guard<std::mutex> _{context->mEventCbLock};
-        ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
-        if((enabledevts&EventType_Error) && context->mEventCb)
-            (*context->mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
-                                context->mEventParam);
+        std::lock_guard<std::mutex> _{mEventCbLock};
+        ALbitfieldSOFT enabledevts{mEnabledEvts.load(std::memory_order_relaxed)};
+        if((enabledevts&EventType_Error) && mEventCb)
+            (*mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg, mEventParam);
     }
 }
 

@@ -27,7 +27,6 @@
 #include <algorithm>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -187,7 +186,7 @@ void Modulator_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
 void Modulator_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -208,7 +207,7 @@ void Modulator_setParami(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
 void Modulator_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -229,7 +228,7 @@ void Modulator_getParami(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
 void Modulator_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -246,7 +245,7 @@ void Modulator_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
 void Modulator_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

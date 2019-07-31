@@ -31,7 +31,6 @@
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "atomic.h"
-#include "error.h"
 #include "opthelpers.h"
 
 
@@ -55,15 +54,14 @@ START_API_FUNC
     {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
-            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener gain out of range");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener gain out of range");
         listener.Gain = value;
         DO_UPDATEPROPS();
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            SETERR_RETURN(context.get(), AL_INVALID_VALUE,,
-                          "Listener meters per unit out of range");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
         context->mMetersPerUnit = value;
         if(!context->mDeferUpdates.load(std::memory_order_acquire))
             UpdateContextProps(context.get());
@@ -72,7 +70,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener float property");
     }
 }
 END_API_FUNC
@@ -89,7 +87,7 @@ START_API_FUNC
     {
     case AL_POSITION:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener position out of range");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener position out of range");
         listener.Position[0] = value1;
         listener.Position[1] = value2;
         listener.Position[2] = value3;
@@ -98,7 +96,7 @@ START_API_FUNC
 
     case AL_VELOCITY:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener velocity out of range");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener velocity out of range");
         listener.Velocity[0] = value1;
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
@@ -106,7 +104,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-float property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 }
 END_API_FUNC
@@ -135,13 +133,13 @@ START_API_FUNC
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
-    if(!values) SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "NULL pointer");
+    if(!values) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
     switch(param)
     {
     case AL_ORIENTATION:
         if(!(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
              std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5])))
-            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener orientation out of range");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener orientation out of range");
         /* AT then UP */
         listener.OrientAt[0] = values[0];
         listener.OrientAt[1] = values[1];
@@ -153,7 +151,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float-vector property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 }
 END_API_FUNC
@@ -169,7 +167,7 @@ START_API_FUNC
     switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
     }
 }
 END_API_FUNC
@@ -192,7 +190,7 @@ START_API_FUNC
     switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-integer property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
 }
 END_API_FUNC
@@ -227,11 +225,11 @@ START_API_FUNC
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer-vector property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
 END_API_FUNC
@@ -246,7 +244,7 @@ START_API_FUNC
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_GAIN:
@@ -258,7 +256,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener float property");
     }
 }
 END_API_FUNC
@@ -272,7 +270,7 @@ START_API_FUNC
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_POSITION:
@@ -288,7 +286,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-float property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 }
 END_API_FUNC
@@ -315,7 +313,7 @@ START_API_FUNC
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_ORIENTATION:
@@ -329,7 +327,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float-vector property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 }
 END_API_FUNC
@@ -343,11 +341,11 @@ START_API_FUNC
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
     }
 }
 END_API_FUNC
@@ -361,7 +359,7 @@ START_API_FUNC
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_POSITION:
@@ -377,7 +375,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-integer property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
 }
 END_API_FUNC
@@ -399,7 +397,7 @@ START_API_FUNC
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_ORIENTATION:
@@ -413,7 +411,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer-vector property");
+        context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
 END_API_FUNC

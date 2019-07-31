@@ -26,7 +26,6 @@
 #include <algorithm>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "al/filter.h"
 #include "alcmain.h"
 #include "alcontext.h"
@@ -163,9 +162,9 @@ void EchoState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRI
 
 
 void Echo_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
 void Echo_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
 void Echo_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -201,16 +200,16 @@ void Echo_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALflo
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
 void Echo_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Echo_setParamf(props, context, param, vals[0]); }
 
 void Echo_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
 void Echo_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
 void Echo_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
@@ -236,7 +235,7 @@ void Echo_getParamf(const EffectProps *props, ALCcontext *context, ALenum param,
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
 void Echo_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

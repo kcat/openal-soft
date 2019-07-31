@@ -30,7 +30,6 @@
 #include <functional>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "al/listener.h"
 #include "alcmain.h"
 #include "alcontext.h"
@@ -1545,8 +1544,8 @@ void EAXReverb_setParami(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
+                param);
     }
 }
 void EAXReverb_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -1676,8 +1675,7 @@ void EAXReverb_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x", param);
     }
 }
 void EAXReverb_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -1714,8 +1712,8 @@ void EAXReverb_getParami(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
+                param);
     }
 }
 void EAXReverb_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -1805,8 +1803,7 @@ void EAXReverb_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x", param);
     }
 }
 void EAXReverb_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
@@ -1884,7 +1881,7 @@ void StdReverb_setParami(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid reverb integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid reverb integer property 0x%04x", param);
     }
 }
 void StdReverb_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -1966,7 +1963,7 @@ void StdReverb_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid reverb float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid reverb float property 0x%04x", param);
     }
 }
 void StdReverb_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -1981,7 +1978,7 @@ void StdReverb_getParami(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid reverb integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid reverb integer property 0x%04x", param);
     }
 }
 void StdReverb_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -2039,7 +2036,7 @@ void StdReverb_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid reverb float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid reverb float property 0x%04x", param);
     }
 }
 void StdReverb_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

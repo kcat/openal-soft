@@ -27,7 +27,6 @@
 #include <algorithm>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -213,7 +212,8 @@ void Fshifter_setParamf(EffectProps *props, ALCcontext *context, ALenum param, A
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x",
+                param);
     }
 }
 void Fshifter_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -236,7 +236,8 @@ void Fshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, A
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x",
+                param);
     }
 }
 void Fshifter_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -253,7 +254,8 @@ void Fshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum pa
             *val = props->Fshifter.RightDirection;
             break;
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x",
+                param);
     }
 }
 void Fshifter_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -268,7 +270,8 @@ void Fshifter_getParamf(const EffectProps *props, ALCcontext *context, ALenum pa
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x",
+                param);
     }
 }
 void Fshifter_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

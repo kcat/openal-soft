@@ -102,7 +102,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
+        context->setError(AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
     }
 }
 END_API_FUNC
@@ -122,7 +122,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
+        context->setError(AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
     }
 }
 END_API_FUNC
@@ -142,7 +142,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid is enabled property 0x%04x", capability);
+        context->setError(AL_INVALID_VALUE, "Invalid is enabled property 0x%04x", capability);
     }
 
     return value;
@@ -199,7 +199,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid boolean property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid boolean property 0x%04x", pname);
     }
 
     return value;
@@ -250,7 +250,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid double property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid double property 0x%04x", pname);
     }
 
     return value;
@@ -301,7 +301,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid float property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid float property 0x%04x", pname);
     }
 
     return value;
@@ -352,7 +352,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid integer property 0x%04x", pname);
     }
 
     return value;
@@ -403,7 +403,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer64 property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid integer64 property 0x%04x", pname);
     }
 
     return value;
@@ -429,7 +429,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid pointer property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid pointer property 0x%04x", pname);
     }
 
     return value;
@@ -460,11 +460,11 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(pname)
     {
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid boolean-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid boolean-vector property 0x%04x", pname);
     }
 }
 END_API_FUNC
@@ -493,11 +493,11 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(pname)
     {
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid double-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid double-vector property 0x%04x", pname);
     }
 }
 END_API_FUNC
@@ -526,11 +526,11 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(pname)
     {
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid float-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid float-vector property 0x%04x", pname);
     }
 }
 END_API_FUNC
@@ -559,11 +559,11 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(pname)
     {
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid integer-vector property 0x%04x", pname);
     }
 }
 END_API_FUNC
@@ -592,11 +592,11 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(pname)
     {
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer64-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid integer64-vector property 0x%04x", pname);
     }
 }
 END_API_FUNC
@@ -619,11 +619,11 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!values)
-        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(pname)
     {
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid pointer-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid pointer-vector property 0x%04x", pname);
     }
 }
 END_API_FUNC
@@ -678,7 +678,7 @@ START_API_FUNC
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid string property 0x%04x", pname);
+        context->setError(AL_INVALID_VALUE, "Invalid string property 0x%04x", pname);
     }
     return value;
 }
@@ -691,7 +691,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!(value >= 0.0f && std::isfinite(value)))
-        alSetError(context.get(), AL_INVALID_VALUE, "Doppler factor %f out of range", value);
+        context->setError(AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
@@ -720,7 +720,7 @@ START_API_FUNC
     }
 
     if(!(value >= 0.0f && std::isfinite(value)))
-        alSetError(context.get(), AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
+        context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
@@ -737,7 +737,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return;
 
     if(!(value > 0.0f && std::isfinite(value)))
-        alSetError(context.get(), AL_INVALID_VALUE, "Speed of sound %f out of range", value);
+        context->setError(AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
@@ -757,7 +757,7 @@ START_API_FUNC
          value == AL_LINEAR_DISTANCE || value == AL_LINEAR_DISTANCE_CLAMPED ||
          value == AL_EXPONENT_DISTANCE || value == AL_EXPONENT_DISTANCE_CLAMPED ||
          value == AL_NONE))
-        alSetError(context.get(), AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
+        context->setError(AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
     else
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
@@ -808,14 +808,13 @@ START_API_FUNC
     {
     case AL_RESAMPLER_NAME_SOFT:
         if(index < 0 || static_cast<size_t>(index) >= al::size(ResamplerNames))
-            alSetError(context.get(), AL_INVALID_VALUE, "Resampler name index %d out of range",
-                       index);
+            context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
         else
             value = ResamplerNames[index];
         break;
 
     default:
-        alSetError(context.get(), AL_INVALID_VALUE, "Invalid string indexed property");
+        context->setError(AL_INVALID_VALUE, "Invalid string indexed property");
     }
     return value;
 }

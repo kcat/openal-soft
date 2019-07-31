@@ -29,7 +29,6 @@
 
 #include "alcontext.h"
 #include "alexcpt.h"
-#include "error.h"
 #include "opthelpers.h"
 
 
@@ -40,7 +39,7 @@ START_API_FUNC
     if(UNLIKELY(!context)) return AL_FALSE;
 
     if(!extName)
-        SETERR_RETURN(context.get(), AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
+        SETERR_RETURN(context, AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
 
     size_t len{strlen(extName)};
     const char *ptr{context->mExtensionList};

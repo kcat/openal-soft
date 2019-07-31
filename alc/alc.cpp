@@ -53,7 +53,6 @@
 
 #include "al/auxeffectslot.h"
 #include "al/effect.h"
-#include "al/error.h"
 #include "al/event.h"
 #include "al/filter.h"
 #include "al/listener.h"

@@ -26,7 +26,6 @@
 #include <functional>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -333,11 +332,12 @@ void Vmorpher_setParami(EffectProps* props, ALCcontext *context, ALenum param, A
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
+                param);
     }
 }
 void Vmorpher_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
 void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -349,7 +349,8 @@ void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, A
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x",
+                param);
     }
 }
 void Vmorpher_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -380,11 +381,12 @@ void Vmorpher_getParami(const EffectProps* props, ALCcontext *context, ALenum pa
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
+                param);
     }
 }
 void Vmorpher_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
 void Vmorpher_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
@@ -394,7 +396,8 @@ void Vmorpher_getParamf(const EffectProps *props, ALCcontext *context, ALenum pa
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x",
+                param);
     }
 }
 void Vmorpher_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

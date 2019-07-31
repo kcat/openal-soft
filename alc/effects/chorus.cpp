@@ -31,7 +31,6 @@
 #include "AL/efx.h"
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
@@ -290,7 +289,7 @@ void Chorus_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALi
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
 void Chorus_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -324,7 +323,7 @@ void Chorus_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALf
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
 void Chorus_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -343,7 +342,7 @@ void Chorus_getParami(const EffectProps *props, ALCcontext *context, ALenum para
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
 void Chorus_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -369,7 +368,7 @@ void Chorus_getParamf(const EffectProps *props, ALCcontext *context, ALenum para
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
 void Chorus_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
@@ -414,7 +413,7 @@ void Flanger_setParami(EffectProps *props, ALCcontext *context, ALenum param, AL
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
 void Flanger_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
@@ -448,7 +447,7 @@ void Flanger_setParamf(EffectProps *props, ALCcontext *context, ALenum param, AL
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
 void Flanger_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -467,7 +466,7 @@ void Flanger_getParami(const EffectProps *props, ALCcontext *context, ALenum par
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
 void Flanger_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
@@ -493,7 +492,7 @@ void Flanger_getParamf(const EffectProps *props, ALCcontext *context, ALenum par
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
+            context->setError(AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
 void Flanger_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

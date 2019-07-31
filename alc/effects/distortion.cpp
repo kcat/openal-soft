@@ -26,7 +26,6 @@
 #include <cmath>
 
 #include "al/auxeffectslot.h"
-#include "al/error.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -159,9 +158,9 @@ void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *
 
 
 void Distortion_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
 void Distortion_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
 void Distortion_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
@@ -197,17 +196,16 @@ void Distortion_setParamf(EffectProps *props, ALCcontext *context, ALenum param,
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid distortion float property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid distortion float property 0x%04x", param);
     }
 }
 void Distortion_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
 { Distortion_setParamf(props, context, param, vals[0]); }
 
 void Distortion_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param); }
 void Distortion_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
-{ alSetError(context, AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
+{ context->setError(AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x", param); }
 void Distortion_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
@@ -233,8 +231,7 @@ void Distortion_getParamf(const EffectProps *props, ALCcontext *context, ALenum 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, "Invalid distortion float property 0x%04x",
-                       param);
+            context->setError(AL_INVALID_ENUM, "Invalid distortion float property 0x%04x", param);
     }
 }
 void Distortion_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)

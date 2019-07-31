@@ -459,14 +459,14 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     if(UNLIKELY(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align))
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
-    const ALsizei frames{size / SrcByteAlign * align};
+    const auto frames = static_cast<ALuint>(size / SrcByteAlign * align);
 
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
      */
     ALsizei NumChannels{ChannelsFromFmt(DstChannels)};
     ALsizei FrameSize{NumChannels * BytesFromFmt(DstType)};
-    if(UNLIKELY(frames > std::numeric_limits<ALsizei>::max()/FrameSize))
+    if(UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize))
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
     size_t newsize{static_cast<size_t>(frames) * FrameSize};
@@ -1129,7 +1129,8 @@ START_API_FUNC
         if(UNLIKELY(ReadRef(&albuf->ref) != 0))
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
-        else if(UNLIKELY(values[0] >= values[1] || values[0] < 0 || values[1] > albuf->SampleLen))
+        else if(UNLIKELY(values[0] < 0 || values[0] >= values[1] ||
+            static_cast<ALuint>(values[1]) > albuf->SampleLen))
             context->setError(AL_INVALID_VALUE, "Invalid loop point range %d -> %d on buffer %u",
                 values[0], values[1], buffer);
         else

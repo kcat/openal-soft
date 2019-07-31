@@ -92,7 +92,7 @@ struct ALbuffer {
 
     ALsizei Frequency{0};
     ALbitfieldSOFT Access{0u};
-    ALsizei SampleLen{0};
+    ALuint SampleLen{0u};
 
     FmtChannels mFmtChannels{};
     FmtType     mFmtType{};
@@ -101,8 +101,8 @@ struct ALbuffer {
     ALsizei OriginalSize{0};
     ALsizei OriginalAlign{0};
 
-    ALsizei LoopStart{0};
-    ALsizei LoopEnd{0};
+    ALuint LoopStart{0u};
+    ALuint LoopEnd{0u};
 
     std::atomic<ALsizei> UnpackAlign{0};
     std::atomic<ALsizei> PackAlign{0};

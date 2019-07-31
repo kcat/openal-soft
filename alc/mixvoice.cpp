@@ -382,15 +382,15 @@ void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtT
 }
 
 ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
-    const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
+    const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALuint DataPosInt,
     al::span<ALfloat> SrcBuffer)
 {
     /* TODO: For static sources, loop points are taken from the first buffer
      * (should be adjusted by any buffer offset, to possibly be added later).
      */
-    const ALbuffer *Buffer0{BufferListItem->buffers[0]};
-    const ALsizei LoopStart{Buffer0->LoopStart};
-    const ALsizei LoopEnd{Buffer0->LoopEnd};
+    const ALbuffer *Buffer0{BufferListItem->front()};
+    const ALuint LoopStart{Buffer0->LoopStart};
+    const ALuint LoopEnd{Buffer0->LoopEnd};
     ASSUME(LoopStart >= 0);
     ASSUME(LoopEnd > LoopStart);
 
@@ -416,10 +416,9 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
             return CompLen;
         };
         /* It's impossible to have a buffer list item with no entries. */
-        ASSUME(BufferListItem->num_buffers > 0);
-        auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
-            size_t{0u}, load_buffer));
+        ASSUME(BufferListItem->mNumBuffers > 0);
+        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->begin(),
+            BufferListItem->end(), size_t{0u}, load_buffer));
     }
     else
     {
@@ -442,10 +441,9 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
             LoadSamples(SrcData.data(), Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
-        ASSUME(BufferListItem->num_buffers > 0);
-        auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
-            size_t{0u}, load_buffer));
+        ASSUME(BufferListItem->mNumBuffers > 0);
+        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->begin(),
+            BufferListItem->end(), size_t{0u}, load_buffer));
 
         const auto LoopSize = static_cast<size_t>(LoopEnd - LoopStart);
         while(!SrcBuffer.empty())
@@ -468,24 +466,24 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
                 LoadSamples(SrcData.data(), Data, NumChannels, buffer->mFmtType, DataSize);
                 return CompLen;
             };
-            SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
-                size_t{0u}, load_buffer_loop));
+            SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->begin(),
+                BufferListItem->end(), size_t{0u}, load_buffer_loop));
         }
     }
     return SrcBuffer.begin();
 }
 
 ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
-    const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALsizei DataPosInt,
+    const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALuint DataPosInt,
     al::span<ALfloat> SrcBuffer)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
     while(BufferListItem && !SrcBuffer.empty())
     {
-        if(DataPosInt >= BufferListItem->max_samples)
+        if(DataPosInt >= BufferListItem->mMaxSamples)
         {
-            DataPosInt -= BufferListItem->max_samples;
-            BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
+            DataPosInt -= BufferListItem->mMaxSamples;
+            BufferListItem = BufferListItem->mNext.load(std::memory_order_acquire);
             if(!BufferListItem) BufferListItem = BufferLoopItem;
             continue;
         }
@@ -505,15 +503,14 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
             LoadSamples(SrcBuffer.data(), Data, NumChannels, buffer->mFmtType, DataSize);
             return CompLen;
         };
-        ASSUME(BufferListItem->num_buffers > 0);
-        auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->buffers, buffers_end,
-            size_t{0u}, load_buffer));
+        ASSUME(BufferListItem->mNumBuffers > 0);
+        SrcBuffer = SrcBuffer.subspan(std::accumulate(BufferListItem->begin(),
+            BufferListItem->end(), size_t{0u}, load_buffer));
 
         if(SrcBuffer.empty())
             break;
         DataPosInt = 0;
-        BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
+        BufferListItem = BufferListItem->mNext.load(std::memory_order_acquire);
         if(!BufferListItem) BufferListItem = BufferLoopItem;
     }
 
@@ -530,7 +527,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
     /* Get voice info */
     const bool isstatic{(voice->mFlags&VOICE_IS_STATIC) != 0};
-    ALsizei DataPosInt{static_cast<ALsizei>(voice->mPosition.load(std::memory_order_relaxed))};
+    ALuint DataPosInt{voice->mPosition.load(std::memory_order_relaxed)};
     ALsizei DataPosFrac{voice->mPositionFrac.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{voice->mCurrentBuffer.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferLoopItem{voice->mLoopBuffer.load(std::memory_order_relaxed)};
@@ -538,7 +535,6 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     const ALsizei SampleSize{voice->mSampleSize};
     const ALint increment{voice->mStep};
 
-    ASSUME(DataPosInt >= 0);
     ASSUME(DataPosFrac >= 0);
     ASSUME(NumChannels > 0);
     ASSUME(SampleSize > 0);
@@ -868,9 +864,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             if(BufferLoopItem)
             {
                 /* Handle looping static source */
-                const ALbuffer *Buffer{BufferListItem->buffers[0]};
-                const ALsizei LoopStart{Buffer->LoopStart};
-                const ALsizei LoopEnd{Buffer->LoopEnd};
+                const ALbuffer *Buffer{BufferListItem->front()};
+                const ALuint LoopStart{Buffer->LoopStart};
+                const ALuint LoopEnd{Buffer->LoopEnd};
                 if(DataPosInt >= LoopEnd)
                 {
                     assert(LoopEnd > LoopStart);
@@ -880,7 +876,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             else
             {
                 /* Handle non-looping static source */
-                if(DataPosInt >= BufferListItem->max_samples)
+                if(DataPosInt >= BufferListItem->mMaxSamples)
                 {
                     if(LIKELY(vstate == ALvoice::Playing))
                         vstate = ALvoice::Stopped;
@@ -892,13 +888,13 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         else while(1)
         {
             /* Handle streaming source */
-            if(BufferListItem->max_samples > DataPosInt)
+            if(BufferListItem->mMaxSamples > DataPosInt)
                 break;
 
-            DataPosInt -= BufferListItem->max_samples;
+            DataPosInt -= BufferListItem->mMaxSamples;
 
-            buffers_done += BufferListItem->num_buffers;
-            BufferListItem = BufferListItem->next.load(std::memory_order_relaxed);
+            buffers_done += BufferListItem->mNumBuffers;
+            BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);
             if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {
                 if(LIKELY(vstate == ALvoice::Playing))

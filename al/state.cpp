@@ -38,7 +38,6 @@
 #include "alspan.h"
 #include "alu.h"
 #include "atomic.h"
-#include "error.h"
 #include "event.h"
 #include "inprogext.h"
 #include "opthelpers.h"

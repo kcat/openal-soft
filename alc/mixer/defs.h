@@ -1,46 +1,44 @@
 #ifndef MIXER_DEFS_H
 #define MIXER_DEFS_H
 
-#include "AL/alc.h"
 #include "AL/al.h"
 
 #include "alcmain.h"
-#include "alu.h"
 #include "alspan.h"
+#include "alu.h"
+#include "hrtf.h"
 
 
-struct MixGains;
-struct MixHrtfFilter;
-struct HrtfState;
-struct DirectHrtfState;
+enum InstSetType {
+    CTag,
+    SSETag,
+    SSE2Tag,
+    SSE3Tag,
+    SSE4Tag,
+    NEONTag
+};
 
+enum ResampleType {
+    CopyTag,
+    PointTag,
+    LerpTag,
+    CubicTag,
+    BSincTag
+};
 
-struct CTag { };
-struct SSETag { };
-struct SSE2Tag { };
-struct SSE3Tag { };
-struct SSE4Tag { };
-struct NEONTag { };
-
-struct CopyTag { };
-struct PointTag { };
-struct LerpTag { };
-struct CubicTag { };
-struct BSincTag { };
-
-template<typename TypeTag, typename InstTag>
+template<ResampleType TypeTag, InstSetType InstTag>
 const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen);
 
-template<typename InstTag>
+template<InstSetType InstTag>
 void Mix_(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer, ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos, const ALsizei BufferSize);
-template<typename InstTag>
+template<InstSetType InstTag>
 void MixRow_(FloatBufferLine &OutBuffer, const ALfloat *Gains, const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize);
 
-template<typename InstTag>
+template<InstSetType InstTag>
 void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, MixHrtfFilter *hrtfparams, const ALsizei BufferSize);
-template<typename InstTag>
+template<InstSetType InstTag>
 void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams, const ALsizei BufferSize);
-template<typename InstTag>
+template<InstSetType InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State, const ALsizei BufferSize);
 
 /* Vectorized resampler helpers */

@@ -9,7 +9,7 @@
 
 
 using ApplyCoeffsT = void(ALsizei Offset, float2 *RESTRICT Values, const ALsizei irSize,
-    const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right);
+    const HrirArray &Coeffs, const ALfloat left, const ALfloat right);
 
 template<ApplyCoeffsT &ApplyCoeffs>
 inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
@@ -20,7 +20,7 @@ inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 
-    const auto &Coeffs = *hrtfparams->Coeffs;
+    const HrirArray &Coeffs = *hrtfparams->Coeffs;
     const ALfloat gainstep{hrtfparams->GainStep};
     const ALfloat gain{hrtfparams->Gain};
 

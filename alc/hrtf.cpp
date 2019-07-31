@@ -216,7 +216,7 @@ IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
  * and azimuth in radians. The coefficients are normalized.
  */
 void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
-    ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei (&delays)[2])
+    ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2])
 {
     const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
@@ -348,7 +348,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
 
-    auto tmpres = al::vector<HrirArray<ALdouble>>(NumChannels);
+    auto tmpres = al::vector<std::array<std::array<ALdouble,2>,HRIR_LENGTH>>(NumChannels);
     auto tmpfilt = al::vector<std::array<ALdouble,HRIR_LENGTH*4>>(3);
     for(size_t c{0u};c < AmbiCount;++c)
     {

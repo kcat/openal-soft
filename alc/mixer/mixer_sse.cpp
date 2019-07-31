@@ -75,7 +75,7 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
 
 
 static inline void ApplyCoeffs(ALsizei Offset, float2 *RESTRICT Values, const ALsizei IrSize,
-    const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right)
+    const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
 

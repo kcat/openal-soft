@@ -63,17 +63,15 @@ struct EnumeratedHrtf {
 
 
 using float2 = std::array<float,2>;
-
-template<typename T>
-using HrirArray = std::array<std::array<T,2>,HRIR_LENGTH>;
+using HrirArray = std::array<float2,HRIR_LENGTH>;
 
 struct HrtfState {
     alignas(16) std::array<ALfloat,HRTF_HISTORY_LENGTH> History;
-    alignas(16) HrirArray<ALfloat> Values;
+    alignas(16) HrirArray Values;
 };
 
 struct HrtfFilter {
-    alignas(16) HrirArray<ALfloat> Coeffs;
+    alignas(16) HrirArray Coeffs;
     ALsizei Delay[2];
     ALfloat Gain;
 };
@@ -82,8 +80,8 @@ struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
     ALsizei IrSize{0};
     struct ChanData {
-        alignas(16) HrirArray<ALfloat> Values;
-        alignas(16) HrirArray<ALfloat> Coeffs;
+        alignas(16) HrirArray Values;
+        alignas(16) HrirArray Coeffs;
     };
     al::FlexArray<ChanData> Chan;
 
@@ -108,7 +106,7 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
 HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
 
 void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
-    ALfloat spread, HrirArray<ALfloat> &coeffs, ALsizei (&delays)[2]);
+    ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2]);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

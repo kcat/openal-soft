@@ -136,7 +136,7 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
 
 
 static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
-    const HrirArray<ALfloat> &Coeffs, const ALfloat left, const ALfloat right)
+    const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
 {
     ASSUME(IrSize >= 2);
 

@@ -43,6 +43,71 @@ public:
     }
 };
 
+
+template<typename T>
+class intrusive_ptr {
+    T *mPtr{nullptr};
+
+public:
+    intrusive_ptr() noexcept = default;
+    intrusive_ptr(const intrusive_ptr &rhs) noexcept : mPtr{rhs.mPtr}
+    { if(mPtr) mPtr->add_ref(); }
+    intrusive_ptr(intrusive_ptr&& rhs) noexcept : mPtr{rhs.mPtr}
+    { rhs.mPtr = nullptr; }
+    intrusive_ptr(std::nullptr_t) noexcept { }
+    explicit intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
+    ~intrusive_ptr() { reset(); }
+
+    intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
+    {
+        if(rhs.mPtr) rhs.mPtr->add_ref();
+        if(mPtr) mPtr->release();
+        mPtr = rhs.mPtr;
+        return *this;
+    }
+    intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
+    { std::swap(mPtr, rhs.mPtr); return *this; }
+
+    operator bool() const noexcept { return mPtr != nullptr; }
+
+    T* operator->() const noexcept { return mPtr; }
+    T* get() const noexcept { return mPtr; }
+
+    void reset() noexcept
+    {
+        if(mPtr)
+            mPtr->release();
+        mPtr = nullptr;
+    }
+
+    T* release() noexcept
+    {
+        T *ret{mPtr};
+        mPtr = nullptr;
+        return ret;
+    }
+
+    void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
+    void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
+};
+
+#define AL_DECL_OP(op)                                                        \
+template<typename T>                                                          \
+inline bool operator op(const intrusive_ptr<T> &lhs, const T *rhs) noexcept   \
+{ return lhs.get() op rhs; }                                                  \
+template<typename T>                                                          \
+inline bool operator op(const T *lhs, const intrusive_ptr<T> &rhs) noexcept   \
+{ return lhs op rhs.get(); }
+
+AL_DECL_OP(==)
+AL_DECL_OP(!=)
+AL_DECL_OP(<=)
+AL_DECL_OP(>=)
+AL_DECL_OP(<)
+AL_DECL_OP(>)
+
+#undef AL_DECL_OP
+
 } // namespace al
 
 #endif /* INTRUSIVE_PTR_H */

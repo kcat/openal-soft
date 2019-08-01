@@ -178,55 +178,11 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
 } while(0)
 
 
-void UpdateContextProps(ALCcontext *context);
-
-
-/* Simple RAII context reference. Takes the reference of the provided
- * ALCcontext, and decrements it when leaving scope. Movable (transfer
- * reference) but not copyable (no new references).
- */
-class ContextRef {
-    ALCcontext *mCtx{nullptr};
-
-    void reset() noexcept
-    {
-        if(mCtx)
-            mCtx->release();
-        mCtx = nullptr;
-    }
-
-public:
-    ContextRef() noexcept = default;
-    ContextRef(ContextRef&& rhs) noexcept : mCtx{rhs.mCtx}
-    { rhs.mCtx = nullptr; }
-    explicit ContextRef(ALCcontext *ctx) noexcept : mCtx(ctx) { }
-    ~ContextRef() { reset(); }
-
-    ContextRef& operator=(const ContextRef&) = delete;
-    ContextRef& operator=(ContextRef&& rhs) noexcept
-    { std::swap(mCtx, rhs.mCtx); return *this; }
-
-    operator bool() const noexcept { return mCtx != nullptr; }
-
-    ALCcontext* operator->() const noexcept { return mCtx; }
-    ALCcontext* get() const noexcept { return mCtx; }
-
-    ALCcontext* release() noexcept
-    {
-        ALCcontext *ret{mCtx};
-        mCtx = nullptr;
-        return ret;
-    }
-};
-
-inline bool operator==(const ContextRef &lhs, const ALCcontext *rhs) noexcept
-{ return lhs.get() == rhs; }
-inline bool operator!=(const ContextRef &lhs, const ALCcontext *rhs) noexcept
-{ return !(lhs == rhs); }
-inline bool operator<(const ContextRef &lhs, const ALCcontext *rhs) noexcept
-{ return lhs.get() < rhs; }
+using ContextRef = al::intrusive_ptr<ALCcontext>;
 
 ContextRef GetContextRef(void);
+
+void UpdateContextProps(ALCcontext *context);
 
 
 extern bool TrapALError;

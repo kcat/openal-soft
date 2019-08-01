@@ -906,53 +906,7 @@ constexpr ALCint alcEFXMinorVersion = 0;
 al::FlexArray<ALCcontext*> EmptyContextArray{0u};
 
 
-/* Simple RAII device reference. Takes the reference of the provided ALCdevice,
- * and decrements it when leaving scope. Movable (transfer reference) but not
- * copyable (no new references).
- */
-class DeviceRef {
-    ALCdevice *mDev{nullptr};
-
-    void reset() noexcept
-    {
-        if(mDev)
-            mDev->release();
-        mDev = nullptr;
-    }
-
-public:
-    DeviceRef() noexcept = default;
-    DeviceRef(DeviceRef&& rhs) noexcept : mDev{rhs.mDev}
-    { rhs.mDev = nullptr; }
-    explicit DeviceRef(ALCdevice *dev) noexcept : mDev(dev) { }
-    ~DeviceRef() { reset(); }
-
-    DeviceRef& operator=(const DeviceRef&) = delete;
-    DeviceRef& operator=(DeviceRef&& rhs) noexcept
-    {
-        std::swap(mDev, rhs.mDev);
-        return *this;
-    }
-
-    operator bool() const noexcept { return mDev != nullptr; }
-
-    ALCdevice* operator->() const noexcept { return mDev; }
-    ALCdevice* get() const noexcept { return mDev; }
-
-    ALCdevice* release() noexcept
-    {
-        ALCdevice *ret{mDev};
-        mDev = nullptr;
-        return ret;
-    }
-};
-
-inline bool operator==(const DeviceRef &lhs, const ALCdevice *rhs) noexcept
-{ return lhs.get() == rhs; }
-inline bool operator!=(const DeviceRef &lhs, const ALCdevice *rhs) noexcept
-{ return !(lhs == rhs); }
-inline bool operator<(const DeviceRef &lhs, const ALCdevice *rhs) noexcept
-{ return lhs.get() < rhs; }
+using DeviceRef = al::intrusive_ptr<ALCdevice>;
 
 
 /************************************************
@@ -2345,11 +2299,8 @@ static DeviceRef VerifyDevice(ALCdevice *device)
     std::lock_guard<std::recursive_mutex> _{ListLock};
     auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
     if(iter != DeviceList.cend() && *iter == device)
-    {
-        (*iter)->add_ref();
-        return DeviceRef{iter->get()};
-    }
-    return DeviceRef{};
+        return *iter;
+    return nullptr;
 }
 
 
@@ -2590,13 +2541,9 @@ static ContextRef VerifyContext(ALCcontext *context)
     std::lock_guard<std::recursive_mutex> _{ListLock};
     auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
     if(iter != ContextList.cend() && *iter == context)
-    {
-        (*iter)->add_ref();
-        return ContextRef{iter->get()};
-    }
-    return ContextRef{};
+        return *iter;
+    return nullptr;
 }
-
 
 /* GetContextRef
  *

@@ -1,14 +1,16 @@
 #ifndef ALCONTEXT_H
 #define ALCONTEXT_H
 
-#include <mutex>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <mutex>
 #include <thread>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
-#include "AL/alext.h"
 
 #include "al/listener.h"
 #include "almalloc.h"
@@ -20,14 +22,11 @@
 #include "threads.h"
 #include "vector.h"
 
-
-struct ALsource;
 struct ALeffectslot;
-struct ALcontextProps;
-struct ALlistenerProps;
-struct ALvoiceProps;
 struct ALeffectslotProps;
+struct ALsource;
 struct RingBuffer;
+
 
 enum class DistanceModel {
     InverseClamped  = AL_INVERSE_DISTANCE_CLAMPED,
@@ -40,6 +39,19 @@ enum class DistanceModel {
 
     Default = InverseClamped
 };
+
+
+struct ALcontextProps {
+    ALfloat DopplerFactor;
+    ALfloat DopplerVelocity;
+    ALfloat SpeedOfSound;
+    ALboolean SourceDistanceModel;
+    DistanceModel mDistanceModel;
+    ALfloat MetersPerUnit;
+
+    std::atomic<ALcontextProps*> next;
+};
+
 
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};
@@ -153,8 +165,7 @@ struct ALCcontext {
      * This does *NOT* stop mixing, but rather prevents certain property
      * changes from taking effect.
      */
-    void deferUpdates() noexcept
-    { mDeferUpdates.store(true); }
+    void deferUpdates() noexcept { mDeferUpdates.store(true); }
 
     /** Resumes update processing after being deferred. */
     void processUpdates();
@@ -219,18 +230,6 @@ inline bool operator<(const ContextRef &lhs, const ALCcontext *rhs) noexcept
 { return lhs.get() < rhs; }
 
 ContextRef GetContextRef(void);
-
-
-struct ALcontextProps {
-    ALfloat DopplerFactor;
-    ALfloat DopplerVelocity;
-    ALfloat SpeedOfSound;
-    ALboolean SourceDistanceModel;
-    DistanceModel mDistanceModel;
-    ALfloat MetersPerUnit;
-
-    std::atomic<ALcontextProps*> next;
-};
 
 
 extern bool TrapALError;

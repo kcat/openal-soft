@@ -79,6 +79,7 @@
 #include "fpu_modes.h"
 #include "hrtf.h"
 #include "inprogext.h"
+#include "intrusive_ptr.h"
 #include "logging.h"
 #include "mastering.h"
 #include "opthelpers.h"
@@ -832,9 +833,9 @@ std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 /* Thread-local current context */
 void ReleaseThreadCtx(ALCcontext *context)
 {
-    auto ref = DecrementRef(&context->mRef);
-    TRACEREF("ALCcontext %p decreasing refcount to %u\n", context, ref);
-    ERR("Context %p current for thread being destroyed, possible leak!\n", context);
+    const bool result{context->releaseIfNoDelete()};
+    ERR("Context %p current for thread being destroyed%s!\n", context,
+        result ? "" : ", leak detected");
 }
 
 std::atomic<void(*)(ALCcontext*)> ThreadCtxProc{ReleaseThreadCtx};
@@ -907,19 +908,6 @@ constexpr ALCint alcEFXMinorVersion = 0;
 al::FlexArray<ALCcontext*> EmptyContextArray{0u};
 
 
-void ALCdevice_IncRef(ALCdevice *device)
-{
-    auto ref = IncrementRef(&device->ref);
-    TRACEREF("ALCdevice %p increasing refcount to %u\n", device, ref);
-}
-
-void ALCdevice_DecRef(ALCdevice *device)
-{
-    auto ref = DecrementRef(&device->ref);
-    TRACEREF("ALCdevice %p decreasing refcount to %u\n", device, ref);
-    if(UNLIKELY(ref == 0)) delete device;
-}
-
 /* Simple RAII device reference. Takes the reference of the provided ALCdevice,
  * and decrements it when leaving scope. Movable (transfer reference) but not
  * copyable (no new references).
@@ -930,7 +918,7 @@ class DeviceRef {
     void reset() noexcept
     {
         if(mDev)
-            ALCdevice_DecRef(mDev);
+            mDev->release();
         mDev = nullptr;
     }
 
@@ -1658,10 +1646,10 @@ static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, 
  */
 static inline void UpdateClockBase(ALCdevice *device)
 {
-    IncrementRef(&device->MixCount);
+    IncrementRef(device->MixCount);
     device->ClockBase += nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
     device->SamplesDone = 0;
-    IncrementRef(&device->MixCount);
+    IncrementRef(device->MixCount);
 }
 
 /* UpdateDeviceParams
@@ -2205,7 +2193,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     for(s = device->NumAuxSends;s < old_sends;s++)
                     {
                         if(source->Send[s].Slot)
-                            DecrementRef(&source->Send[s].Slot->ref);
+                            DecrementRef(source->Send[s].Slot->ref);
                         source->Send[s].Slot = nullptr;
                     }
                     source->Send.resize(device->NumAuxSends);
@@ -2360,7 +2348,7 @@ static DeviceRef VerifyDevice(ALCdevice *device)
     auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
     if(iter != DeviceList.cend() && *iter == device)
     {
-        ALCdevice_IncRef(iter->get());
+        (*iter)->add_ref();
         return DeviceRef{iter->get()};
     }
     return DeviceRef{};
@@ -2459,7 +2447,7 @@ ALCcontext::~ALCcontext()
     while(eprops)
     {
         ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
-        if(eprops->State) eprops->State->DecRef();
+        if(eprops->State) eprops->State->release();
         al_free(eprops);
         eprops = next;
         ++count;
@@ -2528,7 +2516,7 @@ ALCcontext::~ALCcontext()
         mAsyncEvents->readAdvance(count);
     }
 
-    ALCdevice_DecRef(mDevice);
+    mDevice->release();
 }
 
 /* ReleaseContext
@@ -2543,12 +2531,12 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     {
         WARN("%p released while current on thread\n", context);
         LocalContext.set(nullptr);
-        context->decRef();
+        context->release();
     }
 
     ALCcontext *origctx{context};
     if(GlobalContext.compare_exchange_strong(origctx, nullptr))
-        context->decRef();
+        context->release();
 
     bool ret{};
     {
@@ -2594,18 +2582,6 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     return ret;
 }
 
-static void ALCcontext_IncRef(ALCcontext *context)
-{
-    auto ref = IncrementRef(&context->mRef);
-    TRACEREF("ALCcontext %p increasing refcount to %u\n", context, ref);
-}
-
-void ALCcontext::decRef() noexcept
-{
-    auto ref = DecrementRef(&mRef);
-    TRACEREF("ALCcontext %p decreasing refcount to %u\n", this, ref);
-    if(UNLIKELY(ref == 0)) delete this;
-}
 
 /* VerifyContext
  *
@@ -2617,7 +2593,7 @@ static ContextRef VerifyContext(ALCcontext *context)
     auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
     if(iter != ContextList.cend() && *iter == context)
     {
-        ALCcontext_IncRef(iter->get());
+        (*iter)->add_ref();
         return ContextRef{iter->get()};
     }
     return ContextRef{};
@@ -2632,12 +2608,12 @@ ContextRef GetContextRef(void)
 {
     ALCcontext *context{LocalContext.get()};
     if(context)
-        ALCcontext_IncRef(context);
+        context->add_ref();
     else
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         context = GlobalContext.load(std::memory_order_acquire);
-        if(context) ALCcontext_IncRef(context);
+        if(context) context->add_ref();
     }
     return ContextRef{context};
 }
@@ -3278,11 +3254,11 @@ START_API_FUNC
                     ALuint samplecount;
                     ALuint refcount;
                     do {
-                        while(((refcount=ReadRef(&dev->MixCount))&1) != 0)
+                        while(((refcount=ReadRef(dev->MixCount))&1) != 0)
                             std::this_thread::yield();
                         basecount = dev->ClockBase;
                         samplecount = dev->SamplesDone;
-                    } while(refcount != ReadRef(&dev->MixCount));
+                    } while(refcount != ReadRef(dev->MixCount));
                     basecount += nanoseconds{seconds{samplecount}} / dev->Frequency;
                     *values = basecount.count();
                 }
@@ -3426,7 +3402,7 @@ START_API_FUNC
     dev->LastError.store(ALC_NO_ERROR);
 
     ContextRef context{new ALCcontext{dev.get()}};
-    ALCdevice_IncRef(context->mDevice);
+    dev->add_ref();
 
     ALCenum err{UpdateDeviceParams(dev.get(), attrList)};
     if(err != ALC_NO_ERROR)
@@ -3502,7 +3478,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
-        ALCcontext_IncRef(context.get());
+        context->add_ref();
         ContextList.insert(iter, ContextRef{context.get()});
     }
 
@@ -3850,7 +3826,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        ALCdevice_IncRef(device.get());
+        device->add_ref();
         DeviceList.insert(iter, DeviceRef{device.get()});
     }
 
@@ -3976,7 +3952,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        ALCdevice_IncRef(device.get());
+        device->add_ref();
         DeviceList.insert(iter, DeviceRef{device.get()});
     }
 
@@ -4145,7 +4121,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        ALCdevice_IncRef(device.get());
+        device->add_ref();
         DeviceList.insert(iter, DeviceRef{device.get()});
     }
 

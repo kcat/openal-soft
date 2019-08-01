@@ -320,7 +320,7 @@ START_API_FUNC
                 context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
                 return true;
             }
-            if(ReadRef(&slot->ref) != 0)
+            if(ReadRef(slot->ref) != 0)
             {
                 context->setError(AL_INVALID_NAME, "Deleting in-use effect slot %u", id);
                 return true;
@@ -418,14 +418,14 @@ START_API_FUNC
             /* We must force an update if there was an existing effect slot
              * target, in case it's about to be deleted.
              */
-            if(target) IncrementRef(&target->ref);
-            DecrementRef(&oldtarget->ref);
+            if(target) IncrementRef(target->ref);
+            DecrementRef(oldtarget->ref);
             slot->Target = target;
             UpdateEffectSlotProps(slot, context.get());
             return;
         }
 
-        if(target) IncrementRef(&target->ref);
+        if(target) IncrementRef(target->ref);
         slot->Target = target;
         break;
 
@@ -651,7 +651,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         {
             statelock.unlock();
             mixer_mode.leave();
-            State->DecRef();
+            State->release();
             return AL_OUT_OF_MEMORY;
         }
         mixer_mode.leave();
@@ -667,7 +667,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
             EffectSlot->Effect.Props = effect->Props;
         }
 
-        EffectSlot->Effect.State->DecRef();
+        EffectSlot->Effect.State->release();
         EffectSlot->Effect.State = State;
     }
     else if(effect)
@@ -678,26 +678,12 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
     while(props)
     {
         if(props->State)
-            props->State->DecRef();
+            props->State->release();
         props->State = nullptr;
         props = props->next.load(std::memory_order_relaxed);
     }
 
     return AL_NO_ERROR;
-}
-
-
-void EffectState::IncRef() noexcept
-{
-    auto ref = IncrementRef(&mRef);
-    TRACEREF("EffectState %p increasing refcount to %u\n", this, ref);
-}
-
-void EffectState::DecRef() noexcept
-{
-    auto ref = DecrementRef(&mRef);
-    TRACEREF("EffectState %p decreasing refcount to %u\n", this, ref);
-    if(ref == 0) delete this;
 }
 
 
@@ -708,7 +694,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     slot->Effect.State = factory->create();
     if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
 
-    slot->Effect.State->IncRef();
+    slot->Effect.State->add_ref();
     slot->Params.mEffectState = slot->Effect.State;
     return AL_NO_ERROR;
 }
@@ -716,21 +702,21 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 ALeffectslot::~ALeffectslot()
 {
     if(Target)
-        DecrementRef(&Target->ref);
+        DecrementRef(Target->ref);
     Target = nullptr;
 
     ALeffectslotProps *props{Update.load()};
     if(props)
     {
-        if(props->State) props->State->DecRef();
+        if(props->State) props->State->release();
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
         al_free(props);
     }
 
     if(Effect.State)
-        Effect.State->DecRef();
+        Effect.State->release();
     if(Params.mEffectState)
-        Params.mEffectState->DecRef();
+        Params.mEffectState->release();
 }
 
 void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
@@ -759,7 +745,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
      * delete it.
      */
     EffectState *oldstate{props->State};
-    slot->Effect.State->IncRef();
+    slot->Effect.State->add_ref();
     props->State = slot->Effect.State;
 
     /* Set the new container for updating internal parameters. */
@@ -770,13 +756,13 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
          * freelist.
          */
         if(props->State)
-            props->State->DecRef();
+            props->State->release();
         props->State = nullptr;
         AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
 
     if(oldstate)
-        oldstate->DecRef();
+        oldstate->release();
 }
 
 void UpdateAllEffectSlotProps(ALCcontext *context)

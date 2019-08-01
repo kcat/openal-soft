@@ -24,6 +24,7 @@
 #include "atomic.h"
 #include "hrtf.h"
 #include "inprogext.h"
+#include "intrusive_ptr.h"
 #include "vector.h"
 
 class BFormatDec;
@@ -310,9 +311,7 @@ enum {
     DeviceFlagsCount
 };
 
-struct ALCdevice {
-    RefCount ref{1u};
-
+struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 

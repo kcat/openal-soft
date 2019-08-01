@@ -373,20 +373,10 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         EffectState *oldstate{slot->Params.mEffectState};
         slot->Params.mEffectState = state;
 
-        /* Manually decrement the old effect state's refcount if it's greater
-         * than 1. We need to be a bit clever here to avoid the refcount
-         * reaching 0 since it can't be deleted in the mixer.
+        /* Only decrement the old state if it won't get deleted, since we can't
+         * be deleting/freeing anything in the mixer.
          */
-        ALuint oldval{oldstate->mRef.load(std::memory_order_acquire)};
-        while(oldval > 1 && !oldstate->mRef.compare_exchange_weak(oldval, oldval-1,
-            std::memory_order_acq_rel, std::memory_order_acquire))
-        {
-            /* oldval was updated with the current value on failure, so just
-             * try again.
-             */
-        }
-
-        if(oldval < 2)
+        if(!oldstate->releaseIfNoDelete())
         {
             /* Otherwise, if it would be deleted, send it off with a release
              * event.
@@ -1355,7 +1345,7 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 
 void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
 {
-    IncrementRef(&ctx->mUpdateCount);
+    IncrementRef(ctx->mUpdateCount);
     if(LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire)))
     {
         bool cforce{CalcContextParams(ctx)};
@@ -1374,7 +1364,7 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
             }
         );
     }
-    IncrementRef(&ctx->mUpdateCount);
+    IncrementRef(ctx->mUpdateCount);
 }
 
 void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
@@ -1676,7 +1666,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         );
 
         /* Increment the mix count at the start (lsb should now be 1). */
-        IncrementRef(&device->MixCount);
+        IncrementRef(device->MixCount);
 
         /* For each context on this device, process and mix its sources and
          * effects.
@@ -1694,7 +1684,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         device->SamplesDone %= device->Frequency;
 
         /* Increment the mix count at the end (lsb should now be 0). */
-        IncrementRef(&device->MixCount);
+        IncrementRef(device->MixCount);
 
         /* Apply any needed post-process for finalizing the Dry mix to the
          * RealOut (Ambisonic decode, UHJ encode, etc).

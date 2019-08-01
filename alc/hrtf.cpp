@@ -484,7 +484,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALsizei irSize, const AL
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
     {
-        InitRef(&Hrtf->ref, 1u);
+        InitRef(Hrtf->ref, 1u);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->fdCount = fdCount;
@@ -1373,13 +1373,13 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 
 void HrtfEntry::IncRef()
 {
-    auto ref = IncrementRef(&this->ref);
+    auto ref = IncrementRef(this->ref);
     TRACEREF("HrtfEntry %p increasing refcount to %u\n", this, ref);
 }
 
 void HrtfEntry::DecRef()
 {
-    auto ref = DecrementRef(&this->ref);
+    auto ref = DecrementRef(this->ref);
     TRACEREF("HrtfEntry %p decreasing refcount to %u\n", this, ref);
     if(ref == 0)
     {
@@ -1389,7 +1389,7 @@ void HrtfEntry::DecRef()
         auto delete_unused = [](HrtfHandlePtr &handle) -> void
         {
             HrtfEntry *entry{handle->entry.get()};
-            if(entry && ReadRef(&entry->ref) == 0)
+            if(entry && ReadRef(entry->ref) == 0)
             {
                 TRACE("Unloading unused HRTF %s\n", handle->filename.data());
                 handle->entry = nullptr;

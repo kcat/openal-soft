@@ -18,6 +18,7 @@
 #include "alu.h"
 #include "atomic.h"
 #include "inprogext.h"
+#include "intrusive_ptr.h"
 #include "logging.h"
 #include "threads.h"
 #include "vector.h"
@@ -84,9 +85,7 @@ struct EffectSlotSubList {
     { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
 };
 
-struct ALCcontext {
-    RefCount mRef{1u};
-
+struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     al::vector<SourceSubList> mSourceList;
     ALuint mNumSources{0};
     std::mutex mSourceLock;
@@ -156,8 +155,6 @@ struct ALCcontext {
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext();
 
-    void decRef() noexcept;
-
     void allocVoices(size_t num_voices);
 
     /**
@@ -194,7 +191,7 @@ class ContextRef {
     void reset() noexcept
     {
         if(mCtx)
-            mCtx->decRef();
+            mCtx->release();
         mCtx = nullptr;
     }
 

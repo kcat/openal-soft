@@ -380,7 +380,7 @@ const ALchar *NameFromUserFmtType(UserFmtType type)
  */
 void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData, ALbitfieldSOFT access)
 {
-    if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
+    if(UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
                       ALBuf->id);
 
@@ -671,7 +671,7 @@ START_API_FUNC
                 context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", bid);
                 return true;
             }
-            if(UNLIKELY(ReadRef(&ALBuf->ref) != 0))
+            if(UNLIKELY(ReadRef(ALBuf->ref) != 0))
             {
                 context->setError(AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
                 return true;
@@ -768,7 +768,7 @@ START_API_FUNC
     else
     {
         ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
-        if(UNLIKELY(ReadRef(&albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)))
+        if(UNLIKELY(ReadRef(albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)))
             context->setError(AL_INVALID_OPERATION,
                 "Mapping in-use buffer %u without persistent mapping", buffer);
         else if(UNLIKELY(albuf->MappedAccess != 0))
@@ -1126,7 +1126,7 @@ START_API_FUNC
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        if(UNLIKELY(ReadRef(&albuf->ref) != 0))
+        if(UNLIKELY(ReadRef(albuf->ref) != 0))
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
         else if(UNLIKELY(values[0] < 0 || values[0] >= values[1] ||

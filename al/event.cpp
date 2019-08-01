@@ -64,7 +64,7 @@ static int EventThread(ALCcontext *context)
 
             if(evt.EnumType == EventType_ReleaseEffectState)
             {
-                evt.u.mEffectState->DecRef();
+                evt.u.mEffectState->release();
                 continue;
             }
 

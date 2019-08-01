@@ -6,14 +6,14 @@
 
 using RefCount = std::atomic<unsigned int>;
 
-inline void InitRef(RefCount *ptr, unsigned int value)
-{ ptr->store(value, std::memory_order_relaxed); }
-inline unsigned int ReadRef(RefCount *ptr)
-{ return ptr->load(std::memory_order_acquire); }
-inline unsigned int IncrementRef(RefCount *ptr)
-{ return ptr->fetch_add(1u, std::memory_order_acq_rel)+1u; }
-inline unsigned int DecrementRef(RefCount *ptr)
-{ return ptr->fetch_sub(1u, std::memory_order_acq_rel)-1u; }
+inline void InitRef(RefCount &ref, unsigned int value)
+{ ref.store(value, std::memory_order_relaxed); }
+inline unsigned int ReadRef(RefCount &ref)
+{ return ref.load(std::memory_order_acquire); }
+inline unsigned int IncrementRef(RefCount &ref)
+{ return ref.fetch_add(1u, std::memory_order_acq_rel)+1u; }
+inline unsigned int DecrementRef(RefCount &ref)
+{ return ref.fetch_sub(1u, std::memory_order_acq_rel)-1u; }
 
 
 /* WARNING: A livelock is theoretically possible if another thread keeps

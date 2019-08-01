@@ -598,6 +598,7 @@ SET(COMMON_OBJS
     common/aloptional.h
     common/alspan.h
     common/atomic.h
+    common/intrusive_ptr.h
     common/math_defs.h
     common/opthelpers.h
     common/threads.cpp

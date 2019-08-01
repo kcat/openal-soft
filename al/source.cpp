@@ -1309,7 +1309,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 newlist->mMaxSamples = buffer->SampleLen;
                 newlist->mNumBuffers = 1;
                 newlist->mBuffers[0] = buffer;
-                IncrementRef(&buffer->ref);
+                IncrementRef(buffer->ref);
 
                 /* Source is now Static */
                 Source->SourceType = AL_STATIC;
@@ -1331,7 +1331,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
                 std::for_each(temp->begin(), temp->end(),
                     [](ALbuffer *buffer) -> void
-                    { if(buffer) DecrementRef(&buffer->ref); });
+                    { if(buffer) DecrementRef(buffer->ref); });
                 al_free(temp);
             }
             return AL_TRUE;
@@ -1475,9 +1475,9 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {
                 /* Add refcount on the new slot, and release the previous slot */
-                if(slot) IncrementRef(&slot->ref);
+                if(slot) IncrementRef(slot->ref);
                 if(Source->Send[values[1]].Slot)
-                    DecrementRef(&Source->Send[values[1]].Slot->ref);
+                    DecrementRef(Source->Send[values[1]].Slot->ref);
                 Source->Send[values[1]].Slot = slot;
 
                 /* We must force an update if the auxiliary slot changed on an
@@ -1489,9 +1489,9 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             }
             else
             {
-                if(slot) IncrementRef(&slot->ref);
+                if(slot) IncrementRef(slot->ref);
                 if(Source->Send[values[1]].Slot)
-                    DecrementRef(&Source->Send[values[1]].Slot->ref);
+                    DecrementRef(Source->Send[values[1]].Slot->ref);
                 Source->Send[values[1]].Slot = slot;
                 UpdateSourceProps(Source, Context);
             }
@@ -3249,7 +3249,7 @@ START_API_FUNC
         BufferList->mBuffers[0] = buffer;
         if(!buffer) continue;
 
-        IncrementRef(&buffer->ref);
+        IncrementRef(buffer->ref);
 
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
         {
@@ -3274,7 +3274,7 @@ START_API_FUNC
                 ALbufferlistitem *next = BufferListStart->mNext.load(std::memory_order_relaxed);
                 std::for_each(BufferListStart->begin(), BufferListStart->end(),
                     [](ALbuffer *buffer) -> void
-                    { if(buffer) DecrementRef(&buffer->ref); });
+                    { if(buffer) DecrementRef(buffer->ref); });
                 al_free(BufferListStart);
                 BufferListStart = next;
             }
@@ -3350,7 +3350,7 @@ START_API_FUNC
         BufferList->mBuffers[BufferList->mNumBuffers++] = buffer;
         if(!buffer) continue;
 
-        IncrementRef(&buffer->ref);
+        IncrementRef(buffer->ref);
 
         BufferList->mMaxSamples = maxu(BufferList->mMaxSamples, buffer->SampleLen);
 
@@ -3377,7 +3377,7 @@ START_API_FUNC
                 ALbufferlistitem *next{BufferListStart->mNext.load(std::memory_order_relaxed)};
                 std::for_each(BufferListStart->begin(), BufferListStart->end(),
                     [](ALbuffer *buffer) -> void
-                    { if(buffer) DecrementRef(&buffer->ref); });
+                    { if(buffer) DecrementRef(buffer->ref); });
                 al_free(BufferListStart);
                 BufferListStart = next;
             }
@@ -3460,7 +3460,7 @@ START_API_FUNC
             else
             {
                 *(buffers++) = buffer->id;
-                DecrementRef(&buffer->ref);
+                DecrementRef(buffer->ref);
             }
         }
         if(i < head->mNumBuffers)
@@ -3574,7 +3574,7 @@ ALsource::~ALsource()
         ALbufferlistitem *next{BufferList->mNext.load(std::memory_order_relaxed)};
         std::for_each(BufferList->begin(), BufferList->end(),
             [](ALbuffer *buffer) -> void
-            { if(buffer) DecrementRef(&buffer->ref); });
+            { if(buffer) DecrementRef(buffer->ref); });
         al_free(BufferList);
         BufferList = next;
     }
@@ -3584,7 +3584,7 @@ ALsource::~ALsource()
         [](ALsource::SendData &send) -> void
         {
             if(send.Slot)
-                DecrementRef(&send.Slot->ref);
+                DecrementRef(send.Slot->ref);
             send.Slot = nullptr;
         }
     );

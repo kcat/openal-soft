@@ -838,16 +838,14 @@ void ReleaseThreadCtx(ALCcontext *context)
         result ? "" : ", leak detected");
 }
 
-std::atomic<void(*)(ALCcontext*)> ThreadCtxProc{ReleaseThreadCtx};
 class ThreadCtx {
     ALCcontext *ctx{nullptr};
 
 public:
     ~ThreadCtx()
     {
-        auto destruct = ThreadCtxProc.load();
-        if(destruct && ctx)
-            destruct(ctx);
+        if(ctx)
+            ReleaseThreadCtx(ctx);
         ctx = nullptr;
     }
 

@@ -39,7 +39,7 @@ struct AsyncEvent {
             ALenum type;
             ALuint id;
             ALuint param;
-            ALchar msg[1008];
+            ALchar msg[232];
         } user;
         EffectState *mEffectState;
     } u{};

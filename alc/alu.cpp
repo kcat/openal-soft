@@ -1343,20 +1343,20 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 }
 
 
-void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
+void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
+    const al::span<ALvoice> voices)
 {
     IncrementRef(ctx->mUpdateCount);
     if(LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire)))
     {
         bool cforce{CalcContextParams(ctx)};
         bool force{CalcListenerParams(ctx) || cforce};
-        force = std::accumulate(slots->begin(), slots->end(), force,
+        force = std::accumulate(slots.begin(), slots.end(), force,
             [ctx,cforce](bool force, ALeffectslot *slot) -> bool
             { return CalcEffectSlotParams(slot, ctx, cforce) | force; }
         );
 
-        std::for_each(ctx->mVoices->begin(),
-            ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
+        std::for_each(voices.begin(), voices.end(),
             [ctx,force](ALvoice &voice) -> void
             {
                 ALuint sid{voice.mSourceID.load(std::memory_order_acquire)};
@@ -1371,13 +1371,15 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    const ALeffectslotArray *auxslots{ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
+    const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
+    const al::span<ALvoice> voices{ctx->mVoices->data(),
+        ctx->mVoiceCount.load(std::memory_order_acquire)};
 
     /* Process pending propery updates for objects on the context. */
-    ProcessParamUpdates(ctx, auxslots);
+    ProcessParamUpdates(ctx, auxslots, voices);
 
     /* Clear auxiliary effect slot mixing buffers. */
-    std::for_each(auxslots->begin(), auxslots->end(),
+    std::for_each(auxslots.begin(), auxslots.end(),
         [SamplesToDo](ALeffectslot *slot) -> void
         {
             for(auto &buffer : slot->MixBuffer)
@@ -1386,8 +1388,7 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     );
 
     /* Process voices that have a playing source. */
-    std::for_each(ctx->mVoices->begin(),
-        ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
+    std::for_each(voices.begin(), voices.end(),
         [SamplesToDo,ctx](ALvoice &voice) -> void
         {
             const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
@@ -1400,9 +1401,9 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
     );
 
     /* Process effects. */
-    if(auxslots->size() < 1) return;
-    auto slots = auxslots->data();
-    auto slots_end = slots + auxslots->size();
+    if(auxslots.empty()) return;
+    auto slots = auxslots.data();
+    auto slots_end = slots + auxslots.size();
 
     /* First sort the slots into scratch storage, so that effects come before
      * their effect target (or their targets' target).

@@ -70,6 +70,7 @@ public:
 
     operator bool() const noexcept { return mPtr != nullptr; }
 
+    T& operator*() const noexcept { return *mPtr; }
     T* operator->() const noexcept { return mPtr; }
     T* get() const noexcept { return mPtr; }
 

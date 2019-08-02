@@ -75,15 +75,15 @@ using namespace std::placeholders;
 
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
-    ALint idx{source->VoiceIdx};
-    if(idx >= 0 && static_cast<ALuint>(idx) < context->mVoiceCount.load(std::memory_order_relaxed))
+    ALuint idx{source->VoiceIdx};
+    if(idx < context->mVoiceCount.load(std::memory_order_relaxed))
     {
         ALuint sid{source->id};
         ALvoice &voice = (*context->mVoices)[idx];
         if(voice.mSourceID.load(std::memory_order_acquire) == sid)
             return &voice;
     }
-    source->VoiceIdx = -1;
+    source->VoiceIdx = INVALID_VOICE_IDX;
     return nullptr;
 }
 
@@ -2894,7 +2894,7 @@ START_API_FUNC
             }
         );
         assert(voice != voices_end);
-        auto vidx = static_cast<ALint>(std::distance(context->mVoices->begin(), voice));
+        auto vidx = static_cast<ALuint>(std::distance(context->mVoices->begin(), voice));
         voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
@@ -3554,16 +3554,7 @@ ALsource::ALsource(ALsizei num_sends)
         send.LFReference = HIGHPASSFREQREF;
     }
 
-    Offset = 0.0;
-    OffsetType = AL_NONE;
-    SourceType = AL_UNDETERMINED;
-    state = AL_INITIAL;
-
-    queue = nullptr;
-
     PropsClean.test_and_set(std::memory_order_relaxed);
-
-    VoiceIdx = -1;
 }
 
 ALsource::~ALsource()

@@ -20,6 +20,7 @@ struct ALeffectslot;
 
 #define DEFAULT_SENDS  2
 
+#define INVALID_VOICE_IDX static_cast<ALuint>(-1)
 
 struct ALbufferlistitem {
     using element_type = ALbuffer*;
@@ -139,27 +140,27 @@ struct ALsource {
      * Last user-specified offset, and the offset type (bytes, samples, or
      * seconds).
      */
-    ALdouble Offset;
-    ALenum   OffsetType;
+    ALdouble Offset{0.0};
+    ALenum   OffsetType{AL_NONE};
 
     /** Source type (static, streaming, or undetermined) */
-    ALint SourceType;
+    ALint SourceType{AL_UNDETERMINED};
 
     /** Source state (initial, playing, paused, or stopped) */
-    ALenum state;
+    ALenum state{AL_INITIAL};
 
     /** Source Buffer Queue head. */
-    ALbufferlistitem *queue;
+    ALbufferlistitem *queue{nullptr};
 
     std::atomic_flag PropsClean;
 
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.
      */
-    ALint VoiceIdx;
+    ALuint VoiceIdx{INVALID_VOICE_IDX};
 
     /** Self ID */
-    ALuint id;
+    ALuint id{0};
 
 
     ALsource(ALsizei num_sends);

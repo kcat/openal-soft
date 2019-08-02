@@ -144,13 +144,13 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     /* Default effect slot */
     std::unique_ptr<ALeffectslot> mDefaultSlot;
 
-    ALCdevice *const mDevice;
+    const al::intrusive_ptr<ALCdevice> mDevice;
     const ALCchar *mExtensionList{nullptr};
 
     ALlistener mListener{};
 
 
-    ALCcontext(ALCdevice *device);
+    ALCcontext(al::intrusive_ptr<ALCdevice> device);
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext();

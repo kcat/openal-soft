@@ -246,7 +246,7 @@ constexpr ALbitfieldSOFT INVALID_MAP_FLAGS{~unsigned(AL_MAP_READ_BIT_SOFT | AL_M
 
 ALbuffer *AllocBuffer(ALCcontext *context)
 {
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     auto sublist = std::find_if(device->BufferList.begin(), device->BufferList.end(),
         [](const BufferSubList &entry) noexcept -> bool
@@ -656,7 +656,7 @@ START_API_FUNC
     if(UNLIKELY(n == 0))
         return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
@@ -699,7 +699,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
     {
-        ALCdevice *device = context->mDevice;
+        ALCdevice *device{context->mDevice.get()};
         std::lock_guard<std::mutex> _{device->BufferLock};
         if(!buffer || LookupBuffer(device, buffer))
             return AL_TRUE;
@@ -720,7 +720,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -754,7 +754,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -806,7 +806,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -829,7 +829,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -861,7 +861,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -989,7 +989,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
@@ -1009,7 +1009,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
@@ -1028,7 +1028,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
@@ -1050,7 +1050,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -1085,7 +1085,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
@@ -1115,7 +1115,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -1153,7 +1153,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
@@ -1175,7 +1175,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
@@ -1203,7 +1203,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
@@ -1225,7 +1225,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
@@ -1270,7 +1270,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
@@ -1305,7 +1305,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    ALCdevice *device = context->mDevice;
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))

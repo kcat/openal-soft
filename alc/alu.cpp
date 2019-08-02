@@ -409,7 +409,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         output = EffectTarget{&target->Wet, nullptr};
     else
     {
-        ALCdevice *device{context->mDevice};
+        ALCdevice *device{context->mDevice.get()};
         output = EffectTarget{&device->Dry, &device->RealOut};
     }
     state->update(context, slot, &slot->Params.mEffectProps, output);
@@ -950,7 +950,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
 void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device{ALContext->mDevice};
+    const ALCdevice *Device{ALContext->mDevice.get()};
     ALeffectslot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -1004,7 +1004,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
 
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device{ALContext->mDevice};
+    const ALCdevice *Device{ALContext->mDevice.get()};
     const ALsizei NumSends{Device->NumAuxSends};
     const ALlistener &Listener = ALContext->mListener;
 

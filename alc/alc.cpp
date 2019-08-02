@@ -2304,7 +2304,7 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 }
 
 
-ALCcontext::ALCcontext(ALCdevice *device) : mDevice{device}
+ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device) : mDevice{std::move(device)}
 {
     mPropsClean.test_and_set(std::memory_order_relaxed);
 }
@@ -2464,8 +2464,6 @@ ALCcontext::~ALCcontext()
             TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
         mAsyncEvents->readAdvance(count);
     }
-
-    mDevice->release();
 }
 
 /* ReleaseContext
@@ -3346,9 +3344,6 @@ START_API_FUNC
 
     dev->LastError.store(ALC_NO_ERROR);
 
-    ContextRef context{new ALCcontext{dev.get()}};
-    dev->add_ref();
-
     ALCenum err{UpdateDeviceParams(dev.get(), attrList)};
     if(err != ALC_NO_ERROR)
     {
@@ -3357,6 +3352,8 @@ START_API_FUNC
             aluHandleDisconnect(dev.get(), "Device update failure");
         return nullptr;
     }
+
+    ContextRef context{new ALCcontext{dev}};
     context->allocVoices(256);
 
     if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
@@ -3461,7 +3458,7 @@ START_API_FUNC
     ContextRef ctx{std::move(*iter)};
     ContextList.erase(iter);
 
-    ALCdevice *Device{ctx->mDevice};
+    ALCdevice *Device{ctx->mDevice.get()};
 
     std::lock_guard<std::mutex> _{Device->StateLock};
     if(!ReleaseContext(ctx.get(), Device) && Device->Flags.get<DeviceRunning>())
@@ -3572,7 +3569,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return nullptr;
     }
-    return ctx->mDevice;
+    return ctx->mDevice.get();
 }
 END_API_FUNC
 

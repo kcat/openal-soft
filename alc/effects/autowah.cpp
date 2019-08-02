@@ -106,7 +106,7 @@ ALboolean ALautowahState::deviceUpdate(const ALCdevice*)
 
 void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice};
+    const ALCdevice *device{context->mDevice.get()};
 
     const ALfloat ReleaseTime{clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f)};
 

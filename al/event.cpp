@@ -120,7 +120,6 @@ void StartEventThrd(ALCcontext *ctx)
 
 void StopEventThrd(ALCcontext *ctx)
 {
-    static constexpr AsyncEvent kill_evt{EventType_KillThread};
     RingBuffer *ring{ctx->mAsyncEvents.get()};
     auto evt_data = ring->getWriteVector().first;
     if(evt_data.len == 0)
@@ -130,7 +129,7 @@ void StopEventThrd(ALCcontext *ctx)
             evt_data = ring->getWriteVector().first;
         } while(evt_data.len == 0);
     }
-    new (evt_data.buf) AsyncEvent{kill_evt};
+    new (evt_data.buf) AsyncEvent{EventType_KillThread};
     ring->writeAdvance(1);
 
     ctx->mEventSem.post();

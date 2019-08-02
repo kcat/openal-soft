@@ -905,7 +905,7 @@ void ReverbState::update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *
 
 void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *Device{Context->mDevice};
+    const ALCdevice *Device{Context->mDevice.get()};
     const ALlistener &Listener = Context->mListener;
     const auto frequency = static_cast<ALfloat>(Device->Frequency);
 

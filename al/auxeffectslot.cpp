@@ -114,7 +114,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     }
 
     curarray = context->mActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     while((device->MixCount.load(std::memory_order_acquire)&1))
         std::this_thread::yield();
     delete curarray;
@@ -150,7 +150,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
     }
 
     curarray = context->mActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     while((device->MixCount.load(std::memory_order_acquire)&1))
         std::this_thread::yield();
     delete curarray;
@@ -159,7 +159,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
 
 ALeffectslot *AllocEffectSlot(ALCcontext *context)
 {
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     if(context->mNumEffectSlots >= device->AuxiliaryEffectSlotMax)
     {
@@ -376,7 +376,7 @@ START_API_FUNC
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
-        device = context->mDevice;
+        device = context->mDevice.get();
 
         { std::lock_guard<std::mutex> ___{device->EffectLock};
             ALeffect *effect{value ? LookupEffect(device, value) : nullptr};
@@ -644,7 +644,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         if(!State) return AL_OUT_OF_MEMORY;
 
         FPUCtl mixer_mode{};
-        ALCdevice *Device{Context->mDevice};
+        ALCdevice *Device{Context->mDevice.get()};
         std::unique_lock<std::mutex> statelock{Device->StateLock};
         State->mOutTarget = Device->Dry.Buffer;
         if(State->deviceUpdate(Device) == AL_FALSE)

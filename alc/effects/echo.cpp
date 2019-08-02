@@ -93,7 +93,7 @@ ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
 
 void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device = context->mDevice;
+    const ALCdevice *device{context->mDevice.get()};
     const auto frequency = static_cast<ALfloat>(device->Frequency);
 
     mTap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);

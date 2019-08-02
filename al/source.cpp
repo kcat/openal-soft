@@ -175,7 +175,7 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
  */
 int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     const ALbufferlistitem *Current;
     uint64_t readPos;
     ALuint refcount;
@@ -221,7 +221,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
  */
 ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     const ALbufferlistitem *Current;
     uint64_t readPos;
     ALuint refcount;
@@ -281,7 +281,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
  */
 ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     const ALbufferlistitem *Current;
     ALuint readPos;
     ALsizei readPosFrac;
@@ -483,7 +483,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
 
 ALsource *AllocSource(ALCcontext *context)
 {
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{context->mSourceLock};
     if(context->mNumSources >= device->SourcesMax)
     {
@@ -545,7 +545,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     BackendUniqueLock backlock{*device->Backend};
     if(ALvoice *voice{GetSourceVoice(source, context)})
     {
@@ -1126,7 +1126,7 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
             if(IsPlayingOrPaused(Source))
             {
-                ALCdevice *device{Context->mDevice};
+                ALCdevice *device{Context->mDevice.get()};
                 BackendLockGuard _{*device->Backend};
                 /* Double-check that the source is still playing while we have
                  * the lock.
@@ -1230,7 +1230,7 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
 ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values)
 {
-    ALCdevice *device{Context->mDevice};
+    ALCdevice *device{Context->mDevice.get()};
     ALbuffer *buffer{nullptr};
     ALfilter *filter{nullptr};
     ALeffectslot *slot{nullptr};
@@ -1346,7 +1346,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
             if(IsPlayingOrPaused(Source))
             {
-                ALCdevice *device{Context->mDevice};
+                ALCdevice *device{Context->mDevice.get()};
                 BackendLockGuard _{*device->Backend};
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
@@ -1662,7 +1662,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
 
 ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALdouble *values)
 {
-    ALCdevice *device{Context->mDevice};
+    ALCdevice *device{Context->mDevice.get()};
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
     ALint ivals[3];
@@ -1995,7 +1995,7 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
 
 ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64SOFT *values)
 {
-    ALCdevice *device = Context->mDevice;
+    ALCdevice *device = Context->mDevice.get();
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
     ALdouble dvals[6];
@@ -2780,7 +2780,7 @@ START_API_FUNC
             SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     BackendLockGuard __{*device->Backend};
     /* If the device is disconnected, go right to stopped. */
     if(UNLIKELY(!device->Connected.load(std::memory_order_acquire)))
@@ -3041,7 +3041,7 @@ START_API_FUNC
             SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     BackendLockGuard __{*device->Backend};
     auto pause_source = [&context](ALsource *source) -> void
     {
@@ -3096,7 +3096,7 @@ START_API_FUNC
             SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     BackendLockGuard __{*device->Backend};
     auto stop_source = [&context](ALsource *source) -> void
     {
@@ -3158,7 +3158,7 @@ START_API_FUNC
             SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     BackendLockGuard __{*device->Backend};
     auto rewind_source = [&context](ALsource *source) -> void
     {
@@ -3207,7 +3207,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     ALbuffer *BufferFmt{nullptr};
     ALbufferlistitem *BufferList{source->queue};
     while(BufferList)
@@ -3319,7 +3319,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->mDevice};
+    ALCdevice *device{context->mDevice.get()};
     ALbuffer *BufferFmt{nullptr};
     ALbufferlistitem *BufferList{source->queue};
     while(BufferList)

@@ -209,7 +209,7 @@ ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 
 void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice};
+    const ALCdevice *device{context->mDevice.get()};
     const ALfloat frequency{static_cast<ALfloat>(device->Frequency)};
     const ALfloat step{props->Vmorpher.Rate / static_cast<ALfloat>(device->Frequency)};
     mStep = fastf2i(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));

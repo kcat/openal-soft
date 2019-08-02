@@ -540,7 +540,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     ASSUME(SampleSize > 0);
     ASSUME(increment > 0);
 
-    ALCdevice *Device{Context->mDevice};
+    ALCdevice *Device{Context->mDevice.get()};
     const ALsizei NumSends{Device->NumAuxSends};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 

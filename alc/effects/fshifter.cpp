@@ -108,7 +108,7 @@ ALboolean FshifterState::deviceUpdate(const ALCdevice*)
 
 void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice};
+    const ALCdevice *device{context->mDevice.get()};
 
     ALfloat step{props->Fshifter.Frequency / static_cast<ALfloat>(device->Frequency)};
     mPhaseStep = fastf2i(minf(step, 0.5f) * FRACTIONONE);

@@ -63,7 +63,7 @@ ALboolean DistortionState::deviceUpdate(const ALCdevice*)
 
 void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice};
+    const ALCdevice *device{context->mDevice.get()};
 
     /* Store waveshaper edge settings. */
     const ALfloat edge{

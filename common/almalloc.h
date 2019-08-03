@@ -223,6 +223,11 @@ struct FlexArray {
     const index_type mSize;
     alignas(alignment) element_type mArray[0];
 
+    static std::unique_ptr<FlexArray> Create(index_type count)
+    {
+        void *ptr{al_calloc(alignof(FlexArray), Sizeof(count))};
+        return std::unique_ptr<FlexArray>{new (ptr) FlexArray{count}};
+    }
     static constexpr index_type Sizeof(index_type count, index_type base=0u) noexcept
     {
         return base +

@@ -2483,20 +2483,19 @@ bool ALCcontext::deinit()
         auto alloc_ctx_array = [](const size_t count) -> ContextArray*
         {
             if(count == 0) return &EmptyContextArray;
-            void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(count))};
-            return new (ptr) ContextArray{count};
+            return ContextArray::Create(count).release();
         };
         auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
 
-        /* Copy the current/old context handles to the new array, excluding
-            * the given context.
-            */
+        /* Copy the current/old context handles to the new array, excluding the
+         * given context.
+         */
         std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
             std::bind(std::not_equal_to<ALCcontext*>{}, _1, this));
 
-        /* Store the new context array in the device. Wait for any current
-            * mix to finish before deleting the old array.
-            */
+        /* Store the new context array in the device. Wait for any current mix
+         * to finish before deleting the old array.
+         */
         mDevice->mContexts.store(newarray);
         if(oldarray != &EmptyContextArray)
         {
@@ -2555,11 +2554,8 @@ void ALCcontext::allocVoices(size_t num_voices)
     if(mVoices && num_voices == mVoices->size())
         return;
 
-    std::unique_ptr<al::FlexArray<ALvoice>> voices;
-    {
-        void *ptr{al_calloc(16, al::FlexArray<ALvoice>::Sizeof(num_voices))};
-        voices.reset(new (ptr) al::FlexArray<ALvoice>{num_voices});
-    }
+    using ALvoiceArray = al::FlexArray<ALvoice>;
+    std::unique_ptr<ALvoiceArray> voices{ALvoiceArray::Create(num_voices)};
 
     const size_t v_count{minz(mVoiceCount.load(std::memory_order_relaxed), num_voices)};
     if(mVoices)
@@ -3366,8 +3362,7 @@ START_API_FUNC
          */
         auto *oldarray = device->mContexts.load();
         const size_t newcount{oldarray->size()+1};
-        void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(newcount))};
-        std::unique_ptr<ContextArray> newarray{new (ptr) ContextArray{newcount}};
+        std::unique_ptr<ContextArray> newarray{ContextArray::Create(newcount)};
 
         /* Copy the current/old context handles to the new array, appending the
          * new context.

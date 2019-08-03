@@ -101,8 +101,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
 
     ALfloat mDopplerFactor{1.0f};
     ALfloat mDopplerVelocity{1.0f};
-    ALfloat mSpeedOfSound{};
-    ALfloat mMetersPerUnit{1.0f};
+    ALfloat mSpeedOfSound{SPEEDOFSOUNDMETRESPERSEC};
+    ALfloat mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
     std::atomic_flag mPropsClean;
     std::atomic<bool> mDeferUpdates{false};
@@ -154,6 +154,14 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext();
+
+    void init();
+    /**
+     * Removes the context from its device and removes it from being current on
+     * the running thread or globally. Returns true if other contexts still
+     * exist on the device.
+     */
+    bool deinit();
 
     void allocVoices(size_t num_voices);
 

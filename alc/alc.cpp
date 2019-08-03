@@ -2309,58 +2309,6 @@ ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device) : mDevice{std::move(
     mPropsClean.test_and_set(std::memory_order_relaxed);
 }
 
-/* InitContext
- *
- * Initializes context fields
- */
-static ALvoid InitContext(ALCcontext *Context)
-{
-    ALlistener &listener = Context->mListener;
-    ALeffectslotArray *auxslots;
-
-    //Validate Context
-    if(!Context->mDefaultSlot)
-        auxslots = ALeffectslot::CreatePtrArray(0);
-    else
-    {
-        auxslots = ALeffectslot::CreatePtrArray(1);
-        (*auxslots)[0] = Context->mDefaultSlot.get();
-    }
-    Context->mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
-
-    //Set globals
-    Context->mDistanceModel = DistanceModel::Default;
-    Context->mSourceDistanceModel = AL_FALSE;
-    Context->mDopplerFactor = 1.0f;
-    Context->mDopplerVelocity = 1.0f;
-    Context->mSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
-    Context->mMetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
-
-    Context->mExtensionList = alExtList;
-
-
-    listener.Params.Matrix = alu::Matrix::Identity();
-    listener.Params.Velocity = alu::Vector{};
-    listener.Params.Gain = listener.Gain;
-    listener.Params.MetersPerUnit = Context->mMetersPerUnit;
-    listener.Params.DopplerFactor = Context->mDopplerFactor;
-    listener.Params.SpeedOfSound = Context->mSpeedOfSound * Context->mDopplerVelocity;
-    listener.Params.ReverbSpeedOfSound = listener.Params.SpeedOfSound *
-                                         listener.Params.MetersPerUnit;
-    listener.Params.SourceDistanceModel = Context->mSourceDistanceModel;
-    listener.Params.mDistanceModel = Context->mDistanceModel;
-
-
-    Context->mAsyncEvents = CreateRingBuffer(511, sizeof(AsyncEvent), false);
-    StartEventThrd(Context);
-}
-
-
-/* ALCcontext::~ALCcontext()
- *
- * Cleans up the context, and destroys any remaining objects the app failed to
- * delete. Called once there's no more references on the context.
- */
 ALCcontext::~ALCcontext()
 {
     TRACE("Freeing context %p\n", this);
@@ -2466,65 +2414,103 @@ ALCcontext::~ALCcontext()
     }
 }
 
-/* ReleaseContext
- *
- * Removes the context reference from the given device and removes it from
- * being current on the running thread or globally. Returns true if other
- * contexts still exist on the device.
- */
-static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
+void ALCcontext::init()
 {
-    if(LocalContext.get() == context)
+    if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == Playback)
     {
-        WARN("%p released while current on thread\n", context);
-        LocalContext.set(nullptr);
-        context->release();
+        void *ptr{al_calloc(16, sizeof(ALeffectslot))};
+        mDefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
+        if(InitEffectSlot(mDefaultSlot.get()) == AL_NO_ERROR)
+            aluInitEffectPanning(mDefaultSlot.get(), mDevice.get());
+        else
+        {
+            mDefaultSlot = nullptr;
+            ERR("Failed to initialize the default effect slot\n");
+        }
     }
 
-    ALCcontext *origctx{context};
+    ALeffectslotArray *auxslots;
+    if(!mDefaultSlot)
+        auxslots = ALeffectslot::CreatePtrArray(0);
+    else
+    {
+        auxslots = ALeffectslot::CreatePtrArray(1);
+        (*auxslots)[0] = mDefaultSlot.get();
+    }
+    mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
+
+    mExtensionList = alExtList;
+
+
+    mListener.Params.Matrix = alu::Matrix::Identity();
+    mListener.Params.Velocity = alu::Vector{};
+    mListener.Params.Gain = mListener.Gain;
+    mListener.Params.MetersPerUnit = mMetersPerUnit;
+    mListener.Params.DopplerFactor = mDopplerFactor;
+    mListener.Params.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
+    mListener.Params.ReverbSpeedOfSound = mListener.Params.SpeedOfSound *
+                                          mListener.Params.MetersPerUnit;
+    mListener.Params.SourceDistanceModel = mSourceDistanceModel;
+    mListener.Params.mDistanceModel = mDistanceModel;
+
+
+    mAsyncEvents = CreateRingBuffer(511, sizeof(AsyncEvent), false);
+    StartEventThrd(this);
+
+
+    allocVoices(256);
+}
+
+bool ALCcontext::deinit()
+{
+    if(LocalContext.get() == this)
+    {
+        WARN("%p released while current on thread\n", this);
+        LocalContext.set(nullptr);
+        release();
+    }
+
+    ALCcontext *origctx{this};
     if(GlobalContext.compare_exchange_strong(origctx, nullptr))
-        context->release();
+        release();
 
     bool ret{};
+    /* First make sure this context exists in the device's list. */
+    auto *oldarray = mDevice->mContexts.load(std::memory_order_acquire);
+    if(auto toremove = std::count(oldarray->begin(), oldarray->end(), this))
     {
         using ContextArray = al::FlexArray<ALCcontext*>;
-
-        /* First make sure this context exists in the device's list. */
-        auto *oldarray = device->mContexts.load(std::memory_order_acquire);
-        if(auto toremove = std::count(oldarray->begin(), oldarray->end(), context))
+        auto alloc_ctx_array = [](const size_t count) -> ContextArray*
         {
-            auto alloc_ctx_array = [](const size_t count) -> ContextArray*
-            {
-                if(count == 0) return &EmptyContextArray;
-                void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(count))};
-                return new (ptr) ContextArray{count};
-            };
-            auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
+            if(count == 0) return &EmptyContextArray;
+            void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(count))};
+            return new (ptr) ContextArray{count};
+        };
+        auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
 
-            /* Copy the current/old context handles to the new array, excluding
-             * the given context.
-             */
-            std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
-                std::bind(std::not_equal_to<ALCcontext*>{}, _1, context));
+        /* Copy the current/old context handles to the new array, excluding
+            * the given context.
+            */
+        std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
+            std::bind(std::not_equal_to<ALCcontext*>{}, _1, this));
 
-            /* Store the new context array in the device. Wait for any current
-             * mix to finish before deleting the old array.
-             */
-            device->mContexts.store(newarray);
-            if(oldarray != &EmptyContextArray)
-            {
-                while((device->MixCount.load(std::memory_order_acquire)&1))
-                    std::this_thread::yield();
-                delete oldarray;
-            }
-
-            ret = !newarray->empty();
+        /* Store the new context array in the device. Wait for any current
+            * mix to finish before deleting the old array.
+            */
+        mDevice->mContexts.store(newarray);
+        if(oldarray != &EmptyContextArray)
+        {
+            while((mDevice->MixCount.load(std::memory_order_acquire)&1))
+                std::this_thread::yield();
+            delete oldarray;
         }
-        else
-            ret = !oldarray->empty();
-    }
 
-    StopEventThrd(context);
+        ret = !newarray->empty();
+    }
+    else
+        ret = !oldarray->empty();
+
+    StopEventThrd(this);
 
     return ret;
 }
@@ -3354,22 +3340,7 @@ START_API_FUNC
     }
 
     ContextRef context{new ALCcontext{dev}};
-    context->allocVoices(256);
-
-    if(DefaultEffect.type != AL_EFFECT_NULL && dev->Type == Playback)
-    {
-        void *ptr{al_calloc(16, sizeof(ALeffectslot))};
-        context->mDefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
-        if(InitEffectSlot(context->mDefaultSlot.get()) == AL_NO_ERROR)
-            aluInitEffectPanning(context->mDefaultSlot.get(), dev.get());
-        else
-        {
-            context->mDefaultSlot = nullptr;
-            ERR("Failed to initialize the default effect slot\n");
-        }
-    }
-
-    InitContext(context.get());
+    context->init();
 
     if(auto volopt = ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust"))
     {
@@ -3396,7 +3367,7 @@ START_API_FUNC
         auto *oldarray = device->mContexts.load();
         const size_t newcount{oldarray->size()+1};
         void *ptr{al_calloc(alignof(ContextArray), ContextArray::Sizeof(newcount))};
-        auto *newarray = new (ptr) ContextArray{newcount};
+        std::unique_ptr<ContextArray> newarray{new (ptr) ContextArray{newcount}};
 
         /* Copy the current/old context handles to the new array, appending the
          * new context.
@@ -3407,7 +3378,7 @@ START_API_FUNC
         /* Store the new context array in the device. Wait for any current mix
          * to finish before deleting the old array.
          */
-        dev->mContexts.store(newarray);
+        dev->mContexts.store(newarray.release());
         if(oldarray != &EmptyContextArray)
         {
             while((dev->MixCount.load(std::memory_order_acquire)&1))
@@ -3461,7 +3432,7 @@ START_API_FUNC
     ALCdevice *Device{ctx->mDevice.get()};
 
     std::lock_guard<std::mutex> _{Device->StateLock};
-    if(!ReleaseContext(ctx.get(), Device) && Device->Flags.get<DeviceRunning>())
+    if(!ctx->deinit() && Device->Flags.get<DeviceRunning>())
     {
         Device->Backend->stop();
         Device->Flags.unset<DeviceRunning>();
@@ -3818,8 +3789,8 @@ START_API_FUNC
 
     for(ContextRef &context : orphanctxs)
     {
-        WARN("Releasing context %p\n", context.get());
-        ReleaseContext(context.get(), dev.get());
+        WARN("Releasing orphaned context %p\n", context.get());
+        context->deinit();
     }
     orphanctxs.clear();
 

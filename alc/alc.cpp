@@ -3391,8 +3391,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
-        context->add_ref();
-        ContextList.insert(iter, ContextRef{context.get()});
+        ContextList.emplace(iter, context);
     }
 
     if(context->mDefaultSlot)
@@ -3739,8 +3738,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        device->add_ref();
-        DeviceList.insert(iter, DeviceRef{device.get()});
+        DeviceList.emplace(iter, device);
     }
 
     TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
@@ -3865,8 +3863,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        device->add_ref();
-        DeviceList.insert(iter, DeviceRef{device.get()});
+        DeviceList.emplace(iter, device);
     }
 
     TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
@@ -4034,8 +4031,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        device->add_ref();
-        DeviceList.insert(iter, DeviceRef{device.get()});
+        DeviceList.emplace(iter, device);
     }
 
     TRACE("Created device %p\n", device.get());

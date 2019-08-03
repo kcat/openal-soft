@@ -389,7 +389,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
          * sample array. This produces the forward response with a backwards
          * phase-shift (+n degrees becomes -n degrees).
          */
-        splitter.applyAllpass(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
+        splitter.applyAllpass(tmpfilt[2].data(), tmpfilt[2].size());
         std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
@@ -398,7 +398,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
          */
         splitter.clear();
         splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
-            static_cast<int>(tmpfilt[2].size()));
+            tmpfilt[2].size());
 
         /* Apply left ear response with delay and HF scale. */
         for(ALuint i{0u};i < NumChannels;++i)
@@ -415,12 +415,12 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
         std::transform(fir, fir+Hrtf->irSize, tmpfilt[2].rbegin() + HRIR_LENGTH*3,
             [](const ALfloat (&ir)[2]) noexcept -> ALdouble { return ir[1]; });
 
-        splitter.applyAllpass(tmpfilt[2].data(), static_cast<int>(tmpfilt[2].size()));
+        splitter.applyAllpass(tmpfilt[2].data(), tmpfilt[2].size());
         std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
 
         splitter.clear();
         splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
-            static_cast<int>(tmpfilt[2].size()));
+            tmpfilt[2].size());
 
         for(ALuint i{0u};i < NumChannels;++i)
         {

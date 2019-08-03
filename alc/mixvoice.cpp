@@ -624,6 +624,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 DstBufferSize &= ~3;
         }
 
+        ASSUME(DstBufferSize > 0);
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
             ALvoice::ChannelData &chandata = voice->mChans[chan];

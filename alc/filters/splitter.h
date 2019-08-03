@@ -22,15 +22,15 @@ public:
 
     void init(Real f0norm);
     void clear() noexcept { lp_z1 = lp_z2 = ap_z1 = 0.0f; }
-    void process(Real *hpout, Real *lpout, const Real *input, const int count);
+    void process(Real *hpout, Real *lpout, const Real *input, const size_t count);
 
-    void applyHfScale(Real *samples, const Real hfscale, const int count);
+    void applyHfScale(Real *samples, const Real hfscale, const size_t count);
 
     /* The all-pass portion of the band splitter. Applies the same phase shift
      * without splitting the signal. Note that each use of this method is
      * indepedent, it does not track history between calls.
      */
-    void applyAllpass(Real *samples, const int count) const;
+    void applyAllpass(Real *samples, const size_t count) const;
 };
 using BandSplitter = BandSplitterR<float>;
 

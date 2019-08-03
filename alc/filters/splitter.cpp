@@ -27,7 +27,7 @@ void BandSplitterR<Real>::init(Real f0norm)
 }
 
 template<typename Real>
-void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, const int count)
+void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, const size_t count)
 {
     ASSUME(count > 0);
 
@@ -63,7 +63,7 @@ void BandSplitterR<Real>::process(Real *hpout, Real *lpout, const Real *input, c
 }
 
 template<typename Real>
-void BandSplitterR<Real>::applyHfScale(Real *samples, const Real hfscale, const int count)
+void BandSplitterR<Real>::applyHfScale(Real *samples, const Real hfscale, const size_t count)
 {
     ASSUME(count > 0);
 
@@ -97,7 +97,7 @@ void BandSplitterR<Real>::applyHfScale(Real *samples, const Real hfscale, const 
 }
 
 template<typename Real>
-void BandSplitterR<Real>::applyAllpass(Real *samples, const int count) const
+void BandSplitterR<Real>::applyAllpass(Real *samples, const size_t count) const
 {
     ASSUME(count > 0);
 

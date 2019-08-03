@@ -146,6 +146,8 @@ BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
 void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
 {
+    ASSUME(SamplesToDo > 0);
+
     if(mDualBand)
     {
         for(ALuint i{0};i < mNumChannels;i++)

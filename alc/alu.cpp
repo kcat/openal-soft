@@ -383,7 +383,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
              */
             RingBuffer *ring{context->mAsyncEvents.get()};
             auto evt_vec = ring->getWriteVector();
-            if(LIKELY(evt_vec.first.len > 0))
+            if LIKELY(evt_vec.first.len > 0)
             {
                 AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
                 evt->u.mEffectState = oldstate;
@@ -1347,7 +1347,7 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     const al::span<ALvoice> voices)
 {
     IncrementRef(ctx->mUpdateCount);
-    if(LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire)))
+    if LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire))
     {
         bool cforce{CalcContextParams(ctx)};
         bool force{CalcListenerParams(ctx) || cforce};
@@ -1463,7 +1463,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
 
         auto &DelayBuf = Stablizer->DelayBuf[i];
         auto buffer_end = Buffer[i].begin() + SamplesToDo;
-        if(LIKELY(SamplesToDo >= ALsizei{FrontStablizer::DelayLength}))
+        if LIKELY(SamplesToDo >= ALsizei{FrontStablizer::DelayLength})
         {
             auto delay_end = std::rotate(Buffer[i].begin(),
                 buffer_end - FrontStablizer::DelayLength, buffer_end);
@@ -1556,7 +1556,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALsizei Sa
 
         ALfloat *inout{al::assume_aligned<16>(chanbuffer.data())};
         auto inout_end = inout + SamplesToDo;
-        if(LIKELY(SamplesToDo >= base))
+        if LIKELY(SamplesToDo >= base)
         {
             auto delay_end = std::rotate(inout, inout_end - base, inout_end);
             std::swap_ranges(inout, delay_end, distbuf);
@@ -1690,7 +1690,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         /* Apply any needed post-process for finalizing the Dry mix to the
          * RealOut (Ambisonic decode, UHJ encode, etc).
          */
-        if(LIKELY(device->PostProcess))
+        if LIKELY(device->PostProcess)
             device->PostProcess(device, SamplesToDo);
         const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
 
@@ -1718,7 +1718,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         if(device->DitherDepth > 0.0f)
             ApplyDither(RealOut, &device->DitherSeed, device->DitherDepth, SamplesToDo);
 
-        if(LIKELY(OutBuffer))
+        if LIKELY(OutBuffer)
         {
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.

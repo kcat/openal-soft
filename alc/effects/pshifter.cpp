@@ -68,11 +68,11 @@ inline int double2int(double d)
     shift = ((conv.i64>>52)&0x7ff) - (1023+52);
 
     /* Over/underflow */
-    if(UNLIKELY(shift >= 63 || shift < -52))
+    if UNLIKELY(shift >= 63 || shift < -52)
         return 0;
 
     mant = (conv.i64&0xfffffffffffff_i64) | 0x10000000000000_i64;
-    if(LIKELY(shift < 0))
+    if LIKELY(shift < 0)
         return (int)(mant >> -shift) * sign;
     return (int)(mant << shift) * sign;
 

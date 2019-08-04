@@ -4193,7 +4193,7 @@ START_API_FUNC
     device->Connected.store(true);
 
     ALCenum err{UpdateDeviceParams(dev.get(), attribs)};
-    if(LIKELY(err == ALC_NO_ERROR)) return ALC_TRUE;
+    if LIKELY(err == ALC_NO_ERROR) return ALC_TRUE;
 
     alcSetError(dev.get(), err);
     if(err == ALC_INVALID_DEVICE)

@@ -1484,7 +1484,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
             mDelay.write(offset, c, afmt[c].data()+base, todo);
 
         /* Process the samples for reverb. */
-        if(UNLIKELY(fadeCount < FADE_SAMPLES))
+        if UNLIKELY(fadeCount < FADE_SAMPLES)
         {
             auto fade = static_cast<ALfloat>(fadeCount);
 

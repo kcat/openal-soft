@@ -136,7 +136,7 @@ const char *res_str(SLresult result)
 }
 
 #define PRINTERR(x, s) do {                                                      \
-    if(UNLIKELY((x) != SL_RESULT_SUCCESS))                                       \
+    if UNLIKELY((x) != SL_RESULT_SUCCESS)                                        \
         ERR("%s: %s\n", (s), res_str((x)));                                      \
 } while(0)
 

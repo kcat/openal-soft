@@ -39,24 +39,24 @@ enum LogLevel {
 extern LogLevel gLogLevel;
 
 #define TRACEREF(...) do {                                                    \
-    if(UNLIKELY(gLogLevel >= LogRef))                                         \
+    if UNLIKELY(gLogLevel >= LogRef)                                          \
         AL_PRINT("(--)", __VA_ARGS__);                                        \
 } while(0)
 
 #define TRACE(...) do {                                                       \
-    if(UNLIKELY(gLogLevel >= LogTrace))                                       \
+    if UNLIKELY(gLogLevel >= LogTrace)                                        \
         AL_PRINT("(II)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_DEBUG, __VA_ARGS__);                              \
 } while(0)
 
 #define WARN(...) do {                                                        \
-    if(UNLIKELY(gLogLevel >= LogWarning))                                     \
+    if UNLIKELY(gLogLevel >= LogWarning)                                      \
         AL_PRINT("(WW)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_WARN, __VA_ARGS__);                               \
 } while(0)
 
 #define ERR(...) do {                                                         \
-    if(UNLIKELY(gLogLevel >= LogError))                                       \
+    if UNLIKELY(gLogLevel >= LogError)                                        \
         AL_PRINT("(EE)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_ERROR, __VA_ARGS__);                              \
 } while(0)

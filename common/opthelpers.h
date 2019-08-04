@@ -12,9 +12,9 @@
  * required to be true, but it can result in more optimal code for the true
  * path at the expense of a less optimal false path.
  */
-#define LIKELY(x) __builtin_expect(!!(x), !false)
+#define LIKELY(x) (__builtin_expect(!!(x), !false))
 /* The opposite of LIKELY, optimizing the case where the condition is false. */
-#define UNLIKELY(x) __builtin_expect(!!(x), false)
+#define UNLIKELY(x) (__builtin_expect(!!(x), false))
 /* Unlike LIKELY, ASSUME requires the condition to be true or else it invokes
  * undefined behavior. It's essentially an assert without actually checking the
  * condition at run-time, allowing for stronger optimizations than LIKELY.

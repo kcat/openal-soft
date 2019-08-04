@@ -635,7 +635,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 SrcData.begin());
             std::fill(srciter, SrcData.end(), 0.0f);
 
-            if(UNLIKELY(!BufferListItem))
+            if UNLIKELY(!BufferListItem)
                 srciter = std::copy(chandata.mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
                     chandata.mPrevSamples.end(), srciter);
             else if(isstatic)
@@ -645,7 +645,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
 
-            if(UNLIKELY(srciter != SrcData.end()))
+            if UNLIKELY(srciter != SrcData.end())
             {
                 /* If the source buffer wasn't filled, copy the last sample for
                  * the remaining buffer. Ideally it should have ended with
@@ -734,7 +734,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                          * and new target gains given how much of the fade time
                          * this mix handles.
                          */
-                        if(LIKELY(Counter > fademix))
+                        if LIKELY(Counter > fademix)
                         {
                             const ALfloat a{static_cast<ALfloat>(fademix) /
                                 static_cast<ALfloat>(Counter)};
@@ -758,7 +758,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                             parms.Hrtf.Old.Gain = TargetGain;
                     }
 
-                    if(LIKELY(fademix < DstBufferSize))
+                    if LIKELY(fademix < DstBufferSize)
                     {
                         const ALsizei todo{DstBufferSize - fademix};
                         ALfloat gain{TargetGain};
@@ -856,7 +856,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         OutPos += DstBufferSize;
         Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
 
-        if(UNLIKELY(!BufferListItem))
+        if UNLIKELY(!BufferListItem)
         {
             /* Do nothing extra when there's no buffers. */
         }
@@ -879,7 +879,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 /* Handle non-looping static source */
                 if(DataPosInt >= BufferListItem->mMaxSamples)
                 {
-                    if(LIKELY(vstate == ALvoice::Playing))
+                    if LIKELY(vstate == ALvoice::Playing)
                         vstate = ALvoice::Stopped;
                     BufferListItem = nullptr;
                     break;
@@ -898,7 +898,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);
             if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {
-                if(LIKELY(vstate == ALvoice::Playing))
+                if LIKELY(vstate == ALvoice::Playing)
                     vstate = ALvoice::Stopped;
                 break;
             }
@@ -908,7 +908,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     voice->mFlags |= VOICE_IS_FADING;
 
     /* Don't update positions and buffers if we were stopping. */
-    if(UNLIKELY(vstate == ALvoice::Stopping))
+    if UNLIKELY(vstate == ALvoice::Stopping)
     {
         voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
         return;

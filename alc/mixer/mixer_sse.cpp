@@ -165,7 +165,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
             const ALfloat step{diff * delta};
             ALfloat step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(LIKELY(minsize > 3))
+            if LIKELY(minsize > 3)
             {
                 const __m128 four4{_mm_set1_ps(4.0f)};
                 const __m128 step4{_mm_set1_ps(step)};
@@ -211,7 +211,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        if(LIKELY(BufferSize-pos > 3))
+        if LIKELY(BufferSize-pos > 3)
         {
             ALsizei todo{(BufferSize-pos) >> 2};
             const __m128 gain4{_mm_set1_ps(gain)};
@@ -242,7 +242,7 @@ void MixRow_<SSETag>(FloatBufferLine &OutBuffer, const ALfloat *Gains,
             continue;
 
         ALsizei pos{0};
-        if(LIKELY(BufferSize > 3))
+        if LIKELY(BufferSize > 3)
         {
             ALsizei todo{BufferSize >> 2};
             const __m128 gain4 = _mm_set1_ps(gain);

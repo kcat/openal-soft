@@ -314,7 +314,7 @@ void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, FloatBufferLine *O
         ALfloat *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
 
         auto inout_end = inout + SamplesToDo;
-        if(LIKELY(SamplesToDo >= lookAhead))
+        if LIKELY(SamplesToDo >= lookAhead)
         {
             auto delay_end = std::rotate(inout, inout_end - lookAhead, inout_end);
             std::swap_ranges(inout, delay_end, delaybuf);

@@ -32,7 +32,7 @@ static int EventThread(ALCcontext *context)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     bool quitnow{false};
-    while(LIKELY(!quitnow))
+    while LIKELY(!quitnow)
     {
         auto evt_data = ring->getReadVector().first;
         if(evt_data.len == 0)
@@ -60,7 +60,7 @@ static int EventThread(ALCcontext *context)
             } _{evt, ring};
 
             quitnow = evt.EnumType == EventType_KillThread;
-            if(UNLIKELY(quitnow)) break;
+            if UNLIKELY(quitnow) break;
 
             if(evt.EnumType == EventType_ReleaseEffectState)
             {
@@ -141,10 +141,10 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
-    if(count < 0) SETERR_RETURN(context, AL_INVALID_VALUE,, "Controlling %d events", count);
-    if(count == 0) return;
+    if(count < 0) context->setError(AL_INVALID_VALUE, "Controlling %d events", count);
+    if(count <= 0) return;
     if(!types) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
 
     ALbitfieldSOFT flags{0};
@@ -202,7 +202,7 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mEventCbLock};

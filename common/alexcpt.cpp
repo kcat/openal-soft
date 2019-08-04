@@ -17,7 +17,7 @@ backend_exception::backend_exception(ALCenum code, const char *msg, ...) : mErro
     va_start(args, msg);
     va_copy(args2, args);
     int msglen{std::vsnprintf(nullptr, 0, msg, args)};
-    if(LIKELY(msglen > 0))
+    if LIKELY(msglen > 0)
     {
         mMessage.resize(static_cast<size_t>(msglen)+1);
         std::vsnprintf(&mMessage[0], mMessage.length(), msg, args2);

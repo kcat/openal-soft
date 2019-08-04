@@ -379,7 +379,7 @@ pa_context *connect_context(std::unique_lock<std::mutex> &plock)
     if(!binname.fname.empty())
         name = binname.fname.c_str();
 
-    if(UNLIKELY(!pulse_mainloop))
+    if UNLIKELY(!pulse_mainloop)
     {
         std::thread{pulse_mainloop_thread}.detach();
         while(!pulse_mainloop)
@@ -744,7 +744,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes)
     aluMixData(mDevice, buf, nbytes/mFrameSize);
 
     int ret{pa_stream_write(stream, buf, nbytes, pa_xfree, 0, PA_SEEK_RELATIVE)};
-    if(UNLIKELY(ret != PA_OK))
+    if UNLIKELY(ret != PA_OK)
         ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
 }
 
@@ -1064,7 +1064,7 @@ ClockLatency PulsePlayback::getClockLatency()
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
 
-    if(UNLIKELY(err != 0))
+    if UNLIKELY(err != 0)
     {
         /* FIXME: if err = -PA_ERR_NODATA, it means we were called too soon
          * after starting the stream and no timing info has been received from
@@ -1075,7 +1075,7 @@ ClockLatency PulsePlayback::getClockLatency()
         latency = 0;
         neg = 0;
     }
-    else if(UNLIKELY(neg))
+    else if UNLIKELY(neg)
         latency = 0;
     ret.Latency = std::chrono::microseconds{latency};
 
@@ -1328,24 +1328,24 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
     {
         if(mCapBuffer.empty())
         {
-            if(UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire)))
+            if UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire))
                 break;
             const pa_stream_state_t state{pa_stream_get_state(mStream)};
-            if(UNLIKELY(!PA_STREAM_IS_GOOD(state)))
+            if UNLIKELY(!PA_STREAM_IS_GOOD(state))
             {
                 aluHandleDisconnect(mDevice, "Bad capture state: %u", state);
                 break;
             }
             const void *capbuf;
             size_t caplen;
-            if(UNLIKELY(pa_stream_peek(mStream, &capbuf, &caplen) < 0))
+            if UNLIKELY(pa_stream_peek(mStream, &capbuf, &caplen) < 0)
             {
                 aluHandleDisconnect(mDevice, "Failed retrieving capture samples: %s",
                     pa_strerror(pa_context_errno(mContext)));
                 break;
             }
             if(caplen == 0) break;
-            if(UNLIKELY(!capbuf))
+            if UNLIKELY(!capbuf)
                 mCapLen = -static_cast<ssize_t>(caplen);
             else
                 mCapLen = static_cast<ssize_t>(caplen);
@@ -1353,7 +1353,7 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
         }
 
         const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
-        if(UNLIKELY(mCapLen < 0))
+        if UNLIKELY(mCapLen < 0)
             std::fill_n(dstbuf.begin(), rem, mSilentVal);
         else
             std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
@@ -1409,13 +1409,13 @@ ClockLatency PulseCapture::getClockLatency()
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
 
-    if(UNLIKELY(err != 0))
+    if UNLIKELY(err != 0)
     {
         ERR("Failed to get stream latency: 0x%x\n", err);
         latency = 0;
         neg = 0;
     }
-    else if(UNLIKELY(neg))
+    else if UNLIKELY(neg)
         latency = 0;
     ret.Latency = std::chrono::microseconds{latency};
 

@@ -160,7 +160,7 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         ALuint enabled{mEnabled};
         for(FloatBufferLine &outbuf : OutBuffer)
         {
-            if(LIKELY(enabled&1))
+            if LIKELY(enabled&1)
             {
                 MixRowSamples(outbuf, (*mixmtx)[sHFBand], hfsamples, 0, SamplesToDo);
                 MixRowSamples(outbuf, (*mixmtx)[sLFBand], lfsamples, 0, SamplesToDo);
@@ -176,7 +176,7 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         ALuint enabled{mEnabled};
         for(FloatBufferLine &outbuf : OutBuffer)
         {
-            if(LIKELY(enabled&1))
+            if LIKELY(enabled&1)
                 MixRowSamples(outbuf, *mixmtx, insamples, 0, SamplesToDo);
             ++mixmtx;
             enabled >>= 1;

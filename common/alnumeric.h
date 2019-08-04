@@ -246,11 +246,11 @@ inline int float2int(float f) noexcept
     shift = ((conv.i>>23)&0xff) - (127+23);
 
     /* Over/underflow */
-    if(UNLIKELY(shift >= 31 || shift < -23))
+    if UNLIKELY(shift >= 31 || shift < -23)
         return 0;
 
     mant = (conv.i&0x7fffff) | 0x800000;
-    if(LIKELY(shift < 0))
+    if LIKELY(shift < 0)
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
 
@@ -293,7 +293,7 @@ inline float fast_roundf(float f) noexcept
     sign = (conv.i>>31)&0x01;
     expo = (conv.i>>23)&0xff;
 
-    if(UNLIKELY(expo >= 150/*+23*/))
+    if UNLIKELY(expo >= 150/*+23*/)
     {
         /* An exponent (base-2) of 23 or higher is incapable of sub-integral
          * precision, so it's already an integral value. We don't need to worry

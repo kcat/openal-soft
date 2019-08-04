@@ -288,7 +288,7 @@ ALfilter *AllocFilter(ALCcontext *context)
     auto lidx = static_cast<ALsizei>(std::distance(device->FilterList.begin(), sublist));
     ALfilter *filter{nullptr};
     ALsizei slidx{0};
-    if(LIKELY(sublist != device->FilterList.end()))
+    if LIKELY(sublist != device->FilterList.end())
     {
         slidx = CTZ64(sublist->FreeMask);
         filter = sublist->Filters + slidx;
@@ -298,7 +298,7 @@ ALfilter *AllocFilter(ALCcontext *context)
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(device->FilterList.size() >= 1<<25))
+        if UNLIKELY(device->FilterList.size() >= 1<<25)
         {
             context->setError(AL_OUT_OF_MEMORY, "Too many filters allocated");
             return nullptr;
@@ -307,7 +307,7 @@ ALfilter *AllocFilter(ALCcontext *context)
         sublist = device->FilterList.end() - 1;
         sublist->FreeMask = ~0_u64;
         sublist->Filters = static_cast<ALfilter*>(al_calloc(16, sizeof(ALfilter)*64));
-        if(UNLIKELY(!sublist->Filters))
+        if UNLIKELY(!sublist->Filters)
         {
             device->FilterList.pop_back();
             context->setError(AL_OUT_OF_MEMORY, "Failed to allocate filter batch");
@@ -346,10 +346,10 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= device->FilterList.size()))
+    if UNLIKELY(lidx >= device->FilterList.size())
         return nullptr;
     FilterSubList &sublist = device->FilterList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (1_u64 << slidx)))
+    if UNLIKELY(sublist.FreeMask & (1_u64 << slidx))
         return nullptr;
     return sublist.Filters + slidx;
 }
@@ -360,21 +360,19 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
-    if(UNLIKELY(n < 0))
-    {
+    if UNLIKELY(n < 0)
         context->setError(AL_INVALID_VALUE, "Generating %d filters", n);
-        return;
-    }
+    if UNLIKELY(n <= 0) return;
 
-    if(LIKELY(n == 1))
+    if LIKELY(n == 1)
     {
         /* Special handling for the easy and normal case. */
         ALfilter *filter = AllocFilter(context.get());
         if(filter) filters[0] = filter->id;
     }
-    else if(n > 1)
+    else
     {
         /* Store the allocated buffer IDs in a separate local list, to avoid
          * modifying the user storage in case of failure.
@@ -400,15 +398,11 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
-    if(UNLIKELY(n < 0))
-    {
+    if UNLIKELY(n < 0)
         context->setError(AL_INVALID_VALUE, "Deleting %d filters", n);
-        return;
-    }
-    if(UNLIKELY(n == 0))
-        return;
+    if UNLIKELY(n <= 0) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -420,7 +414,7 @@ START_API_FUNC
         {
             if(!fid) return false;
             ALfilter *filter{LookupFilter(device, fid)};
-            if(UNLIKELY(!filter))
+            if UNLIKELY(!filter)
             {
                 context->setError(AL_INVALID_NAME, "Invalid filter ID %u", fid);
                 return true;
@@ -428,7 +422,7 @@ START_API_FUNC
             return false;
         }
     );
-    if(LIKELY(invflt == filters_end))
+    if LIKELY(invflt == filters_end)
     {
         /* All good. Delete non-0 filter IDs. */
         std::for_each(filters, filters_end,
@@ -446,7 +440,7 @@ AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(LIKELY(context))
+    if LIKELY(context)
     {
         ALCdevice *device{context->mDevice.get()};
         std::lock_guard<std::mutex> _{device->FilterLock};
@@ -462,13 +456,13 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -500,13 +494,13 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -520,13 +514,13 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -540,13 +534,13 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -560,13 +554,13 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -592,13 +586,13 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -612,13 +606,13 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *val
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {
@@ -632,13 +626,13 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(UNLIKELY(!context)) return;
+    if UNLIKELY(!context) return;
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
-    if(UNLIKELY(!alfilt))
+    if UNLIKELY(!alfilt)
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
     {

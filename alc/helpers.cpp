@@ -478,7 +478,7 @@ void al_print(FILE *logfile, const char *fmt, ...)
     va_start(args, fmt);
     va_copy(args2, args);
     int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
-    if(UNLIKELY(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)))
+    if UNLIKELY(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg))
     {
         dynmsg.resize(static_cast<size_t>(msglen) + 1u);
         str = dynmsg.data();

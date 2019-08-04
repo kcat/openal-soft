@@ -16,7 +16,7 @@ public:
     unsigned int release() noexcept
     {
         auto ref = DecrementRef(mRef);
-        if(UNLIKELY(ref == 0))
+        if UNLIKELY(ref == 0)
             delete static_cast<T*>(this);
         return ref;
     }

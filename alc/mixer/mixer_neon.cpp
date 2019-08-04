@@ -209,7 +209,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
             const ALfloat step{diff * delta};
             ALfloat step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(LIKELY(minsize > 3))
+            if LIKELY(minsize > 3)
             {
                 const float32x4_t four4{vdupq_n_f32(4.0f)};
                 const float32x4_t step4{vdupq_n_f32(step)};
@@ -258,7 +258,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        if(LIKELY(BufferSize-pos > 3))
+        if LIKELY(BufferSize-pos > 3)
         {
             ALsizei todo{(BufferSize-pos) >> 2};
             const float32x4_t gain4 = vdupq_n_f32(gain);
@@ -289,7 +289,7 @@ void MixRow_<NEONTag>(FloatBufferLine &OutBuffer, const ALfloat *Gains,
             continue;
 
         ALsizei pos{0};
-        if(LIKELY(BufferSize > 3))
+        if LIKELY(BufferSize > 3)
         {
             ALsizei todo{BufferSize >> 2};
             float32x4_t gain4{vdupq_n_f32(gain)};

@@ -985,28 +985,38 @@ ALint Int64ValsByProp(ALenum prop)
 }
 
 
-ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values);
-ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values);
-ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint64SOFT *values);
+bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALfloat> values);
+bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint> values);
+bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint64SOFT> values);
 
+#define CHECKSIZE(v, s) do { \
+    if(UNLIKELY((v).size() != INT_MAX && (v).size() != (s)))                  \
+    {                                                                         \
+        Context->setError(AL_INVALID_ENUM,                                    \
+            "Property 0x%04x expects %d value(s), got %zu", prop, (s),        \
+            (v).size());                                                      \
+        return false;                                                         \
+    }                                                                         \
+} while(0)
 #define CHECKVAL(x) do {                                                      \
-    if(!(x))                                                                  \
+    if(UNLIKELY(!(x)))                                                        \
     {                                                                         \
         Context->setError(AL_INVALID_VALUE, "Value out of range");            \
-        return AL_FALSE;                                                      \
+        return false;                                                         \
     }                                                                         \
 } while(0)
 
-void UpdateSourceProps(ALsource *source, ALCcontext *context)
+bool UpdateSourceProps(ALsource *source, ALCcontext *context)
 {
     ALvoice *voice;
     if(SourceShouldUpdate(source, context) && (voice=GetSourceVoice(source, context)) != nullptr)
         UpdateSourceProps(source, voice, context);
     else
         source->PropsClean.clear(std::memory_order_release);
+    return true;
 }
 
-ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values)
+bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALfloat> values)
 {
     ALint ival;
 
@@ -1015,114 +1025,115 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_CLOCK_SOFT:
             /* Query only */
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
-                          "Setting read-only source property 0x%04x", prop);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                "Setting read-only source property 0x%04x", prop);
 
         case AL_PITCH:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->Pitch = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->Pitch = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_CONE_INNER_ANGLE:
-            CHECKVAL(*values >= 0.0f && *values <= 360.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 360.0f);
 
-            Source->InnerAngle = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->InnerAngle = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_CONE_OUTER_ANGLE:
-            CHECKVAL(*values >= 0.0f && *values <= 360.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 360.0f);
 
-            Source->OuterAngle = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->OuterAngle = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_GAIN:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->Gain = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->Gain = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_MAX_DISTANCE:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->MaxDistance = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->MaxDistance = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_ROLLOFF_FACTOR:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->RolloffFactor = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->RolloffFactor = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_REFERENCE_DISTANCE:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->RefDistance = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->RefDistance = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_MIN_GAIN:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->MinGain = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->MinGain = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_MAX_GAIN:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
-            Source->MaxGain = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->MaxGain = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_CONE_OUTER_GAIN:
-            CHECKVAL(*values >= 0.0f && *values <= 1.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 1.0f);
 
-            Source->OuterGain = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->OuterGain = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_CONE_OUTER_GAINHF:
-            CHECKVAL(*values >= 0.0f && *values <= 1.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 1.0f);
 
-            Source->OuterGainHF = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->OuterGainHF = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_AIR_ABSORPTION_FACTOR:
-            CHECKVAL(*values >= 0.0f && *values <= 10.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 10.0f);
 
-            Source->AirAbsorptionFactor = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->AirAbsorptionFactor = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_ROOM_ROLLOFF_FACTOR:
-            CHECKVAL(*values >= 0.0f && *values <= 10.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 10.0f);
 
-            Source->RoomRolloffFactor = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->RoomRolloffFactor = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_DOPPLER_FACTOR:
-            CHECKVAL(*values >= 0.0f && *values <= 1.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && values[0] <= 1.0f);
 
-            Source->DopplerFactor = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->DopplerFactor = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-            CHECKVAL(*values >= 0.0f);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f);
 
             Source->OffsetType = prop;
-            Source->Offset = *values;
+            Source->Offset = values[0];
 
             if(IsPlayingOrPaused(Source))
             {
@@ -1134,55 +1145,56 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
                     if(ApplyOffset(Source, voice) == AL_FALSE)
-                        SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid offset");
+                        SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
                 }
             }
-            return AL_TRUE;
+            return true;
 
         case AL_SOURCE_RADIUS:
-            CHECKVAL(*values >= 0.0f && std::isfinite(*values));
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0.0f && std::isfinite(values[0]));
 
-            Source->Radius = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->Radius = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_STEREO_ANGLES:
+            CHECKSIZE(values, 2);
             CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]));
 
             Source->StereoPan[0] = values[0];
             Source->StereoPan[1] = values[1];
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            return UpdateSourceProps(Source, Context);
 
 
         case AL_POSITION:
+            CHECKSIZE(values, 3);
             CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]));
 
             Source->Position[0] = values[0];
             Source->Position[1] = values[1];
             Source->Position[2] = values[2];
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            return UpdateSourceProps(Source, Context);
 
         case AL_VELOCITY:
+            CHECKSIZE(values, 3);
             CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]));
 
             Source->Velocity[0] = values[0];
             Source->Velocity[1] = values[1];
             Source->Velocity[2] = values[2];
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            return UpdateSourceProps(Source, Context);
 
         case AL_DIRECTION:
+            CHECKSIZE(values, 3);
             CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]));
 
             Source->Direction[0] = values[0];
             Source->Direction[1] = values[1];
             Source->Direction[2] = values[2];
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            return UpdateSourceProps(Source, Context);
 
         case AL_ORIENTATION:
+            CHECKSIZE(values, 6);
             CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
                      std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5]));
 
@@ -1192,8 +1204,7 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             Source->OrientUp[0] = values[3];
             Source->OrientUp[1] = values[4];
             Source->OrientUp[2] = values[5];
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            return UpdateSourceProps(Source, Context);
 
 
         case AL_SOURCE_RELATIVE:
@@ -1207,13 +1218,15 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
+            CHECKSIZE(values, 1);
             ival = static_cast<ALint>(values[0]);
-            return SetSourceiv(Source, Context, prop, &ival);
+            return SetSourceiv(Source, Context, prop, {&ival, 1u});
 
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
+            CHECKSIZE(values, 1);
             ival = static_cast<ALint>(static_cast<ALuint>(values[0]));
-            return SetSourceiv(Source, Context, prop, &ival);
+            return SetSourceiv(Source, Context, prop, {&ival, 1u});
 
         case AL_BUFFER:
         case AL_DIRECT_FILTER:
@@ -1225,10 +1238,10 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
     ERR("Unexpected property: 0x%04x\n", prop);
     Context->setError(AL_INVALID_ENUM, "Invalid source float property 0x%04x", prop);
-    return AL_FALSE;
+    return false;
 }
 
-ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values)
+bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint> values)
 {
     ALCdevice *device{Context->mDevice.get()};
     ALbuffer *buffer{nullptr};
@@ -1247,24 +1260,24 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
             /* Query only */
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
-                          "Setting read-only source property 0x%04x", prop);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                "Setting read-only source property 0x%04x", prop);
 
         case AL_SOURCE_RELATIVE:
-            CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-            Source->HeadRelative = static_cast<ALboolean>(*values);
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->HeadRelative = static_cast<ALboolean>(values[0]);
+            return UpdateSourceProps(Source, Context);
 
         case AL_LOOPING:
-            CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-            Source->Looping = static_cast<ALboolean>(*values);
+            Source->Looping = static_cast<ALboolean>(values[0]);
             if(IsPlayingOrPaused(Source))
             {
-                ALvoice *voice{GetSourceVoice(Source, Context)};
-                if(voice)
+                if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
                     if(Source->Looping)
                         voice->mLoopBuffer.store(Source->queue, std::memory_order_release);
@@ -1279,24 +1292,24 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                         std::this_thread::yield();
                 }
             }
-            return AL_TRUE;
+            return true;
 
         case AL_BUFFER:
+            CHECKSIZE(values, 1);
             buflock = std::unique_lock<std::mutex>{device->BufferLock};
-            if(!(*values == 0 || (buffer=LookupBuffer(device, *values)) != nullptr))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid buffer ID %u",
-                              *values);
+            if(!(values[0] == 0 || (buffer=LookupBuffer(device, values[0])) != nullptr))
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u", values[0]);
 
             if(buffer && buffer->MappedAccess != 0 &&
                !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-                SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
-                              "Setting non-persistently mapped buffer %u", buffer->id);
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                    "Setting non-persistently mapped buffer %u", buffer->id);
             else
             {
                 ALenum state = GetSourceState(Source, GetSourceVoice(Source, Context));
                 if(state == AL_PLAYING || state == AL_PAUSED)
-                    SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
-                                  "Setting buffer on playing or paused source %u", Source->id);
+                    SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                        "Setting buffer on playing or paused source %u", Source->id);
             }
 
             oldlist = Source->queue;
@@ -1334,15 +1347,16 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                     { if(buffer) DecrementRef(buffer->ref); });
                 al_free(temp);
             }
-            return AL_TRUE;
+            return true;
 
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-            CHECKVAL(*values >= 0);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0);
 
             Source->OffsetType = prop;
-            Source->Offset = *values;
+            Source->Offset = values[0];
 
             if(IsPlayingOrPaused(Source))
             {
@@ -1351,17 +1365,16 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
                     if(ApplyOffset(Source, voice) == AL_FALSE)
-                        SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE,
-                                      "Invalid source offset");
+                        SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
                 }
             }
-            return AL_TRUE;
+            return true;
 
         case AL_DIRECT_FILTER:
+            CHECKSIZE(values, 1);
             filtlock = std::unique_lock<std::mutex>{device->FilterLock};
-            if(!(*values == 0 || (filter=LookupFilter(device, *values)) != nullptr))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
-                              *values);
+            if(!(values[0] == 0 || (filter=LookupFilter(device, values[0])) != nullptr))
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[0]);
 
             if(!filter)
             {
@@ -1380,78 +1393,74 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 Source->Direct.LFReference = filter->LFReference;
             }
             filtlock.unlock();
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            return UpdateSourceProps(Source, Context);
 
         case AL_DIRECT_FILTER_GAINHF_AUTO:
-            CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-            Source->DryGainHFAuto = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->DryGainHFAuto = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
-            CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-            Source->WetGainAuto = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->WetGainAuto = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
-            CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-            Source->WetGainHFAuto = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->WetGainHFAuto = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_DIRECT_CHANNELS_SOFT:
-            CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-            Source->DirectChannels = *values;
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->DirectChannels = values[0];
+            return UpdateSourceProps(Source, Context);
 
         case AL_DISTANCE_MODEL:
-            CHECKVAL(*values == AL_NONE ||
-                     *values == AL_INVERSE_DISTANCE ||
-                     *values == AL_INVERSE_DISTANCE_CLAMPED ||
-                     *values == AL_LINEAR_DISTANCE ||
-                     *values == AL_LINEAR_DISTANCE_CLAMPED ||
-                     *values == AL_EXPONENT_DISTANCE ||
-                     *values == AL_EXPONENT_DISTANCE_CLAMPED);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] == AL_NONE ||
+                values[0] == AL_INVERSE_DISTANCE || values[0] == AL_INVERSE_DISTANCE_CLAMPED ||
+                values[0] == AL_LINEAR_DISTANCE || values[0] == AL_LINEAR_DISTANCE_CLAMPED ||
+                values[0] == AL_EXPONENT_DISTANCE || values[0] == AL_EXPONENT_DISTANCE_CLAMPED);
 
-            Source->mDistanceModel = static_cast<DistanceModel>(*values);
+            Source->mDistanceModel = static_cast<DistanceModel>(values[0]);
             if(Context->mSourceDistanceModel)
-                UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+                return UpdateSourceProps(Source, Context);
+            return true;
 
         case AL_SOURCE_RESAMPLER_SOFT:
-            CHECKVAL(*values >= 0 && *values <= ResamplerMax);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= 0 && values[0] <= ResamplerMax);
 
-            Source->mResampler = static_cast<Resampler>(*values);
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->mResampler = static_cast<Resampler>(values[0]);
+            return UpdateSourceProps(Source, Context);
 
         case AL_SOURCE_SPATIALIZE_SOFT:
-            CHECKVAL(*values >= AL_FALSE && *values <= AL_AUTO_SOFT);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] >= AL_FALSE && values[0] <= AL_AUTO_SOFT);
 
-            Source->mSpatialize = static_cast<SpatializeMode>(*values);
-            UpdateSourceProps(Source, Context);
-            return AL_TRUE;
+            Source->mSpatialize = static_cast<SpatializeMode>(values[0]);
+            return UpdateSourceProps(Source, Context);
 
 
         case AL_AUXILIARY_SEND_FILTER:
+            CHECKSIZE(values, 3);
             slotlock = std::unique_lock<std::mutex>{Context->mEffectSlotLock};
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != nullptr))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
-                              values[0]);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid effect ID %u", values[0]);
             if(static_cast<ALuint>(values[1]) >= static_cast<ALuint>(device->NumAuxSends))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid send %u", values[1]);
 
             filtlock = std::unique_lock<std::mutex>{device->FilterLock};
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != nullptr))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
-                              values[2]);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[2]);
 
             if(!filter)
             {
@@ -1495,8 +1504,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 Source->Send[values[1]].Slot = slot;
                 UpdateSourceProps(Source, Context);
             }
-
-            return AL_TRUE;
+            return true;
 
 
         /* 1x float */
@@ -1515,27 +1523,30 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_SOURCE_RADIUS:
-            fvals[0] = static_cast<ALfloat>(*values);
-            return SetSourcefv(Source, Context, prop, fvals);
+            CHECKSIZE(values, 1);
+            fvals[0] = static_cast<ALfloat>(values[0]);
+            return SetSourcefv(Source, Context, prop, {fvals, 1u});
 
         /* 3x float */
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
+            CHECKSIZE(values, 3);
             fvals[0] = static_cast<ALfloat>(values[0]);
             fvals[1] = static_cast<ALfloat>(values[1]);
             fvals[2] = static_cast<ALfloat>(values[2]);
-            return SetSourcefv(Source, Context, prop, fvals);
+            return SetSourcefv(Source, Context, prop, {fvals, 3u});
 
         /* 6x float */
         case AL_ORIENTATION:
+            CHECKSIZE(values, 6);
             fvals[0] = static_cast<ALfloat>(values[0]);
             fvals[1] = static_cast<ALfloat>(values[1]);
             fvals[2] = static_cast<ALfloat>(values[2]);
             fvals[3] = static_cast<ALfloat>(values[3]);
             fvals[4] = static_cast<ALfloat>(values[4]);
             fvals[5] = static_cast<ALfloat>(values[5]);
-            return SetSourcefv(Source, Context, prop, fvals);
+            return SetSourcefv(Source, Context, prop, {fvals, 6u});
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1547,10 +1558,10 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
     ERR("Unexpected property: 0x%04x\n", prop);
     Context->setError(AL_INVALID_ENUM, "Invalid source integer property 0x%04x", prop);
-    return AL_FALSE;
+    return false;
 }
 
-ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint64SOFT *values)
+bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint64SOFT> values)
 {
     ALfloat fvals[6];
     ALint   ivals[3];
@@ -1564,8 +1575,8 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             /* Query only */
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
-                          "Setting read-only source property 0x%04x", prop);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                "Setting read-only source property 0x%04x", prop);
 
         /* 1x int */
         case AL_SOURCE_RELATIVE:
@@ -1580,21 +1591,24 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_DISTANCE_MODEL:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
-            CHECKVAL(*values <= INT_MAX && *values >= INT_MIN);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] <= INT_MAX && values[0] >= INT_MIN);
 
-            ivals[0] = static_cast<ALint>(*values);
-            return SetSourceiv(Source, Context, prop, ivals);
+            ivals[0] = static_cast<ALint>(values[0]);
+            return SetSourceiv(Source, Context, prop, {ivals, 1u});
 
         /* 1x uint */
         case AL_BUFFER:
         case AL_DIRECT_FILTER:
-            CHECKVAL(*values <= UINT_MAX && *values >= 0);
+            CHECKSIZE(values, 1);
+            CHECKVAL(values[0] <= UINT_MAX && values[0] >= 0);
 
-            ivals[0] = static_cast<ALuint>(*values);
-            return SetSourceiv(Source, Context, prop, ivals);
+            ivals[0] = static_cast<ALuint>(values[0]);
+            return SetSourceiv(Source, Context, prop, {ivals, 1u});
 
         /* 3x uint */
         case AL_AUXILIARY_SEND_FILTER:
+            CHECKSIZE(values, 3);
             CHECKVAL(values[0] <= UINT_MAX && values[0] >= 0 &&
                      values[1] <= UINT_MAX && values[1] >= 0 &&
                      values[2] <= UINT_MAX && values[2] >= 0);
@@ -1602,7 +1616,7 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
             ivals[0] = static_cast<ALuint>(values[0]);
             ivals[1] = static_cast<ALuint>(values[1]);
             ivals[2] = static_cast<ALuint>(values[2]);
-            return SetSourceiv(Source, Context, prop, ivals);
+            return SetSourceiv(Source, Context, prop, {ivals, 3u});
 
         /* 1x float */
         case AL_CONE_INNER_ANGLE:
@@ -1620,27 +1634,30 @@ ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_SOURCE_RADIUS:
-            fvals[0] = static_cast<ALfloat>(*values);
-            return SetSourcefv(Source, Context, prop, fvals);
+            CHECKSIZE(values, 1);
+            fvals[0] = static_cast<ALfloat>(values[0]);
+            return SetSourcefv(Source, Context, prop, {fvals, 1u});
 
         /* 3x float */
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
+            CHECKSIZE(values, 3);
             fvals[0] = static_cast<ALfloat>(values[0]);
             fvals[1] = static_cast<ALfloat>(values[1]);
             fvals[2] = static_cast<ALfloat>(values[2]);
-            return SetSourcefv(Source, Context, prop, fvals);
+            return SetSourcefv(Source, Context, prop, {fvals, 3u});
 
         /* 6x float */
         case AL_ORIENTATION:
+            CHECKSIZE(values, 6);
             fvals[0] = static_cast<ALfloat>(values[0]);
             fvals[1] = static_cast<ALfloat>(values[1]);
             fvals[2] = static_cast<ALfloat>(values[2]);
             fvals[3] = static_cast<ALfloat>(values[3]);
             fvals[4] = static_cast<ALfloat>(values[4]);
             fvals[5] = static_cast<ALfloat>(values[5]);
-            return SetSourcefv(Source, Context, prop, fvals);
+            return SetSourcefv(Source, Context, prop, {fvals, 6u});
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_CLOCK_SOFT:
@@ -2225,10 +2242,8 @@ START_API_FUNC
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(FloatValsByProp(param) != 1)
-        context->setError(AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
-        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &value);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {&value, 1u});
 }
 END_API_FUNC
 
@@ -2243,11 +2258,9 @@ START_API_FUNC
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(FloatValsByProp(param) != 3)
-        context->setError(AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
-        ALfloat fvals[3] = { value1, value2, value3 };
+        const ALfloat fvals[3]{ value1, value2, value3 };
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
@@ -2266,10 +2279,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else if(FloatValsByProp(param) < 1)
-        context->setError(AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
-        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), values);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
 }
 END_API_FUNC
 
@@ -2285,12 +2296,10 @@ START_API_FUNC
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(DoubleValsByProp(param) != 1)
-        context->setError(AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
     {
-        ALfloat fval = static_cast<ALfloat>(value);
-        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &fval);
+        const auto fval = static_cast<ALfloat>(value);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {&fval, 1u});
     }
 }
 END_API_FUNC
@@ -2306,12 +2315,10 @@ START_API_FUNC
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(DoubleValsByProp(param) != 3)
-        context->setError(AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
-    else {
-        ALfloat fvals[3] = {static_cast<ALfloat>(value1),
-                            static_cast<ALfloat>(value2),
-                            static_cast<ALfloat>(value3)};
+    else
+    {
+        const ALfloat fvals[3]{static_cast<ALfloat>(value1), static_cast<ALfloat>(value2),
+            static_cast<ALfloat>(value3)};
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
@@ -2332,17 +2339,15 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALint count{DoubleValsByProp(param)};
+        const ALuint count = DoubleValsByProp(param);
         if(count < 1 || count > 6)
             context->setError(AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
         else
         {
             ALfloat fvals[6];
-            ALint i;
-
-            for(i = 0;i < count;i++)
+            for(ALuint i{0};i < count;i++)
                 fvals[i] = static_cast<ALfloat>(values[i]);
-            SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
+            SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {fvals, count});
         }
     }
 }
@@ -2360,10 +2365,8 @@ START_API_FUNC
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(IntValsByProp(param) != 1)
-        context->setError(AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
-        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), &value);
+        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {&value, 1u});
 }
 END_API_FUNC
 
@@ -2378,11 +2381,9 @@ START_API_FUNC
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(IntValsByProp(param) != 3)
-        context->setError(AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
-        ALint ivals[3] = { value1, value2, value3 };
+        const ALint ivals[3]{ value1, value2, value3 };
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), ivals);
     }
 }
@@ -2401,10 +2402,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else if(IntValsByProp(param) < 1)
-        context->setError(AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
-        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
+        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
 }
 END_API_FUNC
 
@@ -2420,10 +2419,8 @@ START_API_FUNC
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(Int64ValsByProp(param) != 1)
-        context->setError(AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
-        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), &value);
+        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {&value, 1u});
 }
 END_API_FUNC
 
@@ -2438,11 +2435,9 @@ START_API_FUNC
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(Int64ValsByProp(param) != 3)
-        context->setError(AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
-        ALint64SOFT i64vals[3] = { value1, value2, value3 };
+        const ALint64SOFT i64vals[3]{ value1, value2, value3 };
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals);
     }
 }
@@ -2461,10 +2456,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else if(Int64ValsByProp(param) < 1)
-        context->setError(AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
-        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
+        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
 }
 END_API_FUNC
 

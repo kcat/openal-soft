@@ -195,14 +195,7 @@ void aluInitMixer()
             ResamplerDefault = FIR4Resampler;
         }
         else
-        {
-            char *end;
-            long n = strtol(str, &end, 0);
-            if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
-                ResamplerDefault = static_cast<Resampler>(n);
-            else
-                WARN("Invalid resampler: %s\n", str);
-        }
+            ERR("Invalid resampler: %s\n", str);
     }
 
     MixHrtfBlendSamples = SelectHrtfBlendMixer();

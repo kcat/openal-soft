@@ -63,23 +63,6 @@ enum FmtChannels : unsigned char {
 };
 #define MAX_INPUT_CHANNELS  (8)
 
-/* DevFmtType traits, providing the type, etc given a DevFmtType. */
-template<FmtType T>
-struct FmtTypeTraits { };
-
-template<>
-struct FmtTypeTraits<FmtUByte> { using Type = ALubyte; };
-template<>
-struct FmtTypeTraits<FmtShort> { using Type = ALshort; };
-template<>
-struct FmtTypeTraits<FmtFloat> { using Type = ALfloat; };
-template<>
-struct FmtTypeTraits<FmtDouble> { using Type = ALdouble; };
-template<>
-struct FmtTypeTraits<FmtMulaw> { using Type = ALubyte; };
-template<>
-struct FmtTypeTraits<FmtAlaw> { using Type = ALubyte; };
-
 
 ALsizei BytesFromFmt(FmtType type);
 ALsizei ChannelsFromFmt(FmtChannels chans);

@@ -281,6 +281,42 @@ constexpr ALshort aLawDecompressionTable[256] = {
        944,   912,  1008,   976,   816,   784,   880,   848
 };
 
+template<FmtType T>
+struct FmtTypeTraits { };
+
+template<>
+struct FmtTypeTraits<FmtUByte> {
+    using Type = ALubyte;
+    static constexpr ALfloat to_float(const Type val) { return (val-128) * (1.0f/128.0f); }
+};
+template<>
+struct FmtTypeTraits<FmtShort> {
+    using Type = ALshort;
+    static constexpr ALfloat to_float(const Type val) { return val * (1.0f/32768.0f); }
+};
+template<>
+struct FmtTypeTraits<FmtFloat> {
+    using Type = ALfloat;
+    static constexpr ALfloat to_float(const Type val) { return val; }
+};
+template<>
+struct FmtTypeTraits<FmtDouble> {
+    using Type = ALdouble;
+    static constexpr ALfloat to_float(const Type val) { return static_cast<ALfloat>(val); }
+};
+template<>
+struct FmtTypeTraits<FmtMulaw> {
+    using Type = ALubyte;
+    static constexpr ALfloat to_float(const Type val)
+    { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
+};
+template<>
+struct FmtTypeTraits<FmtAlaw> {
+    using Type = ALubyte;
+    static constexpr ALfloat to_float(const Type val)
+    { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
+};
+
 
 void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 {
@@ -328,25 +364,6 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, ALfloat
 }
 
 
-/* Base template left undefined. Should be marked =delete, but Clang 3.8.1
- * chokes on that given the inline specializations.
- */
-template<FmtType T>
-inline ALfloat LoadSample(typename FmtTypeTraits<T>::Type val);
-
-template<> inline ALfloat LoadSample<FmtUByte>(FmtTypeTraits<FmtUByte>::Type val)
-{ return (val-128) * (1.0f/128.0f); }
-template<> inline ALfloat LoadSample<FmtShort>(FmtTypeTraits<FmtShort>::Type val)
-{ return val * (1.0f/32768.0f); }
-template<> inline ALfloat LoadSample<FmtFloat>(FmtTypeTraits<FmtFloat>::Type val)
-{ return val; }
-template<> inline ALfloat LoadSample<FmtDouble>(FmtTypeTraits<FmtDouble>::Type val)
-{ return static_cast<ALfloat>(val); }
-template<> inline ALfloat LoadSample<FmtMulaw>(FmtTypeTraits<FmtMulaw>::Type val)
-{ return muLawDecompressionTable[val] * (1.0f/32768.0f); }
-template<> inline ALfloat LoadSample<FmtAlaw>(FmtTypeTraits<FmtAlaw>::Type val)
-{ return aLawDecompressionTable[val] * (1.0f/32768.0f); }
-
 template<FmtType T>
 inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep,
     const ptrdiff_t samples)
@@ -355,7 +372,7 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, ALint sr
 
     const SampleType *RESTRICT ssrc{reinterpret_cast<const SampleType*>(src)};
     for(ALsizei i{0};i < samples;i++)
-        dst[i] += LoadSample<T>(ssrc[i*srcstep]);
+        dst[i] += FmtTypeTraits<T>::to_float(ssrc[i*srcstep]);
 }
 
 void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtType srctype,

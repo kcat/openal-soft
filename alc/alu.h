@@ -461,6 +461,5 @@ extern RowMixerFunc MixRowSamples;
 
 extern const ALfloat ConeScale;
 extern const ALfloat ZScale;
-extern const ALboolean OverrideReverbSpeedOfSound;
 
 #endif

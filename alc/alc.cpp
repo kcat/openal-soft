@@ -2448,8 +2448,6 @@ void ALCcontext::init()
     mListener.Params.MetersPerUnit = mMetersPerUnit;
     mListener.Params.DopplerFactor = mDopplerFactor;
     mListener.Params.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
-    mListener.Params.ReverbSpeedOfSound = mListener.Params.SpeedOfSound *
-                                          mListener.Params.MetersPerUnit;
     mListener.Params.SourceDistanceModel = mSourceDistanceModel;
     mListener.Params.mDistanceModel = mDistanceModel;
 

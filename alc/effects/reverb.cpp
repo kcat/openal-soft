@@ -675,14 +675,15 @@ inline ALvoid CalcMatrixCoeffs(const ALfloat diffusion, ALfloat *x, ALfloat *y)
  * filters.
  */
 ALfloat CalcLimitedHfRatio(const ALfloat hfRatio, const ALfloat airAbsorptionGainHF,
-                           const ALfloat decayTime, const ALfloat SpeedOfSound)
+    const ALfloat decayTime)
 {
     /* Find the attenuation due to air absorption in dB (converting delay
      * time to meters using the speed of sound).  Then reversing the decay
      * equation, solve for HF ratio.  The delay length is cancelled out of
      * the equation, so it can be calculated once for all lines.
      */
-    ALfloat limitRatio{1.0f / (CalcDecayLength(airAbsorptionGainHF, decayTime) * SpeedOfSound)};
+    ALfloat limitRatio{1.0f /
+        (CalcDecayLength(airAbsorptionGainHF, decayTime) * SPEEDOFSOUNDMETRESPERSEC)};
 
     /* Using the limit calculated above, apply the upper bound to the HF ratio.
      */
@@ -906,7 +907,6 @@ void ReverbState::update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *
 void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *Device{Context->mDevice.get()};
-    const ALlistener &Listener = Context->mListener;
     const auto frequency = static_cast<ALfloat>(Device->Frequency);
 
     /* Calculate the master filters */
@@ -944,8 +944,7 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     ALfloat hfRatio{props->Reverb.DecayHFRatio};
     if(props->Reverb.DecayHFLimit && props->Reverb.AirAbsorptionGainHF < 1.0f)
         hfRatio = CalcLimitedHfRatio(hfRatio, props->Reverb.AirAbsorptionGainHF,
-            props->Reverb.DecayTime, Listener.Params.ReverbSpeedOfSound
-        );
+            props->Reverb.DecayTime);
 
     /* Calculate the LF/HF decay times. */
     const ALfloat lfDecayTime{clampf(props->Reverb.DecayTime * props->Reverb.DecayLFRatio,

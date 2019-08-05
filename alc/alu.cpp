@@ -102,15 +102,6 @@ ALfloat InitZScale()
     return ret;
 }
 
-ALboolean InitReverbSOS()
-{
-    ALboolean ret{AL_FALSE};
-    const char *str{getenv("__ALSOFT_REVERB_IGNORES_SOUND_SPEED")};
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-        ret = AL_TRUE;
-    return ret;
-}
-
 } // namespace
 
 /* Cone scalar */
@@ -118,9 +109,6 @@ const ALfloat ConeScale{InitConeScale()};
 
 /* Localized Z scalar for mono sources */
 const ALfloat ZScale{InitZScale()};
-
-/* Force default speed of sound for distance-related reverb decay. */
-const ALboolean OverrideReverbSpeedOfSound{InitReverbSOS()};
 
 
 namespace {
@@ -287,9 +275,6 @@ bool CalcContextParams(ALCcontext *Context)
 
     Listener.Params.DopplerFactor = props->DopplerFactor;
     Listener.Params.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
-    if(!OverrideReverbSpeedOfSound)
-        Listener.Params.ReverbSpeedOfSound = Listener.Params.SpeedOfSound *
-                                             Listener.Params.MetersPerUnit;
 
     Listener.Params.SourceDistanceModel = props->SourceDistanceModel;
     Listener.Params.mDistanceModel = props->mDistanceModel;
@@ -334,75 +319,67 @@ bool CalcListenerParams(ALCcontext *Context)
     return true;
 }
 
-bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
+bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
 {
     ALeffectslotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
-    if(!props && !force) return false;
+    if(!props) return false;
 
-    EffectState *state;
-    if(!props)
-        state = slot->Params.mEffectState;
+    slot->Params.Gain = props->Gain;
+    slot->Params.AuxSendAuto = props->AuxSendAuto;
+    slot->Params.Target = props->Target;
+    slot->Params.EffectType = props->Type;
+    slot->Params.mEffectProps = props->Props;
+    if(IsReverbEffect(props->Type))
+    {
+        slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
+        slot->Params.DecayTime = props->Props.Reverb.DecayTime;
+        slot->Params.DecayLFRatio = props->Props.Reverb.DecayLFRatio;
+        slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
+        slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
+        slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+    }
     else
     {
-        slot->Params.Gain = props->Gain;
-        slot->Params.AuxSendAuto = props->AuxSendAuto;
-        slot->Params.Target = props->Target;
-        slot->Params.EffectType = props->Type;
-        slot->Params.mEffectProps = props->Props;
-        if(IsReverbEffect(props->Type))
+        slot->Params.RoomRolloff = 0.0f;
+        slot->Params.DecayTime = 0.0f;
+        slot->Params.DecayLFRatio = 0.0f;
+        slot->Params.DecayHFRatio = 0.0f;
+        slot->Params.DecayHFLimit = AL_FALSE;
+        slot->Params.AirAbsorptionGainHF = 1.0f;
+    }
+
+    EffectState *state{props->State};
+    props->State = nullptr;
+    EffectState *oldstate{slot->Params.mEffectState};
+    slot->Params.mEffectState = state;
+
+    /* Only release the old state if it won't get deleted, since we can't be
+     * deleting/freeing anything in the mixer.
+     */
+    if(!oldstate->releaseIfNoDelete())
+    {
+        /* Otherwise, if it would be deleted send it off with a release event. */
+        RingBuffer *ring{context->mAsyncEvents.get()};
+        auto evt_vec = ring->getWriteVector();
+        if LIKELY(evt_vec.first.len > 0)
         {
-            slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
-            slot->Params.DecayTime = props->Props.Reverb.DecayTime;
-            slot->Params.DecayLFRatio = props->Props.Reverb.DecayLFRatio;
-            slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
-            slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
-            slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+            AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
+            evt->u.mEffectState = oldstate;
+            ring->writeAdvance(1);
+            context->mEventSem.post();
         }
         else
         {
-            slot->Params.RoomRolloff = 0.0f;
-            slot->Params.DecayTime = 0.0f;
-            slot->Params.DecayLFRatio = 0.0f;
-            slot->Params.DecayHFRatio = 0.0f;
-            slot->Params.DecayHFLimit = AL_FALSE;
-            slot->Params.AirAbsorptionGainHF = 1.0f;
-        }
-
-        state = props->State;
-        props->State = nullptr;
-        EffectState *oldstate{slot->Params.mEffectState};
-        slot->Params.mEffectState = state;
-
-        /* Only decrement the old state if it won't get deleted, since we can't
-         * be deleting/freeing anything in the mixer.
-         */
-        if(!oldstate->releaseIfNoDelete())
-        {
-            /* Otherwise, if it would be deleted, send it off with a release
-             * event.
+            /* If writing the event failed, the queue was probably full. Store
+             * the old state in the property object where it can eventually be
+             * cleaned up sometime later (not ideal, but better than blocking
+             * or leaking).
              */
-            RingBuffer *ring{context->mAsyncEvents.get()};
-            auto evt_vec = ring->getWriteVector();
-            if LIKELY(evt_vec.first.len > 0)
-            {
-                AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
-                evt->u.mEffectState = oldstate;
-                ring->writeAdvance(1);
-                context->mEventSem.post();
-            }
-            else
-            {
-                /* If writing the event failed, the queue was probably full.
-                 * Store the old state in the property object where it can
-                 * eventually be cleaned up sometime later (not ideal, but
-                 * better than blocking or leaking).
-                 */
-                props->State = oldstate;
-            }
+            props->State = oldstate;
         }
-
-        AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
+
+    AtomicReplaceHead(context->mFreeEffectslotProps, props);
 
     EffectTarget output;
     if(ALeffectslot *target{slot->Params.Target})
@@ -1034,8 +1011,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             /* Calculate the distances to where this effect's decay reaches
              * -60dB.
              */
-            DecayDistance[i] = SendSlots[i]->Params.DecayTime *
-                               Listener.Params.ReverbSpeedOfSound;
+            DecayDistance[i] = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
             DecayLFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayLFRatio;
             DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
@@ -1349,11 +1325,11 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     IncrementRef(ctx->mUpdateCount);
     if LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire))
     {
-        bool cforce{CalcContextParams(ctx)};
-        bool force{CalcListenerParams(ctx) || cforce};
-        force = std::accumulate(slots.begin(), slots.end(), force,
-            [ctx,cforce](bool force, ALeffectslot *slot) -> bool
-            { return CalcEffectSlotParams(slot, ctx, cforce) | force; }
+        bool force{CalcContextParams(ctx)};
+        force |= CalcListenerParams(ctx);
+        force |= std::accumulate(slots.begin(), slots.end(), bool{false},
+            [ctx](bool force, ALeffectslot *slot) -> bool
+            { return CalcEffectSlotParams(slot, ctx) | force; }
         );
 
         std::for_each(voices.begin(), voices.end(),

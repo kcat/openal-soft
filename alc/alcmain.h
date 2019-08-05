@@ -23,6 +23,7 @@
 #include "ambidefs.h"
 #include "atomic.h"
 #include "devformat.h"
+#include "filters/splitter.h"
 #include "hrtf.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
@@ -35,7 +36,6 @@ struct ALfilter;
 struct BackendBase;
 struct Compressor;
 struct EffectState;
-struct FrontStablizer;
 struct Uhj2Encoder;
 struct bs2b;
 
@@ -158,6 +158,21 @@ using FloatBufferLine = std::array<float,BUFFERSIZE>;
  * Note that both the beginning and end need padding!
  */
 #define MAX_RESAMPLE_PADDING 24
+
+
+struct FrontStablizer {
+    static constexpr size_t DelayLength{256u};
+
+    alignas(16) float DelayBuf[MAX_OUTPUT_CHANNELS][DelayLength];
+
+    BandSplitter LFilter, RFilter;
+    alignas(16) float LSplit[2][BUFFERSIZE];
+    alignas(16) float RSplit[2][BUFFERSIZE];
+
+    alignas(16) float TempBuf[BUFFERSIZE + DelayLength];
+
+    DEF_NEWDEL(FrontStablizer)
+};
 
 
 struct MixParams {

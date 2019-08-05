@@ -3,9 +3,6 @@
 
 #include <cstddef>
 
-#include "alcmain.h"
-#include "almalloc.h"
-
 
 /* Band splitter. Splits a signal into two phase-matching frequency bands. */
 template<typename Real>
@@ -33,20 +30,5 @@ public:
     void applyAllpass(Real *samples, const size_t count) const;
 };
 using BandSplitter = BandSplitterR<float>;
-
-
-struct FrontStablizer {
-    static constexpr size_t DelayLength{256u};
-
-    alignas(16) float DelayBuf[MAX_OUTPUT_CHANNELS][DelayLength];
-
-    BandSplitter LFilter, RFilter;
-    alignas(16) float LSplit[2][BUFFERSIZE];
-    alignas(16) float RSplit[2][BUFFERSIZE];
-
-    alignas(16) float TempBuf[BUFFERSIZE + DelayLength];
-
-    DEF_NEWDEL(FrontStablizer)
-};
 
 #endif /* FILTER_SPLITTER_H */

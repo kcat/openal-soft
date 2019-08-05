@@ -2445,7 +2445,7 @@ void ALCcontext::init()
     mListener.Params.Matrix = alu::Matrix::Identity();
     mListener.Params.Velocity = alu::Vector{};
     mListener.Params.Gain = mListener.Gain;
-    mListener.Params.MetersPerUnit = mMetersPerUnit;
+    mListener.Params.MetersPerUnit = mListener.mMetersPerUnit;
     mListener.Params.DopplerFactor = mDopplerFactor;
     mListener.Params.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
     mListener.Params.SourceDistanceModel = mSourceDistanceModel;

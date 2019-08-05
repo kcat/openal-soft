@@ -836,8 +836,6 @@ void UpdateContextProps(ALCcontext *context)
     }
 
     /* Copy in current property values. */
-    props->MetersPerUnit = context->mMetersPerUnit;
-
     props->DopplerFactor = context->mDopplerFactor;
     props->DopplerVelocity = context->mDopplerVelocity;
     props->SpeedOfSound = context->mSpeedOfSound;

@@ -271,8 +271,6 @@ bool CalcContextParams(ALCcontext *Context)
     if(!props) return false;
 
     ALlistener &Listener = Context->mListener;
-    Listener.Params.MetersPerUnit = props->MetersPerUnit;
-
     Listener.Params.DopplerFactor = props->DopplerFactor;
     Listener.Params.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
 
@@ -314,6 +312,7 @@ bool CalcListenerParams(ALCcontext *Context)
     Listener.Params.Velocity = Listener.Params.Matrix * vel;
 
     Listener.Params.Gain = props->Gain * Context->mGainBoost;
+    Listener.Params.MetersPerUnit = props->MetersPerUnit;
 
     AtomicReplaceHead(Context->mFreeListenerProps, props);
     return true;

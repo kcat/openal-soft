@@ -62,11 +62,8 @@ START_API_FUNC
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
-        context->mMetersPerUnit = value;
-        if(!context->mDeferUpdates.load(std::memory_order_acquire))
-            UpdateContextProps(context.get());
-        else
-            context->mPropsClean.clear(std::memory_order_release);
+        listener.mMetersPerUnit = value;
+        DO_UPDATEPROPS();
         break;
 
     default:
@@ -252,7 +249,7 @@ START_API_FUNC
         break;
 
     case AL_METERS_PER_UNIT:
-        *value = context->mMetersPerUnit;
+        *value = listener.mMetersPerUnit;
         break;
 
     default:
@@ -439,6 +436,7 @@ void UpdateListenerProps(ALCcontext *context)
     props->OrientAt = listener.OrientAt;
     props->OrientUp = listener.OrientUp;
     props->Gain = listener.Gain;
+    props->MetersPerUnit = listener.mMetersPerUnit;
 
     /* Set the new container for updating internal parameters. */
     props = listener.Update.exchange(props, std::memory_order_acq_rel);

@@ -6,6 +6,7 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "vecmat.h"
 
@@ -18,6 +19,7 @@ struct ALlistenerProps {
     std::array<ALfloat,3> OrientAt;
     std::array<ALfloat,3> OrientUp;
     ALfloat Gain;
+    ALfloat MetersPerUnit;
 
     std::atomic<ALlistenerProps*> next;
 };
@@ -28,6 +30,7 @@ struct ALlistener {
     std::array<ALfloat,3> OrientAt{{0.0f, 0.0f, -1.0f}};
     std::array<ALfloat,3> OrientUp{{0.0f, 1.0f, 0.0f}};
     ALfloat Gain{1.0f};
+    ALfloat mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
     std::atomic_flag PropsClean;
 

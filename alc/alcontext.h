@@ -48,7 +48,6 @@ struct ALcontextProps {
     ALfloat SpeedOfSound;
     ALboolean SourceDistanceModel;
     DistanceModel mDistanceModel;
-    ALfloat MetersPerUnit;
 
     std::atomic<ALcontextProps*> next;
 };
@@ -102,7 +101,6 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     ALfloat mDopplerFactor{1.0f};
     ALfloat mDopplerVelocity{1.0f};
     ALfloat mSpeedOfSound{SPEEDOFSOUNDMETRESPERSEC};
-    ALfloat mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
     std::atomic_flag mPropsClean;
     std::atomic<bool> mDeferUpdates{false};

@@ -33,9 +33,10 @@
 
 #include "alcmain.h"
 #include "alu.h"
+#include "compat.h"
+#include "endiantest.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "compat.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>

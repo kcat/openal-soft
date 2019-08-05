@@ -41,6 +41,7 @@
 #include "alnumeric.h"
 #include "alu.h"
 #include "compat.h"
+#include "endiantest.h"
 #include "logging.h"
 #include "threads.h"
 #include "vector.h"

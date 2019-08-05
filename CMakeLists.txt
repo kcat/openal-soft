@@ -598,6 +598,7 @@ SET(COMMON_OBJS
     common/aloptional.h
     common/alspan.h
     common/atomic.h
+    common/endiantest.h
     common/intrusive_ptr.h
     common/math_defs.h
     common/opthelpers.h
@@ -637,6 +638,7 @@ SET(ALC_OBJS
     alc/bs2b.h
     alc/converter.cpp
     alc/converter.h
+    alc/devformat.h
     alc/inprogext.h
     alc/mastering.cpp
     alc/mastering.h

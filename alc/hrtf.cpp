@@ -1363,8 +1363,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
         return nullptr;
     }
 
-    TRACE("Loaded HRTF support for format: %s %uhz\n",
-        DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+    TRACE("Loaded HRTF support for sample rate: %uhz\n", hrtf->sampleRate);
     handle->entry = std::move(hrtf);
 
     return handle->entry.get();

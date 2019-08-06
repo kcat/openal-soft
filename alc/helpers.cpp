@@ -109,6 +109,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include "cpu_caps.h"
 #include "fpu_modes.h"
 #include "logging.h"
+#include "vector.h"
 
 
 #if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
@@ -594,6 +595,11 @@ void SetRTPriority(void)
 }
 
 #else
+
+#if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
+#include <pthread.h>
+#include <sched.h>
+#endif
 
 const PathNamePair &GetProcBinary()
 {

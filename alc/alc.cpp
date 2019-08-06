@@ -73,6 +73,7 @@
 #include "bs2b.h"
 #include "compat.h"
 #include "cpu_caps.h"
+#include "devformat.h"
 #include "effects/base.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"

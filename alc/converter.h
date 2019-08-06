@@ -10,6 +10,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
+#include "devformat.h"
 
 
 struct SampleConverter {

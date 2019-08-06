@@ -27,7 +27,6 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <memory>
@@ -51,6 +50,7 @@
 #include "alspan.h"
 #include "alu.h"
 #include "cpu_caps.h"
+#include "devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"

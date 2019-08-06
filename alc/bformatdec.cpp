@@ -10,6 +10,8 @@
 #include <iterator>
 #include <numeric>
 
+#include "AL/al.h"
+
 #include "almalloc.h"
 #include "alu.h"
 #include "ambdec.h"

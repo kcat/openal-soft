@@ -20,29 +20,41 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-#include <cstring>
-#include <cctype>
-#include <cassert>
-
-#include <cmath>
-#include <chrono>
-#include <numeric>
 #include <algorithm>
+#include <array>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <functional>
+#include <iterator>
+#include <memory>
+#include <new>
+#include <numeric>
+#include <string>
+
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "al/auxeffectslot.h"
 #include "alcmain.h"
-#include "alu.h"
 #include "alconfig.h"
-#include "ambdec.h"
-#include "bformatdec.h"
-#include "filters/splitter.h"
-#include "uhjfilter.h"
-#include "bs2b.h"
-
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "aloptional.h"
 #include "alspan.h"
+#include "alu.h"
+#include "ambdec.h"
+#include "ambidefs.h"
+#include "bformatdec.h"
+#include "bs2b.h"
+#include "devformat.h"
+#include "hrtf.h"
+#include "logging.h"
+#include "math_defs.h"
+#include "opthelpers.h"
+#include "uhjfilter.h"
 
 
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromN3D;

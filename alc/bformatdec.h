@@ -10,6 +10,7 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
+#include "devformat.h"
 #include "filters/splitter.h"
 #include "vector.h"
 

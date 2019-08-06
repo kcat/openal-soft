@@ -60,6 +60,7 @@
 #include "bformatdec.h"
 #include "bs2b.h"
 #include "cpu_caps.h"
+#include "devformat.h"
 #include "effects/base.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
@@ -75,7 +76,6 @@
 #include "threads.h"
 #include "uhjfilter.h"
 #include "vecmat.h"
-#include "vector.h"
 
 #include "bsinc_inc.h"
 

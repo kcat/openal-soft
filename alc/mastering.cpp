@@ -11,6 +11,8 @@
 #include <limits>
 #include <new>
 
+#include "AL/al.h"
+
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"

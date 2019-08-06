@@ -15,6 +15,7 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
+#include "devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"

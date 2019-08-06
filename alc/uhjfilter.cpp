@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include "AL/al.h"
+
 #include "alnumeric.h"
 #include "opthelpers.h"
 

@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <iterator>
 
+#include "AL/al.h"
+
 #include "albyte.h"
 #include "fpu_modes.h"
 #include "mixer/defs.h"

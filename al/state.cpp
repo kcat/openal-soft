@@ -35,6 +35,7 @@
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "alu.h"
 #include "atomic.h"

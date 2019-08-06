@@ -25,6 +25,8 @@
 #include <cmath>
 #include <mutex>
 
+#include "AL/al.h"
+#include "AL/alc.h"
 #include "AL/efx.h"
 
 #include "alcontext.h"

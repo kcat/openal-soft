@@ -31,6 +31,7 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/efx.h"
 
 #include "alcmain.h"
 #include "alcontext.h"

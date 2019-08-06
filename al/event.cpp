@@ -12,6 +12,7 @@
 #include <new>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"

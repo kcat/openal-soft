@@ -29,6 +29,8 @@
 #include <mutex>
 #include <new>
 
+#include "AL/al.h"
+#include "AL/alc.h"
 #include "AL/efx.h"
 
 #include "alcmain.h"

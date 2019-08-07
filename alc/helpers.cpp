@@ -516,7 +516,7 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
             str = path;
             str += '\\';
             str += wstr_to_utf8(fdata.cFileName);
-            TRACE("Got result %s\n", str.c_str());
+            TRACE(" got %s\n", str.c_str());
         } while(FindNextFileW(hdl, &fdata));
         FindClose(hdl);
 
@@ -748,7 +748,7 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
             if(str.back() != '/')
                 str.push_back('/');
             str += dirent->d_name;
-            TRACE("Got result %s\n", str.c_str());
+            TRACE(" got %s\n", str.c_str());
         }
         closedir(dir);
 

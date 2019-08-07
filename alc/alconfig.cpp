@@ -76,7 +76,7 @@ bool readline(std::istream &f, std::string &output)
     return std::getline(f, output) && !output.empty();
 }
 
-std:: string expdup(const char *str)
+std::string expdup(const char *str)
 {
     std::string output;
 
@@ -138,23 +138,19 @@ void LoadConfigFromFile(std::istream &f)
 
     while(readline(f, buffer))
     {
-        while(!buffer.empty() && std::isspace(buffer.back()))
-            buffer.pop_back();
         if(lstrip(buffer).empty())
             continue;
 
-        buffer.push_back(0);
-        char *line{&buffer[0]};
-
-        if(line[0] == '[')
+        if(buffer[0] == '[')
         {
+            char *line{&buffer[0]};
             char *section = line+1;
             char *endsection;
 
             endsection = std::strchr(section, ']');
             if(!endsection || section == endsection)
             {
-                ERR("config parse error: bad line \"%s\"\n", line);
+                ERR(" config parse error: bad line \"%s\"\n", line);
                 continue;
             }
             if(endsection[1] != 0)
@@ -164,7 +160,7 @@ void LoadConfigFromFile(std::istream &f)
                     ++end;
                 if(*end != 0 && *end != '#')
                 {
-                    ERR("config parse error: bad line \"%s\"\n", line);
+                    ERR(" config parse error: bad line \"%s\"\n", line);
                     continue;
                 }
             }
@@ -223,10 +219,14 @@ void LoadConfigFromFile(std::istream &f)
             continue;
         }
 
-        char *comment{std::strchr(line, '#')};
-        if(comment) *(comment++) = 0;
-        if(!line[0]) continue;
+        auto cmtpos = buffer.find('#');
+        if(cmtpos != std::string::npos)
+            buffer.resize(cmtpos);
+        while(!buffer.empty() && std::isspace(buffer.back()))
+            buffer.pop_back();
+        if(buffer.empty()) continue;
 
+        const char *line{&buffer[0]};
         char key[256]{};
         char value[256]{};
         if(std::sscanf(line, "%255[^=] = \"%255[^\"]\"", key, value) == 2 ||
@@ -238,14 +238,14 @@ void LoadConfigFromFile(std::istream &f)
             if(std::strcmp(value, "\"\"") == 0 || std::strcmp(value, "''") == 0)
                 value[0] = 0;
         }
-        else if(sscanf(line, "%255[^=] %255[=]", key, value) == 2)
+        else if(std::sscanf(line, "%255[^=] %255[=]", key, value) == 2)
         {
             /* Special case for 'key =' */
             value[0] = 0;
         }
         else
         {
-            ERR("config parse error: malformed option line: \"%s\"\n\n", line);
+            ERR(" config parse error: malformed option line: \"%s\"\n\n", line);
             continue;
         }
 
@@ -259,20 +259,22 @@ void LoadConfigFromFile(std::istream &f)
         while(!fullKey.empty() && std::isspace(fullKey.back()))
             fullKey.pop_back();
 
+        TRACE(" found '%s' = '%s'\n", fullKey.c_str(), value);
+
         /* Check if we already have this option set */
         auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(),
             [&fullKey](const ConfigEntry &entry) -> bool
             { return entry.key == fullKey; }
         );
         if(ent != ConfOpts.end())
-            ent->value = expdup(value);
-        else
         {
-            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value)});
-            ent = ConfOpts.end()-1;
+            if(value[0])
+                ent->value = expdup(value);
+            else
+                ConfOpts.erase(ent);
         }
-
-        TRACE("found '%s' = '%s'\n", ent->key.c_str(), ent->value.c_str());
+        else if(value[0])
+            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value)});
     }
     ConfOpts.shrink_to_fit();
 }

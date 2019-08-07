@@ -147,51 +147,47 @@ void aluInit(void)
 }
 
 
-void ProcessHrtf(ALCdevice *device, const ALsizei SamplesToDo)
+void ALCdevice::ProcessHrtf(const ALsizei SamplesToDo)
 {
     /* HRTF is stereo output only. */
-    const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
-    const int ridx{device->RealOut.ChannelIndex[FrontRight]};
+    const int lidx{RealOut.ChannelIndex[FrontLeft]};
+    const int ridx{RealOut.ChannelIndex[FrontRight]};
     ASSUME(lidx >= 0 && ridx >= 0);
 
-    DirectHrtfState *state{device->mHrtfState.get()};
-    MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx], device->Dry.Buffer,
-        device->HrtfAccumData, state, SamplesToDo);
+    MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
+        mHrtfState.get(), SamplesToDo);
 }
 
-void ProcessAmbiDec(ALCdevice *device, const ALsizei SamplesToDo)
+void ALCdevice::ProcessAmbiDec(const ALsizei SamplesToDo)
 {
-    BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process(device->RealOut.Buffer, device->Dry.Buffer.data(), SamplesToDo);
+    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 }
 
-void ProcessUhj(ALCdevice *device, const ALsizei SamplesToDo)
+void ALCdevice::ProcessUhj(const ALsizei SamplesToDo)
 {
     /* UHJ is stereo output only. */
-    const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
-    const int ridx{device->RealOut.ChannelIndex[FrontRight]};
+    const int lidx{RealOut.ChannelIndex[FrontLeft]};
+    const int ridx{RealOut.ChannelIndex[FrontRight]};
     ASSUME(lidx >= 0 && ridx >= 0);
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
-    Uhj2Encoder *uhj2enc{device->Uhj_Encoder.get()};
-    uhj2enc->encode(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-        device->Dry.Buffer.data(), SamplesToDo);
+    Uhj_Encoder->encode(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer.data(),
+        SamplesToDo);
 }
 
-void ProcessBs2b(ALCdevice *device, const ALsizei SamplesToDo)
+void ALCdevice::ProcessBs2b(const ALsizei SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
-    BFormatDec *ambidec{device->AmbiDecoder.get()};
-    ambidec->process(device->RealOut.Buffer, device->Dry.Buffer.data(), SamplesToDo);
+    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 
     /* BS2B is stereo output only. */
-    const int lidx{device->RealOut.ChannelIndex[FrontLeft]};
-    const int ridx{device->RealOut.ChannelIndex[FrontRight]};
+    const int lidx{RealOut.ChannelIndex[FrontLeft]};
+    const int ridx{RealOut.ChannelIndex[FrontRight]};
     ASSUME(lidx >= 0 && ridx >= 0);
 
     /* Now apply the BS2B binaural/crossfeed filter. */
-    bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx].data(),
-        device->RealOut.Buffer[ridx].data(), SamplesToDo);
+    bs2b_cross_feed(Bs2b.get(), RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
+        SamplesToDo);
 }
 
 
@@ -1665,8 +1661,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         /* Apply any needed post-process for finalizing the Dry mix to the
          * RealOut (Ambisonic decode, UHJ encode, etc).
          */
-        if LIKELY(device->PostProcess)
-            device->PostProcess(device, SamplesToDo);
+        device->postProcess(SamplesToDo);
+
         const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
 
         /* Apply front image stablization for surround sound, if applicable. */

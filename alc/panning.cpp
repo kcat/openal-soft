@@ -721,7 +721,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             InitCustomPanning(device, !!hqdec, pconf, speakermap);
         }
         if(device->AmbiDecoder)
-            device->PostProcess = ProcessAmbiDec;
+            device->PostProcess = &ALCdevice::ProcessAmbiDec;
         return;
     }
 
@@ -802,7 +802,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         old_hrtf = nullptr;
 
         InitHrtfPanning(device);
-        device->PostProcess = ProcessHrtf;
+        device->PostProcess = &ALCdevice::ProcessHrtf;
         return;
     }
     device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
@@ -824,7 +824,7 @@ no_hrtf:
                 bs2b_set_params(device->Bs2b.get(), *cflevopt, device->Frequency);
                 TRACE("BS2B enabled\n");
                 InitPanning(device);
-                device->PostProcess = ProcessBs2b;
+                device->PostProcess = &ALCdevice::ProcessBs2b;
                 return;
             }
         }
@@ -843,13 +843,13 @@ no_hrtf:
         device->Uhj_Encoder = al::make_unique<Uhj2Encoder>();
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
-        device->PostProcess = ProcessUhj;
+        device->PostProcess = &ALCdevice::ProcessUhj;
         return;
     }
 
     TRACE("Stereo rendering\n");
     InitPanning(device);
-    device->PostProcess = ProcessAmbiDec;
+    device->PostProcess = &ALCdevice::ProcessAmbiDec;
 }
 
 

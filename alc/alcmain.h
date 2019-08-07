@@ -188,8 +188,6 @@ struct RealMixParams {
     al::span<FloatBufferLine> Buffer;
 };
 
-using POSTPROCESS = void(*)(ALCdevice *device, const ALsizei SamplesToDo);
-
 enum {
     // Frequency was requested by the app or config file
     FrequencyRequest,
@@ -305,7 +303,8 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     /* Stereo-to-binaural filter */
     std::unique_ptr<bs2b> Bs2b;
 
-    POSTPROCESS PostProcess{};
+    using PostProc = void(ALCdevice::*)(const ALsizei SamplesToDo);
+    PostProc PostProcess{nullptr};
 
     std::unique_ptr<FrontStablizer> Stablizer;
 
@@ -344,6 +343,14 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALsizei bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
     ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
     ALsizei frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
+
+    void ProcessHrtf(const ALsizei SamplesToDo);
+    void ProcessAmbiDec(const ALsizei SamplesToDo);
+    void ProcessUhj(const ALsizei SamplesToDo);
+    void ProcessBs2b(const ALsizei SamplesToDo);
+
+    inline void postProcess(const ALsizei SamplesToDo)
+    { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
 
     DEF_NEWDEL(ALCdevice)
 };

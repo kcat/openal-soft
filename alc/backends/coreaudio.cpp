@@ -400,7 +400,9 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
     AudioComponentDescription desc;
     UInt32 outputFrameCount;
     UInt32 propertySize;
+#if !TARGET_OS_IOS
     AudioObjectPropertyAddress propertyAddress;
+#endif
     UInt32 enableIO;
     AudioComponent comp;
     OSStatus err;

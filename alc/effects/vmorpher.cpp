@@ -223,8 +223,8 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     else /*if(props->Vmorpher.Waveform == AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE)*/
         mGetSamples = Oscillate<Triangle>;
 
-    const ALfloat pitchA{fastf2i(std::pow(2.0f, props->Vmorpher.PhonemeACoarseTuning*100.0f / 2400.0f)*FRACTIONONE) * (1.0f/FRACTIONONE)};
-    const ALfloat pitchB{fastf2i(std::pow(2.0f, props->Vmorpher.PhonemeBCoarseTuning*100.0f / 2400.0f)*FRACTIONONE) * (1.0f/FRACTIONONE)};
+    const ALfloat pitchA{std::pow(2.0f, props->Vmorpher.PhonemeACoarseTuning / 12.0f)};
+    const ALfloat pitchB{std::pow(2.0f, props->Vmorpher.PhonemeBCoarseTuning / 12.0f)};
 
     auto vowelA = getFiltersByPhoneme(props->Vmorpher.PhonemeA, frequency, pitchA);
     auto vowelB = getFiltersByPhoneme(props->Vmorpher.PhonemeB, frequency, pitchB);
@@ -261,11 +261,8 @@ void VmorpherState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         ASSUME(numInput > 0);
         for(ALsizei c{0};c < numInput;c++)
         {
-            for (ALsizei i{0};i < td;i++)
-            {
-                mSampleBufferA[i] = 0.0f;
-                mSampleBufferB[i] = 0.0f;
-            }
+            std::fill_n(std::begin(mSampleBufferA), td, 0.0f);
+            std::fill_n(std::begin(mSampleBufferB), td, 0.0f);
 
             auto& vowelA = mChans[c].Formants[VOWEL_A_INDEX];
             auto& vowelB = mChans[c].Formants[VOWEL_B_INDEX];

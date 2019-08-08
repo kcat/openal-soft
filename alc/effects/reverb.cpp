@@ -767,15 +767,11 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
      * approximate bandwidth. This attempts to compensate for losses of energy
      * that reduce decay time due to scattering into highly attenuated bands.
      */
-    const ALfloat bandWeights[3]{
-        lf0norm*norm_weight_factor,
-        hf0norm*norm_weight_factor - lf0norm*norm_weight_factor,
-        1.0f - hf0norm*norm_weight_factor};
-    DensityGain[1] = CalcDensityGain(
-        CalcDecayCoeff(length,
-            bandWeights[0]*lfDecayTime + bandWeights[1]*mfDecayTime + bandWeights[2]*hfDecayTime
-        )
-    );
+    const ALfloat decayTimeWeighted{
+        (lf0norm*norm_weight_factor)*lfDecayTime +
+        (hf0norm*norm_weight_factor - lf0norm*norm_weight_factor)*mfDecayTime +
+        (1.0f - hf0norm*norm_weight_factor)*hfDecayTime};
+    DensityGain[1] = CalcDensityGain(CalcDecayCoeff(length, decayTimeWeighted));
 
     /* Calculate the all-pass feed-back/forward coefficient. */
     VecAp.Coeff = std::sqrt(0.5f) * std::pow(diffusion, 2.0f);

@@ -226,6 +226,36 @@ struct DelayLineI {
     ALsizei  Mask{0};
     ALfloat (*Line)[NUM_LINES]{nullptr};
 
+    /* Given the allocated sample buffer, this function updates each delay line
+     * offset.
+     */
+    void realizeLineOffset(ALfloat *sampleBuffer)
+    {
+        union {
+            ALfloat *f;
+            ALfloat (*f4)[NUM_LINES];
+        } u;
+        u.f = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Line) * NUM_LINES];
+        Line = u.f4;
+    }
+
+    /* Calculate the length of a delay line and store its mask and offset. */
+    ALuint calcLineLength(const ALfloat length, const ptrdiff_t offset, const ALfloat frequency,
+        const ALuint extra)
+    {
+        /* All line lengths are powers of 2, calculated from their lengths in
+         * seconds, rounded up.
+         */
+        auto samples = static_cast<ALuint>(float2int(std::ceil(length*frequency)));
+        samples = NextPowerOf2(samples + extra);
+
+        /* All lines share a single sample buffer. */
+        Mask = samples - 1;
+        Line = reinterpret_cast<ALfloat(*)[NUM_LINES]>(offset);
+
+        /* Return the sample count for accumulation. */
+        return samples;
+    }
 
     void write(ALsizei offset, const ALsizei c, const ALfloat *RESTRICT in, const ALsizei count) const noexcept
     {
@@ -457,37 +487,6 @@ struct ReverbState final : public EffectState {
 inline ALfloat CalcDelayLengthMult(ALfloat density)
 { return maxf(5.0f, std::cbrt(density*DENSITY_SCALE)); }
 
-/* Given the allocated sample buffer, this function updates each delay line
- * offset.
- */
-inline ALvoid RealizeLineOffset(ALfloat *sampleBuffer, DelayLineI *Delay)
-{
-    union {
-        ALfloat *f;
-        ALfloat (*f4)[NUM_LINES];
-    } u;
-    u.f = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Delay->Line) * NUM_LINES];
-    Delay->Line = u.f4;
-}
-
-/* Calculate the length of a delay line and store its mask and offset. */
-ALuint CalcLineLength(const ALfloat length, const ptrdiff_t offset, const ALfloat frequency,
-    const ALuint extra, DelayLineI *Delay)
-{
-    /* All line lengths are powers of 2, calculated from their lengths in
-     * seconds, rounded up.
-     */
-    auto samples = static_cast<ALuint>(float2int(std::ceil(length*frequency)));
-    samples = NextPowerOf2(samples + extra);
-
-    /* All lines share a single sample buffer. */
-    Delay->Mask = samples - 1;
-    Delay->Line = reinterpret_cast<ALfloat(*)[NUM_LINES]>(offset);
-
-    /* Return the sample count for accumulation. */
-    return samples;
-}
-
 /* Calculates the delay line metrics and allocates the shared sample buffer
  * for all lines given the sample rate (frequency).  If an allocation failure
  * occurs, it returns AL_FALSE.
@@ -512,25 +511,25 @@ bool ReverbState::allocLines(const ALfloat frequency)
     ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
         AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
         (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())/float{LATE_LINE_LENGTHS_size}*multiplier};
-    totalSamples += CalcLineLength(length, totalSamples, frequency, BUFFERSIZE, &mDelay);
+    totalSamples += mDelay.calcLineLength(length, totalSamples, frequency, BUFFERSIZE);
 
     /* The early vector all-pass line. */
     length = EARLY_ALLPASS_LENGTHS.back() * multiplier;
-    totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mEarly.VecAp.Delay);
+    totalSamples += mEarly.VecAp.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
     /* The early reflection line. */
     length = EARLY_LINE_LENGTHS.back() * multiplier;
-    totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mEarly.Delay);
+    totalSamples += mEarly.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
     /* The late vector all-pass line. */
     length = LATE_ALLPASS_LENGTHS.back() * multiplier;
-    totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mLate.VecAp.Delay);
+    totalSamples += mLate.VecAp.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
     /* The late delay lines are calculated from the largest maximum density
      * line length.
      */
     length = LATE_LINE_LENGTHS.back() * multiplier;
-    totalSamples += CalcLineLength(length, totalSamples, frequency, 0, &mLate.Delay);
+    totalSamples += mLate.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
     totalSamples *= NUM_LINES;
     if(totalSamples != mSampleBuffer.size())
@@ -543,11 +542,11 @@ bool ReverbState::allocLines(const ALfloat frequency)
     std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
 
     /* Update all delays to reflect the new sample buffer. */
-    RealizeLineOffset(mSampleBuffer.data(), &mDelay);
-    RealizeLineOffset(mSampleBuffer.data(), &mEarly.VecAp.Delay);
-    RealizeLineOffset(mSampleBuffer.data(), &mEarly.Delay);
-    RealizeLineOffset(mSampleBuffer.data(), &mLate.VecAp.Delay);
-    RealizeLineOffset(mSampleBuffer.data(), &mLate.Delay);
+    mDelay.realizeLineOffset(mSampleBuffer.data());
+    mEarly.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
+    mEarly.Delay.realizeLineOffset(mSampleBuffer.data());
+    mLate.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
+    mLate.Delay.realizeLineOffset(mSampleBuffer.data());
 
     return true;
 }

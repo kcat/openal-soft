@@ -116,25 +116,26 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
     ALfloat gain, f0norm;
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
-     * filters' gain is for the reference frequency, which is the centerpoint
-     * of the transition band.
+     * and peaking filters' gain is for the centerpoint of the transition band,
+     * meaning its dB needs to be doubled for the shelf or peak to reach the
+     * provided gain.
      */
-    gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
+    gain = maxf(std::sqrt(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
     mChans[0].filter[0].setParams(BiquadType::LowShelf, gain, f0norm,
         BiquadFilter::rcpQFromSlope(gain, 0.75f));
 
-    gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
+    gain = maxf(std::sqrt(props->Equalizer.Mid1Gain), 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
     mChans[0].filter[1].setParams(BiquadType::Peaking, gain, f0norm,
         BiquadFilter::rcpQFromBandwidth(f0norm, props->Equalizer.Mid1Width));
 
-    gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
+    gain = maxf(std::sqrt(props->Equalizer.Mid2Gain), 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
     mChans[0].filter[2].setParams(BiquadType::Peaking, gain, f0norm,
         BiquadFilter::rcpQFromBandwidth(f0norm, props->Equalizer.Mid2Width));
 
-    gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
+    gain = maxf(std::sqrt(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
     mChans[0].filter[3].setParams(BiquadType::HighShelf, gain, f0norm,
         BiquadFilter::rcpQFromSlope(gain, 0.75f));

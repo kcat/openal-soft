@@ -47,7 +47,6 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real gain, Real f0norm, Rea
             a[2] =             (gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
         case BiquadType::Peaking:
-            gain = std::sqrt(gain);
             b[0] =  1.0f + alpha * gain;
             b[1] = -2.0f * cos_w0;
             b[2] =  1.0f - alpha * gain;

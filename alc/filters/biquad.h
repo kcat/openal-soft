@@ -11,10 +11,11 @@
  * EQ biquad filter coefficients" by Robert Bristow-Johnson
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
  */
-/* Implementation note: For the shelf filters, the specified gain is for the
- * reference frequency, which is the centerpoint of the transition band. This
- * better matches EFX filter design. To set the gain for the shelf itself, use
- * the square root of the desired linear gain (or halve the dB gain).
+/* Implementation note: For the shelf and peaking filters, the specified gain
+ * is for the centerpoint of the transition band. This better fits EFX filter
+ * behavior, which expects the shelf's reference frequency to reach the given
+ * gain. To set the gain for the shelf or peak itself, use the square root of
+ * the desired linear gain (or halve the dB gain).
  */
 
 enum class BiquadType {

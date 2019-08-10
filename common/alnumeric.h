@@ -106,11 +106,34 @@ inline size_t RoundUp(size_t value, size_t r) noexcept
 #define CTZ64 __builtin_ctzll
 #endif
 
-#elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
+#else
 
-inline int msvc64_popcnt32(uint32_t v)
-{ return (int)__popcnt(v); }
-#define POPCNT32 msvc64_popcnt32
+/* There be black magics here. The popcnt method is derived from
+ * https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+ * while the ctz-utilizing-popcnt algorithm is shown here
+ * http://www.hackersdelight.org/hdcodetxt/ntz.c.txt
+ * as the ntz2 variant. These likely aren't the most efficient methods, but
+ * they're good enough if the GCC built-ins aren't available.
+ */
+inline int fallback_popcnt32(uint32_t v)
+{
+    v = v - ((v >> 1) & 0x55555555u);
+    v = (v & 0x33333333u) + ((v >> 2) & 0x33333333u);
+    v = (v + (v >> 4)) & 0x0f0f0f0fu;
+    return (int)((v * 0x01010101u) >> 24);
+}
+#define POPCNT32 fallback_popcnt32
+inline int fallback_popcnt64(uint64_t v)
+{
+    v = v - ((v >> 1) & 0x5555555555555555_u64);
+    v = (v & 0x3333333333333333_u64) + ((v >> 2) & 0x3333333333333333_u64);
+    v = (v + (v >> 4)) & 0x0f0f0f0f0f0f0f0f_u64;
+    return (int)((v * 0x0101010101010101_u64) >> 56);
+}
+#define POPCNT64 fallback_popcnt64
+
+#if defined(HAVE_BITSCANFORWARD64_INTRINSIC)
+
 inline int msvc64_ctz32(uint32_t v)
 {
     unsigned long idx = 32;
@@ -118,10 +141,6 @@ inline int msvc64_ctz32(uint32_t v)
     return (int)idx;
 }
 #define CTZ32 msvc64_ctz32
-
-inline int msvc64_popcnt64(uint64_t v)
-{ return (int)__popcnt64(v); }
-#define POPCNT64 msvc64_popcnt64
 inline int msvc64_ctz64(uint64_t v)
 {
     unsigned long idx = 64;
@@ -132,9 +151,6 @@ inline int msvc64_ctz64(uint64_t v)
 
 #elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
 
-inline int msvc_popcnt32(uint32_t v)
-{ return (int)__popcnt(v); }
-#define POPCNT32 msvc_popcnt32
 inline int msvc_ctz32(uint32_t v)
 {
     unsigned long idx = 32;
@@ -142,10 +158,6 @@ inline int msvc_ctz32(uint32_t v)
     return (int)idx;
 }
 #define CTZ32 msvc_ctz32
-
-inline int msvc_popcnt64(uint64_t v)
-{ return (int)(__popcnt((uint32_t)v) + __popcnt((uint32_t)(v>>32))); }
-#define POPCNT64 msvc_popcnt64
 inline int msvc_ctz64(uint64_t v)
 {
     unsigned long idx = 64;
@@ -160,36 +172,14 @@ inline int msvc_ctz64(uint64_t v)
 
 #else
 
-/* There be black magics here. The popcnt method is derived from
- * https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
- * while the ctz-utilizing-popcnt algorithm is shown here
- * http://www.hackersdelight.org/hdcodetxt/ntz.c.txt
- * as the ntz2 variant. These likely aren't the most efficient methods, but
- * they're good enough if the GCC or MSVC intrinsics aren't available.
- */
-inline int fallback_popcnt32(uint32_t v)
-{
-    v = v - ((v >> 1) & 0x55555555u);
-    v = (v & 0x33333333u) + ((v >> 2) & 0x33333333u);
-    v = (v + (v >> 4)) & 0x0f0f0f0fu;
-    return (int)((v * 0x01010101u) >> 24);
-}
-#define POPCNT32 fallback_popcnt32
 inline int fallback_ctz32(uint32_t value)
-{ return fallback_popcnt32(~value & (value - 1)); }
+{ return POPCNT32(~value & (value - 1)); }
 #define CTZ32 fallback_ctz32
-
-inline int fallback_popcnt64(uint64_t v)
-{
-    v = v - ((v >> 1) & 0x5555555555555555_u64);
-    v = (v & 0x3333333333333333_u64) + ((v >> 2) & 0x3333333333333333_u64);
-    v = (v + (v >> 4)) & 0x0f0f0f0f0f0f0f0f_u64;
-    return (int)((v * 0x0101010101010101_u64) >> 56);
-}
-#define POPCNT64 fallback_popcnt64
 inline int fallback_ctz64(uint64_t value)
-{ return fallback_popcnt64(~value & (value - 1)); }
+{ return POPCNT64(~value & (value - 1)); }
 #define CTZ64 fallback_ctz64
+
+#endif
 #endif
 
 

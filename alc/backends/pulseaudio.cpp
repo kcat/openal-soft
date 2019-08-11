@@ -37,8 +37,9 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
-#include "compat.h"
 #include "alexcpt.h"
+#include "compat.h"
+#include "dynload.h"
 
 #include <pulse/pulseaudio.h>
 

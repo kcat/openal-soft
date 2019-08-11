@@ -48,6 +48,7 @@
 #include "alu.h"
 #include "ringbuffer.h"
 #include "compat.h"
+#include "dynload.h"
 #include "threads.h"
 
 /* MinGW-w64 needs this for some unknown reason now. */

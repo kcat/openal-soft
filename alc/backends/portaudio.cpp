@@ -29,8 +29,8 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "dynload.h"
 #include "ringbuffer.h"
-#include "compat.h"
 
 #include <portaudio.h>
 

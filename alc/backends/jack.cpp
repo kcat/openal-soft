@@ -32,9 +32,9 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "dynload.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "compat.h"
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>

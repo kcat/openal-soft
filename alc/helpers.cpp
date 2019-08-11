@@ -81,9 +81,6 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #endif
 #endif /* AL_NO_UID_DEFS */
 
-#ifdef HAVE_DLFCN_H
-#include <dlfcn.h>
-#endif
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif
@@ -454,21 +451,6 @@ const PathNamePair &GetProcBinary()
 }
 
 
-void *LoadLib(const char *name)
-{
-    std::wstring wname{utf8_to_wstr(name)};
-    return LoadLibraryW(wname.c_str());
-}
-void CloseLib(void *handle)
-{ FreeLibrary(static_cast<HMODULE>(handle)); }
-void *GetSymbol(void *handle, const char *name)
-{
-    void *ret{reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name))};
-    if(!ret) ERR("Failed to load %s\n", name);
-    return ret;
-}
-
-
 void al_print(FILE *logfile, const char *fmt, ...)
 {
     al::vector<char> dynmsg;
@@ -682,33 +664,6 @@ const PathNamePair &GetProcBinary()
     return ret;
 }
 
-
-#ifdef HAVE_DLFCN_H
-
-void *LoadLib(const char *name)
-{
-    dlerror();
-    void *handle{dlopen(name, RTLD_NOW)};
-    const char *err{dlerror()};
-    if(err) handle = nullptr;
-    return handle;
-}
-void CloseLib(void *handle)
-{ dlclose(handle); }
-void *GetSymbol(void *handle, const char *name)
-{
-    dlerror();
-    void *sym{dlsym(handle, name)};
-    const char *err{dlerror()};
-    if(err)
-    {
-        WARN("Failed to load %s: %s\n", name, err);
-        sym = nullptr;
-    }
-    return sym;
-}
-
-#endif /* HAVE_DLFCN_H */
 
 void al_print(FILE *logfile, const char *fmt, ...)
 {

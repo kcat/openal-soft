@@ -1,8 +1,6 @@
 #ifndef AL_COMPAT_H
 #define AL_COMPAT_H
 
-#ifdef __cplusplus
-
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
@@ -86,8 +84,6 @@ public:
 
 } // namespace al
 
-#define HAVE_DYNLOAD 1
-
 #else /* _WIN32 */
 
 #include <fstream>
@@ -99,23 +95,11 @@ using ifstream = std::ifstream;
 
 } // namespace al
 
-#if defined(HAVE_DLFCN_H)
-#define HAVE_DYNLOAD 1
-#endif
-
 #endif /* _WIN32 */
 
 #include <string>
 
 struct PathNamePair { std::string path, fname; };
 const PathNamePair &GetProcBinary(void);
-
-#ifdef HAVE_DYNLOAD
-void *LoadLib(const char *name);
-void CloseLib(void *handle);
-void *GetSymbol(void *handle, const char *name);
-#endif
-
-#endif /* __cplusplus */
 
 #endif /* AL_COMPAT_H */

@@ -206,7 +206,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         const ALbufferlistitem *BufferList{Source->queue};
         while(BufferList && BufferList != Current)
         {
-            readPos += int64_t{BufferList->mMaxSamples} << 32;
+            readPos += int64_t{BufferList->mSampleLen} << 32;
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
         readPos = minu64(readPos, 0x7fffffffffffffff_u64);
@@ -253,16 +253,14 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         const ALbuffer *BufferFmt{nullptr};
         while(BufferList && BufferList != Current)
         {
-            for(ALuint i{0};!BufferFmt && i < BufferList->mNumBuffers;++i)
-                BufferFmt = (*BufferList)[i];
-            readPos += int64_t{BufferList->mMaxSamples} << FRACTIONBITS;
+            if(!BufferFmt) BufferFmt = BufferList->mBuffer;
+            readPos += int64_t{BufferList->mSampleLen} << FRACTIONBITS;
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
 
         while(BufferList && !BufferFmt)
         {
-            for(ALuint i{0};!BufferFmt && i < BufferList->mNumBuffers;++i)
-                BufferFmt = (*BufferList)[i];
+            BufferFmt = BufferList->mBuffer;
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
         assert(BufferFmt != nullptr);
@@ -315,12 +313,11 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
         while(BufferList)
         {
-            for(ALuint i{0};!BufferFmt && i < BufferList->mNumBuffers;++i)
-                BufferFmt = (*BufferList)[i];
+            if(!BufferFmt) BufferFmt = BufferList->mBuffer;
 
             readFin |= (BufferList == Current);
-            totalBufferLen += BufferList->mMaxSamples;
-            if(!readFin) readPos += BufferList->mMaxSamples;
+            totalBufferLen += BufferList->mSampleLen;
+            if(!readFin) readPos += BufferList->mSampleLen;
 
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
@@ -392,11 +389,9 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
  
     /* Find the first valid Buffer in the Queue */
     BufferList = Source->queue;
-    while(BufferList)
+    while(BufferList && !BufferFmt)
     {
-        for(ALuint i{0};!BufferFmt && i < BufferList->mNumBuffers;i++)
-            BufferFmt = (*BufferList)[i];
-        if(BufferFmt) break;
+        BufferFmt = BufferList->mBuffer;
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
     if(!BufferFmt)
@@ -464,7 +459,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
     ALbufferlistitem *BufferList{Source->queue};
     while(BufferList && totalBufferLen <= offset)
     {
-        if(static_cast<ALuint>(BufferList->mMaxSamples) > offset-totalBufferLen)
+        if(BufferList->mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
             voice->mPosition.store(offset - totalBufferLen, std::memory_order_relaxed);
@@ -472,7 +467,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
             voice->mCurrentBuffer.store(BufferList, std::memory_order_release);
             return AL_TRUE;
         }
-        totalBufferLen += BufferList->mMaxSamples;
+        totalBufferLen += BufferList->mSampleLen;
 
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
@@ -1197,12 +1192,9 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(buffer != nullptr)
             {
                 /* Add the selected buffer to a one-item queue */
-                auto newlist = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
-                    ALbufferlistitem::Sizeof(1u)));
-                newlist->mNext.store(nullptr, std::memory_order_relaxed);
-                newlist->mMaxSamples = buffer->SampleLen;
-                newlist->mNumBuffers = 1;
-                newlist->mBuffers[0] = buffer;
+                auto newlist = new ALbufferlistitem{};
+                newlist->mSampleLen = buffer->SampleLen;
+                newlist->mBuffer = buffer;
                 IncrementRef(buffer->ref);
 
                 /* Source is now Static */
@@ -1220,13 +1212,11 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             /* Delete all elements in the previous queue */
             while(oldlist != nullptr)
             {
-                ALbufferlistitem *temp{oldlist};
+                std::unique_ptr<ALbufferlistitem> temp{oldlist};
                 oldlist = temp->mNext.load(std::memory_order_relaxed);
 
-                std::for_each(temp->begin(), temp->end(),
-                    [](ALbuffer *buffer) -> void
-                    { if(buffer) DecrementRef(buffer->ref); });
-                al_free(temp);
+                if(ALbuffer *buffer{temp->mBuffer})
+                    DecrementRef(buffer->ref);
             }
             return true;
 
@@ -1769,8 +1759,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         case AL_BUFFER:
             CHECKSIZE(values, 1);
             BufferList = (Source->SourceType == AL_STATIC) ? Source->queue : nullptr;
-            values[0] = (BufferList && !BufferList->empty() && BufferList->front()) ?
-                BufferList->front()->id : 0;
+            values[0] = (BufferList && BufferList->mBuffer) ? BufferList->mBuffer->id : 0;
             return true;
 
         case AL_SOURCE_STATE:
@@ -1786,7 +1775,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             {
                 ALsizei count{0};
                 do {
-                    count += BufferList->mNumBuffers;
+                    ++count;
                     BufferList = BufferList->mNext.load(std::memory_order_relaxed);
                 } while(BufferList != nullptr);
                 values[0] = count;
@@ -1815,7 +1804,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
                 while(BufferList && BufferList != Current)
                 {
-                    played += BufferList->mNumBuffers;
+                    ++played;
                     BufferList = BufferList->mNext.load(std::memory_order_relaxed);
                 }
                 values[0] = played;
@@ -2729,7 +2718,7 @@ START_API_FUNC
          * length buffer.
          */
         ALbufferlistitem *BufferList{source->queue};
-        while(BufferList && BufferList->mMaxSamples == 0)
+        while(BufferList && BufferList->mSampleLen == 0)
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
 
         /* If there's nothing to play, go right to stopped. */
@@ -2807,15 +2796,11 @@ START_API_FUNC
                 voice->mPositionFrac.load(std::memory_order_relaxed) != 0 ||
                 voice->mCurrentBuffer.load(std::memory_order_relaxed) != BufferList;
 
-        auto buffer = std::find_if(BufferList->cbegin(), BufferList->cend(),
-            std::bind(std::not_equal_to<const ALbuffer*>{}, _1, nullptr));
-        if(buffer != BufferList->cend())
-        {
-            voice->mFrequency = (*buffer)->Frequency;
-            voice->mFmtChannels = (*buffer)->mFmtChannels;
-            voice->mNumChannels = ChannelsFromFmt((*buffer)->mFmtChannels);
-            voice->mSampleSize  = BytesFromFmt((*buffer)->mFmtType);
-        }
+        ALbuffer *buffer{BufferList->mBuffer};
+        voice->mFrequency = buffer->Frequency;
+        voice->mFmtChannels = buffer->mFmtChannels;
+        voice->mNumChannels = ChannelsFromFmt(buffer->mFmtChannels);
+        voice->mSampleSize  = BytesFromFmt(buffer->mFmtType);
 
         /* Clear the stepping value so the mixer knows not to mix this until
          * the update gets applied.
@@ -3101,11 +3086,9 @@ START_API_FUNC
     ALCdevice *device{context->mDevice.get()};
     ALbuffer *BufferFmt{nullptr};
     ALbufferlistitem *BufferList{source->queue};
-    while(BufferList)
+    while(BufferList && !BufferFmt)
     {
-        for(ALuint i{0};!BufferFmt && i < BufferList->mNumBuffers;i++)
-            BufferFmt = (*BufferList)[i];
-        if(BufferFmt) break;
+        BufferFmt = BufferList->mBuffer;
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
 
@@ -3123,21 +3106,18 @@ START_API_FUNC
 
         if(!BufferListStart)
         {
-            BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
-                ALbufferlistitem::Sizeof(1u)));
+            BufferListStart = new ALbufferlistitem{};
             BufferList = BufferListStart;
         }
         else
         {
-            auto item = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
-                ALbufferlistitem::Sizeof(1u)));
+            auto item = new ALbufferlistitem{};
             BufferList->mNext.store(item, std::memory_order_relaxed);
             BufferList = item;
         }
         BufferList->mNext.store(nullptr, std::memory_order_relaxed);
-        BufferList->mMaxSamples = buffer ? buffer->SampleLen : 0;
-        BufferList->mNumBuffers = 1;
-        BufferList->mBuffers[0] = buffer;
+        BufferList->mSampleLen = buffer ? buffer->SampleLen : 0;
+        BufferList->mBuffer = buffer;
         if(!buffer) continue;
 
         IncrementRef(buffer->ref);
@@ -3162,115 +3142,9 @@ START_API_FUNC
              * each buffer we had. */
             while(BufferListStart)
             {
-                ALbufferlistitem *next = BufferListStart->mNext.load(std::memory_order_relaxed);
-                std::for_each(BufferListStart->begin(), BufferListStart->end(),
-                    [](ALbuffer *buffer) -> void
-                    { if(buffer) DecrementRef(buffer->ref); });
-                al_free(BufferListStart);
-                BufferListStart = next;
-            }
-            return;
-        }
-    }
-    /* All buffers good. */
-    buflock.unlock();
-
-    /* Source is now streaming */
-    source->SourceType = AL_STREAMING;
-
-    if(!(BufferList=source->queue))
-        source->queue = BufferListStart;
-    else
-    {
-        ALbufferlistitem *next;
-        while((next=BufferList->mNext.load(std::memory_order_relaxed)) != nullptr)
-            BufferList = next;
-        BufferList->mNext.store(BufferListStart, std::memory_order_release);
-    }
-}
-END_API_FUNC
-
-AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, const ALuint *buffers)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
-    if UNLIKELY(nb < 0)
-        context->setError(AL_INVALID_VALUE, "Queueing %d buffer layers", nb);
-    if UNLIKELY(nb <= 0) return;
-
-    std::lock_guard<std::mutex> _{context->mSourceLock};
-    ALsource *source{LookupSource(context.get(),src)};
-    if UNLIKELY(!source)
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
-
-    /* Can't queue on a Static Source */
-    if UNLIKELY(source->SourceType == AL_STATIC)
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
-
-    /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->mDevice.get()};
-    ALbuffer *BufferFmt{nullptr};
-    ALbufferlistitem *BufferList{source->queue};
-    while(BufferList)
-    {
-        for(ALuint i{0};!BufferFmt && i < BufferList->mNumBuffers;i++)
-            BufferFmt = (*BufferList)[i];
-        if(BufferFmt) break;
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
-    }
-
-    std::unique_lock<std::mutex> buflock{device->BufferLock};
-    auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(alignof(void*),
-        ALbufferlistitem::Sizeof(nb)));
-    BufferList = BufferListStart;
-    BufferList->mNext.store(nullptr, std::memory_order_relaxed);
-    BufferList->mMaxSamples = 0;
-    BufferList->mNumBuffers = 0;
-
-    for(ALsizei i{0};i < nb;i++)
-    {
-        ALbuffer *buffer{nullptr};
-        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
-        {
-            context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
-            goto buffer_error;
-        }
-
-        BufferList->mBuffers[BufferList->mNumBuffers++] = buffer;
-        if(!buffer) continue;
-
-        IncrementRef(buffer->ref);
-
-        BufferList->mMaxSamples = maxu(BufferList->mMaxSamples, buffer->SampleLen);
-
-        if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-        {
-            context->setError(AL_INVALID_OPERATION, "Queueing non-persistently mapped buffer %u",
-                buffer->id);
-            goto buffer_error;
-        }
-
-        if(BufferFmt == nullptr)
-            BufferFmt = buffer;
-        else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->mFmtChannels != buffer->mFmtChannels ||
-                BufferFmt->OriginalType != buffer->OriginalType)
-        {
-            context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
-
-        buffer_error:
-            /* A buffer failed (invalid ID or format), so unlock and release
-             * each buffer we had. */
-            while(BufferListStart)
-            {
-                ALbufferlistitem *next{BufferListStart->mNext.load(std::memory_order_relaxed)};
-                std::for_each(BufferListStart->begin(), BufferListStart->end(),
-                    [](ALbuffer *buffer) -> void
-                    { if(buffer) DecrementRef(buffer->ref); });
-                al_free(BufferListStart);
-                BufferListStart = next;
+                std::unique_ptr<ALbufferlistitem> head{BufferListStart};
+                BufferListStart = head->mNext.load(std::memory_order_relaxed);
+                if(ALbuffer *buffer{head->mBuffer}) DecrementRef(buffer->ref);
             }
             return;
         }
@@ -3325,7 +3199,7 @@ START_API_FUNC
     if UNLIKELY(BufferList == Current)
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing pending buffers");
 
-    ALuint i{BufferList->mNumBuffers};
+    ALuint i{1u};
     while(i < static_cast<ALuint>(nb))
     {
         /* If the next bufferlist to check is NULL or is the current one, it's
@@ -3336,47 +3210,22 @@ START_API_FUNC
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing pending buffers");
         BufferList = next;
 
-        i += BufferList->mNumBuffers;
+        ++i;
     }
 
     while(nb > 0)
     {
-        ALbufferlistitem *head{source->queue};
-        ALbufferlistitem *next{head->mNext.load(std::memory_order_relaxed)};
-        for(i = 0;i < head->mNumBuffers && nb > 0;i++,nb--)
-        {
-            ALbuffer *buffer{(*head)[i]};
-            if(!buffer)
-                *(buffers++) = 0;
-            else
-            {
-                *(buffers++) = buffer->id;
-                DecrementRef(buffer->ref);
-            }
-        }
-        if(i < head->mNumBuffers)
-        {
-            /* This head has some buffers left over, so move them to the front
-             * and update the sample and buffer count.
-             */
-            ALuint max_length{0};
-            ALuint j{0};
-            while(i < head->mNumBuffers)
-            {
-                ALbuffer *buffer{(*head)[i++]};
-                if(buffer) max_length = maxu(max_length, buffer->SampleLen);
-                head->mBuffers[j++] = buffer;
-            }
-            head->mMaxSamples = max_length;
-            head->mNumBuffers = j;
-            break;
-        }
+        std::unique_ptr<ALbufferlistitem> head{source->queue};
+        source->queue = head->mNext.load(std::memory_order_relaxed);
 
-        /* Otherwise, free this item and set the source queue head to the next
-         * one.
-         */
-        al_free(head);
-        source->queue = next;
+        if(ALbuffer *buffer{head->mBuffer})
+        {
+            *(buffers++) = buffer->id;
+            DecrementRef(buffer->ref);
+        }
+        else
+            *(buffers++) = 0;
+        --nb;
     }
 }
 END_API_FUNC
@@ -3453,12 +3302,9 @@ ALsource::~ALsource()
     ALbufferlistitem *BufferList{queue};
     while(BufferList != nullptr)
     {
-        ALbufferlistitem *next{BufferList->mNext.load(std::memory_order_relaxed)};
-        std::for_each(BufferList->begin(), BufferList->end(),
-            [](ALbuffer *buffer) -> void
-            { if(buffer) DecrementRef(buffer->ref); });
-        al_free(BufferList);
-        BufferList = next;
+        std::unique_ptr<ALbufferlistitem> head{BufferList};
+        BufferList = head->mNext.load(std::memory_order_relaxed);
+        if(ALbuffer *buffer{BufferList->mBuffer}) DecrementRef(buffer->ref);
     }
     queue = nullptr;
 

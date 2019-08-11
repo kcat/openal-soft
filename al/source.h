@@ -10,6 +10,7 @@
 #include "AL/alc.h"
 
 #include "alcontext.h"
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
 #include "vector.h"
@@ -23,58 +24,11 @@ struct ALeffectslot;
 #define INVALID_VOICE_IDX static_cast<ALuint>(-1)
 
 struct ALbufferlistitem {
-    using element_type = ALbuffer*;
-    using value_type = ALbuffer*;
-    using index_type = size_t;
-    using difference_type = ptrdiff_t;
+    std::atomic<ALbufferlistitem*> mNext{nullptr};
+    ALuint mSampleLen{0u};
+    ALbuffer *mBuffer{nullptr};
 
-    using pointer = ALbuffer**;
-    using const_pointer = ALbuffer*const*;
-    using reference = ALbuffer*&;
-    using const_reference = ALbuffer*const&;
-
-    using iterator = pointer;
-    using const_iterator = const_pointer;
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
-
-    std::atomic<ALbufferlistitem*> mNext;
-    ALuint mMaxSamples;
-    ALuint mNumBuffers;
-    element_type mBuffers[];
-
-    static constexpr size_t Sizeof(size_t num_buffers) noexcept
-    {
-        return maxz(offsetof(ALbufferlistitem, mBuffers) + sizeof(element_type)*num_buffers,
-            sizeof(ALbufferlistitem));
-    }
-
-    reference front() { return mBuffers[0]; }
-    const_reference front() const { return mBuffers[0]; }
-    reference back() { return mBuffers[mNumBuffers-1]; }
-    const_reference back() const { return mBuffers[mNumBuffers-1]; }
-    reference operator[](index_type idx) { return mBuffers[idx]; }
-    const_reference operator[](index_type idx) const { return mBuffers[idx]; }
-    pointer data() noexcept { return mBuffers; }
-    const_pointer data() const noexcept { return mBuffers; }
-
-    index_type size() const noexcept { return mNumBuffers; }
-    bool empty() const noexcept { return mNumBuffers == 0; }
-
-    iterator begin() noexcept { return mBuffers; }
-    iterator end() noexcept { return mBuffers+mNumBuffers; }
-    const_iterator begin() const noexcept { return mBuffers; }
-    const_iterator end() const noexcept { return mBuffers+mNumBuffers; }
-    const_iterator cbegin() const noexcept { return mBuffers; }
-    const_iterator cend() const noexcept { return mBuffers+mNumBuffers; }
-
-    reverse_iterator rbegin() noexcept { return reverse_iterator{end()}; }
-    reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
-    const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator{end()}; }
-    const_reverse_iterator rend() const noexcept { return const_reverse_iterator{begin()}; }
-    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator{cend()}; }
-    const_reverse_iterator crend() const noexcept { return const_reverse_iterator{cbegin()}; }
+    DEF_NEWDEL(ALbufferlistitem)
 };
 
 

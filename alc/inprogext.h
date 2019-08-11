@@ -72,14 +72,6 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #endif
 #endif
 
-#ifndef AL_SOFT_buffer_layers
-#define AL_SOFT_buffer_layers
-typedef void (AL_APIENTRY*LPALSOURCEQUEUEBUFFERLAYERSSOFT)(ALuint src, ALsizei nb, const ALuint *buffers);
-#ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, const ALuint *buffers);
-#endif
-#endif
-
 #ifndef AL_SOFT_effect_chain
 #define AL_SOFT_effect_chain
 #define AL_EFFECTSLOT_TARGET_SOFT                0xf000

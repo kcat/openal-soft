@@ -2403,7 +2403,7 @@ START_API_FUNC
     {
         ALdouble dval[1];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dval))
-            *value = static_cast<ALfloat>(dval[1]);
+            *value = static_cast<ALfloat>(dval[0]);
     }
 }
 END_API_FUNC

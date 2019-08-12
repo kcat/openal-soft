@@ -737,6 +737,8 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
 }
 
 
+constexpr size_t MaxValues{6u};
+
 ALuint FloatValsByProp(ALenum prop)
 {
     switch(static_cast<SourceProp>(prop))
@@ -866,20 +868,16 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint64SOFT> values);
 
 #define CHECKSIZE(v, s) do { \
-    if UNLIKELY((v).size() != INT_MAX && (v).size() != (s))                   \
-    {                                                                         \
-        Context->setError(AL_INVALID_ENUM,                                    \
-            "Property 0x%04x expects %d value(s), got %zu", prop, (s),        \
-            (v).size());                                                      \
-        return false;                                                         \
-    }                                                                         \
+    if LIKELY((v).size() == (s) || (v).size() == MaxValues) break;            \
+    Context->setError(AL_INVALID_ENUM,                                        \
+        "Property 0x%04x expects %d value(s), got %zu", prop, (s),            \
+        (v).size());                                                          \
+    return false;                                                             \
 } while(0)
 #define CHECKVAL(x) do {                                                      \
-    if UNLIKELY(!(x))                                                         \
-    {                                                                         \
-        Context->setError(AL_INVALID_VALUE, "Value out of range");            \
-        return false;                                                         \
-    }                                                                         \
+    if LIKELY(x) break;                                                       \
+    Context->setError(AL_INVALID_VALUE, "Value out of range");                \
+    return false;                                                             \
 } while(0)
 
 bool UpdateSourceProps(ALsource *source, ALCcontext *context)
@@ -1434,8 +1432,8 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
 bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint64SOFT> values)
 {
-    ALfloat fvals[6];
-    ALint   ivals[3];
+    ALfloat fvals[MaxValues];
+    ALint   ivals[MaxValues];
 
     switch(prop)
     {
@@ -1553,7 +1551,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     ALCdevice *device{Context->mDevice.get()};
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
-    ALint ivals[3];
+    ALint ivals[MaxValues];
     ALboolean err;
 
     switch(prop)
@@ -1741,7 +1739,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALint> values)
 {
     ALbufferlistitem *BufferList;
-    ALdouble dvals[6];
+    ALdouble dvals[MaxValues];
     ALboolean err;
 
     switch(prop)
@@ -1926,8 +1924,8 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     ALCdevice *device = Context->mDevice.get();
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
-    ALdouble dvals[6];
-    ALint ivals[3];
+    ALdouble dvals[MaxValues];
+    ALint ivals[MaxValues];
     ALboolean err;
 
     switch(prop)
@@ -2199,7 +2197,7 @@ START_API_FUNC
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
-        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
 }
 END_API_FUNC
 
@@ -2259,7 +2257,7 @@ START_API_FUNC
     else
     {
         const ALuint count{DoubleValsByProp(param)};
-        ALfloat fvals[6];
+        ALfloat fvals[MaxValues];
         for(ALuint i{0};i < count;i++)
             fvals[i] = static_cast<ALfloat>(values[i]);
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {fvals, count});
@@ -2317,7 +2315,7 @@ START_API_FUNC
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
-        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
+        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
 }
 END_API_FUNC
 
@@ -2371,7 +2369,7 @@ START_API_FUNC
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
-        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
+        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
 }
 END_API_FUNC
 
@@ -2437,7 +2435,7 @@ START_API_FUNC
     else
     {
         const ALuint count{FloatValsByProp(param)};
-        ALdouble dvals[6];
+        ALdouble dvals[MaxValues];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {dvals, count}))
         {
             for(ALuint i{0};i < count;i++)
@@ -2503,7 +2501,7 @@ START_API_FUNC
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
-        GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
+        GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
 }
 END_API_FUNC
 
@@ -2563,7 +2561,7 @@ START_API_FUNC
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
-        GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
+        GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
 }
 END_API_FUNC
 
@@ -2623,7 +2621,7 @@ START_API_FUNC
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
-        GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, INT_MAX});
+        GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
 }
 END_API_FUNC
 

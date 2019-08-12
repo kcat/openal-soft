@@ -608,6 +608,7 @@ SET(COMMON_OBJS
     common/threads.cpp
     common/threads.h
     common/vecmat.h
+    common/vector.h
 )
 SET(OPENAL_OBJS
     al/auxeffectslot.cpp
@@ -672,7 +673,6 @@ SET(ALC_OBJS
     alc/cpu_caps.h
     alc/fpu_modes.h
     alc/logging.h
-    alc/vector.h
     alc/hrtf.cpp
     alc/hrtf.h
     alc/uhjfilter.cpp

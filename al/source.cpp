@@ -1552,7 +1552,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     ClockLatency clocktime;
     std::chrono::nanoseconds srcclock;
     ALint ivals[MaxValues];
-    ALboolean err;
+    bool err;
 
     switch(prop)
     {
@@ -1719,7 +1719,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
             CHECKSIZE(values, 1);
-            if((err=GetSourceiv(Source, Context, prop, {ivals, 1u})) != AL_FALSE)
+            if((err=GetSourceiv(Source, Context, prop, {ivals, 1u})) != false)
                 values[0] = static_cast<ALdouble>(ivals[0]);
             return err;
 
@@ -1740,7 +1740,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 {
     ALbufferlistitem *BufferList;
     ALdouble dvals[MaxValues];
-    ALboolean err;
+    bool err;
 
     switch(prop)
     {
@@ -1926,7 +1926,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     std::chrono::nanoseconds srcclock;
     ALdouble dvals[MaxValues];
     ALint ivals[MaxValues];
-    ALboolean err;
+    bool err;
 
     switch(prop)
     {
@@ -1956,7 +1956,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
             CHECKSIZE(values, 2);
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             values[1] = srcclock.count();
-            return AL_TRUE;
+            return true;
 
         /* 1x float/double */
         case AL_CONE_INNER_ANGLE:

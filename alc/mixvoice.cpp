@@ -398,7 +398,6 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
     const ALbuffer *Buffer{BufferListItem->mBuffer};
     const ALuint LoopStart{Buffer->LoopStart};
     const ALuint LoopEnd{Buffer->LoopEnd};
-    ASSUME(LoopStart >= 0);
     ASSUME(LoopEnd > LoopStart);
 
     /* If current pos is beyond the loop range, do not loop */

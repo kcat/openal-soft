@@ -42,6 +42,7 @@
 #include "event.h"
 #include "inprogext.h"
 #include "opthelpers.h"
+#include "strutils.h"
 
 
 namespace {
@@ -73,8 +74,8 @@ constexpr ALchar alBSinc24Resampler[] = "23rd order Sinc";
 extern "C" AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
 START_API_FUNC
 {
-    const char *spoof{getenv("ALSOFT_SPOOF_VERSION")};
-    if(spoof && spoof[0] != '\0') return spoof;
+    static const auto spoof = al::getenv("ALSOFT_SPOOF_VERSION");
+    if(spoof) return spoof->c_str();
     return ALSOFT_VERSION;
 }
 END_API_FUNC

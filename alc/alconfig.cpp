@@ -81,6 +81,7 @@ std::string expdup(const char *str)
 {
     std::string output;
 
+    std::string envval;
     while(*str != '\0')
     {
         const char *addstr;
@@ -107,20 +108,20 @@ std::string expdup(const char *str)
             }
             else
             {
-                bool hasbraces{(*str == '{')};
+                const bool hasbraces{(*str == '{')};
+
                 if(hasbraces) str++;
-
-                std::string envname;
-                while((std::isalnum(*str) || *str == '_'))
-                    envname += *(str++);
-
+                const char *envstart = str;
+                while(std::isalnum(*str) || *str == '_')
+                    ++str;
                 if(hasbraces && *str != '}')
                     continue;
-
+                const std::string envname{envstart, str};
                 if(hasbraces) str++;
-                if((addstr=std::getenv(envname.c_str())) == nullptr)
-                    continue;
-                addstrlen = std::strlen(addstr);
+
+                envval = al::getenv(envname.c_str()).value_or(std::string{});
+                addstr = envval.data();
+                addstrlen = envval.length();
             }
         }
         if(addstrlen == 0)
@@ -308,18 +309,17 @@ void ReadALConfig()
             LoadConfigFromFile(f);
     }
 
-    const WCHAR *str{_wgetenv(L"ALSOFT_CONF")};
-    if(str != nullptr && *str)
+    if(auto confpath = al::getenv(L"ALSOFT_CONF"))
     {
-        std::string filepath{wstr_to_utf8(str)};
-
-        TRACE("Loading config %s...\n", filepath.c_str());
-        al::ifstream f{filepath};
+        TRACE("Loading config %s...\n", wstr_to_utf8(confpath->c_str()).c_str());
+        al::ifstream f{*confpath};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
 }
+
 #else
+
 void ReadALConfig()
 {
     const char *str{"/etc/openal/alsoft.conf"};
@@ -330,9 +330,7 @@ void ReadALConfig()
         LoadConfigFromFile(f);
     f.close();
 
-    if(!(str=getenv("XDG_CONFIG_DIRS")) || str[0] == 0)
-        str = "/etc/xdg";
-    std::string confpaths = str;
+    std::string confpaths{al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg")};
     /* Go through the list in reverse, since "the order of base directories
      * denotes their importance; the first directory listed is the most
      * important". Ergo, we need to load the settings from the later dirs
@@ -385,9 +383,9 @@ void ReadALConfig()
     }
 #endif
 
-    if((str=getenv("HOME")) != nullptr && *str)
+    if(auto homedir = al::getenv("HOME"))
     {
-        fname = str;
+        fname = *homedir;
         if(fname.back() != '/') fname += "/.alsoftrc";
         else fname += ".alsoftrc";
 
@@ -397,18 +395,18 @@ void ReadALConfig()
             LoadConfigFromFile(f);
     }
 
-    if((str=getenv("XDG_CONFIG_HOME")) != nullptr && str[0] != 0)
+    if(auto configdir = al::getenv("XDG_CONFIG_HOME"))
     {
-        fname = str;
+        fname = *configdir;
         if(fname.back() != '/') fname += "/alsoft.conf";
         else fname += "alsoft.conf";
     }
     else
     {
         fname.clear();
-        if((str=getenv("HOME")) != nullptr && str[0] != 0)
+        if(auto homedir = al::getenv("HOME"))
         {
-            fname = str;
+            fname = *homedir;
             if(fname.back() != '/') fname += "/.config/alsoft.conf";
             else fname += ".config/alsoft.conf";
         }
@@ -433,10 +431,10 @@ void ReadALConfig()
             LoadConfigFromFile(f);
     }
 
-    if((str=getenv("ALSOFT_CONF")) != nullptr && *str)
+    if(auto confname = al::getenv("ALSOFT_CONF"))
     {
-        TRACE("Loading config %s...\n", str);
-        al::ifstream f{str};
+        TRACE("Loading config %s...\n", confname->c_str());
+        al::ifstream f{*confname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }

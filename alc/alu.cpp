@@ -73,6 +73,7 @@
 #include "mixer/defs.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
+#include "strutils.h"
 #include "threads.h"
 #include "uhjfilter.h"
 #include "vecmat.h"
@@ -87,18 +88,22 @@ using namespace std::placeholders;
 ALfloat InitConeScale()
 {
     ALfloat ret{1.0f};
-    const char *str{getenv("__ALSOFT_HALF_ANGLE_CONES")};
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-        ret *= 0.5f;
+    if(auto optval = al::getenv("__ALSOFT_HALF_ANGLE_CONES"))
+    {
+        if(strcasecmp(optval->c_str(), "true") == 0 || strtol(optval->c_str(), nullptr, 0) == 1)
+            ret *= 0.5f;
+    }
     return ret;
 }
 
 ALfloat InitZScale()
 {
     ALfloat ret{1.0f};
-    const char *str{getenv("__ALSOFT_REVERSE_Z")};
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-        ret *= -1.0f;
+    if(auto optval = al::getenv("__ALSOFT_REVERSE_Z"))
+    {
+        if(strcasecmp(optval->c_str(), "true") == 0 || strtol(optval->c_str(), nullptr, 0) == 1)
+            ret *= -1.0f;
+    }
     return ret;
 }
 

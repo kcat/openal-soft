@@ -929,25 +929,23 @@ std::recursive_mutex ListLock;
 
 void alc_initconfig(void)
 {
-    const char *str{getenv("ALSOFT_LOGLEVEL")};
-    if(str)
+    if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
     {
-        long lvl = strtol(str, nullptr, 0);
+        long lvl = strtol(loglevel->c_str(), nullptr, 0);
         if(lvl >= NoLog && lvl <= LogRef)
             gLogLevel = static_cast<LogLevel>(lvl);
     }
 
-    str = getenv("ALSOFT_LOGFILE");
-    if(str && str[0])
+    if(auto logfile = al::getenv("ALSOFT_LOGFILE"))
     {
 #ifdef _WIN32
-        std::wstring wname{utf8_to_wstr(str)};
-        FILE *logfile = _wfopen(wname.c_str(), L"wt");
+        std::wstring wname{utf8_to_wstr(logfile->c_str())};
+        FILE *logf{_wfopen(wname.c_str(), L"wt")};
 #else
-        FILE *logfile = fopen(str, "wt");
+        FILE *logf{fopen(logfile->c_str(), "wt")};
 #endif
-        if(logfile) gLogFile = logfile;
-        else ERR("Failed to open log file '%s'\n", str);
+        if(logf) gLogFile = logf;
+        else ERR("Failed to open log file '%s'\n", logfile->c_str());
     }
 
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
@@ -970,16 +968,15 @@ void alc_initconfig(void)
     }
     ReadALConfig();
 
-    str = getenv("__ALSOFT_SUSPEND_CONTEXT");
-    if(str && *str)
+    if(auto suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))
     {
-        if(strcasecmp(str, "ignore") == 0)
+        if(strcasecmp(suspendmode->c_str(), "ignore") == 0)
         {
             SuspendDefers = false;
             TRACE("Selected context suspend behavior, \"ignore\"\n");
         }
         else
-            ERR("Unhandled context suspend behavior setting: \"%s\"\n", str);
+            ERR("Unhandled context suspend behavior setting: \"%s\"\n", suspendmode->c_str());
     }
 
     int capfilter{0};
@@ -997,7 +994,7 @@ void alc_initconfig(void)
 #endif
     if(auto cpuopt = ConfigValueStr(nullptr, nullptr, "disable-cpu-exts"))
     {
-        str = cpuopt->c_str();
+        const char *str{cpuopt->c_str()};
         if(strcasecmp(str, "all") == 0)
             capfilter = 0;
         else
@@ -1043,22 +1040,31 @@ void alc_initconfig(void)
     aluInit();
     aluInitMixer();
 
-    str = getenv("ALSOFT_TRAP_ERROR");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
+    auto traperr = al::getenv("ALSOFT_TRAP_ERROR");
+    if(traperr && (strcasecmp(traperr->c_str(), "true") == 0
+            || strtol(traperr->c_str(), nullptr, 0) == 1))
     {
         TrapALError  = true;
         TrapALCError = true;
     }
     else
     {
-        str = getenv("ALSOFT_TRAP_AL_ERROR");
-        if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-            TrapALError = true;
+        traperr = al::getenv("ALSOFT_TRAP_AL_ERROR");
+        if(traperr)
+        {
+            if(strcasecmp(traperr->c_str(), "true") == 0
+                || strtol(traperr->c_str(), nullptr, 0) == 1)
+                TrapALError = true;
+        }
         TrapALError = !!GetConfigValueBool(nullptr, nullptr, "trap-al-error", TrapALError);
 
-        str = getenv("ALSOFT_TRAP_ALC_ERROR");
-        if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
+        traperr = al::getenv("ALSOFT_TRAP_ALC_ERROR");
+        if(traperr)
+        {
+            if(strcasecmp(traperr->c_str(), "true") == 0
+                || strtol(traperr->c_str(), nullptr, 0) == 1)
             TrapALCError = true;
+        }
         TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", TrapALCError);
     }
 
@@ -1068,13 +1074,8 @@ void alc_initconfig(void)
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
     }
 
-    auto devopt = ConfigValueStr(nullptr, nullptr, "drivers");
-    if(const char *devs{getenv("ALSOFT_DRIVERS")})
-    {
-        if(devs[0])
-            devopt = devs;
-    }
-    if(devopt)
+    auto devopt = al::getenv("ALSOFT_DRIVERS");
+    if(devopt || (devopt=ConfigValueStr(nullptr, nullptr, "drivers")))
     {
         auto backendlist_cur = std::begin(BackendList);
 
@@ -1165,7 +1166,7 @@ void alc_initconfig(void)
     {
         const char *next{exclopt->c_str()};
         do {
-            str = next;
+            const char *str{next};
             next = strchr(str, ',');
 
             if(!str[0] || next == str)
@@ -1182,10 +1183,9 @@ void alc_initconfig(void)
     }
 
     InitEffect(&DefaultEffect);
-    auto defrevopt = ConfigValueStr(nullptr, nullptr, "default-reverb");
-    if((str=getenv("ALSOFT_DEFAULT_REVERB")) && str[0])
-        defrevopt = str;
-    if(defrevopt) LoadReverbPreset(defrevopt->c_str(), &DefaultEffect);
+    auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
+    if(defrevopt || (defrevopt=ConfigValueStr(nullptr, nullptr, "default-reverb")))
+        LoadReverbPreset(defrevopt->c_str(), &DefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
 

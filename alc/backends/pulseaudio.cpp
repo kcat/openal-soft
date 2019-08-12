@@ -40,6 +40,7 @@
 #include "alexcpt.h"
 #include "compat.h"
 #include "dynload.h"
+#include "strutils.h"
 
 #include <pulse/pulseaudio.h>
 
@@ -855,8 +856,8 @@ ALCenum PulsePlayback::open(const ALCchar *name)
 
     if(!pulse_name)
     {
-        pulse_name = getenv("ALSOFT_PULSE_DEFAULT");
-        if(pulse_name && !pulse_name[0]) pulse_name = nullptr;
+        static const auto defname = al::getenv("ALSOFT_PULSE_DEFAULT");
+        if(defname) pulse_name = defname->c_str();
     }
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
     mStream = pulse_connect_stream(pulse_name, plock, mContext, flags, nullptr, &spec, nullptr,

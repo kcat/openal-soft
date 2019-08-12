@@ -530,22 +530,21 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     std::string path;
 
     /* Search the app-local directory. */
-    WCHAR *cwdbuf{_wgetenv(L"ALSOFT_LOCAL_PATH")};
-    if(cwdbuf && *cwdbuf != '\0')
+    if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
     {
-        path = wstr_to_utf8(cwdbuf);
+        path = wstr_to_utf8(localpath->c_str());
         if(is_slash(path.back()))
             path.pop_back();
     }
-    else if(!(cwdbuf=_wgetcwd(nullptr, 0)))
-        path = ".";
-    else
+    else if(WCHAR *cwdbuf{_wgetcwd(nullptr, 0)})
     {
         path = wstr_to_utf8(cwdbuf);
         if(is_slash(path.back()))
             path.pop_back();
         free(cwdbuf);
     }
+    else
+        path = ".";
     std::replace(path.begin(), path.end(), '/', '\\');
     DirectorySearch(path.c_str(), ext, &results);
 
@@ -725,9 +724,8 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     }
 
     /* Search the app-local directory. */
-    const char *str{getenv("ALSOFT_LOCAL_PATH")};
-    if(str && *str != '\0')
-        DirectorySearch(str, ext, &results);
+    if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
+        DirectorySearch(localpath->c_str(), ext, &results);
     else
     {
         al::vector<char> cwdbuf(256);
@@ -750,17 +748,17 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     }
 
     // Search local data dir
-    if((str=getenv("XDG_DATA_HOME")) != nullptr && str[0] != '\0')
+    if(auto datapath = al::getenv("XDG_DATA_HOME"))
     {
-        std::string path{str};
+        std::string &path = *datapath;
         if(path.back() != '/')
             path += '/';
         path += subdir;
         DirectorySearch(path.c_str(), ext, &results);
     }
-    else if((str=getenv("HOME")) != nullptr && str[0] != '\0')
+    else if(auto homepath = al::getenv("HOME"))
     {
-        std::string path{str};
+        std::string &path = *homepath;
         if(path.back() == '/')
             path.pop_back();
         path += "/.local/share/";
@@ -769,17 +767,18 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     }
 
     // Search global data dirs
-    if((str=getenv("XDG_DATA_DIRS")) == nullptr || str[0] == '\0')
-        str = "/usr/local/share/:/usr/share/";
+    std::string datadirs{al::getenv("XDG_DATA_DIRS").value_or("/usr/local/share/:/usr/share/")};
 
-    const char *next{str};
-    while((str=next) != nullptr && str[0] != '\0')
+    size_t curpos{0u};
+    while(curpos < datadirs.size())
     {
-        next = strchr(str, ':');
+        size_t nextpos{datadirs.find(':', curpos)};
 
-        std::string path = (next ? std::string(str, next++) : std::string(str));
+        std::string path{(nextpos != std::string::npos) ?
+            datadirs.substr(curpos, nextpos++ - curpos) : datadirs.substr(curpos)};
+        curpos = nextpos;
+
         if(path.empty()) continue;
-
         if(path.back() != '/')
             path += '/';
         path += subdir;

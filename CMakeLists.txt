@@ -619,6 +619,8 @@ SET(OPENAL_OBJS
     al/effect.cpp
     al/effect.h
     al/error.cpp
+    al/event.cpp
+    al/event.h
     al/extension.cpp
     al/filter.cpp
     al/filter.h
@@ -627,8 +629,6 @@ SET(OPENAL_OBJS
     al/source.cpp
     al/source.h
     al/state.cpp
-    al/event.cpp
-    al/event.h
 )
 SET(ALC_OBJS
     alc/alc.cpp
@@ -638,17 +638,18 @@ SET(ALC_OBJS
     alc/alconfig.cpp
     alc/alconfig.h
     alc/alcontext.h
+    alc/ambdec.cpp
+    alc/ambdec.h
     alc/ambidefs.h
+    alc/bformatdec.cpp
+    alc/bformatdec.h
     alc/bs2b.cpp
     alc/bs2b.h
+    alc/compat.h
     alc/converter.cpp
     alc/converter.h
+    alc/cpu_caps.h
     alc/devformat.h
-    alc/inprogext.h
-    alc/mastering.cpp
-    alc/mastering.h
-    alc/ringbuffer.cpp
-    alc/ringbuffer.h
     alc/effects/base.h
     alc/effects/autowah.cpp
     alc/effects/chorus.cpp
@@ -669,21 +670,21 @@ SET(ALC_OBJS
     alc/filters/nfc.h
     alc/filters/splitter.cpp
     alc/filters/splitter.h
-    alc/helpers.cpp
-    alc/compat.h
-    alc/cpu_caps.h
     alc/fpu_modes.h
-    alc/logging.h
+    alc/helpers.cpp
     alc/hrtf.cpp
     alc/hrtf.h
+    alc/inprogext.h
+    alc/logging.h
+    alc/mastering.cpp
+    alc/mastering.h
+    alc/mixvoice.cpp
+    alc/panning.cpp
+    alc/ringbuffer.cpp
+    alc/ringbuffer.h
     alc/uhjfilter.cpp
     alc/uhjfilter.h
-    alc/ambdec.cpp
-    alc/ambdec.h
-    alc/bformatdec.cpp
-    alc/bformatdec.h
-    alc/panning.cpp
-    alc/mixvoice.cpp
+    alc/uiddefs.cpp
     alc/mixer/defs.h
     alc/mixer/hrtfbase.h
     alc/mixer/mixer_c.cpp

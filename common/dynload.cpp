@@ -3,28 +3,9 @@
 
 #include "dynload.h"
 
+#include "strutils.h"
 
 #ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#include <string>
-
-inline std::wstring utf8_to_wstr(const char *str)
-{
-    std::wstring ret;
-
-    int len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
-    if(len > 0)
-    {
-        ret.resize(len);
-        MultiByteToWideChar(CP_UTF8, 0, str, -1, &ret[0], len);
-        ret.pop_back();
-    }
-
-    return ret;
-}
 
 void *LoadLib(const char *name)
 {

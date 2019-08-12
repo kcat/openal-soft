@@ -59,6 +59,7 @@
 #include "ringbuffer.h"
 #include "compat.h"
 #include "converter.h"
+#include "strutils.h"
 #include "threads.h"
 
 

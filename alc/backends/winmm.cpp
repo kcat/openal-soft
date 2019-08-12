@@ -40,6 +40,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "ringbuffer.h"
+#include "strutils.h"
 #include "threads.h"
 #include "compat.h"
 

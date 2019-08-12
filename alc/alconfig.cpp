@@ -47,6 +47,7 @@
 
 #include "alcmain.h"
 #include "logging.h"
+#include "strutils.h"
 #include "compat.h"
 
 

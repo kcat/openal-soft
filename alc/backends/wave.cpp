@@ -43,6 +43,7 @@
 #include "compat.h"
 #include "endiantest.h"
 #include "logging.h"
+#include "strutils.h"
 #include "threads.h"
 #include "vector.h"
 

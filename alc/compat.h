@@ -10,36 +10,6 @@
 #include <string>
 #include <fstream>
 
-inline std::string wstr_to_utf8(const WCHAR *wstr)
-{
-    std::string ret;
-
-    int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
-    if(len > 0)
-    {
-        ret.resize(len);
-        WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &ret[0], len, nullptr, nullptr);
-        ret.pop_back();
-    }
-
-    return ret;
-}
-
-inline std::wstring utf8_to_wstr(const char *str)
-{
-    std::wstring ret;
-
-    int len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
-    if(len > 0)
-    {
-        ret.resize(len);
-        MultiByteToWideChar(CP_UTF8, 0, str, -1, &ret[0], len);
-        ret.pop_back();
-    }
-
-    return ret;
-}
-
 
 namespace al {
 

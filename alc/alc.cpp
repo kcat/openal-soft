@@ -85,6 +85,7 @@
 #include "mastering.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
+#include "strutils.h"
 #include "threads.h"
 #include "uhjfilter.h"
 #include "vecmat.h"

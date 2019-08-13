@@ -1051,21 +1051,17 @@ void alc_initconfig(void)
     {
         traperr = al::getenv("ALSOFT_TRAP_AL_ERROR");
         if(traperr)
-        {
-            if(strcasecmp(traperr->c_str(), "true") == 0
-                || strtol(traperr->c_str(), nullptr, 0) == 1)
-                TrapALError = true;
-        }
-        TrapALError = !!GetConfigValueBool(nullptr, nullptr, "trap-al-error", TrapALError);
+            TrapALError = strcasecmp(traperr->c_str(), "true") == 0
+                || strtol(traperr->c_str(), nullptr, 0) == 1;
+        else
+            TrapALError = !!GetConfigValueBool(nullptr, nullptr, "trap-al-error", false);
 
         traperr = al::getenv("ALSOFT_TRAP_ALC_ERROR");
         if(traperr)
-        {
-            if(strcasecmp(traperr->c_str(), "true") == 0
-                || strtol(traperr->c_str(), nullptr, 0) == 1)
-            TrapALCError = true;
-        }
-        TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", TrapALCError);
+            TrapALCError = strcasecmp(traperr->c_str(), "true") == 0
+                || strtol(traperr->c_str(), nullptr, 0) == 1;
+        else
+            TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", false);
     }
 
     if(auto boostopt = ConfigValueFloat(nullptr, "reverb", "boost"))

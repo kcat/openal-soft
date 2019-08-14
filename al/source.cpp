@@ -74,7 +74,7 @@ namespace {
 
 using namespace std::placeholders;
 
-inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
+ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
     ALuint idx{source->VoiceIdx};
     if(idx < context->mVoiceCount.load(std::memory_order_relaxed))

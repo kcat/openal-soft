@@ -2322,14 +2322,14 @@ ALCcontext::~ALCcontext()
     if(cprops)
     {
         TRACE("Freed unapplied context update %p\n", cprops);
-        al_free(cprops);
+        delete cprops;
     }
     size_t count{0};
     cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
     while(cprops)
     {
         ALcontextProps *next{cprops->next.load(std::memory_order_relaxed)};
-        al_free(cprops);
+        delete cprops;
         cprops = next;
         ++count;
     }
@@ -2350,7 +2350,7 @@ ALCcontext::~ALCcontext()
     {
         ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
         if(eprops->State) eprops->State->release();
-        al_free(eprops);
+        delete eprops;
         eprops = next;
         ++count;
     }

@@ -711,7 +711,7 @@ ALeffectslot::~ALeffectslot()
     {
         if(props->State) props->State->release();
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
-        al_free(props);
+        delete props;
     }
 
     if(Effect.State)
@@ -725,7 +725,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     /* Get an unused property container, or allocate a new one as needed. */
     ALeffectslotProps *props{context->mFreeEffectslotProps.load(std::memory_order_relaxed)};
     if(!props)
-        props = static_cast<ALeffectslotProps*>(al_calloc(16, sizeof(*props)));
+        props = new ALeffectslotProps{};
     else
     {
         ALeffectslotProps *next;

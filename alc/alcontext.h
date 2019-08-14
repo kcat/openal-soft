@@ -50,6 +50,8 @@ struct ALcontextProps {
     DistanceModel mDistanceModel;
 
     std::atomic<ALcontextProps*> next;
+
+    DEF_NEWDEL(ALcontextProps)
 };
 
 

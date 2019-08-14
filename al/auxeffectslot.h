@@ -32,6 +32,8 @@ struct ALeffectslotProps {
     EffectState *State;
 
     std::atomic<ALeffectslotProps*> next;
+
+    DEF_NEWDEL(ALeffectslotProps)
 };
 
 

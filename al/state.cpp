@@ -827,7 +827,7 @@ void UpdateContextProps(ALCcontext *context)
     /* Get an unused proprty container, or allocate a new one as needed. */
     ALcontextProps *props{context->mFreeContextProps.load(std::memory_order_acquire)};
     if(!props)
-        props = static_cast<ALcontextProps*>(al_calloc(16, sizeof(*props)));
+        props = new ALcontextProps{};
     else
     {
         ALcontextProps *next;

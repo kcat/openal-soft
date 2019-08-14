@@ -2386,14 +2386,14 @@ ALCcontext::~ALCcontext()
     if(lprops)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);
-        al_free(lprops);
+        delete lprops;
     }
     count = 0;
     lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
     while(lprops)
     {
         ALlistenerProps *next{lprops->next.load(std::memory_order_relaxed)};
-        al_free(lprops);
+        delete lprops;
         lprops = next;
         ++count;
     }

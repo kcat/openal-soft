@@ -8,6 +8,7 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
+#include "almalloc.h"
 #include "vecmat.h"
 
 enum class DistanceModel;
@@ -22,6 +23,8 @@ struct ALlistenerProps {
     ALfloat MetersPerUnit;
 
     std::atomic<ALlistenerProps*> next;
+
+    DEF_NEWDEL(ALlistenerProps)
 };
 
 struct ALlistener {

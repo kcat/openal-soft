@@ -421,7 +421,7 @@ void UpdateListenerProps(ALCcontext *context)
     /* Get an unused proprty container, or allocate a new one as needed. */
     ALlistenerProps *props{context->mFreeListenerProps.load(std::memory_order_acquire)};
     if(!props)
-        props = static_cast<ALlistenerProps*>(al_calloc(16, sizeof(*props)));
+        props = new ALlistenerProps{};
     else
     {
         ALlistenerProps *next;

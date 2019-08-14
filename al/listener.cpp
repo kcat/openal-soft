@@ -441,7 +441,7 @@ void UpdateListenerProps(ALCcontext *context)
     props->MetersPerUnit = listener.mMetersPerUnit;
 
     /* Set the new container for updating internal parameters. */
-    props = listener.Update.exchange(props, std::memory_order_acq_rel);
+    props = listener.Params.Update.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

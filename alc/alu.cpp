@@ -286,7 +286,7 @@ bool CalcListenerParams(ALCcontext *Context)
 {
     ALlistener &Listener = Context->mListener;
 
-    ALlistenerProps *props{Listener.Update.exchange(nullptr, std::memory_order_acq_rel)};
+    ALlistenerProps *props{Listener.Params.Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
     /* AT then UP */
@@ -321,7 +321,7 @@ bool CalcListenerParams(ALCcontext *Context)
 
 bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
 {
-    ALeffectslotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
+    ALeffectslotProps *props{slot->Params.Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
     slot->Params.Gain = props->Gain;

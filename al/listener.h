@@ -37,11 +37,12 @@ struct ALlistener {
 
     std::atomic_flag PropsClean;
 
-    /* Pointer to the most recent property values that are awaiting an update.
-     */
-    std::atomic<ALlistenerProps*> Update{nullptr};
-
     struct {
+        /* Pointer to the most recent property values that are awaiting an
+         * update.
+         */
+        std::atomic<ALlistenerProps*> Update{nullptr};
+
         alu::Matrix Matrix;
         alu::Vector Velocity;
 

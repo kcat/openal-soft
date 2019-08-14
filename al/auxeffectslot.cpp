@@ -706,7 +706,7 @@ ALeffectslot::~ALeffectslot()
         DecrementRef(Target->ref);
     Target = nullptr;
 
-    ALeffectslotProps *props{Update.load()};
+    ALeffectslotProps *props{Params.Update.load()};
     if(props)
     {
         if(props->State) props->State->release();
@@ -750,7 +750,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     props->State = slot->Effect.State;
 
     /* Set the new container for updating internal parameters. */
-    props = slot->Update.exchange(props, std::memory_order_acq_rel);
+    props = slot->Params.Update.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

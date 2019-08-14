@@ -2382,7 +2382,7 @@ ALCcontext::~ALCcontext()
     mVoices = nullptr;
     mVoiceCount.store(0, std::memory_order_relaxed);
 
-    ALlistenerProps *lprops{mListener.Update.exchange(nullptr, std::memory_order_relaxed)};
+    ALlistenerProps *lprops{mListener.Params.Update.exchange(nullptr, std::memory_order_relaxed)};
     if(lprops)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);

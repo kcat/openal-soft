@@ -51,9 +51,9 @@ struct ALeffectslot {
 
     RefCount ref{0u};
 
-    std::atomic<ALeffectslotProps*> Update{nullptr};
-
     struct {
+        std::atomic<ALeffectslotProps*> Update{nullptr};
+
         ALfloat   Gain{1.0f};
         ALboolean AuxSendAuto{AL_TRUE};
         ALeffectslot *Target{nullptr};

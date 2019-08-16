@@ -403,6 +403,10 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
     /* If current pos is beyond the loop range, do not loop */
     if(!BufferLoopItem || DataPosInt >= LoopEnd)
     {
+		if (Buffer->callback) {
+			SrcBuffer = SrcBuffer.
+				subspan(Buffer->callback(Buffer->id, SrcBuffer.begin(), SrcBuffer.size() * 4, Buffer->usr_ptr) / 4);
+		}else{
         BufferLoopItem = nullptr;
 
         /* Load what's left to play from the buffer */
@@ -413,9 +417,12 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
 
         LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataSize);
         SrcBuffer = SrcBuffer.subspan(DataSize);
+		}
     }
     else
     {
+		/* A callback buffer can never use AL_LOOP with static buffer */
+		ASSUME(!Buffer->callback);
         /* Load what's left of this loop iteration */
         const size_t DataSize{minz(SrcBuffer.size(), LoopEnd-DataPosInt)};
 
@@ -449,6 +456,11 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
     while(BufferListItem && !SrcBuffer.empty())
     {
         ALbuffer *Buffer{BufferListItem->mBuffer};
+		if (Buffer->callback) {
+			SrcBuffer = SrcBuffer.subspan(
+				Buffer->callback(Buffer->id, SrcBuffer.begin(), SrcBuffer.size(), Buffer->usr_ptr));
+		}
+		else {
         if(!(Buffer && DataPosInt < Buffer->SampleLen))
         {
             if(Buffer) DataPosInt -= Buffer->SampleLen;
@@ -464,6 +476,7 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
 
         LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataSize);
         SrcBuffer = SrcBuffer.subspan(DataSize);
+		}
         if(SrcBuffer.empty()) break;
 
         DataPosInt = 0;
@@ -603,6 +616,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
 
+			bool source_finished = false;
             if UNLIKELY(srciter != SrcData.end())
             {
                 /* If the source buffer wasn't filled, copy the last sample for
@@ -835,7 +849,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             else
             {
                 /* Handle non-looping static source */
-                if(DataPosInt >= BufferListItem->mSampleLen)
+				/* TODO: Handle the callback more gracefully */
+                if((DataPosInt >= BufferListItem->mSampleLen)&&((!BufferListItem->mBuffer->callback)))
                 {
                     if LIKELY(vstate == ALvoice::Playing)
                         vstate = ALvoice::Stopped;

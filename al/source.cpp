@@ -2716,7 +2716,10 @@ START_API_FUNC
          * length buffer.
          */
         ALbufferlistitem *BufferList{source->queue};
-        while(BufferList && BufferList->mSampleLen == 0)
+		/* TODO: Make the other functions queuing buffers and reading aware
+		* of the callback, and correctly zero out buffers.
+		*/
+        while(BufferList && (BufferList->mSampleLen == 0 && !BufferList->mBuffer->callback))
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
 
         /* If there's nothing to play, go right to stopped. */

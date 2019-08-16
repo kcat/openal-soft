@@ -390,6 +390,8 @@ const struct {
     DECL(alEventCallbackSOFT),
     DECL(alGetPointerSOFT),
     DECL(alGetPointervSOFT),
+
+	DECL(alBufferCallbackSOFT),
 };
 #undef DECL
 

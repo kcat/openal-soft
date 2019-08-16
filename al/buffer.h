@@ -69,7 +69,6 @@ ALsizei ChannelsFromFmt(FmtChannels chans);
 inline ALsizei FrameSizeFromFmt(FmtChannels chans, FmtType type)
 { return ChannelsFromFmt(chans) * BytesFromFmt(type); }
 
-
 struct ALbuffer {
     al::vector<al::byte,16> mData;
 
@@ -99,6 +98,10 @@ struct ALbuffer {
 
     /* Self ID */
     ALuint id{0};
+
+	//for callback
+	alSourceFunc_t callback{ nullptr };
+	void* usr_ptr{ nullptr };
 };
 
 #endif

@@ -189,7 +189,7 @@ void Mix_<CTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
  * stepping is necessary.
  */
 template<>
-void MixRow_<CTag>(FloatBufferLine &OutBuffer, const ALfloat *Gains,
+void MixRow_<CTag>(ALfloat *OutBuffer, const ALfloat *Gains,
     const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize)
 {
     ASSUME(BufferSize > 0);

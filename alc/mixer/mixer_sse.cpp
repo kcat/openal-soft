@@ -229,7 +229,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
 }
 
 template<>
-void MixRow_<SSETag>(FloatBufferLine &OutBuffer, const ALfloat *Gains,
+void MixRow_<SSETag>(ALfloat *OutBuffer, const ALfloat *Gains,
     const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize)
 {
     ASSUME(BufferSize > 0);

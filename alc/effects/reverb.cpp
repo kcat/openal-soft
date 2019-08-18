@@ -424,14 +424,14 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine, A2B[c], mTempSamples, sEarlyOffset, todo);
+            MixRowSamples(mTempLine.data(), A2B[c], mTempSamples, sEarlyOffset, todo);
             MixSamples(mTempLine.data(), samplesOut, mEarly.CurrentGain[c],
                 mEarly.PanGain[c], counter, offset, todo);
         }
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine, A2B[c], mTempSamples, sLateOffset, todo);
+            MixRowSamples(mTempLine.data(), A2B[c], mTempSamples, sLateOffset, todo);
             MixSamples(mTempLine.data(), samplesOut, mLate.CurrentGain[c], mLate.PanGain[c],
                 counter, offset, todo);
         }
@@ -445,7 +445,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine, A2B[c], mTempSamples, sEarlyOffset, todo);
+            MixRowSamples(mTempLine.data(), A2B[c], mTempSamples, sEarlyOffset, todo);
 
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
@@ -459,7 +459,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine, A2B[c], mTempSamples, sLateOffset, todo);
+            MixRowSamples(mTempLine.data(), A2B[c], mTempSamples, sLateOffset, todo);
 
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].applyHfScale(mTempLine.data(), hfscale, todo);
@@ -1457,7 +1457,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     for(ALsizei c{0};c < NUM_LINES;c++)
     {
         std::fill_n(mTempLine.begin(), samplesToDo, 0.0f);
-        MixRowSamples(mTempLine, B2A[c], {samplesIn, samplesIn+numInput}, 0, samplesToDo);
+        MixRowSamples(mTempLine.data(), B2A[c], {samplesIn, samplesIn+numInput}, 0, samplesToDo);
 
         /* Band-pass the incoming samples and feed the initial delay line. */
         mFilter[c].Lp.process(mTempLine.data(), mTempLine.data(), samplesToDo);

@@ -276,7 +276,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
 }
 
 template<>
-void MixRow_<NEONTag>(FloatBufferLine &OutBuffer, const ALfloat *Gains,
+void MixRow_<NEONTag>(ALfloat *OutBuffer, const ALfloat *Gains,
     const al::span<const FloatBufferLine> InSamples, const ALsizei InPos, const ALsizei BufferSize)
 {
     ASSUME(BufferSize > 0);

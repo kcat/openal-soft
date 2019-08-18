@@ -224,20 +224,13 @@ struct DelayLineI {
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
      */
     ALsizei  Mask{0};
-    ALfloat (*Line)[NUM_LINES]{nullptr};
+    std::array<float,NUM_LINES> *Line{nullptr};
 
     /* Given the allocated sample buffer, this function updates each delay line
      * offset.
      */
-    void realizeLineOffset(ALfloat *sampleBuffer)
-    {
-        union {
-            ALfloat *f;
-            ALfloat (*f4)[NUM_LINES];
-        } u;
-        u.f = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Line) * NUM_LINES];
-        Line = u.f4;
-    }
+    void realizeLineOffset(std::array<float,NUM_LINES> *sampleBuffer) noexcept
+    { Line = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Line)]; }
 
     /* Calculate the length of a delay line and store its mask and offset. */
     ALuint calcLineLength(const ALfloat length, const ptrdiff_t offset, const ALfloat frequency,
@@ -251,7 +244,7 @@ struct DelayLineI {
 
         /* All lines share a single sample buffer. */
         Mask = samples - 1;
-        Line = reinterpret_cast<ALfloat(*)[NUM_LINES]>(offset);
+        Line = reinterpret_cast<std::array<float,NUM_LINES>*>(offset);
 
         /* Return the sample count for accumulation. */
         return samples;
@@ -350,7 +343,7 @@ struct ReverbState final : public EffectState {
     /* All delay lines are allocated as a single buffer to reduce memory
      * fragmentation and management code.
      */
-    al::vector<ALfloat,16> mSampleBuffer;
+    al::vector<std::array<float,NUM_LINES>,16> mSampleBuffer;
 
     struct {
         /* Calculated parameters which indicate if cross-fading is needed after
@@ -531,7 +524,6 @@ bool ReverbState::allocLines(const ALfloat frequency)
     length = LATE_LINE_LENGTHS.back() * multiplier;
     totalSamples += mLate.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
-    totalSamples *= NUM_LINES;
     if(totalSamples != mSampleBuffer.size())
     {
         mSampleBuffer.resize(totalSamples);
@@ -539,7 +531,7 @@ bool ReverbState::allocLines(const ALfloat frequency)
     }
 
     /* Clear the sample buffer. */
-    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
+    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), std::array<float,NUM_LINES>{});
 
     /* Update all delays to reflect the new sample buffer. */
     mDelay.realizeLineOffset(mSampleBuffer.data());
@@ -1029,8 +1021,8 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
  * Where D is a diagonal matrix (of x), and S is a triangular matrix (of y)
  * whose combination of signs are being iterated.
  */
-inline void VectorPartialScatter(ALfloat *RESTRICT out, const ALfloat *RESTRICT in,
-                                 const ALfloat xCoeff, const ALfloat yCoeff)
+inline void VectorPartialScatter(std::array<float,NUM_LINES> &RESTRICT out,
+    const std::array<float,NUM_LINES> &RESTRICT in, const ALfloat xCoeff, const ALfloat yCoeff)
 {
     out[0] = xCoeff*in[0] + yCoeff*(          in[1] + -in[2] + in[3]);
     out[1] = xCoeff*in[1] + yCoeff*(-in[0]          +  in[2] + in[3]);
@@ -1051,7 +1043,7 @@ void VectorScatterRevDelayIn(const DelayLineI delay, ALint offset, const ALfloat
         offset &= delay.Mask;
         ALsizei td{mini(delay.Mask+1 - offset, count-i)};
         do {
-            ALfloat f[NUM_LINES];
+            std::array<float,NUM_LINES> f;
             for(ALsizei j{0};j < NUM_LINES;j++)
                 f[NUM_LINES-1-j] = in[j][base+i];
             ++i;
@@ -1094,7 +1086,7 @@ void VecAllpass::processUnfaded(const al::span<FloatBufferLine,NUM_LINES> sample
         ALsizei td{mini(delay.Mask+1 - maxoff, todo - i)};
 
         do {
-            ALfloat f[NUM_LINES];
+            std::array<float,NUM_LINES> f;
             for(ALsizei j{0};j < NUM_LINES;j++)
             {
                 const ALfloat input{samples[j][i]};
@@ -1140,7 +1132,7 @@ void VecAllpass::processFaded(const al::span<FloatBufferLine,NUM_LINES> samples,
 
         do {
             fade += FadeStep;
-            ALfloat f[NUM_LINES];
+            std::array<float,NUM_LINES> f;
             for(ALsizei j{0};j < NUM_LINES;j++)
                 f[j] = delay.Line[vap_offset[j][0]++][j]*(1.0f-fade) +
                     delay.Line[vap_offset[j][1]++][j]*fade;

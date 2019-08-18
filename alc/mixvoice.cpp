@@ -366,17 +366,17 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, ALfloat
 
 template<FmtType T>
 inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep,
-    const ptrdiff_t samples)
+    const size_t samples)
 {
     using SampleType = typename FmtTypeTraits<T>::Type;
 
     const SampleType *RESTRICT ssrc{reinterpret_cast<const SampleType*>(src)};
-    for(ALsizei i{0};i < samples;i++)
+    for(size_t i{0u};i < samples;i++)
         dst[i] = FmtTypeTraits<T>::to_float(ssrc[i*srcstep]);
 }
 
 void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtType srctype,
-    const ptrdiff_t samples)
+    const size_t samples)
 {
 #define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
     switch(srctype)
@@ -457,7 +457,7 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
             continue;
         }
 
-        const size_t DataSize{std::min<size_t>(SrcBuffer.size(), Buffer->SampleLen-DataPosInt)};
+        const size_t DataSize{minz(SrcBuffer.size(), Buffer->SampleLen-DataPosInt)};
 
         const al::byte *Data{Buffer->mData.data()};
         Data += (DataPosInt*NumChannels + chan)*SampleSize;

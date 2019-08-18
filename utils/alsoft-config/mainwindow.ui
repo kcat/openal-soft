@@ -2264,6 +2264,22 @@ added by the ALC_EXT_DEDICATED extension.</string>
         <bool>true</bool>
        </property>
       </widget>
+      <widget class="QCheckBox" name="enableVocalMorpherCheck">
+       <property name="geometry">
+        <rect>
+         <x>320</x>
+         <y>210</y>
+         <width>131</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Vocal morpher</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
      </widget>
      <widget class="QLabel" name="label_13">
       <property name="geometry">

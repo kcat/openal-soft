@@ -404,8 +404,8 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
     if(!BufferLoopItem || DataPosInt >= LoopEnd)
     {
 		if (Buffer->callback) {
-			SrcBuffer = SrcBuffer.
-				subspan(Buffer->callback(Buffer->id, SrcBuffer.begin(), SrcBuffer.size() * 4, Buffer->usr_ptr) / 4);
+			SrcBuffer = SrcBuffer.subspan(Buffer->callback(
+				Buffer->id, (ALbyte*)SrcBuffer.begin(), sizeof(ALfloat), SrcBuffer.size(), Buffer->usr_ptr));
 		}else{
         BufferLoopItem = nullptr;
 
@@ -457,8 +457,8 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
     {
         ALbuffer *Buffer{BufferListItem->mBuffer};
 		if (Buffer->callback) {
-			SrcBuffer = SrcBuffer.subspan(
-				Buffer->callback(Buffer->id, SrcBuffer.begin(), SrcBuffer.size(), Buffer->usr_ptr));
+			SrcBuffer = SrcBuffer.subspan(Buffer->callback(
+				Buffer->id, (ALbyte*)SrcBuffer.begin(), sizeof(ALfloat), SrcBuffer.size(), Buffer->usr_ptr));
 		}
 		else {
         if(!(Buffer && DataPosInt < Buffer->SampleLen))
@@ -603,9 +603,15 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             /* Load the previous samples into the source data first, then load
              * what we can from the buffer queue.
              */
-            auto srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLE_PADDING,
-                SrcData.begin());
-
+			ALfloat* srciter;
+			if UNLIKELY(BufferListItem && BufferListItem->mBuffer->callback) {
+				srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLE_PADDING * 2,
+					SrcData.begin());
+			}
+			else {
+				srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLE_PADDING,
+					SrcData.begin());
+			}
             if UNLIKELY(!BufferListItem)
                 srciter = std::copy(chandata.mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
                     chandata.mPrevSamples.end(), srciter);

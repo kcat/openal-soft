@@ -3304,8 +3304,12 @@ ALsource::~ALsource()
     while(BufferList != nullptr)
     {
         std::unique_ptr<ALbufferlistitem> head{BufferList};
-        BufferList = head->mNext.load(std::memory_order_relaxed);
+		/* If (BufferList->next==nullptr), the following will segfault, 
+		* thus the loading of next is moved to the next line, hopefully
+		* this won't break anything.
+		*/
         if(ALbuffer *buffer{BufferList->mBuffer}) DecrementRef(buffer->ref);
+		BufferList = head->mNext.load(std::memory_order_relaxed);
     }
     queue = nullptr;
 

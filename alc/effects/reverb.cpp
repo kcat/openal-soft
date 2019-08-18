@@ -1021,13 +1021,15 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
  * Where D is a diagonal matrix (of x), and S is a triangular matrix (of y)
  * whose combination of signs are being iterated.
  */
-inline void VectorPartialScatter(std::array<float,NUM_LINES> &RESTRICT out,
-    const std::array<float,NUM_LINES> &RESTRICT in, const ALfloat xCoeff, const ALfloat yCoeff)
+inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &RESTRICT in,
+    const ALfloat xCoeff, const ALfloat yCoeff) -> std::array<float,NUM_LINES>
 {
+    std::array<float,NUM_LINES> out;
     out[0] = xCoeff*in[0] + yCoeff*(          in[1] + -in[2] + in[3]);
     out[1] = xCoeff*in[1] + yCoeff*(-in[0]          +  in[2] + in[3]);
     out[2] = xCoeff*in[2] + yCoeff*( in[0] + -in[1]          + in[3]);
     out[3] = xCoeff*in[3] + yCoeff*(-in[0] + -in[1] + -in[2]        );
+    return out;
 }
 
 /* Utilizes the above, but reverses the input channels. */
@@ -1048,7 +1050,7 @@ void VectorScatterRevDelayIn(const DelayLineI delay, ALint offset, const ALfloat
                 f[NUM_LINES-1-j] = in[j][base+i];
             ++i;
 
-            VectorPartialScatter(delay.Line[offset++], f, xCoeff, yCoeff);
+            delay.Line[offset++] = VectorPartialScatter(f, xCoeff, yCoeff);
         } while(--td);
     }
 }
@@ -1097,7 +1099,7 @@ void VecAllpass::processUnfaded(const al::span<FloatBufferLine,NUM_LINES> sample
             }
             ++i;
 
-            VectorPartialScatter(delay.Line[offset++], f, xCoeff, yCoeff);
+            delay.Line[offset++] = VectorPartialScatter(f, xCoeff, yCoeff);
         } while(--td);
     }
 }
@@ -1147,7 +1149,7 @@ void VecAllpass::processFaded(const al::span<FloatBufferLine,NUM_LINES> samples,
             }
             ++i;
 
-            VectorPartialScatter(delay.Line[offset++], f, xCoeff, yCoeff);
+            delay.Line[offset++] = VectorPartialScatter(f, xCoeff, yCoeff);
         } while(--td);
     }
 }

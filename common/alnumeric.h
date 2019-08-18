@@ -250,6 +250,41 @@ inline int float2int(float f) noexcept
 #endif
 }
 
+/** Converts double-to-int using standard behavior (truncation). */
+inline int double2int(double d) noexcept
+{
+#if defined(HAVE_SSE_INTRINSICS)
+	return _mm_cvttsd_si32(_mm_set_sd(d));
+
+#elif ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
+       !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
+
+	int sign, shift;
+	int64_t mant;
+	union {
+		double d;
+		int64_t i64;
+	} conv;
+
+	conv.d = d;
+	sign = (conv.i64 >> 63) | 1;
+	shift = ((conv.i64 >> 52) & 0x7ff) - (1023 + 52);
+
+	/* Over/underflow */
+	if UNLIKELY(shift >= 63 || shift < -52)
+		return 0;
+
+	mant = (conv.i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
+	if LIKELY(shift < 0)
+		return (int)(mant >> -shift) * sign;
+	return (int)(mant << shift) * sign;
+
+#else
+
+	return static_cast<int>(d);
+#endif
+}
+
 /**
  * Rounds a float to the nearest integral value, according to the current
  * rounding mode. This is essentially an inlined version of rintf, although

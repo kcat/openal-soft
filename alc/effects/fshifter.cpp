@@ -80,7 +80,7 @@ struct FshifterState final : public EffectState {
     struct {
         ALfloat Current[MAX_OUTPUT_CHANNELS]{};
         ALfloat Target[MAX_OUTPUT_CHANNELS]{};
-    }mGains[2];
+    } mGains[2];
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
@@ -93,7 +93,7 @@ struct FshifterState final : public EffectState {
 ALboolean FshifterState::deviceUpdate(const ALCdevice*)
 {
     /* (Re-)initializing parameters and clear the buffers. */
-    mCount     = FIFO_LATENCY;
+    mCount = FIFO_LATENCY;
 
     std::fill(std::begin(mPhaseStep),   std::end(mPhaseStep),   0);
     std::fill(std::begin(mPhase),       std::end(mPhase),       0);
@@ -103,7 +103,7 @@ ALboolean FshifterState::deviceUpdate(const ALCdevice*)
     std::fill(std::begin(mOutputAccum), std::end(mOutputAccum), complex_d{});
     std::fill(std::begin(mAnalytic),    std::end(mAnalytic),    complex_d{});
 
-    for (auto &gain : mGains)
+    for(auto &gain : mGains)
     {
         std::fill(std::begin(gain.Current), std::end(gain.Current), 0.0f);
         std::fill(std::begin(gain.Target), std::end(gain.Target), 0.0f);
@@ -121,39 +121,39 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
 
     switch(props->Fshifter.LeftDirection)
     {
-        case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
-            mSign[0] = -1.0;
-            break;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
+        mSign[0] = -1.0;
+        break;
 
-        case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
-            mSign[0] = 1.0;
-            break;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
+        mSign[0] = 1.0;
+        break;
 
-        case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
-            mPhase[0]     = 0;
-            mPhaseStep[0] = 0;
-            break;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
+        mPhase[0]     = 0;
+        mPhaseStep[0] = 0;
+        break;
     }
 
     switch (props->Fshifter.RightDirection)
     {
-        case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
-            mSign[1] = -1.0;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
+        mSign[1] = -1.0;
         break;
 
-        case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
-            mSign[1] = 1.0;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
+        mSign[1] = 1.0;
         break;
 
-        case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
-             mPhase[1]     = 0;
-             mPhaseStep[1] = 0;
-             break;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
+        mPhase[1]     = 0;
+        mPhaseStep[1] = 0;
+        break;
     }
 
     ALfloat coeffs[2][MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({-1.0f, 0.0f, -1.0f}, 0.0f, coeffs[0]);
-    CalcDirectionCoeffs({1.0f, 0.0f, -1.0f }, 0.0f, coeffs[1]);
+    CalcDirectionCoeffs({ 1.0f, 0.0f, -1.0f}, 0.0f, coeffs[1]);
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs[0], slot->Params.Gain, mGains[0].Target);
@@ -177,7 +177,7 @@ void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         for(j = 0;j < todo;j++,k++)
         {
             mInFIFO[k] = samplesIn[0][base+j];
-            mOutdata[base+j]  = mOutFIFO[k-FIFO_LATENCY];
+            mOutdata[base+j] = mOutFIFO[k-FIFO_LATENCY];
         }
         mCount += todo;
         base += todo;
@@ -209,9 +209,9 @@ void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
-    for (ALsizei c{0}; c < 2; c++)
+    for(ALsizei c{0};c < 2;++c)
     {
-        for (k = 0; k < samplesToDo; k++)
+        for(k = 0;k < samplesToDo;++k)
         {
             double phase = mPhase[c] * ((1.0 / FRACTIONONE) * al::MathDefs<double>::Tau());
             BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
@@ -222,8 +222,8 @@ void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         }
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(BufferOut, samplesOut, mGains[c].Current, mGains[c].Target, maxi(samplesToDo, 512), 0,
-            samplesToDo);
+        MixSamples(BufferOut, samplesOut, mGains[c].Current, mGains[c].Target,
+            maxi(samplesToDo, 512), 0, samplesToDo);
     }
 }
 

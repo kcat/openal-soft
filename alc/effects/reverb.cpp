@@ -424,7 +424,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine.data(), A2B[c], mEarlySamples[0].data(),
+            MixRowSamples(mTempLine.data(), {A2B[c], NUM_LINES}, mEarlySamples[0].data(),
                 mEarlySamples[0].size(), todo);
             MixSamples(mTempLine.data(), samplesOut, mEarly.CurrentGain[c],
                 mEarly.PanGain[c], counter, offset, todo);
@@ -432,8 +432,8 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine.data(), A2B[c], mLateSamples[0].data(), mLateSamples[0].size(),
-                todo);
+            MixRowSamples(mTempLine.data(), {A2B[c], NUM_LINES}, mLateSamples[0].data(),
+                mLateSamples[0].size(), todo);
             MixSamples(mTempLine.data(), samplesOut, mLate.CurrentGain[c], mLate.PanGain[c],
                 counter, offset, todo);
         }
@@ -447,7 +447,7 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine.data(), A2B[c], mEarlySamples[0].data(),
+            MixRowSamples(mTempLine.data(), {A2B[c], NUM_LINES}, mEarlySamples[0].data(),
                 mEarlySamples[0].size(), todo);
 
             /* Apply scaling to the B-Format's HF response to "upsample" it to
@@ -462,8 +462,8 @@ struct ReverbState final : public EffectState {
         for(ALsizei c{0};c < NUM_LINES;c++)
         {
             std::fill_n(mTempLine.begin(), todo, 0.0f);
-            MixRowSamples(mTempLine.data(), A2B[c], mLateSamples[0].data(), mLateSamples[0].size(),
-                todo);
+            MixRowSamples(mTempLine.data(), {A2B[c], NUM_LINES}, mLateSamples[0].data(),
+                mLateSamples[0].size(), todo);
 
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].applyHfScale(mTempLine.data(), hfscale, todo);

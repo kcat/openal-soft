@@ -249,9 +249,9 @@ public:
     constexpr span last(size_t count) const
     { return (count >= size()) ? *this : span{mDataEnd-count, mDataEnd}; }
 
-    template<size_t O, size_t C>
+    template<size_t O, size_t C=dynamic_extent>
     constexpr span<element_type,C> subspan() const
-    { return span<element_type,C>{mData+O, C}; }
+    { return span<element_type,C>{mData+O, (C!=dynamic_extent) ? mData+C : mDataEnd}; }
 
     constexpr span subspan(size_t offset, size_t count=dynamic_extent) const
     {

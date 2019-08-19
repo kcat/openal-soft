@@ -24,8 +24,10 @@ class BFormatDec {
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
+    bool mDualBand{false};
     ALuint mEnabled{0u}; /* Bitfield of enabled channels. */
 
+    ALuint mNumChannels{0u};
     union MatrixU {
         ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_CHANNELS];
         ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_CHANNELS];
@@ -38,9 +40,6 @@ class BFormatDec {
     /* These two alias into Samples */
     FloatBufferLine *mSamplesHF{nullptr};
     FloatBufferLine *mSamplesLF{nullptr};
-
-    ALuint mNumChannels{0u};
-    bool mDualBand{false};
 
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,

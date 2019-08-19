@@ -156,16 +156,16 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
             mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i].data(),
                 SamplesToDo);
 
-        const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mNumChannels};
-        const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mNumChannels};
         ALfloat (*mixmtx)[sNumBands][MAX_AMBI_CHANNELS]{mMatrix.Dual};
         ALuint enabled{mEnabled};
         for(FloatBufferLine &outbuf : OutBuffer)
         {
             if LIKELY(enabled&1)
             {
-                MixRowSamples(outbuf.data(), (*mixmtx)[sHFBand], hfsamples, 0, SamplesToDo);
-                MixRowSamples(outbuf.data(), (*mixmtx)[sLFBand], lfsamples, 0, SamplesToDo);
+                MixRowSamples(outbuf.data(), {(*mixmtx)[sHFBand], mNumChannels},
+                    mSamplesHF->data(), mSamplesHF->size(), SamplesToDo);
+                MixRowSamples(outbuf.data(), {(*mixmtx)[sLFBand], mNumChannels},
+                    mSamplesLF->data(), mSamplesLF->size(), SamplesToDo);
             }
             ++mixmtx;
             enabled >>= 1;
@@ -173,13 +173,13 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     }
     else
     {
-        const al::span<const FloatBufferLine> insamples{InSamples, mNumChannels};
         ALfloat (*mixmtx)[MAX_AMBI_CHANNELS]{mMatrix.Single};
         ALuint enabled{mEnabled};
         for(FloatBufferLine &outbuf : OutBuffer)
         {
             if LIKELY(enabled&1)
-                MixRowSamples(outbuf.data(), *mixmtx, insamples, 0, SamplesToDo);
+                MixRowSamples(outbuf.data(), {*mixmtx, mNumChannels}, InSamples->data(),
+                    InSamples->size(), SamplesToDo);
             ++mixmtx;
             enabled >>= 1;
         }

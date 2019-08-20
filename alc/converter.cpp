@@ -41,17 +41,17 @@ template<> inline ALfloat LoadSample<DevFmtUInt>(DevFmtTypeTraits<DevFmtUInt>::T
 
 template<DevFmtType T>
 inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, const size_t srcstep,
-    const ALsizei samples) noexcept
+    const size_t samples) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     const SampleType *ssrc = static_cast<const SampleType*>(src);
-    for(ALsizei i{0};i < samples;i++)
+    for(size_t i{0u};i < samples;i++)
         dst[i] = LoadSample<T>(ssrc[i*srcstep]);
 }
 
 void LoadSamples(ALfloat *dst, const ALvoid *src, const size_t srcstep, const DevFmtType srctype,
-    const ALsizei samples) noexcept
+    const size_t samples) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
     case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -91,18 +91,18 @@ template<> inline ALubyte StoreSample<DevFmtUByte>(ALfloat val) noexcept
 
 template<DevFmtType T>
 inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, const size_t dststep,
-    const ALsizei samples) noexcept
+    const size_t samples) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     SampleType *sdst = static_cast<SampleType*>(dst);
-    for(ALsizei i{0};i < samples;i++)
+    for(size_t i{0u};i < samples;i++)
         sdst[i*dststep] = StoreSample<T>(src[i]);
 }
 
 
 void StoreSamples(ALvoid *dst, const ALfloat *src, const size_t dststep, const DevFmtType dsttype,
-    const ALsizei samples) noexcept
+    const size_t samples) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
     case T: StoreSampleArray<T>(dst, src, dststep, samples); break
@@ -121,22 +121,22 @@ void StoreSamples(ALvoid *dst, const ALfloat *src, const size_t dststep, const D
 
 
 template<DevFmtType T>
-void Mono2Stereo(ALfloat *RESTRICT dst, const void *src, const ALsizei frames) noexcept
+void Mono2Stereo(ALfloat *RESTRICT dst, const void *src, const size_t frames) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     const SampleType *ssrc = static_cast<const SampleType*>(src);
-    for(ALsizei i{0};i < frames;i++)
+    for(size_t i{0u};i < frames;i++)
         dst[i*2 + 1] = dst[i*2 + 0] = LoadSample<T>(ssrc[i]) * 0.707106781187f;
 }
 
 template<DevFmtType T>
-void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, const ALsizei frames) noexcept
+void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, const size_t frames) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     const SampleType *ssrc = static_cast<const SampleType*>(src);
-    for(ALsizei i{0};i < frames;i++)
+    for(size_t i{0u};i < frames;i++)
         dst[i] = (LoadSample<T>(ssrc[i*2 + 0])+LoadSample<T>(ssrc[i*2 + 1])) *
                  0.707106781187f;
 }
@@ -178,13 +178,13 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     return converter;
 }
 
-ALsizei SampleConverter::availableOut(ALsizei srcframes) const
+ALuint SampleConverter::availableOut(ALuint srcframes) const
 {
     ALint prepcount{mSrcPrepCount};
     if(prepcount < 0)
     {
         /* Negative prepcount means we need to skip that many input samples. */
-        if(-prepcount >= srcframes)
+        if(static_cast<ALuint>(-prepcount) >= srcframes)
             return 0;
         srcframes += prepcount;
         prepcount = 0;
@@ -197,7 +197,7 @@ ALsizei SampleConverter::availableOut(ALsizei srcframes) const
     }
 
     if(prepcount < MAX_RESAMPLE_PADDING*2 &&
-       MAX_RESAMPLE_PADDING*2 - prepcount >= srcframes)
+       static_cast<ALuint>(MAX_RESAMPLE_PADDING*2 - prepcount) >= srcframes)
     {
         /* Not enough input samples to generate an output sample. */
         return 0;
@@ -210,26 +210,26 @@ ALsizei SampleConverter::availableOut(ALsizei srcframes) const
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
-    return static_cast<ALsizei>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1, BUFFERSIZE));
+    return static_cast<ALuint>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1, BUFFERSIZE));
 }
 
-ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
+ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *dst, ALuint dstframes)
 {
     const ALsizei SrcFrameSize{static_cast<ALsizei>(mChan.size()) * mSrcTypeSize};
     const ALsizei DstFrameSize{static_cast<ALsizei>(mChan.size()) * mDstTypeSize};
     const ALsizei increment{mIncrement};
     auto SamplesIn = static_cast<const al::byte*>(*src);
-    ALsizei NumSrcSamples{*srcframes};
+    ALuint NumSrcSamples{*srcframes};
 
     FPUCtl mixer_mode{};
-    ALsizei pos{0};
+    ALuint pos{0};
     while(pos < dstframes && NumSrcSamples > 0)
     {
         ALint prepcount{mSrcPrepCount};
         if(prepcount < 0)
         {
             /* Negative prepcount means we need to skip that many input samples. */
-            if(-prepcount >= NumSrcSamples)
+            if(static_cast<ALuint>(-prepcount) >= NumSrcSamples)
             {
                 mSrcPrepCount = prepcount + NumSrcSamples;
                 NumSrcSamples = 0;
@@ -240,10 +240,10 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
             mSrcPrepCount = 0;
             continue;
         }
-        ALint toread{mini(NumSrcSamples, BUFFERSIZE - MAX_RESAMPLE_PADDING*2)};
+        ALuint toread{minu(NumSrcSamples, BUFFERSIZE - MAX_RESAMPLE_PADDING*2)};
 
         if(prepcount < MAX_RESAMPLE_PADDING*2 &&
-           MAX_RESAMPLE_PADDING*2 - prepcount >= toread)
+            static_cast<ALuint>(MAX_RESAMPLE_PADDING*2 - prepcount) >= toread)
         {
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
@@ -267,9 +267,9 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = static_cast<ALsizei>(
+        auto DstSize = static_cast<ALuint>(
             clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE));
-        DstSize = mini(DstSize, dstframes-pos);
+        DstSize = minu(DstSize, dstframes-pos);
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
@@ -285,13 +285,13 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            ALsizei SrcDataEnd{(DstSize*increment + DataPosFrac)>>FRACTIONBITS};
+            ALuint SrcDataEnd{(DstSize*increment + DataPosFrac)>>FRACTIONBITS};
             if(SrcDataEnd >= prepcount+toread)
                 std::fill(std::begin(mChan[chan].PrevSamples),
                           std::end(mChan[chan].PrevSamples), 0.0f);
             else
             {
-                size_t len = mini(MAX_RESAMPLE_PADDING*2, prepcount+toread-SrcDataEnd);
+                size_t len{minu(MAX_RESAMPLE_PADDING*2, prepcount+toread-SrcDataEnd)};
                 std::copy_n(SrcData+SrcDataEnd, len, mChan[chan].PrevSamples);
                 std::fill(std::begin(mChan[chan].PrevSamples)+len,
                           std::end(mChan[chan].PrevSamples), 0.0f);
@@ -314,7 +314,7 @@ ALsizei SampleConverter::convert(const ALvoid **src, ALsizei *srcframes, ALvoid 
 
         /* Update the src and dst pointers in case there's still more to do. */
         SamplesIn += SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
-        NumSrcSamples -= mini(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
+        NumSrcSamples -= minu(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
 
         dst = static_cast<al::byte*>(dst) + DstFrameSize*DstSize;
         pos += DstSize;
@@ -335,7 +335,7 @@ ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels sr
     return al::make_unique<ChannelConverter>(srcType, srcChans, dstChans);
 }
 
-void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALsizei frames) const
+void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALuint frames) const
 {
     if(mSrcChans == DevFmtStereo && mDstChans == DevFmtMono)
     {

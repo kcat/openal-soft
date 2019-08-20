@@ -1229,10 +1229,10 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                 if(mSampleConv)
                 {
                     const ALvoid *srcdata{rdata};
-                    auto srcframes = static_cast<ALsizei>(numsamples);
+                    ALuint srcframes{numsamples};
 
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data.first.buf,
-                        static_cast<ALsizei>(minz(data.first.len, INT_MAX)));
+                        static_cast<ALuint>(minz(data.first.len, INT_MAX)));
                     if(srcframes > 0 && dstframes == data.first.len && data.second.len > 0)
                     {
                         /* If some source samples remain, all of the first dest
@@ -1240,14 +1240,14 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                          * dest block, do another run for the second block.
                          */
                         dstframes += mSampleConv->convert(&srcdata, &srcframes, data.second.buf,
-                            static_cast<ALsizei>(minz(data.second.len, INT_MAX)));
+                            static_cast<ALuint>(minz(data.second.len, INT_MAX)));
                     }
                 }
                 else
                 {
                     const auto framesize = static_cast<ALuint>(mDevice->frameSizeFromFmt());
-                    size_t len1 = minz(data.first.len, numsamples);
-                    size_t len2 = minz(data.second.len, numsamples-len1);
+                    size_t len1{minz(data.first.len, numsamples)};
+                    size_t len2{minz(data.second.len, numsamples-len1)};
 
                     memcpy(data.first.buf, rdata, len1*framesize);
                     if(len2 > 0)

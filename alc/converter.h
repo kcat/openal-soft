@@ -35,11 +35,9 @@ struct SampleConverter {
     al::FlexArray<ChanSamples> mChan;
 
     SampleConverter(size_t numchans) : mChan{numchans} { }
-    SampleConverter(const SampleConverter&) = delete;
-    SampleConverter& operator=(const SampleConverter&) = delete;
 
-    ALsizei convert(const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
-    ALsizei availableOut(ALsizei srcframes) const;
+    ALuint convert(const ALvoid **src, ALuint *srcframes, ALvoid *dst, ALuint dstframes);
+    ALuint availableOut(ALuint srcframes) const;
 
     static constexpr size_t Sizeof(size_t length) noexcept
     {
@@ -64,7 +62,7 @@ struct ChannelConverter {
       : mSrcType(srctype), mSrcChans(srcchans), mDstChans(dstchans)
     { }
 
-    void convert(const ALvoid *src, ALfloat *dst, ALsizei frames) const;
+    void convert(const ALvoid *src, ALfloat *dst, ALuint frames) const;
 
     DEF_NEWDEL(ChannelConverter)
 };

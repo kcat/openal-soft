@@ -1250,9 +1250,8 @@ void EarlyReflection_Unfaded(ReverbState *State, const ALsizei offset, const ALs
      * bounce to improve the initial diffusion in the late reverb.
      */
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    const al::span<ReverbUpdateLine,NUM_LINES> out{State->mEarlySamples};
-    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base,
-        {out.cbegin(), out.cend()}, todo);
+    const al::span<const ReverbUpdateLine,NUM_LINES> out{State->mEarlySamples};
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, out, todo);
 }
 void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALfloat fade)
@@ -1323,9 +1322,8 @@ void EarlyReflection_Faded(ReverbState *State, const ALsizei offset, const ALsiz
         early_delay.write(offset, NUM_LINES-1-j, temps[j].data(), todo);
 
     const ALsizei late_feed_tap{offset - State->mLateFeedTap};
-    const al::span<ReverbUpdateLine,NUM_LINES> out{State->mEarlySamples};
-    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, 0, {out.cbegin(), out.cend()},
-        todo);
+    const al::span<const ReverbUpdateLine,NUM_LINES> out{State->mEarlySamples};
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, 0, out, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1386,8 +1384,7 @@ void LateReverb_Unfaded(ReverbState *State, const ALsizei offset, const ALsizei 
         std::copy_n(temps[j].begin(), todo, State->mLateSamples[j].begin() + base);
 
     /* Finally, scatter and bounce the results to refeed the feedback buffer. */
-    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, {temps.cbegin(), temps.cend()},
-        todo);
+    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, temps, todo);
 }
 void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei todo,
     const ALfloat fade)
@@ -1446,8 +1443,7 @@ void LateReverb_Faded(ReverbState *State, const ALsizei offset, const ALsizei to
     for(size_t j{0u};j < NUM_LINES;j++)
         std::copy_n(temps[j].begin(), todo, State->mLateSamples[j].begin());
 
-    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, {temps.cbegin(), temps.cend()},
-        todo);
+    VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, temps, todo);
 }
 
 void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)

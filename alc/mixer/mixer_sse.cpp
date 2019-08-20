@@ -145,8 +145,8 @@ void MixDirectHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 
 template<>
-void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
-    ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
+void Mix_<SSETag>(const float *InSamples, const al::span<FloatBufferLine> OutBuffer,
+    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos,
     const ALsizei BufferSize)
 {
     ASSUME(BufferSize > 0);
@@ -173,7 +173,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
                 __m128 step_count4{_mm_setr_ps(0.0f, 1.0f, 2.0f, 3.0f)};
                 ALsizei todo{minsize >> 2};
                 do {
-                    const __m128 val4{_mm_load_ps(&data[pos])};
+                    const __m128 val4{_mm_load_ps(&InSamples[pos])};
                     __m128 dry4{_mm_load_ps(&dst[pos])};
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
                     /* dry += val * (gain + step*step_count) */
@@ -192,7 +192,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < minsize;pos++)
             {
-                dst[pos] += data[pos]*(gain + step*step_count);
+                dst[pos] += InSamples[pos]*(gain + step*step_count);
                 step_count += 1.0f;
             }
             if(pos == Counter)
@@ -204,7 +204,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
             /* Mix until pos is aligned with 4 or the mix is done. */
             minsize = mini(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
-                dst[pos] += data[pos]*gain;
+                dst[pos] += InSamples[pos]*gain;
         }
         ++CurrentGains;
         ++TargetGains;
@@ -216,7 +216,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
             ALsizei todo{(BufferSize-pos) >> 2};
             const __m128 gain4{_mm_set1_ps(gain)};
             do {
-                const __m128 val4{_mm_load_ps(&data[pos])};
+                const __m128 val4{_mm_load_ps(&InSamples[pos])};
                 __m128 dry4{_mm_load_ps(&dst[pos])};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
                 _mm_store_ps(&dst[pos], dry4);
@@ -224,7 +224,7 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
             } while(--todo);
         }
         for(;pos < BufferSize;pos++)
-            dst[pos] += data[pos]*gain;
+            dst[pos] += InSamples[pos]*gain;
     }
 }
 

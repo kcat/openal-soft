@@ -142,8 +142,8 @@ void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 
 template<>
-void Mix_<CTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
-    ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
+void Mix_<CTag>(const float *InSamples, const al::span<FloatBufferLine> OutBuffer,
+    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos,
     const ALsizei BufferSize)
 {
     ASSUME(BufferSize > 0);
@@ -163,7 +163,7 @@ void Mix_<CTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
             ALfloat step_count{0.0f};
             for(;pos < minsize;pos++)
             {
-                dst[pos] += data[pos] * (gain + step*step_count);
+                dst[pos] += InSamples[pos] * (gain + step*step_count);
                 step_count += 1.0f;
             }
             if(pos == Counter)
@@ -178,7 +178,7 @@ void Mix_<CTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
         for(;pos < BufferSize;pos++)
-            dst[pos] += data[pos]*gain;
+            dst[pos] += InSamples[pos]*gain;
     }
 }
 

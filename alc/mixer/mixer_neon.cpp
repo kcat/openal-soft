@@ -189,8 +189,8 @@ void MixDirectHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
 
 
 template<>
-void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
-    ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
+void Mix_<NEONTag>(const float *InSamples, const al::span<FloatBufferLine> OutBuffer,
+    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos,
     const ALsizei BufferSize)
 {
     ASSUME(BufferSize > 0);
@@ -223,7 +223,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
                 ALsizei todo{minsize >> 2};
 
                 do {
-                    const float32x4_t val4 = vld1q_f32(&data[pos]);
+                    const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
                     float32x4_t dry4 = vld1q_f32(&dst[pos]);
                     dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
                     step_count4 = vaddq_f32(step_count4, four4);
@@ -239,7 +239,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < minsize;pos++)
             {
-                dst[pos] += data[pos]*(gain + step*step_count);
+                dst[pos] += InSamples[pos]*(gain + step*step_count);
                 step_count += 1.0f;
             }
             if(pos == Counter)
@@ -251,7 +251,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
             /* Mix until pos is aligned with 4 or the mix is done. */
             minsize = mini(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
-                dst[pos] += data[pos]*gain;
+                dst[pos] += InSamples[pos]*gain;
         }
         ++CurrentGains;
         ++TargetGains;
@@ -263,7 +263,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
             ALsizei todo{(BufferSize-pos) >> 2};
             const float32x4_t gain4 = vdupq_n_f32(gain);
             do {
-                const float32x4_t val4 = vld1q_f32(&data[pos]);
+                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
                 float32x4_t dry4 = vld1q_f32(&dst[pos]);
                 dry4 = vmlaq_f32(dry4, val4, gain4);
                 vst1q_f32(&dst[pos], dry4);
@@ -271,7 +271,7 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
             } while(--todo);
         }
         for(;pos < BufferSize;pos++)
-            dst[pos] += data[pos]*gain;
+            dst[pos] += InSamples[pos]*gain;
     }
 }
 

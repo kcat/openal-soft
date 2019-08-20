@@ -189,20 +189,18 @@ void Mix_<CTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
  * stepping is necessary.
  */
 template<>
-void MixRow_<CTag>(ALfloat *OutBuffer, const al::span<const ALfloat> Gains,
-    const ALfloat *InSamples, const ALsizei InStride, const ALsizei BufferSize)
+void MixRow_<CTag>(const al::span<float> OutBuffer, const al::span<const float> Gains,
+    const float *InSamples, const size_t InStride)
 {
-    ASSUME(BufferSize > 0);
-
-    for(const ALfloat gain : Gains)
+    for(const float gain : Gains)
     {
-        const ALfloat *RESTRICT src{InSamples};
+        const float *RESTRICT src{InSamples};
         InSamples += InStride;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        for(ALsizei i{0};i < BufferSize;i++)
-            OutBuffer[i] += src[i] * gain;
+        std::transform(OutBuffer.begin(), OutBuffer.end(), src, OutBuffer.begin(),
+            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
     }
 }

@@ -317,8 +317,8 @@ struct ALvoice {
 using MixerFunc = void(*)(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer,
     ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
     const ALsizei BufferSize);
-using RowMixerFunc = void(*)(ALfloat *OutBuffer, const al::span<const ALfloat> Gains,
-    const ALfloat *InSamples, const ALsizei InStride, const ALsizei BufferSize);
+using RowMixerFunc = void(*)(const al::span<float> OutBuffer, const al::span<const float> Gains,
+    const float *InSamples, const size_t InStride);
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
     MixHrtfFilter *hrtfparams, const ALsizei BufferSize);

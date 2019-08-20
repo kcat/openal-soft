@@ -229,33 +229,30 @@ void Mix_<SSETag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffer
 }
 
 template<>
-void MixRow_<SSETag>(ALfloat *OutBuffer, const al::span<const ALfloat> Gains,
-    const ALfloat *InSamples, const ALsizei InStride, const ALsizei BufferSize)
+void MixRow_<SSETag>(const al::span<float> OutBuffer, const al::span<const float> Gains,
+    const float *InSamples, const size_t InStride)
 {
-    ASSUME(BufferSize > 0);
-
-    for(const ALfloat gain : Gains)
+    for(const float gain : Gains)
     {
-        const ALfloat *RESTRICT src{InSamples};
+        const float *RESTRICT src{InSamples};
         InSamples += InStride;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        ALsizei pos{0};
-        if LIKELY(BufferSize > 3)
+        auto out_iter = OutBuffer.begin();
+        if(size_t todo{OutBuffer.size() >> 2})
         {
-            ALsizei todo{BufferSize >> 2};
             const __m128 gain4 = _mm_set1_ps(gain);
             do {
-                const __m128 val4{_mm_load_ps(&src[pos])};
-                __m128 dry4{_mm_load_ps(&OutBuffer[pos])};
+                const __m128 val4{_mm_load_ps(src)};
+                __m128 dry4{_mm_load_ps(out_iter)};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-                _mm_store_ps(&OutBuffer[pos], dry4);
-                pos += 4;
+                _mm_store_ps(out_iter, dry4);
+                out_iter += 4; src += 4;
             } while(--todo);
         }
-        for(;pos < BufferSize;pos++)
-            OutBuffer[pos] += src[pos]*gain;
+        std::transform(out_iter, OutBuffer.end(), src, out_iter,
+            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
     }
 }

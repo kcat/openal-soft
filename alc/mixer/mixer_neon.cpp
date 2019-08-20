@@ -276,11 +276,9 @@ void Mix_<NEONTag>(const ALfloat *data, const al::span<FloatBufferLine> OutBuffe
 }
 
 template<>
-void MixRow_<NEONTag>(ALfloat *OutBuffer, const al::span<const ALfloat> Gains,
-    const ALfloat *InSamples, const ALsizei InStride, const ALsizei BufferSize)
+void MixRow_<NEONTag>(const al::span<ALfloat> OutBuffer, const al::span<const ALfloat> Gains,
+    const ALfloat *InSamples, const ALsizei InStride)
 {
-    ASSUME(BufferSize > 0);
-
     for(const ALfloat gain : Gains)
     {
         const ALfloat *RESTRICT src{InSamples};
@@ -289,20 +287,19 @@ void MixRow_<NEONTag>(ALfloat *OutBuffer, const al::span<const ALfloat> Gains,
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        ALsizei pos{0};
-        if LIKELY(BufferSize > 3)
+        auto out_iter = OutBuffer.begin();
+        if(size_t todo{OutBuffer.size() >> 2})
         {
-            ALsizei todo{BufferSize >> 2};
-            float32x4_t gain4{vdupq_n_f32(gain)};
+            const float32x4_t gain4{vdupq_n_f32(gain)};
             do {
-                const float32x4_t val4 = vld1q_f32(&src[pos]);
-                float32x4_t dry4 = vld1q_f32(&OutBuffer[pos]);
+                const float32x4_t val4 = vld1q_f32(src);
+                float32x4_t dry4 = vld1q_f32(out_iter);
                 dry4 = vmlaq_f32(dry4, val4, gain4);
-                vst1q_f32(&OutBuffer[pos], dry4);
-                pos += 4;
+                vst1q_f32(out_iter, dry4);
+                out_iter += 4; src += 4;
             } while(--todo);
         }
-        for(;pos < BufferSize;pos++)
-            OutBuffer[pos] += src[pos]*gain;
+        std::transform(out_iter, OutBuffer.end(), src, out_iter,
+            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
     }
 }

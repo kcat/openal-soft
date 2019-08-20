@@ -114,7 +114,7 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
 
 template<>
 void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -123,7 +123,7 @@ void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void MixHrtfBlend_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -141,10 +141,10 @@ void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
-    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos)
+    float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
-    const bool reached_target{InSamples.size() >= static_cast<size_t>(Counter)};
+    const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
     for(FloatBufferLine &output : OutBuffer)
     {

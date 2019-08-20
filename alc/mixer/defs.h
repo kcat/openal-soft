@@ -27,19 +27,20 @@ enum ResampleType {
 };
 
 template<ResampleType TypeTag, InstSetType InstTag>
-const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac, ALint increment, const al::span<float> dst);
+const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac,
+    ALint increment, const al::span<float> dst);
 
 template<InstSetType InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
-    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos);
+    float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos);
 template<InstSetType InstTag>
 void MixRow_(const al::span<float> OutBuffer, const al::span<const float> Gains,
     const float *InSamples, const size_t InStride);
 
 template<InstSetType InstTag>
-void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, MixHrtfFilter *hrtfparams, const size_t BufferSize);
+void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize, MixHrtfFilter *hrtfparams, const size_t BufferSize);
 template<InstSetType InstTag>
-void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
+void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
 template<InstSetType InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State, const size_t BufferSize);
 

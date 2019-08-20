@@ -160,7 +160,7 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
 
 template<>
 void MixHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -169,7 +169,7 @@ void MixHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void MixHrtfBlend_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -187,10 +187,10 @@ void MixDirectHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
 
 template<>
 void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
-    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos)
+    float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
-    const bool reached_target{InSamples.size() >= static_cast<size_t>(Counter)};
+    const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
     const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3) +
         InSamples.begin();

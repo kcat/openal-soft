@@ -271,8 +271,8 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
 }
 
 template<>
-void MixRow_<NEONTag>(const al::span<ALfloat> OutBuffer, const al::span<const ALfloat> Gains,
-    const ALfloat *InSamples, const ALsizei InStride)
+void MixRow_<NEONTag>(const al::span<float> OutBuffer, const al::span<const float> Gains,
+    const float *InSamples, const size_t InStride)
 {
     for(const ALfloat gain : Gains)
     {

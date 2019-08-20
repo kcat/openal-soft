@@ -16,25 +16,24 @@
 
 template<>
 const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
+    ALsizei frac, ALint increment, const al::span<float> dst)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
     const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
     alignas(16) ALsizei pos_[4], frac_[4];
     int32x4_t pos4, frac4;
-    ALsizei todo, pos, i;
 
     ASSUME(frac >= 0);
     ASSUME(increment > 0);
-    ASSUME(dstlen > 0);
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
     frac4 = vld1q_s32(frac_);
     pos4 = vld1q_s32(pos_);
 
-    todo = dstlen & ~3;
-    for(i = 0;i < todo;i += 4)
+    auto dst_iter = dst.begin();
+    const auto aligned_end = (dst.size()&~3) + dst_iter;
+    while(dst_iter != aligned_end)
     {
         const int pos0 = vgetq_lane_s32(pos4, 0);
         const int pos1 = vgetq_lane_s32(pos4, 1);
@@ -48,7 +47,8 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
         const float32x4_t mu = vmulq_f32(vcvtq_f32_s32(frac4), fracOne4);
         const float32x4_t out = vmlaq_f32(val1, mu, r0);
 
-        vst1q_f32(&dst[i], out);
+        vst1q_f32(dst_iter, out);
+        dst_iter += 4;
 
         frac4 = vaddq_s32(frac4, increment4);
         pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, FRACTIONBITS));
@@ -58,39 +58,38 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
     /* NOTE: These four elements represent the position *after* the last four
      * samples, so the lowest element is the next position to resample.
      */
-    pos = vgetq_lane_s32(pos4, 0);
+    ALsizei pos{vgetq_lane_s32(pos4, 0)};
     frac = vgetq_lane_s32(frac4, 0);
 
-    for(;i < dstlen;++i)
+    while(dst_iter != dst.end())
     {
-        dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
+        *(dst_iter++) = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
 
         frac += increment;
         pos  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
-    return dst;
+    return dst.begin();
 }
 
 template<>
 const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
+    ALsizei frac, ALint increment, const al::span<float> dst)
 {
     const ALfloat *const filter = state->bsinc.filter;
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
     const ALsizei m = state->bsinc.m;
     const float32x4_t *fil, *scd, *phd, *spd;
-    ALsizei pi, i, j, offset;
+    ALsizei pi, j, offset;
     float32x4_t r4;
     ALfloat pf;
 
     ASSUME(m > 0);
-    ASSUME(dstlen > 0);
     ASSUME(increment > 0);
     ASSUME(frac >= 0);
 
     src -= state->bsinc.l;
-    for(i = 0;i < dstlen;i++)
+    for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
@@ -125,13 +124,13 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
         }
         r4 = vaddq_f32(r4, vcombine_f32(vrev64_f32(vget_high_f32(r4)),
                                         vrev64_f32(vget_low_f32(r4))));
-        dst[i] = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+        out_sample = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
 
         frac += increment;
         src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
-    return dst;
+    return dst.begin();
 }
 
 

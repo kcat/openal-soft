@@ -29,7 +29,7 @@
 
 template<>
 const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
+    ALsizei frac, ALint increment, const al::span<float> dst)
 {
     const __m128i increment4{_mm_set1_epi32(increment*4)};
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};
@@ -37,15 +37,15 @@ const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RES
 
     ASSUME(frac >= 0);
     ASSUME(increment > 0);
-    ASSUME(dstlen >= 0);
 
     alignas(16) ALsizei pos_[4], frac_[4];
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
     __m128i frac4{_mm_setr_epi32(frac_[0], frac_[1], frac_[2], frac_[3])};
     __m128i pos4{_mm_setr_epi32(pos_[0], pos_[1], pos_[2], pos_[3])};
 
-    const ALsizei todo{dstlen & ~3};
-    for(ALsizei i{0};i < todo;i += 4)
+    auto dst_iter = dst.begin();
+    const auto aligned_end = (dst.size()&~3) + dst_iter;
+    while(dst_iter != aligned_end)
     {
         const int pos0{_mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(0, 0, 0, 0)))};
         const int pos1{_mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(1, 1, 1, 1)))};
@@ -59,7 +59,8 @@ const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RES
         const __m128 mu{_mm_mul_ps(_mm_cvtepi32_ps(frac4), fracOne4)};
         const __m128 out{_mm_add_ps(val1, _mm_mul_ps(mu, r0))};
 
-        _mm_store_ps(&dst[i], out);
+        _mm_store_ps(dst_iter, out);
+        dst_iter += 4;
 
         frac4 = _mm_add_epi32(frac4, increment4);
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, FRACTIONBITS));
@@ -72,13 +73,13 @@ const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RES
     ALsizei pos{_mm_cvtsi128_si32(pos4)};
     frac = _mm_cvtsi128_si32(frac4);
 
-    for(ALsizei i{todo};i < dstlen;++i)
+    while(dst_iter != dst.end())
     {
-        dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
+        *(dst_iter++) = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
 
         frac += increment;
         pos  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
-    return dst;
+    return dst.begin();
 }

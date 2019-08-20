@@ -44,9 +44,8 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
 using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALsizei);
 template<SamplerT &Sampler>
 const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei numsamples)
+    ALsizei frac, ALint increment, const al::span<float> dst)
 {
-    ASSUME(numsamples > 0);
     ASSUME(increment > 0);
     ASSUME(frac >= 0);
 
@@ -61,46 +60,45 @@ const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
 
         return ret;
     };
-    std::generate_n(dst, numsamples, proc_sample);
+    std::generate(dst.begin(), dst.end(), proc_sample);
 
-    return dst;
+    return dst.begin();
 }
 
 } // namespace
 
 template<>
 const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRICT src, ALsizei,
-    ALint, ALfloat *RESTRICT dst, ALsizei dstlen)
+    ALint, const al::span<float> dst)
 {
-    ASSUME(dstlen > 0);
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
-    if((reinterpret_cast<intptr_t>(src)&15) == (reinterpret_cast<intptr_t>(dst)&15))
+    if((reinterpret_cast<intptr_t>(src)&15) == (reinterpret_cast<intptr_t>(dst.data())&15))
         return src;
 #endif
-    std::copy_n(src, dstlen, dst);
-    return dst;
+    std::copy_n(src, dst.size(), dst.begin());
+    return dst.begin();
 }
 
 template<>
 const ALfloat *Resample_<PointTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
-{ return DoResample<do_point>(state, src, frac, increment, dst, dstlen); }
+    ALsizei frac, ALint increment, const al::span<float> dst)
+{ return DoResample<do_point>(state, src, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<LerpTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
-{ return DoResample<do_lerp>(state, src, frac, increment, dst, dstlen); }
+    ALsizei frac, ALint increment, const al::span<float> dst)
+{ return DoResample<do_lerp>(state, src, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<CubicTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
-{ return DoResample<do_cubic>(state, src-1, frac, increment, dst, dstlen); }
+    ALsizei frac, ALint increment, const al::span<float> dst)
+{ return DoResample<do_cubic>(state, src-1, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
-{ return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst, dstlen); }
+    ALsizei frac, ALint increment, const al::span<float> dst)
+{ return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 
 static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,

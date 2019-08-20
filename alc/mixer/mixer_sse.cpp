@@ -15,19 +15,18 @@
 
 template<>
 const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen)
+    ALsizei frac, ALint increment, const al::span<float> dst)
 {
     const ALfloat *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
     const ALsizei m{state->bsinc.m};
 
     ASSUME(m > 0);
-    ASSUME(dstlen > 0);
     ASSUME(increment > 0);
     ASSUME(frac >= 0);
 
     src -= state->bsinc.l;
-    for(ALsizei i{0};i < dstlen;i++)
+    for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
@@ -64,13 +63,13 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         }
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-        dst[i] = _mm_cvtss_f32(r4);
+        out_sample = _mm_cvtss_f32(r4);
 
         frac += increment;
         src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
-    return dst;
+    return dst.begin();
 }
 
 

@@ -80,9 +80,8 @@ union InterpState {
     BsincState bsinc;
 };
 
-using ResamplerFunc = const ALfloat*(*)(const InterpState *state,
-    const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-    ALfloat *RESTRICT dst, ALsizei dstlen);
+using ResamplerFunc = const ALfloat*(*)(const InterpState *state, const ALfloat *RESTRICT src,
+    ALsizei frac, ALint increment, const al::span<float> dst);
 
 void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table);
 

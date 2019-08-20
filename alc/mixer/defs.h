@@ -27,7 +27,7 @@ enum ResampleType {
 };
 
 template<ResampleType TypeTag, InstSetType InstTag>
-const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac, ALint increment, ALfloat *RESTRICT dst, ALsizei dstlen);
+const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALsizei frac, ALint increment, const al::span<float> dst);
 
 template<InstSetType InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,

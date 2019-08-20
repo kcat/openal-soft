@@ -484,7 +484,7 @@ struct ReverbState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ReverbState)
 };
@@ -1442,7 +1442,7 @@ void LateReverb_Faded(ReverbState *State, const size_t offset, const size_t todo
     VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, temps, todo);
 }
 
-void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void ReverbState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
     size_t offset{mOffset};
     size_t fadeCount{mFadeCount};
@@ -1450,7 +1450,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     ASSUME(samplesToDo > 0);
 
     /* Convert B-Format to A-Format for processing. */
-    const al::span<float> tmpspan{mTempLine.data(), mTempLine.data()+samplesToDo};
+    const al::span<float> tmpspan{mTempLine.data(), samplesToDo};
     for(size_t c{0u};c < NUM_LINES;c++)
     {
         std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
@@ -1463,14 +1463,14 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     }
 
     /* Process reverb for these samples. */
-    for(size_t base{0};base < static_cast<size_t>(samplesToDo);)
+    for(size_t base{0};base < samplesToDo;)
     {
         /* Calculate the number of samples we can do this iteration. */
         size_t todo{minz(samplesToDo - base, minz(mMaxUpdate[0], mMaxUpdate[1]))};
         /* Some mixers require maintaining a 4-sample alignment, so ensure that
          * if it's not the last iteration.
          */
-        if(base+todo < static_cast<size_t>(samplesToDo)) todo &= ~3;
+        if(base+todo < samplesToDo) todo &= ~3;
         ASSUME(todo > 0);
 
         /* Process the samples for reverb. */
@@ -1518,7 +1518,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         }
 
         /* Finally, mix early reflections and late reverb. */
-        (this->*mMixOut)(samplesOut, static_cast<size_t>(samplesToDo)-base, base, todo);
+        (this->*mMixOut)(samplesOut, samplesToDo-base, base, todo);
 
         base += todo;
     }

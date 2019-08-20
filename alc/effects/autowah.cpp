@@ -71,7 +71,7 @@ struct ALautowahState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ALautowahState)
 };
@@ -126,7 +126,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void ALautowahState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
     const ALfloat attack_rate = mAttackRate;
     const ALfloat release_rate = mReleaseRate;
@@ -136,7 +136,7 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
     const ALfloat bandwidth = mBandwidthNorm;
 
     ALfloat env_delay{mEnvDelay};
-    for(ALsizei i{0};i < samplesToDo;i++)
+    for(size_t i{0u};i < samplesToDo;i++)
     {
         ALfloat w0, sample, a;
 
@@ -166,7 +166,7 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         ALfloat z1{mChans[c].Filter.z1};
         ALfloat z2{mChans[c].Filter.z2};
 
-        for(ALsizei i{0};i < samplesToDo;i++)
+        for(size_t i{0u};i < samplesToDo;i++)
         {
             const ALfloat alpha = mEnv[i].alpha;
             const ALfloat cos_w0 = mEnv[i].cos_w0;
@@ -190,7 +190,7 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         mChans[c].Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({mBufferOut, mBufferOut+samplesToDo}, samplesOut, mChans[c].CurrentGains,
+        MixSamples({mBufferOut, samplesToDo}, samplesOut, mChans[c].CurrentGains,
             mChans[c].TargetGains, samplesToDo, 0);
     }
 }

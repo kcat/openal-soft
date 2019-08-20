@@ -92,7 +92,7 @@ inline complex_d polar2rect(const ALphasor &number)
 
 struct PshifterState final : public EffectState {
     /* Effect parameters */
-    ALsizei mCount;
+    size_t  mCount;
     ALsizei mPitchShiftI;
     ALfloat mPitchShift;
     ALfloat mFreqPerBin;
@@ -118,7 +118,7 @@ struct PshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(PshifterState)
 };
@@ -161,7 +161,7 @@ void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const Ef
     ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void PshifterState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -170,9 +170,9 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
     static constexpr ALdouble expected{al::MathDefs<double>::Tau() / OVERSAMP};
     const ALdouble freq_per_bin{mFreqPerBin};
     ALfloat *RESTRICT bufferOut{mBufferOut};
-    ALsizei count{mCount};
+    size_t count{mCount};
 
-    for(ALsizei i{0};i < samplesToDo;)
+    for(size_t i{0u};i < samplesToDo;)
     {
         do {
             /* Fill FIFO buffer with samples data */
@@ -187,7 +187,7 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         count = FIFO_LATENCY;
 
         /* Real signal windowing and store in FFTbuffer */
-        for(ALsizei k{0};k < STFT_SIZE;k++)
+        for(size_t k{0u};k < STFT_SIZE;k++)
         {
             mFFTbuffer[k].real(mInFIFO[k] * HannWindow[k]);
             mFFTbuffer[k].imag(0.0);
@@ -200,7 +200,7 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_HALF_SIZE+1 samples are needed.
          */
-        for(ALsizei k{0};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             /* Compute amplitude and phase */
             ALphasor component{rect2polar(mFFTbuffer[k])};
@@ -228,15 +228,15 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
 
         /* PROCESSING */
         /* pitch shifting */
-        for(ALsizei k{0};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             mSyntesis_buffer[k].Amplitude = 0.0;
             mSyntesis_buffer[k].Frequency = 0.0;
         }
 
-        for(ALsizei k{0};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
-            ALsizei j{(k*mPitchShiftI) >> FRACTIONBITS};
+            size_t j{(k*mPitchShiftI) >> FRACTIONBITS};
             if(j >= STFT_HALF_SIZE+1) break;
 
             mSyntesis_buffer[j].Amplitude += mAnalysis_buffer[k].Amplitude;
@@ -245,7 +245,7 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
 
         /* SYNTHESIS */
         /* Synthesis the processing data */
-        for(ALsizei k{0};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             ALphasor component;
             ALdouble tmp;
@@ -263,19 +263,19 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
             mFFTbuffer[k] = polar2rect(component);
         }
         /* zero negative frequencies for recontruct a real signal */
-        for(ALsizei k{STFT_HALF_SIZE+1};k < STFT_SIZE;k++)
+        for(size_t k{STFT_HALF_SIZE+1};k < STFT_SIZE;k++)
             mFFTbuffer[k] = complex_d{};
 
         /* Apply iFFT to buffer data */
         complex_fft(mFFTbuffer, 1.0);
 
         /* Windowing and add to output */
-        for(ALsizei k{0};k < STFT_SIZE;k++)
+        for(size_t k{0u};k < STFT_SIZE;k++)
             mOutputAccum[k] += HannWindow[k] * mFFTbuffer[k].real() /
                                (0.5 * STFT_HALF_SIZE * OVERSAMP);
 
         /* Shift accumulator, input & output FIFO */
-        ALsizei j, k;
+        size_t j, k;
         for(k = 0;k < STFT_STEP;k++) mOutFIFO[k] = static_cast<ALfloat>(mOutputAccum[k]);
         for(j = 0;k < STFT_SIZE;k++,j++) mOutputAccum[j] = mOutputAccum[k];
         for(;j < STFT_SIZE;j++) mOutputAccum[j] = 0.0;
@@ -285,8 +285,8 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
     mCount = count;
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples({bufferOut, bufferOut+samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
-        maxi(samplesToDo, 512), 0);
+    MixSamples({bufferOut, samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
+        maxz(samplesToDo, 512), 0);
 }
 
 

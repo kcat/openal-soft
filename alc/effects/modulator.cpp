@@ -64,10 +64,9 @@ inline ALfloat One(ALsizei)
 }
 
 template<ALfloat func(ALsizei)>
-void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei todo)
+void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, size_t todo)
 {
-    ALsizei i;
-    for(i = 0;i < todo;i++)
+    for(size_t i{0u};i < todo;i++)
     {
         index += step;
         index &= WAVEFORM_FRACMASK;
@@ -77,7 +76,7 @@ void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei 
 
 
 struct ModulatorState final : public EffectState {
-    void (*mGetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, ALsizei){};
+    void (*mGetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, size_t){};
 
     ALsizei mIndex{0};
     ALsizei mStep{1};
@@ -92,7 +91,7 @@ struct ModulatorState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ModulatorState)
 };
@@ -139,29 +138,28 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void ModulatorState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
-    for(ALsizei base{0};base < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
         alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
-        ALsizei td = mini(MAX_UPDATE_SAMPLES, samplesToDo-base);
-        ALsizei c, i;
+        size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
         mGetSamples(modsamples, mIndex, mStep, td);
         mIndex += (mStep*td) & WAVEFORM_FRACMASK;
         mIndex &= WAVEFORM_FRACMASK;
 
         ASSUME(numInput > 0);
-        for(c = 0;c < numInput;c++)
+        for(ALsizei c{0};c < numInput;c++)
         {
             alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
 
             mChans[c].Filter.process(temps, &samplesIn[c][base], td);
-            for(i = 0;i < td;i++)
+            for(size_t i{0u};i < td;i++)
                 temps[i] *= modsamples[i];
 
-            MixSamples({temps, temps+td}, samplesOut, mChans[c].CurrentGains,
-                mChans[c].TargetGains, samplesToDo-base, base);
+            MixSamples({temps, td}, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
+                samplesToDo-base, base);
         }
 
         base += td;

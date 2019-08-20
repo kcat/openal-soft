@@ -20,7 +20,7 @@ struct NullState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(NullState)
 };
@@ -57,7 +57,7 @@ void NullState::update(const ALCcontext* /*context*/, const ALeffectslot* /*slot
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-void NullState::process(const ALsizei /*samplesToDo*/,
+void NullState::process(const size_t/*samplesToDo*/,
     const FloatBufferLine *RESTRICT /*samplesIn*/, const ALsizei /*numInput*/,
     const al::span<FloatBufferLine> /*samplesOut*/)
 {

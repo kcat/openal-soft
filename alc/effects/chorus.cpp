@@ -55,7 +55,7 @@ enum class WaveForm {
 };
 
 void GetTriangleDelays(ALint *delays, const ALsizei start_offset, const ALsizei lfo_range,
-    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const ALsizei todo)
+    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const size_t todo)
 {
     ASSUME(start_offset >= 0);
     ASSUME(lfo_range > 0);
@@ -71,7 +71,7 @@ void GetTriangleDelays(ALint *delays, const ALsizei start_offset, const ALsizei 
 }
 
 void GetSinusoidDelays(ALint *delays, const ALsizei start_offset, const ALsizei lfo_range,
-    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const ALsizei todo)
+    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const size_t todo)
 {
     ASSUME(start_offset >= 0);
     ASSUME(lfo_range > 0);
@@ -111,7 +111,7 @@ struct ChorusState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ChorusState)
 };
@@ -207,7 +207,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     }
 }
 
-void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void ChorusState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
     const auto bufmask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     const ALfloat feedback{mFeedback};
@@ -215,9 +215,9 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
     ALsizei offset{mOffset};
 
-    for(ALsizei base{0};base < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
-        const ALsizei todo = mini(256, samplesToDo-base);
+        const size_t todo{minz(256, samplesToDo-base)};
 
         ALint moddelays[2][256];
         if(mWaveform == WaveForm::Sinusoid)
@@ -237,7 +237,7 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         mLfoOffset = (mLfoOffset+todo) % mLfoRange;
 
         alignas(16) ALfloat temps[2][256];
-        for(ALsizei i{0};i < todo;i++)
+        for(size_t i{0u};i < todo;i++)
         {
             // Feed the buffer's input first (necessary for delays < 1).
             delaybuf[offset&bufmask] = samplesIn[0][base+i];
@@ -262,7 +262,7 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         }
 
         for(ALsizei c{0};c < 2;c++)
-            MixSamples({temps[c], temps[c]+todo}, samplesOut, mGains[c].Current, mGains[c].Target,
+            MixSamples({temps[c], todo}, samplesOut, mGains[c].Current, mGains[c].Target,
                 samplesToDo-base, base);
 
         base += todo;

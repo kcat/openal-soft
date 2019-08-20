@@ -66,9 +66,9 @@ inline ALfloat Half(ALsizei)
 }
 
 template<ALfloat func(ALsizei)>
-void Oscillate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei todo)
+void Oscillate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, size_t todo)
 {
-    for(ALsizei i{0};i < todo;i++)
+    for(size_t i{0u};i < todo;i++)
     {
         index += step;
         index &= WAVEFORM_FRACMASK;
@@ -86,7 +86,7 @@ struct FormantFilter
     FormantFilter() = default;
     FormantFilter(ALfloat f0norm_, ALfloat gain) : f0norm{f0norm_}, fGain{gain} { }
 
-    inline void process(const ALfloat* samplesIn, ALfloat* samplesOut, const ALsizei numInput)
+    inline void process(const ALfloat* samplesIn, ALfloat* samplesOut, const size_t numInput)
     {
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
@@ -94,7 +94,7 @@ struct FormantFilter
         const ALfloat g = std::tan(al::MathDefs<float>::Pi() * f0norm);
         const ALfloat h = 1.0f / (1 + (g / Q_FACTOR) + (g * g));
 
-        for (ALsizei i{0};i < numInput;i++)
+        for(size_t i{0u};i < numInput;i++)
         {
             const ALfloat H = h * (samplesIn[i] - (1.0f / Q_FACTOR + g) * s1 - s2);
             const ALfloat B = g * H + s1;
@@ -126,7 +126,7 @@ struct VmorpherState final : public EffectState {
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_AMBI_CHANNELS];
 
-    void (*mGetSamples)(ALfloat* RESTRICT, ALsizei, const ALsizei, ALsizei) {};
+    void (*mGetSamples)(ALfloat* RESTRICT, ALsizei, const ALsizei, size_t){};
 
     ALsizei mIndex{0};
     ALsizei mStep{1};
@@ -137,7 +137,7 @@ struct VmorpherState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     static std::array<FormantFilter,4> getFiltersByPhoneme(ALenum phoneme, ALfloat frequency, ALfloat pitch);
 
@@ -244,15 +244,15 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     }
 }
 
-void VmorpherState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void VmorpherState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
 {
     /* Following the EFX specification for a conformant implementation which describes
      * the effect as a pair of 4-band formant filters blended together using an LFO.
      */
-    for(ALsizei base{0};base < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
         alignas(16) ALfloat lfo[MAX_UPDATE_SAMPLES];
-        const ALsizei td = mini(MAX_UPDATE_SAMPLES, samplesToDo-base);
+        const size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
         mGetSamples(lfo, mIndex, mStep, td);
         mIndex += (mStep * td) & WAVEFORM_FRACMASK;
@@ -280,12 +280,12 @@ void VmorpherState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
             vowelB[3].process(&samplesIn[c][base], mSampleBufferB, td);
 
             alignas(16) ALfloat blended[MAX_UPDATE_SAMPLES];
-            for(ALsizei i{0};i < td;i++)
+            for(size_t i{0u};i < td;i++)
                 blended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
 
             /* Now, mix the processed sound data to the output. */
-            MixSamples({blended, blended+td}, samplesOut, mChans[c].CurrentGains,
-                mChans[c].TargetGains, samplesToDo-base, base);
+            MixSamples({blended, td}, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
+                samplesToDo-base, base);
         }
 
         base += td;

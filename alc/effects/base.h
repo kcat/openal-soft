@@ -1,6 +1,8 @@
 #ifndef EFFECTS_BASE_H
 #define EFFECTS_BASE_H
 
+#include <cstddef>
+
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
@@ -157,7 +159,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 
     virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
-    virtual void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) = 0;
+    virtual void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) = 0;
 };
 
 

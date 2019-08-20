@@ -61,7 +61,7 @@ alignas(16) const std::array<ALdouble,HIL_SIZE> HannWindow = InitHannWindow();
 
 struct FshifterState final : public EffectState {
     /* Effect parameters */
-    ALsizei  mCount{};
+    size_t   mCount{};
     ALsizei  mPhaseStep[2]{};
     ALsizei  mPhase[2]{};
     ALdouble mSign[2]{};
@@ -85,7 +85,7 @@ struct FshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(FshifterState)
 };
@@ -117,7 +117,7 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     const ALCdevice *device{context->mDevice.get()};
 
     ALfloat step{props->Fshifter.Frequency / static_cast<ALfloat>(device->Frequency)};
-    mPhaseStep[0] = mPhaseStep[1]  = fastf2i(minf(step, 0.5f) * FRACTIONONE);
+    mPhaseStep[0] = mPhaseStep[1] = fastf2i(minf(step, 0.5f) * FRACTIONONE);
 
     switch(props->Fshifter.LeftDirection)
     {
@@ -160,15 +160,15 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }
 
-void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void FshifterState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
     static constexpr complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = mBufferOut;
-    ALsizei j, k, base;
+    size_t j, k;
 
-    for(base = 0;base < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
-        const ALsizei todo{mini(HIL_SIZE-mCount, samplesToDo-base)};
+        const size_t todo{minz(HIL_SIZE-mCount, samplesToDo-base)};
 
         ASSUME(todo > 0);
 
@@ -222,8 +222,8 @@ void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         }
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({BufferOut, BufferOut+samplesToDo}, samplesOut, mGains[c].Current,
-            mGains[c].Target, maxi(samplesToDo, 512), 0);
+        MixSamples({BufferOut, samplesToDo}, samplesOut, mGains[c].Current, mGains[c].Target,
+            maxz(samplesToDo, 512), 0);
     }
 }
 

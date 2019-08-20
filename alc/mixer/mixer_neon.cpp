@@ -154,7 +154,7 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
 
         vals = vmlaq_f32(vals, coefs, leftright4);
 
-        vst1_f32((float32_t*)&Values[c][0], vals);
+        vst1q_f32((float32_t*)&Values[c][0], vals);
     }
 }
 

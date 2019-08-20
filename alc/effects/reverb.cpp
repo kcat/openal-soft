@@ -421,7 +421,7 @@ struct ReverbState final : public EffectState {
         ASSUME(todo > 0);
 
         /* Convert back to B-Format, and mix the results to output. */
-        const al::span<float> tmpspan{mTempLine.begin(), mTempLine.begin()+todo};
+        const al::span<float> tmpspan{mTempLine.data(), mTempLine.data()+todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
@@ -445,7 +445,7 @@ struct ReverbState final : public EffectState {
     {
         ASSUME(todo > 0);
 
-        const al::span<float> tmpspan{mTempLine.begin(), mTempLine.begin()+todo};
+        const al::span<float> tmpspan{mTempLine.data(), mTempLine.data()+todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
@@ -1459,7 +1459,7 @@ void ReverbState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     ASSUME(offset >= 0);
 
     /* Convert B-Format to A-Format for processing. */
-    const al::span<float> tmpspan{mTempLine.begin(), mTempLine.begin()+samplesToDo};
+    const al::span<float> tmpspan{mTempLine.data(), mTempLine.data()+samplesToDo};
     for(size_t c{0u};c < NUM_LINES;c++)
     {
         std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);

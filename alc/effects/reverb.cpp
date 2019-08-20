@@ -293,7 +293,7 @@ struct T60Filter {
         const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm);
 
     /* Applies the two T60 damping filter sections. */
-    void process(ALfloat *samples, const ALsizei todo)
+    void process(ALfloat *samples, const size_t todo)
     {
         HFFilter.process(samples, samples, todo);
         LFFilter.process(samples, samples, todo);

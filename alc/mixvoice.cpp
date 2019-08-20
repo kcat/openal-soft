@@ -337,7 +337,7 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 
 
 const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, ALfloat *dst,
-    const ALfloat *src, ALsizei numsamples, int type)
+    const ALfloat *src, const size_t numsamples, int type)
 {
     switch(type)
     {
@@ -769,11 +769,11 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     const al::span<float> nfcsamples{Device->NfcSampleData,
                         static_cast<size_t>(DstBufferSize)};
                     size_t chanoffset{outcount};
-                    using FilterProc = void (NfcFilter::*)(float*,const float*,int);
-                    auto apply_nfc = [voice,&parms,samples,TargetGains,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t outcount) -> void
+                    using FilterProc = void (NfcFilter::*)(float*,const float*,const size_t);
+                    auto apply_nfc = [voice,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t outcount) -> void
                     {
                         if(outcount < 1) return;
-                        (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples, DstBufferSize);
+                        (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples, nfcsamples.size());
                         MixSamples(nfcsamples, voice->mDirect.Buffer.subspan(chanoffset, outcount),
                             parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter,
                             OutPos);

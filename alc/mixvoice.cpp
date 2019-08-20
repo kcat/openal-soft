@@ -476,7 +476,7 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
 
 } // namespace
 
-void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
+void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCcontext *Context, const ALuint SamplesToDo)
 {
     static constexpr ALfloat SilentTarget[MAX_OUTPUT_CHANNELS]{};
 
@@ -507,7 +507,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
                            Resample_<CopyTag,CTag> : voice->mResampler};
 
-    ALsizei Counter{(voice->mFlags&VOICE_IS_FADING) ? SamplesToDo : 0};
+    ALuint Counter{(voice->mFlags&VOICE_IS_FADING) ? SamplesToDo : 0};
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
@@ -549,20 +549,20 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     }
 
     ALsizei buffers_done{0};
-    ALsizei OutPos{0};
+    ALuint OutPos{0u};
     do {
         /* Figure out how many buffer samples will be needed */
-        ALsizei DstBufferSize{SamplesToDo - OutPos};
+        ALuint DstBufferSize{SamplesToDo - OutPos};
 
         /* Calculate the last written dst sample pos. */
-        int64_t DataSize64{DstBufferSize - 1};
+        uint64_t DataSize64{DstBufferSize - 1};
         /* Calculate the last read src sample pos. */
         DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
         /* +1 to get the src sample count, include padding. */
         DataSize64 += 1 + MAX_RESAMPLE_PADDING*2;
 
         auto SrcBufferSize = static_cast<ALuint>(
-            mini64(DataSize64, BUFFERSIZE + MAX_RESAMPLE_PADDING*2 + 1));
+            minu64(DataSize64, BUFFERSIZE + MAX_RESAMPLE_PADDING*2 + 1));
         if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLE_PADDING*2)
         {
             SrcBufferSize = BUFFERSIZE + MAX_RESAMPLE_PADDING*2;
@@ -572,7 +572,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
              */
             DataSize64 = SrcBufferSize - MAX_RESAMPLE_PADDING*2;
             DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
-            DstBufferSize = static_cast<ALsizei>(mini64(DataSize64, DstBufferSize));
+            DstBufferSize = static_cast<ALuint>(minu64(DataSize64, DstBufferSize));
 
             /* Some mixers like having a multiple of 4, so try to give that
              * unless this is the last update.
@@ -652,7 +652,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     auto &AccumSamples = Device->HrtfAccumData;
                     const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
-                    ALsizei fademix{0};
+                    ALuint fademix{0u};
 
                     /* Copy the HRTF history and new input samples into a temp
                      * buffer.
@@ -682,7 +682,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                      */
                     if(Counter && (parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD) && OutPos == 0)
                     {
-                        fademix = mini(DstBufferSize, 128);
+                        fademix = minu(DstBufferSize, 128);
 
                         ALfloat gain{TargetGain};
 
@@ -718,7 +718,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                     if LIKELY(fademix < DstBufferSize)
                     {
-                        const ALsizei todo{DstBufferSize - fademix};
+                        const ALuint todo{DstBufferSize - fademix};
                         ALfloat gain{TargetGain};
 
                         /* Interpolate the target gain if the gain fading lasts
@@ -762,12 +762,10 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         SilentTarget : parms.Gains.Target};
 
                     const size_t outcount{Device->NumChannelsPerOrder[0]};
-                    MixSamples({samples, samples+DstBufferSize},
-                        voice->mDirect.Buffer.first(outcount), parms.Gains.Current, TargetGains,
-                        Counter, OutPos);
+                    MixSamples({samples, DstBufferSize}, voice->mDirect.Buffer.first(outcount),
+                        parms.Gains.Current, TargetGains, Counter, OutPos);
 
-                    const al::span<float> nfcsamples{Device->NfcSampleData,
-                        static_cast<size_t>(DstBufferSize)};
+                    const al::span<float> nfcsamples{Device->NfcSampleData, DstBufferSize};
                     size_t chanoffset{outcount};
                     using FilterProc = void (NfcFilter::*)(float*,const float*,const size_t);
                     auto apply_nfc = [voice,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t outcount) -> void
@@ -787,7 +785,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 {
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
-                    MixSamples({samples, samples+DstBufferSize}, voice->mDirect.Buffer,
+                    MixSamples({samples, DstBufferSize}, voice->mDirect.Buffer,
                         parms.Gains.Current, TargetGains, Counter, OutPos);
                 }
             }
@@ -804,7 +802,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
-                MixSamples({samples, samples+DstBufferSize}, voice->mSend[send].Buffer,
+                MixSamples({samples, DstBufferSize}, voice->mSend[send].Buffer,
                     parms.Gains.Current, TargetGains, Counter, OutPos);
             };
         }
@@ -814,7 +812,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         DataPosFrac &= FRACTIONMASK;
 
         OutPos += DstBufferSize;
-        Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
+        Counter = maxu(DstBufferSize, Counter) - DstBufferSize;
 
         if UNLIKELY(!BufferListItem)
         {

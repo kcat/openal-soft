@@ -279,14 +279,13 @@ void VmorpherState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
             vowelB[2].process(&samplesIn[c][base], mSampleBufferB, td);
             vowelB[3].process(&samplesIn[c][base], mSampleBufferB, td);
 
-            alignas(16) ALfloat samplesBlended[MAX_UPDATE_SAMPLES];
-
-            for (ALsizei i{0};i < td;i++)
-                samplesBlended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
+            alignas(16) ALfloat blended[MAX_UPDATE_SAMPLES];
+            for(ALsizei i{0};i < td;i++)
+                blended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
 
             /* Now, mix the processed sound data to the output. */
-            MixSamples(samplesBlended, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
-                samplesToDo-base, base, td);
+            MixSamples({blended, blended+td}, samplesOut, mChans[c].CurrentGains,
+                mChans[c].TargetGains, samplesToDo-base, base);
         }
 
         base += td;

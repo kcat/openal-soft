@@ -190,8 +190,8 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         mChans[c].Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(mBufferOut, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
-            samplesToDo, 0, samplesToDo);
+        MixSamples({mBufferOut, mBufferOut+samplesToDo}, samplesOut, mChans[c].CurrentGains,
+            mChans[c].TargetGains, samplesToDo, 0);
     }
 }
 

@@ -427,16 +427,16 @@ struct ReverbState final : public EffectState {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
             MixRowSamples(tmpspan, {A2B[c], NUM_LINES}, mEarlySamples[0].data(),
                 mEarlySamples[0].size());
-            MixSamples(mTempLine.data(), samplesOut, mEarly.CurrentGain[c],
-                mEarly.PanGain[c], counter, offset, todo);
+            MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], counter,
+                offset);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
             MixRowSamples(tmpspan, {A2B[c], NUM_LINES}, mLateSamples[0].data(),
                 mLateSamples[0].size());
-            MixSamples(mTempLine.data(), samplesOut, mLate.CurrentGain[c], mLate.PanGain[c],
-                counter, offset, todo);
+            MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], counter,
+                offset);
         }
     }
 
@@ -456,10 +456,10 @@ struct ReverbState final : public EffectState {
              * higher-order output.
              */
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            mAmbiSplitter[0][c].applyHfScale(mTempLine.data(), hfscale, todo);
+            mAmbiSplitter[0][c].applyHfScale(tmpspan.data(), hfscale, todo);
 
-            MixSamples(mTempLine.data(), samplesOut, mEarly.CurrentGain[c],
-                mEarly.PanGain[c], counter, offset, todo);
+            MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], counter,
+                offset);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
@@ -468,10 +468,10 @@ struct ReverbState final : public EffectState {
                 mLateSamples[0].size());
 
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            mAmbiSplitter[1][c].applyHfScale(mTempLine.data(), hfscale, todo);
+            mAmbiSplitter[1][c].applyHfScale(tmpspan.data(), hfscale, todo);
 
-            MixSamples(mTempLine.data(), samplesOut, mLate.CurrentGain[c], mLate.PanGain[c],
-                counter, offset, todo);
+            MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], counter,
+                offset);
         }
     }
 

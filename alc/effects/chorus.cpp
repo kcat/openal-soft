@@ -218,9 +218,8 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
     for(ALsizei base{0};base < samplesToDo;)
     {
         const ALsizei todo = mini(256, samplesToDo-base);
-        ALint moddelays[2][256];
-        alignas(16) ALfloat temps[2][256];
 
+        ALint moddelays[2][256];
         if(mWaveform == WaveForm::Sinusoid)
         {
             GetSinusoidDelays(moddelays[0], mLfoOffset, mLfoRange, mLfoScale, mDepth, mDelay,
@@ -237,6 +236,7 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         }
         mLfoOffset = (mLfoOffset+todo) % mLfoRange;
 
+        alignas(16) ALfloat temps[2][256];
         for(ALsizei i{0};i < todo;i++)
         {
             // Feed the buffer's input first (necessary for delays < 1).
@@ -262,8 +262,8 @@ void ChorusState::process(const ALsizei samplesToDo, const FloatBufferLine *REST
         }
 
         for(ALsizei c{0};c < 2;c++)
-            MixSamples(temps[c], samplesOut, mGains[c].Current, mGains[c].Target, samplesToDo-base,
-                base, todo);
+            MixSamples({temps[c], temps[c]+todo}, samplesOut, mGains[c].Current, mGains[c].Target,
+                samplesToDo-base, base);
 
         base += todo;
     }

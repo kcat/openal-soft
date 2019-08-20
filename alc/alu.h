@@ -314,9 +314,9 @@ struct ALvoice {
 };
 
 
-using MixerFunc = void(*)(const ALfloat *InSamples, const al::span<FloatBufferLine> OutBuffer,
-    ALfloat *CurrentGains, const ALfloat *TargetGains, const ALsizei Counter, const ALsizei OutPos,
-    const ALsizei BufferSize);
+using MixerFunc = void(*)(const al::span<const float> InSamples,
+    const al::span<FloatBufferLine> OutBuffer, float *CurrentGains, const float *TargetGains,
+    const ALsizei Counter, const ALsizei OutPos);
 using RowMixerFunc = void(*)(const al::span<float> OutBuffer, const al::span<const float> Gains,
     const float *InSamples, const size_t InStride);
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,

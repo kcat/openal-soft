@@ -88,8 +88,8 @@ void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const E
 
 void DedicatedState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
 {
-    MixSamples(samplesIn[0].data(), samplesOut, mCurrentGains, mTargetGains, samplesToDo, 0,
-        samplesToDo);
+    MixSamples({samplesIn[0].data(), samplesIn[0].data()+samplesToDo}, samplesOut, mCurrentGains,
+        mTargetGains, samplesToDo, 0);
 }
 
 

@@ -142,31 +142,29 @@ void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 
 template<>
-void Mix_<CTag>(const float *InSamples, const al::span<FloatBufferLine> OutBuffer,
-    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos,
-    const ALsizei BufferSize)
+void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
+    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos)
 {
-    ASSUME(BufferSize > 0);
-
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
+    const bool reached_target{InSamples.size() >= static_cast<size_t>(Counter)};
+    const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
     for(FloatBufferLine &output : OutBuffer)
     {
-        ALfloat *RESTRICT dst{output.data()+OutPos};
+        ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
         ALfloat gain{*CurrentGains};
         const ALfloat diff{*TargetGains - gain};
 
-        ALsizei pos{0};
+        auto in_iter = InSamples.begin();
         if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
         {
-            ALsizei minsize{mini(BufferSize, Counter)};
             const ALfloat step{diff * delta};
             ALfloat step_count{0.0f};
-            for(;pos < minsize;pos++)
+            while(in_iter != min_end)
             {
-                dst[pos] += InSamples[pos] * (gain + step*step_count);
+                *(dst++) += *(in_iter++) * (gain + step*step_count);
                 step_count += 1.0f;
             }
-            if(pos == Counter)
+            if(reached_target)
                 gain = *TargetGains;
             else
                 gain += step*step_count;
@@ -177,8 +175,8 @@ void Mix_<CTag>(const float *InSamples, const al::span<FloatBufferLine> OutBuffe
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        for(;pos < BufferSize;pos++)
-            dst[pos] += InSamples[pos]*gain;
+        while(in_iter != InSamples.end())
+            *(dst++) += *(in_iter++) * gain;
     }
 }
 

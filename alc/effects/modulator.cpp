@@ -160,8 +160,8 @@ void ModulatorState::process(const ALsizei samplesToDo, const FloatBufferLine *R
             for(i = 0;i < td;i++)
                 temps[i] *= modsamples[i];
 
-            MixSamples(temps, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
-                samplesToDo-base, base, td);
+            MixSamples({temps, temps+td}, samplesOut, mChans[c].CurrentGains,
+                mChans[c].TargetGains, samplesToDo-base, base);
         }
 
         base += td;

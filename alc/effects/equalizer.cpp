@@ -167,8 +167,8 @@ void EqualizerState::process(const ALsizei samplesToDo, const FloatBufferLine *R
         mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
         mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
 
-        MixSamples(mSampleBuffer, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
-            samplesToDo, 0, samplesToDo);
+        MixSamples({mSampleBuffer, mSampleBuffer+samplesToDo}, samplesOut, mChans[c].CurrentGains,
+            mChans[c].TargetGains, samplesToDo, 0);
     }
 }
 

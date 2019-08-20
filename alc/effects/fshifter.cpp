@@ -222,8 +222,8 @@ void FshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
         }
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(BufferOut, samplesOut, mGains[c].Current, mGains[c].Target,
-            maxi(samplesToDo, 512), 0, samplesToDo);
+        MixSamples({BufferOut, BufferOut+samplesToDo}, samplesOut, mGains[c].Current,
+            mGains[c].Target, maxi(samplesToDo, 512), 0);
     }
 }
 

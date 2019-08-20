@@ -285,8 +285,8 @@ void PshifterState::process(const ALsizei samplesToDo, const FloatBufferLine *RE
     mCount = count;
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(bufferOut, samplesOut, mCurrentGains, mTargetGains, maxi(samplesToDo, 512), 0,
-        samplesToDo);
+    MixSamples({bufferOut, bufferOut+samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
+        maxi(samplesToDo, 512), 0);
 }
 
 

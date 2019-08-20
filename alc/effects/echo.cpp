@@ -156,8 +156,8 @@ void EchoState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRI
     mOffset = offset;
 
     for(ALsizei c{0};c < 2;c++)
-        MixSamples(mTempBuffer[c], samplesOut, mGains[c].Current, mGains[c].Target, samplesToDo, 0,
-            samplesToDo);
+        MixSamples({mTempBuffer[c], mTempBuffer[c]+samplesToDo}, samplesOut, mGains[c].Current,
+            mGains[c].Target, samplesToDo, 0);
 }
 
 

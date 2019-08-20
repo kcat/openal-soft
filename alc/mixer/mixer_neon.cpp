@@ -189,27 +189,27 @@ void MixDirectHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
 
 
 template<>
-void Mix_<NEONTag>(const float *InSamples, const al::span<FloatBufferLine> OutBuffer,
-    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos,
-    const ALsizei BufferSize)
+void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
+    float *CurrentGains, const float *TargetGains, const ALsizei Counter, const ALsizei OutPos)
 {
-    ASSUME(BufferSize > 0);
-
-    const ALfloat delta{(Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f};
+    const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
+    const bool reached_target{InSamples.size() >= static_cast<size_t>(Counter)};
+    const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
+    const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3) +
+        InSamples.begin();
     for(FloatBufferLine &output : OutBuffer)
     {
         ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
         ALfloat gain{*CurrentGains};
         const ALfloat diff{*TargetGains - gain};
 
-        ALsizei pos{0};
+        auto in_iter = InSamples.begin();
         if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
         {
-            ALsizei minsize{mini(BufferSize, Counter)};
             const ALfloat step{diff * delta};
             ALfloat step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if LIKELY(minsize > 3)
+            if(ptrdiff_t todo{(min_end-in_iter) >> 2})
             {
                 const float32x4_t four4{vdupq_n_f32(4.0f)};
                 const float32x4_t step4{vdupq_n_f32(step)};
@@ -220,15 +220,13 @@ void Mix_<NEONTag>(const float *InSamples, const al::span<FloatBufferLine> OutBu
                     vsetq_lane_f32(3.0f, vdupq_n_f32(0.0f), 3),
                     2), 1), 0
                 )};
-                ALsizei todo{minsize >> 2};
-
                 do {
-                    const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-                    float32x4_t dry4 = vld1q_f32(&dst[pos]);
+                    const float32x4_t val4 = vld1q_f32(in_iter);
+                    float32x4_t dry4 = vld1q_f32(dst);
                     dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
                     step_count4 = vaddq_f32(step_count4, four4);
-                    vst1q_f32(&dst[pos], dry4);
-                    pos += 4;
+                    vst1q_f32(dst, dry4);
+                    in_iter += 4; dst += 4;
                 } while(--todo);
                 /* NOTE: step_count4 now represents the next four counts after
                  * the last four mixed samples, so the lowest element
@@ -237,41 +235,39 @@ void Mix_<NEONTag>(const float *InSamples, const al::span<FloatBufferLine> OutBu
                 step_count = vgetq_lane_f32(step_count4, 0);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            for(;pos < minsize;pos++)
+            while(in_iter != min_end)
             {
-                dst[pos] += InSamples[pos]*(gain + step*step_count);
+                *(dst++) += *(in_iter++) * (gain + step*step_count);
                 step_count += 1.0f;
             }
-            if(pos == Counter)
+            if(reached_target)
                 gain = *TargetGains;
             else
                 gain += step*step_count;
             *CurrentGains = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            minsize = mini(BufferSize, (pos+3)&~3);
-            for(;pos < minsize;pos++)
-                dst[pos] += InSamples[pos]*gain;
+            while(in_iter != aligned_end)
+                *(dst++) += *(in_iter++) * gain;
         }
         ++CurrentGains;
         ++TargetGains;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        if LIKELY(BufferSize-pos > 3)
+        if(ptrdiff_t todo{(InSamples.end()-in_iter) >> 2})
         {
-            ALsizei todo{(BufferSize-pos) >> 2};
             const float32x4_t gain4 = vdupq_n_f32(gain);
             do {
-                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-                float32x4_t dry4 = vld1q_f32(&dst[pos]);
+                const float32x4_t val4 = vld1q_f32(in_iter);
+                float32x4_t dry4 = vld1q_f32(dst);
                 dry4 = vmlaq_f32(dry4, val4, gain4);
-                vst1q_f32(&dst[pos], dry4);
-                pos += 4;
+                vst1q_f32(dst, dry4);
+                in_iter += 4; dst += 4;
             } while(--todo);
         }
-        for(;pos < BufferSize;pos++)
-            dst[pos] += InSamples[pos]*gain;
+        while(in_iter != InSamples.end())
+            *(dst++) += *(in_iter++) * gain;
     }
 }
 

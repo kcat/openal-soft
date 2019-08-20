@@ -159,6 +159,7 @@ void ALCdevice::ProcessHrtf(const ALsizei SamplesToDo)
     const int ridx{RealOut.ChannelIndex[FrontRight]};
     ASSUME(lidx >= 0 && ridx >= 0);
 
+    ASSUME(SamplesToDo >= 0);
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
         mHrtfState.get(), SamplesToDo);
 }

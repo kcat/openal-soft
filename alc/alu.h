@@ -320,13 +320,13 @@ using RowMixerFunc = void(*)(const al::span<float> OutBuffer, const al::span<con
     const float *InSamples, const size_t InStride);
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    MixHrtfFilter *hrtfparams, const ALsizei BufferSize);
+    MixHrtfFilter *hrtfparams, const size_t BufferSize);
 using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const ALsizei BufferSize);
+    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
-    const ALsizei BufferSize);
+    const size_t BufferSize);
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */

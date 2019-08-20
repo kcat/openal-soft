@@ -101,7 +101,7 @@ const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat 
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 
-static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
+static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
     const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
 {
     ASSUME(IrSize >= 2);
@@ -115,7 +115,7 @@ static inline void ApplyCoeffs(ALsizei /*Offset*/, float2 *RESTRICT Values, cons
 template<>
 void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    MixHrtfFilter *hrtfparams, const ALsizei BufferSize)
+    MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
         hrtfparams, BufferSize);
@@ -124,7 +124,7 @@ void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 template<>
 void MixHrtfBlend_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *AccumSamples, const ALsizei OutPos, const ALsizei IrSize,
-    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const ALsizei BufferSize)
+    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
         oldparams, newparams, BufferSize);
@@ -133,7 +133,7 @@ void MixHrtfBlend_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 template<>
 void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
-    const ALsizei BufferSize)
+    const size_t BufferSize)
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize);
 }

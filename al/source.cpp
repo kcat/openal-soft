@@ -3302,7 +3302,7 @@ ALsource::~ALsource()
     {
         std::unique_ptr<ALbufferlistitem> head{BufferList};
         BufferList = head->mNext.load(std::memory_order_relaxed);
-        if(ALbuffer *buffer{BufferList->mBuffer}) DecrementRef(buffer->ref);
+        if(ALbuffer *buffer{head->mBuffer}) DecrementRef(buffer->ref);
     }
     queue = nullptr;
 

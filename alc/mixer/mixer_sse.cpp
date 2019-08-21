@@ -34,31 +34,28 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-        ALsizei offset{m*pi*4};
-        const __m128 *fil{reinterpret_cast<const __m128*>(filter + offset)}; offset += m;
-        const __m128 *scd{reinterpret_cast<const __m128*>(filter + offset)}; offset += m;
-        const __m128 *phd{reinterpret_cast<const __m128*>(filter + offset)}; offset += m;
-        const __m128 *spd{reinterpret_cast<const __m128*>(filter + offset)};
-
         // Apply the scale and phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
         {
-            const ALsizei count{m >> 2};
             const __m128 pf4{_mm_set1_ps(pf)};
-
-            ASSUME(count > 0);
+            const float *fil{filter + m*pi*4};
+            const float *scd{fil + m};
+            const float *phd{scd + m};
+            const float *spd{phd + m};
+            ALsizei td{m >> 2};
+            size_t j{0u};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
-            for(ALsizei j{0};j < count;j++)
-            {
+            do {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const __m128 f4 = MLA4(
-                    MLA4(fil[j], sf4, scd[j]),
-                    pf4, MLA4(phd[j], sf4, spd[j])
-                );
+                    MLA4(_mm_load_ps(fil), sf4, _mm_load_ps(scd)),
+                    pf4, MLA4(_mm_load_ps(phd), sf4, _mm_load_ps(spd)));
+                fil += 4; scd += 4; phd += 4; spd += 4;
                 /* r += f*src */
-                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j*4]));
-            }
+                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
+                j += 4;
+            } while(--td);
 #undef MLA4
         }
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));

@@ -76,13 +76,9 @@ template<>
 const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALfloat *RESTRICT src,
     ALsizei frac, ALint increment, const al::span<float> dst)
 {
-    const ALfloat *const filter = state->bsinc.filter;
-    const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
-    const ALsizei m = state->bsinc.m;
-    const float32x4_t *fil, *scd, *phd, *spd;
-    ALsizei pi, j, offset;
-    float32x4_t r4;
-    ALfloat pf;
+    const ALfloat *const filter{state->bsinc.filter};
+    const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
+    const ALsizei m{state->bsinc.m};
 
     ASSUME(m > 0);
     ASSUME(increment > 0);
@@ -93,34 +89,32 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
     {
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
-        pi = frac >> FRAC_PHASE_BITDIFF;
-        pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
+        const ALsizei pi{frac >> FRAC_PHASE_BITDIFF};
+        const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
-
-        offset = m*pi*4;
-        fil = (const float32x4_t*)(filter + offset); offset += m;
-        scd = (const float32x4_t*)(filter + offset); offset += m;
-        phd = (const float32x4_t*)(filter + offset); offset += m;
-        spd = (const float32x4_t*)(filter + offset);
 
         // Apply the scale and phase interpolated filter.
         r4 = vdupq_n_f32(0.0f);
         {
             const ALsizei count = m >> 2;
             const float32x4_t pf4 = vdupq_n_f32(pf);
+            const float *fil{filter + m*pi*4};
+            const float *scd{fil + m};
+            const float *phd{scd + m};
+            const float *spd{phd + m};
+            ALsizei td{m >> 2};
+            size_t j{0u};
 
-            ASSUME(count > 0);
-
-            for(j = 0;j < count;j++)
-            {
+            do {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const float32x4_t f4 = vmlaq_f32(
-                    vmlaq_f32(fil[j], sf4, scd[j]),
-                    pf4, vmlaq_f32(phd[j], sf4, spd[j])
-                );
+                    vmlaq_f32(vld1q_f32(fil), sf4, vld1q_f32(scd)),
+                    pf4, vmlaq_f32(vld1q_f32(phd), sf4, vld1q_f32(spd)));
+                fil += 4; scd += 4; phd += 4; spd += 4;
                 /* r += f*src */
-                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j*4]));
-            }
+                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
+                j += 4;
+            } while(--td);
         }
         r4 = vaddq_f32(r4, vcombine_f32(vrev64_f32(vget_high_f32(r4)),
                                         vrev64_f32(vget_low_f32(r4))));

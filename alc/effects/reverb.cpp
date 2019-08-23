@@ -482,6 +482,12 @@ struct ReverbState final : public EffectState {
     void update3DPanning(const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan,
         const ALfloat earlyGain, const ALfloat lateGain, const EffectTarget &target);
 
+    void earlyUnfaded(const size_t offset, const size_t todo, const size_t base);
+    void earlyFaded(const size_t offset, const size_t todo, const ALfloat fade);
+
+    void lateUnfaded(const size_t offset, const size_t todo, const size_t base);
+    void lateFaded(const size_t offset, const size_t todo, const ALfloat fade);
+
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
@@ -1188,14 +1194,13 @@ void VecAllpass::processFaded(const al::span<ReverbUpdateLine,NUM_LINES> samples
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-void EarlyReflection_Unfaded(ReverbState *State, const size_t offset, const size_t todo,
-    const size_t base)
+void ReverbState::earlyUnfaded(const size_t offset, const size_t todo, const size_t base)
 {
-    const al::span<ReverbUpdateLine,NUM_LINES> temps{State->mTempSamples};
-    const DelayLineI early_delay{State->mEarly.Delay};
-    const DelayLineI main_delay{State->mDelay};
-    const ALfloat mixX{State->mMixX};
-    const ALfloat mixY{State->mMixY};
+    const al::span<ReverbUpdateLine,NUM_LINES> temps{mTempSamples};
+    const DelayLineI early_delay{mEarly.Delay};
+    const DelayLineI main_delay{mDelay};
+    const ALfloat mixX{mMixX};
+    const ALfloat mixY{mMixY};
 
     ASSUME(todo > 0);
 
@@ -1204,8 +1209,8 @@ void EarlyReflection_Unfaded(ReverbState *State, const size_t offset, const size
      */
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        size_t early_delay_tap{offset - State->mEarlyDelayTap[j][0]};
-        const ALfloat coeff{State->mEarlyDelayCoeff[j][0]};
+        size_t early_delay_tap{offset - mEarlyDelayTap[j][0]};
+        const ALfloat coeff{mEarlyDelayCoeff[j][0]};
         for(size_t i{0u};i < todo;)
         {
             early_delay_tap &= main_delay.Mask;
@@ -1219,16 +1224,16 @@ void EarlyReflection_Unfaded(ReverbState *State, const size_t offset, const size
     /* Apply a vector all-pass, to help color the initial reflections based on
      * the diffusion strength.
      */
-    State->mEarly.VecAp.processUnfaded(temps, offset, mixX, mixY, todo);
+    mEarly.VecAp.processUnfaded(temps, offset, mixX, mixY, todo);
 
     /* Apply a delay and bounce to generate secondary reflections, combine with
      * the primary reflections and write out the result for mixing.
      */
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        size_t feedb_tap{offset - State->mEarly.Offset[j][0]};
-        const ALfloat feedb_coeff{State->mEarly.Coeff[j][0]};
-        float *out = State->mEarlySamples[j].data() + base;
+        size_t feedb_tap{offset - mEarly.Offset[j][0]};
+        const ALfloat feedb_coeff{mEarly.Coeff[j][0]};
+        float *out = mEarlySamples[j].data() + base;
 
         for(size_t i{0u};i < todo;)
         {
@@ -1247,28 +1252,26 @@ void EarlyReflection_Unfaded(ReverbState *State, const size_t offset, const size
      * stage to pick up at the appropriate time, appplying a scatter and
      * bounce to improve the initial diffusion in the late reverb.
      */
-    const size_t late_feed_tap{offset - State->mLateFeedTap};
-    const al::span<const ReverbUpdateLine,NUM_LINES> out{State->mEarlySamples};
-    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, out, todo);
+    const size_t late_feed_tap{offset - mLateFeedTap};
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, base, mEarlySamples, todo);
 }
-void EarlyReflection_Faded(ReverbState *State, const size_t offset, const size_t todo,
-    const ALfloat fade)
+void ReverbState::earlyFaded(const size_t offset, const size_t todo, const ALfloat fade)
 {
-    const al::span<ReverbUpdateLine,NUM_LINES> temps{State->mTempSamples};
-    const DelayLineI early_delay{State->mEarly.Delay};
-    const DelayLineI main_delay{State->mDelay};
-    const ALfloat mixX{State->mMixX};
-    const ALfloat mixY{State->mMixY};
+    const al::span<ReverbUpdateLine,NUM_LINES> temps{mTempSamples};
+    const DelayLineI early_delay{mEarly.Delay};
+    const DelayLineI main_delay{mDelay};
+    const ALfloat mixX{mMixX};
+    const ALfloat mixY{mMixY};
 
     ASSUME(todo > 0);
 
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        size_t early_delay_tap0{offset - State->mEarlyDelayTap[j][0]};
-        size_t early_delay_tap1{offset - State->mEarlyDelayTap[j][1]};
-        const ALfloat oldCoeff{State->mEarlyDelayCoeff[j][0]};
+        size_t early_delay_tap0{offset - mEarlyDelayTap[j][0]};
+        size_t early_delay_tap1{offset - mEarlyDelayTap[j][1]};
+        const ALfloat oldCoeff{mEarlyDelayCoeff[j][0]};
         const ALfloat oldCoeffStep{-oldCoeff / FADE_SAMPLES};
-        const ALfloat newCoeffStep{State->mEarlyDelayCoeff[j][1] / FADE_SAMPLES};
+        const ALfloat newCoeffStep{mEarlyDelayCoeff[j][1] / FADE_SAMPLES};
         ALfloat fadeCount{fade};
 
         for(size_t i{0u};i < todo;)
@@ -1287,16 +1290,16 @@ void EarlyReflection_Faded(ReverbState *State, const size_t offset, const size_t
         }
     }
 
-    State->mEarly.VecAp.processFaded(temps, offset, mixX, mixY, fade, todo);
+    mEarly.VecAp.processFaded(temps, offset, mixX, mixY, fade, todo);
 
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        size_t feedb_tap0{offset - State->mEarly.Offset[j][0]};
-        size_t feedb_tap1{offset - State->mEarly.Offset[j][1]};
-        const ALfloat feedb_oldCoeff{State->mEarly.Coeff[j][0]};
+        size_t feedb_tap0{offset - mEarly.Offset[j][0]};
+        size_t feedb_tap1{offset - mEarly.Offset[j][1]};
+        const ALfloat feedb_oldCoeff{mEarly.Coeff[j][0]};
         const ALfloat feedb_oldCoeffStep{-feedb_oldCoeff / FADE_SAMPLES};
-        const ALfloat feedb_newCoeffStep{State->mEarly.Coeff[j][1] / FADE_SAMPLES};
-        float *out = State->mEarlySamples[j].data();
+        const ALfloat feedb_newCoeffStep{mEarly.Coeff[j][1] / FADE_SAMPLES};
+        float *out = mEarlySamples[j].data();
         ALfloat fadeCount{fade};
 
         for(size_t i{0u};i < todo;)
@@ -1319,9 +1322,8 @@ void EarlyReflection_Faded(ReverbState *State, const size_t offset, const size_t
     for(size_t j{0u};j < NUM_LINES;j++)
         early_delay.write(offset, NUM_LINES-1-j, temps[j].data(), todo);
 
-    const size_t late_feed_tap{offset - State->mLateFeedTap};
-    const al::span<const ReverbUpdateLine,NUM_LINES> out{State->mEarlySamples};
-    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, 0, out, todo);
+    const size_t late_feed_tap{offset - mLateFeedTap};
+    VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, 0, mEarlySamples, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1338,14 +1340,13 @@ void EarlyReflection_Faded(ReverbState *State, const size_t offset, const size_t
  * Two variations are made, one for for transitional (cross-faded) delay line
  * processing and one for non-transitional processing.
  */
-void LateReverb_Unfaded(ReverbState *State, const size_t offset, const size_t todo,
-    const size_t base)
+void ReverbState::lateUnfaded(const size_t offset, const size_t todo, const size_t base)
 {
-    const al::span<ReverbUpdateLine,NUM_LINES> temps{State->mTempSamples};
-    const DelayLineI late_delay{State->mLate.Delay};
-    const DelayLineI main_delay{State->mDelay};
-    const ALfloat mixX{State->mMixX};
-    const ALfloat mixY{State->mMixY};
+    const al::span<ReverbUpdateLine,NUM_LINES> temps{mTempSamples};
+    const DelayLineI late_delay{mLate.Delay};
+    const DelayLineI main_delay{mDelay};
+    const ALfloat mixX{mMixX};
+    const ALfloat mixY{mMixY};
 
     ASSUME(todo > 0);
 
@@ -1354,10 +1355,10 @@ void LateReverb_Unfaded(ReverbState *State, const size_t offset, const size_t to
      */
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        size_t late_delay_tap{offset - State->mLateDelayTap[j][0]};
-        size_t late_feedb_tap{offset - State->mLate.Offset[j][0]};
-        const ALfloat midGain{State->mLate.T60[j].MidGain[0]};
-        const ALfloat densityGain{State->mLate.DensityGain[0] * midGain};
+        size_t late_delay_tap{offset - mLateDelayTap[j][0]};
+        size_t late_feedb_tap{offset - mLate.Offset[j][0]};
+        const ALfloat midGain{mLate.T60[j].MidGain[0]};
+        const ALfloat densityGain{mLate.DensityGain[0] * midGain};
         for(size_t i{0u};i < todo;)
         {
             late_delay_tap &= main_delay.Mask;
@@ -1370,44 +1371,43 @@ void LateReverb_Unfaded(ReverbState *State, const size_t offset, const size_t to
                     late_delay.Line[late_feedb_tap++][j]*midGain;
             } while(--td);
         }
-        State->mLate.T60[j].process(temps[j].data(), todo);
+        mLate.T60[j].process(temps[j].data(), todo);
     }
 
     /* Apply a vector all-pass to improve micro-surface diffusion, and write
      * out the results for mixing.
      */
-    State->mLate.VecAp.processUnfaded(temps, offset, mixX, mixY, todo);
+    mLate.VecAp.processUnfaded(temps, offset, mixX, mixY, todo);
     for(size_t j{0u};j < NUM_LINES;j++)
-        std::copy_n(temps[j].begin(), todo, State->mLateSamples[j].begin() + base);
+        std::copy_n(temps[j].begin(), todo, mLateSamples[j].begin() + base);
 
     /* Finally, scatter and bounce the results to refeed the feedback buffer. */
     VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, temps, todo);
 }
-void LateReverb_Faded(ReverbState *State, const size_t offset, const size_t todo,
-    const ALfloat fade)
+void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloat fade)
 {
-    const al::span<ReverbUpdateLine,NUM_LINES> temps{State->mTempSamples};
-    const DelayLineI late_delay{State->mLate.Delay};
-    const DelayLineI main_delay{State->mDelay};
-    const ALfloat mixX{State->mMixX};
-    const ALfloat mixY{State->mMixY};
+    const al::span<ReverbUpdateLine,NUM_LINES> temps{mTempSamples};
+    const DelayLineI late_delay{mLate.Delay};
+    const DelayLineI main_delay{mDelay};
+    const ALfloat mixX{mMixX};
+    const ALfloat mixY{mMixY};
 
     ASSUME(todo > 0);
 
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        const ALfloat oldMidGain{State->mLate.T60[j].MidGain[0]};
-        const ALfloat midGain{State->mLate.T60[j].MidGain[1]};
+        const ALfloat oldMidGain{mLate.T60[j].MidGain[0]};
+        const ALfloat midGain{mLate.T60[j].MidGain[1]};
         const ALfloat oldMidStep{-oldMidGain / FADE_SAMPLES};
         const ALfloat midStep{midGain / FADE_SAMPLES};
-        const ALfloat oldDensityGain{State->mLate.DensityGain[0] * oldMidGain};
-        const ALfloat densityGain{State->mLate.DensityGain[1] * midGain};
+        const ALfloat oldDensityGain{mLate.DensityGain[0] * oldMidGain};
+        const ALfloat densityGain{mLate.DensityGain[1] * midGain};
         const ALfloat oldDensityStep{-oldDensityGain / FADE_SAMPLES};
         const ALfloat densityStep{densityGain / FADE_SAMPLES};
-        size_t late_delay_tap0{offset - State->mLateDelayTap[j][0]};
-        size_t late_delay_tap1{offset - State->mLateDelayTap[j][1]};
-        size_t late_feedb_tap0{offset - State->mLate.Offset[j][0]};
-        size_t late_feedb_tap1{offset - State->mLate.Offset[j][1]};
+        size_t late_delay_tap0{offset - mLateDelayTap[j][0]};
+        size_t late_delay_tap1{offset - mLateDelayTap[j][1]};
+        size_t late_feedb_tap0{offset - mLate.Offset[j][0]};
+        size_t late_feedb_tap1{offset - mLate.Offset[j][1]};
         ALfloat fadeCount{fade};
 
         for(size_t i{0u};i < todo;)
@@ -1432,12 +1432,12 @@ void LateReverb_Faded(ReverbState *State, const size_t offset, const size_t todo
                     late_delay.Line[late_feedb_tap1++][j]*gfade1;
             } while(--td);
         }
-        State->mLate.T60[j].process(temps[j].data(), todo);
+        mLate.T60[j].process(temps[j].data(), todo);
     }
 
-    State->mLate.VecAp.processFaded(temps, offset, mixX, mixY, fade, todo);
+    mLate.VecAp.processFaded(temps, offset, mixX, mixY, fade, todo);
     for(size_t j{0u};j < NUM_LINES;j++)
-        std::copy_n(temps[j].begin(), todo, State->mLateSamples[j].begin());
+        std::copy_n(temps[j].begin(), todo, mLateSamples[j].begin());
 
     VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, 0, temps, todo);
 }
@@ -1482,8 +1482,8 @@ void ReverbState::process(const size_t samplesToDo, const FloatBufferLine *RESTR
             auto fade = static_cast<ALfloat>(fadeCount);
 
             /* Generate cross-faded early reflections and late reverb. */
-            EarlyReflection_Faded(this, offset, tofade, fade);
-            LateReverb_Faded(this, offset, tofade, fade);
+            earlyFaded(offset, tofade, fade);
+            lateFaded(offset, tofade, fade);
 
             /* Step forward by amount faded. */
             samples_done += tofade;
@@ -1512,8 +1512,8 @@ void ReverbState::process(const size_t samplesToDo, const FloatBufferLine *RESTR
         {
             /* Generate non-faded early reflections and late reverb. */
             const size_t remaining{todo - samples_done};
-            EarlyReflection_Unfaded(this, offset, remaining, samples_done);
-            LateReverb_Unfaded(this, offset, remaining, samples_done);
+            earlyUnfaded(offset, remaining, samples_done);
+            lateUnfaded(offset, remaining, samples_done);
             offset += remaining;
         }
 

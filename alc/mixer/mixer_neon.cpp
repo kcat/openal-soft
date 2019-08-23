@@ -94,10 +94,9 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
 #undef FRAC_PHASE_BITDIFF
 
         // Apply the scale and phase interpolated filter.
-        r4 = vdupq_n_f32(0.0f);
+        float32x4_t r4{vdupq_n_f32(0.0f)};
         {
-            const ALsizei count = m >> 2;
-            const float32x4_t pf4 = vdupq_n_f32(pf);
+            const float32x4_t pf4{vdupq_n_f32(pf)};
             const float *fil{filter + m*pi*4};
             const float *scd{fil + m};
             const float *phd{scd + m};

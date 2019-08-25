@@ -146,7 +146,7 @@ BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
 
 
 void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
-    const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
+    const FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -162,7 +162,7 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         {
             if LIKELY(enabled&1)
             {
-                const al::span<float> outspan{outbuf.data(), outbuf.data()+SamplesToDo};
+                const al::span<float> outspan{outbuf.data(), SamplesToDo};
                 MixRowSamples(outspan, {(*mixmtx)[sHFBand], mNumChannels}, mSamplesHF->data(),
                     mSamplesHF->size());
                 MixRowSamples(outspan, {(*mixmtx)[sLFBand], mNumChannels}, mSamplesLF->data(),
@@ -179,7 +179,7 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         for(FloatBufferLine &outbuf : OutBuffer)
         {
             if LIKELY(enabled&1)
-                MixRowSamples({outbuf.data(), outbuf.data()+SamplesToDo}, {*mixmtx, mNumChannels},
+                MixRowSamples({outbuf.data(), SamplesToDo}, {*mixmtx, mNumChannels},
                     InSamples->data(), InSamples->size());
             ++mixmtx;
             enabled >>= 1;

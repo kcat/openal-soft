@@ -303,7 +303,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     /* Stereo-to-binaural filter */
     std::unique_ptr<bs2b> Bs2b;
 
-    using PostProc = void(ALCdevice::*)(const ALsizei SamplesToDo);
+    using PostProc = void(ALCdevice::*)(const size_t SamplesToDo);
     PostProc PostProcess{nullptr};
 
     std::unique_ptr<FrontStablizer> Stablizer;
@@ -344,12 +344,12 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
     ALsizei frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
 
-    void ProcessHrtf(const ALsizei SamplesToDo);
-    void ProcessAmbiDec(const ALsizei SamplesToDo);
-    void ProcessUhj(const ALsizei SamplesToDo);
-    void ProcessBs2b(const ALsizei SamplesToDo);
+    void ProcessHrtf(const size_t SamplesToDo);
+    void ProcessAmbiDec(const size_t SamplesToDo);
+    void ProcessUhj(const size_t SamplesToDo);
+    void ProcessBs2b(const size_t SamplesToDo);
 
-    inline void postProcess(const ALsizei SamplesToDo)
+    inline void postProcess(const size_t SamplesToDo)
     { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
 
     DEF_NEWDEL(ALCdevice)

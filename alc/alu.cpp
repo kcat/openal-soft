@@ -152,24 +152,23 @@ void aluInit(void)
 }
 
 
-void ALCdevice::ProcessHrtf(const ALsizei SamplesToDo)
+void ALCdevice::ProcessHrtf(const size_t SamplesToDo)
 {
     /* HRTF is stereo output only. */
     const int lidx{RealOut.ChannelIndex[FrontLeft]};
     const int ridx{RealOut.ChannelIndex[FrontRight]};
     ASSUME(lidx >= 0 && ridx >= 0);
 
-    ASSUME(SamplesToDo >= 0);
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
         mHrtfState.get(), SamplesToDo);
 }
 
-void ALCdevice::ProcessAmbiDec(const ALsizei SamplesToDo)
+void ALCdevice::ProcessAmbiDec(const size_t SamplesToDo)
 {
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 }
 
-void ALCdevice::ProcessUhj(const ALsizei SamplesToDo)
+void ALCdevice::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
     const int lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -181,7 +180,7 @@ void ALCdevice::ProcessUhj(const ALsizei SamplesToDo)
         SamplesToDo);
 }
 
-void ALCdevice::ProcessBs2b(const ALsizei SamplesToDo)
+void ALCdevice::ProcessBs2b(const size_t SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);

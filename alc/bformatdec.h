@@ -50,7 +50,7 @@ public:
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,
-        const ALsizei SamplesToDo);
+        const size_t SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALsizei in_order,

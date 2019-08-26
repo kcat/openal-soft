@@ -113,7 +113,7 @@ class DistanceComp {
 public:
     struct DistData {
         ALfloat Gain{1.0f};
-        ALsizei Length{0}; /* Valid range is [0...MAX_DELAY_LENGTH). */
+        ALuint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
         ALfloat *Buffer{nullptr};
     };
 

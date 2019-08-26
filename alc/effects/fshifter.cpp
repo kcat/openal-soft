@@ -85,7 +85,7 @@ struct FshifterState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(FshifterState)
 };
@@ -160,7 +160,7 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }
 
-void FshifterState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void FshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     static constexpr complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = mBufferOut;

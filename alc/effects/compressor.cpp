@@ -51,7 +51,7 @@ struct CompressorState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(CompressorState)
 };
@@ -85,7 +85,7 @@ void CompressorState::update(const ALCcontext*, const ALeffectslot *slot, const 
     }
 }
 
-void CompressorState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void CompressorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -134,10 +134,10 @@ void CompressorState::process(const size_t samplesToDo, const FloatBufferLine *R
         mEnvFollower = env;
 
         /* Now compress the signal amplitude to output. */
-        ASSUME(numInput > 0);
-        for(ALsizei j{0};j < numInput;j++)
+        auto changains = std::addressof(mGain[0]);
+        for(const auto &input : samplesIn)
         {
-            const ALfloat *outgains{mGain[j]};
+            const ALfloat *outgains{*(changains++)};
             for(FloatBufferLine &output : samplesOut)
             {
                 const ALfloat gain{*(outgains++)};
@@ -145,7 +145,7 @@ void CompressorState::process(const size_t samplesToDo, const FloatBufferLine *R
                     continue;
 
                 for(size_t i{0u};i < td;i++)
-                    output[base+i] += samplesIn[j][base+i] * gains[i] * gain;
+                    output[base+i] += input[base+i] * gains[i] * gain;
             }
         }
 

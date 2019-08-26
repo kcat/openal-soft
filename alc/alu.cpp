@@ -1416,8 +1416,7 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo, slot->Wet.Buffer.data(),
-                static_cast<ALsizei>(slot->Wet.Buffer.size()), state->mOutTarget);
+            state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
         }
     );
 }

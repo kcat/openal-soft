@@ -93,7 +93,7 @@ struct EqualizerState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(EqualizerState)
 };
@@ -157,18 +157,19 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void EqualizerState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    ASSUME(numInput > 0);
-    for(ALsizei c{0};c < numInput;c++)
+    auto chandata = std::addressof(mChans[0]);
+    for(const auto &input : samplesIn)
     {
-        mChans[c].filter[0].process(mSampleBuffer, samplesIn[c].data(), samplesToDo);
-        mChans[c].filter[1].process(mSampleBuffer, mSampleBuffer, samplesToDo);
-        mChans[c].filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
-        mChans[c].filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
+        chandata->filter[0].process(mSampleBuffer, input.data(), samplesToDo);
+        chandata->filter[1].process(mSampleBuffer, mSampleBuffer, samplesToDo);
+        chandata->filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
+        chandata->filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
 
-        MixSamples({mSampleBuffer, samplesToDo}, samplesOut, mChans[c].CurrentGains,
-            mChans[c].TargetGains, samplesToDo, 0);
+        MixSamples({mSampleBuffer, samplesToDo}, samplesOut, chandata->CurrentGains,
+            chandata->TargetGains, samplesToDo, 0);
+        ++chandata;
     }
 }
 

@@ -49,7 +49,7 @@ struct DistortionState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DistortionState)
 };
@@ -93,7 +93,7 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
-void DistortionState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const ALfloat fc{mEdgeCoeff};
     for(size_t base{0u};base < samplesToDo;)

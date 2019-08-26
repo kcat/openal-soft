@@ -59,7 +59,7 @@ struct EchoState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(EchoState)
 };
@@ -117,7 +117,7 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
     ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }
 
-void EchoState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const auto mask = static_cast<ALsizei>(mSampleBuffer.size()-1);
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};

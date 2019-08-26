@@ -91,7 +91,7 @@ struct ModulatorState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ModulatorState)
 };
@@ -138,7 +138,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void ModulatorState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void ModulatorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -149,17 +149,18 @@ void ModulatorState::process(const size_t samplesToDo, const FloatBufferLine *RE
         mIndex += (mStep*td) & WAVEFORM_FRACMASK;
         mIndex &= WAVEFORM_FRACMASK;
 
-        ASSUME(numInput > 0);
-        for(ALsizei c{0};c < numInput;c++)
+        auto chandata = std::addressof(mChans[0]);
+        for(const auto &input : samplesIn)
         {
             alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
 
-            mChans[c].Filter.process(temps, &samplesIn[c][base], td);
+            chandata->Filter.process(temps, &input[base], td);
             for(size_t i{0u};i < td;i++)
                 temps[i] *= modsamples[i];
 
-            MixSamples({temps, td}, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
+            MixSamples({temps, td}, samplesOut, chandata->CurrentGains, chandata->TargetGains,
                 samplesToDo-base, base);
+            ++chandata;
         }
 
         base += td;

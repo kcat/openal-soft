@@ -137,7 +137,7 @@ struct VmorpherState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     static std::array<FormantFilter,4> getFiltersByPhoneme(ALenum phoneme, ALfloat frequency, ALfloat pitch);
 
@@ -244,7 +244,7 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     }
 }
 
-void VmorpherState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void VmorpherState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     /* Following the EFX specification for a conformant implementation which describes
      * the effect as a pair of 4-band formant filters blended together using an LFO.
@@ -258,34 +258,35 @@ void VmorpherState::process(const size_t samplesToDo, const FloatBufferLine *RES
         mIndex += (mStep * td) & WAVEFORM_FRACMASK;
         mIndex &= WAVEFORM_FRACMASK;
 
-        ASSUME(numInput > 0);
-        for(ALsizei c{0};c < numInput;c++)
+        auto chandata = std::addressof(mChans[0]);
+        for(const auto &input : samplesIn)
         {
             std::fill_n(std::begin(mSampleBufferA), td, 0.0f);
             std::fill_n(std::begin(mSampleBufferB), td, 0.0f);
 
-            auto& vowelA = mChans[c].Formants[VOWEL_A_INDEX];
-            auto& vowelB = mChans[c].Formants[VOWEL_B_INDEX];
+            auto& vowelA = chandata->Formants[VOWEL_A_INDEX];
+            auto& vowelB = chandata->Formants[VOWEL_B_INDEX];
 
             /* Process first vowel. */
-            vowelA[0].process(&samplesIn[c][base], mSampleBufferA, td);
-            vowelA[1].process(&samplesIn[c][base], mSampleBufferA, td);
-            vowelA[2].process(&samplesIn[c][base], mSampleBufferA, td);
-            vowelA[3].process(&samplesIn[c][base], mSampleBufferA, td);
+            vowelA[0].process(&input[base], mSampleBufferA, td);
+            vowelA[1].process(&input[base], mSampleBufferA, td);
+            vowelA[2].process(&input[base], mSampleBufferA, td);
+            vowelA[3].process(&input[base], mSampleBufferA, td);
 
             /* Process second vowel. */
-            vowelB[0].process(&samplesIn[c][base], mSampleBufferB, td);
-            vowelB[1].process(&samplesIn[c][base], mSampleBufferB, td);
-            vowelB[2].process(&samplesIn[c][base], mSampleBufferB, td);
-            vowelB[3].process(&samplesIn[c][base], mSampleBufferB, td);
+            vowelB[0].process(&input[base], mSampleBufferB, td);
+            vowelB[1].process(&input[base], mSampleBufferB, td);
+            vowelB[2].process(&input[base], mSampleBufferB, td);
+            vowelB[3].process(&input[base], mSampleBufferB, td);
 
             alignas(16) ALfloat blended[MAX_UPDATE_SAMPLES];
             for(size_t i{0u};i < td;i++)
                 blended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
 
             /* Now, mix the processed sound data to the output. */
-            MixSamples({blended, td}, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
+            MixSamples({blended, td}, samplesOut, chandata->CurrentGains, chandata->TargetGains,
                 samplesToDo-base, base);
+            ++chandata;
         }
 
         base += td;

@@ -483,7 +483,7 @@ struct ReverbState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ReverbState)
 };
@@ -1440,18 +1440,19 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloa
     VectorScatterRevDelayIn(late_delay, offset, mixX, mixY, temps, todo);
 }
 
-void ReverbState::process(const size_t samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     size_t offset{mOffset};
 
     ASSUME(samplesToDo > 0);
 
     /* Convert B-Format to A-Format for processing. */
+    const size_t numInput{samplesIn.size()};
     const al::span<float> tmpspan{mTempLine.data(), samplesToDo};
     for(size_t c{0u};c < NUM_LINES;c++)
     {
         std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
-        MixRowSamples(tmpspan, {B2A[c], B2A[c]+numInput}, samplesIn->data(), samplesIn->size());
+        MixRowSamples(tmpspan, {B2A[c], numInput}, samplesIn[0].data(), samplesIn[0].size());
 
         /* Band-pass the incoming samples and feed the initial delay line. */
         mFilter[c].Lp.process(mTempLine.data(), mTempLine.data(), samplesToDo);

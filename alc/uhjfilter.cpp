@@ -26,13 +26,14 @@ constexpr ALfloat Filter2CoeffSqr[4] = {
     0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
 };
 
-void allpass_process(AllPassState *state, ALfloat *dst, const ALfloat *src, const ALfloat aa, ALsizei todo)
+void allpass_process(AllPassState *state, ALfloat *dst, const ALfloat *src, const ALfloat aa,
+    const size_t todo)
 {
     ALfloat z1{state->z[0]};
     ALfloat z2{state->z[1]};
-    auto proc_sample = [aa,&z1,&z2](ALfloat input) noexcept -> ALfloat
+    auto proc_sample = [aa,&z1,&z2](const ALfloat input) noexcept -> ALfloat
     {
-        ALfloat output = input*aa + z1;
+        const ALfloat output{input*aa + z1};
         z1 = z2; z2 = output*aa - input;
         return output;
     };

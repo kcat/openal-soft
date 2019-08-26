@@ -34,7 +34,7 @@ struct Compressor {
         bool Declip : 1;
     } mAuto{};
 
-    ALsizei mLookAhead{0};
+    ALuint mLookAhead{0};
 
     ALfloat mPreGain{0.0f};
     ALfloat mPostGain{0.0f};
@@ -64,7 +64,7 @@ struct Compressor {
 
 
     ~Compressor();
-    void process(const ALsizei SamplesToDo, FloatBufferLine *OutBuffer);
+    void process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer);
     ALsizei getLookAhead() const noexcept { return mLookAhead; }
 
     DEF_PLACE_NEWDEL()

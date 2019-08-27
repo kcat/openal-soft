@@ -192,7 +192,6 @@ constexpr std::array<ALfloat,NUM_LINES> EARLY_LINE_LENGTHS{{
 constexpr std::array<ALfloat,NUM_LINES> LATE_ALLPASS_LENGTHS{{
     1.6182800e-4f, 2.0389060e-4f, 2.8159360e-4f, 3.2365600e-4f
 }};
-constexpr auto LATE_ALLPASS_LENGTHS_size = LATE_ALLPASS_LENGTHS.size();
 
 /* The late lines are used to approximate the decaying cycle of recursive
  * late reflections.
@@ -212,7 +211,6 @@ constexpr auto LATE_ALLPASS_LENGTHS_size = LATE_ALLPASS_LENGTHS.size();
 constexpr std::array<ALfloat,NUM_LINES> LATE_LINE_LENGTHS{{
     1.9419362e-3f, 2.4466860e-3f, 3.3791220e-3f, 3.8838720e-3f
 }};
-constexpr auto LATE_LINE_LENGTHS_size = LATE_LINE_LENGTHS.size();
 
 
 using ReverbUpdateLine = std::array<float,MAX_UPDATE_SAMPLES>;
@@ -518,7 +516,7 @@ bool ReverbState::allocLines(const ALfloat frequency)
      */
     ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
         AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
-        (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())/float{LATE_LINE_LENGTHS_size}*multiplier};
+        (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*multiplier};
     totalSamples += mDelay.calcLineLength(length, totalSamples, frequency, BUFFERSIZE);
 
     /* The early vector all-pass line. */
@@ -756,7 +754,7 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
 
     const ALfloat late_allpass_avg{
         std::accumulate(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
-        float{LATE_ALLPASS_LENGTHS_size}};
+        float{NUM_LINES}};
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -768,7 +766,7 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
      */
     const ALfloat multiplier{CalcDelayLengthMult(density)};
     ALfloat length{std::accumulate(LATE_LINE_LENGTHS.begin(), LATE_LINE_LENGTHS.end(), 0.0f) /
-        float{LATE_LINE_LENGTHS_size} * multiplier};
+        float{NUM_LINES} * multiplier};
     length += late_allpass_avg * multiplier;
     /* The density gain calculation uses an average decay time weighted by
      * approximate bandwidth. This attempts to compensate for losses of energy
@@ -833,8 +831,8 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
         length = EARLY_TAP_LENGTHS[i]*multiplier;
         mEarlyDelayCoeff[i][1] = CalcDecayCoeff(length, decayTime);
 
-        length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front()) /
-            float{LATE_LINE_LENGTHS_size} * multiplier;
+        length = (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*multiplier +
+            lateDelay;
         mLateDelayTap[i][1] = mLateFeedTap + float2int(length * frequency);
     }
 }

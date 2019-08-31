@@ -310,6 +310,8 @@ struct ALvoice {
 
         return *this;
     }
+
+    void mix(ALvoice::State vstate, ALCcontext *Context, const ALuint SamplesToDo);
 };
 
 
@@ -443,8 +445,6 @@ inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexce
     return ret;
 }
 
-
-void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCcontext *Context, const ALuint SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples);
 /* Caller must lock the device state, and the mixer must not be running. */

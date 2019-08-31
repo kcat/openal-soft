@@ -1368,11 +1368,7 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
         [SamplesToDo,ctx](ALvoice &voice) -> void
         {
             const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
-            if(vstate == ALvoice::Stopped) return;
-            const ALuint sid{voice.mSourceID.load(std::memory_order_relaxed)};
-            if(voice.mStep < 1) return;
-
-            MixVoice(&voice, vstate, sid, ctx, SamplesToDo);
+            if(vstate != ALvoice::Stopped) voice.mix(vstate, ctx, SamplesToDo);
         }
     );
 

@@ -320,9 +320,6 @@ struct FmtTypeTraits<FmtAlaw> {
 
 void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 {
-    ALbitfieldSOFT enabledevt{context->mEnabledEvts.load(std::memory_order_acquire)};
-    if(!(enabledevt&EventType_SourceStateChange)) return;
-
     RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
@@ -476,21 +473,22 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
 
 } // namespace
 
-void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCcontext *Context, const ALuint SamplesToDo)
+void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 {
     static constexpr ALfloat SilentTarget[MAX_OUTPUT_CHANNELS]{};
 
     ASSUME(SamplesToDo > 0);
 
     /* Get voice info */
-    const bool isstatic{(voice->mFlags&VOICE_IS_STATIC) != 0};
-    ALuint DataPosInt{voice->mPosition.load(std::memory_order_relaxed)};
-    ALsizei DataPosFrac{voice->mPositionFrac.load(std::memory_order_relaxed)};
-    ALbufferlistitem *BufferListItem{voice->mCurrentBuffer.load(std::memory_order_relaxed)};
-    ALbufferlistitem *BufferLoopItem{voice->mLoopBuffer.load(std::memory_order_relaxed)};
-    const ALsizei NumChannels{voice->mNumChannels};
-    const ALsizei SampleSize{voice->mSampleSize};
-    const ALint increment{voice->mStep};
+    const bool isstatic{(mFlags&VOICE_IS_STATIC) != 0};
+    ALuint DataPosInt{mPosition.load(std::memory_order_relaxed)};
+    ALsizei DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
+    ALbufferlistitem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
+    ALbufferlistitem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
+    const ALsizei NumChannels{mNumChannels};
+    const ALsizei SampleSize{mSampleSize};
+    const ALint increment{mStep};
+    if(increment < 1) return;
 
     ASSUME(DataPosFrac >= 0);
     ASSUME(NumChannels > 0);
@@ -505,24 +503,24 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
     ASSUME(IrSize >= 0);
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
-                           Resample_<CopyTag,CTag> : voice->mResampler};
+                           Resample_<CopyTag,CTag> : mResampler};
 
-    ALuint Counter{(voice->mFlags&VOICE_IS_FADING) ? SamplesToDo : 0};
+    ALuint Counter{(mFlags&VOICE_IS_FADING) ? SamplesToDo : 0};
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            ALvoice::ChannelData &chandata = voice->mChans[chan];
+            ChannelData &chandata = mChans[chan];
             DirectParams &parms = chandata.mDryParams;
-            if(!(voice->mFlags&VOICE_HAS_HRTF))
+            if(!(mFlags&VOICE_HAS_HRTF))
                 std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
                     std::begin(parms.Gains.Current));
             else
                 parms.Hrtf.Old = parms.Hrtf.Target;
             for(ALsizei send{0};send < NumSends;++send)
             {
-                if(voice->mSend[send].Buffer.empty())
+                if(mSend[send].Buffer.empty())
                     continue;
 
                 SendParams &parms = chandata.mWetParams[send];
@@ -531,11 +529,11 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             }
         }
     }
-    else if((voice->mFlags&VOICE_HAS_HRTF))
+    else if((mFlags&VOICE_HAS_HRTF))
     {
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            DirectParams &parms = voice->mChans[chan].mDryParams;
+            DirectParams &parms = mChans[chan].mDryParams;
             if(!(parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
             {
                 /* The old HRTF params are silent, so overwrite the old
@@ -584,7 +582,7 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         ASSUME(DstBufferSize > 0);
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            ALvoice::ChannelData &chandata = voice->mChans[chan];
+            ChannelData &chandata = mChans[chan];
             const al::span<ALfloat> SrcData{Device->SourceData, SrcBufferSize};
 
             /* Load the previous samples into the source data first, then load
@@ -619,10 +617,10 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 chandata.mPrevSamples.size(), chandata.mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
-            const ALfloat *ResampledData{Resample(&voice->mResampleState,
+            const ALfloat *ResampledData{Resample(&mResampleState,
                 &SrcData[MAX_RESAMPLE_PADDING], DataPosFrac, increment,
                 {Device->ResampledData, DstBufferSize})};
-            if((voice->mFlags&VOICE_IS_AMBISONIC))
+            if((mFlags&VOICE_IS_AMBISONIC))
             {
                 const ALfloat hfscale{chandata.mAmbiScale};
                 /* Beware the evil const_cast. It's safe since it's pointing to
@@ -639,10 +637,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
             {
                 DirectParams &parms = chandata.mDryParams;
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
-                    Device->FilteredData, ResampledData, DstBufferSize,
-                    voice->mDirect.FilterType)};
+                    Device->FilteredData, ResampledData, DstBufferSize, mDirect.FilterType)};
 
-                if((voice->mFlags&VOICE_HAS_HRTF))
+                if((mFlags&VOICE_HAS_HRTF))
                 {
                     const int OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
                     const int OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
@@ -705,9 +702,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         hrtfparams.Gain = 0.0f;
                         hrtfparams.GainStep = gain / static_cast<ALfloat>(fademix);
 
-                        MixHrtfBlendSamples(voice->mDirect.Buffer[OutLIdx],
-                            voice->mDirect.Buffer[OutRIdx], HrtfSamples, AccumSamples, OutPos,
-                            IrSize, &parms.Hrtf.Old, &hrtfparams, fademix);
+                        MixHrtfBlendSamples(mDirect.Buffer[OutLIdx], mDirect.Buffer[OutRIdx],
+                            HrtfSamples, AccumSamples, OutPos, IrSize, &parms.Hrtf.Old,
+                            &hrtfparams, fademix);
                         /* Update the old parameters with the result. */
                         parms.Hrtf.Old = parms.Hrtf.Target;
                         if(fademix < Counter)
@@ -738,9 +735,9 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                         hrtfparams.Gain = parms.Hrtf.Old.Gain;
                         hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) /
                             static_cast<ALfloat>(todo);
-                        MixHrtfSamples(voice->mDirect.Buffer[OutLIdx],
-                            voice->mDirect.Buffer[OutRIdx], HrtfSamples+fademix,
-                            AccumSamples+fademix, OutPos+fademix, IrSize, &hrtfparams, todo);
+                        MixHrtfSamples(mDirect.Buffer[OutLIdx], mDirect.Buffer[OutRIdx],
+                            HrtfSamples+fademix, AccumSamples+fademix, OutPos+fademix, IrSize,
+                            &hrtfparams, todo);
                         /* Store the interpolated gain or the final target gain
                          * depending if the fade is done.
                          */
@@ -756,23 +753,23 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                     std::copy_n(std::begin(AccumSamples) + DstBufferSize,
                         parms.Hrtf.State.Values.size(), parms.Hrtf.State.Values.begin());
                 }
-                else if((voice->mFlags&VOICE_HAS_NFC))
+                else if((mFlags&VOICE_HAS_NFC))
                 {
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
 
                     const size_t outcount{Device->NumChannelsPerOrder[0]};
-                    MixSamples({samples, DstBufferSize}, voice->mDirect.Buffer.first(outcount),
+                    MixSamples({samples, DstBufferSize}, mDirect.Buffer.first(outcount),
                         parms.Gains.Current, TargetGains, Counter, OutPos);
 
                     const al::span<float> nfcsamples{Device->NfcSampleData, DstBufferSize};
                     size_t chanoffset{outcount};
                     using FilterProc = void (NfcFilter::*)(float*,const float*,const size_t);
-                    auto apply_nfc = [voice,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t outcount) -> void
+                    auto apply_nfc = [this,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t outcount) -> void
                     {
                         if(outcount < 1) return;
                         (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples, nfcsamples.size());
-                        MixSamples(nfcsamples, voice->mDirect.Buffer.subspan(chanoffset, outcount),
+                        MixSamples(nfcsamples, mDirect.Buffer.subspan(chanoffset, outcount),
                             parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter,
                             OutPos);
                         chanoffset += outcount;
@@ -785,25 +782,25 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
                 {
                     const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget : parms.Gains.Target};
-                    MixSamples({samples, DstBufferSize}, voice->mDirect.Buffer,
-                        parms.Gains.Current, TargetGains, Counter, OutPos);
+                    MixSamples({samples, DstBufferSize}, mDirect.Buffer, parms.Gains.Current,
+                        TargetGains, Counter, OutPos);
                 }
             }
 
             ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             for(ALsizei send{0};send < NumSends;++send)
             {
-                if(voice->mSend[send].Buffer.empty())
+                if(mSend[send].Buffer.empty())
                     continue;
 
                 SendParams &parms = chandata.mWetParams[send];
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
-                    FilterBuf, ResampledData, DstBufferSize, voice->mSend[send].FilterType)};
+                    FilterBuf, ResampledData, DstBufferSize, mSend[send].FilterType)};
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
-                MixSamples({samples, DstBufferSize}, voice->mSend[send].Buffer,
-                    parms.Gains.Current, TargetGains, Counter, OutPos);
+                MixSamples({samples, DstBufferSize}, mSend[send].Buffer, parms.Gains.Current,
+                    TargetGains, Counter, OutPos);
             };
         }
         /* Update positions */
@@ -863,28 +860,31 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         }
     } while(OutPos < SamplesToDo);
 
-    voice->mFlags |= VOICE_IS_FADING;
+    mFlags |= VOICE_IS_FADING;
 
     /* Don't update positions and buffers if we were stopping. */
     if UNLIKELY(vstate == ALvoice::Stopping)
     {
-        voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+        mPlayState.store(ALvoice::Stopped, std::memory_order_release);
         return;
     }
 
+    /* Capture the source ID in case it's reset for stopping. */
+    const ALuint SourceID{mSourceID.load(std::memory_order_relaxed)};
+
     /* Update voice info */
-    voice->mPosition.store(DataPosInt, std::memory_order_relaxed);
-    voice->mPositionFrac.store(DataPosFrac, std::memory_order_relaxed);
-    voice->mCurrentBuffer.store(BufferListItem, std::memory_order_relaxed);
+    mPosition.store(DataPosInt, std::memory_order_relaxed);
+    mPositionFrac.store(DataPosFrac, std::memory_order_relaxed);
+    mCurrentBuffer.store(BufferListItem, std::memory_order_relaxed);
     if(vstate == ALvoice::Stopped)
     {
-        voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-        voice->mSourceID.store(0u, std::memory_order_relaxed);
+        mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+        mSourceID.store(0u, std::memory_order_relaxed);
     }
     std::atomic_thread_fence(std::memory_order_release);
 
     /* Send any events now, after the position/buffer info was updated. */
-    ALbitfieldSOFT enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
+    const ALbitfieldSOFT enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
     {
         RingBuffer *ring{Context->mAsyncEvents.get()};
@@ -904,7 +904,8 @@ void MixVoice(ALvoice *voice, ALvoice::State vstate, const ALuint SourceID, ALCc
         /* If the voice just ended, set it to Stopping so the next render
          * ensures any residual noise fades to 0 amplitude.
          */
-        voice->mPlayState.store(ALvoice::Stopping, std::memory_order_release);
-        SendSourceStoppedEvent(Context, SourceID);
+        mPlayState.store(ALvoice::Stopping, std::memory_order_release);
+        if((enabledevt&EventType_SourceStateChange))
+            SendSourceStoppedEvent(Context, SourceID);
     }
 }

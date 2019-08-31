@@ -482,7 +482,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     /* Get voice info */
     const bool isstatic{(mFlags&VOICE_IS_STATIC) != 0};
     ALuint DataPosInt{mPosition.load(std::memory_order_relaxed)};
-    ALsizei DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
+    ALuint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
     const ALsizei NumChannels{mNumChannels};
@@ -490,7 +490,6 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     const ALint increment{mStep};
     if(increment < 1) return;
 
-    ASSUME(DataPosFrac >= 0);
     ASSUME(NumChannels > 0);
     ASSUME(SampleSize > 0);
     ASSUME(increment > 0);

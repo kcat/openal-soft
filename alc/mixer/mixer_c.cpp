@@ -13,23 +13,23 @@
 
 namespace {
 
-inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei)
+inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALuint)
 { return vals[0]; }
-inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac)
+inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALsizei frac)
+inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALuint frac)
 { return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
-inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALsizei frac)
+inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALuint frac)
 {
     ASSUME(istate.bsinc.m > 0);
 
     // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
-    const ALsizei pi{frac >> FRAC_PHASE_BITDIFF};
+    const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
     const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    const ALfloat *fil{istate.bsinc.filter + istate.bsinc.m*pi*4};
+    const ALfloat *fil{istate.bsinc.filter + ptrdiff_t{istate.bsinc.m}*pi*4};
     const ALfloat *scd{fil + istate.bsinc.m};
     const ALfloat *phd{scd + istate.bsinc.m};
     const ALfloat *spd{phd + istate.bsinc.m};
@@ -41,13 +41,12 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
     return r;
 }
 
-using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALsizei);
+using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALuint);
 template<SamplerT &Sampler>
 const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 {
     ASSUME(increment > 0);
-    ASSUME(frac >= 0);
 
     const InterpState istate{*state};
     auto proc_sample = [&src,&frac,istate,increment]() -> ALfloat
@@ -68,7 +67,7 @@ const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
 } // namespace
 
 template<>
-const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRICT src, ALsizei,
+const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRICT src, ALuint,
     ALint, const al::span<float> dst)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
@@ -82,22 +81,22 @@ const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRI
 
 template<>
 const ALfloat *Resample_<PointTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 { return DoResample<do_point>(state, src, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<LerpTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 { return DoResample<do_lerp>(state, src, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<CubicTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 { return DoResample<do_cubic>(state, src-1, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 

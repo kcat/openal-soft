@@ -16,7 +16,7 @@
 
 template<>
 const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
@@ -24,7 +24,6 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
     alignas(16) ALsizei pos_[4], frac_[4];
     int32x4_t pos4, frac4;
 
-    ASSUME(frac >= 0);
     ASSUME(increment > 0);
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
@@ -35,17 +34,17 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
     const auto aligned_end = (dst.size()&~3) + dst_iter;
     while(dst_iter != aligned_end)
     {
-        const int pos0 = vgetq_lane_s32(pos4, 0);
-        const int pos1 = vgetq_lane_s32(pos4, 1);
-        const int pos2 = vgetq_lane_s32(pos4, 2);
-        const int pos3 = vgetq_lane_s32(pos4, 3);
-        const float32x4_t val1 = (float32x4_t){src[pos0], src[pos1], src[pos2], src[pos3]};
-        const float32x4_t val2 = (float32x4_t){src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1]};
+        const int pos0{vgetq_lane_s32(pos4, 0)};
+        const int pos1{vgetq_lane_s32(pos4, 1)};
+        const int pos2{vgetq_lane_s32(pos4, 2)};
+        const int pos3{vgetq_lane_s32(pos4, 3)};
+        const float32x4_t val1{src[pos0], src[pos1], src[pos2], src[pos3]};
+        const float32x4_t val2{src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1]};
 
         /* val1 + (val2-val1)*mu */
-        const float32x4_t r0 = vsubq_f32(val2, val1);
-        const float32x4_t mu = vmulq_f32(vcvtq_f32_s32(frac4), fracOne4);
-        const float32x4_t out = vmlaq_f32(val1, mu, r0);
+        const float32x4_t r0{vsubq_f32(val2, val1)};
+        const float32x4_t mu{vmulq_f32(vcvtq_f32_s32(frac4), fracOne4)};
+        const float32x4_t out{vmlaq_f32(val1, mu, r0)};
 
         vst1q_f32(dst_iter, out);
         dst_iter += 4;
@@ -58,15 +57,15 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
     /* NOTE: These four elements represent the position *after* the last four
      * samples, so the lowest element is the next position to resample.
      */
-    ALsizei pos{vgetq_lane_s32(pos4, 0)};
+    src += static_cast<ALuint>(vgetq_lane_s32(pos4, 0));
     frac = vgetq_lane_s32(frac4, 0);
 
     while(dst_iter != dst.end())
     {
-        *(dst_iter++) = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
+        *(dst_iter++) = lerp(src[0], src[1], frac * (1.0f/FRACTIONONE));
 
         frac += increment;
-        pos  += frac>>FRACTIONBITS;
+        src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
     return dst.begin();
@@ -74,22 +73,21 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
 
 template<>
 const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 {
     const ALfloat *const filter{state->bsinc.filter};
     const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
-    const ALsizei m{state->bsinc.m};
+    const ptrdiff_t m{state->bsinc.m};
 
     ASSUME(m > 0);
     ASSUME(increment > 0);
-    ASSUME(frac >= 0);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
-        const ALsizei pi{frac >> FRAC_PHASE_BITDIFF};
+        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
         const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
@@ -101,7 +99,7 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
             const float *scd{fil + m};
             const float *phd{scd + m};
             const float *spd{phd + m};
-            ALsizei td{m >> 2};
+            ptrdiff_t td{m >> 2};
             size_t j{0u};
 
             do {

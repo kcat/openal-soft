@@ -30,13 +30,12 @@
 
 template<>
 const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState*, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 {
     const __m128i increment4{_mm_set1_epi32(increment*4)};
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};
     const __m128i fracMask4{_mm_set1_epi32(FRACTIONMASK)};
 
-    ASSUME(frac >= 0);
     ASSUME(increment > 0);
 
     alignas(16) ALsizei pos_[4], frac_[4];
@@ -71,15 +70,15 @@ const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState*, const ALfloat *RES
     /* NOTE: These four elements represent the position *after* the last four
      * samples, so the lowest element is the next position to resample.
      */
-    ALsizei pos{_mm_cvtsi128_si32(pos4)};
+    src += static_cast<ALuint>(_mm_cvtsi128_si32(pos4));
     frac = _mm_cvtsi128_si32(frac4);
 
     while(dst_iter != dst.end())
     {
-        *(dst_iter++) = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
+        *(dst_iter++) = lerp(src[0], src[1], frac * (1.0f/FRACTIONONE));
 
         frac += increment;
-        pos  += frac>>FRACTIONBITS;
+        src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
     return dst.begin();

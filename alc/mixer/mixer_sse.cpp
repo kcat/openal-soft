@@ -15,22 +15,21 @@
 
 template<>
 const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALsizei frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALint increment, const al::span<float> dst)
 {
     const ALfloat *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
-    const ALsizei m{state->bsinc.m};
+    const ptrdiff_t m{state->bsinc.m};
 
     ASSUME(m > 0);
     ASSUME(increment > 0);
-    ASSUME(frac >= 0);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
-        const ALsizei pi{frac >> FRAC_PHASE_BITDIFF};
+        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
         const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
@@ -42,7 +41,7 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
             const float *scd{fil + m};
             const float *phd{scd + m};
             const float *spd{phd + m};
-            ALsizei td{m >> 2};
+            ptrdiff_t td{m >> 2};
             size_t j{0u};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))

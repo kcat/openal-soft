@@ -318,9 +318,9 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
             delay = ALfloat{MAX_DELAY_LENGTH-1};
         }
 
-        ChanDelay[chan].Length = static_cast<ALsizei>(delay);
+        ChanDelay[chan].Length = static_cast<ALuint>(delay);
         ChanDelay[chan].Gain = speaker.Distance / maxdist;
-        TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
+        TRACE("Channel %u \"%s\" distance compensation: %u samples, %f gain\n", chan,
             speaker.Name.c_str(), ChanDelay[chan].Length, ChanDelay[chan].Gain);
 
         /* Round up to the next 4th sample, so each channel buffer starts

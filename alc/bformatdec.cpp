@@ -146,7 +146,7 @@ BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
 
 
 void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
-    const FloatBufferLine *InSamples, const ALsizei SamplesToDo)
+    const FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -156,16 +156,17 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
             mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i].data(),
                 SamplesToDo);
 
-        const al::span<const FloatBufferLine> hfsamples{mSamplesHF, mNumChannels};
-        const al::span<const FloatBufferLine> lfsamples{mSamplesLF, mNumChannels};
         ALfloat (*mixmtx)[sNumBands][MAX_AMBI_CHANNELS]{mMatrix.Dual};
         ALuint enabled{mEnabled};
         for(FloatBufferLine &outbuf : OutBuffer)
         {
             if LIKELY(enabled&1)
             {
-                MixRowSamples(outbuf, (*mixmtx)[sHFBand], hfsamples, 0, SamplesToDo);
-                MixRowSamples(outbuf, (*mixmtx)[sLFBand], lfsamples, 0, SamplesToDo);
+                const al::span<float> outspan{outbuf.data(), SamplesToDo};
+                MixRowSamples(outspan, {(*mixmtx)[sHFBand], mNumChannels}, mSamplesHF->data(),
+                    mSamplesHF->size());
+                MixRowSamples(outspan, {(*mixmtx)[sLFBand], mNumChannels}, mSamplesLF->data(),
+                    mSamplesLF->size());
             }
             ++mixmtx;
             enabled >>= 1;
@@ -173,13 +174,13 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     }
     else
     {
-        const al::span<const FloatBufferLine> insamples{InSamples, mNumChannels};
         ALfloat (*mixmtx)[MAX_AMBI_CHANNELS]{mMatrix.Single};
         ALuint enabled{mEnabled};
         for(FloatBufferLine &outbuf : OutBuffer)
         {
             if LIKELY(enabled&1)
-                MixRowSamples(outbuf, *mixmtx, insamples, 0, SamplesToDo);
+                MixRowSamples({outbuf.data(), SamplesToDo}, {*mixmtx, mNumChannels},
+                    InSamples->data(), InSamples->size());
             ++mixmtx;
             enabled >>= 1;
         }

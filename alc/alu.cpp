@@ -152,7 +152,7 @@ void aluInit(void)
 }
 
 
-void ALCdevice::ProcessHrtf(const ALsizei SamplesToDo)
+void ALCdevice::ProcessHrtf(const size_t SamplesToDo)
 {
     /* HRTF is stereo output only. */
     const int lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -163,12 +163,12 @@ void ALCdevice::ProcessHrtf(const ALsizei SamplesToDo)
         mHrtfState.get(), SamplesToDo);
 }
 
-void ALCdevice::ProcessAmbiDec(const ALsizei SamplesToDo)
+void ALCdevice::ProcessAmbiDec(const size_t SamplesToDo)
 {
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 }
 
-void ALCdevice::ProcessUhj(const ALsizei SamplesToDo)
+void ALCdevice::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
     const int lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -180,7 +180,7 @@ void ALCdevice::ProcessUhj(const ALsizei SamplesToDo)
         SamplesToDo);
 }
 
-void ALCdevice::ProcessBs2b(const ALsizei SamplesToDo)
+void ALCdevice::ProcessBs2b(const size_t SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
@@ -1343,7 +1343,7 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     IncrementRef(ctx->mUpdateCount);
 }
 
-void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
+void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -1368,11 +1368,7 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo,ctx](ALvoice &voice) -> void
         {
             const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
-            if(vstate == ALvoice::Stopped) return;
-            const ALuint sid{voice.mSourceID.load(std::memory_order_relaxed)};
-            if(voice.mStep < 1) return;
-
-            MixVoice(&voice, vstate, sid, ctx, SamplesToDo);
+            if(vstate != ALvoice::Stopped) voice.mix(vstate, ctx, SamplesToDo);
         }
     );
 
@@ -1416,15 +1412,14 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo, slot->Wet.Buffer.data(),
-                static_cast<ALsizei>(slot->Wet.Buffer.size()), state->mOutTarget);
+            state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
         }
     );
 }
 
 
 void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> Buffer,
-    const ALuint lidx, const ALuint ridx, const ALuint cidx, const ALsizei SamplesToDo)
+    const ALuint lidx, const ALuint ridx, const ALuint cidx, const ALuint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -1439,7 +1434,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
 
         auto &DelayBuf = Stablizer->DelayBuf[i];
         auto buffer_end = Buffer[i].begin() + SamplesToDo;
-        if LIKELY(SamplesToDo >= ALsizei{FrontStablizer::DelayLength})
+        if LIKELY(SamplesToDo >= ALuint{FrontStablizer::DelayLength})
         {
             auto delay_end = std::rotate(Buffer[i].begin(),
                 buffer_end - FrontStablizer::DelayLength, buffer_end);
@@ -1489,7 +1484,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     apply_splitter(Buffer[lidx], Stablizer->DelayBuf[lidx], Stablizer->LFilter, lsplit);
     apply_splitter(Buffer[ridx], Stablizer->DelayBuf[ridx], Stablizer->RFilter, rsplit);
 
-    for(ALsizei i{0};i < SamplesToDo;i++)
+    for(ALuint i{0};i < SamplesToDo;i++)
     {
         ALfloat lfsum{lsplit[0][i] + rsplit[0][i]};
         ALfloat hfsum{lsplit[1][i] + rsplit[1][i]};
@@ -1515,7 +1510,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     }
 }
 
-void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALsizei SamplesToDo,
+void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALuint SamplesToDo,
     const DistanceComp::DistData *distcomp)
 {
     ASSUME(SamplesToDo > 0);
@@ -1523,7 +1518,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALsizei Sa
     for(auto &chanbuffer : Samples)
     {
         const ALfloat gain{distcomp->Gain};
-        const ALsizei base{distcomp->Length};
+        const ALuint base{distcomp->Length};
         ALfloat *distbuf{al::assume_aligned<16>(distcomp->Buffer)};
         ++distcomp;
 
@@ -1547,7 +1542,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALsizei Sa
 }
 
 void ApplyDither(const al::span<FloatBufferLine> Samples, ALuint *dither_seed,
-    const ALfloat quant_scale, const ALsizei SamplesToDo)
+    const ALfloat quant_scale, const ALuint SamplesToDo)
 {
     /* Dithering. Generate whitenoise (uniform distribution of random values
      * between -1 and +1) and add it to the sample values, after scaling up to
@@ -1605,7 +1600,7 @@ template<> inline ALubyte SampleConv(ALfloat val) noexcept
 
 template<DevFmtType T>
 void Write(const al::span<const FloatBufferLine> InBuffer, ALvoid *OutBuffer, const size_t Offset,
-    const ALsizei SamplesToDo)
+    const ALuint SamplesToDo)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
@@ -1629,12 +1624,12 @@ void Write(const al::span<const FloatBufferLine> InBuffer, ALvoid *OutBuffer, co
 
 } // namespace
 
-void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
+void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples)
 {
     FPUCtl mixer_mode{};
-    for(ALsizei SamplesDone{0};SamplesDone < NumSamples;)
+    for(ALuint SamplesDone{0u};SamplesDone < NumSamples;)
     {
-        const ALsizei SamplesToDo{mini(NumSamples-SamplesDone, BUFFERSIZE)};
+        const ALuint SamplesToDo{minu(NumSamples-SamplesDone, BUFFERSIZE)};
 
         /* Clear main mixing buffers. */
         std::for_each(device->MixBuffer.begin(), device->MixBuffer.end(),

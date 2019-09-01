@@ -71,7 +71,7 @@ struct ALautowahState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ALautowahState)
 };
@@ -126,7 +126,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
     }
 }
 
-void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut)
+void ALautowahState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const ALfloat attack_rate = mAttackRate;
     const ALfloat release_rate = mReleaseRate;
@@ -136,7 +136,7 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
     const ALfloat bandwidth = mBandwidthNorm;
 
     ALfloat env_delay{mEnvDelay};
-    for(ALsizei i{0};i < samplesToDo;i++)
+    for(size_t i{0u};i < samplesToDo;i++)
     {
         ALfloat w0, sample, a;
 
@@ -154,8 +154,8 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
     }
     mEnvDelay = env_delay;
 
-    ASSUME(numInput > 0);
-    for(ALsizei c{0};c < numInput;++c)
+    auto chandata = std::addressof(mChans[0]);
+    for(const auto &insamples : samplesIn)
     {
         /* This effectively inlines BiquadFilter_setParams for a peaking
          * filter and BiquadFilter_processC. The alpha and cosine components
@@ -163,10 +163,10 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
          * envelope. Because the filter changes for each sample, the
          * coefficients are transient and don't need to be held.
          */
-        ALfloat z1{mChans[c].Filter.z1};
-        ALfloat z2{mChans[c].Filter.z2};
+        ALfloat z1{chandata->Filter.z1};
+        ALfloat z2{chandata->Filter.z2};
 
-        for(ALsizei i{0};i < samplesToDo;i++)
+        for(size_t i{0u};i < samplesToDo;i++)
         {
             const ALfloat alpha = mEnv[i].alpha;
             const ALfloat cos_w0 = mEnv[i].cos_w0;
@@ -180,18 +180,19 @@ void ALautowahState::process(const ALsizei samplesToDo, const FloatBufferLine *R
             a[1] = -2.0f * cos_w0;
             a[2] =  1.0f - alpha/res_gain;
 
-            input = samplesIn[c][i];
+            input = insamples[i];
             output = input*(b[0]/a[0]) + z1;
             z1 = input*(b[1]/a[0]) - output*(a[1]/a[0]) + z2;
             z2 = input*(b[2]/a[0]) - output*(a[2]/a[0]);
             mBufferOut[i] = output;
         }
-        mChans[c].Filter.z1 = z1;
-        mChans[c].Filter.z2 = z2;
+        chandata->Filter.z1 = z1;
+        chandata->Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(mBufferOut, samplesOut, mChans[c].CurrentGains, mChans[c].TargetGains,
-            samplesToDo, 0, samplesToDo);
+        MixSamples({mBufferOut, samplesToDo}, samplesOut, chandata->CurrentGains,
+            chandata->TargetGains, samplesToDo, 0);
+        ++chandata;
     }
 }
 

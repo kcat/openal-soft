@@ -35,6 +35,7 @@
 
 #include "AL/al.h"
 
+#include "albyte.h"
 #include "alcmain.h"
 #include "alconfig.h"
 #include "almalloc.h"
@@ -103,7 +104,7 @@ struct WaveBackend final : public BackendBase {
     FILE *mFile{nullptr};
     long mDataStart{-1};
 
-    al::vector<ALbyte> mBuffer;
+    al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -151,13 +152,12 @@ int WaveBackend::mixerProc()
             if(!IS_LITTLE_ENDIAN)
             {
                 const ALsizei bytesize{mDevice->bytesFromFmt()};
-                ALsizei i;
 
                 if(bytesize == 2)
                 {
                     ALushort *samples = reinterpret_cast<ALushort*>(mBuffer.data());
-                    const auto len = static_cast<ALsizei>(mBuffer.size() / 2);
-                    for(i = 0;i < len;i++)
+                    const size_t len{mBuffer.size() / 2};
+                    for(size_t i{0};i < len;i++)
                     {
                         ALushort samp = samples[i];
                         samples[i] = (samp>>8) | (samp<<8);
@@ -166,8 +166,8 @@ int WaveBackend::mixerProc()
                 else if(bytesize == 4)
                 {
                     ALuint *samples = reinterpret_cast<ALuint*>(mBuffer.data());
-                    const auto len = static_cast<ALsizei>(mBuffer.size() / 4);
-                    for(i = 0;i < len;i++)
+                    const size_t len{mBuffer.size() / 4};
+                    for(size_t i{0};i < len;i++)
                     {
                         ALuint samp = samples[i];
                         samples[i] = (samp>>24) | ((samp>>8)&0x0000ff00) |

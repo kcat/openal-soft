@@ -4076,7 +4076,7 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
     {
-        BackendLockGuard _{*device->Backend};
+        BackendLockGuard _{*dev->Backend};
         aluMixData(dev.get(), buffer, samples);
     }
 }

@@ -2,6 +2,7 @@
 #define FILTERS_BIQUAD_H
 
 #include <cmath>
+#include <cstddef>
 #include <utility>
 
 #include "math_defs.h"
@@ -72,7 +73,7 @@ public:
     }
 
 
-    void process(Real *dst, const Real *src, int numsamples);
+    void process(Real *dst, const Real *src, const size_t numsamples);
 
     /* Rather hacky. It's just here to support "manual" processing. */
     std::pair<Real,Real> getComponents() const noexcept

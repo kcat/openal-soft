@@ -2203,30 +2203,29 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             };
             std::for_each(voices->begin(), voices_end, clear_sends);
         }
-        std::for_each(voices->begin(), voices_end,
-            [device](ALvoice &voice) -> void
+        auto reset_voice = [device](ALvoice &voice) -> void
+        {
+            delete voice.mUpdate.exchange(nullptr, std::memory_order_acq_rel);
+
+            /* Force the voice to stopped if it was stopping. */
+            ALvoice::State vstate{ALvoice::Stopping};
+            voice.mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
+                std::memory_order_acquire, std::memory_order_acquire);
+            if(voice.mSourceID.load(std::memory_order_relaxed) == 0u)
+                return;
+
+            if(device->AvgSpeakerDist > 0.0f)
             {
-                delete voice.mUpdate.exchange(nullptr, std::memory_order_acq_rel);
-
-                /* Force the voice to stopped if it was stopping. */
-                ALvoice::State vstate{ALvoice::Stopping};
-                voice.mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
-                    std::memory_order_acquire, std::memory_order_acquire);
-                if(voice.mSourceID.load(std::memory_order_relaxed) == 0u)
-                    return;
-
-                if(device->AvgSpeakerDist > 0.0f)
-                {
-                    /* Reinitialize the NFC filters for new parameters. */
-                    const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
-                        (device->AvgSpeakerDist * device->Frequency)};
-                    auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
-                    { chandata.mDryParams.NFCtrlFilter.init(w1); };
-                    std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
-                        init_nfc);
-                }
+                /* Reinitialize the NFC filters for new parameters. */
+                const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+                    (device->AvgSpeakerDist * device->Frequency)};
+                auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
+                { chandata.mDryParams.NFCtrlFilter.init(w1); };
+                std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
+                    init_nfc);
             }
-        );
+        };
+        std::for_each(voices->begin(), voices_end, reset_voice);
         srclock.unlock();
 
         context->mPropsClean.test_and_set(std::memory_order_release);

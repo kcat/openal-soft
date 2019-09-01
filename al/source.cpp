@@ -3318,6 +3318,7 @@ ALsource::~ALsource()
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
+    std::lock_guard<std::mutex> _{context->mSourceLock};
     auto voices_end = context->mVoices->begin() +
         context->mVoiceCount.load(std::memory_order_relaxed);
     std::for_each(context->mVoices->begin(), voices_end,

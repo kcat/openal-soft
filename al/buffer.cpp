@@ -812,6 +812,9 @@ START_API_FUNC
     else if UNLIKELY((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
         context->setError(AL_INVALID_VALUE,
             "Declaring persistently mapped storage without read or write access");
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Declaring storage for callback buffer");
     else
     {
         auto usrfmt = DecomposeUserFormat(format);
@@ -874,6 +877,9 @@ START_API_FUNC
     else if UNLIKELY(!(access&MAP_READ_WRITE_FLAGS))
         context->setError(AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
             buffer);
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Mapping storage for callback buffer");
     else
     {
         ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
@@ -979,6 +985,9 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
         return;
     }
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Callingg SubData on callback buffer");
 
     auto usrfmt = DecomposeUserFormat(format);
     if UNLIKELY(!usrfmt)
@@ -1100,9 +1109,12 @@ START_API_FUNC
 
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
-
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+	ALbuffer* albuf = LookupBuffer(device, buffer);
+    if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Changing parameter for callback buffer not supported");
     else switch(param)
     {
     default:
@@ -1121,8 +1133,12 @@ START_API_FUNC
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+	ALbuffer* albuf = LookupBuffer(device, buffer);
+	if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Changing parameter for callback buffer not supported");
     else switch(param)
     {
     default:
@@ -1140,10 +1156,14 @@ START_API_FUNC
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+	ALbuffer* albuf = LookupBuffer(device, buffer);
+	if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Changing parameter for callback buffer not supported");
     else switch(param)
     {
     default:
@@ -1165,6 +1185,9 @@ START_API_FUNC
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if UNLIKELY(!albuf)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Changing parameter for callback buffer not supported");
     else switch(param)
     {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
@@ -1199,6 +1222,9 @@ START_API_FUNC
 
     if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Changing parameter for callback buffer not supported");
     else switch(param)
     {
     default:
@@ -1232,6 +1258,9 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
+	else if UNLIKELY(albuf->callback)
+		context->setError(AL_INVALID_OPERATION,
+			"Changing parameter for callback buffer not supported");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:

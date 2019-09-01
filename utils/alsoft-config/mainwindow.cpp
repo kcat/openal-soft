@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "version.h"
+#include "mainwindow.h"
 
 #include <iostream>
 #include <cmath>
@@ -11,8 +11,8 @@
 #include <QCloseEvent>
 #include <QSettings>
 #include <QtGlobal>
-#include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "verstr.h"
 
 namespace {
 
@@ -503,8 +503,8 @@ void MainWindow::cancelCloseAction()
 void MainWindow::showAboutPage()
 {
     QMessageBox::information(this, tr("About"),
-        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ")+
-        (ALSOFT_VERSION "-" ALSOFT_GIT_COMMIT_HASH " (" ALSOFT_GIT_BRANCH " branch)."));
+        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ") +
+        tr(GetVersionString()));
 }
 
 

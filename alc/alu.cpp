@@ -1327,8 +1327,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     {
         bool force{CalcContextParams(ctx)};
         force |= CalcListenerParams(ctx);
-        force |= std::accumulate(slots.begin(), slots.end(), bool{false},
-            [ctx](bool force, ALeffectslot *slot) -> bool
+        force = std::accumulate(slots.begin(), slots.end(), force,
+            [ctx](const bool force, ALeffectslot *slot) -> bool
             { return CalcEffectSlotParams(slot, ctx) | force; }
         );
 

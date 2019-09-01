@@ -236,7 +236,7 @@
 #  help for apps that try to use effects which are too CPU intensive for the
 #  system to handle. Available effects are: eaxreverb,reverb,autowah,chorus,
 #  compressor,distortion,echo,equalizer,flanger,modulator,dedicated,pshifter,
-#  fshifter
+#  fshifter,vmorpher.
 #excludefx =
 
 ## default-reverb: (global)

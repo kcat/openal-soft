@@ -278,7 +278,7 @@ void NfcFilter::adjust(const float w0) noexcept
 }
 
 
-void NfcFilter::process1(float *RESTRICT dst, const float *RESTRICT src, const int count)
+void NfcFilter::process1(float *RESTRICT dst, const float *RESTRICT src, const size_t count)
 {
     ASSUME(count > 0);
 
@@ -297,7 +297,7 @@ void NfcFilter::process1(float *RESTRICT dst, const float *RESTRICT src, const i
     first.z[0] = z1;
 }
 
-void NfcFilter::process2(float *RESTRICT dst, const float *RESTRICT src, const int count)
+void NfcFilter::process2(float *RESTRICT dst, const float *RESTRICT src, const size_t count)
 {
     ASSUME(count > 0);
 
@@ -321,7 +321,7 @@ void NfcFilter::process2(float *RESTRICT dst, const float *RESTRICT src, const i
     second.z[1] = z2;
 }
 
-void NfcFilter::process3(float *RESTRICT dst, const float *RESTRICT src, const int count)
+void NfcFilter::process3(float *RESTRICT dst, const float *RESTRICT src, const size_t count)
 {
     ASSUME(count > 0);
 
@@ -353,7 +353,7 @@ void NfcFilter::process3(float *RESTRICT dst, const float *RESTRICT src, const i
     third.z[2] = z3;
 }
 
-void NfcFilter::process4(float *RESTRICT dst, const float *RESTRICT src, const int count)
+void NfcFilter::process4(float *RESTRICT dst, const float *RESTRICT src, const size_t count)
 {
     ASSUME(count > 0);
 

@@ -24,8 +24,10 @@ class BFormatDec {
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
+    bool mDualBand{false};
     ALuint mEnabled{0u}; /* Bitfield of enabled channels. */
 
+    ALuint mNumChannels{0u};
     union MatrixU {
         ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_CHANNELS];
         ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_CHANNELS];
@@ -39,9 +41,6 @@ class BFormatDec {
     FloatBufferLine *mSamplesHF{nullptr};
     FloatBufferLine *mSamplesLF{nullptr};
 
-    ALuint mNumChannels{0u};
-    bool mDualBand{false};
-
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
         const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
@@ -51,7 +50,7 @@ public:
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,
-        const ALsizei SamplesToDo);
+        const size_t SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALsizei in_order,

@@ -49,7 +49,7 @@ struct DistortionState final : public EffectState {
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei numInput, const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DistortionState)
 };
@@ -93,22 +93,22 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
-void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *RESTRICT samplesIn, const ALsizei /*numInput*/, const al::span<FloatBufferLine> samplesOut)
+void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const ALfloat fc{mEdgeCoeff};
-    for(ALsizei base{0};base < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
         /* Perform 4x oversampling to avoid aliasing. Oversampling greatly
          * improves distortion quality and allows to implement lowpass and
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
-        ALsizei todo{mini(BUFFERSIZE, (samplesToDo-base) * 4)};
+        size_t todo{minz(BUFFERSIZE, (samplesToDo-base) * 4)};
 
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.
          */
-        for(ALsizei i{0};i < todo;i++)
+        for(size_t i{0u};i < todo;i++)
             mBuffer[0][i] = !(i&3) ? samplesIn[0][(i>>2)+base] * 4.0f : 0.0f;
 
         /* First step, do lowpass filtering of original signal. Additionally
@@ -123,7 +123,7 @@ void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *
          * waveshaping are intended to modify waveform without boost/clipping/
          * attenuation process.
          */
-        for(ALsizei i{0};i < todo;i++)
+        for(size_t i{0u};i < todo;i++)
         {
             ALfloat smp{mBuffer[1][i]};
 
@@ -148,7 +148,7 @@ void DistortionState::process(const ALsizei samplesToDo, const FloatBufferLine *
             if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
-            for(ALsizei i{0};i < todo;i++)
+            for(size_t i{0u};i < todo;i++)
                 output[base+i] += gain * mBuffer[1][i*4];
         }
 

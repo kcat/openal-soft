@@ -654,15 +654,14 @@ ALCenum CoreAudioCapture::captureSamples(void *buffer, ALCuint samples)
 
     auto rec_vec = mRing->getReadVector();
     const void *src0{rec_vec.first.buf};
-    auto src0len = static_cast<ALsizei>(rec_vec.first.len);
-    auto got = static_cast<ALuint>(mConverter->convert(&src0, &src0len, buffer, samples));
+    auto src0len = static_cast<ALuint>(rec_vec.first.len);
+    ALuint got{mConverter->convert(&src0, &src0len, buffer, samples)};
     size_t total_read{rec_vec.first.len - src0len};
     if(got < samples && !src0len && rec_vec.second.len > 0)
     {
         const void *src1{rec_vec.second.buf};
-        auto src1len = static_cast<ALsizei>(rec_vec.second.len);
-        got += static_cast<ALuint>(mConverter->convert(&src1, &src1len,
-            static_cast<char*>(buffer)+got, samples-got));
+        auto src1len = static_cast<ALuint>(rec_vec.second.len);
+        got += mConverter->convert(&src1, &src1len, static_cast<char*>(buffer)+got, samples-got);
         total_read += rec_vec.second.len - src1len;
     }
 

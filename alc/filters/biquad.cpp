@@ -89,7 +89,7 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real gain, Real f0norm, Rea
 }
 
 template<typename Real>
-void BiquadFilterR<Real>::process(Real *dst, const Real *src, int numsamples)
+void BiquadFilterR<Real>::process(Real *dst, const Real *src, const size_t numsamples)
 {
     ASSUME(numsamples > 0);
 

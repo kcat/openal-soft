@@ -24,10 +24,10 @@ static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 
 
 struct SlidingHold {
     alignas(16) ALfloat mValues[BUFFERSIZE];
-    ALsizei mExpiries[BUFFERSIZE];
-    ALsizei mLowerIndex;
-    ALsizei mUpperIndex;
-    ALsizei mLength;
+    ALuint mExpiries[BUFFERSIZE];
+    ALuint mLowerIndex;
+    ALuint mUpperIndex;
+    ALuint mLength;
 };
 
 
@@ -42,17 +42,14 @@ using namespace std::placeholders;
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALfloat in)
+ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const ALfloat in)
 {
     static constexpr ALsizei mask{BUFFERSIZE - 1};
-    const ALsizei length{Hold->mLength};
+    const ALuint length{Hold->mLength};
     ALfloat (&values)[BUFFERSIZE] = Hold->mValues;
-    ALsizei (&expiries)[BUFFERSIZE] = Hold->mExpiries;
-    ALsizei lowerIndex{Hold->mLowerIndex};
-    ALsizei upperIndex{Hold->mUpperIndex};
-
-    ASSUME(upperIndex >= 0);
-    ASSUME(lowerIndex >= 0);
+    ALuint (&expiries)[BUFFERSIZE] = Hold->mExpiries;
+    ALuint lowerIndex{Hold->mLowerIndex};
+    ALuint upperIndex{Hold->mUpperIndex};
 
     if(i >= expiries[upperIndex])
         upperIndex = (upperIndex + 1) & mask;
@@ -85,36 +82,31 @@ ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALfloat in)
     return values[upperIndex];
 }
 
-void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
+void ShiftSlidingHold(SlidingHold *Hold, const ALuint n)
 {
-    ASSUME(Hold->mUpperIndex >= 0);
-    ASSUME(Hold->mLowerIndex >= 0);
-
     auto exp_begin = std::begin(Hold->mExpiries) + Hold->mUpperIndex;
     auto exp_last = std::begin(Hold->mExpiries) + Hold->mLowerIndex;
-    if(exp_last < exp_begin)
+    if(exp_last-exp_begin < 0)
     {
         std::transform(exp_begin, std::end(Hold->mExpiries), exp_begin,
-            std::bind(std::minus<ALsizei>{}, _1, n));
+            std::bind(std::minus<ALuint>{}, _1, n));
         exp_begin = std::begin(Hold->mExpiries);
     }
-    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<ALsizei>{}, _1, n));
+    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<ALuint>{}, _1, n));
 }
 
 
 /* Multichannel compression is linked via the absolute maximum of all
  * channels.
  */
-void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, const FloatBufferLine *OutBuffer)
+void LinkChannels(Compressor *Comp, const ALuint SamplesToDo, const FloatBufferLine *OutBuffer)
 {
-    const ALsizei index{Comp->mLookAhead};
     const ALuint numChans{Comp->mNumChans};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
-    ASSUME(index >= 0);
 
-    auto side_begin = std::begin(Comp->mSideChain) + index;
+    auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::fill(side_begin, side_begin+SamplesToDo, 0.0f);
 
     auto fill_max = [SamplesToDo,side_begin](const FloatBufferLine &input) -> void
@@ -131,15 +123,13 @@ void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, const FloatBuffer
  * it uses an instantaneous squared peak detector and a squared RMS detector
  * both with 200ms release times.
  */
-static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
+static void CrestDetector(Compressor *Comp, const ALuint SamplesToDo)
 {
     const ALfloat a_crest{Comp->mCrestCoeff};
-    const ALsizei index{Comp->mLookAhead};
     ALfloat y2_peak{Comp->mLastPeakSq};
     ALfloat y2_rms{Comp->mLastRmsSq};
 
     ASSUME(SamplesToDo > 0);
-    ASSUME(index >= 0);
 
     auto calc_crest = [&y2_rms,&y2_peak,a_crest](const ALfloat x_abs) noexcept -> ALfloat
     {
@@ -149,7 +139,7 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
         y2_rms = lerp(x2, y2_rms, a_crest);
         return y2_peak / y2_rms;
     };
-    auto side_begin = std::begin(Comp->mSideChain) + index;
+    auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::transform(side_begin, side_begin+SamplesToDo, std::begin(Comp->mCrestFactor), calc_crest);
 
     Comp->mLastPeakSq = y2_peak;
@@ -160,15 +150,12 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
  * value of the incoming signal) and performs most of its operations in the
  * log domain.
  */
-void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
+void PeakDetector(Compressor *Comp, const ALuint SamplesToDo)
 {
-    const ALsizei index{Comp->mLookAhead};
-
     ASSUME(SamplesToDo > 0);
-    ASSUME(index >= 0);
 
     /* Clamp the minimum amplitude to near-zero and convert to logarithm. */
-    auto side_begin = std::begin(Comp->mSideChain) + index;
+    auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::transform(side_begin, side_begin+SamplesToDo, side_begin,
         std::bind(static_cast<float(&)(float)>(std::log), std::bind(maxf, 0.000001f, _1)));
 }
@@ -177,21 +164,18 @@ void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
  * solidly detect fast transients.  This is best used when operating as a
  * limiter.
  */
-void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
+void PeakHoldDetector(Compressor *Comp, const ALuint SamplesToDo)
 {
-    const ALsizei index{Comp->mLookAhead};
-
     ASSUME(SamplesToDo > 0);
-    ASSUME(index >= 0);
 
     SlidingHold *hold{Comp->mHold};
-    ALsizei i{0};
+    ALuint i{0};
     auto detect_peak = [&i,hold](const ALfloat x_abs) -> ALfloat
     {
         const ALfloat x_G{std::log(maxf(0.000001f, x_abs))};
         return UpdateSlidingHold(hold, i++, x_G);
     };
-    auto side_begin = std::begin(Comp->mSideChain) + index;
+    auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::transform(side_begin, side_begin+SamplesToDo, side_begin, detect_peak);
 
     ShiftSlidingHold(hold, SamplesToDo);
@@ -202,22 +186,21 @@ void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
  * to knee width, attack/release times, make-up/post gain, and clipping
  * reduction.
  */
-void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
+void GainCompressor(Compressor *Comp, const ALuint SamplesToDo)
 {
     const bool autoKnee{Comp->mAuto.Knee};
     const bool autoAttack{Comp->mAuto.Attack};
     const bool autoRelease{Comp->mAuto.Release};
     const bool autoPostGain{Comp->mAuto.PostGain};
     const bool autoDeclip{Comp->mAuto.Declip};
-    const ALsizei lookAhead{Comp->mLookAhead};
+    const ALuint lookAhead{Comp->mLookAhead};
     const ALfloat threshold{Comp->mThreshold};
     const ALfloat slope{Comp->mSlope};
     const ALfloat attack{Comp->mAttack};
     const ALfloat release{Comp->mRelease};
     const ALfloat c_est{Comp->mGainEstimate};
     const ALfloat a_adp{Comp->mAdaptCoeff};
-    const ALfloat (&crestFactor)[BUFFERSIZE] = Comp->mCrestFactor;
-    ALfloat (&sideChain)[BUFFERSIZE*2] = Comp->mSideChain;
+    const ALfloat *crestFactor{Comp->mCrestFactor};
     ALfloat postGain{Comp->mPostGain};
     ALfloat knee{Comp->mKnee};
     ALfloat t_att{attack};
@@ -229,9 +212,8 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
     ALfloat c_dev{Comp->mLastGainDev};
 
     ASSUME(SamplesToDo > 0);
-    ASSUME(lookAhead >= 0);
 
-    for(ALsizei i{0};i < SamplesToDo;i++)
+    for(ALfloat &sideChain : al::span<float>{Comp->mSideChain, SamplesToDo})
     {
         if(autoKnee)
             knee = maxf(0.0f, 2.5f * (c_dev + c_est));
@@ -240,14 +222,14 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
         /* This is the gain computer.  It applies a static compression curve
          * to the control signal.
          */
-        const ALfloat x_over{sideChain[lookAhead+i] - threshold};
+        const ALfloat x_over{std::addressof(sideChain)[lookAhead] - threshold};
         const ALfloat y_G{
             (x_over <= -knee_h) ? 0.0f :
             (std::fabs(x_over) < knee_h) ? (x_over + knee_h) * (x_over + knee_h) / (2.0f * knee) :
             x_over
         };
 
-        const ALfloat y2_crest{crestFactor[i]};
+        const ALfloat y2_crest{*(crestFactor++)};
         if(autoAttack)
         {
             t_att = 2.0f*attack/y2_crest;
@@ -283,12 +265,12 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
              * same output level.
              */
             if(autoDeclip)
-                c_dev = maxf(c_dev, sideChain[i] - y_L - threshold - c_est);
+                c_dev = maxf(c_dev, sideChain - y_L - threshold - c_est);
 
             postGain = -(c_dev + c_est);
         }
 
-        sideChain[i] = std::exp(postGain - y_L);
+        sideChain = std::exp(postGain - y_L);
     }
 
     Comp->mLastRelease = y_1;
@@ -301,10 +283,10 @@ void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
  * reaching the offending impulse.  This is best used when operating as a
  * limiter.
  */
-void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
+void SignalDelay(Compressor *Comp, const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
 {
     const ALuint numChans{Comp->mNumChans};
-    const ALsizei lookAhead{Comp->mLookAhead};
+    const ALuint lookAhead{Comp->mLookAhead};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
@@ -362,9 +344,9 @@ std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALuint S
     const ALfloat ThresholdDb, const ALfloat Ratio, const ALfloat KneeDb, const ALfloat AttackTime,
     const ALfloat ReleaseTime)
 {
-    const auto lookAhead = static_cast<ALsizei>(
+    const auto lookAhead = static_cast<ALuint>(
         clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
-    const auto hold = static_cast<ALsizei>(
+    const auto hold = static_cast<ALuint>(
         clampf(std::round(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1));
 
     size_t size{sizeof(Compressor)};
@@ -437,7 +419,7 @@ Compressor::~Compressor()
 }
 
 
-void Compressor::process(const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
+void Compressor::process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
 {
     const ALuint numChans{mNumChans};
 
@@ -481,7 +463,6 @@ void Compressor::process(const ALsizei SamplesToDo, FloatBufferLine *OutBuffer)
     };
     std::for_each(OutBuffer, OutBuffer+numChans, apply_comp);
 
-    ASSUME(mLookAhead >= 0);
     auto side_begin = std::begin(mSideChain) + SamplesToDo;
     std::copy(side_begin, side_begin+mLookAhead, std::begin(mSideChain));
 }

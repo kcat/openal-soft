@@ -195,7 +195,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
             readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << 32;
-            readPos |= int64_t{voice->mPositionFrac.load(std::memory_order_relaxed)} <<
+            readPos |= uint64_t{voice->mPositionFrac.load(std::memory_order_relaxed)} <<
                        (32-FRACTIONBITS);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -206,7 +206,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         const ALbufferlistitem *BufferList{Source->queue};
         while(BufferList && BufferList != Current)
         {
-            readPos += int64_t{BufferList->mSampleLen} << 32;
+            readPos += uint64_t{BufferList->mSampleLen} << 32;
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
         readPos = minu64(readPos, 0x7fffffffffffffff_u64);
@@ -254,7 +254,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         while(BufferList && BufferList != Current)
         {
             if(!BufferFmt) BufferFmt = BufferList->mBuffer;
-            readPos += int64_t{BufferList->mSampleLen} << FRACTIONBITS;
+            readPos += uint64_t{BufferList->mSampleLen} << FRACTIONBITS;
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
 
@@ -265,7 +265,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         }
         assert(BufferFmt != nullptr);
 
-        offset = static_cast<ALdouble>(readPos) / static_cast<ALdouble>FRACTIONONE /
+        offset = static_cast<ALdouble>(readPos) / ALdouble{FRACTIONONE} /
                  static_cast<ALdouble>(BufferFmt->Frequency);
     }
 
@@ -283,7 +283,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     ALCdevice *device{context->mDevice.get()};
     const ALbufferlistitem *Current;
     ALuint readPos;
-    ALsizei readPosFrac;
+    ALuint readPosFrac;
     ALuint refcount;
     ALvoice *voice;
 
@@ -382,7 +382,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
  * or Second offset supplied by the application). This takes into account the
  * fact that the buffer format may have been modifed since.
  */
-ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
+ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
 {
     const ALbuffer *BufferFmt{nullptr};
     const ALbufferlistitem *BufferList;
@@ -426,14 +426,14 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
 
     case AL_SAMPLE_OFFSET:
         dblfrac = modf(Source->Offset, &dbloff);
-        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<unsigned int>::max()));
-        *frac = static_cast<ALsizei>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        *frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
         break;
 
     case AL_SEC_OFFSET:
         dblfrac = modf(Source->Offset*BufferFmt->Frequency, &dbloff);
-        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<unsigned int>::max()));
-        *frac = static_cast<ALsizei>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        *frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
         break;
     }
     Source->OffsetType = AL_NONE;
@@ -451,7 +451,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
 {
     /* Get sample frame offset */
     ALuint offset{0u};
-    ALsizei frac{0};
+    ALuint frac{0u};
     if(!GetSampleOffset(Source, &offset, &frac))
         return AL_FALSE;
 
@@ -3302,7 +3302,7 @@ ALsource::~ALsource()
     {
         std::unique_ptr<ALbufferlistitem> head{BufferList};
         BufferList = head->mNext.load(std::memory_order_relaxed);
-        if(ALbuffer *buffer{BufferList->mBuffer}) DecrementRef(buffer->ref);
+        if(ALbuffer *buffer{head->mBuffer}) DecrementRef(buffer->ref);
     }
     queue = nullptr;
 

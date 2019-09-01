@@ -403,7 +403,7 @@ struct AlsaPlayback final : public BackendBase {
 
     snd_pcm_t *mPcmHandle{nullptr};
 
-    al::vector<char> mBuffer;
+    al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -550,7 +550,7 @@ int AlsaPlayback::mixerNoMMapProc()
         }
 
         lock();
-        char *WritePtr{mBuffer.data()};
+        al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
         aluMixData(mDevice, WritePtr, avail);
         while(avail > 0)
@@ -874,7 +874,7 @@ struct AlsaCapture final : public BackendBase {
 
     snd_pcm_t *mPcmHandle{nullptr};
 
-    al::vector<char> mBuffer;
+    al::vector<al::byte> mBuffer;
 
     bool mDoCapture{false};
     RingBufferPtr mRing{nullptr};
@@ -1044,7 +1044,7 @@ void AlsaCapture::stop()
     {
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage. */
-        al::vector<char> temp(snd_pcm_frames_to_bytes(mPcmHandle, avail));
+        auto temp = al::vector<al::byte>(snd_pcm_frames_to_bytes(mPcmHandle, avail));
         captureSamples(temp.data(), avail);
         mBuffer = std::move(temp);
     }
@@ -1106,7 +1106,7 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
             continue;
         }
 
-        buffer = static_cast<ALbyte*>(buffer) + amt;
+        buffer = static_cast<al::byte*>(buffer) + amt;
         samples -= amt;
     }
     if(samples > 0)

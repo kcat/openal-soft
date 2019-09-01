@@ -504,7 +504,7 @@ void MainWindow::showAboutPage()
 {
     QMessageBox::information(this, tr("About"),
         tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ") +
-        tr(GetVersionString()));
+        GetVersionString());
 }
 
 

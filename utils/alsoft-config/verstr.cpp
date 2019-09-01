@@ -4,7 +4,7 @@
 #include "version.h"
 
 
-const char *GetVersionString()
+QString GetVersionString()
 {
-    return ALSOFT_VERSION "-" ALSOFT_GIT_COMMIT_HASH " (" ALSOFT_GIT_BRANCH " branch).";
+    return QStringLiteral(ALSOFT_VERSION "-" ALSOFT_GIT_COMMIT_HASH " (" ALSOFT_GIT_BRANCH " branch).");
 }

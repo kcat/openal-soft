@@ -2974,7 +2974,11 @@ START_API_FUNC
     BackendLockGuard __{*device->Backend};
     auto stop_source = [&context](ALsource *source) -> void
     {
+        /* Get the source state before clearing from the voice, so we know what
+         * state the source+voice was actually in.
+         */
         ALvoice *voice{GetSourceVoice(source, context.get())};
+        const ALenum oldstate{GetSourceState(source, voice)};
         if(voice != nullptr)
         {
             voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
@@ -2986,7 +2990,6 @@ START_API_FUNC
                 std::memory_order_acq_rel, std::memory_order_acquire);
             voice = nullptr;
         }
-        ALenum oldstate{GetSourceState(source, voice)};
         if(oldstate != AL_INITIAL && oldstate != AL_STOPPED)
         {
             source->state = AL_STOPPED;
@@ -3048,7 +3051,7 @@ START_API_FUNC
                 std::memory_order_acq_rel, std::memory_order_acquire);
             voice = nullptr;
         }
-        if(GetSourceState(source, voice) != AL_INITIAL)
+        if(source->state != AL_INITIAL)
         {
             source->state = AL_INITIAL;
             SendStateChangeEvent(context.get(), source->id, AL_INITIAL);

@@ -254,13 +254,9 @@ ALbuffer *AllocBuffer(ALCcontext *context)
     );
 
     auto lidx = static_cast<ALsizei>(std::distance(device->BufferList.begin(), sublist));
-    ALbuffer *buffer{nullptr};
     ALsizei slidx{0};
     if LIKELY(sublist != device->BufferList.end())
-    {
         slidx = CTZ64(sublist->FreeMask);
-        buffer = sublist->Buffers + slidx;
-    }
     else
     {
         /* Don't allocate so many list entries that the 32-bit ID could
@@ -283,10 +279,10 @@ ALbuffer *AllocBuffer(ALCcontext *context)
         }
 
         slidx = 0;
-        buffer = sublist->Buffers + slidx;
     }
 
-    buffer = new (buffer) ALbuffer{};
+    ALbuffer *buffer{::new (sublist->Buffers + slidx) ALbuffer{}};
+
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;
 

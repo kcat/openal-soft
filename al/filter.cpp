@@ -288,13 +288,9 @@ ALfilter *AllocFilter(ALCcontext *context)
     );
 
     auto lidx = static_cast<ALsizei>(std::distance(device->FilterList.begin(), sublist));
-    ALfilter *filter{nullptr};
     ALsizei slidx{0};
     if LIKELY(sublist != device->FilterList.end())
-    {
         slidx = CTZ64(sublist->FreeMask);
-        filter = sublist->Filters + slidx;
-    }
     else
     {
         /* Don't allocate so many list entries that the 32-bit ID could
@@ -317,10 +313,9 @@ ALfilter *AllocFilter(ALCcontext *context)
         }
 
         slidx = 0;
-        filter = sublist->Filters + slidx;
     }
 
-    filter = new (filter) ALfilter{};
+    ALfilter *filter{::new (sublist->Filters + slidx) ALfilter{}};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */

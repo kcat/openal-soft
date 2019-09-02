@@ -130,7 +130,7 @@ void InitEffectParams(ALeffect *effect, ALenum type)
     }
     else
     {
-        effect->Props = EffectProps {};
+        effect->Props = EffectProps{};
         effect->vtab = nullptr;
     }
     effect->type = type;
@@ -146,13 +146,9 @@ ALeffect *AllocEffect(ALCcontext *context)
     );
 
     auto lidx = static_cast<ALsizei>(std::distance(device->EffectList.begin(), sublist));
-    ALeffect *effect{nullptr};
     ALsizei slidx{0};
     if LIKELY(sublist != device->EffectList.end())
-    {
         slidx = CTZ64(sublist->FreeMask);
-        effect = sublist->Effects + slidx;
-    }
     else
     {
         /* Don't allocate so many list entries that the 32-bit ID could
@@ -175,10 +171,9 @@ ALeffect *AllocEffect(ALCcontext *context)
         }
 
         slidx = 0;
-        effect = sublist->Effects + slidx;
     }
 
-    effect = new (effect) ALeffect{};
+    ALeffect *effect{::new (sublist->Effects + slidx) ALeffect{}};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */

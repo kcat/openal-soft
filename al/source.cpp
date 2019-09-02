@@ -491,13 +491,9 @@ ALsource *AllocSource(ALCcontext *context)
         { return entry.FreeMask != 0; }
     );
     auto lidx = static_cast<ALsizei>(std::distance(context->mSourceList.begin(), sublist));
-    ALsource *source;
     ALsizei slidx;
     if LIKELY(sublist != context->mSourceList.end())
-    {
         slidx = CTZ64(sublist->FreeMask);
-        source = sublist->Sources + slidx;
-    }
     else
     {
         /* Don't allocate so many list entries that the 32-bit ID could
@@ -521,10 +517,9 @@ ALsource *AllocSource(ALCcontext *context)
         }
 
         slidx = 0;
-        source = sublist->Sources + slidx;
     }
 
-    source = new (source) ALsource{device->NumAuxSends};
+    ALsource *source{::new (sublist->Sources + slidx) ALsource{device->NumAuxSends}};
 
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;

@@ -2422,8 +2422,7 @@ void ALCcontext::init()
 {
     if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == Playback)
     {
-        void *ptr{al_calloc(16, sizeof(ALeffectslot))};
-        mDefaultSlot = std::unique_ptr<ALeffectslot>{new (ptr) ALeffectslot{}};
+        mDefaultSlot = std::unique_ptr<ALeffectslot>{new ALeffectslot{}};
         if(InitEffectSlot(mDefaultSlot.get()) == AL_NO_ERROR)
             aluInitEffectPanning(mDefaultSlot.get(), mDevice.get());
         else

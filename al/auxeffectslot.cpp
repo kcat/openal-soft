@@ -173,13 +173,9 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         { return entry.FreeMask != 0; }
     );
     auto lidx = static_cast<ALsizei>(std::distance(context->mEffectSlotList.begin(), sublist));
-    ALeffectslot *slot;
     ALsizei slidx;
     if LIKELY(sublist != context->mEffectSlotList.end())
-    {
         slidx = CTZ64(sublist->FreeMask);
-        slot = sublist->EffectSlots + slidx;
-    }
     else
     {
         /* Don't allocate so many list entries that the 32-bit ID could
@@ -203,10 +199,9 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         }
 
         slidx = 0;
-        slot = sublist->EffectSlots + slidx;
     }
 
-    slot = new (slot) ALeffectslot{};
+    ALeffectslot *slot{::new (sublist->EffectSlots + slidx) ALeffectslot{}};
     ALenum err{InitEffectSlot(slot)};
     if(err != AL_NO_ERROR)
     {

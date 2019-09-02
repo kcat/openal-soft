@@ -77,8 +77,13 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #define AL_EFFECTSLOT_TARGET_SOFT                0xf000
 #endif
 
-typedef ALsizei(*alSourceFunc_t)(ALuint abo, ALbyte* to_fill, ALsizei stride, ptrdiff_t samples, ALvoid* usr_ptr /*, ALuint alignment, Alenum format, ...*/);
-AL_API ALvoid AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALbitfieldSOFT flags, alSourceFunc_t callback, ALvoid* usr_ptr);
+/* Location in file may be inappropriate */
+/* Callback buffer */
+#ifndef AL_SOFT_callback_buffer
+#define AL_SOFT_callback_buffer
+typedef ALsizei(*LPALBUFFERCALLBACKFUNC)(ALuint abo, ALbyte* to_fill, ALsizei stride, ptrdiff_t samples, ALvoid* usr_ptr /*, ALuint alignment, Alenum format, ...*/);
+AL_API ALvoid AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALbitfieldSOFT flags, LPALBUFFERCALLBACKFUNC callback, ALvoid* usr_ptr);
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

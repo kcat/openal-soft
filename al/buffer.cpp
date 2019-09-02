@@ -525,7 +525,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
 
 void SetUpCallback(ALCcontext *context, ALbuffer *ALBuf,
 	ALuint freq, UserFmtChannels SrcChannels, UserFmtType SrcType,
-	ALbitfieldSOFT access, alSourceFunc_t callback, ALvoid* usr_ptr) {
+	ALbitfieldSOFT access, LPALBUFFERCALLBACKFUNC callback, ALvoid* usr_ptr) {
 	if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
 		SETERR_RETURN(context, AL_INVALID_OPERATION, , "Setting callback for in-use buffer!%u",
 			ALBuf->id);
@@ -827,7 +827,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALbitfieldSOFT flags, alSourceFunc_t callback, ALvoid* usr_ptr)
+AL_API ALvoid AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALbitfieldSOFT flags, LPALBUFFERCALLBACKFUNC callback, ALvoid* usr_ptr)
 START_API_FUNC
 {
 	ContextRef context{ GetContextRef() };

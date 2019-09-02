@@ -100,7 +100,7 @@ struct ALbuffer {
     ALuint id{0};
 
 	//for callback
-	alSourceFunc_t callback{ nullptr };
+	LPALBUFFERCALLBACKFUNC callback{ nullptr };
 	void* usr_ptr{ nullptr };
 };
 

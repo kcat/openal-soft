@@ -633,10 +633,11 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
             }
 
             /* Now filter and mix to the appropriate outputs. */
+            ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             {
                 DirectParams &parms = chandata.mDryParams;
-                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
-                    Device->FilteredData, ResampledData, DstBufferSize, mDirect.FilterType)};
+                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
+                    ResampledData, DstBufferSize, mDirect.FilterType)};
 
                 if((mFlags&VOICE_HAS_HRTF))
                 {
@@ -786,21 +787,20 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 }
             }
 
-            ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             for(ALsizei send{0};send < NumSends;++send)
             {
                 if(mSend[send].Buffer.empty())
                     continue;
 
                 SendParams &parms = chandata.mWetParams[send];
-                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
-                    FilterBuf, ResampledData, DstBufferSize, mSend[send].FilterType)};
+                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
+                    ResampledData, DstBufferSize, mSend[send].FilterType)};
 
                 const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
                     parms.Gains.Target};
                 MixSamples({samples, DstBufferSize}, mSend[send].Buffer, parms.Gains.Current,
                     TargetGains, Counter, OutPos);
-            };
+            }
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;

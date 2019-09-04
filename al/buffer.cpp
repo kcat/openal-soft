@@ -1220,7 +1220,8 @@ START_API_FUNC
     ALCdevice *device{context->mDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+	ALbuffer* albuf = LookupBuffer(device, buffer);
+    if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
 	else if UNLIKELY(albuf->callback)
 		context->setError(AL_INVALID_OPERATION,

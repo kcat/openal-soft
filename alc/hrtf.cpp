@@ -438,7 +438,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     {
         auto copy_arr = [](const std::array<double,2> &in) noexcept -> float2
         { return float2{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };
-        std::transform(tmpres[i].begin(), tmpres[i].end(), state->Chan[i].Coeffs.begin(),
+        std::transform(tmpres[i].begin(), tmpres[i].end(), state->Coeffs[i].begin(),
             copy_arr);
     }
     tmpres.clear();

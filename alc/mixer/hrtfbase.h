@@ -108,29 +108,25 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
     const ALsizei IrSize{State->IrSize};
     ASSUME(IrSize >= 4);
 
-    auto chanstate = State->Chan.begin();
+    auto accum_iter = std::copy_n(State->Values.begin(), State->Values.size(), AccumSamples);
+    std::fill_n(accum_iter, BufferSize, float2{});
+
+    auto coeff_iter = State->Coeffs.begin();
     for(const FloatBufferLine &input : InSamples)
     {
-        const auto &Coeffs = chanstate->Coeffs;
-
-        auto accum_iter = std::copy_n(chanstate->Values.begin(),
-            chanstate->Values.size(), AccumSamples);
-        std::fill_n(accum_iter, BufferSize, float2{});
-
+        const auto &Coeffs = *(coeff_iter++);
         for(size_t i{0u};i < BufferSize;++i)
         {
             const ALfloat insample{input[i]};
             ApplyCoeffs(i, AccumSamples+i, IrSize, Coeffs, insample, insample);
         }
-        for(size_t i{0u};i < BufferSize;++i)
-            LeftOut[i]  += AccumSamples[i][0];
-        for(size_t i{0u};i < BufferSize;++i)
-            RightOut[i] += AccumSamples[i][1];
-
-        std::copy_n(AccumSamples + BufferSize, chanstate->Values.size(),
-            chanstate->Values.begin());
-        ++chanstate;
     }
+    for(size_t i{0u};i < BufferSize;++i)
+        LeftOut[i]  += AccumSamples[i][0];
+    for(size_t i{0u};i < BufferSize;++i)
+        RightOut[i] += AccumSamples[i][1];
+
+    std::copy_n(AccumSamples + BufferSize, State->Values.size(), State->Values.begin());
 }
 
 #endif /* MIXER_HRTFBASE_H */

@@ -79,19 +79,14 @@ struct HrtfFilter {
 struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
     ALsizei IrSize{0};
-    struct ChanData {
-        alignas(16) HrirArray Values;
-        alignas(16) HrirArray Coeffs;
-    };
-    al::FlexArray<ChanData> Chan;
+    alignas(16) HrirArray Values;
+    al::FlexArray<HrirArray,16> Coeffs;
 
-    DirectHrtfState(size_t numchans) : Chan{numchans} { }
-    DirectHrtfState(const DirectHrtfState&) = delete;
-    DirectHrtfState& operator=(const DirectHrtfState&) = delete;
+    DirectHrtfState(size_t numchans) : Coeffs{numchans} { }
 
     static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
     static constexpr size_t Sizeof(size_t numchans) noexcept
-    { return al::FlexArray<ChanData>::Sizeof(numchans, offsetof(DirectHrtfState, Chan)); }
+    { return al::FlexArray<HrirArray,16>::Sizeof(numchans, offsetof(DirectHrtfState, Coeffs)); }
 
     DEF_PLACE_NEWDEL()
 };

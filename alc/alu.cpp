@@ -1732,6 +1732,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.user.msg))
         evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
 
+    IncrementRef(device->MixCount);
     for(ALCcontext *ctx : *device->mContexts.load())
     {
         const ALbitfieldSOFT enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
@@ -1741,7 +1742,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             auto evt_data = ring->getWriteVector().first;
             if(evt_data.len > 0)
             {
-                new (evt_data.buf) AsyncEvent{evt};
+                ::new (evt_data.buf) AsyncEvent{evt};
                 ring->writeAdvance(1);
                 ctx->mEventSem.post();
             }
@@ -1758,4 +1759,5 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
             stop_voice);
     }
+    IncrementRef(device->MixCount);
 }

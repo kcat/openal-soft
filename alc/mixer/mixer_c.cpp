@@ -103,7 +103,7 @@ const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat 
 static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
     const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
 {
-    ASSUME(IrSize >= 2);
+    ASSUME(IrSize >= 4);
     for(ALsizei c{0};c < IrSize;++c)
     {
         Values[c][0] += Coeffs[c][0] * left;

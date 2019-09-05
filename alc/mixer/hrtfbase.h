@@ -16,7 +16,6 @@ inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const ALfloat *InSamples, float2 *RESTRICT AccumSamples, const size_t OutPos,
     const ALsizei IrSize, MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
-    ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 
     const HrirArray &Coeffs = *hrtfparams->Coeffs;
@@ -58,7 +57,6 @@ inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
     const auto &NewCoeffs = *newparams->Coeffs;
     const ALfloat newGainStep{newparams->GainStep};
 
-    ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 
     ALsizei Delay[2]{
@@ -106,7 +104,6 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
     ASSUME(BufferSize > 0);
 
     const ALsizei IrSize{State->IrSize};
-    ASSUME(IrSize >= 4);
 
     auto accum_iter = std::copy_n(State->Values.begin(), State->Values.size(), AccumSamples);
     std::fill_n(accum_iter, BufferSize, float2{});

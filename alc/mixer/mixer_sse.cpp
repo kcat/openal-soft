@@ -74,7 +74,7 @@ static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALs
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
 
-    ASSUME(IrSize >= 2);
+    ASSUME(IrSize >= 4);
 
     if((Offset&1))
     {

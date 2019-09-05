@@ -1348,8 +1348,7 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
     ASSUME(SamplesToDo > 0);
 
     const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
-    const al::span<ALvoice> voices{ctx->mVoices->data(),
-        ctx->mVoiceCount.load(std::memory_order_acquire)};
+    const al::span<ALvoice> voices{ctx->mVoices.data(), ctx->mVoices.size()};
 
     /* Process pending propery updates for objects on the context. */
     ProcessParamUpdates(ctx, auxslots, voices);
@@ -1755,9 +1754,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             voice.mSourceID.store(0u, std::memory_order_relaxed);
             voice.mPlayState.store(ALvoice::Stopped, std::memory_order_release);
         };
-        std::for_each(ctx->mVoices->begin(),
-            ctx->mVoices->begin() + ctx->mVoiceCount.load(std::memory_order_acquire),
-            stop_voice);
+        std::for_each(ctx->mVoices.begin(), ctx->mVoices.end(), stop_voice);
     }
     IncrementRef(device->MixCount);
 }

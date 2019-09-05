@@ -269,6 +269,7 @@ struct ALvoice {
 
     ALvoice() = default;
     ALvoice(const ALvoice&) = delete;
+    ALvoice(ALvoice&& rhs) noexcept { *this = std::move(rhs); }
     ~ALvoice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
     ALvoice& operator=(const ALvoice&) = delete;
     ALvoice& operator=(ALvoice&& rhs) noexcept

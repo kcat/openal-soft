@@ -377,96 +377,79 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 }
 
 
-/* GetSampleOffset
- *
- * Retrieves the sample offset into the Source's queue (from the Sample, Byte
- * or Second offset supplied by the application). This takes into account the
- * fact that the buffer format may have been modifed since.
- */
-bool GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
-{
-    const ALbuffer *BufferFmt{nullptr};
-    const ALbufferlistitem *BufferList;
- 
-    /* Find the first valid Buffer in the Queue */
-    BufferList = Source->queue;
-    while(BufferList && !BufferFmt)
-    {
-        BufferFmt = BufferList->mBuffer;
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
-    }
-    if(!BufferFmt)
-    {
-        Source->OffsetType = AL_NONE;
-        Source->Offset = 0.0;
-        return false;
-    }
-
-    ALdouble dbloff, dblfrac;
-    switch(Source->OffsetType)
-    {
-    case AL_BYTE_OFFSET:
-        /* Determine the ByteOffset (and ensure it is block aligned) */
-        *offset = static_cast<ALuint>(Source->Offset);
-        if(BufferFmt->OriginalType == UserFmtIMA4)
-        {
-            ALsizei align = (BufferFmt->OriginalAlign-1)/2 + 4;
-            *offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
-            *offset *= BufferFmt->OriginalAlign;
-        }
-        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
-        {
-            ALsizei align = (BufferFmt->OriginalAlign-2)/2 + 7;
-            *offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
-            *offset *= BufferFmt->OriginalAlign;
-        }
-        else
-            *offset /= FrameSizeFromFmt(BufferFmt->mFmtChannels, BufferFmt->mFmtType);
-        *frac = 0;
-        break;
-
-    case AL_SAMPLE_OFFSET:
-        dblfrac = modf(Source->Offset, &dbloff);
-        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        *frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
-        break;
-
-    case AL_SEC_OFFSET:
-        dblfrac = modf(Source->Offset*BufferFmt->Frequency, &dbloff);
-        *offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        *frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
-        break;
-    }
-    Source->OffsetType = AL_NONE;
-    Source->Offset = 0.0;
-
-    return true;
-}
-
-
 struct VoicePos {
     ALuint pos, frac;
     ALbufferlistitem *bufferitem;
 };
 
 /**
- * CalcOffset
+ * GetSampleOffset
  *
- * Calculates the voice position, fixed-point fraction, and bufferlist item
- * using the source's stored offset. If the source has no stored offset, or the
- * offset is out of range, returns an empty optional.
+ * Retrieves the voice position, fixed-point fraction, and bufferlist item
+ * using the source's stored offset and offset type. If the source has no
+ * stored offset, or the offset is out of range, returns an empty optional.
  */
-al::optional<VoicePos> CalcOffset(ALsource *Source)
+al::optional<VoicePos> GetSampleOffset(ALsource *Source)
 {
     al::optional<VoicePos> ret;
 
+    /* Find the first valid Buffer in the Queue */
+    const ALbuffer *BufferFmt{nullptr};
+    ALbufferlistitem *BufferList{Source->queue};
+    while(BufferList)
+    {
+        if((BufferFmt=BufferList->mBuffer) != nullptr) break;
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+    }
+    if(!BufferList)
+    {
+        Source->OffsetType = AL_NONE;
+        Source->Offset = 0.0;
+        return ret;
+    }
+
     /* Get sample frame offset */
     ALuint offset{0u}, frac{0u};
-    if(!GetSampleOffset(Source, &offset, &frac))
-        return ret;
+    ALdouble dbloff, dblfrac;
+    switch(Source->OffsetType)
+    {
+    case AL_BYTE_OFFSET:
+        /* Determine the ByteOffset (and ensure it is block aligned) */
+        offset = static_cast<ALuint>(Source->Offset);
+        if(BufferFmt->OriginalType == UserFmtIMA4)
+        {
+            const ALsizei align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
+            offset *= BufferFmt->OriginalAlign;
+        }
+        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
+        {
+            const ALsizei align{(BufferFmt->OriginalAlign-2)/2 + 7};
+            offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
+            offset *= BufferFmt->OriginalAlign;
+        }
+        else
+            offset /= FrameSizeFromFmt(BufferFmt->mFmtChannels, BufferFmt->mFmtType);
+        frac = 0;
+        break;
 
+    case AL_SAMPLE_OFFSET:
+        dblfrac = std::modf(Source->Offset, &dbloff);
+        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        break;
+
+    case AL_SEC_OFFSET:
+        dblfrac = std::modf(Source->Offset*BufferFmt->Frequency, &dbloff);
+        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        break;
+    }
+    Source->OffsetType = AL_NONE;
+    Source->Offset = 0.0;
+
+    /* Find the bufferlist item this offset belongs to. */
     ALuint totalBufferLen{0u};
-    ALbufferlistitem *BufferList{Source->queue};
     while(BufferList && totalBufferLen <= offset)
     {
         if(BufferList->mSampleLen > offset-totalBufferLen)
@@ -1021,7 +1004,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                  */
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
-                    auto vpos = CalcOffset(Source);
+                    auto vpos = GetSampleOffset(Source);
                     if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
                     voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
@@ -1240,7 +1223,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                 BackendLockGuard _{*device->Backend};
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
-                    auto vpos = CalcOffset(Source);
+                    auto vpos = GetSampleOffset(Source);
                     if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
 
                     voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
@@ -2781,7 +2764,7 @@ START_API_FUNC
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         bool start_fading{false};
-        if(auto vpos = CalcOffset(source))
+        if(auto vpos = GetSampleOffset(source))
         {
             start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
             voice->mPosition.store(vpos->pos, std::memory_order_relaxed);

@@ -50,6 +50,7 @@
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "aloptional.h"
 #include "alspan.h"
 #include "alu.h"
 #include "ambidefs.h"
@@ -382,7 +383,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
  * or Second offset supplied by the application). This takes into account the
  * fact that the buffer format may have been modifed since.
  */
-ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
+bool GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
 {
     const ALbuffer *BufferFmt{nullptr};
     const ALbufferlistitem *BufferList;
@@ -398,7 +399,7 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
     {
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
-        return AL_FALSE;
+        return false;
     }
 
     ALdouble dbloff, dblfrac;
@@ -439,21 +440,30 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
     Source->OffsetType = AL_NONE;
     Source->Offset = 0.0;
 
-    return AL_TRUE;
+    return true;
 }
 
-/* ApplyOffset
+
+struct VoicePos {
+    ALuint pos, frac;
+    ALbufferlistitem *bufferitem;
+};
+
+/**
+ * CalcOffset
  *
- * Apply the stored playback offset to the Source. This function will update
- * the number of buffers "played" given the stored offset.
+ * Calculates the voice position, fixed-point fraction, and bufferlist item
+ * using the source's stored offset. If the source has no stored offset, or the
+ * offset is out of range, returns an empty optional.
  */
-ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
+al::optional<VoicePos> CalcOffset(ALsource *Source)
 {
+    al::optional<VoicePos> ret;
+
     /* Get sample frame offset */
-    ALuint offset{0u};
-    ALuint frac{0u};
+    ALuint offset{0u}, frac{0u};
     if(!GetSampleOffset(Source, &offset, &frac))
-        return AL_FALSE;
+        return ret;
 
     ALuint totalBufferLen{0u};
     ALbufferlistitem *BufferList{Source->queue};
@@ -462,10 +472,8 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
         if(BufferList->mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            voice->mPosition.store(offset - totalBufferLen, std::memory_order_relaxed);
-            voice->mPositionFrac.store(frac, std::memory_order_relaxed);
-            voice->mCurrentBuffer.store(BufferList, std::memory_order_release);
-            return AL_TRUE;
+            ret = {offset-totalBufferLen, frac, BufferList};
+            return ret;
         }
         totalBufferLen += BufferList->mSampleLen;
 
@@ -473,7 +481,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
     }
 
     /* Offset is out of range of the queue */
-    return AL_FALSE;
+    return ret;
 }
 
 
@@ -1013,8 +1021,12 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                  */
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
-                    if(ApplyOffset(Source, voice) == AL_FALSE)
-                        SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
+                    auto vpos = CalcOffset(Source);
+                    if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
+
+                    voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+                    voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+                    voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_release);
                 }
             }
             return true;
@@ -1228,8 +1240,12 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                 BackendLockGuard _{*device->Backend};
                 if(ALvoice *voice{GetSourceVoice(Source, Context)})
                 {
-                    if(ApplyOffset(Source, voice) == AL_FALSE)
-                        SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
+                    auto vpos = CalcOffset(Source);
+                    if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
+
+                    voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+                    voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+                    voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_release);
                 }
             }
             return true;
@@ -2765,10 +2781,13 @@ START_API_FUNC
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         bool start_fading{false};
-        if(ApplyOffset(source, voice) != AL_FALSE)
-            start_fading = voice->mPosition.load(std::memory_order_relaxed) != 0 ||
-                voice->mPositionFrac.load(std::memory_order_relaxed) != 0 ||
-                voice->mCurrentBuffer.load(std::memory_order_relaxed) != BufferList;
+        if(auto vpos = CalcOffset(source))
+        {
+            start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
+            voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+            voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+            voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+        }
 
         ALbuffer *buffer{BufferList->mBuffer};
         voice->mFrequency = buffer->Frequency;

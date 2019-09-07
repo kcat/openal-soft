@@ -2716,14 +2716,6 @@ START_API_FUNC
         ALvoice *voice{GetSourceVoice(source, context.get())};
         switch(GetSourceState(source, voice))
         {
-        case AL_PLAYING:
-            assert(voice != nullptr);
-            /* A source that's already playing is restarted from the beginning. */
-            voice->mCurrentBuffer.store(BufferList, std::memory_order_relaxed);
-            voice->mPosition.store(0u, std::memory_order_relaxed);
-            voice->mPositionFrac.store(0, std::memory_order_release);
-            return;
-
         case AL_PAUSED:
             assert(voice != nullptr);
             /* A source that's paused simply resumes. */
@@ -2731,6 +2723,19 @@ START_API_FUNC
             source->state = AL_PLAYING;
             SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
             return;
+
+        case AL_PLAYING:
+            assert(voice != nullptr);
+            /* A source that's already playing is restarted from the beginning.
+             * Stop the current voice and start a new one so it properly cross-
+             * fades back to the beginning.
+             */
+            voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+            voice->mSourceID.store(0u, std::memory_order_release);
+            voice->mPlayState.store(ALvoice::Stopping, std::memory_order_release);
+            voice = nullptr;
+            break;
 
         default:
             assert(voice == nullptr);
@@ -2851,10 +2856,13 @@ START_API_FUNC
 
         voice->mSourceID.store(source->id, std::memory_order_relaxed);
         voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
-        source->state = AL_PLAYING;
         source->VoiceIdx = vidx;
 
-        SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
+        if(source->state != AL_PLAYING)
+        {
+            source->state = AL_PLAYING;
+            SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
+        }
     };
     std::for_each(srchandles, srchandles+n, start_source);
 }

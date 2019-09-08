@@ -272,7 +272,7 @@
 #  configuration files for the appropriate speaker configuration you intend to
 #  use (see the quad, surround51, etc options below). Currently, up to third-
 #  order decoding is supported.
-#hq-mode = false
+#hq-mode = true
 
 ## distance-comp:
 #  Enables compensation for the speakers' relative distances to the listener.

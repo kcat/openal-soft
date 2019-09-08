@@ -509,9 +509,8 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, co
     auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
     const ALfloat avg_dist{
-        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f},
-            accum_spkr_dist) / static_cast<ALfloat>(conf->Speakers.size())
-    };
+        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), 0.0f, accum_spkr_dist) /
+        static_cast<ALfloat>(conf->Speakers.size())};
     InitNearFieldCtrl(device, avg_dist, order,
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? chans_per_order3d : chans_per_order2d);
 
@@ -717,7 +716,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             InitPanning(device);
         else
         {
-            int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 0)};
+            int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1)};
             InitCustomPanning(device, !!hqdec, pconf, speakermap);
         }
         if(device->AmbiDecoder)

@@ -716,7 +716,7 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    bool hqmode{settings.value("decoder/hq-mode", false).toBool()};
+    bool hqmode{settings.value("decoder/hq-mode", true).toBool()};
     ui->decoderHQModeCheckBox->setChecked(hqmode);
     ui->decoderDistCompCheckBox->setCheckState(getCheckState(settings.value("decoder/distance-comp")));
     ui->decoderNFEffectsCheckBox->setCheckState(getCheckState(settings.value("decoder/nfc")));
@@ -976,7 +976,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("dither", getCheckValue(ui->outputDitherCheckBox));
 
     settings.setValue("decoder/hq-mode",
-        ui->decoderHQModeCheckBox->isChecked() ? QString{"true"} : QString{/*"false"*/}
+        ui->decoderHQModeCheckBox->isChecked() ? QString{/*"true"*/} : QString{"false"}
     );
     settings.setValue("decoder/distance-comp", getCheckValue(ui->decoderDistCompCheckBox));
     settings.setValue("decoder/nfc", getCheckValue(ui->decoderNFEffectsCheckBox));

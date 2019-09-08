@@ -10,21 +10,13 @@
 namespace alu {
 
 class Vector {
-    alignas(16) std::array<float,4> mVals{};
+    alignas(16) std::array<float,4> mVals;
 
 public:
-    constexpr Vector() noexcept = default;
+    Vector() noexcept = default;
     constexpr Vector(float a, float b, float c, float d) noexcept
       : mVals{{a, b, c, d}}
     { }
-    Vector(const Vector &rhs) noexcept
-    { mVals = rhs.mVals; }
-
-    Vector& operator=(const Vector &rhs) noexcept
-    {
-        mVals = rhs.mVals;
-        return *this;
-    }
 
     float& operator[](size_t idx) noexcept { return mVals[idx]; }
     constexpr const float& operator[](size_t idx) const noexcept { return mVals[idx]; }
@@ -55,24 +47,16 @@ public:
 };
 
 class Matrix {
-    alignas(16) std::array<std::array<float,4>,4> mVals{};
+    alignas(16) std::array<std::array<float,4>,4> mVals;
 
 public:
-    constexpr Matrix() noexcept = default;
+    Matrix() noexcept = default;
     constexpr Matrix(float aa, float ab, float ac, float ad,
                      float ba, float bb, float bc, float bd,
                      float ca, float cb, float cc, float cd,
                      float da, float db, float dc, float dd) noexcept
       : mVals{{{{aa, ab, ac, ad}}, {{ba, bb, bc, bd}}, {{ca, cb, cc, cd}}, {{da, db, dc, dd}}}}
     { }
-    Matrix(const Matrix &rhs) noexcept
-    { mVals = rhs.mVals; }
-
-    Matrix& operator=(const Matrix &rhs) noexcept
-    {
-        mVals = rhs.mVals;
-        return *this;
-    }
 
     std::array<float,4>& operator[](size_t idx) noexcept { return mVals[idx]; }
     constexpr const std::array<float,4>& operator[](size_t idx) const noexcept { return mVals[idx]; }

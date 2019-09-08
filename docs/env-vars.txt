@@ -11,9 +11,6 @@ Specifies the amount of logging OpenAL Soft will write out:
 1 - Prints out errors only
 2 - Prints out warnings and errors
 3 - Prints out additional information, as well as warnings and errors
-4 - Same as 3, but also device and context reference count changes. This will
-    print out *a lot* of info, and is generally not useful unless you're trying
-    to track a reference leak within the library.
 
 ALSOFT_LOGFILE
 Specifies a filename that logged output will be written to. Note that the file

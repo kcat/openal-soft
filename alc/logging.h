@@ -38,11 +38,6 @@ enum LogLevel {
 };
 extern LogLevel gLogLevel;
 
-#define TRACEREF(...) do {                                                    \
-    if UNLIKELY(gLogLevel >= LogRef)                                          \
-        AL_PRINT("(--)", __VA_ARGS__);                                        \
-} while(0)
-
 #define TRACE(...) do {                                                       \
     if UNLIKELY(gLogLevel >= LogTrace)                                        \
         AL_PRINT("(II)", __VA_ARGS__);                                        \

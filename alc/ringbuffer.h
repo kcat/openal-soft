@@ -34,8 +34,6 @@ struct RingBuffer {
     al::FlexArray<al::byte, 16> mBuffer;
 
     RingBuffer(const size_t count) : mBuffer{count} { }
-    RingBuffer(const RingBuffer&) = delete;
-    RingBuffer& operator=(const RingBuffer&) = delete;
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
     void reset() noexcept;
@@ -84,7 +82,7 @@ struct RingBuffer {
     /** Advance the write pointer `cnt' places. */
     void writeAdvance(size_t cnt) noexcept;
 
-    DEF_PLACE_NEWDEL()
+    DEF_FAM_NEWDEL(RingBuffer, mBuffer)
 };
 using RingBufferPtr = std::unique_ptr<RingBuffer>;
 

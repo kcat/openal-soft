@@ -143,14 +143,13 @@ void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, const size_t frames) no
 
 } // namespace
 
-SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
-                                         ALsizei srcRate, ALsizei dstRate, Resampler resampler)
+SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, size_t numchans,
+    ALsizei srcRate, ALsizei dstRate, Resampler resampler)
 {
-    if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
+    if(numchans < 1 || srcRate < 1 || dstRate < 1)
         return nullptr;
 
-    void *ptr{al_calloc(16, SampleConverter::Sizeof(numchans))};
-    SampleConverterPtr converter{new (ptr) SampleConverter{static_cast<size_t>(numchans)}};
+    SampleConverterPtr converter{new (FamCount{numchans}) SampleConverter{numchans}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mSrcTypeSize = BytesFromDevFmt(srcType);
@@ -162,7 +161,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
     auto step = static_cast<ALsizei>(
-        mind(static_cast<ALdouble>(srcRate)/dstRate*FRACTIONONE + 0.5, MAX_PITCH*FRACTIONONE));
+        mind(srcRate*ALdouble{FRACTIONONE}/dstRate + 0.5, MAX_PITCH*FRACTIONONE));
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_<CopyTag,CTag>;

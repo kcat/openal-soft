@@ -48,7 +48,7 @@ RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
     if(power_of_two < sz) return nullptr;
 
     const size_t bufbytes{power_of_two * elem_sz};
-    RingBufferPtr rb{new (al_calloc(16, sizeof(*rb) + bufbytes)) RingBuffer{bufbytes}};
+    RingBufferPtr rb{new (FamCount{bufbytes}) RingBuffer{bufbytes}};
     rb->mWriteSize = limit_writes ? sz : (power_of_two-1);
     rb->mSizeMask = power_of_two - 1;
     rb->mElemSize = elem_sz;

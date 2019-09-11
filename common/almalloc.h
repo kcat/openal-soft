@@ -27,8 +27,24 @@ void al_free(void *ptr) noexcept;
 
 #define DEF_PLACE_NEWDEL()                                                    \
     void *operator new(size_t /*size*/, void *ptr) noexcept { return ptr; }   \
-    void operator delete(void *block) noexcept { al_free(block); }            \
-    void operator delete(void* /*block*/, void* /*ptr*/) noexcept { }
+    void operator delete(void *block, void*) noexcept { al_free(block); }     \
+    void operator delete(void *block) noexcept { al_free(block); }
+
+struct FamCount { size_t mCount; };
+
+#define DEF_FAM_NEWDEL(T, FamMem)                                             \
+    static constexpr size_t Sizeof(size_t count) noexcept                     \
+    { return decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)); }          \
+                                                                              \
+    void *operator new(size_t /*size*/, FamCount fam)                         \
+    {                                                                         \
+        if(void *ret{al_malloc(alignof(T), T::Sizeof(fam.mCount))})           \
+            return ret;                                                       \
+        throw std::bad_alloc();                                               \
+    }                                                                         \
+    void operator delete(void *block, FamCount /*fam*/) { al_free(block); }   \
+    void operator delete(void *block) noexcept { al_free(block); }
+
 
 namespace al {
 

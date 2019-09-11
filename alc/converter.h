@@ -39,13 +39,7 @@ struct SampleConverter {
     ALuint convert(const ALvoid **src, ALuint *srcframes, ALvoid *dst, ALuint dstframes);
     ALuint availableOut(ALuint srcframes) const;
 
-    static constexpr size_t Sizeof(size_t length) noexcept
-    {
-        return maxz(sizeof(SampleConverter),
-            al::FlexArray<ChanSamples>::Sizeof(length, offsetof(SampleConverter, mChan)));
-    }
-
-    DEF_PLACE_NEWDEL()
+    DEF_FAM_NEWDEL(SampleConverter, mChan)
 };
 using SampleConverterPtr = std::unique_ptr<SampleConverter>;
 

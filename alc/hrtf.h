@@ -85,10 +85,8 @@ struct DirectHrtfState {
     DirectHrtfState(size_t numchans) : Coeffs{numchans} { }
 
     static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
-    static constexpr size_t Sizeof(size_t numchans) noexcept
-    { return al::FlexArray<HrirArray,16>::Sizeof(numchans, offsetof(DirectHrtfState, Coeffs)); }
 
-    DEF_PLACE_NEWDEL()
+    DEF_FAM_NEWDEL(DirectHrtfState, Coeffs)
 };
 
 struct AngularPoint {

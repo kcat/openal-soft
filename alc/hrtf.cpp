@@ -61,21 +61,11 @@ struct HrtfHandle {
     HrtfHandle(const HrtfHandle&) = delete;
     HrtfHandle& operator=(const HrtfHandle&) = delete;
 
-    static std::unique_ptr<HrtfHandle> Create(size_t fname_len);
-    static constexpr size_t Sizeof(size_t length) noexcept
-    {
-        return maxz(sizeof(HrtfHandle),
-            al::FlexArray<char>::Sizeof(length, offsetof(HrtfHandle, filename)));
-    }
+    static std::unique_ptr<HrtfHandle> Create(size_t fname_len)
+    { return std::unique_ptr<HrtfHandle>{new (FamCount{fname_len}) HrtfHandle{fname_len}}; }
 
-    DEF_PLACE_NEWDEL()
+    DEF_FAM_NEWDEL(HrtfHandle, filename)
 };
-
-std::unique_ptr<HrtfHandle> HrtfHandle::Create(size_t fname_len)
-{
-    void *ptr{al_calloc(alignof(HrtfHandle), HrtfHandle::Sizeof(fname_len))};
-    return std::unique_ptr<HrtfHandle>{new (ptr) HrtfHandle{fname_len}};
-}
 
 namespace {
 
@@ -294,8 +284,7 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
 
 std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 {
-    void *ptr{al_calloc(16, DirectHrtfState::Sizeof(num_chans))};
-    return std::unique_ptr<DirectHrtfState>{new (ptr) DirectHrtfState{num_chans}};
+    return std::unique_ptr<DirectHrtfState>{new (FamCount{num_chans}) DirectHrtfState{num_chans}};
 }
 
 void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuint NumChannels,

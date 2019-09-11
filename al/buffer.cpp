@@ -34,6 +34,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <numeric>
 #include <utility>
 
 #include "AL/al.h"
@@ -244,42 +245,41 @@ constexpr ALbitfieldSOFT INVALID_MAP_FLAGS{~unsigned(AL_MAP_READ_BIT_SOFT | AL_M
     AL_MAP_PERSISTENT_BIT_SOFT)};
 
 
-ALbuffer *AllocBuffer(ALCcontext *context)
+bool EnsureBuffers(ALCdevice *device, size_t needed)
 {
-    ALCdevice *device{context->mDevice.get()};
-    std::lock_guard<std::mutex> _{device->BufferLock};
+    size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), size_t{0},
+        [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
+    )};
+
+    while(needed > count)
+    {
+        if UNLIKELY(device->BufferList.size() >= 1<<25)
+            return false;
+
+        device->BufferList.emplace_back();
+        auto sublist = device->BufferList.end() - 1;
+        sublist->FreeMask = ~0_u64;
+        sublist->Buffers = static_cast<ALbuffer*>(al_calloc(alignof(ALbuffer), sizeof(ALbuffer)*64));
+        if UNLIKELY(!sublist->Buffers)
+        {
+            device->BufferList.pop_back();
+            return false;
+        }
+        count += 64;
+    }
+    return true;
+}
+
+ALbuffer *AllocBuffer(ALCdevice *device)
+{
     auto sublist = std::find_if(device->BufferList.begin(), device->BufferList.end(),
         [](const BufferSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
 
-    auto lidx = static_cast<ALsizei>(std::distance(device->BufferList.begin(), sublist));
-    ALsizei slidx{0};
-    if LIKELY(sublist != device->BufferList.end())
-        slidx = CTZ64(sublist->FreeMask);
-    else
-    {
-        /* Don't allocate so many list entries that the 32-bit ID could
-         * overflow...
-         */
-        if UNLIKELY(device->BufferList.size() >= 1<<25)
-        {
-            context->setError(AL_OUT_OF_MEMORY, "Too many buffers allocated");
-            return nullptr;
-        }
-        device->BufferList.emplace_back();
-        sublist = device->BufferList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Buffers = reinterpret_cast<ALbuffer*>(al_calloc(16, sizeof(ALbuffer)*64));
-        if UNLIKELY(!sublist->Buffers)
-        {
-            device->BufferList.pop_back();
-            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
-            return nullptr;
-        }
-
-        slidx = 0;
-    }
+    auto lidx = static_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
+    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
     ALbuffer *buffer{::new (sublist->Buffers + slidx) ALbuffer{}};
 
@@ -293,9 +293,9 @@ ALbuffer *AllocBuffer(ALCcontext *context)
 
 void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
 {
-    ALuint id{buffer->id - 1};
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
+    const ALuint id{buffer->id - 1};
+    const size_t lidx{id >> 6};
+    const ALuint slidx{id & 0x3f};
 
     al::destroy_at(buffer);
 
@@ -304,8 +304,8 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
 
 inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
 
     if UNLIKELY(lidx >= device->BufferList.size())
         return nullptr;
@@ -606,11 +606,19 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d buffers", n);
     if UNLIKELY(n <= 0) return;
 
+    ALCdevice *device{context->mDevice.get()};
+    std::unique_lock<std::mutex> buflock{device->BufferLock};
+    if(!EnsureBuffers(device, static_cast<ALuint>(n)))
+    {
+        context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d buffer%s", n, (n==1)?"":"s");
+        return;
+    }
+
     if LIKELY(n == 1)
     {
         /* Special handling for the easy and normal case. */
-        ALbuffer *buffer = AllocBuffer(context.get());
-        if(buffer) buffers[0] = buffer->id;
+        ALbuffer *buffer{AllocBuffer(device)};
+        buffers[0] = buffer->id;
     }
     else
     {
@@ -618,15 +626,9 @@ START_API_FUNC
          * modifying the user storage in case of failure.
          */
         al::vector<ALuint> ids;
-        ids.reserve(n);
+        ids.reserve(static_cast<ALuint>(n));
         do {
-            ALbuffer *buffer = AllocBuffer(context.get());
-            if(!buffer)
-            {
-                alDeleteBuffers(static_cast<ALsizei>(ids.size()), ids.data());
-                return;
-            }
-
+            ALbuffer *buffer{AllocBuffer(device)};
             ids.emplace_back(buffer->id);
         } while(--n);
         std::copy(ids.begin(), ids.end(), buffers);

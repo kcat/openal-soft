@@ -402,7 +402,7 @@ static int TrReadInt(TokenReaderT *tr, const int loBound, const int hiBound, int
                 return 0;
             }
             temp[len] = '\0';
-            *value = strtol(temp, nullptr, 10);
+            *value = static_cast<int>(strtol(temp, nullptr, 10));
             if(*value < loBound || *value > hiBound)
             {
                 TrErrorAt(tr, tr->mLine, col, "Expected a value from %d to %d.\n", loBound, hiBound);
@@ -1123,9 +1123,9 @@ static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, do
              various coordinate systems, listener/source orientations, and
              direciontal vectors defined in the SOFA file.
     */
-    target[0] = src->mAzimuth;
-    target[1] = src->mElevation;
-    target[2] = src->mRadius;
+    target[0] = static_cast<float>(src->mAzimuth);
+    target[1] = static_cast<float>(src->mElevation);
+    target[2] = static_cast<float>(src->mRadius);
     mysofa_s2c(target);
 
     nearest = mysofa_lookup(sofa->lookup, target);
@@ -1147,7 +1147,7 @@ static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, do
         return 0;
     }
 
-    ExtractSofaHrir(sofa, nearest, src->mChannel, src->mOffset, n, hrir);
+    ExtractSofaHrir(sofa, static_cast<uint>(nearest), src->mChannel, src->mOffset, n, hrir);
 
     return 1;
 }
@@ -1834,13 +1834,13 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
                     continue;
 
                 double ef{(90.0 + aer[1]) * (hData->mFds[fi].mEvCount - 1) / 180.0};
-                ei = (int)std::round(ef);
+                ei = (uint)std::round(ef);
                 ef = (ef - ei) * 180.0f / (hData->mFds[fi].mEvCount - 1);
                 if(std::abs(ef) >= 0.1)
                     continue;
 
                 double af{aer[0] * hData->mFds[fi].mEvs[ei].mAzCount / 360.0f};
-                ai = (int)std::round(af);
+                ai = (uint)std::round(af);
                 af = (af - ai) * 360.0f / hData->mFds[fi].mEvs[ei].mAzCount;
                 ai = ai % hData->mFds[fi].mEvs[ei].mAzCount;
                 if(std::abs(af) >= 0.1)
@@ -1913,7 +1913,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
 
                 if(!TrReadIdent(tr, MAX_IDENT_LEN, ident))
                     return 0;
-                ti = MatchTargetEar(ident);
+                ti = static_cast<uint>(MatchTargetEar(ident));
                 if(static_cast<int>(ti) < 0)
                 {
                     TrErrorAt(tr, line, col, "Expected a target ear.\n");

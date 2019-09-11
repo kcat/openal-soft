@@ -220,15 +220,16 @@ static inline uint dither_rng(uint *seed)
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
 static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
-                       const int count, const int step, uint *seed)
+                       const uint count, const uint step, uint *seed)
 {
     static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
 
-    for(int i{0};i < count;i++)
+    for(uint i{0};i < count;i++)
     {
         uint prn0{dither_rng(seed)};
         uint prn1{dither_rng(seed)};
-        out[i*step] = std::round(in[i]*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
+        *out = std::round(*(in++)*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
+        out += step;
     }
 }
 
@@ -254,18 +255,18 @@ static void FftArrange(const uint n, complex_d *inout)
 }
 
 // Performs the summation.
-static void FftSummation(const int n, const double s, complex_d *cplx)
+static void FftSummation(const uint n, const double s, complex_d *cplx)
 {
     double pi;
-    int m, m2;
-    int i, k, mk;
+    uint m, m2;
+    uint i, k, mk;
 
     pi = s * M_PI;
     for(m = 1, m2 = 2;m < n; m <<= 1, m2 <<= 1)
     {
         // v = Complex (-2.0 * sin (0.5 * pi / m) * sin (0.5 * pi / m), -sin (pi / m))
-        double sm = sin(0.5 * pi / m);
-        auto v = complex_d{-2.0*sm*sm, -sin(pi / m)};
+        double sm = std::sin(0.5 * pi / m);
+        auto v = complex_d{-2.0*sm*sm, -std::sin(pi / m)};
         auto w = complex_d{1.0, 0.0};
         for(i = 0;i < m;i++)
         {
@@ -511,7 +512,7 @@ static double CalcKaiserBeta(const double rejection)
  *   p    -- gain compensation factor when sampling
  *   f_t  -- normalized center frequency (or cutoff; 0.5 is nyquist)
  */
-static double SincFilter(const int l, const double b, const double gain, const double cutoff, const int i)
+static double SincFilter(const uint l, const double b, const double gain, const double cutoff, const uint i)
 {
     return Kaiser(b, static_cast<double>(i - l) / l) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * (i - l));
 }
@@ -546,17 +547,15 @@ static double SincFilter(const int l, const double b, const double gain, const d
 // that's used to cut frequencies above the destination nyquist.
 void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRate)
 {
-    double cutoff, width, beta;
-    uint gcd, l;
-    int i;
-
-    gcd = Gcd(srcRate, dstRate);
+    const uint gcd{Gcd(srcRate, dstRate)};
     rs->mP = dstRate / gcd;
     rs->mQ = srcRate / gcd;
+
     /* The cutoff is adjusted by half the transition width, so the transition
      * ends before the nyquist (0.5).  Both are scaled by the downsampling
      * factor.
      */
+    double cutoff, width;
     if(rs->mP > rs->mQ)
     {
         cutoff = 0.475 / rs->mP;
@@ -569,13 +568,13 @@ void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRate)
     }
     // A rejection of -180 dB is used for the stop band. Round up when
     // calculating the left offset to avoid increasing the transition width.
-    l = (CalcKaiserOrder(180.0, width)+1) / 2;
-    beta = CalcKaiserBeta(180.0);
+    const uint l{(CalcKaiserOrder(180.0, width)+1) / 2};
+    const double beta{CalcKaiserBeta(180.0)};
     rs->mM = l*2 + 1;
     rs->mL = l;
     rs->mF.resize(rs->mM);
-    for(i = 0;i < (static_cast<int>(rs->mM));i++)
-        rs->mF[i] = SincFilter(static_cast<int>(l), beta, rs->mP, cutoff, i);
+    for(uint i{0};i < rs->mM;i++)
+        rs->mF[i] = SincFilter(l, beta, rs->mP, cutoff, i);
 }
 
 // Perform the upsample-filter-downsample resampling operation using a
@@ -709,8 +708,8 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     {
         const double scale = (hData->mSampleType == ST_S16) ? 32767.0 :
                              ((hData->mSampleType == ST_S24) ? 8388607.0 : 0.0);
-        const int bps = (hData->mSampleType == ST_S16) ? 2 :
-                        ((hData->mSampleType == ST_S24) ? 3 : 0);
+        const uint bps = (hData->mSampleType == ST_S16) ? 2 :
+                         ((hData->mSampleType == ST_S24) ? 3 : 0);
 
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -960,8 +959,8 @@ struct HrirReconstructor {
     std::vector<double*> mIrs;
     std::atomic<size_t> mCurrent;
     std::atomic<size_t> mDone;
-    size_t mFftSize;
-    size_t mIrPoints;
+    uint mFftSize;
+    uint mIrPoints;
 
     void Worker()
     {
@@ -987,7 +986,7 @@ struct HrirReconstructor {
              */
             MinimumPhase(mFftSize, mIrs[idx], h.data());
             FftInverse(mFftSize, h.data());
-            for(size_t i{0u};i < mIrPoints;++i)
+            for(uint i{0u};i < mIrPoints;++i)
                 mIrs[idx][i] = h[i].real();
 
             /* Increment the number of IRs done. */
@@ -1684,7 +1683,7 @@ int main(int argc, char *argv[])
         switch(opt)
         {
         case 'r':
-            outRate = strtoul(optarg, &end, 10);
+            outRate = static_cast<uint>(strtoul(optarg, &end, 10));
             if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
@@ -1697,7 +1696,7 @@ int main(int argc, char *argv[])
             break;
 
         case 'f':
-            fftSize = strtoul(optarg, &end, 10);
+            fftSize = static_cast<uint>(strtoul(optarg, &end, 10));
             if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MIN_FFTSIZE || fftSize > MAX_FFTSIZE)
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MIN_FFTSIZE, MAX_FFTSIZE);
@@ -1744,7 +1743,7 @@ int main(int argc, char *argv[])
             break;
 
         case 'w':
-            truncSize = strtoul(optarg, &end, 10);
+            truncSize = static_cast<uint>(strtoul(optarg, &end, 10));
             if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE || (truncSize%MOD_TRUNCSIZE))
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected multiple of %u between %u to %u.\n", optarg, opt, MOD_TRUNCSIZE, MIN_TRUNCSIZE, MAX_TRUNCSIZE);

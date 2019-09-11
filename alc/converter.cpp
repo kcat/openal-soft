@@ -144,7 +144,7 @@ void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, const size_t frames) no
 } // namespace
 
 SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, size_t numchans,
-    ALsizei srcRate, ALsizei dstRate, Resampler resampler)
+    ALuint srcRate, ALuint dstRate, Resampler resampler)
 {
     if(numchans < 1 || srcRate < 1 || dstRate < 1)
         return nullptr;

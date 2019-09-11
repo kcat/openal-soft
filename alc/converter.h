@@ -43,8 +43,8 @@ struct SampleConverter {
 };
 using SampleConverterPtr = std::unique_ptr<SampleConverter>;
 
-SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
-    ALsizei srcRate, ALsizei dstRate, Resampler resampler);
+SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, size_t numchans,
+    ALuint srcRate, ALuint dstRate, Resampler resampler);
 
 
 struct ChannelConverter {

@@ -1565,8 +1565,9 @@ HRESULT WasapiCapture::resetProxy()
 
     if(mDevice->Frequency != OutputType.Format.nSamplesPerSec || mDevice->FmtType != srcType)
     {
-        mSampleConv = CreateSampleConverter(srcType, mDevice->FmtType, mDevice->channelsFromFmt(),
-            OutputType.Format.nSamplesPerSec, mDevice->Frequency, BSinc24Resampler);
+        mSampleConv = CreateSampleConverter(srcType, mDevice->FmtType,
+            static_cast<ALuint>(mDevice->channelsFromFmt()), OutputType.Format.nSamplesPerSec,
+            mDevice->Frequency, BSinc24Resampler);
         if(!mSampleConv)
         {
             ERR("Failed to create converter for %s format, dst: %s %uhz, src: %s %luhz\n",

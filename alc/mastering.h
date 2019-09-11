@@ -65,7 +65,7 @@ struct Compressor {
 
     ~Compressor();
     void process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer);
-    ALsizei getLookAhead() const noexcept { return mLookAhead; }
+    ALsizei getLookAhead() const noexcept { return static_cast<ALsizei>(mLookAhead); }
 
     DEF_PLACE_NEWDEL()
 };

@@ -1664,7 +1664,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 break;
 
             case ALC_FREQUENCY:
-                freq = attrList[attrIdx + 1];
+                freq = static_cast<ALuint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_FREQUENCY, freq);
                 break;
 
@@ -1684,13 +1684,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 break;
 
             case ALC_MONO_SOURCES:
-                numMono = attrList[attrIdx + 1];
+                numMono = static_cast<ALuint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_MONO_SOURCES, numMono);
                 if(numMono > INT_MAX) numMono = 0;
                 break;
 
             case ALC_STEREO_SOURCES:
-                numStereo = attrList[attrIdx + 1];
+                numStereo = static_cast<ALuint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
                 if(numStereo > INT_MAX) numStereo = 0;
                 break;
@@ -1780,7 +1780,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->Flags.unset<FrequencyRequest>();
             else
             {
-                freq = maxi(freq, MIN_OUTPUT_RATE);
+                freq = maxu(freq, MIN_OUTPUT_RATE);
 
                 device->UpdateSize = (device->UpdateSize*freq + device->Frequency/2) /
                     device->Frequency;
@@ -1886,8 +1886,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
             if(!device->HrtfList.empty())
             {
-                if(hrtf_id >= 0 && static_cast<size_t>(hrtf_id) < device->HrtfList.size())
-                    hrtf = GetLoadedHrtf(device->HrtfList[hrtf_id].hrtf);
+                if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
+                    hrtf = GetLoadedHrtf(device->HrtfList[static_cast<ALuint>(hrtf_id)].hrtf);
                 else
                     hrtf = GetLoadedHrtf(device->HrtfList.front().hrtf);
             }
@@ -2146,24 +2146,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
                 if(old_sends != device->NumAuxSends)
                 {
-                    ALsizei s;
-                    for(s = device->NumAuxSends;s < old_sends;s++)
-                    {
-                        if(source->Send[s].Slot)
-                            DecrementRef(source->Send[s].Slot->ref);
-                        source->Send[s].Slot = nullptr;
-                    }
-                    source->Send.resize(device->NumAuxSends);
+                    if(source->Send.size() > static_cast<ALuint>(device->NumAuxSends))
+                        std::for_each(source->Send.begin()+device->NumAuxSends, source->Send.end(),
+                            [](ALsource::SendData &send) -> void
+                            {
+                                if(send.Slot)
+                                    DecrementRef(send.Slot->ref);
+                                send.Slot = nullptr;
+                            });
+
+                    source->Send.resize(static_cast<ALuint>(device->NumAuxSends),
+                        ALsource::SendData{nullptr, 1.0f, 1.0f, LOWPASSFREQREF, 1.0f, HIGHPASSFREQREF});
                     source->Send.shrink_to_fit();
-                    for(s = old_sends;s < device->NumAuxSends;s++)
-                    {
-                        source->Send[s].Slot = nullptr;
-                        source->Send[s].Gain = 1.0f;
-                        source->Send[s].GainHF = 1.0f;
-                        source->Send[s].HFReference = LOWPASSFREQREF;
-                        source->Send[s].GainLF = 1.0f;
-                        source->Send[s].LFReference = HIGHPASSFREQREF;
-                    }
                 }
 
                 source->PropsClean.clear(std::memory_order_release);
@@ -2264,21 +2258,21 @@ ALCdevice::~ALCdevice()
 
     size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), size_t{0u},
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + POPCNT64(~sublist.FreeMask); }
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
     )};
     if(count > 0)
         WARN("%zu Buffer%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), size_t{0u},
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + POPCNT64(~sublist.FreeMask); }
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
     );
     if(count > 0)
         WARN("%zu Effect%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), size_t{0u},
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + POPCNT64(~sublist.FreeMask); }
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
     );
     if(count > 0)
         WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
@@ -2334,7 +2328,7 @@ ALCcontext::~ALCcontext()
 
     count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + POPCNT64(~sublist.FreeMask); }
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
     );
     if(count > 0)
         WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
@@ -2358,7 +2352,7 @@ ALCcontext::~ALCcontext()
 
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + POPCNT64(~sublist.FreeMask); }
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
     );
     if(count > 0)
         WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
@@ -2476,7 +2470,7 @@ bool ALCcontext::deinit()
     bool ret{};
     /* First make sure this context exists in the device's list. */
     auto *oldarray = mDevice->mContexts.load(std::memory_order_acquire);
-    if(auto toremove = std::count(oldarray->begin(), oldarray->end(), this))
+    if(auto toremove = static_cast<size_t>(std::count(oldarray->begin(), oldarray->end(), this)))
     {
         using ContextArray = al::FlexArray<ALCcontext*>;
         auto alloc_ctx_array = [](const size_t count) -> ContextArray*
@@ -2719,9 +2713,9 @@ static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
     return 29;
 }
 
-static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCint> values)
+static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCint> values)
 {
-    ALCsizei i;
+    size_t i;
 
     if(values.empty())
     {
@@ -2733,33 +2727,33 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALC
     {
         switch(param)
         {
-            case ALC_MAJOR_VERSION:
-                values[0] = alcMajorVersion;
-                return 1;
-            case ALC_MINOR_VERSION:
-                values[0] = alcMinorVersion;
-                return 1;
+        case ALC_MAJOR_VERSION:
+            values[0] = alcMajorVersion;
+            return 1;
+        case ALC_MINOR_VERSION:
+            values[0] = alcMinorVersion;
+            return 1;
 
-            case ALC_ATTRIBUTES_SIZE:
-            case ALC_ALL_ATTRIBUTES:
-            case ALC_FREQUENCY:
-            case ALC_REFRESH:
-            case ALC_SYNC:
-            case ALC_MONO_SOURCES:
-            case ALC_STEREO_SOURCES:
-            case ALC_CAPTURE_SAMPLES:
-            case ALC_FORMAT_CHANNELS_SOFT:
-            case ALC_FORMAT_TYPE_SOFT:
-            case ALC_AMBISONIC_LAYOUT_SOFT:
-            case ALC_AMBISONIC_SCALING_SOFT:
-            case ALC_AMBISONIC_ORDER_SOFT:
-            case ALC_MAX_AMBISONIC_ORDER_SOFT:
-                alcSetError(nullptr, ALC_INVALID_DEVICE);
-                return 0;
+        case ALC_ATTRIBUTES_SIZE:
+        case ALC_ALL_ATTRIBUTES:
+        case ALC_FREQUENCY:
+        case ALC_REFRESH:
+        case ALC_SYNC:
+        case ALC_MONO_SOURCES:
+        case ALC_STEREO_SOURCES:
+        case ALC_CAPTURE_SAMPLES:
+        case ALC_FORMAT_CHANNELS_SOFT:
+        case ALC_FORMAT_TYPE_SOFT:
+        case ALC_AMBISONIC_LAYOUT_SOFT:
+        case ALC_AMBISONIC_SCALING_SOFT:
+        case ALC_AMBISONIC_ORDER_SOFT:
+        case ALC_MAX_AMBISONIC_ORDER_SOFT:
+            alcSetError(nullptr, ALC_INVALID_DEVICE);
+            return 0;
 
-            default:
-                alcSetError(nullptr, ALC_INVALID_ENUM);
-                return 0;
+        default:
+            alcSetError(nullptr, ALC_INVALID_ENUM);
+            return 0;
         }
         return 0;
     }
@@ -2768,58 +2762,6 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALC
     {
         switch(param)
         {
-            case ALC_ATTRIBUTES_SIZE:
-                values[0] = NumAttrsForDevice(device);
-                return 1;
-
-            case ALC_ALL_ATTRIBUTES:
-                i = 0;
-                if(values.size() < static_cast<size_t>(NumAttrsForDevice(device)))
-                    alcSetError(device, ALC_INVALID_VALUE);
-                else
-                {
-                    std::lock_guard<std::mutex> _{device->StateLock};
-                    values[i++] = ALC_MAJOR_VERSION;
-                    values[i++] = alcMajorVersion;
-                    values[i++] = ALC_MINOR_VERSION;
-                    values[i++] = alcMinorVersion;
-                    values[i++] = ALC_CAPTURE_SAMPLES;
-                    values[i++] = device->Backend->availableSamples();
-                    values[i++] = ALC_CONNECTED;
-                    values[i++] = device->Connected.load(std::memory_order_relaxed);
-                    values[i++] = 0;
-                }
-                return i;
-
-            case ALC_MAJOR_VERSION:
-                values[0] = alcMajorVersion;
-                return 1;
-            case ALC_MINOR_VERSION:
-                values[0] = alcMinorVersion;
-                return 1;
-
-            case ALC_CAPTURE_SAMPLES:
-                { std::lock_guard<std::mutex> _{device->StateLock};
-                    values[0] = device->Backend->availableSamples();
-                }
-                return 1;
-
-            case ALC_CONNECTED:
-                { std::lock_guard<std::mutex> _{device->StateLock};
-                    values[0] = device->Connected.load(std::memory_order_acquire);
-                }
-                return 1;
-
-            default:
-                alcSetError(device, ALC_INVALID_ENUM);
-                return 0;
-        }
-        return 0;
-    }
-
-    /* render device */
-    switch(param)
-    {
         case ALC_ATTRIBUTES_SIZE:
             values[0] = NumAttrsForDevice(device);
             return 1;
@@ -2835,63 +2777,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALC
                 values[i++] = alcMajorVersion;
                 values[i++] = ALC_MINOR_VERSION;
                 values[i++] = alcMinorVersion;
-                values[i++] = ALC_EFX_MAJOR_VERSION;
-                values[i++] = alcEFXMajorVersion;
-                values[i++] = ALC_EFX_MINOR_VERSION;
-                values[i++] = alcEFXMinorVersion;
-
-                values[i++] = ALC_FREQUENCY;
-                values[i++] = device->Frequency;
-                if(device->Type != Loopback)
-                {
-                    values[i++] = ALC_REFRESH;
-                    values[i++] = device->Frequency / device->UpdateSize;
-
-                    values[i++] = ALC_SYNC;
-                    values[i++] = ALC_FALSE;
-                }
-                else
-                {
-                    if(device->FmtChans == DevFmtAmbi3D)
-                    {
-                        values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                        values[i++] = static_cast<ALCint>(device->mAmbiLayout);
-
-                        values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                        values[i++] = static_cast<ALCint>(device->mAmbiScale);
-
-                        values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                        values[i++] = device->mAmbiOrder;
-                    }
-
-                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                    values[i++] = device->FmtChans;
-
-                    values[i++] = ALC_FORMAT_TYPE_SOFT;
-                    values[i++] = device->FmtType;
-                }
-
-                values[i++] = ALC_MONO_SOURCES;
-                values[i++] = device->NumMonoSources;
-
-                values[i++] = ALC_STEREO_SOURCES;
-                values[i++] = device->NumStereoSources;
-
-                values[i++] = ALC_MAX_AUXILIARY_SENDS;
-                values[i++] = device->NumAuxSends;
-
-                values[i++] = ALC_HRTF_SOFT;
-                values[i++] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
-
-                values[i++] = ALC_HRTF_STATUS_SOFT;
-                values[i++] = device->HrtfStatus;
-
-                values[i++] = ALC_OUTPUT_LIMITER_SOFT;
-                values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
-
-                values[i++] = ALC_MAX_AMBISONIC_ORDER_SOFT;
-                values[i++] = MAX_AMBI_ORDER;
-
+                values[i++] = ALC_CAPTURE_SAMPLES;
+                values[i++] = static_cast<int>(device->Backend->availableSamples());
+                values[i++] = ALC_CONNECTED;
+                values[i++] = device->Connected.load(std::memory_order_relaxed);
                 values[i++] = 0;
             }
             return i;
@@ -2899,134 +2788,241 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALC
         case ALC_MAJOR_VERSION:
             values[0] = alcMajorVersion;
             return 1;
-
         case ALC_MINOR_VERSION:
             values[0] = alcMinorVersion;
             return 1;
 
-        case ALC_EFX_MAJOR_VERSION:
-            values[0] = alcEFXMajorVersion;
-            return 1;
-
-        case ALC_EFX_MINOR_VERSION:
-            values[0] = alcEFXMinorVersion;
-            return 1;
-
-        case ALC_FREQUENCY:
-            values[0] = device->Frequency;
-            return 1;
-
-        case ALC_REFRESH:
-            if(device->Type == Loopback)
+        case ALC_CAPTURE_SAMPLES:
             {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
+                std::lock_guard<std::mutex> _{device->StateLock};
+                values[0] = static_cast<int>(device->Backend->availableSamples());
             }
-            { std::lock_guard<std::mutex> _{device->StateLock};
-                values[0] = device->Frequency / device->UpdateSize;
-            }
-            return 1;
-
-        case ALC_SYNC:
-            if(device->Type == Loopback)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
-            }
-            values[0] = ALC_FALSE;
-            return 1;
-
-        case ALC_FORMAT_CHANNELS_SOFT:
-            if(device->Type != Loopback)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
-            }
-            values[0] = device->FmtChans;
-            return 1;
-
-        case ALC_FORMAT_TYPE_SOFT:
-            if(device->Type != Loopback)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
-            }
-            values[0] = device->FmtType;
-            return 1;
-
-        case ALC_AMBISONIC_LAYOUT_SOFT:
-            if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
-            }
-            values[0] = static_cast<ALCint>(device->mAmbiLayout);
-            return 1;
-
-        case ALC_AMBISONIC_SCALING_SOFT:
-            if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
-            }
-            values[0] = static_cast<ALCint>(device->mAmbiScale);
-            return 1;
-
-        case ALC_AMBISONIC_ORDER_SOFT:
-            if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
-            {
-                alcSetError(device, ALC_INVALID_DEVICE);
-                return 0;
-            }
-            values[0] = device->mAmbiOrder;
-            return 1;
-
-        case ALC_MONO_SOURCES:
-            values[0] = device->NumMonoSources;
-            return 1;
-
-        case ALC_STEREO_SOURCES:
-            values[0] = device->NumStereoSources;
-            return 1;
-
-        case ALC_MAX_AUXILIARY_SENDS:
-            values[0] = device->NumAuxSends;
             return 1;
 
         case ALC_CONNECTED:
-            { std::lock_guard<std::mutex> _{device->StateLock};
+            {
+                std::lock_guard<std::mutex> _{device->StateLock};
                 values[0] = device->Connected.load(std::memory_order_acquire);
             }
             return 1;
 
-        case ALC_HRTF_SOFT:
-            values[0] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
-            return 1;
-
-        case ALC_HRTF_STATUS_SOFT:
-            values[0] = device->HrtfStatus;
-            return 1;
-
-        case ALC_NUM_HRTF_SPECIFIERS_SOFT:
-            { std::lock_guard<std::mutex> _{device->StateLock};
-                device->HrtfList.clear();
-                device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-                values[0] = static_cast<ALCint>(minz(device->HrtfList.size(),
-                    std::numeric_limits<ALCint>::max()));
-            }
-            return 1;
-
-        case ALC_OUTPUT_LIMITER_SOFT:
-            values[0] = device->Limiter ? ALC_TRUE : ALC_FALSE;
-            return 1;
-
-        case ALC_MAX_AMBISONIC_ORDER_SOFT:
-            values[0] = MAX_AMBI_ORDER;
-            return 1;
-
         default:
             alcSetError(device, ALC_INVALID_ENUM);
+        }
+        return 0;
+    }
+
+    /* render device */
+    switch(param)
+    {
+    case ALC_ATTRIBUTES_SIZE:
+        values[0] = NumAttrsForDevice(device);
+        return 1;
+
+    case ALC_ALL_ATTRIBUTES:
+        i = 0;
+        if(values.size() < static_cast<size_t>(NumAttrsForDevice(device)))
+            alcSetError(device, ALC_INVALID_VALUE);
+        else
+        {
+            std::lock_guard<std::mutex> _{device->StateLock};
+            values[i++] = ALC_MAJOR_VERSION;
+            values[i++] = alcMajorVersion;
+            values[i++] = ALC_MINOR_VERSION;
+            values[i++] = alcMinorVersion;
+            values[i++] = ALC_EFX_MAJOR_VERSION;
+            values[i++] = alcEFXMajorVersion;
+            values[i++] = ALC_EFX_MINOR_VERSION;
+            values[i++] = alcEFXMinorVersion;
+
+            values[i++] = ALC_FREQUENCY;
+            values[i++] = static_cast<int>(device->Frequency);
+            if(device->Type != Loopback)
+            {
+                values[i++] = ALC_REFRESH;
+                values[i++] = static_cast<int>(device->Frequency / device->UpdateSize);
+
+                values[i++] = ALC_SYNC;
+                values[i++] = ALC_FALSE;
+            }
+            else
+            {
+                if(device->FmtChans == DevFmtAmbi3D)
+                {
+                    values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
+                    values[i++] = static_cast<ALCint>(device->mAmbiLayout);
+
+                    values[i++] = ALC_AMBISONIC_SCALING_SOFT;
+                    values[i++] = static_cast<ALCint>(device->mAmbiScale);
+
+                    values[i++] = ALC_AMBISONIC_ORDER_SOFT;
+                    values[i++] = device->mAmbiOrder;
+                }
+
+                values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                values[i++] = device->FmtChans;
+
+                values[i++] = ALC_FORMAT_TYPE_SOFT;
+                values[i++] = device->FmtType;
+            }
+
+            values[i++] = ALC_MONO_SOURCES;
+            values[i++] = static_cast<int>(device->NumMonoSources);
+
+            values[i++] = ALC_STEREO_SOURCES;
+            values[i++] = static_cast<int>(device->NumStereoSources);
+
+            values[i++] = ALC_MAX_AUXILIARY_SENDS;
+            values[i++] = device->NumAuxSends;
+
+            values[i++] = ALC_HRTF_SOFT;
+            values[i++] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
+
+            values[i++] = ALC_HRTF_STATUS_SOFT;
+            values[i++] = device->HrtfStatus;
+
+            values[i++] = ALC_OUTPUT_LIMITER_SOFT;
+            values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
+
+            values[i++] = ALC_MAX_AMBISONIC_ORDER_SOFT;
+            values[i++] = MAX_AMBI_ORDER;
+
+            values[i++] = 0;
+        }
+        return i;
+
+    case ALC_MAJOR_VERSION:
+        values[0] = alcMajorVersion;
+        return 1;
+
+    case ALC_MINOR_VERSION:
+        values[0] = alcMinorVersion;
+        return 1;
+
+    case ALC_EFX_MAJOR_VERSION:
+        values[0] = alcEFXMajorVersion;
+        return 1;
+
+    case ALC_EFX_MINOR_VERSION:
+        values[0] = alcEFXMinorVersion;
+        return 1;
+
+    case ALC_FREQUENCY:
+        values[0] = static_cast<int>(device->Frequency);
+        return 1;
+
+    case ALC_REFRESH:
+        if(device->Type == Loopback)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
+        }
+        {
+            std::lock_guard<std::mutex> _{device->StateLock};
+            values[0] = static_cast<int>(device->Frequency / device->UpdateSize);
+        }
+        return 1;
+
+    case ALC_SYNC:
+        if(device->Type == Loopback)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
+            return 0;
+        }
+        values[0] = ALC_FALSE;
+        return 1;
+
+    case ALC_FORMAT_CHANNELS_SOFT:
+        if(device->Type != Loopback)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
+            return 0;
+        }
+        values[0] = device->FmtChans;
+        return 1;
+
+    case ALC_FORMAT_TYPE_SOFT:
+        if(device->Type != Loopback)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
+            return 0;
+        }
+        values[0] = device->FmtType;
+        return 1;
+
+    case ALC_AMBISONIC_LAYOUT_SOFT:
+        if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
+            return 0;
+        }
+        values[0] = static_cast<ALCint>(device->mAmbiLayout);
+        return 1;
+
+    case ALC_AMBISONIC_SCALING_SOFT:
+        if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
+            return 0;
+        }
+        values[0] = static_cast<ALCint>(device->mAmbiScale);
+        return 1;
+
+    case ALC_AMBISONIC_ORDER_SOFT:
+        if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
+        {
+            alcSetError(device, ALC_INVALID_DEVICE);
+            return 0;
+        }
+        values[0] = device->mAmbiOrder;
+        return 1;
+
+    case ALC_MONO_SOURCES:
+        values[0] = static_cast<int>(device->NumMonoSources);
+        return 1;
+
+    case ALC_STEREO_SOURCES:
+        values[0] = static_cast<int>(device->NumStereoSources);
+        return 1;
+
+    case ALC_MAX_AUXILIARY_SENDS:
+        values[0] = device->NumAuxSends;
+        return 1;
+
+    case ALC_CONNECTED:
+        {
+            std::lock_guard<std::mutex> _{device->StateLock};
+            values[0] = device->Connected.load(std::memory_order_acquire);
+        }
+        return 1;
+
+    case ALC_HRTF_SOFT:
+        values[0] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
+        return 1;
+
+    case ALC_HRTF_STATUS_SOFT:
+        values[0] = device->HrtfStatus;
+        return 1;
+
+    case ALC_NUM_HRTF_SPECIFIERS_SOFT:
+        {
+            std::lock_guard<std::mutex> _{device->StateLock};
+            device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
+            values[0] = static_cast<ALCint>(minz(device->HrtfList.size(),
+                std::numeric_limits<ALCint>::max()));
+        }
+        return 1;
+
+    case ALC_OUTPUT_LIMITER_SOFT:
+        values[0] = device->Limiter ? ALC_TRUE : ALC_FALSE;
+        return 1;
+
+    case ALC_MAX_AMBISONIC_ORDER_SOFT:
+        values[0] = MAX_AMBI_ORDER;
+        return 1;
+
+    default:
+        alcSetError(device, ALC_INVALID_ENUM);
     }
     return 0;
 }
@@ -3054,127 +3050,126 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else if(!dev || dev->Type == Capture)
     {
-        auto ivals = al::vector<ALCint>(size);
-        size = GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()});
-        std::copy(ivals.begin(), ivals.begin()+size, values);
+        auto ivals = al::vector<ALCint>(static_cast<ALuint>(size));
+        size_t got{GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()})};
+        std::copy_n(ivals.begin(), got, values);
+        return;
     }
-    else /* render device */
+    /* render device */
+    switch(pname)
     {
-        switch(pname)
+    case ALC_ATTRIBUTES_SIZE:
+        *values = NumAttrsForDevice(dev.get())+4;
+        break;
+
+    case ALC_ALL_ATTRIBUTES:
+        if(size < NumAttrsForDevice(dev.get())+4)
+            alcSetError(dev.get(), ALC_INVALID_VALUE);
+        else
         {
-            case ALC_ATTRIBUTES_SIZE:
-                *values = NumAttrsForDevice(dev.get())+4;
-                break;
+            size_t i{0};
+            std::lock_guard<std::mutex> _{dev->StateLock};
+            values[i++] = ALC_FREQUENCY;
+            values[i++] = dev->Frequency;
 
-            case ALC_ALL_ATTRIBUTES:
-                if(size < NumAttrsForDevice(dev.get())+4)
-                    alcSetError(dev.get(), ALC_INVALID_VALUE);
-                else
+            if(dev->Type != Loopback)
+            {
+                values[i++] = ALC_REFRESH;
+                values[i++] = dev->Frequency / dev->UpdateSize;
+
+                values[i++] = ALC_SYNC;
+                values[i++] = ALC_FALSE;
+            }
+            else
+            {
+                if(dev->FmtChans == DevFmtAmbi3D)
                 {
-                    ALsizei i{0};
-                    std::lock_guard<std::mutex> _{dev->StateLock};
-                    values[i++] = ALC_FREQUENCY;
-                    values[i++] = dev->Frequency;
+                    values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
+                    values[i++] = static_cast<ALCint64SOFT>(dev->mAmbiLayout);
 
-                    if(dev->Type != Loopback)
-                    {
-                        values[i++] = ALC_REFRESH;
-                        values[i++] = dev->Frequency / dev->UpdateSize;
+                    values[i++] = ALC_AMBISONIC_SCALING_SOFT;
+                    values[i++] = static_cast<ALCint64SOFT>(dev->mAmbiScale);
 
-                        values[i++] = ALC_SYNC;
-                        values[i++] = ALC_FALSE;
-                    }
-                    else
-                    {
-                        if(dev->FmtChans == DevFmtAmbi3D)
-                        {
-                            values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                            values[i++] = static_cast<ALCint64SOFT>(dev->mAmbiLayout);
-
-                            values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                            values[i++] = static_cast<ALCint64SOFT>(dev->mAmbiScale);
-
-                            values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                            values[i++] = dev->mAmbiOrder;
-                        }
-
-                        values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                        values[i++] = dev->FmtChans;
-
-                        values[i++] = ALC_FORMAT_TYPE_SOFT;
-                        values[i++] = dev->FmtType;
-                    }
-
-                    values[i++] = ALC_MONO_SOURCES;
-                    values[i++] = dev->NumMonoSources;
-
-                    values[i++] = ALC_STEREO_SOURCES;
-                    values[i++] = dev->NumStereoSources;
-
-                    values[i++] = ALC_MAX_AUXILIARY_SENDS;
-                    values[i++] = dev->NumAuxSends;
-
-                    values[i++] = ALC_HRTF_SOFT;
-                    values[i++] = (dev->mHrtf ? ALC_TRUE : ALC_FALSE);
-
-                    values[i++] = ALC_HRTF_STATUS_SOFT;
-                    values[i++] = dev->HrtfStatus;
-
-                    values[i++] = ALC_OUTPUT_LIMITER_SOFT;
-                    values[i++] = dev->Limiter ? ALC_TRUE : ALC_FALSE;
-
-                    ClockLatency clock{GetClockLatency(dev.get())};
-                    values[i++] = ALC_DEVICE_CLOCK_SOFT;
-                    values[i++] = clock.ClockTime.count();
-
-                    values[i++] = ALC_DEVICE_LATENCY_SOFT;
-                    values[i++] = clock.Latency.count();
-
-                    values[i++] = 0;
+                    values[i++] = ALC_AMBISONIC_ORDER_SOFT;
+                    values[i++] = dev->mAmbiOrder;
                 }
-                break;
 
-            case ALC_DEVICE_CLOCK_SOFT:
-                { std::lock_guard<std::mutex> _{dev->StateLock};
-                    nanoseconds basecount;
-                    ALuint samplecount;
-                    ALuint refcount;
-                    do {
-                        while(((refcount=ReadRef(dev->MixCount))&1) != 0)
-                            std::this_thread::yield();
-                        basecount = dev->ClockBase;
-                        samplecount = dev->SamplesDone;
-                    } while(refcount != ReadRef(dev->MixCount));
-                    basecount += nanoseconds{seconds{samplecount}} / dev->Frequency;
-                    *values = basecount.count();
-                }
-                break;
+                values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                values[i++] = dev->FmtChans;
 
-            case ALC_DEVICE_LATENCY_SOFT:
-                { std::lock_guard<std::mutex> _{dev->StateLock};
-                    ClockLatency clock{GetClockLatency(dev.get())};
-                    *values = clock.Latency.count();
-                }
-                break;
+                values[i++] = ALC_FORMAT_TYPE_SOFT;
+                values[i++] = dev->FmtType;
+            }
 
-            case ALC_DEVICE_CLOCK_LATENCY_SOFT:
-                if(size < 2)
-                    alcSetError(dev.get(), ALC_INVALID_VALUE);
-                else
-                {
-                    std::lock_guard<std::mutex> _{dev->StateLock};
-                    ClockLatency clock{GetClockLatency(dev.get())};
-                    values[0] = clock.ClockTime.count();
-                    values[1] = clock.Latency.count();
-                }
-                break;
+            values[i++] = ALC_MONO_SOURCES;
+            values[i++] = dev->NumMonoSources;
 
-            default:
-                auto ivals = al::vector<ALCint>(size);
-                size = GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()});
-                std::copy(ivals.begin(), ivals.begin()+size, values);
-                break;
+            values[i++] = ALC_STEREO_SOURCES;
+            values[i++] = dev->NumStereoSources;
+
+            values[i++] = ALC_MAX_AUXILIARY_SENDS;
+            values[i++] = dev->NumAuxSends;
+
+            values[i++] = ALC_HRTF_SOFT;
+            values[i++] = (dev->mHrtf ? ALC_TRUE : ALC_FALSE);
+
+            values[i++] = ALC_HRTF_STATUS_SOFT;
+            values[i++] = dev->HrtfStatus;
+
+            values[i++] = ALC_OUTPUT_LIMITER_SOFT;
+            values[i++] = dev->Limiter ? ALC_TRUE : ALC_FALSE;
+
+            ClockLatency clock{GetClockLatency(dev.get())};
+            values[i++] = ALC_DEVICE_CLOCK_SOFT;
+            values[i++] = clock.ClockTime.count();
+
+            values[i++] = ALC_DEVICE_LATENCY_SOFT;
+            values[i++] = clock.Latency.count();
+
+            values[i++] = 0;
         }
+        break;
+
+    case ALC_DEVICE_CLOCK_SOFT:
+        { std::lock_guard<std::mutex> _{dev->StateLock};
+            nanoseconds basecount;
+            ALuint samplecount;
+            ALuint refcount;
+            do {
+                while(((refcount=ReadRef(dev->MixCount))&1) != 0)
+                    std::this_thread::yield();
+                basecount = dev->ClockBase;
+                samplecount = dev->SamplesDone;
+            } while(refcount != ReadRef(dev->MixCount));
+            basecount += nanoseconds{seconds{samplecount}} / dev->Frequency;
+            *values = basecount.count();
+        }
+        break;
+
+    case ALC_DEVICE_LATENCY_SOFT:
+        { std::lock_guard<std::mutex> _{dev->StateLock};
+            ClockLatency clock{GetClockLatency(dev.get())};
+            *values = clock.Latency.count();
+        }
+        break;
+
+    case ALC_DEVICE_CLOCK_LATENCY_SOFT:
+        if(size < 2)
+            alcSetError(dev.get(), ALC_INVALID_VALUE);
+        else
+        {
+            std::lock_guard<std::mutex> _{dev->StateLock};
+            ClockLatency clock{GetClockLatency(dev.get())};
+            values[0] = clock.ClockTime.count();
+            values[1] = clock.Latency.count();
+        }
+        break;
+
+    default:
+        auto ivals = al::vector<ALCint>(static_cast<ALuint>(size));
+        size_t got{GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()})};
+        std::copy_n(ivals.begin(), got, values);
+        break;
     }
 }
 END_API_FUNC
@@ -3794,8 +3789,8 @@ START_API_FUNC
     device->FmtType = decompfmt->type;
     device->Flags.set<FrequencyRequest, ChannelsRequest, SampleTypeRequest>();
 
-    device->UpdateSize = samples;
-    device->BufferSize = samples;
+    device->UpdateSize = static_cast<ALuint>(samples);
+    device->BufferSize = static_cast<ALuint>(samples);
 
     try {
         device->Backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
@@ -3912,7 +3907,7 @@ START_API_FUNC
     { std::lock_guard<std::mutex> _{dev->StateLock};
         BackendBase *backend{dev->Backend.get()};
         if(samples >= 0 && backend->availableSamples() >= static_cast<ALCuint>(samples))
-            err = backend->captureSamples(buffer, samples);
+            err = backend->captureSamples(buffer, static_cast<ALuint>(samples));
     }
     if(err != ALC_NO_ERROR)
         alcSetError(dev.get(), err);
@@ -4033,7 +4028,7 @@ START_API_FUNC
     else
     {
         BackendLockGuard _{*dev->Backend};
-        aluMixData(dev.get(), buffer, samples);
+        aluMixData(dev.get(), buffer, static_cast<ALuint>(samples));
     }
 }
 END_API_FUNC
@@ -4114,7 +4109,7 @@ START_API_FUNC
     {
         case ALC_HRTF_SPECIFIER_SOFT:
             if(index >= 0 && static_cast<size_t>(index) < dev->HrtfList.size())
-                return dev->HrtfList[index].name.c_str();
+                return dev->HrtfList[static_cast<ALuint>(index)].name.c_str();
             alcSetError(dev.get(), ALC_INVALID_VALUE);
             break;
 

@@ -221,8 +221,9 @@ public:
     constexpr reference operator[](index_type idx) const { return mData[idx]; }
     constexpr pointer data() const noexcept { return mData; }
 
-    constexpr index_type size() const noexcept { return mDataEnd-mData; }
-    constexpr index_type size_bytes() const noexcept { return (mDataEnd-mData) * sizeof(value_type); }
+    constexpr index_type size() const noexcept { return static_cast<index_type>(mDataEnd-mData); }
+    constexpr index_type size_bytes() const noexcept
+    { return static_cast<index_type>(mDataEnd-mData) * sizeof(value_type); }
     constexpr bool empty() const noexcept { return mData == mDataEnd; }
 
     constexpr iterator begin() const noexcept { return mData; }

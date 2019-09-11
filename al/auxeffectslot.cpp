@@ -51,8 +51,8 @@ namespace {
 
 inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 {
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
 
     if UNLIKELY(lidx >= context->mEffectSlotList.size())
         return nullptr;
@@ -64,8 +64,8 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 
 inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
 {
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
 
     if UNLIKELY(lidx >= device->EffectList.size())
         return nullptr;
@@ -76,7 +76,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
 }
 
 
-void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context)
+void AddActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *context)
 {
     if(count < 1) return;
     ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
@@ -121,7 +121,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     delete curarray;
 }
 
-void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context)
+void RemoveActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *context)
 {
     if(count < 1) return;
     ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
@@ -172,10 +172,10 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         [](const EffectSlotSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
-    auto lidx = static_cast<ALsizei>(std::distance(context->mEffectSlotList.begin(), sublist));
-    ALsizei slidx;
+    auto lidx = static_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
+    ALuint slidx;
     if LIKELY(sublist != context->mEffectSlotList.end())
-        slidx = CTZ64(sublist->FreeMask);
+        slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
     else
     {
         /* Don't allocate so many list entries that the 32-bit ID could
@@ -222,9 +222,9 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
 
 void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
 {
-    ALuint id = slot->id - 1;
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
+    const ALuint id{slot->id - 1};
+    const size_t lidx{id >> 6};
+    const size_t slidx{id & 0x3f};
 
     al::destroy_at(slot);
 
@@ -270,7 +270,7 @@ START_API_FUNC
     }
     else
     {
-        auto tempids = al::vector<ALuint>(n);
+        auto tempids = al::vector<ALuint>(static_cast<ALuint>(n));
         auto alloc_end = std::find_if_not(tempids.begin(), tempids.end(),
             [&context](ALuint &id) -> bool
             {
@@ -291,7 +291,7 @@ START_API_FUNC
     }
 
     std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
-    AddActiveEffectSlots(effectslots, n, context.get());
+    AddActiveEffectSlots(effectslots, static_cast<ALuint>(n), context.get());
 }
 END_API_FUNC
 
@@ -328,7 +328,7 @@ START_API_FUNC
         return;
 
     // All effectslots are valid, remove and delete them
-    RemoveActiveEffectSlots(effectslots, n, context.get());
+    RemoveActiveEffectSlots(effectslots, static_cast<ALuint>(n), context.get());
     std::for_each(effectslots, effectslots_end,
         [&context](ALuint sid) -> void
         {
@@ -375,7 +375,7 @@ START_API_FUNC
         device = context->mDevice.get();
 
         { std::lock_guard<std::mutex> ___{device->EffectLock};
-            ALeffect *effect{value ? LookupEffect(device, value) : nullptr};
+            ALeffect *effect{value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr};
             if(!(value == 0 || effect != nullptr))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
             err = InitializeEffect(context.get(), slot, effect);
@@ -391,11 +391,11 @@ START_API_FUNC
         if(!(value == AL_TRUE || value == AL_FALSE))
             SETERR_RETURN(context, AL_INVALID_VALUE,,
                 "Effect slot auxiliary send auto out of range");
-        slot->AuxSendAuto = value;
+        slot->AuxSendAuto = static_cast<ALboolean>(value);
         break;
 
     case AL_EFFECTSLOT_TARGET_SOFT:
-        target = (value ? LookupEffectSlot(context.get(), value) : nullptr);
+        target = LookupEffectSlot(context.get(), static_cast<ALuint>(value));
         if(value && !target)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect slot target ID");
         if(target)
@@ -536,7 +536,10 @@ START_API_FUNC
         break;
 
     case AL_EFFECTSLOT_TARGET_SOFT:
-        *value = slot->Target ? slot->Target->id : 0;
+        if(auto *target = slot->Target)
+            *value = static_cast<ALint>(target->id);
+        else
+            *value = 0;
         break;
 
     default:

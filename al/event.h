@@ -33,7 +33,7 @@ struct AsyncEvent {
         } srcstate;
         struct {
             ALuint id;
-            ALsizei count;
+            ALuint count;
         } bufcomp;
         struct {
             ALenum type;

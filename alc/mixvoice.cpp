@@ -362,7 +362,7 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, ALfloat
 
 
 template<FmtType T>
-inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep,
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcstep,
     const size_t samples)
 {
     using SampleType = typename FmtTypeTraits<T>::Type;
@@ -372,7 +372,7 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, ALint sr
         dst[i] = FmtTypeTraits<T>::to_float(ssrc[i*srcstep]);
 }
 
-void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtType srctype,
+void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
     const size_t samples)
 {
 #define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -389,7 +389,7 @@ void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, ALint srcstep, FmtT
 }
 
 ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
-    const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALuint DataPosInt,
+    const size_t NumChannels, const size_t SampleSize, const size_t chan, size_t DataPosInt,
     al::span<ALfloat> SrcBuffer)
 {
     const ALbuffer *Buffer{BufferListItem->mBuffer};
@@ -439,7 +439,7 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
 }
 
 ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
-    const ALsizei NumChannels, const ALsizei SampleSize, const ALsizei chan, ALuint DataPosInt,
+    const size_t NumChannels, const size_t SampleSize, const size_t chan, size_t DataPosInt,
     al::span<ALfloat> SrcBuffer)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
@@ -485,9 +485,9 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     ALuint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
-    const ALsizei NumChannels{mNumChannels};
-    const ALsizei SampleSize{mSampleSize};
-    const ALint increment{mStep};
+    const auto NumChannels = static_cast<ALuint>(mNumChannels);
+    const auto SampleSize = static_cast<ALuint>(mSampleSize);
+    const auto increment = static_cast<ALuint>(mStep);
     if(increment < 1) return;
 
     ASSUME(NumChannels > 0);
@@ -508,7 +508,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
-        for(ALsizei chan{0};chan < NumChannels;chan++)
+        for(ALuint chan{0};chan < NumChannels;chan++)
         {
             ChannelData &chandata = mChans[chan];
             DirectParams &parms = chandata.mDryParams;
@@ -530,7 +530,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     }
     else if((mFlags&VOICE_HAS_HRTF))
     {
-        for(ALsizei chan{0};chan < NumChannels;chan++)
+        for(ALuint chan{0};chan < NumChannels;chan++)
         {
             DirectParams &parms = mChans[chan].mDryParams;
             if(!(parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
@@ -545,7 +545,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
         }
     }
 
-    ALsizei buffers_done{0};
+    ALuint buffers_done{0u};
     ALuint OutPos{0u};
     do {
         /* Figure out how many buffer samples will be needed */
@@ -575,11 +575,11 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
              * unless this is the last update.
              */
             if(DstBufferSize < SamplesToDo-OutPos)
-                DstBufferSize &= ~3;
+                DstBufferSize &= ~3u;
         }
 
         ASSUME(DstBufferSize > 0);
-        for(ALsizei chan{0};chan < NumChannels;chan++)
+        for(ALuint chan{0};chan < NumChannels;chan++)
         {
             ChannelData &chandata = mChans[chan];
             const al::span<ALfloat> SrcData{Device->SourceData, SrcBufferSize};
@@ -616,8 +616,8 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 chandata.mPrevSamples.size(), chandata.mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
-            const ALfloat *ResampledData{Resample(&mResampleState,
-                &SrcData[MAX_RESAMPLE_PADDING], DataPosFrac, increment,
+            const ALfloat *ResampledData{Resample(&mResampleState, &SrcData[MAX_RESAMPLE_PADDING],
+                DataPosFrac, static_cast<ALint>(increment),
                 {Device->ResampledData, DstBufferSize})};
             if((mFlags&VOICE_IS_AMBISONIC))
             {

@@ -99,13 +99,13 @@ constexpr int MSADPCMAdaptionCoeff[7][2] = {
 };
 
 
-void DecodeIMA4Block(ALshort *dst, const al::byte *src, ALint numchans, ALsizei align)
+void DecodeIMA4Block(ALshort *dst, const al::byte *src, size_t numchans, size_t align)
 {
     ALint sample[MAX_INPUT_CHANNELS]{};
     ALint index[MAX_INPUT_CHANNELS]{};
     ALuint code[MAX_INPUT_CHANNELS]{};
 
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
     {
         sample[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
         sample[c] = (sample[c]^0x8000) - 32768;
@@ -114,14 +114,14 @@ void DecodeIMA4Block(ALshort *dst, const al::byte *src, ALint numchans, ALsizei 
         index[c] = clampi((index[c]^0x8000) - 32768, 0, 88);
         src += 2;
 
-        *(dst++) = sample[c];
+        *(dst++) = static_cast<ALshort>(sample[c]);
     }
 
-    for(int i{1};i < align;i++)
+    for(size_t i{1};i < align;i++)
     {
         if((i&7) == 1)
         {
-            for(int c{0};c < numchans;c++)
+            for(size_t c{0};c < numchans;c++)
             {
                 code[c] = al::to_integer<ALuint>(src[0]) | (al::to_integer<ALuint>(src[1])<< 8) |
                     (al::to_integer<ALuint>(src[2])<<16) | (al::to_integer<ALuint>(src[3])<<24);
@@ -129,7 +129,7 @@ void DecodeIMA4Block(ALshort *dst, const al::byte *src, ALint numchans, ALsizei 
             }
         }
 
-        for(int c{0};c < numchans;c++)
+        for(size_t c{0};c < numchans;c++)
         {
             const ALuint nibble{code[c]&0xf};
             code[c] >>= 4;
@@ -140,51 +140,53 @@ void DecodeIMA4Block(ALshort *dst, const al::byte *src, ALint numchans, ALsizei 
             index[c] += IMA4Index_adjust[nibble];
             index[c] = clampi(index[c], 0, 88);
 
-            *(dst++) = sample[c];
+            *(dst++) = static_cast<ALshort>(sample[c]);
         }
     }
 }
 
-void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, ALint numchans, ALsizei align)
+void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, size_t numchans, size_t align)
 {
     ALubyte blockpred[MAX_INPUT_CHANNELS]{};
     ALint delta[MAX_INPUT_CHANNELS]{};
     ALshort samples[MAX_INPUT_CHANNELS][2]{};
 
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
     {
-        blockpred[c] = minu(al::to_integer<ALubyte>(src[0]), 6);
+        blockpred[c] = std::min<ALubyte>(al::to_integer<ALubyte>(src[0]), 6);
         ++src;
     }
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
     {
         delta[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
         delta[c] = (delta[c]^0x8000) - 32768;
         src += 2;
     }
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
     {
-        samples[c][0] = al::to_integer<short>(src[0]) | (al::to_integer<short>(src[1])<<8);
+        samples[c][0] = static_cast<ALshort>(al::to_integer<int>(src[0]) |
+            (al::to_integer<int>(src[1])<<8));
         samples[c][0] = (samples[c][0]^0x8000) - 32768;
         src += 2;
     }
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
     {
-        samples[c][1] = al::to_integer<short>(src[0]) | (al::to_integer<short>(src[1])<<8);
+        samples[c][1] = static_cast<ALshort>(al::to_integer<int>(src[0]) |
+            (al::to_integer<int>(src[1])<<8));
         samples[c][1] = (samples[c][1]^0x8000) - 32768;
         src += 2;
     }
 
     /* Second sample is written first. */
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
         *(dst++) = samples[c][1];
-    for(int c{0};c < numchans;c++)
+    for(size_t c{0};c < numchans;c++)
         *(dst++) = samples[c][0];
 
     int num{0};
-    for(int i{2};i < align;i++)
+    for(size_t i{2};i < align;i++)
     {
-        for(int c{0};c < numchans;c++)
+        for(size_t c{0};c < numchans;c++)
         {
             /* Read the nibble (first is in the upper bits). */
             al::byte nibble;
@@ -199,20 +201,20 @@ void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, ALint numchans, ALsiz
             pred  = clampi(pred, -32768, 32767);
 
             samples[c][1] = samples[c][0];
-            samples[c][0] = pred;
+            samples[c][0] = static_cast<ALshort>(pred);
 
             delta[c] = (MSADPCMAdaption[al::to_integer<ALubyte>(nibble)] * delta[c]) / 256;
             delta[c] = maxi(16, delta[c]);
 
-            *(dst++) = pred;
+            *(dst++) = static_cast<ALshort>(pred);
         }
     }
 }
 
-void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, ALsizei numchans, ALsizei len,
-    ALsizei align)
+void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, size_t numchans, size_t len,
+    size_t align)
 {
-    const ALsizei byte_align{((align-1)/2 + 4) * numchans};
+    const size_t byte_align{((align-1)/2 + 4) * numchans};
 
     len /= align;
     while(len--)
@@ -223,10 +225,10 @@ void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, ALsizei numchans,
     }
 }
 
-void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, ALsizei numchans, ALsizei len,
-    ALsizei align)
+void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, size_t numchans, size_t len,
+    size_t align)
 {
-    const ALsizei byte_align{((align-2)/2 + 7) * numchans};
+    const size_t byte_align{((align-2)/2 + 7) * numchans};
 
     len /= align;
     while(len--)
@@ -236,6 +238,41 @@ void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, ALsizei numcha
         dst += align*numchans;
     }
 }
+
+
+ALuint BytesFromUserFmt(UserFmtType type)
+{
+    switch(type)
+    {
+    case UserFmtUByte: return sizeof(ALubyte);
+    case UserFmtShort: return sizeof(ALshort);
+    case UserFmtFloat: return sizeof(ALfloat);
+    case UserFmtDouble: return sizeof(ALdouble);
+    case UserFmtMulaw: return sizeof(ALubyte);
+    case UserFmtAlaw: return sizeof(ALubyte);
+    case UserFmtIMA4: break; /* not handled here */
+    case UserFmtMSADPCM: break; /* not handled here */
+    }
+    return 0;
+}
+ALuint ChannelsFromUserFmt(UserFmtChannels chans)
+{
+    switch(chans)
+    {
+    case UserFmtMono: return 1;
+    case UserFmtStereo: return 2;
+    case UserFmtRear: return 2;
+    case UserFmtQuad: return 4;
+    case UserFmtX51: return 6;
+    case UserFmtX61: return 7;
+    case UserFmtX71: return 8;
+    case UserFmtBFormat2D: return 3;
+    case UserFmtBFormat3D: return 4;
+    }
+    return 0;
+}
+inline ALuint FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type)
+{ return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type); }
 
 
 constexpr ALbitfieldSOFT INVALID_STORAGE_MASK{~unsigned(AL_MAP_READ_BIT_SOFT |
@@ -316,11 +353,8 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 }
 
 
-ALsizei SanitizeAlignment(UserFmtType type, ALsizei align)
+ALuint SanitizeAlignment(UserFmtType type, ALuint align)
 {
-    if(align < 0)
-        return 0;
-
     if(align == 0)
     {
         if(type == UserFmtIMA4)
@@ -339,17 +373,17 @@ ALsizei SanitizeAlignment(UserFmtType type, ALsizei align)
     if(type == UserFmtIMA4)
     {
         /* IMA4 block alignment must be a multiple of 8, plus 1. */
-        if((align&7) == 1) return align;
+        if((align&7) == 1) return static_cast<ALuint>(align);
         return 0;
     }
     if(type == UserFmtMSADPCM)
     {
         /* MSADPCM block alignment must be a multiple of 2. */
-        if((align&1) == 0) return align;
+        if((align&1) == 0) return static_cast<ALuint>(align);
         return 0;
     }
 
-    return align;
+    return static_cast<ALuint>(align);
 }
 
 
@@ -369,12 +403,10 @@ const ALchar *NameFromUserFmtType(UserFmtType type)
     return "<internal type error>";
 }
 
-/*
- * LoadData
- *
- * Loads the specified data into the buffer, using the specified format.
- */
-void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData, ALbitfieldSOFT access)
+/** Loads the specified data into the buffer, using the specified format. */
+void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
+    UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData,
+    ALbitfieldSOFT access)
 {
     if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
@@ -422,10 +454,10 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
                 NameFromUserFmtType(SrcType));
     }
 
-    const ALsizei unpackalign{ALBuf->UnpackAlign.load()};
-    const ALsizei align{SanitizeAlignment(SrcType, unpackalign)};
+    const ALuint unpackalign{ALBuf->UnpackAlign};
+    const ALuint align{SanitizeAlignment(SrcType, unpackalign)};
     if UNLIKELY(align < 1)
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %d for %s samples",
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %u for %s samples",
             unpackalign, NameFromUserFmtType(SrcType));
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
@@ -433,14 +465,14 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
         /* Can only preserve data with the same format and alignment. */
         if UNLIKELY(ALBuf->mFmtChannels != DstChannels || ALBuf->OriginalType != SrcType)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
-        if UNLIKELY(ALBuf->OriginalAlign != align)
+        if UNLIKELY(static_cast<ALuint>(ALBuf->OriginalAlign) != align)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
     }
 
     /* Convert the input/source size in bytes to sample frames using the unpack
      * block alignment.
      */
-    const ALsizei SrcByteAlign{
+    const ALuint SrcByteAlign{
         (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels) :
         (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels) :
         (align * FrameSizeFromUserFmt(SrcChannels, SrcType))
@@ -453,13 +485,13 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     if UNLIKELY(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
-    const auto frames = static_cast<ALuint>(size / SrcByteAlign * align);
+    const ALuint frames{size / SrcByteAlign * align};
 
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
      */
-    ALsizei NumChannels{ChannelsFromFmt(DstChannels)};
-    ALsizei FrameSize{NumChannels * BytesFromFmt(DstType)};
+    ALuint NumChannels{ChannelsFromFmt(DstChannels)};
+    ALuint FrameSize{NumChannels * BytesFromFmt(DstType)};
     if UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
@@ -588,7 +620,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
     for(const auto &fmt : UserFmtList)
     {
         if(fmt.format == format)
-            return al::make_optional(DecompResult{fmt.channels, fmt.type});
+            return al::make_optional<DecompResult>({fmt.channels, fmt.type});
     }
     return al::nullopt;
 }
@@ -607,7 +639,7 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     ALCdevice *device{context->mDevice.get()};
-    std::unique_lock<std::mutex> buflock{device->BufferLock};
+    std::lock_guard<std::mutex> _{device->BufferLock};
     if(!EnsureBuffers(device, static_cast<ALuint>(n)))
     {
         context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d buffer%s", n, (n==1)?"":"s");
@@ -732,8 +764,8 @@ START_API_FUNC
         if UNLIKELY(!usrfmt)
             context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
-            LoadData(context.get(), albuf, freq, size, usrfmt->channels, usrfmt->type,
-                static_cast<const al::byte*>(data), flags);
+            LoadData(context.get(), albuf, freq, static_cast<ALuint>(size), usrfmt->channels,
+                usrfmt->type, static_cast<const al::byte*>(data), flags);
     }
 }
 END_API_FUNC
@@ -772,8 +804,9 @@ START_API_FUNC
         else if UNLIKELY((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
             context->setError(AL_INVALID_VALUE,
                 "Mapping buffer %u persistently without persistent access", buffer);
-        else if UNLIKELY(offset < 0 || offset >= albuf->OriginalSize ||
-                         length <= 0 || length > albuf->OriginalSize - offset)
+        else if UNLIKELY(offset < 0 || length <= 0
+            || static_cast<ALuint>(offset) >= albuf->OriginalSize
+            || static_cast<ALuint>(length) > albuf->OriginalSize - static_cast<ALuint>(offset))
             context->setError(AL_INVALID_VALUE, "Mapping invalid range %d+%d for buffer %u",
                 offset, length, buffer);
         else
@@ -828,9 +861,9 @@ START_API_FUNC
     else if UNLIKELY(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT))
         context->setError(AL_INVALID_OPERATION, "Flushing buffer %u while not mapped for writing",
             buffer);
-    else if UNLIKELY(offset < albuf->MappedOffset ||
-                     offset >= albuf->MappedOffset+albuf->MappedSize ||
-                     length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset)
+    else if UNLIKELY(offset < albuf->MappedOffset || length <= 0
+        || offset >= albuf->MappedOffset+albuf->MappedSize
+        || length > albuf->MappedOffset+albuf->MappedSize-offset)
         context->setError(AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u", offset,
             length, buffer);
     else
@@ -868,12 +901,12 @@ START_API_FUNC
         return;
     }
 
-    ALsizei unpack_align{albuf->UnpackAlign.load()};
-    ALsizei align{SanitizeAlignment(usrfmt->type, unpack_align)};
+    ALuint unpack_align{albuf->UnpackAlign};
+    ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
     if UNLIKELY(align < 1)
-        context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
-    else if UNLIKELY(long{usrfmt->channels} != long{albuf->mFmtChannels} ||
-                     usrfmt->type != albuf->OriginalType)
+        context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u", unpack_align);
+    else if UNLIKELY(long{usrfmt->channels} != long{albuf->mFmtChannels}
+        || usrfmt->type != albuf->OriginalType)
         context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
     else if UNLIKELY(align != albuf->OriginalAlign)
         context->setError(AL_INVALID_VALUE,
@@ -883,43 +916,43 @@ START_API_FUNC
         context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
     else
     {
-        ALsizei num_chans{ChannelsFromFmt(albuf->mFmtChannels)};
-        ALsizei frame_size{num_chans * BytesFromFmt(albuf->mFmtType)};
-        ALsizei byte_align{
+        ALuint num_chans{ChannelsFromFmt(albuf->mFmtChannels)};
+        ALuint frame_size{num_chans * BytesFromFmt(albuf->mFmtType)};
+        ALuint byte_align{
             (albuf->OriginalType == UserFmtIMA4) ? ((align-1)/2 + 4) * num_chans :
             (albuf->OriginalType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
             (align * frame_size)
         };
 
-        if UNLIKELY(offset < 0 || length < 0 || offset > albuf->OriginalSize ||
-                    length > albuf->OriginalSize-offset)
+        if UNLIKELY(offset < 0 || length < 0 || static_cast<ALuint>(offset) > albuf->OriginalSize
+            || static_cast<ALuint>(length) > albuf->OriginalSize-static_cast<ALuint>(offset))
             context->setError(AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
                 offset, length, buffer);
-        else if UNLIKELY((offset%byte_align) != 0)
+        else if UNLIKELY((static_cast<ALuint>(offset)%byte_align) != 0)
             context->setError(AL_INVALID_VALUE,
                 "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
                 offset, byte_align, align);
-        else if UNLIKELY((length%byte_align) != 0)
+        else if UNLIKELY((static_cast<ALuint>(length)%byte_align) != 0)
             context->setError(AL_INVALID_VALUE,
                 "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
                 length, byte_align, align);
         else
         {
             /* offset -> byte offset, length -> sample count */
-            offset = offset/byte_align * align * frame_size;
-            length = length/byte_align * align;
+            size_t byteoff{static_cast<ALuint>(offset)/byte_align * align * frame_size};
+            size_t samplen{static_cast<ALuint>(length)/byte_align * align};
 
-            void *dst = albuf->mData.data() + offset;
+            void *dst = albuf->mData.data() + byteoff;
             if(usrfmt->type == UserFmtIMA4 && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
-                    static_cast<const al::byte*>(data), num_chans, length, align);
+                    static_cast<const al::byte*>(data), num_chans, samplen, align);
             else if(usrfmt->type == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
-                    static_cast<const al::byte*>(data), num_chans, length, align);
+                    static_cast<const al::byte*>(data), num_chans, samplen, align);
             else
             {
-                assert(long{usrfmt->type} == static_cast<long>(albuf->mFmtType));
-                memcpy(dst, data, length * frame_size);
+                assert(long{usrfmt->type} == long{albuf->mFmtType});
+                memcpy(dst, data, size_t{samplen} * frame_size);
             }
         }
     }
@@ -1052,14 +1085,14 @@ START_API_FUNC
         if UNLIKELY(value < 0)
             context->setError(AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
         else
-            albuf->UnpackAlign.store(value);
+            albuf->UnpackAlign = static_cast<ALuint>(value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if UNLIKELY(value < 0)
             context->setError(AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
         else
-            albuf->PackAlign.store(value);
+            albuf->PackAlign = static_cast<ALuint>(value);
         break;
 
     default:
@@ -1119,14 +1152,14 @@ START_API_FUNC
         if UNLIKELY(ReadRef(albuf->ref) != 0)
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
-        else if UNLIKELY(values[0] < 0 || values[0] >= values[1] ||
-            static_cast<ALuint>(values[1]) > albuf->SampleLen)
+        else if UNLIKELY(values[0] < 0 || values[0] >= values[1]
+            || static_cast<ALuint>(values[1]) > albuf->SampleLen)
             context->setError(AL_INVALID_VALUE, "Invalid loop point range %d -> %d on buffer %u",
                 values[0], values[1], buffer);
         else
         {
-            albuf->LoopStart = values[0];
-            albuf->LoopEnd = values[1];
+            albuf->LoopStart = static_cast<ALuint>(values[0]);
+            albuf->LoopEnd = static_cast<ALuint>(values[1]);
         }
         break;
 
@@ -1229,23 +1262,24 @@ START_API_FUNC
         break;
 
     case AL_BITS:
-        *value = BytesFromFmt(albuf->mFmtType) * 8;
+        *value = static_cast<ALint>(BytesFromFmt(albuf->mFmtType) * 8);
         break;
 
     case AL_CHANNELS:
-        *value = ChannelsFromFmt(albuf->mFmtChannels);
+        *value = static_cast<ALint>(ChannelsFromFmt(albuf->mFmtChannels));
         break;
 
     case AL_SIZE:
-        *value = albuf->SampleLen * FrameSizeFromFmt(albuf->mFmtChannels, albuf->mFmtType);
+        *value = static_cast<ALint>(albuf->SampleLen *
+            FrameSizeFromFmt(albuf->mFmtChannels, albuf->mFmtType));
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        *value = albuf->UnpackAlign.load();
+        *value = static_cast<ALint>(albuf->UnpackAlign);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        *value = albuf->PackAlign.load();
+        *value = static_cast<ALint>(albuf->PackAlign);
         break;
 
     default:
@@ -1305,8 +1339,8 @@ START_API_FUNC
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        values[0] = albuf->LoopStart;
-        values[1] = albuf->LoopEnd;
+        values[0] = static_cast<ALint>(albuf->LoopStart);
+        values[1] = static_cast<ALint>(albuf->LoopEnd);
         break;
 
     default:
@@ -1316,39 +1350,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALsizei BytesFromUserFmt(UserFmtType type)
-{
-    switch(type)
-    {
-    case UserFmtUByte: return sizeof(ALubyte);
-    case UserFmtShort: return sizeof(ALshort);
-    case UserFmtFloat: return sizeof(ALfloat);
-    case UserFmtDouble: return sizeof(ALdouble);
-    case UserFmtMulaw: return sizeof(ALubyte);
-    case UserFmtAlaw: return sizeof(ALubyte);
-    case UserFmtIMA4: break; /* not handled here */
-    case UserFmtMSADPCM: break; /* not handled here */
-    }
-    return 0;
-}
-ALsizei ChannelsFromUserFmt(UserFmtChannels chans)
-{
-    switch(chans)
-    {
-    case UserFmtMono: return 1;
-    case UserFmtStereo: return 2;
-    case UserFmtRear: return 2;
-    case UserFmtQuad: return 4;
-    case UserFmtX51: return 6;
-    case UserFmtX61: return 7;
-    case UserFmtX71: return 8;
-    case UserFmtBFormat2D: return 3;
-    case UserFmtBFormat3D: return 4;
-    }
-    return 0;
-}
-
-ALsizei BytesFromFmt(FmtType type)
+ALuint BytesFromFmt(FmtType type)
 {
     switch(type)
     {
@@ -1361,7 +1363,7 @@ ALsizei BytesFromFmt(FmtType type)
     }
     return 0;
 }
-ALsizei ChannelsFromFmt(FmtChannels chans)
+ALuint ChannelsFromFmt(FmtChannels chans)
 {
     switch(chans)
     {

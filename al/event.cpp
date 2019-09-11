@@ -83,8 +83,8 @@ static int EventThread(ALCcontext *context)
                     (evt.u.srcstate.state==AL_PAUSED) ? "AL_PAUSED" :
                     (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>";
                 context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
-                    evt.u.srcstate.state, static_cast<ALsizei>(msg.length()), msg.c_str(),
-                    context->mEventParam);
+                    static_cast<ALuint>(evt.u.srcstate.state), static_cast<ALsizei>(msg.length()),
+                    msg.c_str(), context->mEventParam);
             }
             else if(evt.EnumType == EventType_BufferCompleted)
             {

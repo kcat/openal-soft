@@ -35,11 +35,6 @@ enum UserFmtChannels : unsigned char {
     UserFmtBFormat3D, /* WXYZ */
 };
 
-ALsizei BytesFromUserFmt(UserFmtType type);
-ALsizei ChannelsFromUserFmt(UserFmtChannels chans);
-inline ALsizei FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type)
-{ return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type); }
-
 
 /* Storable formats */
 enum FmtType : unsigned char {
@@ -64,9 +59,9 @@ enum FmtChannels : unsigned char {
 #define MAX_INPUT_CHANNELS  (8)
 
 
-ALsizei BytesFromFmt(FmtType type);
-ALsizei ChannelsFromFmt(FmtChannels chans);
-inline ALsizei FrameSizeFromFmt(FmtChannels chans, FmtType type)
+ALuint BytesFromFmt(FmtType type);
+ALuint ChannelsFromFmt(FmtChannels chans);
+inline ALuint FrameSizeFromFmt(FmtChannels chans, FmtType type)
 { return ChannelsFromFmt(chans) * BytesFromFmt(type); }
 
 
@@ -81,14 +76,14 @@ struct ALbuffer {
     FmtType     mFmtType{};
 
     UserFmtType OriginalType{};
-    ALsizei OriginalSize{0};
-    ALsizei OriginalAlign{0};
+    ALuint OriginalSize{0};
+    ALuint OriginalAlign{0};
 
     ALuint LoopStart{0u};
     ALuint LoopEnd{0u};
 
-    std::atomic<ALsizei> UnpackAlign{0};
-    std::atomic<ALsizei> PackAlign{0};
+    ALuint UnpackAlign{0};
+    ALuint PackAlign{0};
 
     ALbitfieldSOFT MappedAccess{0u};
     ALsizei MappedOffset{0};

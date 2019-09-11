@@ -305,72 +305,69 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
 
     ALdouble offset{0.0};
-    if(voice)
+    if(!voice) return offset;
+
+    const ALbufferlistitem *BufferList{Source->queue};
+    const ALbuffer *BufferFmt{nullptr};
+    ALboolean readFin{AL_FALSE};
+    ALuint totalBufferLen{0u};
+
+    while(BufferList)
     {
-        const ALbufferlistitem *BufferList{Source->queue};
-        const ALbuffer *BufferFmt{nullptr};
-        ALboolean readFin{AL_FALSE};
-        ALuint totalBufferLen{0u};
+        if(!BufferFmt) BufferFmt = BufferList->mBuffer;
 
-        while(BufferList)
+        readFin |= (BufferList == Current);
+        totalBufferLen += BufferList->mSampleLen;
+        if(!readFin) readPos += BufferList->mSampleLen;
+
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+    }
+    assert(BufferFmt != nullptr);
+
+    if(Source->Looping)
+        readPos %= totalBufferLen;
+    else
+    {
+        /* Wrap back to 0 */
+        if(readPos >= totalBufferLen)
+            readPos = readPosFrac = 0;
+    }
+
+    switch(name)
+    {
+    case AL_SEC_OFFSET:
+        offset = (readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE) / BufferFmt->Frequency;
+        break;
+
+    case AL_SAMPLE_OFFSET:
+        offset = readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE;
+        break;
+
+    case AL_BYTE_OFFSET:
+        if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            if(!BufferFmt) BufferFmt = BufferList->mBuffer;
+            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            ALuint BlockSize{align * ChannelsFromFmt(BufferFmt->mFmtChannels)};
 
-            readFin |= (BufferList == Current);
-            totalBufferLen += BufferList->mSampleLen;
-            if(!readFin) readPos += BufferList->mSampleLen;
-
-            BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+            /* Round down to nearest ADPCM block */
+            offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
         }
-        assert(BufferFmt != nullptr);
+        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
+        {
+            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint align{(FrameBlockSize-2)/2 + 7};
+            ALuint BlockSize{align * ChannelsFromFmt(BufferFmt->mFmtChannels)};
 
-        if(Source->Looping)
-            readPos %= totalBufferLen;
+            /* Round down to nearest ADPCM block */
+            offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
+        }
         else
         {
-            /* Wrap back to 0 */
-            if(readPos >= totalBufferLen)
-                readPos = readPosFrac = 0;
+            const ALuint FrameSize{FrameSizeFromFmt(BufferFmt->mFmtChannels, BufferFmt->mFmtType)};
+            offset = static_cast<ALdouble>(readPos * FrameSize);
         }
-
-        offset = 0.0;
-        switch(name)
-        {
-            case AL_SEC_OFFSET:
-                offset = (readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE) / BufferFmt->Frequency;
-                break;
-
-            case AL_SAMPLE_OFFSET:
-                offset = readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE;
-                break;
-
-            case AL_BYTE_OFFSET:
-                if(BufferFmt->OriginalType == UserFmtIMA4)
-                {
-                    ALsizei align = (BufferFmt->OriginalAlign-1)/2 + 4;
-                    ALuint BlockSize = align * ChannelsFromFmt(BufferFmt->mFmtChannels);
-                    ALuint FrameBlockSize = BufferFmt->OriginalAlign;
-
-                    /* Round down to nearest ADPCM block */
-                    offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
-                }
-                else if(BufferFmt->OriginalType == UserFmtMSADPCM)
-                {
-                    ALsizei align = (BufferFmt->OriginalAlign-2)/2 + 7;
-                    ALuint BlockSize = align * ChannelsFromFmt(BufferFmt->mFmtChannels);
-                    ALuint FrameBlockSize = BufferFmt->OriginalAlign;
-
-                    /* Round down to nearest ADPCM block */
-                    offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
-                }
-                else
-                {
-                    const ALsizei FrameSize{FrameSizeFromFmt(BufferFmt->mFmtChannels,
-                        BufferFmt->mFmtType)};
-                    offset = static_cast<ALdouble>(readPos * FrameSize);
-                }
-                break;
-        }
+        break;
     }
 
     return offset;
@@ -418,13 +415,13 @@ al::optional<VoicePos> GetSampleOffset(ALsource *Source)
         offset = static_cast<ALuint>(Source->Offset);
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            const ALsizei align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
             offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
             offset *= BufferFmt->OriginalAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
-            const ALsizei align{(BufferFmt->OriginalAlign-2)/2 + 7};
+            const ALuint align{(BufferFmt->OriginalAlign-2)/2 + 7};
             offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
             offset *= BufferFmt->OriginalAlign;
         }

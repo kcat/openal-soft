@@ -58,17 +58,9 @@ struct ChannelConverter {
     DevFmtChannels mSrcChans;
     DevFmtChannels mDstChans;
 
-    ChannelConverter(DevFmtType srctype, DevFmtChannels srcchans, DevFmtChannels dstchans)
-      : mSrcType(srctype), mSrcChans(srcchans), mDstChans(dstchans)
-    { }
+    bool is_active() const noexcept { return mSrcChans != mDstChans; }
 
     void convert(const ALvoid *src, ALfloat *dst, ALuint frames) const;
-
-    DEF_NEWDEL(ChannelConverter)
 };
-using ChannelConverterPtr = std::unique_ptr<ChannelConverter>;
-
-ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans,
-    DevFmtChannels dstChans);
 
 #endif /* CONVERTER_H */

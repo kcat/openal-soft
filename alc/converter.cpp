@@ -327,14 +327,6 @@ ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *d
 }
 
 
-ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans, DevFmtChannels dstChans)
-{
-    if(srcChans != dstChans && !((srcChans == DevFmtMono && dstChans == DevFmtStereo) ||
-                                 (srcChans == DevFmtStereo && dstChans == DevFmtMono)))
-        return nullptr;
-    return al::make_unique<ChannelConverter>(srcType, srcChans, dstChans);
-}
-
 void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALuint frames) const
 {
     if(mSrcChans == DevFmtStereo && mDstChans == DevFmtMono)

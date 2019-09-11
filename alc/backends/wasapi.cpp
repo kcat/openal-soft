@@ -1166,7 +1166,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     IAudioCaptureClient *mCapture{nullptr};
     HANDLE mNotifyEvent{nullptr};
 
-    ChannelConverterPtr mChannelConv;
+    ChannelConverter mChannelConv{};
     SampleConverterPtr mSampleConv;
     RingBufferPtr mRing;
 
@@ -1216,10 +1216,10 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                 ERR("Failed to get capture buffer: 0x%08lx\n", hr);
             else
             {
-                if(mChannelConv)
+                if(mChannelConv.is_active())
                 {
                     samples.resize(numsamples*2);
-                    mChannelConv->convert(rdata, samples.data(), numsamples);
+                    mChannelConv.convert(rdata, samples.data(), numsamples);
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
@@ -1487,7 +1487,7 @@ HRESULT WasapiCapture::resetProxy()
     }
 
     mSampleConv = nullptr;
-    mChannelConv = nullptr;
+    mChannelConv = {};
 
     if(wfx != nullptr)
     {
@@ -1546,12 +1546,7 @@ HRESULT WasapiCapture::resetProxy()
 
     if(mDevice->FmtChans == DevFmtMono && OutputType.Format.nChannels == 2)
     {
-        mChannelConv = CreateChannelConverter(srcType, DevFmtStereo, mDevice->FmtChans);
-        if(!mChannelConv)
-        {
-            ERR("Failed to create %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
-            return E_FAIL;
-        }
+        mChannelConv = ChannelConverter{srcType, DevFmtStereo, mDevice->FmtChans};
         TRACE("Created %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
         /* The channel converter always outputs float, so change the input type
          * for the resampler/type-converter.
@@ -1560,12 +1555,7 @@ HRESULT WasapiCapture::resetProxy()
     }
     else if(mDevice->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 1)
     {
-        mChannelConv = CreateChannelConverter(srcType, DevFmtMono, mDevice->FmtChans);
-        if(!mChannelConv)
-        {
-            ERR("Failed to create %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
-            return E_FAIL;
-        }
+        mChannelConv = ChannelConverter{srcType, DevFmtMono, mDevice->FmtChans};
         TRACE("Created %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
         srcType = DevFmtFloat;
     }

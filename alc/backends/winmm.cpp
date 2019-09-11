@@ -245,7 +245,8 @@ retry_open:
     mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
     mFormat.cbSize = 0;
 
-    MMRESULT res{waveOutOpen(&mOutHdl, DeviceID, &mFormat, (DWORD_PTR)&WinMMPlayback::waveOutProcC,
+    MMRESULT res{waveOutOpen(&mOutHdl, DeviceID, &mFormat,
+        reinterpret_cast<DWORD_PTR>(&WinMMPlayback::waveOutProcC),
         reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
     if(res != MMSYSERR_NOERROR)
     {
@@ -506,7 +507,8 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
     mFormat.cbSize = 0;
 
-    MMRESULT res{waveInOpen(&mInHdl, DeviceID, &mFormat, (DWORD_PTR)&WinMMCapture::waveInProcC,
+    MMRESULT res{waveInOpen(&mInHdl, DeviceID, &mFormat,
+        reinterpret_cast<DWORD_PTR>(&WinMMCapture::waveInProcC),
         reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
     if(res != MMSYSERR_NOERROR)
     {
@@ -590,7 +592,7 @@ ALCenum WinMMCapture::captureSamples(void *buffer, ALCuint samples)
 }
 
 ALCuint WinMMCapture::availableSamples()
-{ return (ALCuint)mRing->readSpace(); }
+{ return static_cast<ALCuint>(mRing->readSpace()); }
 
 } // namespace
 

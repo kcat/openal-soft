@@ -371,36 +371,36 @@ START_API_FUNC
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = (ALint64SOFT)context->mDopplerFactor;
+        value = static_cast<ALint64SOFT>(context->mDopplerFactor);
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = (ALint64SOFT)context->mDopplerVelocity;
+        value = static_cast<ALint64SOFT>(context->mDopplerVelocity);
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALint64SOFT)context->mDistanceModel;
+        value = static_cast<ALint64SOFT>(context->mDistanceModel);
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = (ALint64SOFT)context->mSpeedOfSound;
+        value = static_cast<ALint64SOFT>(context->mSpeedOfSound);
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
         if(context->mDeferUpdates.load(std::memory_order_acquire))
-            value = (ALint64SOFT)AL_TRUE;
+            value = AL_TRUE;
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = (ALint64SOFT)(GAIN_MIX_MAX/context->mGainBoost);
+        value = static_cast<ALint64SOFT>(GAIN_MIX_MAX/context->mGainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = (ALint64SOFT)(ResamplerMax + 1);
+        value = static_cast<ALint64SOFT>(ResamplerMax + 1);
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = (ALint64SOFT)ResamplerDefault;
+        value = static_cast<ALint64SOFT>(ResamplerDefault);
         break;
 
     default:

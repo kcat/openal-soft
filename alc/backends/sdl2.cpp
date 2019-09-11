@@ -133,7 +133,7 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
         mDevice->FmtChans = DevFmtStereo;
     else
     {
-        ERR("Got unhandled SDL channel count: %d\n", (int)have.channels);
+        ERR("Got unhandled SDL channel count: %d\n", int{have.channels});
         return ALC_INVALID_VALUE;
     }
     switch(have.format)

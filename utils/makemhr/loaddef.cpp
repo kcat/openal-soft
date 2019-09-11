@@ -1047,7 +1047,7 @@ static int LoadWaveSource(FILE *fp, SourceRefT *src, const uint hrirRate, const 
 // Load a Spatially Oriented Format for Accoustics (SOFA) file.
 static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n)
 {
-    struct MYSOFA_EASY *sofa{mysofa_cache_lookup(src->mPath, (float)hrirRate)};
+    struct MYSOFA_EASY *sofa{mysofa_cache_lookup(src->mPath, static_cast<float>(hrirRate))};
     if(sofa) return sofa;
 
     sofa = static_cast<MYSOFA_EASY*>(calloc(1, sizeof(*sofa)));
@@ -1096,7 +1096,7 @@ static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uin
         fprintf(stderr, "\nError:  Out of memory.\n");
         return nullptr;
     }
-    return mysofa_cache_store(sofa, src->mPath, (float)hrirRate);
+    return mysofa_cache_store(sofa, src->mPath, static_cast<float>(hrirRate));
 }
 
 // Copies the HRIR data from a particular SOFA measurement.
@@ -1532,7 +1532,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
         src->mType = ET_NONE;
         src->mSize = 0;
         src->mBits = 0;
-        src->mChannel = (uint)intVal;
+        src->mChannel = static_cast<uint>(intVal);
         src->mSkip = 0;
     }
     else if(src->mFormat == SF_WAVE)
@@ -1666,7 +1666,7 @@ static int ReadSofaRef(TokenReaderT *tr, SourceRefT *src)
         TrReadOperator(tr, "@");
         if(!TrReadInt(tr, 0, 0x7FFFFFFF, &intVal))
             return 0;
-        src->mOffset = (uint)intVal;
+        src->mOffset = static_cast<uint>(intVal);
     }
     else
         src->mOffset = 0;
@@ -1834,13 +1834,13 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
                     continue;
 
                 double ef{(90.0 + aer[1]) * (hData->mFds[fi].mEvCount - 1) / 180.0};
-                ei = (uint)std::round(ef);
+                ei = static_cast<uint>(std::round(ef));
                 ef = (ef - ei) * 180.0f / (hData->mFds[fi].mEvCount - 1);
                 if(std::abs(ef) >= 0.1)
                     continue;
 
                 double af{aer[0] * hData->mFds[fi].mEvs[ei].mAzCount / 360.0f};
-                ai = (uint)std::round(af);
+                ai = static_cast<uint>(std::round(af));
                 af = (af - ai) * 360.0f / hData->mFds[fi].mEvs[ei].mAzCount;
                 ai = ai % hData->mFds[fi].mEvs[ei].mAzCount;
                 if(std::abs(af) >= 0.1)

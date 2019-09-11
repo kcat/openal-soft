@@ -28,6 +28,7 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
+#include <cinttypes>
 #include <climits>
 #include <cmath>
 #include <csignal>
@@ -214,7 +215,7 @@ BackendFactory *CaptureFactory{};
 /************************************************
  * Functions, enums, and errors
  ************************************************/
-#define DECL(x) { #x, (ALCvoid*)(x) }
+#define DECL(x) { #x, reinterpret_cast<void*>(x) }
 const struct {
     const ALCchar *funcName;
     ALCvoid *address;
@@ -1228,14 +1229,11 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
 {
     switch(reason)
     {
-        case DLL_PROCESS_ATTACH:
-            /* Pin the DLL so we won't get unloaded until the process terminates */
-            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-                               (WCHAR*)module, &module);
-            break;
-
-        case DLL_PROCESS_DETACH:
-            break;
+    case DLL_PROCESS_ATTACH:
+        /* Pin the DLL so we won't get unloaded until the process terminates */
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+            reinterpret_cast<WCHAR*>(module), &module);
+        break;
     }
     return TRUE;
 }
@@ -2087,7 +2085,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         TRACE("Output limiter enabled, %.4fdB limit\n", thrshld_dB);
     }
 
-    TRACE("Fixed device latency: %ldns\n", (long)device->FixedLatency.count());
+    TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.

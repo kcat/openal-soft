@@ -396,7 +396,7 @@ ALCenum SndioCapture::open(const ALCchar *name)
          (mDevice->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0) ||
          (mDevice->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0) ||
          (mDevice->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0)) ||
-       mDevice->channelsFromFmt() != (ALsizei)par.rchan ||
+       mDevice->channelsFromFmt() != static_cast<int>(par.rchan) ||
        mDevice->Frequency != par.rate)
     {
         ERR("Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead\n",

@@ -221,7 +221,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
             float ev{90.0f + elems[ei]};
             float eif{std::round(ev / step)};
 
-            if(std::fabs(eif - (uint)eif) < (0.1f / step))
+            if(std::fabs(eif - static_cast<uint>(eif)) < (0.1f / step))
             {
                 evStart = static_cast<uint>(eif);
                 break;

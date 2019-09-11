@@ -81,6 +81,9 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 namespace {
 
+inline constexpr REFERENCE_TIME operator "" _reftime(unsigned long long int n) noexcept
+{ return static_cast<REFERENCE_TIME>(n); }
+
 #define MONO SPEAKER_FRONT_CENTER
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
 #define QUAD (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
@@ -90,7 +93,7 @@ namespace {
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
-#define REFTIME_PER_SEC ((REFERENCE_TIME)10000000)
+#define REFTIME_PER_SEC 10000000_reftime
 
 #define DEVNAME_HEAD "OpenAL Soft on "
 
@@ -1051,7 +1054,7 @@ HRESULT WasapiPlayback::resetProxy()
     /* Find the nearest multiple of the period size to the update size */
     if(min_per < per_time)
         min_per *= maxi64((per_time + min_per/2) / min_per, 1);
-    min_len = (UINT32)ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC);
+    min_len = static_cast<UINT32>(ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC));
     min_len = minu(min_len, buffer_len/2);
 
     mDevice->UpdateSize = min_len;
@@ -1680,7 +1683,7 @@ void WasapiCapture::stopProxy()
 
 
 ALCuint WasapiCapture::availableSamples()
-{ return (ALCuint)mRing->readSpace(); }
+{ return static_cast<ALCuint>(mRing->readSpace()); }
 
 ALCenum WasapiCapture::captureSamples(void *buffer, ALCuint samples)
 {

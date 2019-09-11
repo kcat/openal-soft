@@ -255,7 +255,7 @@ auto filebuf::underflow() -> int_type
     {
         // Read in the next chunk of data, and set the pointers on success
         DWORD got{};
-        if(ReadFile(mFile, mBuffer.data(), (DWORD)mBuffer.size(), &got, nullptr))
+        if(ReadFile(mFile, mBuffer.data(), static_cast<DWORD>(mBuffer.size()), &got, nullptr))
             setg(mBuffer.data(), mBuffer.data(), mBuffer.data()+got);
     }
     if(gptr() == egptr())

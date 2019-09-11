@@ -34,36 +34,32 @@ namespace al {
 
 #define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),int>::type = 0
 
-template<typename T, size_t alignment=alignof(T)>
-struct allocator : public std::allocator<T> {
-    using size_type = size_t;
-    using pointer = T*;
-    using const_pointer = const T*;
+template<typename T, std::size_t alignment=alignof(T)>
+struct allocator {
+    using value_type = T;
+    using is_always_equal = std::true_type;
 
     template<typename U>
     struct rebind {
-        using other = allocator<U, alignment>;
+        using other = allocator<U, (alignment<alignof(U))?alignof(U):alignment>;
     };
 
-    pointer allocate(size_type n, const void* = nullptr)
+    allocator() = default;
+    template<typename U>
+    constexpr allocator(const allocator<U>&) noexcept { }
+
+    [[nodiscard]] T *allocate(std::size_t n)
     {
-        if(n > std::numeric_limits<size_t>::max() / sizeof(T))
-            throw std::bad_alloc();
-
-        void *ret{al_malloc(alignment, n*sizeof(T))};
-        if(!ret) throw std::bad_alloc();
-        return static_cast<pointer>(ret);
+        if(n > std::numeric_limits<std::size_t>::max() / sizeof(T)) throw std::bad_alloc();
+        if(auto p = static_cast<T*>(al_malloc(alignment, n*sizeof(T)))) return p;
+        throw std::bad_alloc();
     }
-
-    void deallocate(pointer p, size_type)
-    { al_free(p); }
-
-    allocator() : std::allocator<T>() { }
-    allocator(const allocator &a) : std::allocator<T>(a) { }
-    template<class U>
-    allocator(const allocator<U,alignment> &a) : std::allocator<T>(a)
-    { }
+    void deallocate(T *p, std::size_t) noexcept { al_free(p); }
 };
+template<typename T, typename U>
+bool operator==(const allocator<T>&, const allocator<U>&) noexcept { return true; }
+template<typename T, typename U>
+bool operator!=(const allocator<T>&, const allocator<U>&) noexcept { return false; }
 
 template<size_t alignment, typename T>
 inline T* assume_aligned(T *ptr) noexcept

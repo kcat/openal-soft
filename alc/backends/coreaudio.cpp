@@ -585,7 +585,7 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
     // The output format should be the requested format, but using the hardware sample rate
     // This is because the AudioUnit will automatically scale other properties, except for sample rate
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-        1, (void*)&outputFormat, sizeof(outputFormat));
+        1, &outputFormat, sizeof(outputFormat));
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");

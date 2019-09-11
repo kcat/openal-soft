@@ -140,12 +140,12 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
 
     for(ALsizei c{0};c < IrSize;c += 2)
     {
-        float32x4_t vals = vld1q_f32((float32_t*)&Values[c][0]);
-        float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
+        float32x4_t vals = vld1q_f32(&Values[c][0]);
+        float32x4_t coefs = vld1q_f32(&Coeffs[c][0]);
 
         vals = vmlaq_f32(vals, coefs, leftright4);
 
-        vst1q_f32((float32_t*)&Values[c][0], vals);
+        vst1q_f32(&Values[c][0], vals);
     }
 }
 

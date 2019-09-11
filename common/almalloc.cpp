@@ -34,7 +34,7 @@ void *al_malloc(size_t alignment, size_t size)
     if(ret != nullptr)
     {
         *(ret++) = 0x00;
-        while(((ptrdiff_t)ret&(alignment-1)) != 0)
+        while((reinterpret_cast<ptrdiff_t>(ret)&(alignment-1)) != 0)
             *(ret++) = 0x55;
     }
     return ret;

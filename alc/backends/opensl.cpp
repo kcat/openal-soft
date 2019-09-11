@@ -849,7 +849,7 @@ void OpenSLCapture::stop()
     }
 }
 
-ALCenum OpenSLCapture::captureSamples(void* buffer, ALCuint samples)
+ALCenum OpenSLCapture::captureSamples(void *buffer, ALCuint samples)
 {
     ALsizei chunk_size = mDevice->UpdateSize * mFrameSize;
     SLAndroidSimpleBufferQueueItf bufferQueue;
@@ -866,7 +866,8 @@ ALCenum OpenSLCapture::captureSamples(void* buffer, ALCuint samples)
     for(i = 0;i < samples;)
     {
         ALCuint rem{minu(samples - i, mDevice->UpdateSize - mSplOffset)};
-        memcpy((ALCbyte*)buffer + i*mFrameSize, data.first.buf + mSplOffset*mFrameSize,
+        memcpy(static_cast<al::byte*>(buffer) + i*mFrameSize,
+               data.first.buf + mSplOffset*mFrameSize,
                rem * mFrameSize);
 
         mSplOffset += rem;

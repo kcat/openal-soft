@@ -72,10 +72,10 @@ struct allocator {
     }
     void deallocate(T *p, std::size_t) noexcept { al_free(p); }
 };
-template<typename T, typename U>
-bool operator==(const allocator<T>&, const allocator<U>&) noexcept { return true; }
-template<typename T, typename U>
-bool operator!=(const allocator<T>&, const allocator<U>&) noexcept { return false; }
+template<typename T, std::size_t N, typename U, std::size_t M>
+bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept { return true; }
+template<typename T, std::size_t N, typename U, std::size_t M>
+bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
 template<size_t alignment, typename T>
 inline T* assume_aligned(T *ptr) noexcept

@@ -141,7 +141,7 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
 {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), size_t{0},
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
+        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
     )};
 
     while(needed > count)

@@ -500,7 +500,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     size_t count{std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(),
         size_t{0},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
+        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
     )};
 
     while(needed > count)

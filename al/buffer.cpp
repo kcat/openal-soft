@@ -286,7 +286,7 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
 {
     size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), size_t{0},
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
+        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
     )};
 
     while(needed > count)

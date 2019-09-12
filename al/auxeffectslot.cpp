@@ -253,9 +253,9 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
-    if(n < 0)
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Generating %d effect slots", n);
-    if(n == 0) return;
+    if UNLIKELY(n < 0)
+        context->setError(AL_INVALID_VALUE, "Generating %d effect slots", n);
+    if UNLIKELY(n <= 0) return;
 
     std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
     ALCdevice *device{context->mDevice.get()};

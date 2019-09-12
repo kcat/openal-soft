@@ -2067,9 +2067,10 @@ START_API_FUNC
 
     std::unique_lock<std::mutex> srclock{context->mSourceLock};
     ALCdevice *device{context->mDevice.get()};
-    if(static_cast<ALuint>(n) >= device->SourcesMax-context->mNumSources)
+    if(static_cast<ALuint>(n) > device->SourcesMax-context->mNumSources)
     {
-        context->setError(AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
+        context->setError(AL_OUT_OF_MEMORY, "Exceeding %u source limit (%u + %d)",
+            device->SourcesMax, context->mNumSources, n);
         return;
     }
     if(!EnsureSources(context.get(), static_cast<ALuint>(n)))

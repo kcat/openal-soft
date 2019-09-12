@@ -42,7 +42,7 @@ struct FamCount { size_t mCount; };
             return ret;                                                       \
         throw std::bad_alloc();                                               \
     }                                                                         \
-    void operator delete(void *block, FamCount /*fam*/) { al_free(block); }   \
+    void operator delete(void *block, FamCount) { al_free(block); }           \
     void operator delete(void *block) noexcept { al_free(block); }
 
 
@@ -61,12 +61,12 @@ struct allocator {
     };
 
     allocator() = default;
-    template<typename U>
-    constexpr allocator(const allocator<U>&) noexcept { }
+    template<typename U, std::size_t N>
+    constexpr allocator(const allocator<U,N>&) noexcept { }
 
-    [[nodiscard]] T *allocate(std::size_t n)
+    T *allocate(std::size_t n)
     {
-        if(n > std::numeric_limits<std::size_t>::max() / sizeof(T)) throw std::bad_alloc();
+        if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
         if(auto p = static_cast<T*>(al_malloc(alignment, n*sizeof(T)))) return p;
         throw std::bad_alloc();
     }

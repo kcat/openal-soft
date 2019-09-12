@@ -29,6 +29,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <numeric>
 #include <utility>
 
 #include "AL/al.h"
@@ -136,42 +137,41 @@ void InitEffectParams(ALeffect *effect, ALenum type)
     effect->type = type;
 }
 
-ALeffect *AllocEffect(ALCcontext *context)
+bool EnsureEffects(ALCdevice *device, size_t needed)
 {
-    ALCdevice *device{context->mDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), size_t{0},
+        [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
+        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
+    )};
+
+    while(needed > count)
+    {
+        if UNLIKELY(device->EffectList.size() >= 1<<25)
+            return false;
+
+        device->EffectList.emplace_back();
+        auto sublist = device->EffectList.end() - 1;
+        sublist->FreeMask = ~0_u64;
+        sublist->Effects = static_cast<ALeffect*>(al_calloc(alignof(ALeffect), sizeof(ALeffect)*64));
+        if UNLIKELY(!sublist->Effects)
+        {
+            device->EffectList.pop_back();
+            return false;
+        }
+        count += 64;
+    }
+    return true;
+}
+
+ALeffect *AllocEffect(ALCdevice *device)
+{
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
         [](const EffectSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
 
-    auto lidx = static_cast<ALsizei>(std::distance(device->EffectList.begin(), sublist));
-    ALsizei slidx{0};
-    if LIKELY(sublist != device->EffectList.end())
-        slidx = CTZ64(sublist->FreeMask);
-    else
-    {
-        /* Don't allocate so many list entries that the 32-bit ID could
-         * overflow...
-         */
-        if UNLIKELY(device->EffectList.size() >= 1<<25)
-        {
-            context->setError(AL_OUT_OF_MEMORY, "Too many effects allocated");
-            return nullptr;
-        }
-        device->EffectList.emplace_back();
-        sublist = device->EffectList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
-        if UNLIKELY(!sublist->Effects)
-        {
-            device->EffectList.pop_back();
-            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
-            return nullptr;
-        }
-
-        slidx = 0;
-    }
+    auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
+    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
     ALeffect *effect{::new (sublist->Effects + slidx) ALeffect{}};
     InitEffectParams(effect, AL_EFFECT_NULL);
@@ -186,9 +186,9 @@ ALeffect *AllocEffect(ALCcontext *context)
 
 void FreeEffect(ALCdevice *device, ALeffect *effect)
 {
-    ALuint id = effect->id - 1;
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
+    const ALuint id{effect->id - 1};
+    const size_t lidx{id >> 6};
+    const ALuint slidx{id & 0x3f};
 
     al::destroy_at(effect);
 
@@ -197,8 +197,8 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
 
 inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 {
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
 
     if UNLIKELY(lidx >= device->EffectList.size())
         return nullptr;
@@ -220,11 +220,19 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d effects", n);
     if UNLIKELY(n <= 0) return;
 
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->EffectLock};
+    if(!EnsureEffects(device, static_cast<ALuint>(n)))
+    {
+        context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d effect%s", n, (n==1)?"":"s");
+        return;
+    }
+
     if LIKELY(n == 1)
     {
         /* Special handling for the easy and normal case. */
-        ALeffect *effect = AllocEffect(context.get());
-        if(effect) effects[0] = effect->id;
+        ALeffect *effect{AllocEffect(device)};
+        effects[0] = effect->id;
     }
     else
     {
@@ -232,18 +240,12 @@ START_API_FUNC
          * modifying the user storage in case of failure.
          */
         al::vector<ALuint> ids;
-        ids.reserve(n);
+        ids.reserve(static_cast<ALuint>(n));
         do {
-            ALeffect *effect = AllocEffect(context.get());
-            if(!effect)
-            {
-                alDeleteEffects(static_cast<ALsizei>(ids.size()), ids.data());
-                return;
-            }
-
+            ALeffect *effect{AllocEffect(device)};
             ids.emplace_back(effect->id);
         } while(--n);
-        std::copy(ids.begin(), ids.end(), effects);
+        std::copy(ids.cbegin(), ids.cend(), effects);
     }
 }
 END_API_FUNC
@@ -722,7 +724,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         effect->Props.Reverb.HFReference = props->flHFReference;
         effect->Props.Reverb.LFReference = props->flLFReference;
         effect->Props.Reverb.RoomRolloffFactor = props->flRoomRolloffFactor;
-        effect->Props.Reverb.DecayHFLimit = props->iDecayHFLimit;
+        effect->Props.Reverb.DecayHFLimit = props->iDecayHFLimit ? AL_TRUE : AL_FALSE;
         return;
     }
 

@@ -86,7 +86,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
         std::lock_guard<std::mutex> _{mEventCbLock};
         ALbitfieldSOFT enabledevts{mEnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Error) && mEventCb)
-            (*mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg, mEventParam);
+            (*mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, static_cast<ALuint>(errorCode), msglen, msg,
+                mEventParam);
     }
 }
 

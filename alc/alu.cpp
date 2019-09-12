@@ -155,9 +155,8 @@ void aluInit(void)
 void ALCdevice::ProcessHrtf(const size_t SamplesToDo)
 {
     /* HRTF is stereo output only. */
-    const int lidx{RealOut.ChannelIndex[FrontLeft]};
-    const int ridx{RealOut.ChannelIndex[FrontRight]};
-    ASSUME(lidx >= 0 && ridx >= 0);
+    const ALuint lidx{RealOut.ChannelIndex[FrontLeft]};
+    const ALuint ridx{RealOut.ChannelIndex[FrontRight]};
 
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
         mHrtfState.get(), SamplesToDo);
@@ -171,9 +170,8 @@ void ALCdevice::ProcessAmbiDec(const size_t SamplesToDo)
 void ALCdevice::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
-    const int lidx{RealOut.ChannelIndex[FrontLeft]};
-    const int ridx{RealOut.ChannelIndex[FrontRight]};
-    ASSUME(lidx >= 0 && ridx >= 0);
+    const ALuint lidx{RealOut.ChannelIndex[FrontLeft]};
+    const ALuint ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
     Uhj_Encoder->encode(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer.data(),
@@ -186,9 +184,8 @@ void ALCdevice::ProcessBs2b(const size_t SamplesToDo)
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 
     /* BS2B is stereo output only. */
-    const int lidx{RealOut.ChannelIndex[FrontLeft]};
-    const int ridx{RealOut.ChannelIndex[FrontRight]};
-    ASSUME(lidx >= 0 && ridx >= 0);
+    const ALuint lidx{RealOut.ChannelIndex[FrontLeft]};
+    const ALuint ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Now apply the BS2B binaural/crossfeed filter. */
     bs2b_cross_feed(Bs2b.get(), RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
@@ -662,8 +659,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
         for(ALsizei c{0};c < num_channels;c++)
         {
-            int idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
-            if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+            const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+            if(idx != INVALID_CHANNEL_INDEX)
+                voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
         }
 
         /* Auxiliary sends still use normal channel panning since they mix to
@@ -807,8 +805,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 {
                     if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
-                        int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
-                        if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+                        const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+                        if(idx != INVALID_CHANNEL_INDEX)
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
                     }
                     continue;
                 }
@@ -854,8 +853,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 {
                     if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
-                        int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
-                        if(idx != -1) voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+                        const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+                        if(idx != INVALID_CHANNEL_INDEX)
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
                     }
                     continue;
                 }
@@ -1667,10 +1667,9 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples)
         /* Apply front image stablization for surround sound, if applicable. */
         if(device->Stablizer)
         {
-            const int lidx{GetChannelIdxByName(device->RealOut, FrontLeft)};
-            const int ridx{GetChannelIdxByName(device->RealOut, FrontRight)};
-            const int cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
-            assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
+            const ALuint lidx{GetChannelIdxByName(device->RealOut, FrontLeft)};
+            const ALuint ridx{GetChannelIdxByName(device->RealOut, FrontRight)};
+            const ALuint cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
 
             ApplyStablizer(device->Stablizer.get(), RealOut, lidx, ridx, cidx, SamplesToDo);
         }

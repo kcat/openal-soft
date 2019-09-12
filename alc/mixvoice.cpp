@@ -641,9 +641,8 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 
                 if((mFlags&VOICE_HAS_HRTF))
                 {
-                    const int OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
-                    const int OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
-                    ASSUME(OutLIdx >= 0 && OutRIdx >= 0);
+                    const ALuint OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
+                    const ALuint OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
 
                     auto &HrtfSamples = Device->HrtfSourceData;
                     auto &AccumSamples = Device->HrtfAccumData;

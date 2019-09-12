@@ -183,7 +183,7 @@ struct MixParams {
 };
 
 struct RealMixParams {
-    std::array<ALint,MaxChannels> ChannelIndex{};
+    std::array<ALuint,MaxChannels> ChannelIndex{};
 
     al::span<FloatBufferLine> Buffer;
 };
@@ -374,11 +374,12 @@ const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept;
 /**
  * GetChannelIdxByName
  *
- * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
- * doesn't exist.
+ * Returns the index for the given channel name (e.g. FrontCenter), or
+ * INVALID_CHANNEL_INDEX if it doesn't exist.
  */
-inline ALint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
+inline ALuint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
 { return real.ChannelIndex[chan]; }
+#define INVALID_CHANNEL_INDEX ~0u
 
 
 al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);

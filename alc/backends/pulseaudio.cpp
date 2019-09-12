@@ -278,8 +278,8 @@ size_t ChannelFromPulse(pa_channel_position_t chan)
 
 void SetChannelOrderFromMap(ALCdevice *device, const pa_channel_map &chanmap)
 {
-    device->RealOut.ChannelIndex.fill(-1);
-    for(int i{0};i < chanmap.channels;++i)
+    device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
+    for(ALuint i{0};i < chanmap.channels;++i)
         device->RealOut.ChannelIndex[ChannelFromPulse(chanmap.map[i])] = i;
 }
 

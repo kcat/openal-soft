@@ -1409,7 +1409,7 @@ static ALCboolean IsValidAmbiScaling(ALCenum scaling)
  */
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
-    device->RealOut.ChannelIndex.fill(-1);
+    device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
 
     switch(device->FmtChans)
     {
@@ -1497,7 +1497,7 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
  */
 void SetDefaultChannelOrder(ALCdevice *device)
 {
-    device->RealOut.ChannelIndex.fill(-1);
+    device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
 
     switch(device->FmtChans)
     {
@@ -1849,7 +1849,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.Buffer = {};
     std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
-    device->RealOut.ChannelIndex.fill(-1);
+    device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
     device->RealOut.Buffer = {};
     device->MixBuffer.clear();
     device->MixBuffer.shrink_to_fit();

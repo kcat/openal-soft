@@ -147,9 +147,9 @@ struct ChannelMap {
     ALfloat Config[MAX_AMBI2D_CHANNELS];
 };
 
-bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
+bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    auto map_spkr = [device](const AmbDecConf::SpeakerConf &speaker) -> ALsizei
+    auto map_spkr = [device](const AmbDecConf::SpeakerConf &speaker) -> ALuint
     {
         /* NOTE: AmbDec does not define any standard speaker names, however
          * for this to work we have to by able to find the output channel
@@ -222,15 +222,15 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei (&speaker
                 return -1;
             }
         }
-        const int chidx{GetChannelIdxByName(device->RealOut, ch)};
-        if(chidx == -1)
+        const ALuint chidx{GetChannelIdxByName(device->RealOut, ch)};
+        if(chidx == INVALID_CHANNEL_INDEX)
             ERR("Failed to lookup AmbDec speaker label %s\n", speaker.Name.c_str());
         return chidx;
     };
     std::transform(conf->Speakers.begin(), conf->Speakers.end(), std::begin(speakermap), map_spkr);
     /* Return success if no invalid entries are found. */
-    auto speakermap_end = std::begin(speakermap) + conf->Speakers.size();
-    return std::find(std::begin(speakermap), speakermap_end, -1) == speakermap_end;
+    auto spkrmap_end = std::begin(speakermap) + conf->Speakers.size();
+    return std::find(std::begin(speakermap), spkrmap_end, INVALID_CHANNEL_INDEX) == spkrmap_end;
 }
 
 
@@ -285,7 +285,8 @@ void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
     std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
 }
 
-void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
+void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
+    const ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
     auto get_max = std::bind(maxf, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
@@ -302,7 +303,7 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
     for(size_t i{0u};i < conf->Speakers.size();i++)
     {
         const AmbDecConf::SpeakerConf &speaker = conf->Speakers[i];
-        const ALsizei chan{speakermap[i]};
+        const ALuint chan{speakermap[i]};
 
         /* Distance compensation only delays in steps of the sample rate. This
          * is a bit less accurate since the delay time falls to the nearest
@@ -429,11 +430,11 @@ void InitPanning(ALCdevice *device)
     else
     {
         ChannelDec chancoeffs[MAX_OUTPUT_CHANNELS]{};
-        ALsizei idxmap[MAX_OUTPUT_CHANNELS]{};
+        ALuint idxmap[MAX_OUTPUT_CHANNELS]{};
         for(size_t i{0u};i < chanmap.size();++i)
         {
-            const ALint idx{GetChannelIdxByName(device->RealOut, chanmap[i].ChanName)};
-            if(idx < 0)
+            const ALuint idx{GetChannelIdxByName(device->RealOut, chanmap[i].ChanName)};
+            if(idx == INVALID_CHANNEL_INDEX)
             {
                 ERR("Failed to find %s channel in device\n",
                     GetLabelFromChannel(chanmap[i].ChanName));
@@ -465,7 +466,8 @@ void InitPanning(ALCdevice *device)
     }
 }
 
-void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
+void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
+    const ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
     static constexpr ALuint chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
     static constexpr ALuint chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
@@ -474,9 +476,9 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf, co
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
 
-    ALsizei order{(conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
-        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1};
-    device->mAmbiOrder = order;
+    const ALuint order{(conf->ChanMask > AMBI_2ORDER_MASK) ? 3u :
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2u : 1u};
+    device->mAmbiOrder = static_cast<ALsizei>(order);
 
     ALuint count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
@@ -692,7 +694,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         }
 
         const char *devname{device->DeviceName.c_str()};
-        ALsizei speakermap[MAX_OUTPUT_CHANNELS];
+        ALuint speakermap[MAX_OUTPUT_CHANNELS];
         AmbDecConf *pconf{nullptr};
         AmbDecConf conf{};
         if(layout)

@@ -43,10 +43,10 @@ class BFormatDec {
 
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
-        const ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
+        const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS]);
     BFormatDec(const ALuint inchans, const ALsizei chancount,
         const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
-        const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
+        const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS]);
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,

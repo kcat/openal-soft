@@ -49,17 +49,17 @@ struct ALsource {
     std::array<ALfloat,3> Direction;
     std::array<ALfloat,3> OrientAt;
     std::array<ALfloat,3> OrientUp;
-    ALboolean HeadRelative;
-    ALboolean Looping;
+    bool HeadRelative;
+    bool Looping;
     DistanceModel mDistanceModel;
     Resampler mResampler;
-    ALboolean DirectChannels;
+    bool DirectChannels;
     SpatializeMode mSpatialize;
 
-    ALboolean DryGainHFAuto;
-    ALboolean WetGainAuto;
-    ALboolean WetGainHFAuto;
-    ALfloat   OuterGainHF;
+    bool DryGainHFAuto;
+    bool WetGainAuto;
+    bool WetGainHFAuto;
+    ALfloat OuterGainHF;
 
     ALfloat AirAbsorptionFactor;
     ALfloat RoomRolloffFactor;
@@ -98,7 +98,7 @@ struct ALsource {
     ALenum   OffsetType{AL_NONE};
 
     /** Source type (static, streaming, or undetermined) */
-    ALint SourceType{AL_UNDETERMINED};
+    ALenum SourceType{AL_UNDETERMINED};
 
     /** Source state (initial, playing, paused, or stopped) */
     ALenum state{AL_INITIAL};

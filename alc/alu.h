@@ -232,8 +232,8 @@ struct ALvoice {
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
     ALuint mFrequency;
-    ALsizei mNumChannels;
-    ALsizei mSampleSize;
+    ALuint mNumChannels;
+    ALuint mSampleSize;
 
     /** Current target parameters used for mixing. */
     ALint mStep;

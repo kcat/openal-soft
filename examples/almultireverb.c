@@ -211,7 +211,7 @@ static ALuint LoadSound(const char *filename)
      * close the file. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, sample->buffer, slen, sample->actual.rate);
+    alBufferData(buffer, format, sample->buffer, (ALsizei)slen, (ALsizei)sample->actual.rate);
     Sound_FreeSample(sample);
 
     /* Check if an error occured, and clean up if so. */
@@ -443,8 +443,8 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
     }
 
     /* Finally, update the effect slots with the updated effect parameters. */
-    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, effects[0]);
-    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, effects[1]);
+    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
+    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
 }
 
 
@@ -598,8 +598,8 @@ int main(int argc, char **argv)
      * effect properties. Modifying or deleting the effect object afterward
      * won't directly affect the effect slot until they're reapplied like this.
      */
-    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, effects[0]);
-    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, effects[1]);
+    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
+    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
     assert(alGetError()==AL_NO_ERROR && "Failed to set effect slot");
 
     /* For the purposes of this example, prepare a filter that optionally
@@ -621,8 +621,8 @@ int main(int argc, char **argv)
     alGenSources(1, &source);
     alSourcei(source, AL_LOOPING, AL_TRUE);
     alSource3f(source, AL_POSITION, -5.0f, 0.0f, -2.0f);
-    alSourcei(source, AL_DIRECT_FILTER, direct_filter);
-    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
 
     /* Connect the source to the effect slots. Here, we connect source send 0
      * to Zone 0's slot, and send 1 to Zone 1's slot. Filters can be specified
@@ -631,8 +631,8 @@ int main(int argc, char **argv)
      * can only see a zone through a window or thin wall may be attenuated for
      * that zone.
      */
-    alSource3i(source, AL_AUXILIARY_SEND_FILTER, slots[0], 0, AL_FILTER_NULL);
-    alSource3i(source, AL_AUXILIARY_SEND_FILTER, slots[1], 1, AL_FILTER_NULL);
+    alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slots[0], 0, AL_FILTER_NULL);
+    alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slots[1], 1, AL_FILTER_NULL);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Get the current time as the base for timing in the main loop. */

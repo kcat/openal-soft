@@ -91,7 +91,7 @@ static void ApplySin(ALfloat *data, ALdouble g, ALuint srate, ALuint freq)
 static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate)
 {
     ALuint seed = 22222;
-    ALint data_size;
+    ALuint data_size;
     ALfloat *data;
     ALuint buffer;
     ALenum err;
@@ -142,7 +142,7 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate)
     /* Buffer the audio data into a new buffer object. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, AL_FORMAT_MONO_FLOAT32, data, data_size, srate);
+    alBufferData(buffer, AL_FORMAT_MONO_FLOAT32, data, (ALsizei)data_size, (ALsizei)srate);
     free(data);
 
     /* Check if an error occured, and clean up if so. */
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
         srate = dev_rate;
 
     /* Load the sound into a buffer. */
-    buffer = CreateWave(wavetype, tone_freq, srate);
+    buffer = CreateWave(wavetype, (ALuint)tone_freq, (ALuint)srate);
     if(!buffer)
     {
         CloseAL();
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
     /* Create the source to play the sound with. */
     source = 0;
     alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound for a while. */

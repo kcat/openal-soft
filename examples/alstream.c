@@ -160,10 +160,10 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
         fprintf(stderr, "Unsupported channel count: %d\n", player->sample->actual.channels);
         goto error;
     }
-    player->srate = player->sample->actual.rate;
+    player->srate = (ALsizei)player->sample->actual.rate;
 
     frame_size = player->sample->actual.channels *
-                 SDL_AUDIO_BITSIZE(player->sample->actual.format) / 8;
+        SDL_AUDIO_BITSIZE(player->sample->actual.format) / 8;
 
     /* Set the buffer size, given the desired millisecond length. */
     Sound_SetBufferSize(player->sample, (Uint32)((Uint64)player->srate*BUFFER_TIME_MS/1000) *
@@ -191,7 +191,7 @@ static void ClosePlayerFile(StreamPlayer *player)
 /* Prebuffers some audio from the file, and starts playing the source */
 static int StartPlayer(StreamPlayer *player)
 {
-    size_t i;
+    ALsizei i;
 
     /* Rewind the source position and clear the buffer queue */
     alSourceRewind(player->source);
@@ -204,8 +204,8 @@ static int StartPlayer(StreamPlayer *player)
         Uint32 slen = Sound_Decode(player->sample);
         if(slen == 0) break;
 
-        alBufferData(player->buffers[i], player->format,
-                     player->sample->buffer, slen, player->srate);
+        alBufferData(player->buffers[i], player->format, player->sample->buffer, (ALsizei)slen,
+            player->srate);
     }
     if(alGetError() != AL_NO_ERROR)
     {
@@ -255,8 +255,8 @@ static int UpdatePlayer(StreamPlayer *player)
         slen = Sound_Decode(player->sample);
         if(slen > 0)
         {
-            alBufferData(bufid, player->format, player->sample->buffer, slen,
-                         player->srate);
+            alBufferData(bufid, player->format, player->sample->buffer, (ALsizei)slen,
+                player->srate);
             alSourceQueueBuffers(player->source, 1, &bufid);
         }
         if(alGetError() != AL_NO_ERROR)
@@ -323,8 +323,7 @@ int main(int argc, char **argv)
         else
             namepart = argv[i];
 
-        printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->format),
-               player->srate);
+        printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->format), player->srate);
         fflush(stdout);
 
         if(!StartPlayer(player))

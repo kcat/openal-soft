@@ -115,7 +115,7 @@ static ALuint LoadSound(const char *filename)
      * close the file. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, sample->buffer, slen, sample->actual.rate);
+    alBufferData(buffer, format, sample->buffer, (ALsizei)slen, (ALsizei)sample->actual.rate);
     Sound_FreeSample(sample);
 
     /* Check if an error occured, and clean up if so. */
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     /* Create the source to play the sound with. */
     source = 0;
     alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound until it finishes. */

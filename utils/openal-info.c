@@ -124,7 +124,7 @@ static void printList(const char *list, char separator)
         next = strchr(list, separator);
         if(next)
         {
-            len = next-list;
+            len = (size_t)(next-list);
             do {
                 next++;
             } while(*next == separator);

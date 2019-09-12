@@ -73,9 +73,9 @@ typedef struct Recorder {
     ALuint mDataSize;
     float mRecTime;
 
-    int mChannels;
-    int mBits;
-    int mSampleRate;
+    ALuint mChannels;
+    ALuint mBits;
+    ALuint mSampleRate;
     ALuint mFrameSize;
     ALbyte *mBuffer;
     ALsizei mBufferSize;
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
                 return 1;
             }
 
-            recorder.mChannels = strtol(argv[1], &end, 0);
+            recorder.mChannels = (ALuint)strtoul(argv[1], &end, 0);
             if((recorder.mChannels != 1 && recorder.mChannels != 2) || (end && *end != '\0'))
             {
                 fprintf(stderr, "Invalid channels: %s\n", argv[1]);
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
                 return 1;
             }
 
-            recorder.mBits = strtol(argv[1], &end, 0);
+            recorder.mBits = (ALuint)strtoul(argv[1], &end, 0);
             if((recorder.mBits != 8 && recorder.mBits != 16 && recorder.mBits != 32) ||
                (end && *end != '\0'))
             {
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
                 return 1;
             }
 
-            recorder.mSampleRate = strtol(argv[1], &end, 0);
+            recorder.mSampleRate = (ALuint)strtoul(argv[1], &end, 0);
             if(!(recorder.mSampleRate >= 8000 && recorder.mSampleRate <= 96000) || (end && *end != '\0'))
             {
                 fprintf(stderr, "Invalid sample rate: %s\n", argv[1]);
@@ -285,15 +285,15 @@ int main(int argc, char **argv)
     // 16-bit val, format type id (1 = integer PCM, 3 = float PCM)
     fwrite16le((recorder.mBits == 32) ? 0x0003 : 0x0001, recorder.mFile);
     // 16-bit val, channel count
-    fwrite16le(recorder.mChannels, recorder.mFile);
+    fwrite16le((ALushort)recorder.mChannels, recorder.mFile);
     // 32-bit val, frequency
     fwrite32le(recorder.mSampleRate, recorder.mFile);
     // 32-bit val, bytes per second
     fwrite32le(recorder.mSampleRate * recorder.mFrameSize, recorder.mFile);
     // 16-bit val, frame size
-    fwrite16le(recorder.mFrameSize, recorder.mFile);
+    fwrite16le((ALushort)recorder.mFrameSize, recorder.mFile);
     // 16-bit val, bits per sample
-    fwrite16le(recorder.mBits, recorder.mFile);
+    fwrite16le((ALushort)recorder.mBits, recorder.mFile);
     // 16-bit val, extra byte count
     fwrite16le(0, recorder.mFile);
 
@@ -331,7 +331,7 @@ int main(int argc, char **argv)
         }
         if(count > recorder.mBufferSize)
         {
-            ALbyte *data = calloc(recorder.mFrameSize, count);
+            ALbyte *data = calloc(recorder.mFrameSize, (ALuint)count);
             free(recorder.mBuffer);
             recorder.mBuffer = data;
             recorder.mBufferSize = count;
@@ -365,7 +365,7 @@ int main(int argc, char **argv)
             }
         }
 #endif
-        recorder.mDataSize += (ALuint)fwrite(recorder.mBuffer, recorder.mFrameSize, count,
+        recorder.mDataSize += (ALuint)fwrite(recorder.mBuffer, recorder.mFrameSize, (ALuint)count,
                                              recorder.mFile);
     }
     alcCaptureStop(recorder.mDevice);
@@ -385,7 +385,7 @@ int main(int argc, char **argv)
     {
         fwrite32le(recorder.mDataSize*recorder.mFrameSize, recorder.mFile);
         if(fseek(recorder.mFile, 4, SEEK_SET) == 0)
-            fwrite32le(total_size - 8, recorder.mFile);
+            fwrite32le((ALuint)total_size - 8, recorder.mFile);
     }
 
     fclose(recorder.mFile);

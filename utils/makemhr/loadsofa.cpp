@@ -50,7 +50,7 @@ static const char *SofaErrorStr(int err)
  * of other axes as necessary.  The epsilons are used to constrain the
  * equality of unique elements.
  */
-static uint GetUniquelySortedElems(const uint m, const float *triplets, const int axis,
+static uint GetUniquelySortedElems(const uint m, const float *triplets, const uint axis,
     const double *const (&filters)[3], const double (&epsilons)[3], float *elems)
 {
     uint count{0u};

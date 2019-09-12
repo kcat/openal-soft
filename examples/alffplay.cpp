@@ -213,7 +213,7 @@ class PacketQueue {
     void pop()
     {
         AVPacket *pkt = &mPackets.front();
-        mTotalSize -= pkt->size;
+        mTotalSize -= static_cast<unsigned int>(pkt->size);
         av_packet_unref(pkt);
         mPackets.pop_front();
     }
@@ -267,7 +267,7 @@ public:
                 return true;
             }
 
-            mTotalSize += mPackets.back().size;
+            mTotalSize += static_cast<unsigned int>(mPackets.back().size);
         }
         mCondVar.notify_one();
         return true;
@@ -299,7 +299,7 @@ struct AudioState {
     SwrContextPtr mSwresCtx;
 
     /* Conversion format, for what gets fed to OpenAL */
-    int            mDstChanLayout{0};
+    uint64_t       mDstChanLayout{0};
     AVSampleFormat mDstSampleFmt{AV_SAMPLE_FMT_NONE};
 
     /* Storage of converted samples */
@@ -310,14 +310,14 @@ struct AudioState {
 
     /* OpenAL format */
     ALenum mFormat{AL_NONE};
-    ALsizei mFrameSize{0};
+    ALuint mFrameSize{0};
 
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
     std::atomic_flag mConnected;
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
-    ALsizei mBufferIdx{0};
+    ALuint mBufferIdx{0};
 
     AudioState(MovieState &movie) : mMovie(movie)
     { mConnected.test_and_set(std::memory_order_relaxed); }
@@ -326,7 +326,7 @@ struct AudioState {
         if(mSource)
             alDeleteSources(1, &mSource);
         if(!mBuffers.empty())
-            alDeleteBuffers(mBuffers.size(), mBuffers.data());
+            alDeleteBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
 
         av_freep(&mSamples);
     }
@@ -348,7 +348,7 @@ struct AudioState {
 
     int getSync();
     int decodeFrame();
-    bool readAudio(uint8_t *samples, int length);
+    bool readAudio(uint8_t *samples, unsigned int length);
 
     int handler();
 };
@@ -441,7 +441,7 @@ struct MovieState {
 
     nanoseconds getDuration();
 
-    int streamComponentOpen(int stream_index);
+    int streamComponentOpen(unsigned int stream_index);
     int parse_handler();
 };
 
@@ -618,17 +618,17 @@ int AudioState::decodeFrame()
  * multiple of the template type size.
  */
 template<typename T>
-static void sample_dup(uint8_t *out, const uint8_t *in, int count, int frame_size)
+static void sample_dup(uint8_t *out, const uint8_t *in, unsigned int count, size_t frame_size)
 {
-    const T *sample = reinterpret_cast<const T*>(in);
-    T *dst = reinterpret_cast<T*>(out);
+    auto *sample = reinterpret_cast<const T*>(in);
+    auto *dst = reinterpret_cast<T*>(out);
     if(frame_size == sizeof(T))
         std::fill_n(dst, count, *sample);
     else
     {
         /* NOTE: frame_size is a multiple of sizeof(T). */
-        int type_mult = frame_size / sizeof(T);
-        int i = 0;
+        size_t type_mult{frame_size / sizeof(T)};
+        size_t i{0};
         std::generate_n(dst, count*type_mult,
             [sample,type_mult,&i]() -> T
             {
@@ -641,10 +641,10 @@ static void sample_dup(uint8_t *out, const uint8_t *in, int count, int frame_siz
 }
 
 
-bool AudioState::readAudio(uint8_t *samples, int length)
+bool AudioState::readAudio(uint8_t *samples, unsigned int length)
 {
-    int sample_skip = getSync();
-    int audio_size = 0;
+    int sample_skip{getSync()};
+    unsigned int audio_size{0};
 
     /* Read the next chunk of data, refill the buffer, and queue it
      * on the source */
@@ -669,16 +669,17 @@ bool AudioState::readAudio(uint8_t *samples, int length)
             continue;
         }
 
-        int rem = length - audio_size;
+        unsigned int rem{length - audio_size};
         if(mSamplesPos >= 0)
         {
-            int len = mSamplesLen - mSamplesPos;
+            const auto len = static_cast<unsigned int>(mSamplesLen - mSamplesPos);
             if(rem > len) rem = len;
-            memcpy(samples, mSamples + mSamplesPos*mFrameSize, rem*mFrameSize);
+            std::copy_n(mSamples + static_cast<unsigned int>(mSamplesPos)*mFrameSize,
+                rem*mFrameSize, samples);
         }
         else
         {
-            rem = std::min(rem, -mSamplesPos);
+            rem = std::min(rem, static_cast<unsigned int>(-mSamplesPos));
 
             /* Add samples by copying the first sample */
             if((mFrameSize&7) == 0)
@@ -692,7 +693,7 @@ bool AudioState::readAudio(uint8_t *samples, int length)
         }
 
         mSamplesPos += rem;
-        mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
+        mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
         samples += rem*mFrameSize;
         audio_size += rem;
     }
@@ -701,10 +702,10 @@ bool AudioState::readAudio(uint8_t *samples, int length)
 
     if(audio_size < length)
     {
-        int rem = length - audio_size;
+        const unsigned int rem{length - audio_size};
         std::fill_n(samples, rem*mFrameSize,
                     (mDstSampleFmt == AV_SAMPLE_FMT_U8) ? 0x80 : 0x00);
-        mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
+        mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
         audio_size += rem;
     }
     return true;
@@ -928,8 +929,8 @@ int AudioState::handler()
         }
     }
     void *samples{nullptr};
-    ALsizei buffer_len = std::chrono::duration_cast<std::chrono::duration<int>>(
-        mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize;
+    ALsizei buffer_len = static_cast<int>(std::chrono::duration_cast<seconds>(
+        mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize);
 
     mSamples = nullptr;
     mSamplesMax = 0;
@@ -968,9 +969,9 @@ int AudioState::handler()
     }
     else
         mSwresCtx.reset(swr_alloc_set_opts(nullptr,
-            mDstChanLayout, mDstSampleFmt, mCodecCtx->sample_rate,
-            mCodecCtx->channel_layout ? mCodecCtx->channel_layout :
-                static_cast<uint64_t>(av_get_default_channel_layout(mCodecCtx->channels)),
+            static_cast<int64_t>(mDstChanLayout), mDstSampleFmt, mCodecCtx->sample_rate,
+            mCodecCtx->channel_layout ? static_cast<int64_t>(mCodecCtx->channel_layout) :
+                av_get_default_channel_layout(mCodecCtx->channels),
             mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
             0, nullptr));
     if(!mSwresCtx || swr_init(mSwresCtx.get()) != 0)
@@ -980,7 +981,7 @@ int AudioState::handler()
     }
 
     mBuffers.assign(AudioBufferTotalTime / AudioBufferTime, 0);
-    alGenBuffers(mBuffers.size(), mBuffers.data());
+    alGenBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
     alGenSources(1, &mSource);
 
     if(EnableDirectOut)
@@ -1003,12 +1004,12 @@ int AudioState::handler()
         if(alGetError() != AL_NO_ERROR)
         {
             fprintf(stderr, "Failed to use mapped buffers\n");
-            samples = av_malloc(buffer_len);
+            samples = av_malloc(static_cast<ALuint>(buffer_len));
         }
     }
     else
 #endif
-        samples = av_malloc(buffer_len);
+        samples = av_malloc(static_cast<ALuint>(buffer_len));
 
     /* Prefill the codec buffer. */
     do {
@@ -1053,14 +1054,15 @@ int AudioState::handler()
             {
                 auto ptr = static_cast<uint8_t*>(alMapBufferSOFT(bufid, 0, buffer_len,
                     AL_MAP_WRITE_BIT_SOFT));
-                bool got_audio{readAudio(ptr, buffer_len)};
+                bool got_audio{readAudio(ptr, static_cast<unsigned int>(buffer_len))};
                 alUnmapBufferSOFT(bufid);
                 if(!got_audio) break;
             }
             else
 #endif
             {
-                if(!readAudio(static_cast<uint8_t*>(samples), buffer_len))
+                auto ptr = static_cast<uint8_t*>(samples);
+                if(!readAudio(ptr, static_cast<unsigned int>(buffer_len)))
                     break;
                 alBufferData(bufid, mFormat, samples, buffer_len, mCodecCtx->sample_rate);
             }
@@ -1138,27 +1140,27 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
     if(!mImage)
         return;
 
-    float aspect_ratio;
+    double aspect_ratio;
     int win_w, win_h;
     int w, h, x, y;
 
     if(mCodecCtx->sample_aspect_ratio.num == 0)
-        aspect_ratio = 0.0f;
+        aspect_ratio = 0.0;
     else
     {
         aspect_ratio = av_q2d(mCodecCtx->sample_aspect_ratio) * mCodecCtx->width /
                        mCodecCtx->height;
     }
-    if(aspect_ratio <= 0.0f)
-        aspect_ratio = static_cast<float>(mCodecCtx->width) / static_cast<float>(mCodecCtx->height);
+    if(aspect_ratio <= 0.0)
+        aspect_ratio = static_cast<double>(mCodecCtx->width) / mCodecCtx->height;
 
     SDL_GetWindowSize(screen, &win_w, &win_h);
     h = win_h;
-    w = (static_cast<int>(rint(h * aspect_ratio)) + 3) & ~3;
+    w = (static_cast<int>(std::rint(h * aspect_ratio)) + 3) & ~3;
     if(w > win_w)
     {
         w = win_w;
-        h = (static_cast<int>(rint(w / aspect_ratio)) + 3) & ~3;
+        h = (static_cast<int>(std::rint(w / aspect_ratio)) + 3) & ~3;
     }
     x = (win_w - w) / 2;
     y = (win_h - h) / 2;
@@ -1460,9 +1462,9 @@ nanoseconds MovieState::getMasterClock()
 nanoseconds MovieState::getDuration()
 { return std::chrono::duration<int64_t,std::ratio<1,AV_TIME_BASE>>(mFormatCtx->duration); }
 
-int MovieState::streamComponentOpen(int stream_index)
+int MovieState::streamComponentOpen(unsigned int stream_index)
 {
-    if(stream_index < 0 || static_cast<unsigned int>(stream_index) >= mFormatCtx->nb_streams)
+    if(stream_index >= mFormatCtx->nb_streams)
         return -1;
 
     /* Get a pointer to the codec context for the stream, and open the
@@ -1499,7 +1501,7 @@ int MovieState::streamComponentOpen(int stream_index)
             return -1;
     }
 
-    return stream_index;
+    return static_cast<int>(stream_index);
 }
 
 int MovieState::parse_handler()

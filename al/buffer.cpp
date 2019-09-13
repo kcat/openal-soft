@@ -166,14 +166,12 @@ void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, size_t numchans, size
     {
         samples[c][0] = static_cast<ALshort>(al::to_integer<int>(src[0]) |
             (al::to_integer<int>(src[1])<<8));
-        samples[c][0] = (samples[c][0]^0x8000) - 32768;
         src += 2;
     }
     for(size_t c{0};c < numchans;c++)
     {
         samples[c][1] = static_cast<ALshort>(al::to_integer<int>(src[0]) |
             (al::to_integer<int>(src[1])<<8));
-        samples[c][1] = (samples[c][1]^0x8000) - 32768;
         src += 2;
     }
 

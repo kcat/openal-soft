@@ -30,21 +30,21 @@
 
 template<>
 const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState*, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 {
-    const __m128i increment4{_mm_set1_epi32(increment*4)};
+    const __m128i increment4{_mm_set1_epi32(static_cast<int>(increment*4))};
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};
     const __m128i fracMask4{_mm_set1_epi32(FRACTIONMASK)};
 
-    ASSUME(increment > 0);
-
-    alignas(16) ALsizei pos_[4], frac_[4];
-    InitiatePositionArrays(frac, increment, frac_, pos_, 4);
-    __m128i frac4{_mm_setr_epi32(frac_[0], frac_[1], frac_[2], frac_[3])};
-    __m128i pos4{_mm_setr_epi32(pos_[0], pos_[1], pos_[2], pos_[3])};
+    alignas(16) ALuint pos_[4], frac_[4];
+    InitPosArrays(frac, increment, frac_, pos_, 4);
+    __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
+        static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
+    __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
+        static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
     auto dst_iter = dst.begin();
-    const auto aligned_end = (dst.size()&~3) + dst_iter;
+    const auto aligned_end = (dst.size()&~3u) + dst_iter;
     while(dst_iter != aligned_end)
     {
         const int pos0{_mm_extract_epi32(pos4, 0)};
@@ -67,19 +67,22 @@ const ALfloat *Resample_<LerpTag,SSE4Tag>(const InterpState*, const ALfloat *RES
         frac4 = _mm_and_si128(frac4, fracMask4);
     }
 
-    /* NOTE: These four elements represent the position *after* the last four
-     * samples, so the lowest element is the next position to resample.
-     */
-    src += static_cast<ALuint>(_mm_cvtsi128_si32(pos4));
-    frac = _mm_cvtsi128_si32(frac4);
-
-    while(dst_iter != dst.end())
+    if(dst_iter != dst.end())
     {
-        *(dst_iter++) = lerp(src[0], src[1], frac * (1.0f/FRACTIONONE));
+        /* NOTE: These four elements represent the position *after* the last
+         * four samples, so the lowest element is the next position to
+         * resample.
+         */
+        src += static_cast<ALuint>(_mm_cvtsi128_si32(pos4));
+        frac = static_cast<ALuint>(_mm_cvtsi128_si32(frac4));
 
-        frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        do {
+            *(dst_iter++) = lerp(src[0], src[1], frac * (1.0f/FRACTIONONE));
+
+            frac += increment;
+            src  += frac>>FRACTIONBITS;
+            frac &= FRACTIONMASK;
+        } while(dst_iter != dst.end());
     }
     return dst.begin();
 }

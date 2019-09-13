@@ -15,14 +15,13 @@
 
 template<>
 const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 {
     const ALfloat *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
     const ptrdiff_t m{state->bsinc.m};
 
     ASSUME(m > 0);
-    ASSUME(increment > 0);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
@@ -146,7 +145,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
-    const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3) +
+    const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3u) +
         InSamples.begin();
     for(FloatBufferLine &output : OutBuffer)
     {

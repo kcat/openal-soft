@@ -617,8 +617,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 
             /* Resample, then apply ambisonic upsampling as needed. */
             const ALfloat *ResampledData{Resample(&mResampleState, &SrcData[MAX_RESAMPLE_PADDING],
-                DataPosFrac, static_cast<ALint>(increment),
-                {Device->ResampledData, DstBufferSize})};
+                DataPosFrac, increment, {Device->ResampledData, DstBufferSize})};
             if((mFlags&VOICE_IS_AMBISONIC))
             {
                 const ALfloat hfscale{chandata.mAmbiScale};

@@ -299,7 +299,7 @@ ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *d
 
             /* Now resample, and store the result in the output buffer. */
             const ALfloat *ResampledData{mResample(&mState, SrcData+MAX_RESAMPLE_PADDING,
-                DataPosFrac, static_cast<ALint>(increment), {DstData, DstSize})};
+                DataPosFrac, increment, {DstData, DstSize})};
 
             StoreSamples(DstSamples, ResampledData, mChan.size(), mDstType, DstSize);
         }

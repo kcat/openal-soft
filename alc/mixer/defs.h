@@ -28,7 +28,7 @@ enum ResampleType {
 
 template<ResampleType TypeTag, InstSetType InstTag>
 const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALuint frac,
-    ALint increment, const al::span<float> dst);
+    ALuint increment, const al::span<float> dst);
 
 template<InstSetType InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
@@ -45,13 +45,14 @@ template<InstSetType InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State, const size_t BufferSize);
 
 /* Vectorized resampler helpers */
-inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTRICT frac_arr, ALsizei *RESTRICT pos_arr, ALsizei size)
+inline void InitPosArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr,
+    size_t size)
 {
     pos_arr[0] = 0;
     frac_arr[0] = frac;
-    for(ALsizei i{1};i < size;i++)
+    for(size_t i{1};i < size;i++)
     {
-        ALint frac_tmp = frac_arr[i-1] + increment;
+        const ALuint frac_tmp{frac_arr[i-1] + increment};
         pos_arr[i] = pos_arr[i-1] + (frac_tmp>>FRACTIONBITS);
         frac_arr[i] = frac_tmp&FRACTIONMASK;
     }

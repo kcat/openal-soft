@@ -44,10 +44,8 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
 using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALuint);
 template<SamplerT &Sampler>
 const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 {
-    ASSUME(increment > 0);
-
     const InterpState istate{*state};
     auto proc_sample = [&src,&frac,istate,increment]() -> ALfloat
     {
@@ -68,7 +66,7 @@ const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
 
 template<>
 const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRICT src, ALuint,
-    ALint, const al::span<float> dst)
+    ALuint, const al::span<float> dst)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
@@ -81,22 +79,22 @@ const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRI
 
 template<>
 const ALfloat *Resample_<PointTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_point>(state, src, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<LerpTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_lerp>(state, src, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<CubicTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_cubic>(state, src-1, frac, increment, dst); }
 
 template<>
 const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 

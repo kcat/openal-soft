@@ -312,7 +312,6 @@ ALfilter *AllocFilter(ALCdevice *device)
         [](const FilterSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
-
     auto lidx = static_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
     auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
@@ -408,31 +407,24 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
+    auto validate_filter = [device](const ALuint fid) -> bool
+    { return !fid || LookupFilter(device, fid) != nullptr; };
+
     const ALuint *filters_end = filters + n;
-    auto invflt = std::find_if(filters, filters_end,
-        [device, &context](ALuint fid) -> bool
-        {
-            if(!fid) return false;
-            ALfilter *filter{LookupFilter(device, fid)};
-            if UNLIKELY(!filter)
-            {
-                context->setError(AL_INVALID_NAME, "Invalid filter ID %u", fid);
-                return true;
-            }
-            return false;
-        }
-    );
-    if LIKELY(invflt == filters_end)
+    auto invflt = std::find_if_not(filters, filters_end, validate_filter);
+    if UNLIKELY(invflt != filters_end)
     {
-        /* All good. Delete non-0 filter IDs. */
-        std::for_each(filters, filters_end,
-            [device](ALuint fid) -> void
-            {
-                ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr};
-                if(filter) FreeFilter(device, filter);
-            }
-        );
+        context->setError(AL_INVALID_NAME, "Invalid filter ID %u", *invflt);
+        return;
     }
+
+    /* All good. Delete non-0 filter IDs. */
+    auto delete_filter = [device](const ALuint fid) -> void
+    {
+        ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr};
+        if(filter) FreeFilter(device, filter);
+    };
+    std::for_each(filters, filters_end, delete_filter);
 }
 END_API_FUNC
 

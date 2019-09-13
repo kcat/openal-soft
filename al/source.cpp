@@ -2110,7 +2110,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
 
     /* Check that all Sources are valid */
-    auto validate_source = [&context](ALuint sid) -> bool
+    auto validate_source = [&context](const ALuint sid) -> bool
     { return LookupSource(context.get(), sid) != nullptr; };
 
     const ALuint *sources_end = sources + n;
@@ -2122,7 +2122,7 @@ START_API_FUNC
     }
 
     /* All good. Delete source IDs. */
-    auto delete_source = [&context](ALuint sid) -> void
+    auto delete_source = [&context](const ALuint sid) -> void
     {
         ALsource *src{LookupSource(context.get(), sid)};
         if(src) FreeSource(context.get(), src);

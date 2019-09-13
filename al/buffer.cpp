@@ -682,36 +682,33 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
-    const ALuint *buffers_end = buffers + n;
-    auto invbuf = std::find_if(buffers, buffers_end,
-        [device, &context](ALuint bid) -> bool
+    auto validate_buffer = [device, &context](const ALuint bid) -> bool
+    {
+        if(!bid) return true;
+        ALbuffer *ALBuf{LookupBuffer(device, bid)};
+        if UNLIKELY(!ALBuf)
         {
-            if(!bid) return false;
-            ALbuffer *ALBuf = LookupBuffer(device, bid);
-            if UNLIKELY(!ALBuf)
-            {
-                context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", bid);
-                return true;
-            }
-            if UNLIKELY(ReadRef(ALBuf->ref) != 0)
-            {
-                context->setError(AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
-                return true;
-            }
+            context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", bid);
             return false;
         }
-    );
-    if LIKELY(invbuf == buffers_end)
+        if UNLIKELY(ReadRef(ALBuf->ref) != 0)
+        {
+            context->setError(AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
+            return false;
+        }
+        return true;
+    };
+    const ALuint *buffers_end = buffers + n;
+    auto invbuf = std::find_if_not(buffers, buffers_end, validate_buffer);
+    if UNLIKELY(invbuf != buffers_end) return;
+
+    /* All good. Delete non-0 buffer IDs. */
+    auto delete_buffer = [device](const ALuint bid) -> void
     {
-        /* All good. Delete non-0 buffer IDs. */
-        std::for_each(buffers, buffers_end,
-            [device](ALuint bid) -> void
-            {
-                ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
-                if(buffer) FreeBuffer(device, buffer);
-            }
-        );
-    }
+        ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
+        if(buffer) FreeBuffer(device, buffer);
+    };
+    std::for_each(buffers, buffers_end, delete_buffer);
 }
 END_API_FUNC
 

@@ -169,7 +169,6 @@ ALeffect *AllocEffect(ALCdevice *device)
         [](const EffectSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
-
     auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
     auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
@@ -264,31 +263,24 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
+    auto validate_effect = [device](const ALuint eid) -> bool
+    { return !eid || LookupEffect(device, eid) != nullptr; };
+
     const ALuint *effects_end = effects + n;
-    auto inveffect = std::find_if(effects, effects_end,
-        [device, &context](ALuint eid) -> bool
-        {
-            if(!eid) return false;
-            ALeffect *effect{LookupEffect(device, eid)};
-            if UNLIKELY(!effect)
-            {
-                context->setError(AL_INVALID_NAME, "Invalid effect ID %u", eid);
-                return true;
-            }
-            return false;
-        }
-    );
-    if LIKELY(inveffect == effects_end)
+    auto inveffect = std::find_if_not(effects, effects_end, validate_effect);
+    if UNLIKELY(inveffect != effects_end)
     {
-        /* All good. Delete non-0 effect IDs. */
-        std::for_each(effects, effects_end,
-            [device](ALuint eid) -> void
-            {
-                ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
-                if(effect) FreeEffect(device, effect);
-            }
-        );
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", *inveffect);
+        return;
     }
+
+    /* All good. Delete non-0 effect IDs. */
+    auto delete_effect = [device](ALuint eid) -> void
+    {
+        ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
+        if(effect) FreeEffect(device, effect);
+    };
+    std::for_each(effects, effects_end, delete_effect);
 }
 END_API_FUNC
 

@@ -193,7 +193,6 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         [](const EffectSlotSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
-
     auto lidx = static_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
     auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
@@ -305,41 +304,38 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
-    if(n < 0)
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Deleting %d effect slots", n);
-    if(n == 0) return;
+    if UNLIKELY(n < 0)
+        context->setError(AL_INVALID_VALUE, "Deleting %d effect slots", n);
+    if UNLIKELY(n <= 0) return;
 
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
-    auto effectslots_end = effectslots + n;
-    auto bad_slot = std::find_if(effectslots, effectslots_end,
-        [&context](ALuint id) -> bool
+    auto validate_slot = [&context](const ALuint id) -> bool
+    {
+        ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
+        if UNLIKELY(!slot)
         {
-            ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
-            if(!slot)
-            {
-                context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
-                return true;
-            }
-            if(ReadRef(slot->ref) != 0)
-            {
-                context->setError(AL_INVALID_NAME, "Deleting in-use effect slot %u", id);
-                return true;
-            }
+            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
             return false;
         }
-    );
-    if(bad_slot != effectslots_end)
-        return;
+        if UNLIKELY(ReadRef(slot->ref) != 0)
+        {
+            context->setError(AL_INVALID_OPERATION, "Deleting in-use effect slot %u", id);
+            return false;
+        }
+        return true;
+    };
+    auto effectslots_end = effectslots + n;
+    auto bad_slot = std::find_if_not(effectslots, effectslots_end, validate_slot);
+    if UNLIKELY(bad_slot != effectslots_end) return;
 
     // All effectslots are valid, remove and delete them
     RemoveActiveEffectSlots(effectslots, static_cast<ALuint>(n), context.get());
-    std::for_each(effectslots, effectslots_end,
-        [&context](ALuint sid) -> void
-        {
-            ALeffectslot *slot{LookupEffectSlot(context.get(), sid)};
-            if(slot) FreeEffectSlot(context.get(), slot);
-        }
-    );
+    auto delete_slot = [&context](const ALuint sid) -> void
+    {
+        ALeffectslot *slot{LookupEffectSlot(context.get(), sid)};
+        if(slot) FreeEffectSlot(context.get(), slot);
+    };
+    std::for_each(effectslots, effectslots_end, delete_slot);
 }
 END_API_FUNC
 

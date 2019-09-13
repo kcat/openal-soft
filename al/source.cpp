@@ -522,7 +522,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     return true;
 }
 
-ALsource *AllocSource(ALCcontext *context, ALsizei num_sends)
+ALsource *AllocSource(ALCcontext *context, ALuint num_sends)
 {
     auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
         [](const SourceSubList &entry) noexcept -> bool
@@ -1315,7 +1315,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         slotlock = std::unique_lock<std::mutex>{Context->mEffectSlotLock};
         if(values[0] && (slot=LookupEffectSlot(Context, static_cast<ALuint>(values[0]))) == nullptr)
             SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid effect ID %u", values[0]);
-        if(static_cast<ALuint>(values[1]) >= static_cast<ALuint>(device->NumAuxSends))
+        if(static_cast<ALuint>(values[1]) >= device->NumAuxSends)
             SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid send %u", values[1]);
 
         filtlock = std::unique_lock<std::mutex>{device->FilterLock};
@@ -2086,7 +2086,7 @@ START_API_FUNC
     }
     else
     {
-        const ALsizei num_sends{device->NumAuxSends};
+        const ALuint num_sends{device->NumAuxSends};
         al::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
@@ -3220,7 +3220,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALsource::ALsource(ALsizei num_sends)
+ALsource::ALsource(ALuint num_sends)
 {
     InnerAngle = 360.0f;
     OuterAngle = 360.0f;
@@ -3272,7 +3272,7 @@ ALsource::ALsource(ALsizei num_sends)
     Direct.HFReference = LOWPASSFREQREF;
     Direct.GainLF = 1.0f;
     Direct.LFReference = HIGHPASSFREQREF;
-    Send.resize(static_cast<ALuint>(num_sends));
+    Send.resize(num_sends);
     for(auto &send : Send)
     {
         send.Slot = nullptr;

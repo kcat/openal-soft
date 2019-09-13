@@ -495,10 +495,9 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     ASSUME(increment > 0);
 
     ALCdevice *Device{Context->mDevice.get()};
-    const ALsizei NumSends{Device->NumAuxSends};
+    const ALuint NumSends{Device->NumAuxSends};
     const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 
-    ASSUME(NumSends >= 0);
     ASSUME(IrSize >= 0);
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
@@ -517,7 +516,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                     std::begin(parms.Gains.Current));
             else
                 parms.Hrtf.Old = parms.Hrtf.Target;
-            for(ALsizei send{0};send < NumSends;++send)
+            for(ALuint send{0};send < NumSends;++send)
             {
                 if(mSend[send].Buffer.empty())
                     continue;
@@ -785,7 +784,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 }
             }
 
-            for(ALsizei send{0};send < NumSends;++send)
+            for(ALuint send{0};send < NumSends;++send)
             {
                 if(mSend[send].Buffer.empty())
                     continue;

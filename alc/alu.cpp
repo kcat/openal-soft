@@ -451,7 +451,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     };
 
     const auto Frequency = static_cast<ALfloat>(Device->Frequency);
-    const auto NumSends = static_cast<ALuint>(Device->NumAuxSends);
+    const ALuint NumSends{Device->NumAuxSends};
 
     bool DirectChannels{props->DirectChannels != AL_FALSE};
     const ChanMap *chans{nullptr};
@@ -923,7 +923,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     ALeffectslot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    for(ALuint i{0};i < static_cast<ALuint>(Device->NumAuxSends);i++)
+    for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
@@ -958,7 +958,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     ALfloat DryGainHF{props->Direct.GainHF};
     ALfloat DryGainLF{props->Direct.GainLF};
     ALfloat WetGain[MAX_SENDS], WetGainHF[MAX_SENDS], WetGainLF[MAX_SENDS];
-    for(ALsizei i{0};i < Device->NumAuxSends;i++)
+    for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i]  = clampf(props->Gain, props->MinGain, props->MaxGain);
         WetGain[i] *= props->Send[i].Gain * Listener.Params.Gain;
@@ -974,7 +974,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->mDevice.get()};
-    const auto NumSends = static_cast<ALuint>(Device->NumAuxSends);
+    const ALuint NumSends{Device->NumAuxSends};
     const ALlistener &Listener = ALContext->mListener;
 
     /* Set mixing buffers and get send parameters. */

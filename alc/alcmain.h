@@ -242,7 +242,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     ALCuint NumMonoSources{};
     ALCuint NumStereoSources{};
-    ALsizei NumAuxSends{};
+    ALCuint NumAuxSends{};
 
     // Map of Buffers for this device
     std::mutex BufferLock;

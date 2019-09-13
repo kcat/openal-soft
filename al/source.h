@@ -117,7 +117,7 @@ struct ALsource {
     ALuint id{0};
 
 
-    ALsource(ALsizei num_sends);
+    ALsource(ALuint num_sends);
     ~ALsource();
 
     ALsource(const ALsource&) = delete;

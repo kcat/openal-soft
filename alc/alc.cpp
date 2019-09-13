@@ -1614,15 +1614,15 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
-    HrtfRequestMode hrtf_userreq = Hrtf_Default;
-    HrtfRequestMode hrtf_appreq = Hrtf_Default;
-    ALCenum gainLimiter = device->LimiterState;
-    const ALsizei old_sends = device->NumAuxSends;
-    ALsizei new_sends = device->NumAuxSends;
+    HrtfRequestMode hrtf_userreq{Hrtf_Default};
+    HrtfRequestMode hrtf_appreq{Hrtf_Default};
+    ALCenum gainLimiter{device->LimiterState};
+    const ALCuint old_sends{device->NumAuxSends};
+    ALCuint new_sends{device->NumAuxSends};
     DevFmtChannels oldChans;
     DevFmtType oldType;
     ALboolean update_failed;
-    ALCsizei hrtf_id = -1;
+    ALCsizei hrtf_id{-1};
     ALCuint oldFreq;
 
     if((!attrList || !attrList[0]) && device->Type == Loopback)
@@ -1644,7 +1644,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         ALuint numMono{device->NumMonoSources};
         ALuint numStereo{device->NumStereoSources};
-        ALsizei numSends{old_sends};
+        ALuint numSends{old_sends};
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
@@ -1694,9 +1694,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 break;
 
             case ALC_MAX_AUXILIARY_SENDS:
-                numSends = attrList[attrIdx + 1];
+                numSends = static_cast<ALuint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
-                numSends = clampi(numSends, 0, MAX_SENDS);
+                if(numSends > INT_MAX) numSends = 0;
+                else numSends = minu(numSends, MAX_SENDS);
                 break;
 
             case ALC_HRTF_SOFT:
@@ -1828,7 +1829,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumStereoSources = numStereo;
 
         if(auto sendsopt = ConfigValueInt(devname, nullptr, "sends"))
-            new_sends = mini(numSends, clampi(*sendsopt, 0, MAX_SENDS));
+            new_sends = minu(numSends, static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
         else
             new_sends = numSends;
     }
@@ -2176,7 +2177,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(device->NumAuxSends < old_sends)
         {
-            const ALsizei num_sends{device->NumAuxSends};
+            const ALuint num_sends{device->NumAuxSends};
             /* Clear extraneous property set sends. */
             auto clear_sends = [num_sends](ALvoice &voice) -> void
             {
@@ -2871,7 +2872,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
             values[i++] = static_cast<int>(device->NumStereoSources);
 
             values[i++] = ALC_MAX_AUXILIARY_SENDS;
-            values[i++] = device->NumAuxSends;
+            values[i++] = static_cast<ALCint>(device->NumAuxSends);
 
             values[i++] = ALC_HRTF_SOFT;
             values[i++] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
@@ -2984,7 +2985,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
         return 1;
 
     case ALC_MAX_AUXILIARY_SENDS:
-        values[0] = device->NumAuxSends;
+        values[0] = static_cast<ALCint>(device->NumAuxSends);
         return 1;
 
     case ALC_CONNECTED:
@@ -3647,7 +3648,8 @@ START_API_FUNC
     }
 
     if(auto sendsopt = ConfigValueInt(deviceName, nullptr, "sends"))
-        device->NumAuxSends = clampi(DEFAULT_SENDS, 0, clampi(*sendsopt, 0, MAX_SENDS));
+        device->NumAuxSends = clampu(DEFAULT_SENDS, 0,
+            static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -3959,7 +3961,8 @@ START_API_FUNC
     }
 
     if(auto sendsopt = ConfigValueInt(nullptr, nullptr, "sends"))
-        device->NumAuxSends = clampi(DEFAULT_SENDS, 0, clampi(*sendsopt, 0, MAX_SENDS));
+        device->NumAuxSends = clampu(DEFAULT_SENDS, 0,
+            static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;

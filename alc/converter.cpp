@@ -152,8 +152,8 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     SampleConverterPtr converter{new (FamCount{numchans}) SampleConverter{numchans}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
-    converter->mSrcTypeSize = static_cast<ALuint>(BytesFromDevFmt(srcType));
-    converter->mDstTypeSize = static_cast<ALuint>(BytesFromDevFmt(dstType));
+    converter->mSrcTypeSize = BytesFromDevFmt(srcType);
+    converter->mDstTypeSize = BytesFromDevFmt(dstType);
 
     converter->mSrcPrepCount = 0;
     converter->mFracOffset = 0;
@@ -360,6 +360,5 @@ void ChannelConverter::convert(const ALvoid *src, ALfloat *dst, ALuint frames) c
         }
     }
     else
-        LoadSamples(dst, src, 1u, mSrcType,
-            frames*static_cast<ALuint>(ChannelsFromDevFmt(mSrcChans, 0)));
+        LoadSamples(dst, src, 1u, mSrcType, frames * ChannelsFromDevFmt(mSrcChans, 0));
 }

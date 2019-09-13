@@ -153,7 +153,7 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
     mDevice->UpdateSize = have.samples;
     mDevice->BufferSize = have.samples * 2; /* SDL always (tries to) use two periods. */
 
-    mFrameSize = static_cast<ALuint>(mDevice->frameSizeFromFmt());
+    mFrameSize = mDevice->frameSizeFromFmt();
     mFrequency = mDevice->Frequency;
     mFmtChans = mDevice->FmtChans;
     mFmtType = mDevice->FmtType;

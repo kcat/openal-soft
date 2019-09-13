@@ -76,16 +76,16 @@ int SndioPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
+    const ALuint frameSize{mDevice->frameSizeFromFmt()};
 
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
-        auto WritePtr = static_cast<ALubyte*>(mBuffer.data());
+        ALubyte *WritePtr{mBuffer.data()};
         size_t len{mBuffer.size()};
 
         lock();
-        aluMixData(mDevice, WritePtr, len/frameSize);
+        aluMixData(mDevice, WritePtr, static_cast<ALuint>(len/frameSize));
         unlock();
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
@@ -277,7 +277,7 @@ int SndioCapture::recordProc()
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
+    const ALuint frameSize{mDevice->frameSizeFromFmt()};
 
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
@@ -396,8 +396,7 @@ ALCenum SndioCapture::open(const ALCchar *name)
          (mDevice->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0) ||
          (mDevice->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0) ||
          (mDevice->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0)) ||
-       mDevice->channelsFromFmt() != static_cast<int>(par.rchan) ||
-       mDevice->Frequency != par.rate)
+       mDevice->channelsFromFmt() != par.rchan || mDevice->Frequency != par.rate)
     {
         ERR("Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead\n",
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
@@ -457,7 +456,7 @@ ALCenum SndioCapture::captureSamples(void *buffer, ALCuint samples)
 }
 
 ALCuint SndioCapture::availableSamples()
-{ return mRing->readSpace(); }
+{ return static_cast<ALCuint>(mRing->readSpace()); }
 
 } // namespace
 

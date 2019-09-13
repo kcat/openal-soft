@@ -88,7 +88,7 @@ int SolarisBackend::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const int frame_size{mDevice->frameSizeFromFmt()};
+    const ALuint frame_size{mDevice->frameSizeFromFmt()};
 
     lock();
     while(!mKillNow.load(std::memory_order_acquire) &&
@@ -169,7 +169,7 @@ ALCboolean SolarisBackend::reset()
 
     if(mDevice->FmtChans != DevFmtMono)
         mDevice->FmtChans = DevFmtStereo;
-    ALsizei numChannels{mDevice->channelsFromFmt()};
+    ALuint numChannels{mDevice->channelsFromFmt()};
     info.play.channels = numChannels;
 
     switch(mDevice->FmtType)
@@ -194,7 +194,7 @@ ALCboolean SolarisBackend::reset()
             break;
     }
 
-    ALsizei frameSize{numChannels * mDevice->bytesFromFmt()};
+    ALuint frameSize{numChannels * mDevice->bytesFromFmt()};
     info.play.buffer_size = mDevice->BufferSize * frameSize;
 
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
@@ -203,7 +203,7 @@ ALCboolean SolarisBackend::reset()
         return ALC_FALSE;
     }
 
-    if(mDevice->channelsFromFmt() != (ALsizei)info.play.channels)
+    if(mDevice->channelsFromFmt() != info.play.channels)
     {
         ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
             info.play.channels);

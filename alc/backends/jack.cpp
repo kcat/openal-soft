@@ -235,7 +235,7 @@ int JackPlayback::process(jack_nframes_t numframes)
     }
 
     auto data = mRing->getReadVector();
-    jack_nframes_t todo{minu(numframes, data.first.len)};
+    jack_nframes_t todo{minu(numframes, static_cast<ALuint>(data.first.len))};
     std::transform(out, out+numchans, out,
         [&data,numchans,todo](ALfloat *outbuf) -> ALfloat*
         {
@@ -254,7 +254,7 @@ int JackPlayback::process(jack_nframes_t numframes)
     );
     jack_nframes_t total{todo};
 
-    todo = minu(numframes-total, data.second.len);
+    todo = minu(numframes-total, static_cast<ALuint>(data.second.len));
     if(todo > 0)
     {
         std::transform(out, out+numchans, out,
@@ -315,8 +315,8 @@ int JackPlayback::mixerProc()
         auto todo = static_cast<ALuint>(data.first.len + data.second.len);
         todo -= todo%mDevice->UpdateSize;
 
-        ALuint len1{minu(data.first.len, todo)};
-        ALuint len2{minu(data.second.len, todo-len1)};
+        ALuint len1{minu(static_cast<ALuint>(data.first.len), todo)};
+        ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
 
         aluMixData(mDevice, data.first.buf, len1);
         if(len2 > 0)
@@ -382,8 +382,7 @@ ALCboolean JackPlayback::reset()
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;
 
-    ALsizei numchans{mDevice->channelsFromFmt()};
-    auto ports_end = std::begin(mPort) + numchans;
+    auto ports_end = std::begin(mPort) + mDevice->channelsFromFmt();
     auto bad_port = std::find_if_not(std::begin(mPort), ports_end,
         [this](jack_port_t *&port) -> bool
         {
@@ -410,7 +409,6 @@ ALCboolean JackPlayback::reset()
             }
             mDevice->FmtChans = DevFmtStereo;
         }
-        numchans = std::distance(std::begin(mPort), bad_port);
     }
 
     mRing = nullptr;

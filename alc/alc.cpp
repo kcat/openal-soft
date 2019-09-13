@@ -1272,7 +1272,7 @@ const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept
     return "(unknown channels)";
 }
 
-ALsizei BytesFromDevFmt(DevFmtType type) noexcept
+ALuint BytesFromDevFmt(DevFmtType type) noexcept
 {
     switch(type)
     {
@@ -1286,7 +1286,7 @@ ALsizei BytesFromDevFmt(DevFmtType type) noexcept
     }
     return 0;
 }
-ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
+ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
 {
     switch(chans)
     {
@@ -1297,7 +1297,7 @@ ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
     case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
-    case DevFmtAmbi3D: return (ambiorder+1) * (ambiorder+1);
+    case DevFmtAmbi3D: return static_cast<ALuint>((ambiorder+1) * (ambiorder+1));
     }
     return 0;
 }

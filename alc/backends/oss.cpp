@@ -230,10 +230,10 @@ done:
 
 #endif
 
-int log2i(ALCuint x)
+ALCuint log2i(ALCuint x)
 {
-    int y = 0;
-    while (x > 1)
+    ALCuint y{0};
+    while(x > 1)
     {
         x >>= 1;
         y++;
@@ -276,7 +276,7 @@ int OSSPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const int frame_size{mDevice->frameSizeFromFmt()};
+    const ALuint frame_size{mDevice->frameSizeFromFmt()};
 
     lock();
     while(!mKillNow.load(std::memory_order_acquire) &&
@@ -319,7 +319,7 @@ int OSSPlayback::mixerProc()
                 break;
             }
 
-            to_write -= wrote;
+            to_write -= static_cast<size_t>(wrote);
             write_ptr += wrote;
         }
     }
@@ -361,16 +361,7 @@ ALCenum OSSPlayback::open(const ALCchar *name)
 
 ALCboolean OSSPlayback::reset()
 {
-    int numFragmentsLogSize;
-    int log2FragmentSize;
-    unsigned int periods;
-    audio_buf_info info;
-    ALuint frameSize;
-    int numChannels;
-    int ossFormat;
-    int ossSpeed;
-    const char *err;
-
+    int ossFormat{};
     switch(mDevice->FmtType)
     {
         case DevFmtByte:
@@ -390,14 +381,16 @@ ALCboolean OSSPlayback::reset()
             break;
     }
 
-    periods = mDevice->BufferSize / mDevice->UpdateSize;
-    numChannels = mDevice->channelsFromFmt();
-    ossSpeed = mDevice->Frequency;
-    frameSize = numChannels * mDevice->bytesFromFmt();
+    ALuint periods{mDevice->BufferSize / mDevice->UpdateSize};
+    ALuint numChannels{mDevice->channelsFromFmt()};
+    ALuint ossSpeed{mDevice->Frequency};
+    ALuint frameSize{numChannels * mDevice->bytesFromFmt()};
     /* According to the OSS spec, 16 bytes (log2(16)) is the minimum. */
-    log2FragmentSize = maxi(log2i(mDevice->UpdateSize*frameSize), 4);
-    numFragmentsLogSize = (periods << 16) | log2FragmentSize;
+    ALuint log2FragmentSize{maxu(log2i(mDevice->UpdateSize*frameSize), 4)};
+    ALuint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
+    audio_buf_info info{};
+    const char *err;
 #define CHECKERR(func) if((func) < 0) {                                       \
     err = #func;                                                              \
     goto err;                                                                 \
@@ -434,8 +427,8 @@ ALCboolean OSSPlayback::reset()
     }
 
     mDevice->Frequency = ossSpeed;
-    mDevice->UpdateSize = info.fragsize / frameSize;
-    mDevice->BufferSize = info.fragments * mDevice->UpdateSize;
+    mDevice->UpdateSize = static_cast<ALuint>(info.fragsize) / frameSize;
+    mDevice->BufferSize = static_cast<ALuint>(info.fragments) * mDevice->UpdateSize;
 
     SetDefaultChannelOrder(mDevice);
 
@@ -505,7 +498,7 @@ int OSScapture::recordProc()
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    const int frame_size{mDevice->frameSizeFromFmt()};
+    const ALuint frame_size{mDevice->frameSizeFromFmt()};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
@@ -592,17 +585,15 @@ ALCenum OSScapture::open(const ALCchar *name)
             return ALC_INVALID_VALUE;
     }
 
-    int periods{4};
-    int numChannels{mDevice->channelsFromFmt()};
-    int frameSize{numChannels * mDevice->bytesFromFmt()};
-    int ossSpeed{static_cast<int>(mDevice->Frequency)};
-    int log2FragmentSize{log2i(mDevice->BufferSize * frameSize / periods)};
-
+    ALuint periods{4};
+    ALuint numChannels{mDevice->channelsFromFmt()};
+    ALuint frameSize{numChannels * mDevice->bytesFromFmt()};
+    ALuint ossSpeed{mDevice->Frequency};
     /* according to the OSS spec, 16 bytes are the minimum */
-    log2FragmentSize = std::max(log2FragmentSize, 4);
-    int numFragmentsLogSize{(periods << 16) | log2FragmentSize};
+    ALuint log2FragmentSize{maxu(log2i(mDevice->BufferSize * frameSize / periods), 4)};
+    ALuint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
-    audio_buf_info info;
+    audio_buf_info info{};
     const char *err;
 #define CHECKERR(func) if((func) < 0) {                                       \
     err = #func;                                                              \
@@ -687,7 +678,7 @@ ALCenum OSScapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 }
 
 ALCuint OSScapture::availableSamples()
-{ return mRing->readSpace(); }
+{ return static_cast<ALCuint>(mRing->readSpace()); }
 
 } // namespace
 

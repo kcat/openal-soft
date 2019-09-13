@@ -340,9 +340,9 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALCdevice& operator=(const ALCdevice&) = delete;
     ~ALCdevice();
 
-    ALsizei bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
-    ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
-    ALsizei frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
+    ALuint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
+    ALuint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
+    ALuint frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
 
     void ProcessHrtf(const size_t SamplesToDo);
     void ProcessAmbiDec(const size_t SamplesToDo);

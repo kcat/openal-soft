@@ -97,9 +97,9 @@ template<>
 struct DevFmtTypeTraits<DevFmtFloat> { using Type = ALfloat; };
 
 
-ALsizei BytesFromDevFmt(DevFmtType type) noexcept;
-ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept;
-inline ALsizei FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, ALsizei ambiorder) noexcept
+ALuint BytesFromDevFmt(DevFmtType type) noexcept;
+ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept;
+inline ALuint FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, ALsizei ambiorder) noexcept
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
 enum class AmbiLayout {

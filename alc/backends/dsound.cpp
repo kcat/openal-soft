@@ -219,7 +219,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         return 1;
     }
 
-    ALsizei FrameSize{mDevice->frameSizeFromFmt()};
+    ALuint FrameSize{mDevice->frameSizeFromFmt()};
     DWORD FragSize{mDevice->UpdateSize * FrameSize};
 
     bool Playing{false};
@@ -820,7 +820,7 @@ ALCuint DSoundCapture::availableSamples()
     if(!mDevice->Connected.load(std::memory_order_acquire))
         return static_cast<ALCuint>(mRing->readSpace());
 
-    ALsizei FrameSize{mDevice->frameSizeFromFmt()};
+    ALuint FrameSize{mDevice->frameSizeFromFmt()};
     DWORD BufferBytes{mBufferBytes};
     DWORD LastCursor{mCursor};
 

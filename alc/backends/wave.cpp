@@ -125,7 +125,7 @@ int WaveBackend::mixerProc()
 
     althrd_setname(MIXER_THREAD_NAME);
 
-    const auto frameSize = static_cast<ALuint>(mDevice->frameSizeFromFmt());
+    const ALuint frameSize{mDevice->frameSizeFromFmt()};
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
@@ -151,7 +151,7 @@ int WaveBackend::mixerProc()
 
             if(!IS_LITTLE_ENDIAN)
             {
-                const ALsizei bytesize{mDevice->bytesFromFmt()};
+                const ALuint bytesize{mDevice->bytesFromFmt()};
 
                 if(bytesize == 2)
                 {
@@ -281,8 +281,8 @@ ALCboolean WaveBackend::reset()
             chanmask = 0;
             break;
     }
-    bytes = static_cast<ALuint>(mDevice->bytesFromFmt());
-    channels = static_cast<ALuint>(mDevice->channelsFromFmt());
+    bytes = mDevice->bytesFromFmt();
+    channels = mDevice->channelsFromFmt();
 
     rewind(mFile);
 
@@ -330,7 +330,7 @@ ALCboolean WaveBackend::reset()
 
     SetDefaultWFXChannelOrder(mDevice);
 
-    const ALuint bufsize{static_cast<ALuint>(mDevice->frameSizeFromFmt())*mDevice->UpdateSize};
+    const ALuint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
     mBuffer.resize(bufsize);
 
     return ALC_TRUE;

@@ -451,12 +451,11 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     };
 
     const auto Frequency = static_cast<ALfloat>(Device->Frequency);
-    const ALsizei NumSends{Device->NumAuxSends};
-    ASSUME(NumSends >= 0);
+    const auto NumSends = static_cast<ALuint>(Device->NumAuxSends);
 
     bool DirectChannels{props->DirectChannels != AL_FALSE};
     const ChanMap *chans{nullptr};
-    ALsizei num_channels{0};
+    ALuint num_channels{0};
     bool isbformat{false};
     ALfloat downmix_gain{1.0f};
     switch(voice->mFmtChannels)
@@ -583,7 +582,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             const ALfloat &scale0 = AmbiScale::FromFuMa[0];
             ComputePanGains(&Device->Dry, coeffs, DryGain*scale0,
                 voice->mChans[0].mDryParams.Gains.Target);
-            for(ALsizei i{0};i < NumSends;i++)
+            for(ALuint i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanGains(&Slot->Wet, coeffs, WetGain[i]*scale0,
@@ -636,12 +635,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 {   0.0f, -V[0]*zscale,  V[1]*zscale, -V[2]*zscale }  // FuMa Z
             };
 
-            for(ALsizei c{0};c < num_channels;c++)
+            for(ALuint c{0};c < num_channels;c++)
             {
                 ComputePanGains(&Device->Dry, matrix[c], DryGain,
                     voice->mChans[c].mDryParams.Gains.Target);
 
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, matrix[c], WetGain[i],
@@ -657,7 +656,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
          */
         voice->mDirect.Buffer = Device->RealOut.Buffer;
 
-        for(ALsizei c{0};c < num_channels;c++)
+        for(ALuint c{0};c < num_channels;c++)
         {
             const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
             if(idx != INVALID_CHANNEL_INDEX)
@@ -667,12 +666,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Auxiliary sends still use normal channel panning since they mix to
          * B-Format, which can't channel-match.
          */
-        for(ALsizei c{0};c < num_channels;c++)
+        for(ALuint c{0};c < num_channels;c++)
         {
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
 
-            for(ALsizei i{0};i < NumSends;i++)
+            for(ALuint i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
@@ -701,7 +700,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
-            for(ALsizei c{1};c < num_channels;c++)
+            for(ALuint c{1};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
@@ -714,12 +713,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
 
-            for(ALsizei c{0};c < num_channels;c++)
+            for(ALuint c{0};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
                     continue;
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
@@ -733,7 +732,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
              * relative location around the listener, providing "virtual
              * speaker" responses.
              */
-            for(ALsizei c{0};c < num_channels;c++)
+            for(ALuint c{0};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
@@ -752,7 +751,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 ALfloat coeffs[MAX_AMBI_CHANNELS];
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread, coeffs);
 
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
@@ -779,7 +778,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
-                for(ALsizei c{0};c < num_channels;c++)
+                for(ALuint c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags |= VOICE_HAS_NFC;
@@ -798,7 +797,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
             }
 
-            for(ALsizei c{0};c < num_channels;c++)
+            for(ALuint c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -814,14 +813,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain * downmix_gain,
                     voice->mChans[c].mDryParams.Gains.Target);
-            }
-
-            for(ALsizei c{0};c < num_channels;c++)
-            {
-                /* Skip LFE */
-                if(chans[c].channel == LFE)
-                    continue;
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
@@ -840,13 +832,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                  */
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (Device->AvgSpeakerDist * Frequency)};
 
-                for(ALsizei c{0};c < num_channels;c++)
+                for(ALuint c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 
-            for(ALsizei c{0};c < num_channels;c++)
+            for(ALuint c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -869,7 +861,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain,
                     voice->mChans[c].mDryParams.Gains.Target);
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
@@ -894,13 +886,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             lowpass.rcpQFromSlope(gainHF, 1.0f));
         highpass.setParams(BiquadType::LowShelf, gainLF, lfScale,
             highpass.rcpQFromSlope(gainLF, 1.0f));
-        for(ALsizei c{1};c < num_channels;c++)
+        for(ALuint c{1};c < num_channels;c++)
         {
             voice->mChans[c].mDryParams.LowPass.copyParamsFrom(lowpass);
             voice->mChans[c].mDryParams.HighPass.copyParamsFrom(highpass);
         }
     }
-    for(ALsizei i{0};i < NumSends;i++)
+    for(ALuint i{0};i < NumSends;i++)
     {
         const ALfloat hfScale{props->Send[i].HFReference / Frequency};
         const ALfloat lfScale{props->Send[i].LFReference / Frequency};
@@ -917,7 +909,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             lowpass.rcpQFromSlope(gainHF, 1.0f));
         highpass.setParams(BiquadType::LowShelf, gainLF, lfScale,
             highpass.rcpQFromSlope(gainLF, 1.0f));
-        for(ALsizei c{1};c < num_channels;c++)
+        for(ALuint c{1};c < num_channels;c++)
         {
             voice->mChans[c].mWetParams[i].LowPass.copyParamsFrom(lowpass);
             voice->mChans[c].mWetParams[i].HighPass.copyParamsFrom(highpass);
@@ -931,7 +923,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     ALeffectslot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    for(ALsizei i{0};i < Device->NumAuxSends;i++)
+    for(ALuint i{0};i < static_cast<ALuint>(Device->NumAuxSends);i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
@@ -982,7 +974,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->mDevice.get()};
-    const ALsizei NumSends{Device->NumAuxSends};
+    const auto NumSends = static_cast<ALuint>(Device->NumAuxSends);
     const ALlistener &Listener = ALContext->mListener;
 
     /* Set mixing buffers and get send parameters. */
@@ -992,7 +984,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     ALfloat DecayDistance[MAX_SENDS];
     ALfloat DecayLFDistance[MAX_SENDS];
     ALfloat DecayHFDistance[MAX_SENDS];
-    for(ALsizei i{0};i < NumSends;i++)
+    for(ALuint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
@@ -1071,7 +1063,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     ALfloat DryGainHF{1.0f};
     ALfloat DryGainLF{1.0f};
     ALfloat WetGain[MAX_SENDS], WetGainHF[MAX_SENDS], WetGainLF[MAX_SENDS];
-    for(ALsizei i{0};i < NumSends;i++)
+    for(ALuint i{0};i < NumSends;i++)
     {
         WetGain[i] = props->Gain;
         WetGainHF[i] = 1.0f;
@@ -1095,7 +1087,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             {
                 ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RolloffFactor);
                 if(dist > 0.0f) DryGain *= props->RefDistance / dist;
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     dist = lerp(props->RefDistance, ClampedDist, RoomRolloff[i]);
                     if(dist > 0.0f) WetGain[i] *= props->RefDistance / dist;
@@ -1115,7 +1107,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 ALfloat attn = props->RolloffFactor * (ClampedDist-props->RefDistance) /
                                (props->MaxDistance-props->RefDistance);
                 DryGain *= maxf(1.0f - attn, 0.0f);
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                 {
                     attn = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
                            (props->MaxDistance-props->RefDistance);
@@ -1134,7 +1126,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             else
             {
                 DryGain *= std::pow(ClampedDist/props->RefDistance, -props->RolloffFactor);
-                for(ALsizei i{0};i < NumSends;i++)
+                for(ALuint i{0};i < NumSends;i++)
                     WetGain[i] *= std::pow(ClampedDist/props->RefDistance, -RoomRolloff[i]);
             }
             break;
@@ -1188,7 +1180,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     DryGain = minf(DryGain*props->Direct.Gain*Listener.Params.Gain, GAIN_MIX_MAX);
     DryGainHF *= props->Direct.GainHF;
     DryGainLF *= props->Direct.GainLF;
-    for(ALsizei i{0};i < NumSends;i++)
+    for(ALuint i{0};i < NumSends;i++)
     {
         WetGain[i] = clampf(WetGain[i], props->MinGain, props->MaxGain);
         WetGain[i] = minf(WetGain[i]*props->Send[i].Gain*Listener.Params.Gain, GAIN_MIX_MAX);
@@ -1217,7 +1209,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
              * source distance in meters. The initial decay of the reverb
              * effect is calculated and applied to the wet path.
              */
-            for(ALsizei i{0};i < NumSends;i++)
+            for(ALuint i{0};i < NumSends;i++)
             {
                 if(!(DecayDistance[i] > 0.0f))
                     continue;
@@ -1585,17 +1577,17 @@ template<> inline ALint SampleConv(ALfloat val) noexcept
     return fastf2i(clampf(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
 template<> inline ALshort SampleConv(ALfloat val) noexcept
-{ return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
+{ return static_cast<ALshort>(fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f))); }
 template<> inline ALbyte SampleConv(ALfloat val) noexcept
-{ return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
+{ return static_cast<ALbyte>(fastf2i(clampf(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
 template<> inline ALuint SampleConv(ALfloat val) noexcept
-{ return SampleConv<ALint>(val) + 2147483648u; }
+{ return static_cast<ALuint>(SampleConv<ALint>(val)) + 2147483648u; }
 template<> inline ALushort SampleConv(ALfloat val) noexcept
-{ return SampleConv<ALshort>(val) + 32768; }
+{ return static_cast<ALushort>(SampleConv<ALshort>(val) + 32768); }
 template<> inline ALubyte SampleConv(ALfloat val) noexcept
-{ return SampleConv<ALbyte>(val) + 128; }
+{ return static_cast<ALubyte>(SampleConv<ALbyte>(val) + 128); }
 
 template<DevFmtType T>
 void Write(const al::span<const FloatBufferLine> InBuffer, ALvoid *OutBuffer, const size_t Offset,

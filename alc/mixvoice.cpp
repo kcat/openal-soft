@@ -487,7 +487,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     ALbufferlistitem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
     const ALuint NumChannels{mNumChannels};
     const ALuint SampleSize{mSampleSize};
-    const auto increment = static_cast<ALuint>(mStep);
+    const ALuint increment{mStep};
     if(increment < 1) return;
 
     ASSUME(NumChannels > 0);

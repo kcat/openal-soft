@@ -16,13 +16,13 @@
 struct SampleConverter {
     DevFmtType mSrcType{};
     DevFmtType mDstType{};
-    ALsizei mSrcTypeSize{};
-    ALsizei mDstTypeSize{};
+    ALuint mSrcTypeSize{};
+    ALuint mDstTypeSize{};
 
     ALint mSrcPrepCount{};
 
-    ALsizei mFracOffset{};
-    ALsizei mIncrement{};
+    ALuint mFracOffset{};
+    ALuint mIncrement{};
     InterpState mState{};
     ResamplerFunc mResample{};
 

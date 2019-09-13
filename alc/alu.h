@@ -236,7 +236,7 @@ struct ALvoice {
     ALuint mSampleSize;
 
     /** Current target parameters used for mixing. */
-    ALint mStep;
+    ALuint mStep;
 
     ResamplerFunc mResampler;
 

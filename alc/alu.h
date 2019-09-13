@@ -322,10 +322,10 @@ using MixerFunc = void(*)(const al::span<const float> InSamples,
 using RowMixerFunc = void(*)(const al::span<float> OutBuffer, const al::span<const float> Gains,
     const float *InSamples, const size_t InStride);
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize);
 using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,

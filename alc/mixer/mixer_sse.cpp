@@ -68,7 +68,7 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
 }
 
 
-static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALsizei IrSize,
+static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALuint IrSize,
     const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
@@ -83,7 +83,7 @@ static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALs
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
-        ALsizei i{1};
+        ALuint i{1};
         for(;i < IrSize-1;i += 2)
         {
             coeffs = _mm_load_ps(&Coeffs[i+1][0]);
@@ -101,7 +101,7 @@ static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALs
     }
     else
     {
-        for(ALsizei i{0};i < IrSize;i += 2)
+        for(ALuint i{0};i < IrSize;i += 2)
         {
             __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
             __m128 vals{_mm_load_ps(&Values[i][0])};
@@ -113,7 +113,7 @@ static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALs
 
 template<>
 void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -122,7 +122,7 @@ void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void MixHrtfBlend_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,

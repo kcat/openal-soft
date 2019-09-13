@@ -121,7 +121,7 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
 }
 
 
-static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALsizei IrSize,
+static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALuint IrSize,
     const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
 {
     ASSUME(IrSize >= 4);
@@ -134,7 +134,7 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
 
-    for(ALsizei c{0};c < IrSize;c += 2)
+    for(ALuint c{0};c < IrSize;c += 2)
     {
         float32x4_t vals = vld1q_f32(&Values[c][0]);
         float32x4_t coefs = vld1q_f32(&Coeffs[c][0]);
@@ -147,7 +147,7 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
 
 template<>
 void MixHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -156,7 +156,7 @@ void MixHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void MixHrtfBlend_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,

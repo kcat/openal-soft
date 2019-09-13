@@ -125,7 +125,7 @@ int WaveBackend::mixerProc()
 
     althrd_setname(MIXER_THREAD_NAME);
 
-    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
+    const auto frameSize = static_cast<ALuint>(mDevice->frameSizeFromFmt());
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
@@ -159,8 +159,8 @@ int WaveBackend::mixerProc()
                     const size_t len{mBuffer.size() / 2};
                     for(size_t i{0};i < len;i++)
                     {
-                        ALushort samp = samples[i];
-                        samples[i] = (samp>>8) | (samp<<8);
+                        const ALushort samp{samples[i]};
+                        samples[i] = static_cast<ALushort>((samp>>8) | (samp<<8));
                     }
                 }
                 else if(bytesize == 4)
@@ -169,7 +169,7 @@ int WaveBackend::mixerProc()
                     const size_t len{mBuffer.size() / 4};
                     for(size_t i{0};i < len;i++)
                     {
-                        ALuint samp = samples[i];
+                        const ALuint samp{samples[i]};
                         samples[i] = (samp>>24) | ((samp>>8)&0x0000ff00) |
                                      ((samp<<8)&0x00ff0000) | (samp<<24);
                     }
@@ -281,8 +281,8 @@ ALCboolean WaveBackend::reset()
             chanmask = 0;
             break;
     }
-    bytes = mDevice->bytesFromFmt();
-    channels = mDevice->channelsFromFmt();
+    bytes = static_cast<ALuint>(mDevice->bytesFromFmt());
+    channels = static_cast<ALuint>(mDevice->channelsFromFmt());
 
     rewind(mFile);
 
@@ -297,25 +297,25 @@ ALCboolean WaveBackend::reset()
     // 16-bit val, format type id (extensible: 0xFFFE)
     fwrite16le(0xFFFE, mFile);
     // 16-bit val, channel count
-    fwrite16le(channels, mFile);
+    fwrite16le(static_cast<ALushort>(channels), mFile);
     // 32-bit val, frequency
     fwrite32le(mDevice->Frequency, mFile);
     // 32-bit val, bytes per second
     fwrite32le(mDevice->Frequency * channels * bytes, mFile);
     // 16-bit val, frame size
-    fwrite16le(channels * bytes, mFile);
+    fwrite16le(static_cast<ALushort>(channels * bytes), mFile);
     // 16-bit val, bits per sample
-    fwrite16le(bytes * 8, mFile);
+    fwrite16le(static_cast<ALushort>(bytes * 8), mFile);
     // 16-bit val, extra byte count
     fwrite16le(22, mFile);
     // 16-bit val, valid bits per sample
-    fwrite16le(bytes * 8, mFile);
+    fwrite16le(static_cast<ALushort>(bytes * 8), mFile);
     // 32-bit val, channel mask
     fwrite32le(chanmask, mFile);
     // 16 byte GUID, sub-type format
     val = fwrite((mDevice->FmtType == DevFmtFloat) ?
-                 (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
-                 (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM), 1, 16, mFile);
+        (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
+        (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM), 1, 16, mFile);
     (void)val;
 
     fputs("data", mFile);
@@ -330,7 +330,7 @@ ALCboolean WaveBackend::reset()
 
     SetDefaultWFXChannelOrder(mDevice);
 
-    const ALuint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
+    const ALuint bufsize{static_cast<ALuint>(mDevice->frameSizeFromFmt())*mDevice->UpdateSize};
     mBuffer.resize(bufsize);
 
     return ALC_TRUE;
@@ -362,9 +362,9 @@ void WaveBackend::stop()
     {
         long dataLen{size - mDataStart};
         if(fseek(mFile, mDataStart-4, SEEK_SET) == 0)
-            fwrite32le(dataLen, mFile); // 'data' header len
+            fwrite32le(static_cast<ALuint>(dataLen), mFile); // 'data' header len
         if(fseek(mFile, 4, SEEK_SET) == 0)
-            fwrite32le(size-8, mFile); // 'WAVE' header len
+            fwrite32le(static_cast<ALuint>(size-8), mFile); // 'WAVE' header len
     }
 }
 

@@ -81,13 +81,13 @@
 #if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
                                     defined(_M_IX86) || defined(_M_X64))
 using reg_type = unsigned int;
-static inline void get_cpuid(int f, reg_type *regs)
+static inline void get_cpuid(unsigned int f, reg_type *regs)
 { __get_cpuid(f, &regs[0], &regs[1], &regs[2], &regs[3]); }
 #define CAN_GET_CPUID
 #elif defined(HAVE_CPUID_INTRINSIC) && (defined(__i386__) || defined(__x86_64__) || \
                                         defined(_M_IX86) || defined(_M_X64))
 using reg_type = int;
-static inline void get_cpuid(int f, reg_type *regs)
+static inline void get_cpuid(unsigned int f, reg_type *regs)
 { (__cpuid)(regs, f); }
 #define CAN_GET_CPUID
 #endif
@@ -104,7 +104,7 @@ void FillCPUCaps(int capfilter)
     union {
         reg_type regs[4];
         char str[sizeof(reg_type[4])];
-    } cpuinf[3] = {{ { 0, 0, 0, 0 } }};
+    } cpuinf[3]{};
 
     get_cpuid(0, cpuinf[0].regs);
     if(cpuinf[0].regs[0] == 0)

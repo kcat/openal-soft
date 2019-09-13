@@ -103,7 +103,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 {
     ASSUME(BufferSize > 0);
 
-    const ALsizei IrSize{State->IrSize};
+    const auto IrSize = static_cast<ALsizei>(State->IrSize);
 
     auto accum_iter = std::copy_n(State->Values.begin(), State->Values.size(), AccumSamples);
     std::fill_n(accum_iter, BufferSize, float2{});

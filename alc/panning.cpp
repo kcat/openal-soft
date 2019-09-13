@@ -219,7 +219,7 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint (&speakerm
             else
             {
                 ERR("AmbDec speaker label \"%s\" not recognized\n", name);
-                return -1;
+                return INVALID_CHANNEL_INDEX;
             }
         }
         const ALuint chidx{GetChannelIdxByName(device->RealOut, ch)};

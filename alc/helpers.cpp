@@ -614,7 +614,7 @@ const PathNamePair &GetProcBinary()
             return ret;
         }
 
-        pathname.resize(len);
+        pathname.resize(static_cast<size_t>(len));
     }
     while(!pathname.empty() && pathname.back() == 0)
         pathname.pop_back();
@@ -651,8 +651,8 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     DIR *dir{opendir(path)};
     if(dir != nullptr)
     {
-        const size_t extlen = strlen(ext);
-        size_t base = results->size();
+        auto base = results->cend() - results->cbegin();
+        const size_t extlen{strlen(ext)};
 
         struct dirent *dirent;
         while((dirent=readdir(dir)) != nullptr)

@@ -107,16 +107,17 @@ ALboolean ALautowahState::deviceUpdate(const ALCdevice*)
 void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
+    const auto frequency = static_cast<float>(device->Frequency);
 
     const ALfloat ReleaseTime{clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f)};
 
-    mAttackRate    = expf(-1.0f / (props->Autowah.AttackTime*device->Frequency));
-    mReleaseRate   = expf(-1.0f / (ReleaseTime*device->Frequency));
+    mAttackRate    = std::exp(-1.0f / (props->Autowah.AttackTime*frequency));
+    mReleaseRate   = std::exp(-1.0f / (ReleaseTime*frequency));
     /* 0-20dB Resonance Peak gain */
     mResonanceGain = std::sqrt(std::log10(props->Autowah.Resonance)*10.0f / 3.0f);
     mPeakGain      = 1.0f - std::log10(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
-    mFreqMinNorm   = MIN_FREQ / device->Frequency;
-    mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
+    mFreqMinNorm   = MIN_FREQ / frequency;
+    mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / frequency;
 
     mOutTarget = target.Main->Buffer;
     for(size_t i{0u};i < slot->Wet.Buffer.size();++i)

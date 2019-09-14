@@ -146,7 +146,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
         size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
         mGetSamples(modsamples, mIndex, mStep, td);
-        mIndex += (mStep*td) & WAVEFORM_FRACMASK;
+        mIndex += static_cast<ALuint>(mStep * td);
         mIndex &= WAVEFORM_FRACMASK;
 
         auto chandata = std::addressof(mChans[0]);

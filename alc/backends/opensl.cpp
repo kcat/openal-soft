@@ -170,7 +170,7 @@ struct OpenSLPlayback final : public BackendBase {
     RingBufferPtr mRing{nullptr};
     al::semaphore mSem;
 
-    ALsizei mFrameSize{0};
+    ALuint mFrameSize{0};
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -630,7 +630,7 @@ struct OpenSLCapture final : public BackendBase {
     RingBufferPtr mRing{nullptr};
     ALCuint mSplOffset{0u};
 
-    ALsizei mFrameSize{0};
+    ALuint mFrameSize{0};
 
     DEF_NEWDEL(OpenSLCapture)
 };
@@ -851,7 +851,7 @@ void OpenSLCapture::stop()
 
 ALCenum OpenSLCapture::captureSamples(void *buffer, ALCuint samples)
 {
-    ALsizei chunk_size = mDevice->UpdateSize * mFrameSize;
+    ALuint chunk_size{mDevice->UpdateSize * mFrameSize};
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLresult result;
     ALCuint i;

@@ -30,11 +30,11 @@ void *al_malloc(size_t alignment, size_t size)
 #elif defined(HAVE__ALIGNED_MALLOC)
     return _aligned_malloc(size, alignment);
 #else
-    char *ret = static_cast<char*>(malloc(size+alignment));
+    auto *ret = static_cast<char*>(malloc(size+alignment));
     if(ret != nullptr)
     {
         *(ret++) = 0x00;
-        while((reinterpret_cast<ptrdiff_t>(ret)&(alignment-1)) != 0)
+        while((reinterpret_cast<uintptr_t>(ret)&(alignment-1)) != 0)
             *(ret++) = 0x55;
     }
     return ret;
@@ -57,7 +57,7 @@ void al_free(void *ptr) noexcept
 #else
     if(ptr != nullptr)
     {
-        char *finder = static_cast<char*>(ptr);
+        auto *finder = static_cast<char*>(ptr);
         do {
             --finder;
         } while(*finder == 0x55);

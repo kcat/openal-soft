@@ -29,7 +29,8 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+        const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
         // Apply the scale and phase interpolated filter.
@@ -145,8 +146,8 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
-    const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3u) +
-        InSamples.begin();
+    const auto aligned_end = minz(static_cast<uintptr_t>(min_end-InSamples.begin()+3) & ~3u,
+        InSamples.size()) + InSamples.begin();
     for(FloatBufferLine &output : OutBuffer)
     {
         ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};

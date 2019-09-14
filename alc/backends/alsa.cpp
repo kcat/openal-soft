@@ -1112,7 +1112,7 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
         }
 
         buffer = static_cast<al::byte*>(buffer) + amt;
-        samples -= amt;
+        samples -= static_cast<ALCuint>(amt);
     }
     if(samples > 0)
         std::fill_n(static_cast<al::byte*>(buffer), snd_pcm_frames_to_bytes(mPcmHandle, samples),

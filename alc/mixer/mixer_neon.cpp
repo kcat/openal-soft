@@ -55,10 +55,10 @@ const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RES
     if(dst_iter != dst.end())
     {
         src += static_cast<ALuint>(vgetq_lane_s32(pos4, 0));
-        frac = vgetq_lane_s32(frac4, 0);
+        frac = static_cast<ALuint>(vgetq_lane_s32(frac4, 0));
 
         do {
-            *(dst_iter++) = lerp(src[0], src[1], frac * (1.0f/FRACTIONONE));
+            *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/FRACTIONONE));
 
             frac += increment;
             src  += frac>>FRACTIONBITS;
@@ -84,14 +84,15 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+        const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
         // Apply the scale and phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
-            const float *fil{filter + m*pi*4};
+            const float *fil{filter + m*static_cast<ptrdiff_t>(pi*4)};
             const float *scd{fil + m};
             const float *phd{scd + m};
             const float *spd{phd + m};
@@ -179,8 +180,8 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
-    const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3u) +
-        InSamples.begin();
+    const auto aligned_end = minz(static_cast<uintptr_t>(min_end-InSamples.begin()+3) & ~3u,
+        InSamples.size()) + InSamples.begin();
     for(FloatBufferLine &output : OutBuffer)
     {
         ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};

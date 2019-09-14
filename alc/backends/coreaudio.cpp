@@ -177,7 +177,7 @@ ALCboolean CoreAudioPlayback::reset()
     {
         mDevice->BufferSize = static_cast<ALuint>(uint64_t{mDevice->BufferSize} *
             streamFormat.mSampleRate / mDevice->Frequency);
-        mDevice->Frequency = streamFormat.mSampleRate;
+        mDevice->Frequency = static_cast<ALuint>(streamFormat.mSampleRate);
     }
 
     /* FIXME: How to tell what channels are what in the output device, and how
@@ -357,7 +357,8 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
     } audiobuf = { { 0 } };
 
     auto rec_vec = mRing->getWriteVector();
-    inNumberFrames = minz(inNumberFrames, rec_vec.first.len+rec_vec.second.len);
+    inNumberFrames = static_cast<UInt32>(minz(inNumberFrames,
+        rec_vec.first.len+rec_vec.second.len));
 
     // Fill the ringbuffer's two segments with data from the input device
     if(rec_vec.first.len >= inNumberFrames)
@@ -369,7 +370,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
     }
     else
     {
-        const size_t remaining{inNumberFrames-rec_vec.first.len};
+        const auto remaining = static_cast<ALuint>(inNumberFrames - rec_vec.first.len);
         audiobuf.list.mNumberBuffers = 2;
         audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
         audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
@@ -594,7 +595,7 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
 
     // Set the AudioUnit output format frame count
     uint64_t FrameCount64{mDevice->UpdateSize};
-    FrameCount64 = (FrameCount64*outputFormat.mSampleRate + mDevice->Frequency-1) /
+    FrameCount64 = static_cast<uint64_t>(FrameCount64*outputFormat.mSampleRate + mDevice->Frequency-1) /
         mDevice->Frequency;
     FrameCount64 += MAX_RESAMPLE_PADDING*2;
     if(FrameCount64 > std::numeric_limits<uint32_t>::max()/2)
@@ -615,8 +616,8 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
     // Set up sample converter if needed
     if(outputFormat.mSampleRate != mDevice->Frequency)
         mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
-            mFormat.mChannelsPerFrame, hardwareFormat.mSampleRate, mDevice->Frequency,
-            BSinc24Resampler);
+            mFormat.mChannelsPerFrame, static_cast<ALuint>(hardwareFormat.mSampleRate),
+            mDevice->Frequency, BSinc24Resampler);
 
     mRing = CreateRingBuffer(outputFrameCount, mFrameSize, false);
     if(!mRing) return ALC_INVALID_VALUE;
@@ -671,8 +672,8 @@ ALCenum CoreAudioCapture::captureSamples(void *buffer, ALCuint samples)
 
 ALCuint CoreAudioCapture::availableSamples()
 {
-    if(!mConverter) return mRing->readSpace();
-    return mConverter->availableOut(mRing->readSpace());
+    if(!mConverter) return static_cast<ALCuint>(mRing->readSpace());
+    return mConverter->availableOut(static_cast<ALCuint>(mRing->readSpace()));
 }
 
 } // namespace

@@ -337,7 +337,7 @@ void SignalDelay(Compressor *Comp, const ALuint SamplesToDo, FloatBufferLine *Ou
  *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
  *                    automating release time.
  */
-std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALuint SampleRate,
+std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALfloat SampleRate,
     const ALboolean AutoKnee, const ALboolean AutoAttack, const ALboolean AutoRelease,
     const ALboolean AutoPostGain, const ALboolean AutoDeclip, const ALfloat LookAheadTime,
     const ALfloat HoldTime, const ALfloat PreGainDb, const ALfloat PostGainDb,
@@ -363,7 +363,6 @@ std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALuint S
 
     auto Comp = std::unique_ptr<Compressor>{new (al_calloc(16, size)) Compressor{}};
     Comp->mNumChans = NumChans;
-    Comp->mSampleRate = SampleRate;
     Comp->mAuto.Knee = AutoKnee != AL_FALSE;
     Comp->mAuto.Attack = AutoAttack != AL_FALSE;
     Comp->mAuto.Release = AutoRelease != AL_FALSE;

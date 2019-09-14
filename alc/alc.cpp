@@ -1587,9 +1587,9 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
 {
-    return CompressorInit(static_cast<ALuint>(device->RealOut.Buffer.size()), device->Frequency,
-        AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f, 0.0f, 0.0f, threshold,
-        INFINITY, 0.0f, 0.020f, 0.200f);
+    return CompressorInit(static_cast<ALuint>(device->RealOut.Buffer.size()),
+        static_cast<float>(device->Frequency), AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f,
+        0.002f, 0.0f, 0.0f, threshold, INFINITY, 0.0f, 0.020f, 0.200f);
 }
 
 /* UpdateClockBase
@@ -2145,17 +2145,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
                 if(old_sends != device->NumAuxSends)
                 {
-                    if(source->Send.size() > static_cast<ALuint>(device->NumAuxSends))
-                        std::for_each(source->Send.begin()+device->NumAuxSends, source->Send.end(),
-                            [](ALsource::SendData &send) -> void
-                            {
-                                if(send.Slot)
-                                    DecrementRef(send.Slot->ref);
-                                send.Slot = nullptr;
-                            });
+                    if(source->Send.size() > device->NumAuxSends)
+                    {
+                        auto clear_send = [](ALsource::SendData &send) -> void
+                        {
+                            if(send.Slot)
+                                DecrementRef(send.Slot->ref);
+                            send.Slot = nullptr;
+                        };
+                        auto send_begin = source->Send.begin() +
+                            static_cast<ptrdiff_t>(device->NumAuxSends);
+                        std::for_each(send_begin, source->Send.end(), clear_send);
+                    }
 
-                    source->Send.resize(static_cast<ALuint>(device->NumAuxSends),
-                        ALsource::SendData{nullptr, 1.0f, 1.0f, LOWPASSFREQREF, 1.0f, HIGHPASSFREQREF});
+                    source->Send.resize(device->NumAuxSends,
+                        {nullptr, 1.0f, 1.0f, LOWPASSFREQREF, 1.0f, HIGHPASSFREQREF});
                     source->Send.shrink_to_fit();
                 }
 
@@ -2209,7 +2213,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 /* Reinitialize the NFC filters for new parameters. */
                 const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
-                    (device->AvgSpeakerDist * device->Frequency)};
+                    (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
                 auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
                 { chandata.mDryParams.NFCtrlFilter.init(w1); };
                 std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,

@@ -16,9 +16,9 @@ namespace {
 inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALuint)
 { return vals[0]; }
 inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALuint frac)
-{ return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
+{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
 inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALuint frac)
-{ return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
+{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
 inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALuint frac)
 {
     ASSUME(istate.bsinc.m > 0);
@@ -26,10 +26,11 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
     // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
     const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+    const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+        (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    const ALfloat *fil{istate.bsinc.filter + ptrdiff_t{istate.bsinc.m}*pi*4};
+    const ALfloat *fil{istate.bsinc.filter + static_cast<ptrdiff_t>(istate.bsinc.m)*pi*4};
     const ALfloat *scd{fil + istate.bsinc.m};
     const ALfloat *phd{scd + istate.bsinc.m};
     const ALfloat *spd{phd + istate.bsinc.m};

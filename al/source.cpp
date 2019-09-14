@@ -310,8 +310,8 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const ALbufferlistitem *BufferList{Source->queue};
     const ALbuffer *BufferFmt{nullptr};
-    ALboolean readFin{AL_FALSE};
     ALuint totalBufferLen{0u};
+    bool readFin{false};
 
     while(BufferList)
     {
@@ -1662,7 +1662,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SEC_OFFSET_CLOCK_SOFT:
         CHECKSIZE(values, 2);
         values[0] = GetSourceSecOffset(Source, Context, &srcclock);
-        values[1] = srcclock.count() / 1000000000.0;
+        values[1] = static_cast<ALdouble>(srcclock.count()) / 1000000000.0;
         return true;
 
     case AL_POSITION:
@@ -2851,7 +2851,7 @@ START_API_FUNC
         if(device->AvgSpeakerDist > 0.0f)
         {
             const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
-                (device->AvgSpeakerDist * device->Frequency)};
+                (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
             auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
             { chandata.mDryParams.NFCtrlFilter.init(w1); };
             std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,

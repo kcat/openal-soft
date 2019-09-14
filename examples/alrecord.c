@@ -54,13 +54,14 @@ static float msvc_strtof(const char *str, char **end)
 
 static void fwrite16le(ALushort val, FILE *f)
 {
-    ALubyte data[2] = { val&0xff, (val>>8)&0xff };
+    ALubyte data[2] = { (ALubyte)(val&0xff), (ALubyte)((val>>8)&0xff) };
     fwrite(data, 1, 2, f);
 }
 
 static void fwrite32le(ALuint val, FILE *f)
 {
-    ALubyte data[4] = { val&0xff, (val>>8)&0xff, (val>>16)&0xff, (val>>24)&0xff };
+    ALubyte data[4] = { (ALubyte)(val&0xff), (ALubyte)((val>>8)&0xff), (ALubyte)((val>>16)&0xff),
+        (ALubyte)((val>>24)&0xff) };
     fwrite(data, 1, 4, f);
 }
 

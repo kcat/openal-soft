@@ -24,7 +24,6 @@ struct SlidingHold;
  */
 struct Compressor {
     ALuint mNumChans{0u};
-    ALuint mSampleRate{0u};
 
     struct {
         bool Knee : 1;
@@ -94,7 +93,7 @@ struct Compressor {
  *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
  *                    automating release time.
  */
-std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALuint SampleRate,
+std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALfloat SampleRate,
     const ALboolean AutoKnee, const ALboolean AutoAttack, const ALboolean AutoRelease,
     const ALboolean AutoPostGain, const ALboolean AutoDeclip, const ALfloat LookAheadTime,
     const ALfloat HoldTime, const ALfloat PreGainDb, const ALfloat PostGainDb,

@@ -182,10 +182,11 @@ struct IdxBlend { ALsizei idx; ALfloat blend; };
  */
 IdxBlend CalcEvIndex(ALsizei evcount, ALfloat ev)
 {
-    ev = (al::MathDefs<float>::Pi()*0.5f + ev) * (evcount-1) / al::MathDefs<float>::Pi();
+    ev = (al::MathDefs<float>::Pi()*0.5f + ev) * static_cast<float>(evcount-1) /
+        al::MathDefs<float>::Pi();
     ALsizei idx{float2int(ev)};
 
-    return IdxBlend{mini(idx, evcount-1), ev-idx};
+    return IdxBlend{mini(idx, evcount-1), ev-static_cast<float>(idx)};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
@@ -193,10 +194,11 @@ IdxBlend CalcEvIndex(ALsizei evcount, ALfloat ev)
  */
 IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
 {
-    az = (al::MathDefs<float>::Tau()+az) * azcount / al::MathDefs<float>::Tau();
+    az = (al::MathDefs<float>::Tau()+az) * static_cast<float>(azcount) /
+        al::MathDefs<float>::Tau();
     ALsizei idx{float2int(az)};
 
-    return IdxBlend{idx%azcount, az-idx};
+    return IdxBlend{idx%azcount, az-static_cast<float>(idx)};
 }
 
 } // namespace
@@ -303,24 +305,25 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     ASSUME(NumChannels > 0);
     ASSUME(AmbiCount > 0);
 
-    auto &field = Hrtf->field[0];
     ALuint min_delay{HRTF_HISTORY_LENGTH};
     ALuint max_delay{0};
     auto idx = al::vector<ALuint>(AmbiCount);
-    auto calc_idxs = [Hrtf,&field,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALuint
+    auto calc_idxs = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALuint
     {
+        auto &field = Hrtf->field[0];
         /* Calculate elevation index. */
-        const auto evidx = clampi(float2int((90.0f+pt.Elev)*(field.evCount-1)/180.0f + 0.5f),
-            0, field.evCount-1);
+        const auto ev_limit = static_cast<float>(field.evCount-1);
+        const ALuint evidx{float2uint(clampf((90.0f+pt.Elev)/180.0f, 0.0f, 1.0f)*ev_limit + 0.5f)};
 
         const ALuint azcount{Hrtf->elev[evidx].azCount};
         const ALuint iroffset{Hrtf->elev[evidx].irOffset};
 
         /* Calculate azimuth index for this elevation. */
-        const auto azidx = static_cast<ALuint>((360.0f+pt.Azim)*azcount/360.0f + 0.5f) % azcount;
+        const float az_norm{(360.0f*pt.Azim) / 360.0f};
+        const ALuint azidx{float2uint(az_norm*static_cast<float>(azcount) + 0.5f) % azcount};
 
         /* Calculate the index for the impulse response. */
-        ALuint idx{iroffset + azidx};
+        const ALuint idx{iroffset + azidx};
 
         min_delay = minu(min_delay, minu(Hrtf->delays[idx][0], Hrtf->delays[idx][1]));
         max_delay = maxu(max_delay, maxu(Hrtf->delays[idx][0], Hrtf->delays[idx][1]));
@@ -594,7 +597,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<ALushort> evOffset(evCount);
+    auto evOffset = al::vector<ALushort>(evCount);
     for(auto &val : evOffset)
         val = GetLE_ALushort(data);
     if(!data || data.eof())
@@ -619,10 +622,10 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<ALushort> azCount(evCount);
+    auto azCount = al::vector<ALushort>(evCount);
     for(size_t i{1};i < evCount;i++)
     {
-        azCount[i-1] = evOffset[i] - evOffset[i-1];
+        azCount[i-1] = static_cast<ALushort>(evOffset[i] - evOffset[i-1]);
         if(azCount[i-1] < MIN_AZ_COUNT || azCount[i-1] > MAX_AZ_COUNT)
         {
             ERR("Unsupported azimuth count: azCount[%zd]=%d (%d to %d)\n",
@@ -630,7 +633,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
             failed = AL_TRUE;
         }
     }
-    azCount.back() = irCount - evOffset.back();
+    azCount.back() = static_cast<ALushort>(irCount - evOffset.back());
     if(azCount.back() < MIN_AZ_COUNT || azCount.back() > MAX_AZ_COUNT)
     {
         ERR("Unsupported azimuth count: azCount[%zu]=%d (%d to %d)\n",
@@ -640,8 +643,8 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
-    al::vector<std::array<ALubyte,2>> delays(irCount);
+    auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irCount);
+    auto delays = al::vector<std::array<ALubyte,2>>(irCount);
     for(auto &val : coeffs)
         val[0] = GetLE_ALshort(data) / 32768.0f;
     for(auto &val : delays)
@@ -711,7 +714,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    al::vector<ALushort> azCount(evCount);
+    auto azCount = al::vector<ALushort>(evCount);
     std::generate(azCount.begin(), azCount.end(), std::bind(GetLE_ALubyte, std::ref(data)));
     if(!data || data.eof())
     {
@@ -735,12 +738,12 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
     ALushort irCount{azCount[0]};
     for(size_t i{1};i < evCount;i++)
     {
-        evOffset[i] = evOffset[i-1] + azCount[i-1];
+        evOffset[i] = static_cast<ALushort>(evOffset[i-1] + azCount[i-1]);
         irCount += azCount[i];
     }
 
-    al::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
-    al::vector<std::array<ALubyte,2>> delays(irCount);
+    auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irCount);
+    auto delays = al::vector<std::array<ALubyte,2>>(irCount);
     for(auto &val : coeffs)
         val[0] = GetLE_ALshort(data) / 32768.0f;
     for(auto &val : delays)
@@ -903,7 +906,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
         else if(sampleType == SAMPLETYPE_S24)
         {
             for(auto &val : coeffs)
-                val[0] = GetLE_ALint24(data) / 8388608.0f;
+                val[0] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
         }
         for(auto &val : delays)
             val[0] = GetLE_ALubyte(data);
@@ -935,8 +938,8 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
         {
             for(auto &val : coeffs)
             {
-                val[0] = GetLE_ALint24(data) / 8388608.0f;
-                val[1] = GetLE_ALint24(data) / 8388608.0f;
+                val[0] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
+                val[1] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
             }
         }
         for(auto &val : delays)

@@ -64,8 +64,8 @@ void GetTriangleDelays(ALuint *delays, const ALuint start_offset, const ALuint l
     auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALuint
     {
         offset = (offset+1)%lfo_range;
-        return static_cast<ALuint>(
-            fastf2i((1.0f - std::abs(2.0f - lfo_scale*offset)) * depth) + delay);
+        const float offset_norm{static_cast<float>(offset) * lfo_scale};
+        return static_cast<ALuint>(fastf2i((1.0f-std::abs(2.0f-offset_norm)) * depth) + delay);
     };
     std::generate_n(delays, todo, gen_lfo);
 }
@@ -80,7 +80,8 @@ void GetSinusoidDelays(ALuint *delays, const ALuint start_offset, const ALuint l
     auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALuint
     {
         offset = (offset+1)%lfo_range;
-        return static_cast<ALuint>(fastf2i(std::sin(lfo_scale*offset) * depth) + delay);
+        const float offset_norm{static_cast<float>(offset) * lfo_scale};
+        return static_cast<ALuint>(fastf2i(std::sin(offset_norm)*depth) + delay);
     };
     std::generate_n(delays, todo, gen_lfo);
 }
@@ -118,7 +119,8 @@ ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
 {
     constexpr ALfloat max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
 
-    const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*Device->Frequency) + 1u)};
+    const auto frequency = static_cast<float>(Device->Frequency);
+    const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*frequency) + 1u)};
     if(maxlen != mSampleBuffer.size())
     {
         mSampleBuffer.resize(maxlen);
@@ -153,9 +155,11 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
      * delay and depth to allow enough padding for resampling.
      */
     const ALCdevice *device{Context->mDevice.get()};
-    const auto frequency = static_cast<ALfloat>(device->Frequency);
+    const auto frequency = static_cast<float>(device->Frequency);
+
     mDelay = maxi(float2int(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f), mindelay);
-    mDepth = minf(props->Chorus.Depth * mDelay, static_cast<ALfloat>(mDelay - mindelay));
+    mDepth = minf(props->Chorus.Depth * static_cast<float>(mDelay),
+        static_cast<float>(mDelay - mindelay));
 
     mFeedback = props->Chorus.Feedback;
 
@@ -188,10 +192,10 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         switch(mWaveform)
         {
             case WaveForm::Triangle:
-                mLfoScale = 4.0f / mLfoRange;
+                mLfoScale = 4.0f / static_cast<float>(mLfoRange);
                 break;
             case WaveForm::Sinusoid:
-                mLfoScale = al::MathDefs<float>::Tau() / mLfoRange;
+                mLfoScale = al::MathDefs<float>::Tau() / static_cast<float>(mLfoRange);
                 break;
         }
 
@@ -229,7 +233,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
             GetTriangleDelays(moddelays[1], (mLfoOffset+mLfoDisp)%mLfoRange, mLfoRange, mLfoScale,
                               mDepth, mDelay, todo);
         }
-        mLfoOffset = (mLfoOffset+todo) % mLfoRange;
+        mLfoOffset = (mLfoOffset+static_cast<ALuint>(todo)) % mLfoRange;
 
         alignas(16) ALfloat temps[2][256];
         for(size_t i{0u};i < todo;i++)
@@ -239,17 +243,15 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 
             // Tap for the left output.
             ALuint delay{offset - (moddelays[0][i]>>FRACTIONBITS)};
-            ALfloat mu{(moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE)};
+            ALfloat mu{static_cast<float>(moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE)};
             temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-                                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
-                                mu);
+                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 
             // Tap for the right output.
             delay = offset - (moddelays[1][i]>>FRACTIONBITS);
-            mu = (moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
+            mu = static_cast<float>(moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
             temps[1][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-                                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
-                                mu);
+                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 
             // Accumulate feedback from the average delay of the taps.
             delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;

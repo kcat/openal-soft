@@ -66,10 +66,12 @@ struct EchoState final : public EffectState {
 
 ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
 {
+    const auto frequency = static_cast<float>(Device->Frequency);
+
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    const ALuint maxlen{NextPowerOf2(float2uint(AL_ECHO_MAX_DELAY*Device->Frequency + 0.5f) +
-        float2uint(AL_ECHO_MAX_LRDELAY*Device->Frequency + 0.5f))};
+    const ALuint maxlen{NextPowerOf2(float2uint(AL_ECHO_MAX_DELAY*frequency + 0.5f) +
+        float2uint(AL_ECHO_MAX_LRDELAY*frequency + 0.5f))};
     if(maxlen != mSampleBuffer.size())
     {
         mSampleBuffer.resize(maxlen);

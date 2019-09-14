@@ -86,7 +86,7 @@ struct FormantFilter
     FormantFilter() = default;
     FormantFilter(ALfloat f0norm_, ALfloat gain) : f0norm{f0norm_}, fGain{gain} { }
 
-    inline void process(const ALfloat* samplesIn, ALfloat* samplesOut, const size_t numInput)
+    inline void process(const ALfloat *samplesIn, ALfloat *samplesOut, const size_t numInput)
     {
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
@@ -198,9 +198,9 @@ ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
     for(auto &e : mChans)
     {
         std::for_each(std::begin(e.Formants[VOWEL_A_INDEX]), std::end(e.Formants[VOWEL_A_INDEX]),
-                      std::mem_fn(&FormantFilter::clear));
+            std::mem_fn(&FormantFilter::clear));
         std::for_each(std::begin(e.Formants[VOWEL_B_INDEX]), std::end(e.Formants[VOWEL_B_INDEX]),
-                      std::mem_fn(&FormantFilter::clear));
+            std::mem_fn(&FormantFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
 
@@ -223,8 +223,10 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     else /*if(props->Vmorpher.Waveform == AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE)*/
         mGetSamples = Oscillate<Triangle>;
 
-    const ALfloat pitchA{std::pow(2.0f, props->Vmorpher.PhonemeACoarseTuning / 12.0f)};
-    const ALfloat pitchB{std::pow(2.0f, props->Vmorpher.PhonemeBCoarseTuning / 12.0f)};
+    const ALfloat pitchA{std::pow(2.0f,
+        static_cast<float>(props->Vmorpher.PhonemeACoarseTuning) / 12.0f)};
+    const ALfloat pitchB{std::pow(2.0f,
+        static_cast<float>(props->Vmorpher.PhonemeBCoarseTuning) / 12.0f)};
 
     auto vowelA = getFiltersByPhoneme(props->Vmorpher.PhonemeA, frequency, pitchA);
     auto vowelB = getFiltersByPhoneme(props->Vmorpher.PhonemeB, frequency, pitchB);
@@ -255,7 +257,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
         const size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
         mGetSamples(lfo, mIndex, mStep, td);
-        mIndex += (mStep * td) & WAVEFORM_FRACMASK;
+        mIndex += static_cast<ALuint>(mStep * td);
         mIndex &= WAVEFORM_FRACMASK;
 
         auto chandata = std::addressof(mChans[0]);

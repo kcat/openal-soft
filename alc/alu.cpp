@@ -201,19 +201,19 @@ void ALCdevice::ProcessBs2b(const size_t SamplesToDo)
  */
 void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
 {
-    ALsizei si{BSINC_SCALE_COUNT - 1};
-    ALfloat sf{0.0f};
+    size_t si{BSINC_SCALE_COUNT - 1};
+    float sf{0.0f};
 
     if(increment > FRACTIONONE)
     {
-        sf = static_cast<ALfloat>FRACTIONONE / increment;
+        sf = FRACTIONONE / static_cast<float>(increment);
         sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
-        si = float2int(sf);
+        si = float2uint(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different
          * scales of the sinc function.
          */
-        sf = 1.0f - std::cos(std::asin(sf - si));
+        sf = 1.0f - std::cos(std::asin(sf - static_cast<float>(si)));
     }
 
     state->sf = sf;

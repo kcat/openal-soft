@@ -287,33 +287,35 @@ struct FmtTypeTraits { };
 template<>
 struct FmtTypeTraits<FmtUByte> {
     using Type = ALubyte;
-    static constexpr ALfloat to_float(const Type val) { return (val-128) * (1.0f/128.0f); }
+    static constexpr ALfloat to_float(const Type val) noexcept
+    { return val*(1.0f/128.0f) - 128.0f; }
 };
 template<>
 struct FmtTypeTraits<FmtShort> {
     using Type = ALshort;
-    static constexpr ALfloat to_float(const Type val) { return val * (1.0f/32768.0f); }
+    static constexpr ALfloat to_float(const Type val) noexcept { return val*(1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtFloat> {
     using Type = ALfloat;
-    static constexpr ALfloat to_float(const Type val) { return val; }
+    static constexpr ALfloat to_float(const Type val) noexcept { return val; }
 };
 template<>
 struct FmtTypeTraits<FmtDouble> {
     using Type = ALdouble;
-    static constexpr ALfloat to_float(const Type val) { return static_cast<ALfloat>(val); }
+    static constexpr ALfloat to_float(const Type val) noexcept
+    { return static_cast<ALfloat>(val); }
 };
 template<>
 struct FmtTypeTraits<FmtMulaw> {
     using Type = ALubyte;
-    static constexpr ALfloat to_float(const Type val)
+    static constexpr ALfloat to_float(const Type val) noexcept
     { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtAlaw> {
     using Type = ALubyte;
-    static constexpr ALfloat to_float(const Type val)
+    static constexpr ALfloat to_float(const Type val) noexcept
     { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 };
 
@@ -363,7 +365,7 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, ALfloat
 
 template<FmtType T>
 inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcstep,
-    const size_t samples)
+    const size_t samples) noexcept
 {
     using SampleType = typename FmtTypeTraits<T>::Type;
 
@@ -373,7 +375,7 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, const si
 }
 
 void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
-    const size_t samples)
+    const size_t samples) noexcept
 {
 #define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
     switch(srctype)

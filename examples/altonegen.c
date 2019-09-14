@@ -97,7 +97,7 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate)
     ALenum err;
     ALuint i;
 
-    data_size = srate * sizeof(ALfloat);
+    data_size = (ALuint)(srate * sizeof(ALfloat));
     data = calloc(1, data_size);
     switch(type)
     {

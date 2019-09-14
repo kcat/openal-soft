@@ -1324,7 +1324,7 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
-    mLastReadable -= dstbuf.size();
+    mLastReadable -= static_cast<ALCuint>(dstbuf.size());
     std::lock_guard<std::mutex> _{pulse_lock};
     while(!dstbuf.empty())
     {

@@ -27,7 +27,7 @@ template<> inline ALfloat LoadSample<DevFmtByte>(DevFmtTypeTraits<DevFmtByte>::T
 template<> inline ALfloat LoadSample<DevFmtShort>(DevFmtTypeTraits<DevFmtShort>::Type val) noexcept
 { return val * (1.0f/32768.0f); }
 template<> inline ALfloat LoadSample<DevFmtInt>(DevFmtTypeTraits<DevFmtInt>::Type val) noexcept
-{ return val * (1.0f/2147483648.0f); }
+{ return static_cast<float>(val) * (1.0f/2147483648.0f); }
 template<> inline ALfloat LoadSample<DevFmtFloat>(DevFmtTypeTraits<DevFmtFloat>::Type val) noexcept
 { return val; }
 

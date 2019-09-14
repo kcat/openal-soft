@@ -72,7 +72,7 @@ const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RES
         frac = static_cast<ALuint>(_mm_cvtsi128_si32(frac4));
 
         do {
-            *(dst_iter++) = lerp(src[0], src[1], frac * (1.0f/FRACTIONONE));
+            *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/FRACTIONONE));
 
             frac += increment;
             src  += frac>>FRACTIONBITS;

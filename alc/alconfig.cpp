@@ -189,7 +189,7 @@ void LoadConfigFromFile(std::istream &f)
                         (section[2] >= 'a' && section[2] <= 'f') ||
                         (section[2] >= 'A' && section[2] <= 'F')))
                     {
-                        unsigned char b = 0;
+                        int b{0};
                         if(section[1] >= '0' && section[1] <= '9')
                             b = (section[1]-'0') << 4;
                         else if(section[1] >= 'a' && section[1] <= 'f')

@@ -60,10 +60,10 @@
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromN3D;
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromSN3D;
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromFuMa;
-constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::FromFuMa;
-constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::FromACN;
-constexpr std::array<int,MAX_AMBI2D_CHANNELS> AmbiIndex::From2D;
-constexpr std::array<int,MAX_AMBI_CHANNELS> AmbiIndex::From3D;
+constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::FromFuMa;
+constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::FromACN;
+constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> AmbiIndex::From2D;
+constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::From3D;
 
 
 namespace {
@@ -352,7 +352,7 @@ auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AM
     return AmbiScale::FromN3D;
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<int,MAX_AMBI_CHANNELS>&
+auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI_CHANNELS>&
 {
     if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
     return AmbiIndex::FromACN;
@@ -408,13 +408,13 @@ void InitPanning(ALCdevice *device)
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname{device->DeviceName.c_str()};
-        const std::array<int,MAX_AMBI_CHANNELS> &acnmap = GetAmbiLayout(device->mAmbiLayout);
+        const std::array<uint8_t,MAX_AMBI_CHANNELS> &acnmap = GetAmbiLayout(device->mAmbiLayout);
         const std::array<float,MAX_AMBI_CHANNELS> &n3dscale = GetAmbiScales(device->mAmbiScale);
 
         /* For DevFmtAmbi3D, the ambisonic order is already set. */
         const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
         std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
-            [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
+            [&n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
             { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
         );
         AllocChannels(device, static_cast<ALuint>(count), 0);
@@ -452,7 +452,7 @@ void InitPanning(ALCdevice *device)
 
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+coeffcount,
             std::begin(device->Dry.AmbiMap),
-            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
         AllocChannels(device, coeffcount, device->channelsFromFmt());
 
@@ -486,7 +486,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
         count = static_cast<ALuint>(AmbiChannelsFromOrder(order));
         std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
             std::begin(device->Dry.AmbiMap),
-            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
     }
     else
@@ -494,7 +494,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
         count = static_cast<ALuint>(Ambi2DChannelsFromOrder(order));
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
-            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
     }
     AllocChannels(device, count, device->channelsFromFmt());
@@ -632,7 +632,7 @@ void InitHrtfPanning(ALCdevice *device)
 
     std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
         std::begin(device->Dry.AmbiMap),
-        [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+        [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
     AllocChannels(device, static_cast<ALuint>(count), device->channelsFromFmt());
 
@@ -652,7 +652,7 @@ void InitUhjPanning(ALCdevice *device)
 
     auto acnmap_end = AmbiIndex::FromFuMa.begin() + count;
     std::transform(AmbiIndex::FromFuMa.begin(), acnmap_end, std::begin(device->Dry.AmbiMap),
-        [](const ALsizei &acn) noexcept -> BFChannelConfig
+        [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f/AmbiScale::FromFuMa[acn], acn}; }
     );
     AllocChannels(device, ALuint{count}, device->channelsFromFmt());
@@ -765,9 +765,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     if(device->HrtfList.empty())
         device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
 
-    if(hrtf_id >= 0 && static_cast<size_t>(hrtf_id) < device->HrtfList.size())
+    if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
     {
-        const EnumeratedHrtf &entry = device->HrtfList[hrtf_id];
+        const EnumeratedHrtf &entry = device->HrtfList[static_cast<ALuint>(hrtf_id)];
         HrtfEntry *hrtf{GetLoadedHrtf(entry.hrtf)};
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
@@ -822,7 +822,8 @@ no_hrtf:
             if(*cflevopt > 0 && *cflevopt <= 6)
             {
                 device->Bs2b = al::make_unique<bs2b>();
-                bs2b_set_params(device->Bs2b.get(), *cflevopt, device->Frequency);
+                bs2b_set_params(device->Bs2b.get(), *cflevopt,
+                    static_cast<int>(device->Frequency));
                 TRACE("BS2B enabled\n");
                 InitPanning(device);
                 device->PostProcess = &ALCdevice::ProcessBs2b;
@@ -862,7 +863,7 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
 
     auto acnmap_end = AmbiIndex::From3D.begin() + count;
     auto iter = std::transform(AmbiIndex::From3D.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
-        [](const ALsizei &acn) noexcept -> BFChannelConfig
+        [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; }
     );
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});

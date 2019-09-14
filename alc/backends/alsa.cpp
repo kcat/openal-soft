@@ -303,7 +303,7 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
                 ERR("snd_ctl_pcm_next_device failed\n");
             if(dev < 0) break;
 
-            snd_pcm_info_set_device(pcminfo, dev);
+            snd_pcm_info_set_device(pcminfo, static_cast<ALuint>(dev));
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, stream);
             if((err=snd_ctl_pcm_info(handle, pcminfo)) < 0)
@@ -425,7 +425,7 @@ int AlsaPlayback::mixerProc()
     althrd_setname(MIXER_THREAD_NAME);
 
     const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
-    const snd_pcm_uframes_t num_updates{mDevice->BufferSize / update_size};
+    const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         int state{verify_state(mPcmHandle)};
@@ -436,14 +436,15 @@ int AlsaPlayback::mixerProc()
             break;
         }
 
-        snd_pcm_sframes_t avail{snd_pcm_avail_update(mPcmHandle)};
-        if(avail < 0)
+        snd_pcm_sframes_t avails{snd_pcm_avail_update(mPcmHandle)};
+        if(avails < 0)
         {
-            ERR("available update failed: %s\n", snd_strerror(avail));
+            ERR("available update failed: %s\n", snd_strerror(static_cast<int>(avails)));
             continue;
         }
+        snd_pcm_uframes_t avail{static_cast<snd_pcm_uframes_t>(avails)};
 
-        if(static_cast<snd_pcm_uframes_t>(avail) > update_size*(num_updates+1))
+        if(avail > buffer_size)
         {
             WARN("available samples exceeds the buffer size\n");
             snd_pcm_reset(mPcmHandle);
@@ -451,7 +452,7 @@ int AlsaPlayback::mixerProc()
         }
 
         // make sure there's frames to process
-        if(static_cast<snd_pcm_uframes_t>(avail) < update_size)
+        if(avail < update_size)
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
@@ -472,7 +473,7 @@ int AlsaPlayback::mixerProc()
         lock();
         while(avail > 0)
         {
-            snd_pcm_uframes_t frames{static_cast<snd_pcm_uframes_t>(avail)};
+            snd_pcm_uframes_t frames{avail};
 
             const snd_pcm_channel_area_t *areas{};
             snd_pcm_uframes_t offset{};
@@ -484,13 +485,13 @@ int AlsaPlayback::mixerProc()
             }
 
             char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
-            aluMixData(mDevice, WritePtr, frames);
+            aluMixData(mDevice, WritePtr, static_cast<ALuint>(frames));
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
-            if(commitres < 0 || (commitres-frames) != 0)
+            if(commitres < 0 || (static_cast<snd_pcm_uframes_t>(commitres)-frames) != 0)
             {
                 ERR("mmap commit error: %s\n",
-                    snd_strerror(commitres >= 0 ? -EPIPE : commitres));
+                    snd_strerror(commitres >= 0 ? -EPIPE : static_cast<int>(commitres)));
                 break;
             }
 
@@ -522,7 +523,7 @@ int AlsaPlayback::mixerNoMMapProc()
         snd_pcm_sframes_t avail{snd_pcm_avail_update(mPcmHandle)};
         if(avail < 0)
         {
-            ERR("available update failed: %s\n", snd_strerror(avail));
+            ERR("available update failed: %s\n", snd_strerror(static_cast<int>(avail)));
             continue;
         }
 
@@ -551,11 +552,12 @@ int AlsaPlayback::mixerNoMMapProc()
 
         lock();
         al::byte *WritePtr{mBuffer.data()};
-        avail = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
-        aluMixData(mDevice, WritePtr, avail);
+        avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
+        aluMixData(mDevice, WritePtr, static_cast<ALuint>(avail));
         while(avail > 0)
         {
-            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr, avail)};
+            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr,
+                static_cast<snd_pcm_uframes_t>(avail))};
             switch(ret)
             {
             case -EAGAIN:
@@ -565,7 +567,7 @@ int AlsaPlayback::mixerNoMMapProc()
 #endif
             case -EPIPE:
             case -EINTR:
-                ret = snd_pcm_recover(mPcmHandle, ret, 1);
+                ret = snd_pcm_recover(mPcmHandle, static_cast<int>(ret), 1);
                 if(ret < 0)
                     avail = 0;
                 break;
@@ -762,8 +764,8 @@ ALCboolean AlsaPlayback::reset()
     snd_pcm_sw_params_free(sp);
     sp = nullptr;
 
-    mDevice->BufferSize = bufferSizeInFrames;
-    mDevice->UpdateSize = periodSizeInFrames;
+    mDevice->BufferSize = static_cast<ALuint>(bufferSizeInFrames);
+    mDevice->UpdateSize = static_cast<ALuint>(periodSizeInFrames);
     mDevice->Frequency = rate;
 
     SetDefaultChannelOrder(mDevice);
@@ -803,7 +805,8 @@ ALCboolean AlsaPlayback::start()
     int (AlsaPlayback::*thread_func)(){};
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        mBuffer.resize(snd_pcm_frames_to_bytes(mPcmHandle, mDevice->UpdateSize));
+        mBuffer.resize(
+            static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, mDevice->UpdateSize)));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else
@@ -952,7 +955,7 @@ ALCenum AlsaCapture::open(const ALCchar *name)
     }
 
     snd_pcm_uframes_t bufferSizeInFrames{maxu(mDevice->BufferSize, 100*mDevice->Frequency/1000)};
-    snd_pcm_uframes_t periodSizeInFrames{minu(bufferSizeInFrames, 25*mDevice->Frequency/1000)};
+    snd_pcm_uframes_t periodSizeInFrames{minu(mDevice->BufferSize, 25*mDevice->Frequency/1000)};
 
     bool needring{false};
     const char *funcerr{};
@@ -1044,7 +1047,8 @@ void AlsaCapture::stop()
     {
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage. */
-        auto temp = al::vector<al::byte>(snd_pcm_frames_to_bytes(mPcmHandle, avail));
+        auto temp = al::vector<al::byte>(
+            static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
         captureSamples(temp.data(), avail);
         mBuffer = std::move(temp);
     }
@@ -1070,11 +1074,11 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
         if(!mBuffer.empty())
         {
             /* First get any data stored from the last stop */
-            amt = snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
+            amt = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
             if(static_cast<snd_pcm_uframes_t>(amt) > samples) amt = samples;
 
             amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
-            memcpy(buffer, mBuffer.data(), amt);
+            std::copy_n(mBuffer.begin(), amt, static_cast<al::byte*>(buffer));
 
             mBuffer.erase(mBuffer.begin(), mBuffer.begin()+amt);
             amt = snd_pcm_bytes_to_frames(mPcmHandle, amt);
@@ -1083,11 +1087,11 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
             amt = snd_pcm_readi(mPcmHandle, buffer, samples);
         if(amt < 0)
         {
-            ERR("read error: %s\n", snd_strerror(amt));
+            ERR("read error: %s\n", snd_strerror(static_cast<int>(amt)));
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=snd_pcm_recover(mPcmHandle, amt, 1)) >= 0)
+            if((amt=snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1)) >= 0)
             {
                 amt = snd_pcm_start(mPcmHandle);
                 if(amt >= 0)
@@ -1095,8 +1099,9 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
             }
             if(amt < 0)
             {
-                ERR("restore error: %s\n", snd_strerror(amt));
-                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", snd_strerror(amt));
+                const char *err{snd_strerror(static_cast<int>(amt))};
+                ERR("restore error: %s\n", err);
+                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", err);
                 break;
             }
             /* If the amount available is less than what's asked, we lost it
@@ -1110,8 +1115,8 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
         samples -= amt;
     }
     if(samples > 0)
-        memset(buffer, ((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0),
-               snd_pcm_frames_to_bytes(mPcmHandle, samples));
+        std::fill_n(static_cast<al::byte*>(buffer), snd_pcm_frames_to_bytes(mPcmHandle, samples),
+            al::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
 
     return ALC_NO_ERROR;
 }
@@ -1123,9 +1128,9 @@ ALCuint AlsaCapture::availableSamples()
         avail = snd_pcm_avail_update(mPcmHandle);
     if(avail < 0)
     {
-        ERR("avail update failed: %s\n", snd_strerror(avail));
+        ERR("avail update failed: %s\n", snd_strerror(static_cast<int>(avail)));
 
-        if((avail=snd_pcm_recover(mPcmHandle, avail, 1)) >= 0)
+        if((avail=snd_pcm_recover(mPcmHandle, static_cast<int>(avail), 1)) >= 0)
         {
             if(mDoCapture)
                 avail = snd_pcm_start(mPcmHandle);
@@ -1134,17 +1139,18 @@ ALCuint AlsaCapture::availableSamples()
         }
         if(avail < 0)
         {
-            ERR("restore error: %s\n", snd_strerror(avail));
-            aluHandleDisconnect(mDevice, "Capture recovery failure: %s", snd_strerror(avail));
+            const char *err{snd_strerror(static_cast<int>(avail))};
+            ERR("restore error: %s\n", err);
+            aluHandleDisconnect(mDevice, "Capture recovery failure: %s", err);
         }
     }
 
     if(!mRing)
     {
         if(avail < 0) avail = 0;
-        avail += snd_pcm_bytes_to_frames(mPcmHandle, mBuffer.size());
+        avail += snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         if(avail > mLastAvail) mLastAvail = avail;
-        return mLastAvail;
+        return static_cast<ALCuint>(mLastAvail);
     }
 
     while(avail > 0)
@@ -1152,15 +1158,15 @@ ALCuint AlsaCapture::availableSamples()
         auto vec = mRing->getWriteVector();
         if(vec.first.len == 0) break;
 
-        snd_pcm_sframes_t amt{std::min<snd_pcm_sframes_t>(vec.first.len, avail)};
-        amt = snd_pcm_readi(mPcmHandle, vec.first.buf, amt);
+        snd_pcm_sframes_t amt{std::min(static_cast<snd_pcm_sframes_t>(vec.first.len), avail)};
+        amt = snd_pcm_readi(mPcmHandle, vec.first.buf, static_cast<snd_pcm_uframes_t>(amt));
         if(amt < 0)
         {
-            ERR("read error: %s\n", snd_strerror(amt));
+            ERR("read error: %s\n", snd_strerror(static_cast<int>(amt)));
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=snd_pcm_recover(mPcmHandle, amt, 1)) >= 0)
+            if((amt=snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1)) >= 0)
             {
                 if(mDoCapture)
                     amt = snd_pcm_start(mPcmHandle);
@@ -1169,19 +1175,20 @@ ALCuint AlsaCapture::availableSamples()
             }
             if(amt < 0)
             {
-                ERR("restore error: %s\n", snd_strerror(amt));
-                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", snd_strerror(amt));
+                const char *err{snd_strerror(static_cast<int>(amt))};
+                ERR("restore error: %s\n", err);
+                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", err);
                 break;
             }
             avail = amt;
             continue;
         }
 
-        mRing->writeAdvance(amt);
+        mRing->writeAdvance(static_cast<snd_pcm_uframes_t>(amt));
         avail -= amt;
     }
 
-    return mRing->readSpace();
+    return static_cast<ALCuint>(mRing->readSpace());
 }
 
 ClockLatency AlsaCapture::getClockLatency()

@@ -305,7 +305,7 @@ int OSSPlayback::mixerProc()
 
         ALubyte *write_ptr{mMixData.data()};
         size_t to_write{mMixData.size()};
-        aluMixData(mDevice, write_ptr, to_write/frame_size);
+        aluMixData(mDevice, write_ptr, static_cast<ALuint>(to_write/frame_size));
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(mFd, write_ptr, to_write)};
@@ -531,7 +531,7 @@ int OSScapture::recordProc()
                     strerror(errno));
                 break;
             }
-            mRing->writeAdvance(amt/frame_size);
+            mRing->writeAdvance(static_cast<ALuint>(amt)/frame_size);
         }
     }
 

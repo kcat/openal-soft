@@ -240,7 +240,7 @@ retry_open:
             mFormat.wBitsPerSample = 16;
     }
     mFormat.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
-    mFormat.nBlockAlign = mFormat.wBitsPerSample * mFormat.nChannels / 8;
+    mFormat.nBlockAlign = static_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
     mFormat.nSamplesPerSec = mDevice->Frequency;
     mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
     mFormat.cbSize = 0;
@@ -500,9 +500,9 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     mFormat = WAVEFORMATEX{};
     mFormat.wFormatTag = (mDevice->FmtType == DevFmtFloat) ?
                          WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
-    mFormat.nChannels = mDevice->channelsFromFmt();
-    mFormat.wBitsPerSample = mDevice->bytesFromFmt() * 8;
-    mFormat.nBlockAlign = mFormat.wBitsPerSample * mFormat.nChannels / 8;
+    mFormat.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
+    mFormat.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
+    mFormat.nBlockAlign = static_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
     mFormat.nSamplesPerSec = mDevice->Frequency;
     mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
     mFormat.cbSize = 0;

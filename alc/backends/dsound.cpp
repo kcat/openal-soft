@@ -465,11 +465,13 @@ ALCboolean DSoundPlayback::reset()
 retry_open:
         hr = S_OK;
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = mDevice->channelsFromFmt();
-        OutputType.Format.wBitsPerSample = mDevice->bytesFromFmt() * 8;
-        OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
+        OutputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
+        OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
+        OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
+            OutputType.Format.wBitsPerSample / 8);
         OutputType.Format.nSamplesPerSec = mDevice->Frequency;
-        OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
+        OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
+            OutputType.Format.nBlockAlign;
         OutputType.Format.cbSize = 0;
     }
 
@@ -728,11 +730,13 @@ ALCenum DSoundCapture::open(const ALCchar *name)
     }
 
     InputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-    InputType.Format.nChannels = mDevice->channelsFromFmt();
-    InputType.Format.wBitsPerSample = mDevice->bytesFromFmt() * 8;
-    InputType.Format.nBlockAlign = InputType.Format.nChannels*InputType.Format.wBitsPerSample/8;
+    InputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
+    InputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
+    InputType.Format.nBlockAlign = static_cast<WORD>(InputType.Format.nChannels *
+        InputType.Format.wBitsPerSample / 8);
     InputType.Format.nSamplesPerSec = mDevice->Frequency;
-    InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec*InputType.Format.nBlockAlign;
+    InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec *
+        InputType.Format.nBlockAlign;
     InputType.Format.cbSize = 0;
     InputType.Samples.wValidBitsPerSample = InputType.Format.wBitsPerSample;
     if(mDevice->FmtType == DevFmtFloat)

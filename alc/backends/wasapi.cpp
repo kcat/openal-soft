@@ -942,10 +942,10 @@ HRESULT WasapiPlayback::resetProxy()
     }
     OutputType.Format.nSamplesPerSec = mDevice->Frequency;
 
-    OutputType.Format.nBlockAlign = OutputType.Format.nChannels *
-                                    OutputType.Format.wBitsPerSample / 8;
+    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
+        OutputType.Format.wBitsPerSample / 8);
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
-                                        OutputType.Format.nBlockAlign;
+        OutputType.Format.nBlockAlign;
 
     TraceFormat("Requesting playback format", &OutputType.Format);
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
@@ -1474,10 +1474,10 @@ HRESULT WasapiCapture::resetProxy()
     OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     OutputType.Format.nSamplesPerSec = mDevice->Frequency;
 
-    OutputType.Format.nBlockAlign = OutputType.Format.nChannels *
-                                    OutputType.Format.wBitsPerSample / 8;
+    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
+        OutputType.Format.wBitsPerSample / 8);
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
-                                        OutputType.Format.nBlockAlign;
+        OutputType.Format.nBlockAlign;
     OutputType.Format.cbSize = sizeof(OutputType) - sizeof(OutputType.Format);
 
     TraceFormat("Requesting capture format", &OutputType.Format);

@@ -142,7 +142,7 @@ public:
 
 struct BFChannelConfig {
     ALfloat Scale;
-    ALsizei Index;
+    ALuint Index;
 };
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need

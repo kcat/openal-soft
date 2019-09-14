@@ -969,10 +969,7 @@ void ComputePanGains(const MixParams *mix, const ALfloat *RESTRICT coeffs, ALflo
 
     auto iter = std::transform(ambimap, ambimap+mix->Buffer.size(), std::begin(gains),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
-        {
-            ASSUME(chanmap.Index >= 0);
-            return chanmap.Scale * coeffs[chanmap.Index] * ingain;
-        }
+        { return chanmap.Scale * coeffs[chanmap.Index] * ingain; }
     );
     std::fill(iter, std::end(gains), 0.0f);
 }

@@ -31,7 +31,7 @@ constexpr ALfloat Ambi3DDecoderHFScale3O[MAX_AMBI_ORDER+1] = {
     5.89792205e-01f, 8.79693856e-01f
 };
 
-inline auto GetDecoderHFScales(ALsizei order) noexcept -> const ALfloat(&)[MAX_AMBI_ORDER+1]
+inline auto GetDecoderHFScales(ALuint order) noexcept -> const ALfloat(&)[MAX_AMBI_ORDER+1]
 {
     if(order >= 3) return Ambi3DDecoderHFScale3O;
     if(order == 2) return Ambi3DDecoderHFScale2O;
@@ -187,17 +187,16 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
 }
 
 
-std::array<ALfloat,MAX_AMBI_ORDER+1> BFormatDec::GetHFOrderScales(const ALsizei in_order, const ALsizei out_order) noexcept
+std::array<ALfloat,MAX_AMBI_ORDER+1> BFormatDec::GetHFOrderScales(const ALuint in_order, const ALuint out_order) noexcept
 {
     std::array<ALfloat,MAX_AMBI_ORDER+1> ret{};
 
     assert(out_order >= in_order);
-    ASSUME(out_order >= in_order);
 
     const ALfloat (&target)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(out_order);
     const ALfloat (&input)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(in_order);
 
-    for(ALsizei i{0};i < in_order+1;++i)
+    for(ALuint i{0};i < in_order+1;++i)
         ret[i] = input[i] / target[i];
 
     return ret;

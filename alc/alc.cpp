@@ -1286,7 +1286,7 @@ ALuint BytesFromDevFmt(DevFmtType type) noexcept
     }
     return 0;
 }
-ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
+ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALuint ambiorder) noexcept
 {
     switch(chans)
     {
@@ -1297,7 +1297,7 @@ ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
     case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
-    case DevFmtAmbi3D: return static_cast<ALuint>((ambiorder+1) * (ambiorder+1));
+    case DevFmtAmbi3D: return (ambiorder+1) * (ambiorder+1);
     }
     return 0;
 }
@@ -1639,7 +1639,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALCenum schans{AL_NONE};
         ALCenum stype{AL_NONE};
         ALCsizei attrIdx{0};
-        ALCsizei aorder{0};
+        ALCuint aorder{0};
         ALCuint freq{0u};
 
         ALuint numMono{device->NumMonoSources};
@@ -1677,7 +1677,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 break;
 
             case ALC_AMBISONIC_ORDER_SOFT:
-                aorder = attrList[attrIdx + 1];
+                aorder = static_cast<ALuint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
                 break;
 
@@ -2855,7 +2855,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
                     values[i++] = static_cast<ALCint>(device->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                    values[i++] = device->mAmbiOrder;
+                    values[i++] = static_cast<ALCint>(device->mAmbiOrder);
                 }
 
                 values[i++] = ALC_FORMAT_CHANNELS_SOFT;
@@ -2973,7 +2973,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = device->mAmbiOrder;
+        values[0] = static_cast<int>(device->mAmbiOrder);
         return 1;
 
     case ALC_MONO_SOURCES:
@@ -3558,7 +3558,7 @@ START_API_FUNC
         static constexpr struct ChannelMap {
             const char name[16];
             DevFmtChannels chans;
-            ALsizei order;
+            ALuint order;
         } chanlist[] = {
             { "mono",       DevFmtMono,   0 },
             { "stereo",     DevFmtStereo, 0 },

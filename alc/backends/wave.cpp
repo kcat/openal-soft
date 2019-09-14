@@ -274,7 +274,7 @@ ALCboolean WaveBackend::reset()
         case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
         case DevFmtAmbi3D:
             /* .amb output requires FuMa */
-            mDevice->mAmbiOrder = mini(mDevice->mAmbiOrder, 3);
+            mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);
             mDevice->mAmbiLayout = AmbiLayout::FuMa;
             mDevice->mAmbiScale = AmbiNorm::FuMa;
             isbformat = 1;

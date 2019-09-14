@@ -269,7 +269,7 @@ constexpr ChannelMap MonoCfg[1] = {
     { BackRight,   { 2.04124145e-1f, -1.08880247e-1f, -1.88586120e-1f,  1.29099444e-1f,  7.45355993e-2f, -3.73460789e-2f,  0.00000000e+0f } },
 };
 
-void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
+void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALuint order,
     const al::span<const ALuint,MAX_AMBI_ORDER+1> chans_per_order)
 {
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
@@ -448,7 +448,7 @@ void InitPanning(ALCdevice *device)
          * channel count. Built-in speaker decoders are always 2D, so just
          * reverse that calculation.
          */
-        device->mAmbiOrder = static_cast<ALsizei>((coeffcount-1) / 2);
+        device->mAmbiOrder = (coeffcount-1) / 2;
 
         std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+coeffcount,
             std::begin(device->Dry.AmbiMap),
@@ -478,7 +478,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
 
     const ALuint order{(conf->ChanMask > AMBI_2ORDER_MASK) ? 3u :
         (conf->ChanMask > AMBI_1ORDER_MASK) ? 2u : 1u};
-    device->mAmbiOrder = static_cast<ALsizei>(order);
+    device->mAmbiOrder = order;
 
     ALuint count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
@@ -582,7 +582,7 @@ void InitHrtfPanning(ALCdevice *device)
      * and it eases the CPU/memory load.
      */
     device->mRenderMode = HrtfRender;
-    ALsizei ambi_order{1};
+    ALuint ambi_order{1};
     if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode"))
     {
         const char *mode{modeopt->c_str()};

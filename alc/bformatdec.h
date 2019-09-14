@@ -53,8 +53,8 @@ public:
         const size_t SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALsizei in_order,
-        const ALsizei out_order) noexcept;
+    static std::array<ALfloat,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALuint in_order,
+        const ALuint out_order) noexcept;
 
     DEF_NEWDEL(BFormatDec)
 };

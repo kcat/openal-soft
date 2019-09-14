@@ -66,15 +66,10 @@ struct EchoState final : public EffectState {
 
 ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
 {
-    ALuint maxlen;
-
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    maxlen = float2int(AL_ECHO_MAX_DELAY*Device->Frequency + 0.5f) +
-             float2int(AL_ECHO_MAX_LRDELAY*Device->Frequency + 0.5f);
-    maxlen = NextPowerOf2(maxlen);
-    if(maxlen <= 0) return AL_FALSE;
-
+    const ALuint maxlen{NextPowerOf2(float2uint(AL_ECHO_MAX_DELAY*Device->Frequency + 0.5f) +
+        float2uint(AL_ECHO_MAX_LRDELAY*Device->Frequency + 0.5f))};
     if(maxlen != mSampleBuffer.size())
     {
         mSampleBuffer.resize(maxlen);
@@ -96,8 +91,8 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
     const ALCdevice *device{context->mDevice.get()};
     const auto frequency = static_cast<ALfloat>(device->Frequency);
 
-    mTap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);
-    mTap[1].delay = float2int(props->Echo.LRDelay*frequency + 0.5f) + mTap[0].delay;
+    mTap[0].delay = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);
+    mTap[1].delay = float2uint(props->Echo.LRDelay*frequency + 0.5f) + mTap[0].delay;
 
     const ALfloat gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParams(BiquadType::HighShelf, gainhf, LOWPASSFREQREF/frequency,
@@ -119,7 +114,7 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
 
 void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const auto mask = static_cast<ALsizei>(mSampleBuffer.size()-1);
+    const size_t mask{mSampleBuffer.size()-1};
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
     size_t offset{mOffset};
     size_t tap1{offset - mTap[0].delay};
@@ -128,6 +123,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
 
     ASSUME(samplesToDo > 0);
 
+    const BiquadFilter filter{mFilter};
     std::tie(z1, z2) = mFilter.getComponents();
     for(size_t i{0u};i < samplesToDo;)
     {
@@ -148,7 +144,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
             const float feedb{mTempBuffer[1][i++]};
 
             /* Add feedback to the delay buffer with damping and attenuation. */
-            delaybuf[offset++] += mFilter.processOne(feedb, z1, z2) * mFeedGain;
+            delaybuf[offset++] += filter.processOne(feedb, z1, z2) * mFeedGain;
         } while(--td);
     }
     mFilter.setComponents(z1, z2);

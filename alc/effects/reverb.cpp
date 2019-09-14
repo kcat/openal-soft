@@ -229,13 +229,13 @@ struct DelayLineI {
     { Line = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Line)]; }
 
     /* Calculate the length of a delay line and store its mask and offset. */
-    ALuint calcLineLength(const ALfloat length, const ptrdiff_t offset, const ALfloat frequency,
+    ALuint calcLineLength(const ALfloat length, const uintptr_t offset, const ALfloat frequency,
         const ALuint extra)
     {
         /* All line lengths are powers of 2, calculated from their lengths in
          * seconds, rounded up.
          */
-        auto samples = static_cast<ALuint>(float2int(std::ceil(length*frequency)));
+        ALuint samples{float2uint(std::ceil(length*frequency))};
         samples = NextPowerOf2(samples + extra);
 
         /* All lines share a single sample buffer. */
@@ -567,7 +567,7 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
     const ALfloat multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
-    mLateFeedTap = float2int(
+    mLateFeedTap = float2uint(
         (AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier) * frequency);
 
     /* Clear filters and gain coefficients since the delay lines were all just
@@ -729,13 +729,13 @@ void EarlyReflections::updateLines(const ALfloat density, const ALfloat diffusio
         ALfloat length{EARLY_ALLPASS_LENGTHS[i] * multiplier};
 
         /* Calculate the delay offset for each all-pass line. */
-        VecAp.Offset[i][1] = float2int(length * frequency);
+        VecAp.Offset[i][1] = float2uint(length * frequency);
 
         /* Calculate the length (in seconds) of each delay line. */
         length = EARLY_LINE_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each delay line. */
-        Offset[i][1] = float2int(length * frequency);
+        Offset[i][1] = float2uint(length * frequency);
 
         /* Calculate the gain (coefficient) for each line. */
         Coeff[i][1] = CalcDecayCoeff(length, decayTime);
@@ -787,13 +787,13 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
         length = LATE_ALLPASS_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each all-pass line. */
-        VecAp.Offset[i][1] = float2int(length * frequency);
+        VecAp.Offset[i][1] = float2uint(length * frequency);
 
         /* Calculate the length (in seconds) of each delay line. */
         length = LATE_LINE_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each delay line. */
-        Offset[i][1] = float2int(length*frequency + 0.5f);
+        Offset[i][1] = float2uint(length*frequency + 0.5f);
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
@@ -826,14 +826,14 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
     for(size_t i{0u};i < NUM_LINES;i++)
     {
         ALfloat length{earlyDelay + EARLY_TAP_LENGTHS[i]*multiplier};
-        mEarlyDelayTap[i][1] = float2int(length * frequency);
+        mEarlyDelayTap[i][1] = float2uint(length * frequency);
 
         length = EARLY_TAP_LENGTHS[i]*multiplier;
         mEarlyDelayCoeff[i][1] = CalcDecayCoeff(length, decayTime);
 
         length = (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*multiplier +
             lateDelay;
-        mLateDelayTap[i][1] = mLateFeedTap + float2int(length * frequency);
+        mLateDelayTap[i][1] = mLateFeedTap + float2uint(length * frequency);
     }
 }
 
@@ -1464,7 +1464,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
             /* Some mixers require maintaining a 4-sample alignment, so ensure
              * that if it's not the last iteration.
              */
-            if(base+todo < samplesToDo) todo &= ~3;
+            if(base+todo < samplesToDo) todo &= ~size_t{3};
             ASSUME(todo > 0);
 
             /* Generate non-faded early reflections and late reverb. */
@@ -1484,7 +1484,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         for(size_t base{0};base < samplesToDo;)
         {
             size_t todo{minz(samplesToDo - base, minz(mMaxUpdate[0], mMaxUpdate[1]))};
-            if(base+todo < samplesToDo) todo &= ~3;
+            if(base+todo < samplesToDo) todo &= ~size_t{3};
             ASSUME(todo > 0);
 
             /* Generate cross-faded early reflections and late reverb. */

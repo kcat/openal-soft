@@ -44,29 +44,29 @@ namespace {
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
-inline ALfloat Sin(ALsizei index)
+inline ALfloat Sin(ALuint index)
 {
     constexpr ALfloat scale{al::MathDefs<float>::Tau() / ALfloat{WAVEFORM_FRACONE}};
     return std::sin(static_cast<ALfloat>(index) * scale)*0.5f + 0.5f;
 }
 
-inline ALfloat Saw(ALsizei index)
+inline ALfloat Saw(ALuint index)
 {
     return static_cast<ALfloat>(index) / ALfloat{WAVEFORM_FRACONE};
 }
 
-inline ALfloat Triangle(ALsizei index)
+inline ALfloat Triangle(ALuint index)
 {
     return std::fabs(static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f);
 }
 
-inline ALfloat Half(ALsizei)
+inline ALfloat Half(ALuint)
 {
     return 0.5f;
 }
 
-template<ALfloat func(ALsizei)>
-void Oscillate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, size_t todo)
+template<ALfloat func(ALuint)>
+void Oscillate(ALfloat *RESTRICT dst, ALuint index, const ALuint step, size_t todo)
 {
     for(size_t i{0u};i < todo;i++)
     {
@@ -126,10 +126,10 @@ struct VmorpherState final : public EffectState {
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_AMBI_CHANNELS];
 
-    void (*mGetSamples)(ALfloat* RESTRICT, ALsizei, const ALsizei, size_t){};
+    void (*mGetSamples)(ALfloat* RESTRICT, ALuint, const ALuint, size_t){};
 
-    ALsizei mIndex{0};
-    ALsizei mStep{1};
+    ALuint mIndex{0};
+    ALuint mStep{1};
 
     /* Effects buffers */
     ALfloat mSampleBufferA[MAX_UPDATE_SAMPLES]{};
@@ -153,41 +153,41 @@ std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(ALenum phoneme, A
      */
     switch(phoneme)
     {
-        case AL_VOCAL_MORPHER_PHONEME_A:
-            return {{
-                {( 800 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
-                {(1150 * pitch) / frequency, 0.501187f}, /* std::pow(10.0f,  -6 / 20.0f); */
-                {(2900 * pitch) / frequency, 0.025118f}, /* std::pow(10.0f, -32 / 20.0f); */
-                {(3900 * pitch) / frequency, 0.100000f}  /* std::pow(10.0f, -20 / 20.0f); */
-            }};
-        case AL_VOCAL_MORPHER_PHONEME_E:
-            return {{
-                {( 350 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
-                {(2000 * pitch) / frequency, 0.100000f}, /* std::pow(10.0f, -20 / 20.0f); */
-                {(2800 * pitch) / frequency, 0.177827f}, /* std::pow(10.0f, -15 / 20.0f); */
-                {(3600 * pitch) / frequency, 0.009999f}  /* std::pow(10.0f, -40 / 20.0f); */
-            }};
-        case AL_VOCAL_MORPHER_PHONEME_I:
-            return {{
-                {( 270 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
-                {(2140 * pitch) / frequency, 0.251188f}, /* std::pow(10.0f, -12 / 20.0f); */
-                {(2950 * pitch) / frequency, 0.050118f}, /* std::pow(10.0f, -26 / 20.0f); */
-                {(3900 * pitch) / frequency, 0.050118f}  /* std::pow(10.0f, -26 / 20.0f); */
-            }};
-        case AL_VOCAL_MORPHER_PHONEME_O:
-            return {{
-                {( 450 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
-                {( 800 * pitch) / frequency, 0.281838f}, /* std::pow(10.0f, -11 / 20.0f); */
-                {(2830 * pitch) / frequency, 0.079432f}, /* std::pow(10.0f, -22 / 20.0f); */
-                {(3800 * pitch) / frequency, 0.079432f}  /* std::pow(10.0f, -22 / 20.0f); */
-            }};
-        case AL_VOCAL_MORPHER_PHONEME_U:
-            return {{
-                {( 325 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
-                {( 700 * pitch) / frequency, 0.158489f}, /* std::pow(10.0f, -16 / 20.0f); */
-                {(2700 * pitch) / frequency, 0.017782f}, /* std::pow(10.0f, -35 / 20.0f); */
-                {(3800 * pitch) / frequency, 0.009999f}  /* std::pow(10.0f, -40 / 20.0f); */
-            }};
+    case AL_VOCAL_MORPHER_PHONEME_A:
+        return {{
+            {( 800 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+            {(1150 * pitch) / frequency, 0.501187f}, /* std::pow(10.0f,  -6 / 20.0f); */
+            {(2900 * pitch) / frequency, 0.025118f}, /* std::pow(10.0f, -32 / 20.0f); */
+            {(3900 * pitch) / frequency, 0.100000f}  /* std::pow(10.0f, -20 / 20.0f); */
+        }};
+    case AL_VOCAL_MORPHER_PHONEME_E:
+        return {{
+            {( 350 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+            {(2000 * pitch) / frequency, 0.100000f}, /* std::pow(10.0f, -20 / 20.0f); */
+            {(2800 * pitch) / frequency, 0.177827f}, /* std::pow(10.0f, -15 / 20.0f); */
+            {(3600 * pitch) / frequency, 0.009999f}  /* std::pow(10.0f, -40 / 20.0f); */
+        }};
+    case AL_VOCAL_MORPHER_PHONEME_I:
+        return {{
+            {( 270 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+            {(2140 * pitch) / frequency, 0.251188f}, /* std::pow(10.0f, -12 / 20.0f); */
+            {(2950 * pitch) / frequency, 0.050118f}, /* std::pow(10.0f, -26 / 20.0f); */
+            {(3900 * pitch) / frequency, 0.050118f}  /* std::pow(10.0f, -26 / 20.0f); */
+        }};
+    case AL_VOCAL_MORPHER_PHONEME_O:
+        return {{
+            {( 450 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+            {( 800 * pitch) / frequency, 0.281838f}, /* std::pow(10.0f, -11 / 20.0f); */
+            {(2830 * pitch) / frequency, 0.079432f}, /* std::pow(10.0f, -22 / 20.0f); */
+            {(3800 * pitch) / frequency, 0.079432f}  /* std::pow(10.0f, -22 / 20.0f); */
+        }};
+    case AL_VOCAL_MORPHER_PHONEME_U:
+        return {{
+            {( 325 * pitch) / frequency, 1.000000f}, /* std::pow(10.0f,   0 / 20.0f); */
+            {( 700 * pitch) / frequency, 0.158489f}, /* std::pow(10.0f, -16 / 20.0f); */
+            {(2700 * pitch) / frequency, 0.017782f}, /* std::pow(10.0f, -35 / 20.0f); */
+            {(3800 * pitch) / frequency, 0.009999f}  /* std::pow(10.0f, -40 / 20.0f); */
+        }};
     }
     return {};
 }
@@ -211,8 +211,8 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
 {
     const ALCdevice *device{context->mDevice.get()};
     const ALfloat frequency{static_cast<ALfloat>(device->Frequency)};
-    const ALfloat step{props->Vmorpher.Rate / static_cast<ALfloat>(device->Frequency)};
-    mStep = fastf2i(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
+    const ALfloat step{props->Vmorpher.Rate / frequency};
+    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
 
     if(mStep == 0)
         mGetSamples = Oscillate<Half>;

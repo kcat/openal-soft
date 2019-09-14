@@ -42,29 +42,29 @@ namespace {
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
-inline ALfloat Sin(ALsizei index)
+inline ALfloat Sin(ALuint index)
 {
     return std::sin(static_cast<ALfloat>(index) *
         (al::MathDefs<float>::Tau() / ALfloat{WAVEFORM_FRACONE}));
 }
 
-inline ALfloat Saw(ALsizei index)
+inline ALfloat Saw(ALuint index)
 {
     return static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f;
 }
 
-inline ALfloat Square(ALsizei index)
+inline ALfloat Square(ALuint index)
 {
     return static_cast<ALfloat>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
 }
 
-inline ALfloat One(ALsizei)
+inline ALfloat One(ALuint)
 {
     return 1.0f;
 }
 
-template<ALfloat func(ALsizei)>
-void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, size_t todo)
+template<ALfloat func(ALuint)>
+void Modulate(ALfloat *RESTRICT dst, ALuint index, const ALuint step, size_t todo)
 {
     for(size_t i{0u};i < todo;i++)
     {
@@ -76,10 +76,10 @@ void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, size_t t
 
 
 struct ModulatorState final : public EffectState {
-    void (*mGetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, size_t){};
+    void (*mGetSamples)(ALfloat*RESTRICT, ALuint, const ALuint, size_t){};
 
-    ALsizei mIndex{0};
-    ALsizei mStep{1};
+    ALuint mIndex{0};
+    ALuint mStep{1};
 
     struct {
         BiquadFilter Filter;
@@ -111,7 +111,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     const ALCdevice *device{context->mDevice.get()};
 
     const float step{props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency)};
-    mStep = fastf2i(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
+    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
 
     if(mStep == 0)
         mGetSamples = Modulate<One>;

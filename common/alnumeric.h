@@ -251,6 +251,8 @@ inline int float2int(float f) noexcept
     return static_cast<int>(f);
 #endif
 }
+inline unsigned int float2uint(float f) noexcept
+{ return static_cast<unsigned int>(float2int(f)); }
 
 /** Converts double-to-int using standard behavior (truncation). */
 inline int double2int(double d) noexcept

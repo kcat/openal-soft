@@ -54,47 +54,45 @@ enum class WaveForm {
     Triangle
 };
 
-void GetTriangleDelays(ALint *delays, const ALsizei start_offset, const ALsizei lfo_range,
+void GetTriangleDelays(ALuint *delays, const ALuint start_offset, const ALuint lfo_range,
     const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const size_t todo)
 {
-    ASSUME(start_offset >= 0);
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
 
-    ALsizei offset{start_offset};
-    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALint
+    ALuint offset{start_offset};
+    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALuint
     {
         offset = (offset+1)%lfo_range;
-        return fastf2i((1.0f - std::abs(2.0f - lfo_scale*offset)) * depth) + delay;
+        return static_cast<ALuint>(
+            fastf2i((1.0f - std::abs(2.0f - lfo_scale*offset)) * depth) + delay);
     };
     std::generate_n(delays, todo, gen_lfo);
 }
 
-void GetSinusoidDelays(ALint *delays, const ALsizei start_offset, const ALsizei lfo_range,
+void GetSinusoidDelays(ALuint *delays, const ALuint start_offset, const ALuint lfo_range,
     const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const size_t todo)
 {
-    ASSUME(start_offset >= 0);
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
 
-    ALsizei offset{start_offset};
-    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALint
+    ALuint offset{start_offset};
+    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALuint
     {
-        ASSUME(delay >= 0);
         offset = (offset+1)%lfo_range;
-        return fastf2i(std::sin(lfo_scale*offset) * depth) + delay;
+        return static_cast<ALuint>(fastf2i(std::sin(lfo_scale*offset) * depth) + delay);
     };
     std::generate_n(delays, todo, gen_lfo);
 }
 
 struct ChorusState final : public EffectState {
     al::vector<ALfloat,16> mSampleBuffer;
-    ALsizei mOffset{0};
+    ALuint mOffset{0};
 
-    ALsizei mLfoOffset{0};
-    ALsizei mLfoRange{1};
+    ALuint mLfoOffset{0};
+    ALuint mLfoRange{1};
     ALfloat mLfoScale{0.0f};
-    ALint mLfoDisp{0};
+    ALuint mLfoDisp{0};
 
     /* Gains for left and right sides */
     struct {
@@ -118,12 +116,9 @@ struct ChorusState final : public EffectState {
 
 ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
 {
-    const ALfloat max_delay = maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY);
-    size_t maxlen;
+    constexpr ALfloat max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
 
-    maxlen = NextPowerOf2(float2int(max_delay*2.0f*Device->Frequency) + 1u);
-    if(maxlen <= 0) return AL_FALSE;
-
+    const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*Device->Frequency) + 1u)};
     if(maxlen != mSampleBuffer.size())
     {
         mSampleBuffer.resize(maxlen);
@@ -142,7 +137,7 @@ ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
 
 void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
-    static constexpr ALsizei mindelay = MAX_RESAMPLE_PADDING << FRACTIONBITS;
+    constexpr ALsizei mindelay{MAX_RESAMPLE_PADDING << FRACTIONBITS};
 
     switch(props->Chorus.Waveform)
     {
@@ -186,9 +181,9 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        ALsizei lfo_range = float2int(minf(frequency/rate + 0.5f, static_cast<ALfloat>(INT_MAX/360 - 180)));
+        ALuint lfo_range{float2uint(minf(frequency/rate + 0.5f, ALfloat{INT_MAX/360 - 180}))};
 
-        mLfoOffset = float2int(static_cast<ALfloat>(mLfoOffset)/mLfoRange*lfo_range + 0.5f) % lfo_range;
+        mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;
         switch(mWaveform)
         {
@@ -203,23 +198,23 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         /* Calculate lfo phase displacement */
         ALint phase{props->Chorus.Phase};
         if(phase < 0) phase = 360 + phase;
-        mLfoDisp = (mLfoRange*phase + 180) / 360;
+        mLfoDisp = (mLfoRange*static_cast<ALuint>(phase) + 180) / 360;
     }
 }
 
 void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const auto bufmask = static_cast<ALsizei>(mSampleBuffer.size()-1);
+    const size_t bufmask{mSampleBuffer.size()-1};
     const ALfloat feedback{mFeedback};
-    const ALsizei avgdelay{(mDelay + (FRACTIONONE>>1)) >> FRACTIONBITS};
+    const ALuint avgdelay{(static_cast<ALuint>(mDelay) + (FRACTIONONE>>1)) >> FRACTIONBITS};
     ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
-    ALsizei offset{mOffset};
+    ALuint offset{mOffset};
 
     for(size_t base{0u};base < samplesToDo;)
     {
         const size_t todo{minz(256, samplesToDo-base)};
 
-        ALint moddelays[2][256];
+        ALuint moddelays[2][256];
         if(mWaveform == WaveForm::Sinusoid)
         {
             GetSinusoidDelays(moddelays[0], mLfoOffset, mLfoRange, mLfoScale, mDepth, mDelay,
@@ -243,7 +238,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
             delaybuf[offset&bufmask] = samplesIn[0][base+i];
 
             // Tap for the left output.
-            ALint delay{offset - (moddelays[0][i]>>FRACTIONBITS)};
+            ALuint delay{offset - (moddelays[0][i]>>FRACTIONBITS)};
             ALfloat mu{(moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE)};
             temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
                                 delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
@@ -258,7 +253,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 
             // Accumulate feedback from the average delay of the taps.
             delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
-            offset++;
+            ++offset;
         }
 
         for(ALsizei c{0};c < 2;c++)

@@ -55,9 +55,9 @@ std::array<ALdouble,STFT_SIZE> InitHannWindow()
 {
     std::array<ALdouble,STFT_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
-    for(ALsizei i{0};i < STFT_SIZE>>1;i++)
+    for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
-        ALdouble val = std::sin(al::MathDefs<double>::Pi() * i / ALdouble{STFT_SIZE-1});
+        const double val{std::sin(al::MathDefs<double>::Pi() * i / ALdouble{STFT_SIZE-1})};
         ret[i] = ret[STFT_SIZE-1-i] = val * val;
     }
     return ret;
@@ -93,7 +93,7 @@ inline complex_d polar2rect(const ALphasor &number)
 struct PshifterState final : public EffectState {
     /* Effect parameters */
     size_t  mCount;
-    ALsizei mPitchShiftI;
+    ALuint  mPitchShiftI;
     ALfloat mPitchShift;
     ALfloat mFreqPerBin;
 
@@ -151,7 +151,7 @@ void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const Ef
     const float pitch{std::pow(2.0f,
         static_cast<ALfloat>(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
     )};
-    mPitchShiftI = fastf2i(pitch*FRACTIONONE);
+    mPitchShiftI = fastf2u(pitch*FRACTIONONE);
     mPitchShift  = mPitchShiftI * (1.0f/FRACTIONONE);
 
     ALfloat coeffs[MAX_AMBI_CHANNELS];

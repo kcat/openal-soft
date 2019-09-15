@@ -78,40 +78,47 @@ void Oscillate(ALfloat *RESTRICT dst, ALuint index, const ALuint step, size_t to
 
 struct FormantFilter
 {
-    ALfloat f0norm{0.0f};
-    ALfloat fGain{1.0f};
-    ALfloat s1{0.0f};
-    ALfloat s2{0.0f};
+    ALfloat mCoeff{0.0f};
+    ALfloat mGain{1.0f};
+    ALfloat mS1{0.0f};
+    ALfloat mS2{0.0f};
 
     FormantFilter() = default;
-    FormantFilter(ALfloat f0norm_, ALfloat gain) : f0norm{f0norm_}, fGain{gain} { }
+    FormantFilter(ALfloat f0norm, ALfloat gain)
+      : mCoeff{std::tan(al::MathDefs<float>::Pi() * f0norm)}, mGain{gain}
+    { }
 
     inline void process(const ALfloat *samplesIn, ALfloat *samplesOut, const size_t numInput)
     {
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
          */
-        const ALfloat g = std::tan(al::MathDefs<float>::Pi() * f0norm);
-        const ALfloat h = 1.0f / (1 + (g / Q_FACTOR) + (g * g));
+        const ALfloat g{mCoeff};
+        const ALfloat gain{mGain};
+        const ALfloat h{1.0f / (1.0f + (g/Q_FACTOR) + (g*g))};
+        ALfloat s1{mS1};
+        ALfloat s2{mS2};
 
         for(size_t i{0u};i < numInput;i++)
         {
-            const ALfloat H = h * (samplesIn[i] - (1.0f / Q_FACTOR + g) * s1 - s2);
-            const ALfloat B = g * H + s1;
-            const ALfloat L = g * B + s2;
+            const ALfloat H{(samplesIn[i] - (1.0f/Q_FACTOR + g)*s1 - s2)*h};
+            const ALfloat B{g*H + s1};
+            const ALfloat L{g*B + s2};
 
-            s1 = g * H + B;
-            s2 = g * B + L;
+            s1 = g*H + B;
+            s2 = g*B + L;
 
             // Apply peak and accumulate samples.
-            samplesOut[i] += B * fGain;
+            samplesOut[i] += B * gain;
         }
+        mS1 = s1;
+        mS2 = s2;
     }
 
     inline void clear()
     {
-        s1 = 0.0f;
-        s2 = 0.0f;
+        mS1 = 0.0f;
+        mS2 = 0.0f;
     }
 };
 

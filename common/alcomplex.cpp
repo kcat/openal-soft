@@ -55,8 +55,6 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 
 void complex_hilbert(const al::span<std::complex<double>> buffer)
 {
-    std::for_each(buffer.begin(), buffer.end(), [](std::complex<double> &c) { c.imag(0.0); });
-
     complex_fft(buffer, 1.0);
 
     const double inverse_size = 1.0/static_cast<double>(buffer.size());

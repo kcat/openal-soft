@@ -44,21 +44,13 @@ static int EventThread(ALCcontext *context)
 
         std::lock_guard<std::mutex> _{context->mEventCbLock};
         do {
-            auto &evt = *reinterpret_cast<AsyncEvent*>(evt_data.buf);
+            auto *evt_ptr = reinterpret_cast<AsyncEvent*>(evt_data.buf);
             evt_data.buf += sizeof(AsyncEvent);
             evt_data.len -= 1;
-            /* This automatically destructs the event object and advances the
-             * ringbuffer's read offset at the end of scope.
-             */
-            const struct EventAutoDestructor {
-                AsyncEvent &evt_;
-                RingBuffer *ring_;
-                ~EventAutoDestructor()
-                {
-                    al::destroy_at(std::addressof(evt_));
-                    ring_->readAdvance(1);
-                }
-            } _{evt, ring};
+
+            AsyncEvent evt{*evt_ptr};
+            al::destroy_at(evt_ptr);
+            ring->readAdvance(1);
 
             quitnow = evt.EnumType == EventType_KillThread;
             if UNLIKELY(quitnow) break;

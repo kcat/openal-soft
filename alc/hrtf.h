@@ -26,7 +26,7 @@ struct HrtfHandle;
 
 
 struct HrtfEntry {
-    RefCount ref;
+    RefCount mRef;
 
     ALuint sampleRate;
     ALuint irSize;

@@ -359,7 +359,7 @@ void ReadALConfig()
             else fname += "alsoft.conf";
 
             TRACE("Loading config %s...\n", fname.c_str());
-            al::ifstream f{fname};
+            f = al::ifstream{fname};
             if(f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -376,7 +376,7 @@ void ReadALConfig()
         if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
            CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
         {
-            al::ifstream f{reinterpret_cast<char*>(fileName)};
+            f = al::ifstream{reinterpret_cast<char*>(fileName)};
             if(f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -390,7 +390,7 @@ void ReadALConfig()
         else fname += ".alsoftrc";
 
         TRACE("Loading config %s...\n", fname.c_str());
-        al::ifstream f{fname};
+        f = al::ifstream{fname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -414,7 +414,7 @@ void ReadALConfig()
     if(!fname.empty())
     {
         TRACE("Loading config %s...\n", fname.c_str());
-        al::ifstream f{fname};
+        f = al::ifstream{fname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -426,7 +426,7 @@ void ReadALConfig()
         else ppath += "alsoft.conf";
 
         TRACE("Loading config %s...\n", ppath.c_str());
-        al::ifstream f{ppath};
+        f = al::ifstream{ppath};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -434,7 +434,7 @@ void ReadALConfig()
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
         TRACE("Loading config %s...\n", confname->c_str());
-        al::ifstream f{*confname};
+        f = al::ifstream{*confname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }

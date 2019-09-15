@@ -81,11 +81,11 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real gain, Real f0norm, Rea
             break;
     }
 
-    a1 = a[1] / a[0];
-    a2 = a[2] / a[0];
-    b0 = b[0] / a[0];
-    b1 = b[1] / a[0];
-    b2 = b[2] / a[0];
+    mA1 = a[1] / a[0];
+    mA2 = a[2] / a[0];
+    mB0 = b[0] / a[0];
+    mB1 = b[1] / a[0];
+    mB2 = b[2] / a[0];
 }
 
 template<typename Real>
@@ -93,13 +93,13 @@ void BiquadFilterR<Real>::process(Real *dst, const Real *src, const size_t numsa
 {
     ASSUME(numsamples > 0);
 
-    const Real b0{this->b0};
-    const Real b1{this->b1};
-    const Real b2{this->b2};
-    const Real a1{this->a1};
-    const Real a2{this->a2};
-    Real z1{this->z1};
-    Real z2{this->z2};
+    const Real b0{mB0};
+    const Real b1{mB1};
+    const Real b2{mB2};
+    const Real a1{mA1};
+    const Real a2{mA2};
+    Real z1{mZ1};
+    Real z2{mZ2};
 
     /* Processing loop is Transposed Direct Form II. This requires less storage
      * compared to Direct Form I (only two delay components, instead of a four-
@@ -118,8 +118,8 @@ void BiquadFilterR<Real>::process(Real *dst, const Real *src, const size_t numsa
     };
     std::transform(src, src+numsamples, dst, proc_sample);
 
-    this->z1 = z1;
-    this->z2 = z2;
+    mZ1 = z1;
+    mZ2 = z2;
 }
 
 template class BiquadFilterR<float>;

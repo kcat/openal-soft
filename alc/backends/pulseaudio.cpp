@@ -484,7 +484,7 @@ pa_stream *pulse_connect_stream(const char *device_name, std::unique_lock<std::m
     {
         if(!PA_STREAM_IS_GOOD(state))
         {
-            int err{pa_context_errno(context)};
+            err = pa_context_errno(context);
             pa_stream_unref(stream);
             throw al::backend_exception{ALC_INVALID_VALUE, "%s did not get ready (%s)", stream_id,
                 pa_strerror(err)};

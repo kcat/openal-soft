@@ -38,14 +38,14 @@ enum class BiquadType {
 template<typename Real>
 class BiquadFilterR {
     /* Last two delayed components for direct form II. */
-    Real z1{0.0f}, z2{0.0f};
+    Real mZ1{0.0f}, mZ2{0.0f};
     /* Transfer function coefficients "b" (numerator) */
-    Real b0{1.0f}, b1{0.0f}, b2{0.0f};
+    Real mB0{1.0f}, mB1{0.0f}, mB2{0.0f};
     /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
-    Real a1{0.0f}, a2{0.0f};
+    Real mA1{0.0f}, mA2{0.0f};
 
 public:
-    void clear() noexcept { z1 = z2 = 0.0f; }
+    void clear() noexcept { mZ1 = mZ2 = 0.0f; }
 
     /**
      * Sets the filter state for the specified filter type and its parameters.
@@ -65,26 +65,24 @@ public:
 
     void copyParamsFrom(const BiquadFilterR &other)
     {
-        b0 = other.b0;
-        b1 = other.b1;
-        b2 = other.b2;
-        a1 = other.a1;
-        a2 = other.a2;
+        mB0 = other.mB0;
+        mB1 = other.mB1;
+        mB2 = other.mB2;
+        mA1 = other.mA1;
+        mA2 = other.mA2;
     }
 
 
     void process(Real *dst, const Real *src, const size_t numsamples);
 
     /* Rather hacky. It's just here to support "manual" processing. */
-    std::pair<Real,Real> getComponents() const noexcept
-    { return {z1, z2}; }
-    void setComponents(Real z1_, Real z2_) noexcept
-    { z1 = z1_; z2 = z2_; }
-    Real processOne(const Real in, Real &z1_, Real &z2_) const noexcept
+    std::pair<Real,Real> getComponents() const noexcept { return {mZ1, mZ2}; }
+    void setComponents(Real z1, Real z2) noexcept { mZ1 = z1; mZ2 = z2; }
+    Real processOne(const Real in, Real &z1, Real &z2) const noexcept
     {
-        Real out{in*b0 + z1_};
-        z1_ = in*b1 - out*a1 + z2_;
-        z2_ = in*b2 - out*a2;
+        Real out{in*mB0 + z1};
+        z1 = in*mB1 - out*mA1 + z2;
+        z2 = in*mB2 - out*mA2;
         return out;
     }
 

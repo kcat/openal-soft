@@ -68,6 +68,8 @@ enum class DevProbe {
 
 
 struct BackendFactory {
+    virtual ~BackendFactory() = default;
+
     virtual bool init() = 0;
 
     virtual bool querySupport(BackendType type) = 0;

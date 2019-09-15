@@ -1737,7 +1737,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
     hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
     double *hrirs = hData->mHrirsBase.data();
     std::vector<double> hrir(hData->mIrPoints);
-    uint line, col, fi, ei, ai, ti;
+    uint line, col, fi, ei, ai;
     int count;
 
     printf("Loading sources...");
@@ -1827,8 +1827,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
                 for(fi = 0;fi < hData->mFdCount;fi++)
                 {
                     double delta = aer[2] - hData->mFds[fi].mDistance;
-                    if(std::abs(delta) < 0.001)
-                        break;
+                    if(std::abs(delta) < 0.001) break;
                 }
                 if(fi >= hData->mFdCount)
                     continue;
@@ -1892,7 +1891,6 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
         for(;;)
         {
             SourceRefT src;
-            uint ti = 0;
 
             if(!ReadSourceRef(tr, &src))
                 return 0;
@@ -1907,6 +1905,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
             if(!LoadSource(&src, hData->mIrRate, hData->mIrPoints, hrir.data()))
                 return 0;
 
+            uint ti{0};
             if(hData->mChannelType == CT_STEREO)
             {
                 char ident[MAX_IDENT_LEN+1];
@@ -1976,7 +1975,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
             }
         }
     }
-    for(ti = 0;ti < channels;ti++)
+    for(uint ti{0};ti < channels;ti++)
     {
         for(fi = 0;fi < hData->mFdCount;fi++)
         {

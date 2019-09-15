@@ -1199,7 +1199,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             std::unique_ptr<ALbufferlistitem> temp{oldlist};
             oldlist = temp->mNext.load(std::memory_order_relaxed);
 
-            if(ALbuffer *buffer{temp->mBuffer})
+            if((buffer=temp->mBuffer) != nullptr)
                 DecrementRef(buffer->ref);
         }
         return true;
@@ -1215,7 +1215,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
         if(IsPlayingOrPaused(Source))
         {
-            ALCdevice *device{Context->mDevice.get()};
             BackendLockGuard _{*device->Backend};
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
@@ -1347,8 +1346,8 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         {
             /* Add refcount on the new slot, and release the previous slot */
             if(slot) IncrementRef(slot->ref);
-            if(auto *slot = Source->Send[static_cast<ALuint>(values[1])].Slot)
-                DecrementRef(slot->ref);
+            if(auto *oldslot = Source->Send[static_cast<ALuint>(values[1])].Slot)
+                DecrementRef(oldslot->ref);
             Source->Send[static_cast<ALuint>(values[1])].Slot = slot;
 
             /* We must force an update if the auxiliary slot changed on an
@@ -1361,8 +1360,8 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         else
         {
             if(slot) IncrementRef(slot->ref);
-            if(auto *slot = Source->Send[static_cast<ALuint>(values[1])].Slot)
-                DecrementRef(slot->ref);
+            if(auto *oldslot = Source->Send[static_cast<ALuint>(values[1])].Slot)
+                DecrementRef(oldslot->ref);
             Source->Send[static_cast<ALuint>(values[1])].Slot = slot;
             UpdateSourceProps(Source, Context);
         }
@@ -1730,7 +1729,6 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
 bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALint> values)
 {
-    ALbufferlistitem *BufferList;
     ALdouble dvals[MaxValues];
     bool err;
 
@@ -1748,9 +1746,13 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_BUFFER:
         CHECKSIZE(values, 1);
-        BufferList = (Source->SourceType == AL_STATIC) ? Source->queue : nullptr;
-        values[0] = (BufferList && BufferList->mBuffer) ?
-            static_cast<ALint>(BufferList->mBuffer->id) : 0;
+        {
+            ALbufferlistitem *BufferList{nullptr};
+            if(Source->SourceType == AL_STATIC) BufferList = Source->queue;
+            ALbuffer *buffer{nullptr};
+            if(BufferList) buffer = BufferList->mBuffer;
+            values[0] = buffer ? static_cast<ALint>(buffer->id) : 0;
+        }
         return true;
 
     case AL_SOURCE_STATE:
@@ -1760,9 +1762,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_BUFFERS_QUEUED:
         CHECKSIZE(values, 1);
-        if(!(BufferList=Source->queue))
-            values[0] = 0;
-        else
+        if(ALbufferlistitem *BufferList{Source->queue})
         {
             ALsizei count{0};
             do {
@@ -1771,6 +1771,8 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             } while(BufferList != nullptr);
             values[0] = count;
         }
+        else
+            values[0] = 0;
         return true;
 
     case AL_BUFFERS_PROCESSED:
@@ -3135,7 +3137,7 @@ START_API_FUNC
             {
                 std::unique_ptr<ALbufferlistitem> head{BufferListStart};
                 BufferListStart = head->mNext.load(std::memory_order_relaxed);
-                if(ALbuffer *buffer{head->mBuffer}) DecrementRef(buffer->ref);
+                if((buffer=head->mBuffer) != nullptr) DecrementRef(buffer->ref);
             }
             return;
         }

@@ -101,7 +101,6 @@ static float GetUniformStepSize(const double epsilon, const uint m, const float 
 {
     auto steps = std::vector<float>(m, 0.0f);
     auto counts = std::vector<uint>(m, 0u);
-    float step{0.0f};
     uint count{0u};
 
     for(uint stride{1u};stride < m/2;stride++)
@@ -140,15 +139,12 @@ static float GetUniformStepSize(const double epsilon, const uint m, const float 
         count = 1;
 
         if(counts[0] > m/2)
-        {
-            step = steps[0];
-            return step;
-        }
+            return steps[0];
     }
 
     if(counts[0] > 5)
-        step = steps[0];
-    return step;
+        return steps[0];
+    return 0.0f;
 }
 
 /* Attempts to produce a compatible layout.  Most data sets tend to be

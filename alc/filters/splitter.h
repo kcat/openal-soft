@@ -7,10 +7,10 @@
 /* Band splitter. Splits a signal into two phase-matching frequency bands. */
 template<typename Real>
 class BandSplitterR {
-    Real coeff{0.0f};
-    Real lp_z1{0.0f};
-    Real lp_z2{0.0f};
-    Real ap_z1{0.0f};
+    Real mCoeff{0.0f};
+    Real mLpZ1{0.0f};
+    Real mLpZ2{0.0f};
+    Real mApZ1{0.0f};
 
 public:
     BandSplitterR() = default;
@@ -18,7 +18,7 @@ public:
     BandSplitterR(Real f0norm) { init(f0norm); }
 
     void init(Real f0norm);
-    void clear() noexcept { lp_z1 = lp_z2 = ap_z1 = 0.0f; }
+    void clear() noexcept { mLpZ1 = mLpZ2 = mApZ1 = 0.0f; }
     void process(Real *hpout, Real *lpout, const Real *input, const size_t count);
 
     void applyHfScale(Real *samples, const Real hfscale, const size_t count);

@@ -405,24 +405,24 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
         BufferLoopItem = nullptr;
 
         /* Load what's left to play from the buffer */
-        const size_t DataSize{minz(SrcBuffer.size(), Buffer->SampleLen-DataPosInt)};
+        const size_t DataRem{minz(SrcBuffer.size(), Buffer->SampleLen-DataPosInt)};
 
         const al::byte *Data{Buffer->mData.data()};
         Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataSize);
-        SrcBuffer = SrcBuffer.subspan(DataSize);
+        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataRem);
+        SrcBuffer = SrcBuffer.subspan(DataRem);
     }
     else
     {
         /* Load what's left of this loop iteration */
-        const size_t DataSize{minz(SrcBuffer.size(), LoopEnd-DataPosInt)};
+        const size_t DataRem{minz(SrcBuffer.size(), LoopEnd-DataPosInt)};
 
         const al::byte *Data{Buffer->mData.data()};
         Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataSize);
-        SrcBuffer = SrcBuffer.subspan(DataSize);
+        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataRem);
+        SrcBuffer = SrcBuffer.subspan(DataRem);
 
         /* Load any repeats of the loop we can to fill the buffer. */
         const auto LoopSize = static_cast<size_t>(LoopEnd - LoopStart);
@@ -430,8 +430,7 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
         {
             const size_t DataSize{minz(SrcBuffer.size(), LoopSize)};
 
-            const al::byte *Data{Buffer->mData.data()};
-            Data += (LoopStart*NumChannels + chan)*SampleSize;
+            Data = Buffer->mData.data() + (LoopStart*NumChannels + chan)*SampleSize;
 
             LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataSize);
             SrcBuffer = SrcBuffer.subspan(DataSize);
@@ -510,12 +509,14 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
         for(ALuint chan{0};chan < NumChannels;chan++)
         {
             ChannelData &chandata = mChans[chan];
-            DirectParams &parms = chandata.mDryParams;
-            if(!(mFlags&VOICE_HAS_HRTF))
-                std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
-                    std::begin(parms.Gains.Current));
-            else
-                parms.Hrtf.Old = parms.Hrtf.Target;
+            {
+                DirectParams &parms = chandata.mDryParams;
+                if(!(mFlags&VOICE_HAS_HRTF))
+                    std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
+                        std::begin(parms.Gains.Current));
+                else
+                    parms.Hrtf.Old = parms.Hrtf.Target;
+            }
             for(ALuint send{0};send < NumSends;++send)
             {
                 if(mSend[send].Buffer.empty())

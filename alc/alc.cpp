@@ -3731,11 +3731,11 @@ START_API_FUNC
     al::vector<ContextRef> orphanctxs;
     for(ALCcontext *ctx : *dev->mContexts.load())
     {
-        auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);
-        if(iter != ContextList.end() && *iter == ctx)
+        auto ctxiter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);
+        if(ctxiter != ContextList.end() && *ctxiter == ctx)
         {
-            orphanctxs.emplace_back(std::move(*iter));
-            ContextList.erase(iter);
+            orphanctxs.emplace_back(std::move(*ctxiter));
+            ContextList.erase(ctxiter);
         }
     }
     listlock.unlock();

@@ -128,14 +128,6 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
 
 void ALautowahState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const ALfloat attack_rate = mAttackRate;
-    const ALfloat release_rate = mReleaseRate;
-    const ALfloat res_gain = mResonanceGain;
-    const ALfloat peak_gain = mPeakGain;
-    const ALfloat freq_min = mFreqMinNorm;
-    const ALfloat bandwidth = mBandwidthNorm;
-
-    ALfloat env_delay{mEnvDelay};
     for(size_t i{0u};i < samplesToDo;i++)
     {
         ALfloat w0, sample, a;
@@ -143,16 +135,15 @@ void ALautowahState::process(const size_t samplesToDo, const al::span<const Floa
         /* Envelope follower described on the book: Audio Effects, Theory,
          * Implementation and Application.
          */
-        sample = peak_gain * std::fabs(samplesIn[0][i]);
-        a = (sample > env_delay) ? attack_rate : release_rate;
-        env_delay = lerp(sample, env_delay, a);
+        sample = mPeakGain * std::fabs(samplesIn[0][i]);
+        a = (sample > mEnvDelay) ? mAttackRate : mReleaseRate;
+        mEnvDelay = lerp(sample, mEnvDelay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
-        w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * al::MathDefs<float>::Tau();
+        w0 = minf((mBandwidthNorm*mEnvDelay + mFreqMinNorm), 0.46f) * al::MathDefs<float>::Tau();
         mEnv[i].cos_w0 = cosf(w0);
         mEnv[i].alpha = sinf(w0)/(2.0f * Q_FACTOR);
     }
-    mEnvDelay = env_delay;
 
     auto chandata = std::addressof(mChans[0]);
     for(const auto &insamples : samplesIn)
@@ -173,12 +164,12 @@ void ALautowahState::process(const size_t samplesToDo, const al::span<const Floa
             ALfloat input, output;
             ALfloat a[3], b[3];
 
-            b[0] =  1.0f + alpha*res_gain;
+            b[0] =  1.0f + alpha*mResonanceGain;
             b[1] = -2.0f * cos_w0;
-            b[2] =  1.0f - alpha*res_gain;
-            a[0] =  1.0f + alpha/res_gain;
+            b[2] =  1.0f - alpha*mResonanceGain;
+            a[0] =  1.0f + alpha/mResonanceGain;
             a[1] = -2.0f * cos_w0;
-            a[2] =  1.0f - alpha/res_gain;
+            a[2] =  1.0f - alpha/mResonanceGain;
 
             input = insamples[i];
             output = input*(b[0]/a[0]) + z1;

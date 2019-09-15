@@ -280,7 +280,8 @@ START_API_FUNC
     else
     {
         al::vector<ALuint> ids;
-        ids.reserve(static_cast<ALuint>(n));
+        ALsizei count{n};
+        ids.reserve(static_cast<ALuint>(count));
         do {
             ALeffectslot *slot{AllocEffectSlot(context.get())};
             if(!slot)
@@ -290,7 +291,7 @@ START_API_FUNC
                 return;
             }
             ids.emplace_back(slot->id);
-        } while(--n);
+        } while(--count);
         std::copy(ids.cbegin(), ids.cend(), effectslots);
     }
 

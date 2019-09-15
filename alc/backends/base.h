@@ -69,8 +69,6 @@ enum class DevProbe {
 
 
 struct BackendFactory {
-    virtual ~BackendFactory() = default;
-
     virtual bool init() = 0;
 
     virtual bool querySupport(BackendType type) = 0;
@@ -78,6 +76,9 @@ struct BackendFactory {
     virtual void probe(DevProbe type, std::string *outnames) = 0;
 
     virtual BackendPtr createBackend(ALCdevice *device, BackendType type) = 0;
+
+protected:
+    virtual ~BackendFactory() = default;
 };
 
 #endif /* ALC_BACKENDS_BASE_H */

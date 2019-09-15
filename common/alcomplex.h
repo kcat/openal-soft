@@ -17,7 +17,8 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
  * Calculate the complex helical sequence (discrete-time analytical signal) of
  * the given input using the discrete Hilbert transform (In-place algorithm).
  * Fills the buffer with the discrete-time analytical signal stored in the
- * buffer. The buffer is an array of complex numbers and MUST BE power of two.
+ * buffer. The buffer is an array of complex numbers and MUST BE power of two,
+ * and the imaginary components should be cleared to 0.
  */
 void complex_hilbert(const al::span<std::complex<double>> buffer);
 

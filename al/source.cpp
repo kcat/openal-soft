@@ -1126,14 +1126,14 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-        Source->HeadRelative = static_cast<ALboolean>(values[0]);
+        Source->HeadRelative = values[0] != AL_FALSE;
         return UpdateSourceProps(Source, Context);
 
     case AL_LOOPING:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-        Source->Looping = static_cast<ALboolean>(values[0]);
+        Source->Looping = values[0] != AL_FALSE;
         if(IsPlayingOrPaused(Source))
         {
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
@@ -1258,28 +1258,28 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-        Source->DryGainHFAuto = values[0];
+        Source->DryGainHFAuto = values[0] != AL_FALSE;
         return UpdateSourceProps(Source, Context);
 
     case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-        Source->WetGainAuto = values[0];
+        Source->WetGainAuto = values[0] != AL_FALSE;
         return UpdateSourceProps(Source, Context);
 
     case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-        Source->WetGainHFAuto = values[0];
+        Source->WetGainHFAuto = values[0] != AL_FALSE;
         return UpdateSourceProps(Source, Context);
 
     case AL_DIRECT_CHANNELS_SOFT:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
-        Source->DirectChannels = values[0];
+        Source->DirectChannels = values[0] != AL_FALSE;
         return UpdateSourceProps(Source, Context);
 
     case AL_DISTANCE_MODEL:

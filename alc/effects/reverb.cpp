@@ -1526,7 +1526,7 @@ void EAXReverb_setParami(EffectProps *props, ALCcontext *context, ALenum param, 
         case AL_EAXREVERB_DECAY_HFLIMIT:
             if(!(val >= AL_EAXREVERB_MIN_DECAY_HFLIMIT && val <= AL_EAXREVERB_MAX_DECAY_HFLIMIT))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "EAX Reverb decay hflimit out of range");
-            props->Reverb.DecayHFLimit = val;
+            props->Reverb.DecayHFLimit = val != AL_FALSE;
             break;
 
         default:
@@ -1863,7 +1863,7 @@ void StdReverb_setParami(EffectProps *props, ALCcontext *context, ALenum param, 
         case AL_REVERB_DECAY_HFLIMIT:
             if(!(val >= AL_REVERB_MIN_DECAY_HFLIMIT && val <= AL_REVERB_MAX_DECAY_HFLIMIT))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Reverb decay hflimit out of range");
-            props->Reverb.DecayHFLimit = val;
+            props->Reverb.DecayHFLimit = val != AL_FALSE;
             break;
 
         default:

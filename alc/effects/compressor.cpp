@@ -161,7 +161,7 @@ void Compressor_setParami(EffectProps *props, ALCcontext *context, ALenum param,
         case AL_COMPRESSOR_ONOFF:
             if(!(val >= AL_COMPRESSOR_MIN_ONOFF && val <= AL_COMPRESSOR_MAX_ONOFF))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Compressor state out of range");
-            props->Compressor.OnOff = val;
+            props->Compressor.OnOff = val != AL_FALSE;
             break;
 
         default:

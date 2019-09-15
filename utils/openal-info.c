@@ -53,7 +53,7 @@ static WCHAR *FromUTF8(const char *str)
 
     if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
     {
-        out = calloc(sizeof(WCHAR), len);
+        out = calloc(sizeof(WCHAR), (unsigned int)(len));
         MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
     }
     return out;

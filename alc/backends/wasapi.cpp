@@ -429,6 +429,8 @@ constexpr char MessageStr[static_cast<unsigned int>(MsgType::Count)][20]{
 
 /* Proxy interface used by the message handler. */
 struct WasapiProxy {
+    virtual ~WasapiProxy() = default;
+
     virtual HRESULT openProxy() = 0;
     virtual void closeProxy() = 0;
 

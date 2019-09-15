@@ -30,7 +30,7 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
         (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    const ALfloat *fil{istate.bsinc.filter + static_cast<ptrdiff_t>(istate.bsinc.m)*pi*4};
+    const ALfloat *fil{istate.bsinc.filter + istate.bsinc.m*static_cast<ptrdiff_t>(pi*4)};
     const ALfloat *scd{fil + istate.bsinc.m};
     const ALfloat *phd{scd + istate.bsinc.m};
     const ALfloat *spd{phd + istate.bsinc.m};

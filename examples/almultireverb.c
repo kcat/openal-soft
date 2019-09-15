@@ -653,12 +653,12 @@ int main(int argc, char **argv)
          * Convert the difference to seconds.
          */
         curtime = altime_get();
-        timediff = (ALfloat)(curtime - basetime) / 1000.0f;
+        timediff = (float)(curtime - basetime) / 1000.0f;
 
         /* Avoid negative time deltas, in case of non-monotonic clocks. */
         if(timediff < 0.0f)
             timediff = 0.0f;
-        else while(timediff >= 4.0f*((loops&1)+1))
+        else while(timediff >= 4.0f*(float)((loops&1)+1))
         {
             /* For this example, each transition occurs over 4 seconds, and
              * there's 2 transitions per cycle.

@@ -681,11 +681,11 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
     {
         mFrameSize = mDevice->frameSizeFromFmt();
         /* Ensure the total length is at least 100ms */
-        ALsizei length{maxi(mDevice->BufferSize, mDevice->Frequency/10)};
+        ALuint length{maxu(mDevice->BufferSize, mDevice->Frequency/10)};
         /* Ensure the per-chunk length is at least 10ms, and no more than 50ms. */
-        ALsizei update_len{clampi(mDevice->BufferSize/3, mDevice->Frequency/100,
+        ALuint update_len{clampu(mDevice->BufferSize/3, mDevice->Frequency/100,
             mDevice->Frequency/100*5)};
-        ALsizei num_updates{(length+update_len-1) / update_len};
+        ALuint num_updates{(length+update_len-1) / update_len};
 
         try {
             mRing = CreateRingBuffer(num_updates, update_len*mFrameSize, false);

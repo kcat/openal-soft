@@ -35,7 +35,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {
         const size_t step2{step >> 1};
-        double arg{al::MathDefs<double>::Pi() / step2};
+        double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
 
         std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};

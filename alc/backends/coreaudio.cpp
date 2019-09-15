@@ -374,7 +374,8 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
         audiobuf.list.mNumberBuffers = 2;
         audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
         audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
-        audiobuf.list.mBuffers[0].mDataByteSize = rec_vec.first.len * mFormat.mBytesPerFrame;
+        audiobuf.list.mBuffers[0].mDataByteSize = static_cast<UInt32>(rec_vec.first.len) *
+            mFormat.mBytesPerFrame;
         audiobuf.list.mBuffers[1].mNumberChannels = mFormat.mChannelsPerFrame;
         audiobuf.list.mBuffers[1].mData = rec_vec.second.buf;
         audiobuf.list.mBuffers[1].mDataByteSize = remaining * mFormat.mBytesPerFrame;

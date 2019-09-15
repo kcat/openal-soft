@@ -3907,14 +3907,26 @@ START_API_FUNC
         return;
     }
 
-    ALCenum err{ALC_INVALID_VALUE};
-    { std::lock_guard<std::mutex> _{dev->StateLock};
-        BackendBase *backend{dev->Backend.get()};
-        if(samples >= 0 && backend->availableSamples() >= static_cast<ALCuint>(samples))
-            err = backend->captureSamples(static_cast<al::byte*>(buffer),
-                static_cast<ALuint>(samples));
+    if(samples < 0 || (samples > 0 && buffer == nullptr))
+    {
+        alcSetError(dev.get(), ALC_INVALID_VALUE);
+        return;
     }
-    if(err != ALC_NO_ERROR)
+    if(samples < 1)
+        return;
+
+    std::lock_guard<std::mutex> _{dev->StateLock};
+    BackendBase *backend{dev->Backend.get()};
+
+    const auto usamples = static_cast<ALCuint>(samples);
+    if(usamples > backend->availableSamples())
+    {
+        alcSetError(dev.get(), ALC_INVALID_VALUE);
+        return;
+    }
+
+    auto *bbuffer = static_cast<al::byte*>(buffer);
+    if(ALCenum err{backend->captureSamples(bbuffer, usamples)})
         alcSetError(dev.get(), err);
 }
 END_API_FUNC

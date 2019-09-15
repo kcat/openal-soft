@@ -319,7 +319,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
         const ALuint iroffset{Hrtf->elev[evidx].irOffset};
 
         /* Calculate azimuth index for this elevation. */
-        const float az_norm{(360.0f*pt.Azim) / 360.0f};
+        const float az_norm{(360.0f+pt.Azim) / 360.0f};
         const ALuint azidx{float2uint(az_norm*static_cast<float>(azcount) + 0.5f) % azcount};
 
         /* Calculate the index for the impulse response. */

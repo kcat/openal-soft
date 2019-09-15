@@ -220,7 +220,7 @@ IF(MSVC)
         ENDFOREACH(flag_var)
     ENDIF()
 ELSE()
-    SET(C_FLAGS ${C_FLAGS} -Winline -Wall -Wextra -Wshadow -Wconversion -Wcast-align
+    SET(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
 
     IF(ALSOFT_WERROR)

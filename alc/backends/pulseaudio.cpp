@@ -1325,13 +1325,13 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
     mLastReadable -= static_cast<ALCuint>(dstbuf.size());
-    std::lock_guard<std::mutex> _{pulse_lock};
     while(!dstbuf.empty())
     {
         if(mCapBuffer.empty())
         {
             if UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire))
                 break;
+            std::lock_guard<std::mutex> _{pulse_lock};
             const pa_stream_state_t state{pa_stream_get_state(mStream)};
             if UNLIKELY(!PA_STREAM_IS_GOOD(state))
             {
@@ -1364,6 +1364,7 @@ ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
 
         if(mCapBuffer.empty())
         {
+            std::lock_guard<std::mutex> _{pulse_lock};
             pa_stream_drop(mStream);
             mCapLen = 0;
         }

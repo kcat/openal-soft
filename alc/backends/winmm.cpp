@@ -132,8 +132,8 @@ struct WinMMPlayback final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     std::atomic<ALuint> mWritable{0u};
@@ -263,7 +263,7 @@ retry_open:
     return ALC_NO_ERROR;
 }
 
-ALCboolean WinMMPlayback::reset()
+bool WinMMPlayback::reset()
 {
     mDevice->BufferSize = static_cast<ALuint>(uint64_t{mDevice->BufferSize} *
         mFormat.nSamplesPerSec / mDevice->Frequency);
@@ -278,7 +278,7 @@ ALCboolean WinMMPlayback::reset()
         else
         {
             ERR("Unhandled IEEE float sample depth: %d\n", mFormat.wBitsPerSample);
-            return ALC_FALSE;
+            return false;
         }
     }
     else if(mFormat.wFormatTag == WAVE_FORMAT_PCM)
@@ -290,13 +290,13 @@ ALCboolean WinMMPlayback::reset()
         else
         {
             ERR("Unhandled PCM sample depth: %d\n", mFormat.wBitsPerSample);
-            return ALC_FALSE;
+            return false;
         }
     }
     else
     {
         ERR("Unhandled format tag: 0x%04x\n", mFormat.wFormatTag);
-        return ALC_FALSE;
+        return false;
     }
 
     if(mFormat.nChannels == 2)
@@ -306,7 +306,7 @@ ALCboolean WinMMPlayback::reset()
     else
     {
         ERR("Unhandled channel count: %d\n", mFormat.nChannels);
-        return ALC_FALSE;
+        return false;
     }
     SetDefaultWFXChannelOrder(mDevice);
 
@@ -324,10 +324,10 @@ ALCboolean WinMMPlayback::reset()
     }
     mIdx = 0;
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean WinMMPlayback::start()
+bool WinMMPlayback::start()
 {
     try {
         std::for_each(mWaveBuffer.begin(), mWaveBuffer.end(),
@@ -338,14 +338,14 @@ ALCboolean WinMMPlayback::start()
 
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WinMMPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void WinMMPlayback::stop()
@@ -374,9 +374,9 @@ struct WinMMCapture final : public BackendBase {
     int captureProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     std::atomic<ALuint> mReadable{0u};
@@ -543,7 +543,7 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean WinMMCapture::start()
+bool WinMMCapture::start()
 {
     try {
         for(size_t i{0};i < mWaveBuffer.size();++i)
@@ -556,14 +556,14 @@ ALCboolean WinMMCapture::start()
         mThread = std::thread{std::mem_fn(&WinMMCapture::captureProc), this};
 
         waveInStart(mInHdl);
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void WinMMCapture::stop()
@@ -585,7 +585,7 @@ void WinMMCapture::stop()
     mIdx = 0;
 }
 
-ALCenum WinMMCapture::captureSamples(void *buffer, ALCuint samples)
+ALCenum WinMMCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     mRing->read(buffer, samples);
     return ALC_NO_ERROR;

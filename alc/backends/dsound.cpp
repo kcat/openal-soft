@@ -167,8 +167,8 @@ struct DSoundPlayback final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     IDirectSound       *mDS{nullptr};
@@ -348,7 +348,7 @@ ALCenum DSoundPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean DSoundPlayback::reset()
+bool DSoundPlayback::reset()
 {
     if(mNotifies)
         mNotifies->Release();
@@ -558,28 +558,28 @@ retry_open:
         if(mPrimaryBuffer)
             mPrimaryBuffer->Release();
         mPrimaryBuffer = nullptr;
-        return ALC_FALSE;
+        return false;
     }
 
     ResetEvent(mNotifyEvent);
     SetDefaultWFXChannelOrder(mDevice);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean DSoundPlayback::start()
+bool DSoundPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&DSoundPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void DSoundPlayback::stop()
@@ -597,9 +597,9 @@ struct DSoundCapture final : public BackendBase {
     ~DSoundCapture() override;
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     IDirectSoundCapture *mDSC{nullptr};
@@ -791,16 +791,16 @@ ALCenum DSoundCapture::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean DSoundCapture::start()
+bool DSoundCapture::start()
 {
     HRESULT hr{mDSCbuffer->Start(DSCBSTART_LOOPING)};
     if(FAILED(hr))
     {
         ERR("start failed: 0x%08lx\n", hr);
         aluHandleDisconnect(mDevice, "Failure starting capture: 0x%lx", hr);
-        return ALC_FALSE;
+        return false;
     }
-    return ALC_TRUE;
+    return true;
 }
 
 void DSoundCapture::stop()
@@ -813,7 +813,7 @@ void DSoundCapture::stop()
     }
 }
 
-ALCenum DSoundCapture::captureSamples(void *buffer, ALCuint samples)
+ALCenum DSoundCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     mRing->read(buffer, samples);
     return ALC_NO_ERROR;

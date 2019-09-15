@@ -162,8 +162,8 @@ struct JackPlayback final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
 
@@ -359,7 +359,7 @@ ALCenum JackPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean JackPlayback::reset()
+bool JackPlayback::reset()
 {
     std::for_each(std::begin(mPort), std::end(mPort),
         [this](jack_port_t *port) -> void
@@ -395,7 +395,7 @@ ALCboolean JackPlayback::reset()
     if(bad_port != ports_end)
     {
         ERR("Not enough JACK ports available for %s output\n", DevFmtChannelsString(mDevice->FmtChans));
-        if(bad_port == std::begin(mPort)) return ALC_FALSE;
+        if(bad_port == std::begin(mPort)) return false;
 
         if(bad_port == std::begin(mPort)+1)
             mDevice->FmtChans = DevFmtMono;
@@ -416,20 +416,20 @@ ALCboolean JackPlayback::reset()
     if(!mRing)
     {
         ERR("Failed to allocate ringbuffer\n");
-        return ALC_FALSE;
+        return false;
     }
 
     SetDefaultChannelOrder(mDevice);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean JackPlayback::start()
+bool JackPlayback::start()
 {
     if(jack_activate(mClient))
     {
         ERR("Failed to activate client\n");
-        return ALC_FALSE;
+        return false;
     }
 
     const char **ports{jack_get_ports(mClient, nullptr, nullptr,
@@ -438,7 +438,7 @@ ALCboolean JackPlayback::start()
     {
         ERR("No physical playback ports found\n");
         jack_deactivate(mClient);
-        return ALC_FALSE;
+        return false;
     }
     std::mismatch(std::begin(mPort), std::end(mPort), ports,
         [this](const jack_port_t *port, const char *pname) -> bool
@@ -460,7 +460,7 @@ ALCboolean JackPlayback::start()
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
@@ -468,7 +468,7 @@ ALCboolean JackPlayback::start()
     catch(...) {
     }
     jack_deactivate(mClient);
-    return ALC_FALSE;
+    return false;
 }
 
 void JackPlayback::stop()

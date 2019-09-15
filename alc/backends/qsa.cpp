@@ -175,8 +175,8 @@ struct PlaybackWrapper final : public BackendBase {
     ~PlaybackWrapper() override;
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     std::unique_ptr<qsa_data> mExtraData;
@@ -616,10 +616,10 @@ PlaybackWrapper::~PlaybackWrapper()
 ALCenum PlaybackWrapper::open(const ALCchar *name)
 { return qsa_open_playback(this, name); }
 
-ALCboolean PlaybackWrapper::reset()
+bool PlaybackWrapper::reset()
 { return qsa_reset_playback(this); }
 
-ALCboolean PlaybackWrapper::start()
+bool PlaybackWrapper::start()
 { return qsa_start_playback(this); }
 
 void PlaybackWrapper::stop()
@@ -635,9 +635,9 @@ struct CaptureWrapper final : public BackendBase {
     ~CaptureWrapper() override;
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     std::unique_ptr<qsa_data> mExtraData;
@@ -894,13 +894,13 @@ CaptureWrapper::~CaptureWrapper()
 ALCenum CaptureWrapper::open(const ALCchar *name)
 { return qsa_open_capture(this, name); }
 
-ALCboolean CaptureWrapper::start()
-{ qsa_start_capture(this); return ALC_TRUE; }
+bool CaptureWrapper::start()
+{ qsa_start_capture(this); return true; }
 
 void CaptureWrapper::stop()
 { qsa_stop_capture(this); }
 
-ALCenum CaptureWrapper::captureSamples(void *buffer, ALCuint samples)
+ALCenum CaptureWrapper::captureSamples(al::byte *buffer, ALCuint samples)
 { return qsa_capture_samples(this, buffer, samples); }
 
 ALCuint CaptureWrapper::availableSamples()

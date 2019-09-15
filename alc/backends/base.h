@@ -9,6 +9,7 @@
 #include "AL/alc.h"
 
 #include "alcmain.h"
+#include "albyte.h"
 
 
 struct ClockLatency {
@@ -33,11 +34,11 @@ ClockLatency GetClockLatency(ALCdevice *device);
 struct BackendBase {
     virtual ALCenum open(const ALCchar *name) = 0;
 
-    virtual ALCboolean reset();
-    virtual ALCboolean start() = 0;
+    virtual bool reset();
+    virtual bool start() = 0;
     virtual void stop() = 0;
 
-    virtual ALCenum captureSamples(void *buffer, ALCuint samples);
+    virtual ALCenum captureSamples(al::byte *buffer, ALCuint samples);
     virtual ALCuint availableSamples();
 
     virtual ClockLatency getClockLatency();

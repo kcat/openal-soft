@@ -50,8 +50,8 @@ struct SndioPlayback final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     sio_hdl *mSndHandle{nullptr};
@@ -124,7 +124,7 @@ ALCenum SndioPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean SndioPlayback::reset()
+bool SndioPlayback::reset()
 {
     sio_par par;
     sio_initpar(&par);
@@ -169,13 +169,13 @@ ALCboolean SndioPlayback::reset()
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
     {
         ERR("Failed to set device parameters\n");
-        return ALC_FALSE;
+        return false;
     }
 
     if(par.bits != par.bps*8)
     {
         ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
-        return ALC_FALSE;
+        return true;
     }
 
     mDevice->Frequency = par.rate;
@@ -196,7 +196,7 @@ ALCboolean SndioPlayback::reset()
     else
     {
         ERR("Unhandled sample format: %s %u-bit\n", (par.sig?"signed":"unsigned"), par.bits);
-        return ALC_FALSE;
+        return false;
     }
 
     SetDefaultChannelOrder(mDevice);
@@ -207,21 +207,21 @@ ALCboolean SndioPlayback::reset()
     mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
     std::fill(mBuffer.begin(), mBuffer.end(), 0);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean SndioPlayback::start()
+bool SndioPlayback::start()
 {
     if(!sio_start(mSndHandle))
     {
         ERR("Error starting playback\n");
-        return ALC_FALSE;
+        return false;
     }
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&SndioPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
@@ -229,7 +229,7 @@ ALCboolean SndioPlayback::start()
     catch(...) {
     }
     sio_stop(mSndHandle);
-    return ALC_FALSE;
+    return false;
 }
 
 void SndioPlayback::stop()
@@ -250,9 +250,9 @@ struct SndioCapture final : public BackendBase {
     int recordProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     sio_hdl *mSndHandle{nullptr};
@@ -417,18 +417,18 @@ ALCenum SndioCapture::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean SndioCapture::start()
+bool SndioCapture::start()
 {
     if(!sio_start(mSndHandle))
     {
         ERR("Error starting playback\n");
-        return ALC_FALSE;
+        return false;
     }
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&SndioCapture::recordProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create record thread: %s\n", e.what());
@@ -436,7 +436,7 @@ ALCboolean SndioCapture::start()
     catch(...) {
     }
     sio_stop(mSndHandle);
-    return ALC_FALSE;
+    return false;
 }
 
 void SndioCapture::stop()
@@ -449,7 +449,7 @@ void SndioCapture::stop()
         ERR("Error stopping device\n");
 }
 
-ALCenum SndioCapture::captureSamples(void *buffer, ALCuint samples)
+ALCenum SndioCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     mRing->read(buffer, samples);
     return ALC_NO_ERROR;

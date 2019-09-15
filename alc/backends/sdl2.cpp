@@ -55,8 +55,8 @@ struct Sdl2Backend final : public BackendBase {
     void audioCallback(Uint8 *stream, int len);
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
     void lock() override;
     void unlock() override;
@@ -163,7 +163,7 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean Sdl2Backend::reset()
+bool Sdl2Backend::reset()
 {
     mDevice->Frequency = mFrequency;
     mDevice->FmtChans = mFmtChans;
@@ -171,13 +171,13 @@ ALCboolean Sdl2Backend::reset()
     mDevice->UpdateSize = mUpdateSize;
     mDevice->BufferSize = mUpdateSize * 2;
     SetDefaultWFXChannelOrder(mDevice);
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean Sdl2Backend::start()
+bool Sdl2Backend::start()
 {
     SDL_PauseAudioDevice(mDeviceID, 0);
-    return ALC_TRUE;
+    return true;
 }
 
 void Sdl2Backend::stop()

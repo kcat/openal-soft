@@ -1920,7 +1920,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->UpdateSize, device->BufferSize);
 
     try {
-        if(device->Backend->reset() == ALC_FALSE)
+        if(device->Backend->reset() == false)
             return ALC_INVALID_DEVICE;
     }
     catch(std::exception &e) {
@@ -2235,7 +2235,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(!device->Flags.get<DevicePaused>())
     {
-        if(device->Backend->start() == ALC_FALSE)
+        if(device->Backend->start() == false)
             return ALC_INVALID_DEVICE;
         device->Flags.set<DeviceRunning>();
     }
@@ -3911,7 +3911,8 @@ START_API_FUNC
     { std::lock_guard<std::mutex> _{dev->StateLock};
         BackendBase *backend{dev->Backend.get()};
         if(samples >= 0 && backend->availableSamples() >= static_cast<ALCuint>(samples))
-            err = backend->captureSamples(buffer, static_cast<ALuint>(samples));
+            err = backend->captureSamples(static_cast<al::byte*>(buffer),
+                static_cast<ALuint>(samples));
     }
     if(err != ALC_NO_ERROR)
         alcSetError(dev.get(), err);
@@ -4085,7 +4086,7 @@ START_API_FUNC
     if(dev->mContexts.load()->empty())
         return;
 
-    if(dev->Backend->start() == ALC_FALSE)
+    if(dev->Backend->start() == false)
     {
         aluHandleDisconnect(dev.get(), "Device start failure");
         alcSetError(dev.get(), ALC_INVALID_DEVICE);

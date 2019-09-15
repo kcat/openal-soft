@@ -152,8 +152,8 @@ struct OpenSLPlayback final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
 
@@ -347,7 +347,7 @@ ALCenum OpenSLPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean OpenSLPlayback::reset()
+bool OpenSLPlayback::reset()
 {
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq;
     SLDataLocator_OutputMix loc_outmix;
@@ -518,13 +518,13 @@ ALCboolean OpenSLPlayback::reset()
             VCALL0(mBufferQueueObj,Destroy)();
         mBufferQueueObj = nullptr;
 
-        return ALC_FALSE;
+        return false;
     }
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean OpenSLPlayback::start()
+bool OpenSLPlayback::start()
 {
     mRing->reset();
 
@@ -533,23 +533,23 @@ ALCboolean OpenSLPlayback::start()
         &bufferQueue)};
     PRINTERR(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS != result)
-        return ALC_FALSE;
+        return false;
 
     result = VCALL(bufferQueue,RegisterCallback)(&OpenSLPlayback::processC, this);
     PRINTERR(result, "bufferQueue->RegisterCallback");
-    if(SL_RESULT_SUCCESS != result) return ALC_FALSE;
+    if(SL_RESULT_SUCCESS != result) return false;
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread(std::mem_fn(&OpenSLPlayback::mixerProc), this);
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void OpenSLPlayback::stop()
@@ -615,9 +615,9 @@ struct OpenSLCapture final : public BackendBase {
     void process(SLAndroidSimpleBufferQueueItf bq);
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     /* engine interfaces */
@@ -815,7 +815,7 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean OpenSLCapture::start()
+bool OpenSLCapture::start()
 {
     SLRecordItf record;
     SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_RECORD, &record)};
@@ -830,10 +830,10 @@ ALCboolean OpenSLCapture::start()
     if(SL_RESULT_SUCCESS != result)
     {
         aluHandleDisconnect(mDevice, "Failed to start capture: 0x%08x", result);
-        return ALC_FALSE;
+        return false;
     }
 
-    return ALC_TRUE;
+    return true;
 }
 
 void OpenSLCapture::stop()
@@ -849,7 +849,7 @@ void OpenSLCapture::stop()
     }
 }
 
-ALCenum OpenSLCapture::captureSamples(void *buffer, ALCuint samples)
+ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     ALuint chunk_size{mDevice->UpdateSize * mFrameSize};
     SLAndroidSimpleBufferQueueItf bufferQueue;
@@ -866,9 +866,7 @@ ALCenum OpenSLCapture::captureSamples(void *buffer, ALCuint samples)
     for(i = 0;i < samples;)
     {
         ALCuint rem{minu(samples - i, mDevice->UpdateSize - mSplOffset)};
-        memcpy(static_cast<al::byte*>(buffer) + i*mFrameSize,
-               data.first.buf + mSplOffset*mFrameSize,
-               rem * mFrameSize);
+        memcpy(buffer + i*mFrameSize, data.first.buf + mSplOffset*mFrameSize, rem*mFrameSize);
 
         mSplOffset += rem;
         if(mSplOffset == mDevice->UpdateSize)

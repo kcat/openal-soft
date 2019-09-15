@@ -52,8 +52,8 @@ struct NullBackend final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     std::atomic<bool> mKillNow{true};
@@ -120,25 +120,25 @@ ALCenum NullBackend::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean NullBackend::reset()
+bool NullBackend::reset()
 {
     SetDefaultWFXChannelOrder(mDevice);
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean NullBackend::start()
+bool NullBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&NullBackend::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void NullBackend::stop()

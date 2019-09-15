@@ -97,8 +97,8 @@ struct WaveBackend final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     FILE *mFile{nullptr};
@@ -231,7 +231,7 @@ ALCenum WaveBackend::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean WaveBackend::reset()
+bool WaveBackend::reset()
 {
     ALuint channels=0, bytes=0, chanmask=0;
     int isbformat = 0;
@@ -324,7 +324,7 @@ ALCboolean WaveBackend::reset()
     if(ferror(mFile))
     {
         ERR("Error writing header: %s\n", strerror(errno));
-        return ALC_FALSE;
+        return false;
     }
     mDataStart = ftell(mFile);
 
@@ -333,22 +333,22 @@ ALCboolean WaveBackend::reset()
     const ALuint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
     mBuffer.resize(bufsize);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean WaveBackend::start()
+bool WaveBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void WaveBackend::stop()

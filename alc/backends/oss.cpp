@@ -249,8 +249,8 @@ struct OSSPlayback final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     int mFd{-1};
@@ -359,7 +359,7 @@ ALCenum OSSPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean OSSPlayback::reset()
+bool OSSPlayback::reset()
 {
     int ossFormat{};
     switch(mDevice->FmtType)
@@ -406,7 +406,7 @@ ALCboolean OSSPlayback::reset()
     {
     err:
         ERR("%s failed: %s\n", err, strerror(errno));
-        return ALC_FALSE;
+        return false;
     }
 #undef CHECKERR
 
@@ -414,7 +414,7 @@ ALCboolean OSSPlayback::reset()
     {
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
             numChannels);
-        return ALC_FALSE;
+        return false;
     }
 
     if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte) ||
@@ -423,7 +423,7 @@ ALCboolean OSSPlayback::reset()
     {
         ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(mDevice->FmtType),
             ossFormat);
-        return ALC_FALSE;
+        return false;
     }
 
     mDevice->Frequency = ossSpeed;
@@ -434,22 +434,22 @@ ALCboolean OSSPlayback::reset()
 
     mMixData.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean OSSPlayback::start()
+bool OSSPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSSPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void OSSPlayback::stop()
@@ -470,9 +470,9 @@ struct OSScapture final : public BackendBase {
     int recordProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(ALCvoid *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     int mFd{-1};
@@ -646,19 +646,19 @@ ALCenum OSScapture::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean OSScapture::start()
+bool OSScapture::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSScapture::recordProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create record thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void OSScapture::stop()
@@ -671,7 +671,7 @@ void OSScapture::stop()
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 
-ALCenum OSScapture::captureSamples(ALCvoid *buffer, ALCuint samples)
+ALCenum OSScapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     mRing->read(buffer, samples);
     return ALC_NO_ERROR;

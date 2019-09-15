@@ -62,8 +62,8 @@ struct SolarisBackend final : public BackendBase {
     int mixerProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     int mFd{-1};
@@ -160,7 +160,7 @@ ALCenum SolarisBackend::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean SolarisBackend::reset()
+bool SolarisBackend::reset()
 {
     audio_info_t info;
     AUDIO_INITINFO(&info);
@@ -200,14 +200,14 @@ ALCboolean SolarisBackend::reset()
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
     {
         ERR("ioctl failed: %s\n", strerror(errno));
-        return ALC_FALSE;
+        return false;
     }
 
     if(mDevice->channelsFromFmt() != info.play.channels)
     {
         ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
             info.play.channels);
-        return ALC_FALSE;
+        return false;
     }
 
     if(!((info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8 && mDevice->FmtType == DevFmtUByte) ||
@@ -217,7 +217,7 @@ ALCboolean SolarisBackend::reset()
     {
         ERR("Could not set %s samples, got %d (0x%x)\n", DevFmtTypeString(mDevice->FmtType),
             info.play.precision, info.play.encoding);
-        return ALC_FALSE;
+        return false;
     }
 
     mDevice->Frequency = info.play.sample_rate;
@@ -229,22 +229,22 @@ ALCboolean SolarisBackend::reset()
     mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
     std::fill(mBuffer.begin(), mBuffer.end(), 0);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean SolarisBackend::start()
+bool SolarisBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&SolarisBackend::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void SolarisBackend::stop()

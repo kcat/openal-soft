@@ -28,10 +28,10 @@ BackendBase::BackendBase(ALCdevice *device) noexcept : mDevice{device}
 
 BackendBase::~BackendBase() = default;
 
-ALCboolean BackendBase::reset()
-{ return ALC_FALSE; }
+bool BackendBase::reset()
+{ return false; }
 
-ALCenum BackendBase::captureSamples(void*, ALCuint)
+ALCenum BackendBase::captureSamples(al::byte*, ALCuint)
 { return ALC_INVALID_DEVICE; }
 
 ALCuint BackendBase::availableSamples()

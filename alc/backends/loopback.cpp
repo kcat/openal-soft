@@ -32,8 +32,8 @@ struct LoopbackBackend final : public BackendBase {
     LoopbackBackend(ALCdevice *device) noexcept : BackendBase{device} { }
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     DEF_NEWDEL(LoopbackBackend)
@@ -46,14 +46,14 @@ ALCenum LoopbackBackend::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean LoopbackBackend::reset()
+bool LoopbackBackend::reset()
 {
     SetDefaultWFXChannelOrder(mDevice);
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean LoopbackBackend::start()
-{ return ALC_TRUE; }
+bool LoopbackBackend::start()
+{ return true; }
 
 void LoopbackBackend::stop()
 { }

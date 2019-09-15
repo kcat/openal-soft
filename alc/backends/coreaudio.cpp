@@ -54,8 +54,8 @@ struct CoreAudioPlayback final : public BackendBase {
         AudioBufferList *ioData);
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     AudioUnit mAudioUnit;
@@ -137,7 +137,7 @@ ALCenum CoreAudioPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean CoreAudioPlayback::reset()
+bool CoreAudioPlayback::reset()
 {
     OSStatus err{AudioUnitUninitialize(mAudioUnit)};
     if(err != noErr)
@@ -151,7 +151,7 @@ ALCboolean CoreAudioPlayback::reset()
     if(err != noErr || size != sizeof(AudioStreamBasicDescription))
     {
         ERR("AudioUnitGetProperty failed\n");
-        return ALC_FALSE;
+        return false;
     }
 
 #if 0
@@ -170,7 +170,7 @@ ALCboolean CoreAudioPlayback::reset()
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
-        return ALC_FALSE;
+        return false;
     }
 
     if(mDevice->Frequency != streamFormat.mSampleRate)
@@ -254,7 +254,7 @@ ALCboolean CoreAudioPlayback::reset()
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
-        return ALC_FALSE;
+        return false;
     }
 
     /* setup callback */
@@ -268,7 +268,7 @@ ALCboolean CoreAudioPlayback::reset()
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
-        return ALC_FALSE;
+        return false;
     }
 
     /* init the default audio unit... */
@@ -276,21 +276,21 @@ ALCboolean CoreAudioPlayback::reset()
     if(err != noErr)
     {
         ERR("AudioUnitInitialize failed\n");
-        return ALC_FALSE;
+        return false;
     }
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean CoreAudioPlayback::start()
+bool CoreAudioPlayback::start()
 {
     OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
     {
         ERR("AudioOutputUnitStart failed\n");
-        return ALC_FALSE;
+        return false;
     }
-    return ALC_TRUE;
+    return true;
 }
 
 void CoreAudioPlayback::stop()
@@ -313,9 +313,9 @@ struct CoreAudioCapture final : public BackendBase {
         UInt32 inNumberFrames, AudioBufferList *ioData);
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     AudioUnit mAudioUnit{0};
@@ -628,15 +628,15 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
 }
 
 
-ALCboolean CoreAudioCapture::start()
+bool CoreAudioCapture::start()
 {
     OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
     {
         ERR("AudioOutputUnitStart failed\n");
-        return ALC_FALSE;
+        return false;
     }
-    return ALC_TRUE;
+    return true;
 }
 
 void CoreAudioCapture::stop()
@@ -646,7 +646,7 @@ void CoreAudioCapture::stop()
         ERR("AudioOutputUnitStop failed\n");
 }
 
-ALCenum CoreAudioCapture::captureSamples(void *buffer, ALCuint samples)
+ALCenum CoreAudioCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     if(!mConverter)
     {
@@ -663,7 +663,7 @@ ALCenum CoreAudioCapture::captureSamples(void *buffer, ALCuint samples)
     {
         const void *src1{rec_vec.second.buf};
         auto src1len = static_cast<ALuint>(rec_vec.second.len);
-        got += mConverter->convert(&src1, &src1len, static_cast<char*>(buffer)+got, samples-got);
+        got += mConverter->convert(&src1, &src1len, buffer+got, samples-got);
         total_read += rec_vec.second.len - src1len;
     }
 

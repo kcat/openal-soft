@@ -395,8 +395,8 @@ struct AlsaPlayback final : public BackendBase {
     int mixerNoMMapProc();
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     ClockLatency getClockLatency() override;
@@ -630,7 +630,7 @@ ALCenum AlsaPlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean AlsaPlayback::reset()
+bool AlsaPlayback::reset()
 {
     snd_pcm_format_t format{SND_PCM_FORMAT_UNKNOWN};
     switch(mDevice->FmtType)
@@ -770,16 +770,16 @@ ALCboolean AlsaPlayback::reset()
 
     SetDefaultChannelOrder(mDevice);
 
-    return ALC_TRUE;
+    return true;
 
 error:
     ERR("%s failed: %s\n", funcerr, snd_strerror(err));
     if(hp) snd_pcm_hw_params_free(hp);
     if(sp) snd_pcm_sw_params_free(sp);
-    return ALC_FALSE;
+    return false;
 }
 
-ALCboolean AlsaPlayback::start()
+bool AlsaPlayback::start()
 {
     snd_pcm_hw_params_t *hp{};
     snd_pcm_access_t access;
@@ -797,7 +797,7 @@ ALCboolean AlsaPlayback::start()
     error:
         ERR("%s failed: %s\n", funcerr, snd_strerror(err));
         if(hp) snd_pcm_hw_params_free(hp);
-        return ALC_FALSE;
+        return false;
     }
     snd_pcm_hw_params_free(hp);
     hp = nullptr;
@@ -815,7 +815,7 @@ ALCboolean AlsaPlayback::start()
         if(err < 0)
         {
             ERR("snd_pcm_prepare(data->mPcmHandle) failed: %s\n", snd_strerror(err));
-            return ALC_FALSE;
+            return false;
         }
         thread_func = &AlsaPlayback::mixerProc;
     }
@@ -823,7 +823,7 @@ ALCboolean AlsaPlayback::start()
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(thread_func), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
@@ -831,7 +831,7 @@ ALCboolean AlsaPlayback::start()
     catch(...) {
     }
     mBuffer.clear();
-    return ALC_FALSE;
+    return false;
 }
 
 void AlsaPlayback::stop()
@@ -869,9 +869,9 @@ struct AlsaCapture final : public BackendBase {
     ~AlsaCapture() override;
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(ALCvoid *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
     ClockLatency getClockLatency() override;
 
@@ -1015,7 +1015,7 @@ error2:
 }
 
 
-ALCboolean AlsaCapture::start()
+bool AlsaCapture::start()
 {
     int err{snd_pcm_prepare(mPcmHandle)};
     if(err < 0)
@@ -1029,11 +1029,11 @@ ALCboolean AlsaCapture::start()
     if(err < 0)
     {
         aluHandleDisconnect(mDevice, "Capture state failure: %s", snd_strerror(err));
-        return ALC_FALSE;
+        return false;
     }
 
     mDoCapture = true;
-    return ALC_TRUE;
+    return true;
 }
 
 void AlsaCapture::stop()
@@ -1058,7 +1058,7 @@ void AlsaCapture::stop()
     mDoCapture = false;
 }
 
-ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
+ALCenum AlsaCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     if(mRing)
     {
@@ -1078,7 +1078,7 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
             if(static_cast<snd_pcm_uframes_t>(amt) > samples) amt = samples;
 
             amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
-            std::copy_n(mBuffer.begin(), amt, static_cast<al::byte*>(buffer));
+            std::copy_n(mBuffer.begin(), amt, buffer);
 
             mBuffer.erase(mBuffer.begin(), mBuffer.begin()+amt);
             amt = snd_pcm_bytes_to_frames(mPcmHandle, amt);
@@ -1111,11 +1111,11 @@ ALCenum AlsaCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
             continue;
         }
 
-        buffer = static_cast<al::byte*>(buffer) + amt;
+        buffer = buffer + amt;
         samples -= static_cast<ALCuint>(amt);
     }
     if(samples > 0)
-        std::fill_n(static_cast<al::byte*>(buffer), snd_pcm_frames_to_bytes(mPcmHandle, samples),
+        std::fill_n(buffer, snd_pcm_frames_to_bytes(mPcmHandle, samples),
             al::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
 
     return ALC_NO_ERROR;

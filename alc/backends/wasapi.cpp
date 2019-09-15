@@ -614,9 +614,9 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     HRESULT openProxy() override;
     void closeProxy() override;
 
-    ALCboolean reset() override;
+    bool reset() override;
     HRESULT resetProxy() override;
-    ALCboolean start() override;
+    bool start() override;
     HRESULT startProxy() override;
     void stop() override;
     void stopProxy() override;
@@ -812,10 +812,10 @@ void WasapiPlayback::closeProxy()
 }
 
 
-ALCboolean WasapiPlayback::reset()
+bool WasapiPlayback::reset()
 {
     HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
-    return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
+    return SUCCEEDED(hr) ? true : false;
 }
 
 HRESULT WasapiPlayback::resetProxy()
@@ -1073,10 +1073,10 @@ HRESULT WasapiPlayback::resetProxy()
 }
 
 
-ALCboolean WasapiPlayback::start()
+bool WasapiPlayback::start()
 {
     HRESULT hr{pushMessage(MsgType::StartDevice).get()};
-    return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
+    return SUCCEEDED(hr) ? true : false;
 }
 
 HRESULT WasapiPlayback::startProxy()
@@ -1156,12 +1156,12 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     void closeProxy() override;
 
     HRESULT resetProxy() override;
-    ALCboolean start() override;
+    bool start() override;
     HRESULT startProxy() override;
     void stop() override;
     void stopProxy() override;
 
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     std::wstring mDevId;
@@ -1622,10 +1622,10 @@ HRESULT WasapiCapture::resetProxy()
 }
 
 
-ALCboolean WasapiCapture::start()
+bool WasapiCapture::start()
 {
     HRESULT hr{pushMessage(MsgType::StartDevice).get()};
-    return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
+    return SUCCEEDED(hr) ? true : false;
 }
 
 HRESULT WasapiCapture::startProxy()
@@ -1687,7 +1687,7 @@ void WasapiCapture::stopProxy()
 ALCuint WasapiCapture::availableSamples()
 { return static_cast<ALCuint>(mRing->readSpace()); }
 
-ALCenum WasapiCapture::captureSamples(void *buffer, ALCuint samples)
+ALCenum WasapiCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     mRing->read(buffer, samples);
     return ALC_NO_ERROR;

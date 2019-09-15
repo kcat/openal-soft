@@ -666,8 +666,8 @@ struct PulsePlayback final : public BackendBase {
     void streamMovedCallback(pa_stream *stream);
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
     void lock() override;
@@ -879,7 +879,7 @@ ALCenum PulsePlayback::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean PulsePlayback::reset()
+bool PulsePlayback::reset()
 {
     std::unique_lock<std::mutex> plock{pulse_lock};
 
@@ -1032,10 +1032,10 @@ ALCboolean PulsePlayback::reset()
                 len, mAttr.prebuf, mDevice->BufferSize);
     }
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean PulsePlayback::start()
+bool PulsePlayback::start()
 {
     std::unique_lock<std::mutex> plock{pulse_lock};
 
@@ -1043,7 +1043,7 @@ ALCboolean PulsePlayback::start()
     pa_operation *op{pa_stream_cork(mStream, 0, stream_success_callback, nullptr)};
     wait_for_operation(op, plock);
 
-    return ALC_TRUE;
+    return true;
 }
 
 void PulsePlayback::stop()
@@ -1110,9 +1110,9 @@ struct PulseCapture final : public BackendBase {
     void streamMovedCallback(pa_stream *stream);
 
     ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(ALCvoid *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
     ClockLatency getClockLatency() override;
     void lock() override;
@@ -1303,12 +1303,12 @@ ALCenum PulseCapture::open(const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-ALCboolean PulseCapture::start()
+bool PulseCapture::start()
 {
     std::unique_lock<std::mutex> plock{pulse_lock};
     pa_operation *op{pa_stream_cork(mStream, 0, stream_success_callback, nullptr)};
     wait_for_operation(op, plock);
-    return ALC_TRUE;
+    return true;
 }
 
 void PulseCapture::stop()
@@ -1318,9 +1318,9 @@ void PulseCapture::stop()
     wait_for_operation(op, plock);
 }
 
-ALCenum PulseCapture::captureSamples(ALCvoid *buffer, ALCuint samples)
+ALCenum PulseCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
-    al::span<al::byte> dstbuf{static_cast<al::byte*>(buffer), samples * pa_frame_size(&mSpec)};
+    al::span<al::byte> dstbuf{buffer, samples * pa_frame_size(&mSpec)};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */

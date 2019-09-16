@@ -349,10 +349,6 @@ ALCenum OpenSLPlayback::open(const ALCchar *name)
 
 bool OpenSLPlayback::reset()
 {
-    SLDataLocator_AndroidSimpleBufferQueue loc_bufq;
-    SLDataLocator_OutputMix loc_outmix;
-    SLDataSource audioSrc;
-    SLDataSink audioSnk;
     SLresult result;
 
     if(mBufferQueueObj)
@@ -439,44 +435,68 @@ bool OpenSLPlayback::reset()
     const std::array<SLInterfaceID,2> ids{{ SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION }};
     const std::array<SLboolean,2> reqs{{ SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE }};
 
-    loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
-    loc_bufq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
-
-#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
-    SLAndroidDataFormat_PCM_EX format_pcm{};
-    format_pcm.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
-    format_pcm.numChannels = mDevice->channelsFromFmt();
-    format_pcm.sampleRate = mDevice->Frequency * 1000;
-    format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
-    format_pcm.containerSize = format_pcm.bitsPerSample;
-    format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
-    format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
-                                               SL_BYTEORDER_BIGENDIAN;
-    format_pcm.representation = GetTypeRepresentation(mDevice->FmtType);
-#else
-    SLDataFormat_PCM format_pcm{};
-    format_pcm.formatType = SL_DATAFORMAT_PCM;
-    format_pcm.numChannels = mDevice->channelsFromFmt();
-    format_pcm.samplesPerSec = mDevice->Frequency * 1000;
-    format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
-    format_pcm.containerSize = format_pcm.bitsPerSample;
-    format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
-    format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
-                                               SL_BYTEORDER_BIGENDIAN;
-#endif
-
-    audioSrc.pLocator = &loc_bufq;
-    audioSrc.pFormat = &format_pcm;
-
+    SLDataLocator_OutputMix loc_outmix{};
     loc_outmix.locatorType = SL_DATALOCATOR_OUTPUTMIX;
     loc_outmix.outputMix = mOutputMix;
+
+    SLDataSink audioSnk{};
     audioSnk.pLocator = &loc_outmix;
     audioSnk.pFormat = nullptr;
 
+    SLDataLocator_AndroidSimpleBufferQueue loc_bufq{};
+    loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
+    loc_bufq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
+
+    SLDataSource audioSrc{};
+#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
+    SLAndroidDataFormat_PCM_EX format_pcm_ex{};
+    format_pcm_ex.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
+    format_pcm_ex.numChannels = mDevice->channelsFromFmt();
+    format_pcm_ex.sampleRate = mDevice->Frequency * 1000;
+    format_pcm_ex.bitsPerSample = mDevice->bytesFromFmt() * 8;
+    format_pcm_ex.containerSize = format_pcm_ex.bitsPerSample;
+    format_pcm_ex.channelMask = GetChannelMask(mDevice->FmtChans);
+    format_pcm_ex.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN : SL_BYTEORDER_BIGENDIAN;
+    format_pcm_ex.representation = GetTypeRepresentation(mDevice->FmtType);
+
+    audioSrc.pLocator = &loc_bufq;
+    audioSrc.pFormat = &format_pcm_ex;
 
     result = VCALL(mEngine,CreateAudioPlayer)(&mBufferQueueObj, &audioSrc, &audioSnk, ids.size(),
         ids.data(), reqs.data());
-    PRINTERR(result, "engine->CreateAudioPlayer");
+    if(SL_RESULT_SUCCESS != result)
+#endif
+    {
+        /* Alter sample type according to what SLDataFormat_PCM can support. */
+        switch(mDevice->FmtType)
+        {
+        case DevFmtByte: mDevice->FmtType = DevFmtUByte; break;
+        case DevFmtUInt: mDevice->FmtType = DevFmtInt; break;
+        case DevFmtFloat:
+        case DevFmtUShort: mDevice->FmtType = DevFmtShort; break;
+        case DevFmtUByte:
+        case DevFmtShort:
+        case DevFmtInt:
+            break;
+        }
+
+        SLDataFormat_PCM format_pcm{};
+        format_pcm.formatType = SL_DATAFORMAT_PCM;
+        format_pcm.numChannels = mDevice->channelsFromFmt();
+        format_pcm.samplesPerSec = mDevice->Frequency * 1000;
+        format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
+        format_pcm.containerSize = format_pcm.bitsPerSample;
+        format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
+        format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
+            SL_BYTEORDER_BIGENDIAN;
+
+        audioSrc.pLocator = &loc_bufq;
+        audioSrc.pFormat = &format_pcm;
+
+        result = VCALL(mEngine,CreateAudioPlayer)(&mBufferQueueObj, &audioSrc, &audioSnk, ids.size(),
+            ids.data(), reqs.data());
+        PRINTERR(result, "engine->CreateAudioPlayer");
+    }
     if(SL_RESULT_SUCCESS == result)
     {
         /* Set the stream type to "media" (games, music, etc), if possible. */
@@ -717,34 +737,49 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
         loc_bq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
         loc_bq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
 
-#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
-        SLAndroidDataFormat_PCM_EX format_pcm{};
-        format_pcm.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
-        format_pcm.numChannels = mDevice->channelsFromFmt();
-        format_pcm.sampleRate = mDevice->Frequency * 1000;
-        format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
-        format_pcm.containerSize = format_pcm.bitsPerSample;
-        format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
-        format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN : SL_BYTEORDER_BIGENDIAN;
-        format_pcm.representation = GetTypeRepresentation(mDevice->FmtType);
-#else
-        SLDataFormat_PCM format_pcm{};
-        format_pcm.formatType = SL_DATAFORMAT_PCM;
-        format_pcm.numChannels = mDevice->channelsFromFmt();
-        format_pcm.samplesPerSec = mDevice->Frequency * 1000;
-        format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
-        format_pcm.containerSize = format_pcm.bitsPerSample;
-        format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
-        format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN : SL_BYTEORDER_BIGENDIAN;
-#endif
-
         SLDataSink audioSnk{};
-        audioSnk.pLocator = &loc_bq;
-        audioSnk.pFormat = &format_pcm;
+#ifdef SL_ANDROID_DATAFORMAT_PCM_EX
+        SLAndroidDataFormat_PCM_EX format_pcm_ex{};
+        format_pcm_ex.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
+        format_pcm_ex.numChannels = mDevice->channelsFromFmt();
+        format_pcm_ex.sampleRate = mDevice->Frequency * 1000;
+        format_pcm_ex.bitsPerSample = mDevice->bytesFromFmt() * 8;
+        format_pcm_ex.containerSize = format_pcm_ex.bitsPerSample;
+        format_pcm_ex.channelMask = GetChannelMask(mDevice->FmtChans);
+        format_pcm_ex.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
+            SL_BYTEORDER_BIGENDIAN;
+        format_pcm_ex.representation = GetTypeRepresentation(mDevice->FmtType);
 
+        audioSnk.pLocator = &loc_bq;
+        audioSnk.pFormat = &format_pcm_ex;
         result = VCALL(mEngine,CreateAudioRecorder)(&mRecordObj, &audioSrc, &audioSnk,
             ids.size(), ids.data(), reqs.data());
-        PRINTERR(result, "engine->CreateAudioRecorder");
+        if(SL_RESULT_SUCCESS != result)
+#endif
+        {
+            /* Fallback to SLDataFormat_PCM only if it supports the desired
+             * sample type.
+             */
+            if(mDevice->FmtType == DevFmtUByte || mDevice->FmtType == DevFmtShort
+                || mDevice->FmtType == DevFmtInt)
+            {
+                SLDataFormat_PCM format_pcm{};
+                format_pcm.formatType = SL_DATAFORMAT_PCM;
+                format_pcm.numChannels = mDevice->channelsFromFmt();
+                format_pcm.samplesPerSec = mDevice->Frequency * 1000;
+                format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
+                format_pcm.containerSize = format_pcm.bitsPerSample;
+                format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
+                format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
+                    SL_BYTEORDER_BIGENDIAN;
+
+                audioSnk.pLocator = &loc_bq;
+                audioSnk.pFormat = &format_pcm;
+                result = VCALL(mEngine,CreateAudioRecorder)(&mRecordObj, &audioSrc, &audioSnk,
+                    ids.size(), ids.data(), reqs.data());
+            }
+            PRINTERR(result, "engine->CreateAudioRecorder");
+        }
     }
     if(SL_RESULT_SUCCESS == result)
     {

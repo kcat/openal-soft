@@ -87,6 +87,7 @@
 #include "../getopt.h"
 #endif
 
+#include "alstring.h"
 #include "loaddef.h"
 #include "loadsofa.h"
 
@@ -178,7 +179,7 @@ static int StrSubst(const char *in, const char *pat, const char *rep, const size
     {
         if(patLen <= inLen-si)
         {
-            if(strncasecmp(&in[si], pat, patLen) == 0)
+            if(al::strncasecmp(&in[si], pat, patLen) == 0)
             {
                 if(repLen > maxLen-di)
                 {

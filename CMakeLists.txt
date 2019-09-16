@@ -1470,7 +1470,7 @@ IF(ALSOFT_UTILS)
         target_include_directories(makemhr
             PRIVATE ${OpenAL_SOURCE_DIR}/common ${OpenAL_BINARY_DIR})
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
-        target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
+        target_link_libraries(makemhr PRIVATE common ${LINKER_FLAGS} MySOFA::MySOFA)
         set(UTIL_TARGETS ${UTIL_TARGETS} makemhr)
 
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)

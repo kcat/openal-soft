@@ -21,6 +21,8 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+#include "loaddef.h"
+
 #include <cstring>
 #include <cstdarg>
 #include <limits>
@@ -28,8 +30,7 @@
 
 #include "mysofa.h"
 
-#include "loaddef.h"
-
+#include "alstring.h"
 
 // Constants for accessing the token reader's ring buffer.
 #define TR_RING_BITS                 (16)
@@ -1197,9 +1198,9 @@ static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double
 // Match the channel type from a given identifier.
 static ChannelTypeT MatchChannelType(const char *ident)
 {
-    if(strcasecmp(ident, "mono") == 0)
+    if(al::strcasecmp(ident, "mono") == 0)
         return CT_MONO;
-    if(strcasecmp(ident, "stereo") == 0)
+    if(al::strcasecmp(ident, "stereo") == 0)
         return CT_STEREO;
     return CT_NONE;
 }
@@ -1226,7 +1227,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
         TrIndication(tr, &line, &col);
         if(!TrReadIdent(tr, MAX_IDENT_LEN, ident))
             return 0;
-        if(strcasecmp(ident, "rate") == 0)
+        if(al::strcasecmp(ident, "rate") == 0)
         {
             if(hasRate)
             {
@@ -1240,7 +1241,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             hData->mIrRate = static_cast<uint>(intVal);
             hasRate = 1;
         }
-        else if(strcasecmp(ident, "type") == 0)
+        else if(al::strcasecmp(ident, "type") == 0)
         {
             char type[MAX_IDENT_LEN+1];
 
@@ -1267,7 +1268,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             }
             hasType = 1;
         }
-        else if(strcasecmp(ident, "points") == 0)
+        else if(al::strcasecmp(ident, "points") == 0)
         {
             if(hasPoints)
             {
@@ -1297,7 +1298,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                 hData->mIrSize = points;
             hasPoints = 1;
         }
-        else if(strcasecmp(ident, "radius") == 0)
+        else if(al::strcasecmp(ident, "radius") == 0)
         {
             if(hasRadius)
             {
@@ -1311,7 +1312,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             hData->mRadius = fpVal;
             hasRadius = 1;
         }
-        else if(strcasecmp(ident, "distance") == 0)
+        else if(al::strcasecmp(ident, "distance") == 0)
         {
             uint count = 0;
 
@@ -1350,7 +1351,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             fdCount = count;
             hasDistance = 1;
         }
-        else if(strcasecmp(ident, "azimuths") == 0)
+        else if(al::strcasecmp(ident, "azimuths") == 0)
         {
             uint count = 0;
 
@@ -1468,15 +1469,15 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
 // Match the source format from a given identifier.
 static SourceFormatT MatchSourceFormat(const char *ident)
 {
-    if(strcasecmp(ident, "ascii") == 0)
+    if(al::strcasecmp(ident, "ascii") == 0)
         return SF_ASCII;
-    if(strcasecmp(ident, "bin_le") == 0)
+    if(al::strcasecmp(ident, "bin_le") == 0)
         return SF_BIN_LE;
-    if(strcasecmp(ident, "bin_be") == 0)
+    if(al::strcasecmp(ident, "bin_be") == 0)
         return SF_BIN_BE;
-    if(strcasecmp(ident, "wave") == 0)
+    if(al::strcasecmp(ident, "wave") == 0)
         return SF_WAVE;
-    if(strcasecmp(ident, "sofa") == 0)
+    if(al::strcasecmp(ident, "sofa") == 0)
         return SF_SOFA;
     return SF_NONE;
 }
@@ -1484,9 +1485,9 @@ static SourceFormatT MatchSourceFormat(const char *ident)
 // Match the source element type from a given identifier.
 static ElementTypeT MatchElementType(const char *ident)
 {
-    if(strcasecmp(ident, "int") == 0)
+    if(al::strcasecmp(ident, "int") == 0)
         return ET_INT;
-    if(strcasecmp(ident, "fp") == 0)
+    if(al::strcasecmp(ident, "fp") == 0)
         return ET_FP;
     return ET_NONE;
 }
@@ -1680,9 +1681,9 @@ static int ReadSofaRef(TokenReaderT *tr, SourceRefT *src)
 // Match the target ear (index) from a given identifier.
 static int MatchTargetEar(const char *ident)
 {
-    if(strcasecmp(ident, "left") == 0)
+    if(al::strcasecmp(ident, "left") == 0)
         return 0;
-    if(strcasecmp(ident, "right") == 0)
+    if(al::strcasecmp(ident, "right") == 0)
         return 1;
     return -1;
 }

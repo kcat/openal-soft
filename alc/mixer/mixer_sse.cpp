@@ -226,7 +226,7 @@ void MixRow_<SSETag>(const al::span<float> OutBuffer, const al::span<const float
 {
     for(const float gain : Gains)
     {
-        const float *RESTRICT src{InSamples};
+        const float *RESTRICT input{InSamples};
         InSamples += InStride;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
@@ -237,14 +237,16 @@ void MixRow_<SSETag>(const al::span<float> OutBuffer, const al::span<const float
         {
             const __m128 gain4 = _mm_set1_ps(gain);
             do {
-                const __m128 val4{_mm_load_ps(src)};
+                const __m128 val4{_mm_load_ps(input)};
                 __m128 dry4{_mm_load_ps(out_iter)};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
                 _mm_store_ps(out_iter, dry4);
-                out_iter += 4; src += 4;
+                out_iter += 4; input += 4;
             } while(--todo);
         }
-        std::transform(out_iter, OutBuffer.end(), src, out_iter,
-            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
+
+        auto do_mix = [gain](const float cur, const float src) noexcept -> float
+        { return cur + src*gain; };
+        std::transform(out_iter, OutBuffer.end(), input, out_iter, do_mix);
     }
 }

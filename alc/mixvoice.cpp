@@ -763,14 +763,14 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                     const al::span<float> nfcsamples{Device->NfcSampleData, DstBufferSize};
                     size_t chanoffset{outcount};
                     using FilterProc = void (NfcFilter::*)(float*,const float*,const size_t);
-                    auto apply_nfc = [this,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t outcount) -> void
+                    auto apply_nfc = [this,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](const FilterProc process, const size_t chancount) -> void
                     {
-                        if(outcount < 1) return;
+                        if(chancount < 1) return;
                         (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples, nfcsamples.size());
-                        MixSamples(nfcsamples, mDirect.Buffer.subspan(chanoffset, outcount),
+                        MixSamples(nfcsamples, mDirect.Buffer.subspan(chanoffset, chancount),
                             parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter,
                             OutPos);
-                        chanoffset += outcount;
+                        chanoffset += chancount;
                     };
                     apply_nfc(&NfcFilter::process1, Device->NumChannelsPerOrder[1]);
                     apply_nfc(&NfcFilter::process2, Device->NumChannelsPerOrder[2]);

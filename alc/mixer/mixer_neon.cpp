@@ -262,7 +262,7 @@ void MixRow_<NEONTag>(const al::span<float> OutBuffer, const al::span<const floa
 {
     for(const ALfloat gain : Gains)
     {
-        const ALfloat *RESTRICT src{InSamples};
+        const ALfloat *RESTRICT intput{InSamples};
         InSamples += InStride;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
@@ -273,14 +273,16 @@ void MixRow_<NEONTag>(const al::span<float> OutBuffer, const al::span<const floa
         {
             const float32x4_t gain4{vdupq_n_f32(gain)};
             do {
-                const float32x4_t val4 = vld1q_f32(src);
+                const float32x4_t val4 = vld1q_f32(intput);
                 float32x4_t dry4 = vld1q_f32(out_iter);
                 dry4 = vmlaq_f32(dry4, val4, gain4);
                 vst1q_f32(out_iter, dry4);
-                out_iter += 4; src += 4;
+                out_iter += 4; intput += 4;
             } while(--todo);
         }
-        std::transform(out_iter, OutBuffer.end(), src, out_iter,
-            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
+
+        auto do_mix = [gain](const float cur, const float src) noexcept -> float
+        { return cur + src*gain; };
+        std::transform(out_iter, OutBuffer.end(), input, out_iter, do_mix);
     }
 }

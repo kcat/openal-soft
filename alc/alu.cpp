@@ -1320,17 +1320,16 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
         bool force{CalcContextParams(ctx)};
         force |= CalcListenerParams(ctx);
         force = std::accumulate(slots.begin(), slots.end(), force,
-            [ctx](const bool force, ALeffectslot *slot) -> bool
-            { return CalcEffectSlotParams(slot, ctx) | force; }
+            [ctx](const bool f, ALeffectslot *slot) -> bool
+            { return CalcEffectSlotParams(slot, ctx) | f; }
         );
 
-        std::for_each(voices.begin(), voices.end(),
-            [ctx,force](ALvoice &voice) -> void
-            {
-                ALuint sid{voice.mSourceID.load(std::memory_order_acquire)};
-                if(sid) CalcSourceParams(&voice, ctx, force);
-            }
-        );
+        auto calc_params = [ctx,force](ALvoice &voice) -> void
+        {
+            if(ALuint sid{voice.mSourceID.load(std::memory_order_acquire)})
+                CalcSourceParams(&voice, ctx, force);
+        };
+        std::for_each(voices.begin(), voices.end(), calc_params);
     }
     IncrementRef(ctx->mUpdateCount);
 }
@@ -1446,7 +1445,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     /* This applies the band-splitter, preserving phase at the cost of some
      * delay. The shorter the delay, the more error seeps into the result.
      */
-    auto apply_splitter = [&tmpbuf,SamplesToDo](const FloatBufferLine &Buffer,
+    auto apply_splitter = [&tmpbuf,SamplesToDo](const FloatBufferLine &InBuf,
         ALfloat (&DelayBuf)[FrontStablizer::DelayLength], BandSplitter &Filter,
         ALfloat (&splitbuf)[2][BUFFERSIZE]) -> void
     {
@@ -1457,7 +1456,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
          */
         auto tmpbuf_end = std::begin(tmpbuf) + SamplesToDo;
         std::copy_n(std::begin(DelayBuf), FrontStablizer::DelayLength, tmpbuf_end);
-        std::reverse_copy(Buffer.begin(), Buffer.begin()+SamplesToDo, std::begin(tmpbuf));
+        std::reverse_copy(InBuf.begin(), InBuf.begin()+SamplesToDo, std::begin(tmpbuf));
         std::copy_n(std::begin(tmpbuf), FrontStablizer::DelayLength, std::begin(DelayBuf));
 
         /* Apply an all-pass on the reversed signal, then reverse the samples

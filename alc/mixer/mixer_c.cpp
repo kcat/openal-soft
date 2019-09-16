@@ -188,13 +188,14 @@ void MixRow_<CTag>(const al::span<float> OutBuffer, const al::span<const float> 
 {
     for(const float gain : Gains)
     {
-        const float *RESTRICT src{InSamples};
+        const float *RESTRICT input{InSamples};
         InSamples += InStride;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        std::transform(OutBuffer.begin(), OutBuffer.end(), src, OutBuffer.begin(),
-            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
+        auto do_mix = [gain](const float cur, const float src) noexcept -> float
+        { return cur + src*gain; };
+        std::transform(OutBuffer.begin(), OutBuffer.end(), input, OutBuffer.begin(), do_mix);
     }
 }

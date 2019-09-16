@@ -447,10 +447,8 @@ struct DevMap {
 
 bool checkName(const al::vector<DevMap> &list, const std::string &name)
 {
-    return std::find_if(list.cbegin(), list.cend(),
-        [&name](const DevMap &entry) -> bool
-        { return entry.name == name; }
-    ) != list.cend();
+    auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
+    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
 }
 
 al::vector<DevMap> PlaybackDevices;
@@ -756,7 +754,7 @@ void PulsePlayback::sinkInfoCallbackC(pa_context *context, const pa_sink_info *i
 void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int eol)
 {
     struct ChannelMap {
-        DevFmtChannels chans;
+        DevFmtChannels fmt;
         pa_channel_map map;
     };
     static constexpr std::array<ChannelMap,7> chanmaps{{
@@ -775,14 +773,14 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
         return;
     }
 
-    auto chanmap = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
+    auto chaniter = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
         [info](const ChannelMap &chanmap) -> bool
         { return pa_channel_map_superset(&info->channel_map, &chanmap.map); }
     );
-    if(chanmap != chanmaps.cend())
+    if(chaniter != chanmaps.cend())
     {
         if(!mDevice->Flags.get<ChannelsRequest>())
-            mDevice->FmtChans = chanmap->chans;
+            mDevice->FmtChans = chaniter->fmt;
     }
     else
     {

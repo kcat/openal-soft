@@ -2749,15 +2749,15 @@ START_API_FUNC
         }
 
         /* Look for an unused voice to play this source with. */
+        auto find_voice = [](const ALvoice &v) noexcept -> bool
+        {
+            return v.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+                && v.mSourceID.load(std::memory_order_relaxed) == 0u;
+        };
         auto voices_end = context->mVoices.data() + context->mVoices.size();
-        voice = std::find_if(context->mVoices.data(), voices_end,
-            [](const ALvoice &voice) noexcept -> bool
-            {
-                return voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped &&
-                    voice.mSourceID.load(std::memory_order_relaxed) == 0u;
-            }
-        );
+        voice = std::find_if(context->mVoices.data(), voices_end, find_voice);
         assert(voice != voices_end);
+
         auto vidx = static_cast<ALuint>(std::distance(context->mVoices.data(), voice));
         voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
 

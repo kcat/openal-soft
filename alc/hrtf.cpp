@@ -323,12 +323,12 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
         const ALuint azidx{float2uint(az_norm*static_cast<float>(azcount) + 0.5f) % azcount};
 
         /* Calculate the index for the impulse response. */
-        const ALuint idx{iroffset + azidx};
+        const ALuint iridx{iroffset + azidx};
 
-        min_delay = minu(min_delay, minu(Hrtf->delays[idx][0], Hrtf->delays[idx][1]));
-        max_delay = maxu(max_delay, maxu(Hrtf->delays[idx][0], Hrtf->delays[idx][1]));
+        min_delay = minu(min_delay, minu(Hrtf->delays[iridx][0], Hrtf->delays[iridx][1]));
+        max_delay = maxu(max_delay, maxu(Hrtf->delays[iridx][0], Hrtf->delays[iridx][1]));
 
-        return idx;
+        return iridx;
     };
     std::transform(AmbiPoints, AmbiPoints+AmbiCount, idx.begin(), calc_idxs);
 

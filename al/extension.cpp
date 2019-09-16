@@ -29,6 +29,7 @@
 
 #include "alcontext.h"
 #include "alexcpt.h"
+#include "alstring.h"
 #include "opthelpers.h"
 
 
@@ -45,8 +46,7 @@ START_API_FUNC
     const char *ptr{context->mExtensionList};
     while(ptr && *ptr)
     {
-        if(strncasecmp(ptr, extName, len) == 0 &&
-           (ptr[len] == '\0' || isspace(ptr[len])))
+        if(al::strncasecmp(ptr, extName, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
             return AL_TRUE;
 
         if((ptr=strchr(ptr, ' ')) != nullptr)

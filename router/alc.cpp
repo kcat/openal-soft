@@ -11,6 +11,7 @@
 #include <array>
 
 #include "AL/alc.h"
+#include "alstring.h"
 #include "router.h"
 
 
@@ -539,7 +540,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     ptr = alcExtensionList;
     while(ptr && *ptr)
     {
-        if(strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
+        if(al::strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
             return ALC_TRUE;
         if((ptr=strchr(ptr, ' ')) != nullptr)
         {

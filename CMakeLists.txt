@@ -594,6 +594,8 @@ SET(COMMON_OBJS
     common/alnumeric.h
     common/aloptional.h
     common/alspan.h
+    common/alstring.cpp
+    common/alstring.h
     common/atomic.h
     common/dynload.cpp
     common/dynload.h

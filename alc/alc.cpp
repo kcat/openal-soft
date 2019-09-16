@@ -67,6 +67,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "alu.h"
 #include "ambidefs.h"
 #include "atomic.h"
@@ -802,8 +803,8 @@ std::string alcAllDevicesList;
 std::string alcCaptureDeviceList;
 
 /* Default is always the first in the list */
-std::string alcDefaultAllDevicesSpecifier;
-std::string alcCaptureDefaultDeviceSpecifier;
+al::string alcDefaultAllDevicesSpecifier;
+al::string alcCaptureDefaultDeviceSpecifier;
 
 /* Default context extensions */
 constexpr ALchar alExtList[] =
@@ -952,7 +953,7 @@ void alc_initconfig(void)
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
         ALSOFT_GIT_BRANCH);
     {
-        std::string names;
+        al::string names;
         if(std::begin(BackendList) == BackendListEnd)
             names += "(none)";
         else
@@ -971,7 +972,7 @@ void alc_initconfig(void)
 
     if(auto suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))
     {
-        if(strcasecmp(suspendmode->c_str(), "ignore") == 0)
+        if(al::strcasecmp(suspendmode->c_str(), "ignore") == 0)
         {
             SuspendDefers = false;
             TRACE("Selected context suspend behavior, \"ignore\"\n");
@@ -996,7 +997,7 @@ void alc_initconfig(void)
     if(auto cpuopt = ConfigValueStr(nullptr, nullptr, "disable-cpu-exts"))
     {
         const char *str{cpuopt->c_str()};
-        if(strcasecmp(str, "all") == 0)
+        if(al::strcasecmp(str, "all") == 0)
             capfilter = 0;
         else
         {
@@ -1013,15 +1014,15 @@ void alc_initconfig(void)
                 size_t len{next ? static_cast<size_t>(next-str) : strlen(str)};
                 while(len > 0 && isspace(str[len-1]))
                     len--;
-                if(len == 3 && strncasecmp(str, "sse", len) == 0)
+                if(len == 3 && al::strncasecmp(str, "sse", len) == 0)
                     capfilter &= ~CPU_CAP_SSE;
-                else if(len == 4 && strncasecmp(str, "sse2", len) == 0)
+                else if(len == 4 && al::strncasecmp(str, "sse2", len) == 0)
                     capfilter &= ~CPU_CAP_SSE2;
-                else if(len == 4 && strncasecmp(str, "sse3", len) == 0)
+                else if(len == 4 && al::strncasecmp(str, "sse3", len) == 0)
                     capfilter &= ~CPU_CAP_SSE3;
-                else if(len == 6 && strncasecmp(str, "sse4.1", len) == 0)
+                else if(len == 6 && al::strncasecmp(str, "sse4.1", len) == 0)
                     capfilter &= ~CPU_CAP_SSE4_1;
-                else if(len == 4 && strncasecmp(str, "neon", len) == 0)
+                else if(len == 4 && al::strncasecmp(str, "neon", len) == 0)
                     capfilter &= ~CPU_CAP_NEON;
                 else
                     WARN("Invalid CPU extension \"%s\"\n", str);
@@ -1042,8 +1043,8 @@ void alc_initconfig(void)
     aluInitMixer();
 
     auto traperr = al::getenv("ALSOFT_TRAP_ERROR");
-    if(traperr && (strcasecmp(traperr->c_str(), "true") == 0
-            || strtol(traperr->c_str(), nullptr, 0) == 1))
+    if(traperr && (al::strcasecmp(traperr->c_str(), "true") == 0
+            || std::strtol(traperr->c_str(), nullptr, 0) == 1))
     {
         TrapALError  = true;
         TrapALCError = true;
@@ -1052,14 +1053,14 @@ void alc_initconfig(void)
     {
         traperr = al::getenv("ALSOFT_TRAP_AL_ERROR");
         if(traperr)
-            TrapALError = strcasecmp(traperr->c_str(), "true") == 0
+            TrapALError = al::strcasecmp(traperr->c_str(), "true") == 0
                 || strtol(traperr->c_str(), nullptr, 0) == 1;
         else
             TrapALError = !!GetConfigValueBool(nullptr, nullptr, "trap-al-error", false);
 
         traperr = al::getenv("ALSOFT_TRAP_ALC_ERROR");
         if(traperr)
-            TrapALCError = strcasecmp(traperr->c_str(), "true") == 0
+            TrapALCError = al::strcasecmp(traperr->c_str(), "true") == 0
                 || strtol(traperr->c_str(), nullptr, 0) == 1;
         else
             TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", false);
@@ -1870,11 +1871,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(auto hrtfopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf"))
         {
             const char *hrtf{hrtfopt->c_str()};
-            if(strcasecmp(hrtf, "true") == 0)
+            if(al::strcasecmp(hrtf, "true") == 0)
                 hrtf_userreq = Hrtf_Enable;
-            else if(strcasecmp(hrtf, "false") == 0)
+            else if(al::strcasecmp(hrtf, "false") == 0)
                 hrtf_userreq = Hrtf_Disable;
-            else if(strcasecmp(hrtf, "auto") != 0)
+            else if(al::strcasecmp(hrtf, "auto") != 0)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
         }
 
@@ -3194,8 +3195,7 @@ START_API_FUNC
         const char *ptr = (dev ? alcExtensionList : alcNoDeviceExtList);
         while(ptr && *ptr)
         {
-            if(strncasecmp(ptr, extName, len) == 0 &&
-               (ptr[len] == '\0' || isspace(ptr[len])))
+            if(al::strncasecmp(ptr, extName, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
                 return ALC_TRUE;
 
             if((ptr=strchr(ptr, ' ')) != nullptr)
@@ -3513,17 +3513,21 @@ START_API_FUNC
         return nullptr;
     }
 
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0
+    if(deviceName)
+    {
+        if(!deviceName[0] || al::strcasecmp(deviceName, alcDefaultName) == 0
 #ifdef _WIN32
-        /* Some old Windows apps hardcode these expecting OpenAL to use a
-         * specific audio API, even when they're not enumerated. Creative's
-         * router effectively ignores them too.
-         */
-        || strcasecmp(deviceName, "DirectSound3D") == 0 || strcasecmp(deviceName, "DirectSound") == 0
-        || strcasecmp(deviceName, "MMSYSTEM") == 0
+            /* Some old Windows apps hardcode these expecting OpenAL to use a
+             * specific audio API, even when they're not enumerated. Creative's
+             * router effectively ignores them too.
+             */
+            || al::strcasecmp(deviceName, "DirectSound3D") == 0
+            || al::strcasecmp(deviceName, "DirectSound") == 0
+            || al::strcasecmp(deviceName, "MMSYSTEM") == 0
 #endif
-    ))
-        deviceName = nullptr;
+            || al::strcasecmp(deviceName, "openal-soft") == 0)
+            deviceName = nullptr;
+    }
 
     DeviceRef device{new ALCdevice{Playback}};
 
@@ -3579,7 +3583,7 @@ START_API_FUNC
         const ALCchar *fmt{chanopt->c_str()};
         auto iter = std::find_if(std::begin(chanlist), std::end(chanlist),
             [fmt](const ChannelMap &entry) -> bool
-            { return strcasecmp(entry.name, fmt) == 0; }
+            { return al::strcasecmp(entry.name, fmt) == 0; }
         );
         if(iter == std::end(chanlist))
             ERR("Unsupported channels: %s\n", fmt);
@@ -3608,7 +3612,7 @@ START_API_FUNC
         const ALCchar *fmt{typeopt->c_str()};
         auto iter = std::find_if(std::begin(typelist), std::end(typelist),
             [fmt](const TypeMap &entry) -> bool
-            { return strcasecmp(entry.name, fmt) == 0; }
+            { return al::strcasecmp(entry.name, fmt) == 0; }
         );
         if(iter == std::end(typelist))
             ERR("Unsupported sample-type: %s\n", fmt);
@@ -3661,7 +3665,7 @@ START_API_FUNC
     if(auto ambiopt = ConfigValueStr(deviceName, nullptr, "ambi-format"))
     {
         const ALCchar *fmt{ambiopt->c_str()};
-        if(strcasecmp(fmt, "fuma") == 0)
+        if(al::strcasecmp(fmt, "fuma") == 0)
         {
             if(device->mAmbiOrder > 3)
                 ERR("FuMa is incompatible with %d%s order ambisonics (up to third-order only)\n",
@@ -3676,12 +3680,12 @@ START_API_FUNC
                 device->mAmbiScale = AmbiNorm::FuMa;
             }
         }
-        else if(strcasecmp(fmt, "ambix") == 0 || strcasecmp(fmt, "acn+sn3d") == 0)
+        else if(al::strcasecmp(fmt, "ambix") == 0 || al::strcasecmp(fmt, "acn+sn3d") == 0)
         {
             device->mAmbiLayout = AmbiLayout::ACN;
             device->mAmbiScale = AmbiNorm::SN3D;
         }
-        else if(strcasecmp(fmt, "acn+n3d") == 0)
+        else if(al::strcasecmp(fmt, "acn+n3d") == 0)
         {
             device->mAmbiLayout = AmbiLayout::ACN;
             device->mAmbiScale = AmbiNorm::N3D;
@@ -3776,8 +3780,12 @@ START_API_FUNC
         return nullptr;
     }
 
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
-        deviceName = nullptr;
+    if(deviceName)
+    {
+        if(!deviceName[0] || al::strcasecmp(deviceName, alcDefaultName) == 0
+            || al::strcasecmp(deviceName, "openal-soft") == 0)
+            deviceName = nullptr;
+    }
 
     DeviceRef device{new ALCdevice{Capture}};
 

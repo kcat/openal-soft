@@ -146,7 +146,8 @@ struct OpenSLPlayback final : public BackendBase {
     OpenSLPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~OpenSLPlayback() override;
 
-    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context);
+    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context)
+    { static_cast<OpenSLPlayback*>(context)->process(bq); }
     void process(SLAndroidSimpleBufferQueueItf bq);
 
     int mixerProc();
@@ -196,9 +197,6 @@ OpenSLPlayback::~OpenSLPlayback()
 
 
 /* this callback handler is called every time a buffer finishes playing */
-void OpenSLPlayback::processC(SLAndroidSimpleBufferQueueItf bq, void *context)
-{ static_cast<OpenSLPlayback*>(context)->process(bq); }
-
 void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf)
 {
     /* A note on the ringbuffer usage: The buffer queue seems to hold on to the
@@ -264,9 +262,11 @@ int OpenSLPlayback::mixerProc()
         }
 
         auto data = mRing->getWriteVector();
-        aluMixData(mDevice, data.first.buf, data.first.len*mDevice->UpdateSize);
+        aluMixData(mDevice, data.first.buf,
+            static_cast<ALuint>(data.first.len*mDevice->UpdateSize));
         if(data.second.len > 0)
-            aluMixData(mDevice, data.second.buf, data.second.len*mDevice->UpdateSize);
+            aluMixData(mDevice, data.second.buf,
+                static_cast<ALuint>(data.second.len*mDevice->UpdateSize));
 
         size_t todo{data.first.len + data.second.len};
         mRing->writeAdvance(todo);
@@ -631,7 +631,8 @@ struct OpenSLCapture final : public BackendBase {
     OpenSLCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~OpenSLCapture() override;
 
-    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context);
+    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context)
+    { static_cast<OpenSLCapture*>(context)->process(bq); }
     void process(SLAndroidSimpleBufferQueueItf bq);
 
     ALCenum open(const ALCchar *name) override;
@@ -667,9 +668,6 @@ OpenSLCapture::~OpenSLCapture()
     mEngine = nullptr;
 }
 
-
-void OpenSLCapture::processC(SLAndroidSimpleBufferQueueItf bq, void *context)
-{ static_cast<OpenSLCapture*>(context)->process(bq); }
 
 void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf)
 {
@@ -711,7 +709,7 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
             mRing = CreateRingBuffer(num_updates, update_len*mFrameSize, false);
 
             mDevice->UpdateSize = update_len;
-            mDevice->BufferSize = mRing->writeSpace() * update_len;
+            mDevice->BufferSize = static_cast<ALuint>(mRing->writeSpace() * update_len);
         }
         catch(std::exception& e) {
             ERR("Failed to allocate ring buffer: %s\n", e.what());
@@ -886,25 +884,24 @@ void OpenSLCapture::stop()
 
 ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
-    ALuint chunk_size{mDevice->UpdateSize * mFrameSize};
     SLAndroidSimpleBufferQueueItf bufferQueue;
-    SLresult result;
-    ALCuint i;
-
-    result = VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &bufferQueue);
+    SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &bufferQueue)};
     PRINTERR(result, "recordObj->GetInterface");
+
+    const ALuint update_size{mDevice->UpdateSize};
+    const ALuint chunk_size{update_size * mFrameSize};
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
     auto data = mRing->getReadVector();
-    for(i = 0;i < samples;)
+    for(ALCuint i{0};i < samples;)
     {
-        ALCuint rem{minu(samples - i, mDevice->UpdateSize - mSplOffset)};
-        memcpy(buffer + i*mFrameSize, data.first.buf + mSplOffset*mFrameSize, rem*mFrameSize);
+        const ALCuint rem{minu(samples - i, update_size - mSplOffset)};
+        std::copy_n(data.first.buf + mSplOffset*mFrameSize, rem*mFrameSize, buffer + i*mFrameSize);
 
         mSplOffset += rem;
-        if(mSplOffset == mDevice->UpdateSize)
+        if(mSplOffset == update_size)
         {
             /* Finished a chunk, reset the offset and advance the read pointer. */
             mSplOffset = 0;
@@ -924,7 +921,7 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
         i += rem;
     }
 
-    if(SL_RESULT_SUCCESS != result)
+    if UNLIKELY(SL_RESULT_SUCCESS != result)
     {
         aluHandleDisconnect(mDevice, "Failed to update capture buffer: 0x%08x", result);
         return ALC_INVALID_DEVICE;
@@ -934,7 +931,7 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
 }
 
 ALCuint OpenSLCapture::availableSamples()
-{ return mRing->readSpace()*mDevice->UpdateSize - mSplOffset; }
+{ return static_cast<ALuint>(mRing->readSpace()*mDevice->UpdateSize - mSplOffset); }
 
 } // namespace
 

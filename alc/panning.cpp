@@ -44,6 +44,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "alu.h"
 #include "ambdec.h"
 #include "ambidefs.h"
@@ -586,25 +587,25 @@ void InitHrtfPanning(ALCdevice *device)
     if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode"))
     {
         const char *mode{modeopt->c_str()};
-        if(strcasecmp(mode, "basic") == 0)
+        if(al::strcasecmp(mode, "basic") == 0)
         {
             ERR("HRTF mode \"%s\" deprecated, substituting \"%s\"\n", mode, "ambi2");
             mode = "ambi2";
         }
 
-        if(strcasecmp(mode, "full") == 0)
+        if(al::strcasecmp(mode, "full") == 0)
             device->mRenderMode = HrtfRender;
-        else if(strcasecmp(mode, "ambi1") == 0)
+        else if(al::strcasecmp(mode, "ambi1") == 0)
         {
             device->mRenderMode = NormalRender;
             ambi_order = 1;
         }
-        else if(strcasecmp(mode, "ambi2") == 0)
+        else if(al::strcasecmp(mode, "ambi2") == 0)
         {
             device->mRenderMode = NormalRender;
             ambi_order = 2;
         }
-        else if(strcasecmp(mode, "ambi3") == 0)
+        else if(al::strcasecmp(mode, "ambi3") == 0)
         {
             device->mRenderMode = NormalRender;
             ambi_order = 3;
@@ -732,11 +733,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode"))
         {
             const char *mode{modeopt->c_str()};
-            if(strcasecmp(mode, "headphones") == 0)
+            if(al::strcasecmp(mode, "headphones") == 0)
                 headphones = true;
-            else if(strcasecmp(mode, "speakers") == 0)
+            else if(al::strcasecmp(mode, "speakers") == 0)
                 headphones = false;
-            else if(strcasecmp(mode, "auto") != 0)
+            else if(al::strcasecmp(mode, "auto") != 0)
                 ERR("Unexpected stereo-mode: %s\n", mode);
         }
     }
@@ -835,9 +836,9 @@ no_hrtf:
     if(auto encopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding"))
     {
         const char *mode{encopt->c_str()};
-        if(strcasecmp(mode, "uhj") == 0)
+        if(al::strcasecmp(mode, "uhj") == 0)
             device->mRenderMode = NormalRender;
-        else if(strcasecmp(mode, "panpot") != 0)
+        else if(al::strcasecmp(mode, "panpot") != 0)
             ERR("Unexpected stereo-encoding: %s\n", mode);
     }
     if(device->mRenderMode == NormalRender)

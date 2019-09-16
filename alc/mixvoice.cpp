@@ -48,6 +48,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "alu.h"
 #include "cpu_caps.h"
 #include "devformat.h"
@@ -174,22 +175,22 @@ void aluInitMixer()
     if(auto resopt = ConfigValueStr(nullptr, nullptr, "resampler"))
     {
         const char *str{resopt->c_str()};
-        if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
+        if(al::strcasecmp(str, "point") == 0 || al::strcasecmp(str, "none") == 0)
             ResamplerDefault = PointResampler;
-        else if(strcasecmp(str, "linear") == 0)
+        else if(al::strcasecmp(str, "linear") == 0)
             ResamplerDefault = LinearResampler;
-        else if(strcasecmp(str, "cubic") == 0)
+        else if(al::strcasecmp(str, "cubic") == 0)
             ResamplerDefault = FIR4Resampler;
-        else if(strcasecmp(str, "bsinc12") == 0)
+        else if(al::strcasecmp(str, "bsinc12") == 0)
             ResamplerDefault = BSinc12Resampler;
-        else if(strcasecmp(str, "bsinc24") == 0)
+        else if(al::strcasecmp(str, "bsinc24") == 0)
             ResamplerDefault = BSinc24Resampler;
-        else if(strcasecmp(str, "bsinc") == 0)
+        else if(al::strcasecmp(str, "bsinc") == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", str);
             ResamplerDefault = BSinc12Resampler;
         }
-        else if(strcasecmp(str, "sinc4") == 0 || strcasecmp(str, "sinc8") == 0)
+        else if(al::strcasecmp(str, "sinc4") == 0 || al::strcasecmp(str, "sinc8") == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using cubic\n", str);
             ResamplerDefault = FIR4Resampler;

@@ -55,6 +55,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "ambidefs.h"
 #include "atomic.h"
 #include "bformatdec.h"
@@ -90,7 +91,8 @@ ALfloat InitConeScale()
     ALfloat ret{1.0f};
     if(auto optval = al::getenv("__ALSOFT_HALF_ANGLE_CONES"))
     {
-        if(strcasecmp(optval->c_str(), "true") == 0 || strtol(optval->c_str(), nullptr, 0) == 1)
+        if(al::strcasecmp(optval->c_str(), "true") == 0
+            || strtol(optval->c_str(), nullptr, 0) == 1)
             ret *= 0.5f;
     }
     return ret;
@@ -101,7 +103,8 @@ ALfloat InitZScale()
     ALfloat ret{1.0f};
     if(auto optval = al::getenv("__ALSOFT_REVERSE_Z"))
     {
-        if(strcasecmp(optval->c_str(), "true") == 0 || strtol(optval->c_str(), nullptr, 0) == 1)
+        if(al::strcasecmp(optval->c_str(), "true") == 0
+            || strtol(optval->c_str(), nullptr, 0) == 1)
             ret *= -1.0f;
     }
     return ret;

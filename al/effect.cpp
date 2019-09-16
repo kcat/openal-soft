@@ -43,6 +43,7 @@
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "effects/base.h"
 #include "logging.h"
 #include "opthelpers.h"
@@ -668,7 +669,7 @@ static const struct {
 
 void LoadReverbPreset(const char *name, ALeffect *effect)
 {
-    if(strcasecmp(name, "NONE") == 0)
+    if(al::strcasecmp(name, "NONE") == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
         TRACE("Loading reverb '%s'\n", "NONE");
@@ -685,7 +686,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
     {
         const EFXEAXREVERBPROPERTIES *props;
 
-        if(strcasecmp(name, reverbitem.name) != 0)
+        if(al::strcasecmp(name, reverbitem.name) != 0)
             continue;
 
         TRACE("Loading reverb '%s'\n", reverbitem.name);

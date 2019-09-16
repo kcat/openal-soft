@@ -70,6 +70,7 @@
 
 #include "alcmain.h"
 #include "almalloc.h"
+#include "alstring.h"
 #include "compat.h"
 #include "cpu_caps.h"
 #include "fpu_modes.h"
@@ -662,7 +663,7 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
 
             size_t len{strlen(dirent->d_name)};
             if(len <= extlen) continue;
-            if(strcasecmp(dirent->d_name+len-extlen, ext) != 0)
+            if(al::strcasecmp(dirent->d_name+len-extlen, ext) != 0)
                 continue;
 
             results->emplace_back();

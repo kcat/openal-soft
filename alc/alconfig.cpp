@@ -46,6 +46,7 @@
 #include <algorithm>
 
 #include "alcmain.h"
+#include "alstring.h"
 #include "logging.h"
 #include "strutils.h"
 #include "compat.h"
@@ -169,7 +170,7 @@ void LoadConfigFromFile(std::istream &f)
             *endsection = 0;
 
             curSection.clear();
-            if(strcasecmp(section, "general") != 0)
+            if(al::strcasecmp(section, "general") != 0)
             {
                 do {
                     char *nextp = std::strchr(section, '%');
@@ -447,7 +448,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
         return def;
 
     std::string key;
-    if(blockName && strcasecmp(blockName, "general") != 0)
+    if(blockName && al::strcasecmp(blockName, "general") != 0)
     {
         key = blockName;
         if(devName)
@@ -532,8 +533,8 @@ al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, c
     if(!val[0]) return al::nullopt;
 
     return al::make_optional(
-        strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
-        strcasecmp(val, "on") == 0 || atoi(val) != 0);
+        al::strcasecmp(val, "true") == 0 || al::strcasecmp(val, "yes") == 0 ||
+        al::strcasecmp(val, "on") == 0 || atoi(val) != 0);
 }
 
 int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)
@@ -541,6 +542,6 @@ int GetConfigValueBool(const char *devName, const char *blockName, const char *k
     const char *val = GetConfigValue(devName, blockName, keyName, "");
 
     if(!val[0]) return def != 0;
-    return (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
-            strcasecmp(val, "on") == 0 || atoi(val) != 0);
+    return (al::strcasecmp(val, "true") == 0 || al::strcasecmp(val, "yes") == 0 ||
+            al::strcasecmp(val, "on") == 0 || atoi(val) != 0);
 }

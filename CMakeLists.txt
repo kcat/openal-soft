@@ -473,26 +473,6 @@ CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 CHECK_SYMBOL_EXISTS(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)
 
 CHECK_FUNCTION_EXISTS(stat HAVE_STAT)
-CHECK_FUNCTION_EXISTS(strcasecmp HAVE_STRCASECMP)
-IF(NOT HAVE_STRCASECMP)
-    CHECK_FUNCTION_EXISTS(_stricmp HAVE__STRICMP)
-    IF(NOT HAVE__STRICMP)
-        MESSAGE(FATAL_ERROR "No case-insensitive compare function found, please report!")
-    ENDIF()
-
-    SET(CPP_DEFS ${CPP_DEFS} strcasecmp=_stricmp)
-ENDIF()
-
-CHECK_FUNCTION_EXISTS(strncasecmp HAVE_STRNCASECMP)
-IF(NOT HAVE_STRNCASECMP)
-    CHECK_FUNCTION_EXISTS(_strnicmp HAVE__STRNICMP)
-    IF(NOT HAVE__STRNICMP)
-        MESSAGE(FATAL_ERROR "No case-insensitive size-limitted compare function found, please report!")
-    ENDIF()
-
-    SET(CPP_DEFS ${CPP_DEFS} strncasecmp=_strnicmp)
-ENDIF()
-
 
 IF(NOT WIN32)
     # We need pthreads outside of Windows, for semaphores. It's also used to

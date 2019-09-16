@@ -1326,7 +1326,7 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
 
         auto calc_params = [ctx,force](ALvoice &voice) -> void
         {
-            if(ALuint sid{voice.mSourceID.load(std::memory_order_acquire)})
+            if(voice.mSourceID.load(std::memory_order_acquire) != 0)
                 CalcSourceParams(&voice, ctx, force);
         };
         std::for_each(voices.begin(), voices.end(), calc_params);

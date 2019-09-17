@@ -400,8 +400,8 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
 inline float ScaleAzimuthFront(float azimuth, float scale)
 {
     const ALfloat abs_azi{std::fabs(azimuth)};
-    if(!(abs_azi > al::MathDefs<float>::Pi()*0.5f))
-        return minf(abs_azi*scale, al::MathDefs<float>::Pi()*0.5f) * std::copysign(1.0f, azimuth);
+    if(!(abs_azi >= al::MathDefs<float>::Pi()*0.5f))
+        return std::copysign(minf(abs_azi*scale, al::MathDefs<float>::Pi()*0.5f), azimuth);
     return azimuth;
 }
 

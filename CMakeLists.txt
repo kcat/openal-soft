@@ -114,7 +114,6 @@ SET(EXPORT_DECL "")
 
 
 CHECK_TYPE_SIZE("long" SIZEOF_LONG)
-CHECK_TYPE_SIZE("long long" SIZEOF_LONG_LONG)
 
 
 # Require C++11
@@ -552,13 +551,6 @@ int main()
 ENDIF()
 
 CHECK_SYMBOL_EXISTS(getopt unistd.h HAVE_GETOPT)
-
-# Check for a 64-bit type
-IF(NOT SIZEOF_LONG MATCHES "8")
-    IF(NOT SIZEOF_LONG_LONG MATCHES "8")
-        MESSAGE(FATAL_ERROR "No 64-bit type found, please report!")
-    ENDIF()
-ENDIF()
 
 
 # Common sources used by both the OpenAL implementation library and potentially

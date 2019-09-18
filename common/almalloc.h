@@ -11,6 +11,23 @@
 #include <utility>
 
 
+#ifdef _MSC_VER
+#define DIAGNOSTIC_PUSH _Pragma("warning(push)")
+#define GNUDIAGNOSTIC(x)
+#define MVSDIAGNOSTIC(x) _Pragma(x)
+#define DIAGNOSTIC_POP _Pragma("warning(pop)")
+#elif defined(__GNUC__) || defined(__clang__)
+#define DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
+#define GNUDIAGNOSTIC(x) _Pragma(x)
+#define MVSDIAGNOSTIC(x)
+#define DIAGNOSTIC_POP _Pragma("GCC diagnostic push")
+#else
+#define DIAGNOSTIC_PUSH
+#define GNUDIAGNOSTIC(x)
+#define MVSDIAGNOSTIC(x)
+#define DIAGNOSTIC_POP
+#endif
+
 void *al_malloc(size_t alignment, size_t size);
 void *al_calloc(size_t alignment, size_t size);
 void al_free(void *ptr) noexcept;
@@ -92,8 +109,14 @@ inline T* assume_aligned(T *ptr) noexcept
 #endif
 }
 
+/* At least VS 2015 complains that 'ptr' is unused when the given type's
+ * destructor is trivial (a no-op). So disable that warning for this call.
+ */
+DIAGNOSTIC_PUSH
+MVSDIAGNOSTIC("warning(disable : 4100)")
 template<typename T>
 inline void destroy_at(T *ptr) { ptr->~T(); }
+DIAGNOSTIC_POP
 
 template<typename T>
 inline void destroy(T first, const T end)
@@ -233,7 +256,11 @@ struct FlexArray {
 
 
     const index_type mSize;
+DIAGNOSTIC_PUSH
+GNUDIAGNOSTIC("GCC diagnostic ignored \"-Wpedantic\"")
+MVSDIAGNOSTIC("warning(disable : 4200)")
     alignas(alignment) element_type mArray[0];
+DIAGNOSTIC_POP
 
     static std::unique_ptr<FlexArray> Create(index_type count)
     {

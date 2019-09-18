@@ -67,8 +67,8 @@ extern Resampler ResamplerDefault;
  */
 struct BsincState {
     ALfloat sf; /* Scale interpolation factor. */
-    ALsizei m;  /* Coefficient count. */
-    ALsizei l;  /* Left coefficient offset. */
+    ALuint m;   /* Coefficient count. */
+    ALuint l;   /* Left coefficient offset. */
     /* Filter coefficients, followed by the scale, phase, and scale-phase
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.

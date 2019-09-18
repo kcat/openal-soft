@@ -21,7 +21,7 @@ inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const 
 { return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
 inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALuint frac)
 {
-    ASSUME(istate.bsinc.m > 0);
+    const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
@@ -30,14 +30,14 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
         (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    const ALfloat *fil{istate.bsinc.filter + istate.bsinc.m*static_cast<ptrdiff_t>(pi*4)};
-    const ALfloat *scd{fil + istate.bsinc.m};
-    const ALfloat *phd{scd + istate.bsinc.m};
-    const ALfloat *spd{phd + istate.bsinc.m};
+    const ALfloat *fil{istate.bsinc.filter + m*pi*4};
+    const ALfloat *scd{fil + m};
+    const ALfloat *phd{scd + m};
+    const ALfloat *spd{phd + m};
 
     // Apply the scale and phase interpolated filter.
     ALfloat r{0.0f};
-    for(ALsizei j_f{0};j_f < istate.bsinc.m;j_f++)
+    for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
     return r;
 }

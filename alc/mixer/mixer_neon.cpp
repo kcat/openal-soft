@@ -74,9 +74,7 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
 {
     const ALfloat *const filter{state->bsinc.filter};
     const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
-    const ptrdiff_t m{state->bsinc.m};
-
-    ASSUME(m > 0);
+    const size_t m{state->bsinc.m};
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
@@ -92,11 +90,11 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
         float32x4_t r4{vdupq_n_f32(0.0f)};
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
-            const float *fil{filter + m*static_cast<ptrdiff_t>(pi*4)};
+            const float *fil{filter + m*pi*4};
             const float *scd{fil + m};
             const float *phd{scd + m};
             const float *spd{phd + m};
-            ptrdiff_t td{m >> 2};
+            size_t td{m >> 2};
             size_t j{0u};
 
             do {
@@ -110,8 +108,7 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
                 j += 4;
             } while(--td);
         }
-        r4 = vaddq_f32(r4, vcombine_f32(vrev64_f32(vget_high_f32(r4)),
-                                        vrev64_f32(vget_low_f32(r4))));
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
         out_sample = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
 
         frac += increment;

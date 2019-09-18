@@ -19,9 +19,7 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
 {
     const ALfloat *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
-    const ptrdiff_t m{state->bsinc.m};
-
-    ASSUME(m > 0);
+    const size_t m{state->bsinc.m};
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
@@ -41,7 +39,7 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
             const float *scd{fil + m};
             const float *phd{scd + m};
             const float *spd{phd + m};
-            ptrdiff_t td{m >> 2};
+            size_t td{m >> 2};
             size_t j{0u};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))

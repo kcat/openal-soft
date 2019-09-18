@@ -164,9 +164,9 @@ int main(int argc, char **argv)
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(d, x)  ((x) = alcGetProcAddress((d), #x))
-    LOAD_PROC(device, alcGetStringiSOFT);
-    LOAD_PROC(device, alcResetDeviceSOFT);
+#define LOAD_PROC(d, T, x)  ((x) = (T)alcGetProcAddress((d), #x))
+    LOAD_PROC(device, LPALCGETSTRINGISOFT, alcGetStringiSOFT);
+    LOAD_PROC(device, LPALCRESETDEVICESOFT, alcResetDeviceSOFT);
 #undef LOAD_PROC
 
     /* Check for the AL_EXT_STEREO_ANGLES extension to be able to also rotate

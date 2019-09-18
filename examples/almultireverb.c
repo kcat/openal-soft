@@ -523,42 +523,42 @@ int main(int argc, char **argv)
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(x)  ((x) = alGetProcAddress(#x))
-    LOAD_PROC(alGenFilters);
-    LOAD_PROC(alDeleteFilters);
-    LOAD_PROC(alIsFilter);
-    LOAD_PROC(alFilteri);
-    LOAD_PROC(alFilteriv);
-    LOAD_PROC(alFilterf);
-    LOAD_PROC(alFilterfv);
-    LOAD_PROC(alGetFilteri);
-    LOAD_PROC(alGetFilteriv);
-    LOAD_PROC(alGetFilterf);
-    LOAD_PROC(alGetFilterfv);
+#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+    LOAD_PROC(LPALGENFILTERS, alGenFilters);
+    LOAD_PROC(LPALDELETEFILTERS, alDeleteFilters);
+    LOAD_PROC(LPALISFILTER, alIsFilter);
+    LOAD_PROC(LPALFILTERI, alFilteri);
+    LOAD_PROC(LPALFILTERIV, alFilteriv);
+    LOAD_PROC(LPALFILTERF, alFilterf);
+    LOAD_PROC(LPALFILTERFV, alFilterfv);
+    LOAD_PROC(LPALGETFILTERI, alGetFilteri);
+    LOAD_PROC(LPALGETFILTERIV, alGetFilteriv);
+    LOAD_PROC(LPALGETFILTERF, alGetFilterf);
+    LOAD_PROC(LPALGETFILTERFV, alGetFilterfv);
 
-    LOAD_PROC(alGenEffects);
-    LOAD_PROC(alDeleteEffects);
-    LOAD_PROC(alIsEffect);
-    LOAD_PROC(alEffecti);
-    LOAD_PROC(alEffectiv);
-    LOAD_PROC(alEffectf);
-    LOAD_PROC(alEffectfv);
-    LOAD_PROC(alGetEffecti);
-    LOAD_PROC(alGetEffectiv);
-    LOAD_PROC(alGetEffectf);
-    LOAD_PROC(alGetEffectfv);
+    LOAD_PROC(LPALGENEFFECTS, alGenEffects);
+    LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
+    LOAD_PROC(LPALISEFFECT, alIsEffect);
+    LOAD_PROC(LPALEFFECTI, alEffecti);
+    LOAD_PROC(LPALEFFECTIV, alEffectiv);
+    LOAD_PROC(LPALEFFECTF, alEffectf);
+    LOAD_PROC(LPALEFFECTFV, alEffectfv);
+    LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
+    LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
+    LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
+    LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
 
-    LOAD_PROC(alGenAuxiliaryEffectSlots);
-    LOAD_PROC(alDeleteAuxiliaryEffectSlots);
-    LOAD_PROC(alIsAuxiliaryEffectSlot);
-    LOAD_PROC(alAuxiliaryEffectSloti);
-    LOAD_PROC(alAuxiliaryEffectSlotiv);
-    LOAD_PROC(alAuxiliaryEffectSlotf);
-    LOAD_PROC(alAuxiliaryEffectSlotfv);
-    LOAD_PROC(alGetAuxiliaryEffectSloti);
-    LOAD_PROC(alGetAuxiliaryEffectSlotiv);
-    LOAD_PROC(alGetAuxiliaryEffectSlotf);
-    LOAD_PROC(alGetAuxiliaryEffectSlotfv);
+    LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
+    LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
+    LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 
     /* Initialize SDL_sound. */

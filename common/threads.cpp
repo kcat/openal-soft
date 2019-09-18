@@ -43,7 +43,7 @@ void althrd_setname(const char *name)
 #pragma pack(pop)
     info.dwType = 0x1000;
     info.szName = name;
-    info.dwThreadID = -1;
+    info.dwThreadID = ~DWORD{0};
     info.dwFlags = 0;
 
     __try {

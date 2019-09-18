@@ -709,7 +709,8 @@ ALeffectslot::~ALeffectslot()
     if(props)
     {
         if(props->State) props->State->release();
-        TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
+        TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n",
+            decltype(std::declval<void*>()){props});
         delete props;
     }
 

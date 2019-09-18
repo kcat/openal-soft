@@ -149,10 +149,10 @@ int main(int argc, char *argv[])
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(x)  ((x) = alcGetProcAddress(NULL, #x))
-    LOAD_PROC(alcLoopbackOpenDeviceSOFT);
-    LOAD_PROC(alcIsRenderFormatSupportedSOFT);
-    LOAD_PROC(alcRenderSamplesSOFT);
+#define LOAD_PROC(T, x)  ((x) = (T)alcGetProcAddress(NULL, #x))
+    LOAD_PROC(LPALCLOOPBACKOPENDEVICESOFT, alcLoopbackOpenDeviceSOFT);
+    LOAD_PROC(LPALCISRENDERFORMATSUPPORTEDSOFT, alcIsRenderFormatSupportedSOFT);
+    LOAD_PROC(LPALCRENDERSAMPLESSOFT, alcRenderSamplesSOFT);
 #undef LOAD_PROC
 
     if(SDL_Init(SDL_INIT_AUDIO) == -1)

@@ -223,7 +223,7 @@ static void printHRTFInfo(ALCdevice *device)
         return;
     }
 
-    alcGetStringiSOFT = alcGetProcAddress(device, "alcGetStringiSOFT");
+    alcGetStringiSOFT = (LPALCGETSTRINGISOFT)alcGetProcAddress(device, "alcGetStringiSOFT");
 
     alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtfs);
     if(!num_hrtfs)
@@ -263,7 +263,7 @@ static void printResamplerInfo(void)
         return;
     }
 
-    alGetStringiSOFT = alGetProcAddress("alGetStringiSOFT");
+    alGetStringiSOFT = (LPALGETSTRINGISOFT)alGetProcAddress("alGetStringiSOFT");
 
     num_resamplers = alGetInteger(AL_NUM_RESAMPLERS_SOFT);
     def_resampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);

@@ -67,7 +67,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     else msg = "<internal error constructing message>";
     msglen = static_cast<int>(strlen(msg));
 
-    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n", this, errorCode, msg);
+    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
+        decltype(std::declval<void*>()){this}, errorCode, msg);
     if(TrapALError)
     {
 #ifdef _WIN32

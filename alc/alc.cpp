@@ -845,8 +845,8 @@ std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 void ReleaseThreadCtx(ALCcontext *context)
 {
     const bool result{context->releaseIfNoDelete()};
-    ERR("Context %p current for thread being destroyed%s!\n", context,
-        result ? "" : ", leak detected");
+    ERR("Context %p current for thread being destroyed%s!\n",
+        decltype(std::declval<void*>()){context}, result ? "" : ", leak detected");
 }
 
 class ThreadCtx {
@@ -1567,7 +1567,8 @@ void ALCcontext::processUpdates()
  */
 static void alcSetError(ALCdevice *device, ALCenum errorCode)
 {
-    WARN("Error generated on device %p, code 0x%04x\n", device, errorCode);
+    WARN("Error generated on device %p, code 0x%04x\n", decltype(std::declval<void*>()){device},
+        errorCode);
     if(TrapALCError)
     {
 #ifdef _WIN32
@@ -2256,7 +2257,7 @@ ALCdevice::ALCdevice(DeviceType type) : Type{type}, mContexts{&EmptyContextArray
  */
 ALCdevice::~ALCdevice()
 {
-    TRACE("Freeing device %p\n", this);
+    TRACE("Freeing device %p\n", decltype(std::declval<void*>()){this});
 
     Backend = nullptr;
 
@@ -2311,15 +2312,15 @@ ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device) : mDevice{std::move(
 
 ALCcontext::~ALCcontext()
 {
-    TRACE("Freeing context %p\n", this);
+    TRACE("Freeing context %p\n", decltype(std::declval<void*>()){this});
 
+    size_t count{0};
     ALcontextProps *cprops{mUpdate.exchange(nullptr, std::memory_order_relaxed)};
     if(cprops)
     {
-        TRACE("Freed unapplied context update %p\n", cprops);
+        ++count;
         delete cprops;
     }
-    size_t count{0};
     cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
     while(cprops)
     {
@@ -2376,13 +2377,13 @@ ALCcontext::~ALCcontext()
 
     mVoices.clear();
 
+    count = 0;
     ALlistenerProps *lprops{mListener.Params.Update.exchange(nullptr, std::memory_order_relaxed)};
     if(lprops)
     {
-        TRACE("Freed unapplied listener update %p\n", lprops);
+        ++count;
         delete lprops;
     }
-    count = 0;
     lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
     while(lprops)
     {
@@ -2462,7 +2463,7 @@ bool ALCcontext::deinit()
 {
     if(LocalContext.get() == this)
     {
-        WARN("%p released while current on thread\n", this);
+        WARN("%p released while current on thread\n", decltype(std::declval<void*>()){this});
         LocalContext.set(nullptr);
         release();
     }
@@ -3356,7 +3357,7 @@ START_API_FUNC
             ERR("Failed to initialize the default effect\n");
     }
 
-    TRACE("Created context %p\n", context.get());
+    TRACE("Created context %p\n", decltype(std::declval<void*>()){context.get()});
     return context.get();
 }
 END_API_FUNC
@@ -3700,7 +3701,8 @@ START_API_FUNC
         DeviceList.emplace(iter, device);
     }
 
-    TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
+    TRACE("Created device %p, \"%s\"\n", decltype(std::declval<void*>()){device.get()},
+        device->DeviceName.c_str());
     return device.get();
 }
 END_API_FUNC
@@ -3746,7 +3748,7 @@ START_API_FUNC
 
     for(ContextRef &context : orphanctxs)
     {
-        WARN("Releasing orphaned context %p\n", context.get());
+        WARN("Releasing orphaned context %p\n", decltype(std::declval<void*>()){context.get()});
         context->deinit();
     }
     orphanctxs.clear();
@@ -3829,7 +3831,8 @@ START_API_FUNC
         DeviceList.emplace(iter, device);
     }
 
-    TRACE("Created device %p, \"%s\"\n", device.get(), device->DeviceName.c_str());
+    TRACE("Created capture device %p, \"%s\"\n", decltype(std::declval<void*>()){device.get()},
+        device->DeviceName.c_str());
     return device.get();
 }
 END_API_FUNC
@@ -4011,7 +4014,7 @@ START_API_FUNC
         DeviceList.emplace(iter, device);
     }
 
-    TRACE("Created device %p\n", device.get());
+    TRACE("Created loopback device %p\n", decltype(std::declval<void*>()){device.get()});
     return device.get();
 }
 END_API_FUNC

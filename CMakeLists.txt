@@ -222,6 +222,7 @@ IF(MSVC)
     ENDIF()
 ELSE()
     SET(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align
+        -Wpedantic -Wno-zero-length-array
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
 
     IF(ALSOFT_WERROR)

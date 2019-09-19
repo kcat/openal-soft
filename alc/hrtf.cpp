@@ -512,7 +512,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const A
             elev_[i].azCount = azCount[i];
             elev_[i].irOffset = irOffset[i];
         }
-        for(ALuint i{0};i < irSize*irCount;i++)
+        for(ALuint i{0};i < ALuint{irSize}*irCount;i++)
         {
             coeffs_[i][0] = coeffs[i][0];
             coeffs_[i][1] = coeffs[i][1];
@@ -739,7 +739,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
     for(size_t i{1};i < evCount;i++)
     {
         evOffset[i] = static_cast<ALushort>(evOffset[i-1] + azCount[i-1]);
-        irCount += azCount[i];
+        irCount = static_cast<ALushort>(irCount + azCount[i]);
     }
 
     auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irCount);

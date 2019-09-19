@@ -159,10 +159,10 @@ class databuf final : public std::streambuf {
     }
 
 public:
-    databuf(const char_type *start, const char_type *end) noexcept
+    databuf(const char_type *start_, const char_type *end_) noexcept
     {
-        setg(const_cast<char_type*>(start), const_cast<char_type*>(start),
-             const_cast<char_type*>(end));
+        setg(const_cast<char_type*>(start_), const_cast<char_type*>(start_),
+             const_cast<char_type*>(end_));
     }
 };
 
@@ -170,8 +170,8 @@ class idstream final : public std::istream {
     databuf mStreamBuf;
 
 public:
-    idstream(const char *start, const char *end)
-      : std::istream{nullptr}, mStreamBuf{start, end}
+    idstream(const char *start_, const char *end_)
+      : std::istream{nullptr}, mStreamBuf{start_, end_}
     { init(&mStreamBuf); }
 };
 

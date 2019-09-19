@@ -828,9 +828,9 @@ ALCuint DSoundCapture::availableSamples()
     DWORD BufferBytes{mBufferBytes};
     DWORD LastCursor{mCursor};
 
-    DWORD ReadCursor;
-    void *ReadPtr1, *ReadPtr2;
-    DWORD ReadCnt1,  ReadCnt2;
+    DWORD ReadCursor{};
+    void *ReadPtr1{}, *ReadPtr2{};
+    DWORD ReadCnt1{},  ReadCnt2{};
     HRESULT hr{mDSCbuffer->GetCurrentPosition(nullptr, &ReadCursor)};
     if(SUCCEEDED(hr))
     {

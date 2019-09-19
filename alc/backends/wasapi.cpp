@@ -402,7 +402,7 @@ void TraceFormat(const char *msg, const WAVEFORMATEX *format)
 }
 
 
-enum class MsgType : unsigned int {
+enum class MsgType {
     OpenDevice,
     ResetDevice,
     StartDevice,
@@ -415,7 +415,7 @@ enum class MsgType : unsigned int {
     Count
 };
 
-constexpr char MessageStr[static_cast<unsigned int>(MsgType::Count)][20]{
+constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][20]{
     "Open Device",
     "Reset Device",
     "Start Device",
@@ -522,8 +522,8 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     while(popMessage(msg))
     {
         TRACE("Got message \"%s\" (0x%04x, this=%p)\n",
-            MessageStr[static_cast<unsigned int>(msg.mType)], static_cast<unsigned int>(msg.mType),
-            msg.mProxy);
+            MessageStr[static_cast<size_t>(msg.mType)], static_cast<int>(msg.mType),
+            decltype(std::declval<void*>()){msg.mProxy});
 
         switch(msg.mType)
         {
@@ -1042,8 +1042,8 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
-    UINT32 buffer_len, min_len;
-    REFERENCE_TIME min_per;
+    UINT32 buffer_len{}, min_len{};
+    REFERENCE_TIME min_per{};
     hr = mClient->GetDevicePeriod(&min_per, nullptr);
     if(SUCCEEDED(hr))
         hr = mClient->GetBufferSize(&buffer_len);
@@ -1414,7 +1414,7 @@ HRESULT WasapiCapture::resetProxy()
     REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
     buf_time = maxu64(buf_time, REFTIME_PER_SEC/10);
 
-    WAVEFORMATEXTENSIBLE OutputType;
+    WAVEFORMATEXTENSIBLE OutputType{};
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     switch(mDevice->FmtChans)
     {
@@ -1589,8 +1589,8 @@ HRESULT WasapiCapture::resetProxy()
         return hr;
     }
 
-    UINT32 buffer_len;
-    REFERENCE_TIME min_per;
+    UINT32 buffer_len{};
+    REFERENCE_TIME min_per{};
     hr = mClient->GetDevicePeriod(&min_per, nullptr);
     if(SUCCEEDED(hr))
         hr = mClient->GetBufferSize(&buffer_len);

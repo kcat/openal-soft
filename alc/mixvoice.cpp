@@ -76,10 +76,13 @@ Resampler ResamplerDefault = LinearResampler;
 
 MixerFunc MixSamples = Mix_<CTag>;
 RowMixerFunc MixRowSamples = MixRow_<CTag>;
-static HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
-static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
 
-static MixerFunc SelectMixer()
+namespace {
+
+HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
+HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
+
+inline MixerFunc SelectMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -92,7 +95,7 @@ static MixerFunc SelectMixer()
     return Mix_<CTag>;
 }
 
-static RowMixerFunc SelectRowMixer()
+inline RowMixerFunc SelectRowMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -105,7 +108,7 @@ static RowMixerFunc SelectRowMixer()
     return MixRow_<CTag>;
 }
 
-static inline HrtfMixerFunc SelectHrtfMixer()
+inline HrtfMixerFunc SelectHrtfMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -118,7 +121,7 @@ static inline HrtfMixerFunc SelectHrtfMixer()
     return MixHrtf_<CTag>;
 }
 
-static inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
+inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -130,6 +133,9 @@ static inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 #endif
     return MixHrtfBlend_<CTag>;
 }
+
+} // namespace
+
 
 ResamplerFunc SelectResampler(Resampler resampler)
 {

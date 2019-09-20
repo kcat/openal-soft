@@ -74,7 +74,7 @@ namespace detail_ {
         : std::true_type { };
 } // namespace detail_
 
-#define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),int>::type = 0
+#define REQUIRES(...) bool rt_=true, typename std::enable_if<rt_ && (__VA_ARGS__),bool>::type = true
 #define USABLE_CONTAINER_DATA(...)                                            \
     std::is_convertible<typename std::remove_pointer<decltype(al::data(std::declval<__VA_ARGS__>()))>::type(*)[],element_type(*)[]>::value
 #define IS_VALID_CONTAINER(C)                                                 \
@@ -104,13 +104,13 @@ public:
 
     static constexpr size_t extent{E};
 
-    template<bool allow_def=(extent==0), REQUIRES(allow_def)>
+    template<REQUIRES(extent==0)>
     constexpr span() noexcept { }
     constexpr span(pointer ptr, index_type /*count*/) : mData{ptr} { }
     constexpr span(pointer first, pointer /*last*/) : mData{first} { }
     constexpr span(element_type (&arr)[E]) noexcept : span{al::data(arr), al::size(arr)} { }
     constexpr span(std::array<value_type,E> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
-    template<bool is_const=std::is_const<element_type>::value, REQUIRES(is_const)>
+    template<REQUIRES(std::is_const<element_type>::value)>
     constexpr span(const std::array<value_type,E> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(U))>
     constexpr span(U &cont) : span{al::data(cont), al::size(cont)} { }
@@ -204,7 +204,7 @@ public:
     constexpr span(element_type (&arr)[N]) noexcept : span{al::data(arr), al::size(arr)} { }
     template<size_t N>
     constexpr span(std::array<value_type,N> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
-    template<size_t N, bool is_const=std::is_const<element_type>::value, REQUIRES(is_const)>
+    template<size_t N, REQUIRES(std::is_const<element_type>::value)>
     constexpr span(const std::array<value_type,N> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(U))>
     constexpr span(U &cont) : span{al::data(cont), al::size(cont)} { }

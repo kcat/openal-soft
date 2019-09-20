@@ -9,7 +9,7 @@
 
 namespace al {
 
-#define REQUIRES(...) bool _rt=true, typename std::enable_if<_rt && (__VA_ARGS__),int>::type = 0
+#define REQUIRES(...) bool rt_=true, typename std::enable_if<rt_ && (__VA_ARGS__),bool>::type = true
 
 struct nullopt_t { };
 struct in_place_t { };
@@ -61,7 +61,7 @@ public:
         !std::is_constructible<U&&, T>::value)>
     constexpr optional(U&& value) : mHasValue{true}, mValue{std::forward<U>(value)}
     { }
-    ~optional() { reset(); }
+    ~optional() { if(mHasValue) al::destroy_at(std::addressof(mValue)); }
 
     optional& operator=(nullopt_t) noexcept { reset(); return *this; }
     template<REQUIRES(std::is_copy_constructible<T>::value && std::is_copy_assignable<T>::value)>

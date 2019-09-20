@@ -31,6 +31,18 @@ public:
 
 #define START_API_FUNC try
 
+#ifndef _MSC_VER
 #define END_API_FUNC catch(...) { std::terminate(); }
+#else
+/* VS 2015 complains that some of these catch statements are unreachable code,
+ * due to the function body not able to throw anything. While technically true,
+ * it's preferable to mark API functions just in case that ever changes, so
+ * silence that warning.
+ */
+#define END_API_FUNC __pragma(warning(push)) \
+__pragma(warning(disable : 4702))            \
+catch(...) { std::terminate(); }             \
+__pragma(warning(pop))
+#endif
 
 #endif /* ALEXCPT_H */

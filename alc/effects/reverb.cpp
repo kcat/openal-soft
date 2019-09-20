@@ -844,6 +844,8 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
  */
 alu::Matrix GetTransformFromVector(const ALfloat *vec)
 {
+    constexpr float sqrt_3{1.73205080756887719318f};
+
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
      * to B-Format also requires negating X (ACN 1) and Z (ACN 3). Note however
@@ -855,9 +857,9 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
     ALfloat mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
-        norm[0] = vec[0] / mag * -al::MathDefs<float>::Sqrt3();
-        norm[1] = vec[1] / mag * al::MathDefs<float>::Sqrt3();
-        norm[2] = vec[2] / mag * al::MathDefs<float>::Sqrt3();
+        norm[0] = vec[0] / mag * -sqrt_3;
+        norm[1] = vec[1] / mag * sqrt_3;
+        norm[2] = vec[2] / mag * sqrt_3;
         mag = 1.0f;
     }
     else
@@ -866,9 +868,9 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] = vec[0] * -al::MathDefs<float>::Sqrt3();
-        norm[1] = vec[1] * al::MathDefs<float>::Sqrt3();
-        norm[2] = vec[2] * al::MathDefs<float>::Sqrt3();
+        norm[0] = vec[0] * -sqrt_3;
+        norm[1] = vec[1] * sqrt_3;
+        norm[2] = vec[2] * sqrt_3;
     }
 
     return alu::Matrix{

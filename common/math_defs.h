@@ -17,16 +17,14 @@ struct MathDefs { };
 
 template<>
 struct MathDefs<float> {
-    static constexpr inline float Pi() noexcept { return 3.14159265358979323846f; }
-    static constexpr inline float Tau() noexcept { return 3.14159265358979323846f * 2.0f; }
-    static constexpr inline float Sqrt3() noexcept { return 1.73205080756887719318f; }
+    static constexpr inline float Pi() noexcept { return static_cast<float>(M_PI); }
+    static constexpr inline float Tau() noexcept { return static_cast<float>(M_PI * 2.0); }
 };
 
 template<>
 struct MathDefs<double> {
-    static constexpr inline double Pi() noexcept { return 3.14159265358979323846; }
-    static constexpr inline double Tau() noexcept { return 3.14159265358979323846 * 2.0; }
-    static constexpr inline double Sqrt3() noexcept { return 1.73205080756887719318; }
+    static constexpr inline double Pi() noexcept { return M_PI; }
+    static constexpr inline double Tau() noexcept { return M_PI * 2.0; }
 };
 
 } // namespace al

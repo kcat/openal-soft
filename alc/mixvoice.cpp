@@ -300,35 +300,35 @@ struct FmtTypeTraits { };
 template<>
 struct FmtTypeTraits<FmtUByte> {
     using Type = ALubyte;
-    static constexpr ALfloat to_float(const Type val) noexcept
+    static constexpr inline float to_float(const Type val) noexcept
     { return val*(1.0f/128.0f) - 128.0f; }
 };
 template<>
 struct FmtTypeTraits<FmtShort> {
     using Type = ALshort;
-    static constexpr ALfloat to_float(const Type val) noexcept { return val*(1.0f/32768.0f); }
+    static constexpr inline float to_float(const Type val) noexcept { return val*(1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtFloat> {
     using Type = ALfloat;
-    static constexpr ALfloat to_float(const Type val) noexcept { return val; }
+    static constexpr inline float to_float(const Type val) noexcept { return val; }
 };
 template<>
 struct FmtTypeTraits<FmtDouble> {
     using Type = ALdouble;
-    static constexpr ALfloat to_float(const Type val) noexcept
+    static constexpr inline float to_float(const Type val) noexcept
     { return static_cast<ALfloat>(val); }
 };
 template<>
 struct FmtTypeTraits<FmtMulaw> {
     using Type = ALubyte;
-    static constexpr ALfloat to_float(const Type val) noexcept
+    static constexpr inline float to_float(const Type val) noexcept
     { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtAlaw> {
     using Type = ALubyte;
-    static constexpr ALfloat to_float(const Type val) noexcept
+    static constexpr inline float to_float(const Type val) noexcept
     { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 };
 

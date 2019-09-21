@@ -68,7 +68,7 @@ inline ALuint FrameSizeFromFmt(FmtChannels chans, FmtType type)
 struct ALbuffer {
     al::vector<al::byte,16> mData;
 
-    ALsizei Frequency{0};
+    ALuint Frequency{0u};
     ALbitfieldSOFT Access{0u};
     ALuint SampleLen{0u};
 

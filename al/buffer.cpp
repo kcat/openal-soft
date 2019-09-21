@@ -463,7 +463,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         /* Can only preserve data with the same format and alignment. */
         if UNLIKELY(ALBuf->mFmtChannels != DstChannels || ALBuf->OriginalType != SrcType)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
-        if UNLIKELY(static_cast<ALuint>(ALBuf->OriginalAlign) != align)
+        if UNLIKELY(ALBuf->OriginalAlign != align)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
     }
 
@@ -539,7 +539,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->OriginalSize = size;
     ALBuf->OriginalType = SrcType;
 
-    ALBuf->Frequency = freq;
+    ALBuf->Frequency = static_cast<ALuint>(freq);
     ALBuf->mFmtChannels = DstChannels;
     ALBuf->mFmtType = DstType;
     ALBuf->Access = access;
@@ -1253,7 +1253,7 @@ START_API_FUNC
     else switch(param)
     {
     case AL_FREQUENCY:
-        *value = albuf->Frequency;
+        *value = static_cast<ALint>(albuf->Frequency);
         break;
 
     case AL_BITS:

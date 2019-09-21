@@ -267,8 +267,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *
         }
         assert(BufferFmt != nullptr);
 
-        offset = static_cast<ALdouble>(readPos) / ALdouble{FRACTIONONE} /
-                 static_cast<ALdouble>(BufferFmt->Frequency);
+        offset = static_cast<ALdouble>(readPos) / ALdouble{FRACTIONONE} / BufferFmt->Frequency;
     }
 
     return offset;
@@ -2784,7 +2783,7 @@ START_API_FUNC
         }
 
         ALbuffer *buffer{BufferList->mBuffer};
-        voice->mFrequency = static_cast<ALuint>(buffer->Frequency);
+        voice->mFrequency = buffer->Frequency;
         voice->mFmtChannels = buffer->mFmtChannels;
         voice->mNumChannels = ChannelsFromFmt(buffer->mFmtChannels);
         voice->mSampleSize  = BytesFromFmt(buffer->mFmtType);

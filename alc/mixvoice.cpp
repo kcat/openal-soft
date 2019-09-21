@@ -27,11 +27,9 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <iterator>
 #include <memory>
 #include <new>
-#include <numeric>
 #include <string>
 #include <utility>
 
@@ -180,29 +178,37 @@ void aluInitMixer()
 {
     if(auto resopt = ConfigValueStr(nullptr, nullptr, "resampler"))
     {
+        struct ResamplerEntry {
+            const char name[12];
+            const Resampler resampler;
+        };
+        constexpr ResamplerEntry ResamplerList[]{
+            { "none", PointResampler },
+            { "point", PointResampler },
+            { "cubic", FIR4Resampler },
+            { "bsinc12", BSinc12Resampler },
+            { "bsinc24", BSinc24Resampler },
+        };
+
         const char *str{resopt->c_str()};
-        if(al::strcasecmp(str, "point") == 0 || al::strcasecmp(str, "none") == 0)
-            ResamplerDefault = PointResampler;
-        else if(al::strcasecmp(str, "linear") == 0)
-            ResamplerDefault = LinearResampler;
-        else if(al::strcasecmp(str, "cubic") == 0)
-            ResamplerDefault = FIR4Resampler;
-        else if(al::strcasecmp(str, "bsinc12") == 0)
-            ResamplerDefault = BSinc12Resampler;
-        else if(al::strcasecmp(str, "bsinc24") == 0)
-            ResamplerDefault = BSinc24Resampler;
-        else if(al::strcasecmp(str, "bsinc") == 0)
+        if(al::strcasecmp(str, "bsinc") == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", str);
-            ResamplerDefault = BSinc12Resampler;
+            str = "bsinc12";
         }
         else if(al::strcasecmp(str, "sinc4") == 0 || al::strcasecmp(str, "sinc8") == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using cubic\n", str);
-            ResamplerDefault = FIR4Resampler;
+            str = "cubic";
         }
-        else
+
+        auto iter = std::find_if(std::begin(ResamplerList), std::end(ResamplerList),
+            [str](const ResamplerEntry &entry) -> bool
+            { return al::strcasecmp(str, entry.name) == 0; });
+        if(iter == std::end(ResamplerList))
             ERR("Invalid resampler: %s\n", str);
+        else
+            ResamplerDefault = iter->resampler;
     }
 
     MixHrtfBlendSamples = SelectHrtfBlendMixer();

@@ -1,53 +1,54 @@
 openal-soft-1.20.0:
 
-    Converted the library code base to C++11. A lot of hacks and custom
-    structures have been replaced with standard stuff.
+    Converted the library codebase to C++11. A lot of hacks and custom
+    structures have been replaced with standard or cleaner implementations.
 
-    Fixed a performance problem with semaphores on macOS.
+    Partially implemented the Vocal Morpher effect.
 
-    Fixed bsinc SSE resampler on non-GCC compilers.
-
-    Modified alcResetDeviceSOFT to attempt recovery of lost devices.
-
-    Added a build option to use external native tools. For cross-compiling,
-    use with caution and ensure the native tools' binaries are up-to-date.
-
-    Modified the virtual speaker layout for the HRTF B-Format decode.
-
-    Added an adjust-latency config option for the PulseAudio backend.
-
-    Improved the efficiency of the HRTF mixers.
+    Fixed the bsinc SSE resampler on non-GCC compilers.
 
     Fixed OpenSL capture.
 
-    Improved the HRTF B-Format decoder coefficient generation.
+    Fixed support for extended capture/playback formats with OpenSL.
 
     Fixed handling of WASAPI not reporting a default device.
 
+    Fixed performance problems relating to semaphores on macOS.
+
+    Modified alcResetDeviceSOFT to attempt recovery of lost devices.
+
+    Modified the virtual speaker layout for HRTF B-Format decoding.
+
+    Modified the PulseAudio backend to use a custom processing loop.
+
     Renamed the makehrtf utility to makemhr.
 
-    Added support for SOFA input files for makemhr. Either directly or through
-    a .def file.
+    Improved the efficiency of the HRTF mixers.
 
-    Added basic support for multi-field HRTFs.
+    Improved the HRTF B-Format decoder coefficient generation.
+
+    Improved reverb fading to be more consistent with pan fading.
 
     Improved handling of sources that end prematurely, to avoid loud clicks.
 
-    Disabled some old KDE workarounds by default. Specifically, PulseAudio
-    streams can now be moved (KDE may try to move them after opening).
+    Improved some reverb processing loops.
 
-    Fixed support for extended capture/playback formats with OpenSL.
+    Added support for SOFA input files with makemhr.
+
+    Added a build option to use pre-built native tools. For cross-compiling,
+    use with caution and ensure the native tools' binaries are kept up-to-date.
+
+    Added an adjust-latency config option for the PulseAudio backend.
+
+    Added basic support for multi-field HRTFs.
 
     Added an option for mixing first-, second-, or third-order B-Format with
     HRTF output. This can improve HRTF performance given a number of sources.
 
-    Added an RC file for proper DLL versioning information.
+    Added an RC file for proper DLL version information.
 
-    Improved some reverb processing loops.
-
-    Added a partial implementation of the Vocal Morpher effect.
-
-    Improved reverb fading to be more consistent with pan fading.
+    Disabled some old KDE workarounds by default. Specifically, PulseAudio
+    streams can now be moved (KDE may try to move them after opening).
 
 openal-soft-1.19.1:
 

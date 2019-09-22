@@ -46,7 +46,6 @@ INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckCXXSourceCompiles)
 INCLUDE(CheckTypeSize)
 include(CheckStructHasMember)
-include(CheckFileOffsetBits)
 include(GNUInstallDirs)
 
 
@@ -148,18 +147,6 @@ if(NOT WIN32)
         ENDIF()
     ENDIF()
     UNSET(OLD_REQUIRED_FLAGS)
-ENDIF()
-
-# Set defines for large file support. Don't set this for Android targets. See:
-# https://android-developers.googleblog.com/2017/09/introducing-android-native-development.html
-IF(NOT ANDROID)
-    CHECK_FILE_OFFSET_BITS()
-    IF(_FILE_OFFSET_BITS)
-        SET(CPP_DEFS ${CPP_DEFS} "_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS}")
-        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS}")
-    ENDIF()
-    SET(CPP_DEFS ${CPP_DEFS} _LARGEFILE_SOURCE _LARGE_FILES)
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_LARGEFILE_SOURCE -D_LARGE_FILES")
 ENDIF()
 
 # C99 has restrict, but C++ does not, so we can only utilize __restrict.

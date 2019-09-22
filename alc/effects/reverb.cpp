@@ -220,13 +220,16 @@ struct DelayLineI {
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
      */
     size_t Mask{0u};
-    std::array<float,NUM_LINES> *Line{nullptr};
+    union {
+        uintptr_t LineOffset{0u};
+        std::array<float,NUM_LINES> *Line;
+    };
 
     /* Given the allocated sample buffer, this function updates each delay line
      * offset.
      */
     void realizeLineOffset(std::array<float,NUM_LINES> *sampleBuffer) noexcept
-    { Line = &sampleBuffer[reinterpret_cast<ptrdiff_t>(Line)]; }
+    { Line = sampleBuffer + LineOffset; }
 
     /* Calculate the length of a delay line and store its mask and offset. */
     ALuint calcLineLength(const ALfloat length, const uintptr_t offset, const ALfloat frequency,
@@ -240,7 +243,7 @@ struct DelayLineI {
 
         /* All lines share a single sample buffer. */
         Mask = samples - 1;
-        Line = reinterpret_cast<std::array<float,NUM_LINES>*>(offset);
+        LineOffset = offset;
 
         /* Return the sample count for accumulation. */
         return samples;

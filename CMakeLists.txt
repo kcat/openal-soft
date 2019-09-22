@@ -527,6 +527,8 @@ SET(COMMON_OBJS
     common/alcomplex.h
     common/alexcpt.cpp
     common/alexcpt.h
+    common/alfstream.cpp
+    common/alfstream.h
     common/almalloc.cpp
     common/almalloc.h
     common/alnumeric.h

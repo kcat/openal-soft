@@ -10,7 +10,7 @@
 #include <sstream>
 #include <string>
 
-#include "compat.h"
+#include "alfstream.h"
 #include "logging.h"
 
 

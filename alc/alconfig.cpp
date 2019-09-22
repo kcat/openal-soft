@@ -41,15 +41,17 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <cstdio>
+#include <string>
+#include <utility>
 
-#include "alcmain.h"
+#include "alfstream.h"
 #include "alstring.h"
+#include "compat.h"
 #include "logging.h"
 #include "strutils.h"
-#include "compat.h"
+#include "vector.h"
 
 
 namespace {

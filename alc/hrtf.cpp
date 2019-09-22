@@ -36,17 +36,18 @@
 #include <mutex>
 #include <new>
 #include <numeric>
+#include <type_traits>
 #include <utility>
 
 #include "AL/al.h"
 
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alfstream.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
-#include "compat.h"
 #include "filters/splitter.h"
 #include "logging.h"
 #include "math_defs.h"

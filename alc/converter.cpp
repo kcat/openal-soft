@@ -167,9 +167,9 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
         converter->mResample = Resample_<CopyTag,CTag>;
     else
     {
-        if(resampler == BSinc24Resampler)
+        if(resampler == Resampler::BSinc24)
             BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc24);
-        else if(resampler == BSinc12Resampler)
+        else if(resampler == Resampler::BSinc12)
             BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc12);
         converter->mResample = SelectResampler(resampler);
     }

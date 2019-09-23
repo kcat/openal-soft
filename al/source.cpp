@@ -1295,7 +1295,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_SOURCE_RESAMPLER_SOFT:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] >= 0 && values[0] <= ResamplerMax);
+        CHECKVAL(values[0] >= 0 && values[0] <= static_cast<int>(Resampler::Max));
 
         Source->mResampler = static_cast<Resampler>(values[0]);
         return UpdateSourceProps(Source, Context);
@@ -1836,7 +1836,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_SOURCE_RESAMPLER_SOFT:
         CHECKSIZE(values, 1);
-        values[0] = Source->mResampler;
+        values[0] = static_cast<int>(Source->mResampler);
         return true;
 
     case AL_SOURCE_SPATIALIZE_SOFT:

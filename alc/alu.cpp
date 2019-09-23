@@ -947,9 +947,9 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         voice->mStep = MAX_PITCH<<FRACTIONBITS;
     else
         voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
-    if(props->mResampler == BSinc24Resampler)
+    if(props->mResampler == Resampler::BSinc24)
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc24);
-    else if(props->mResampler == BSinc12Resampler)
+    else if(props->mResampler == Resampler::BSinc12)
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc12);
     voice->mResampler = SelectResampler(props->mResampler);
 
@@ -1277,9 +1277,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         voice->mStep = MAX_PITCH<<FRACTIONBITS;
     else
         voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
-    if(props->mResampler == BSinc24Resampler)
+    if(props->mResampler == Resampler::BSinc24)
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc24);
-    else if(props->mResampler == BSinc12Resampler)
+    else if(props->mResampler == Resampler::BSinc12)
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc12);
     voice->mResampler = SelectResampler(props->mResampler);
 

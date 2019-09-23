@@ -196,7 +196,7 @@ START_API_FUNC
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = ResamplerDefault ? AL_TRUE : AL_FALSE;
+        value = static_cast<int>(ResamplerDefault) ? AL_TRUE : AL_FALSE;
         break;
 
     default:
@@ -243,7 +243,7 @@ START_API_FUNC
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = static_cast<ALdouble>(ResamplerMax + 1);
+        value = static_cast<ALdouble>(Resampler::Max) + 1.0;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
@@ -294,7 +294,7 @@ START_API_FUNC
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = static_cast<ALfloat>(ResamplerMax + 1);
+        value = static_cast<ALfloat>(Resampler::Max) + 1.0f;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
@@ -345,11 +345,11 @@ START_API_FUNC
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = ResamplerMax + 1;
+        value = static_cast<int>(Resampler::Max) + 1;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = ResamplerDefault;
+        value = static_cast<int>(ResamplerDefault);
         break;
 
     default:
@@ -396,7 +396,7 @@ START_API_FUNC
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = static_cast<ALint64SOFT>(ResamplerMax + 1);
+        value = static_cast<ALint64SOFT>(Resampler::Max) + 1;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
@@ -801,7 +801,8 @@ START_API_FUNC
         alCubicResampler, alBSinc12Resampler,
         alBSinc24Resampler,
     };
-    static_assert(al::size(ResamplerNames) == ResamplerMax+1, "Incorrect ResamplerNames list");
+    static_assert(al::size(ResamplerNames) == static_cast<ALuint>(Resampler::Max)+1,
+        "Incorrect ResamplerNames list");
 
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return nullptr;

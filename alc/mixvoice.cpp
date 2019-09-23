@@ -70,7 +70,7 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 static_assert(MAX_RESAMPLE_PADDING >= 24, "MAX_RESAMPLE_PADDING must be at least 24!");
 
 
-Resampler ResamplerDefault = LinearResampler;
+Resampler ResamplerDefault{Resampler::Linear};
 
 MixerFunc MixSamples = Mix_<CTag>;
 RowMixerFunc MixRowSamples = MixRow_<CTag>;
@@ -139,9 +139,9 @@ ResamplerFunc SelectResampler(Resampler resampler)
 {
     switch(resampler)
     {
-        case PointResampler:
+        case Resampler::Point:
             return Resample_<PointTag,CTag>;
-        case LinearResampler:
+        case Resampler::Linear:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
                 return Resample_<LerpTag,NEONTag>;
@@ -155,10 +155,10 @@ ResamplerFunc SelectResampler(Resampler resampler)
                 return Resample_<LerpTag,SSE2Tag>;
 #endif
             return Resample_<LerpTag,CTag>;
-        case FIR4Resampler:
+        case Resampler::Cubic:
             return Resample_<CubicTag,CTag>;
-        case BSinc12Resampler:
-        case BSinc24Resampler:
+        case Resampler::BSinc12:
+        case Resampler::BSinc24:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
                 return Resample_<BSincTag,NEONTag>;
@@ -183,11 +183,11 @@ void aluInitMixer()
             const Resampler resampler;
         };
         constexpr ResamplerEntry ResamplerList[]{
-            { "none", PointResampler },
-            { "point", PointResampler },
-            { "cubic", FIR4Resampler },
-            { "bsinc12", BSinc12Resampler },
-            { "bsinc24", BSinc24Resampler },
+            { "none", Resampler::Point },
+            { "point", Resampler::Point },
+            { "cubic", Resampler::Cubic },
+            { "bsinc12", Resampler::BSinc12 },
+            { "bsinc24", Resampler::BSinc24 },
         };
 
         const char *str{resopt->c_str()};

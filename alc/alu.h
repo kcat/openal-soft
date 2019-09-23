@@ -42,14 +42,14 @@ enum SpatializeMode {
     SpatializeAuto = AL_AUTO_SOFT
 };
 
-enum Resampler {
-    PointResampler,
-    LinearResampler,
-    FIR4Resampler,
-    BSinc12Resampler,
-    BSinc24Resampler,
+enum class Resampler {
+    Point,
+    Linear,
+    Cubic,
+    BSinc12,
+    BSinc24,
 
-    ResamplerMax = BSinc24Resampler
+    Max = BSinc24
 };
 extern Resampler ResamplerDefault;
 

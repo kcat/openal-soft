@@ -138,7 +138,7 @@ struct WinMMPlayback final : public BackendBase {
 
     std::atomic<ALuint> mWritable{0u};
     al::semaphore mSem;
-    int mIdx{0};
+    ALuint mIdx{0u};
     std::array<WAVEHDR,4> mWaveBuffer{};
 
     HWAVEOUT mOutHdl{nullptr};
@@ -195,7 +195,7 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
             continue;
         }
 
-        int widx{mIdx};
+        size_t widx{mIdx};
         do {
             WAVEHDR &waveHdr = mWaveBuffer[widx];
             widx = (widx+1) % mWaveBuffer.size();
@@ -204,7 +204,7 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
             mWritable.fetch_sub(1, std::memory_order_acq_rel);
             waveOutWrite(mOutHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
-        mIdx = widx;
+        mIdx = static_cast<ALuint>(widx);
     }
     unlock();
 
@@ -381,7 +381,7 @@ struct WinMMCapture final : public BackendBase {
 
     std::atomic<ALuint> mReadable{0u};
     al::semaphore mSem;
-    int mIdx{0};
+    ALuint mIdx{0};
     std::array<WAVEHDR,4> mWaveBuffer{};
 
     HWAVEIN mInHdl{nullptr};
@@ -439,7 +439,7 @@ int WinMMCapture::captureProc()
             continue;
         }
 
-        int widx{mIdx};
+        size_t widx{mIdx};
         do {
             WAVEHDR &waveHdr = mWaveBuffer[widx];
             widx = (widx+1) % mWaveBuffer.size();
@@ -448,7 +448,7 @@ int WinMMCapture::captureProc()
             mReadable.fetch_sub(1, std::memory_order_acq_rel);
             waveInAddBuffer(mInHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
-        mIdx = widx;
+        mIdx = static_cast<ALuint>(widx);
     }
     unlock();
 

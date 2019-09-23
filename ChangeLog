@@ -9,7 +9,7 @@ openal-soft-1.20.0:
 
     Fixed OpenSL capture.
 
-    Fixed support for extended capture/playback formats with OpenSL.
+    Fixed support for extended capture formats with OpenSL.
 
     Fixed handling of WASAPI not reporting a default device.
 

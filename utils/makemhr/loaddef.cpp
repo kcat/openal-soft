@@ -23,14 +23,23 @@
 
 #include "loaddef.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <cstring>
 #include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <iterator>
 #include <limits>
-#include <algorithm>
+#include <memory>
+#include <vector>
+
+#include "alfstream.h"
+#include "alstring.h"
+#include "makemhr.h"
 
 #include "mysofa.h"
-
-#include "alstring.h"
 
 // Constants for accessing the token reader's ring buffer.
 #define TR_RING_BITS                 (16)
@@ -42,13 +51,16 @@
 
 // Token reader state for parsing the data set definition.
 struct TokenReaderT {
-    FILE *mFile;
-    const char *mName;
-    uint        mLine;
-    uint        mColumn;
-    char   mRing[TR_RING_SIZE];
-    size_t mIn;
-    size_t mOut;
+    std::istream &mIStream;
+    const char *mName{};
+    uint        mLine{};
+    uint        mColumn{};
+    char mRing[TR_RING_SIZE]{};
+    std::streamsize mIn{};
+    std::streamsize mOut{};
+
+    TokenReaderT(std::istream &istream) noexcept : mIStream{istream} { }
+    TokenReaderT(const TokenReaderT&) = default;
 };
 
 
@@ -140,7 +152,8 @@ struct SourceRefT {
 
 // Setup the reader on the given file.  The filename can be NULL if no error
 // output is desired.
-static void TrSetup(FILE *fp, const char *startbytes, size_t startbytecount, const char *filename, TokenReaderT *tr)
+static void TrSetup(const char *startbytes, std::streamsize startbytecount, const char *filename,
+    TokenReaderT *tr)
 {
     const char *name = nullptr;
 
@@ -161,7 +174,6 @@ static void TrSetup(FILE *fp, const char *startbytes, size_t startbytecount, con
         }
     }
 
-    tr->mFile = fp;
     tr->mName = name;
     tr->mLine = 1;
     tr->mColumn = 1;
@@ -170,7 +182,7 @@ static void TrSetup(FILE *fp, const char *startbytes, size_t startbytecount, con
 
     if(startbytecount > 0)
     {
-        memcpy(tr->mRing, startbytes, startbytecount);
+        std::copy_n(startbytes, startbytecount, std::begin(tr->mRing));
         tr->mIn += startbytecount;
     }
 }
@@ -179,22 +191,27 @@ static void TrSetup(FILE *fp, const char *startbytes, size_t startbytecount, con
 // is text to process.
 static int TrLoad(TokenReaderT *tr)
 {
-    size_t toLoad, in, count;
+    std::istream &istream = tr->mIStream;
 
-    toLoad = TR_RING_SIZE - (tr->mIn - tr->mOut);
-    if(toLoad >= TR_LOAD_SIZE && !feof(tr->mFile))
+    std::streamsize toLoad{TR_RING_SIZE - static_cast<std::streamsize>(tr->mIn - tr->mOut)};
+    if(toLoad >= TR_LOAD_SIZE && istream.good())
     {
         // Load TR_LOAD_SIZE (or less if at the end of the file) per read.
         toLoad = TR_LOAD_SIZE;
-        in = tr->mIn&TR_RING_MASK;
-        count = TR_RING_SIZE - in;
+        std::streamsize in{tr->mIn&TR_RING_MASK};
+        std::streamsize count{TR_RING_SIZE - in};
         if(count < toLoad)
         {
-            tr->mIn += fread(&tr->mRing[in], 1, count, tr->mFile);
-            tr->mIn += fread(&tr->mRing[0], 1, toLoad-count, tr->mFile);
+            istream.read(&tr->mRing[in], count);
+            tr->mIn += istream.gcount();
+            istream.read(&tr->mRing[0], toLoad-count);
+            tr->mIn += istream.gcount();
         }
         else
-            tr->mIn += fread(&tr->mRing[in], 1, toLoad, tr->mFile);
+        {
+            istream.read(&tr->mRing[in], toLoad);
+            tr->mIn += istream.gcount();
+        }
 
         if(tr->mOut >= TR_RING_SIZE)
         {
@@ -303,7 +320,8 @@ static int TrIsIdent(TokenReaderT *tr)
 // errors and will not proceed to the next token.
 static int TrIsOperator(TokenReaderT *tr, const char *op)
 {
-    size_t out, len;
+    std::streamsize out;
+    size_t len;
     char ch;
 
     if(!TrSkipWhitespace(tr))
@@ -598,26 +616,24 @@ static int TrReadOperator(TokenReaderT *tr, const char *op)
 
 // Read a binary value of the specified byte order and byte size from a file,
 // storing it as a 32-bit unsigned integer.
-static int ReadBin4(FILE *fp, const char *filename, const ByteOrderT order, const uint bytes, uint32_t *out)
+static int ReadBin4(std::istream &istream, const char *filename, const ByteOrderT order, const uint bytes, uint32_t *out)
 {
     uint8_t in[4];
-    uint32_t accum;
-    uint i;
-
-    if(fread(in, 1, bytes, fp) != bytes)
+    istream.read(reinterpret_cast<char*>(in), static_cast<int>(bytes));
+    if(istream.gcount() != bytes)
     {
         fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
         return 0;
     }
-    accum = 0;
+    uint32_t accum{0};
     switch(order)
     {
         case BO_LITTLE:
-            for(i = 0;i < bytes;i++)
+            for(uint i = 0;i < bytes;i++)
                 accum = (accum<<8) | in[bytes - i - 1];
             break;
         case BO_BIG:
-            for(i = 0;i < bytes;i++)
+            for(uint i = 0;i < bytes;i++)
                 accum = (accum<<8) | in[i];
             break;
         default:
@@ -629,18 +645,19 @@ static int ReadBin4(FILE *fp, const char *filename, const ByteOrderT order, cons
 
 // Read a binary value of the specified byte order from a file, storing it as
 // a 64-bit unsigned integer.
-static int ReadBin8(FILE *fp, const char *filename, const ByteOrderT order, uint64_t *out)
+static int ReadBin8(std::istream &istream, const char *filename, const ByteOrderT order, uint64_t *out)
 {
     uint8_t in[8];
     uint64_t accum;
     uint i;
 
-    if(fread(in, 1, 8, fp) != 8)
+    istream.read(reinterpret_cast<char*>(in), 8);
+    if(istream.gcount() != 8)
     {
         fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
         return 0;
     }
-    accum = 0ULL;
+    accum = 0;
     switch(order)
     {
         case BO_LITTLE:
@@ -664,7 +681,8 @@ static int ReadBin8(FILE *fp, const char *filename, const ByteOrderT order, uint
  * whether they are padded toward the MSB (negative) or LSB (positive).
  * Floating-point types are not normalized.
  */
-static int ReadBinAsDouble(FILE *fp, const char *filename, const ByteOrderT order, const ElementTypeT type, const uint bytes, const int bits, double *out)
+static int ReadBinAsDouble(std::istream &istream, const char *filename, const ByteOrderT order,
+    const ElementTypeT type, const uint bytes, const int bits, double *out)
 {
     union {
         uint32_t ui;
@@ -679,14 +697,14 @@ static int ReadBinAsDouble(FILE *fp, const char *filename, const ByteOrderT orde
     *out = 0.0;
     if(bytes > 4)
     {
-        if(!ReadBin8(fp, filename, order, &v8.ui))
+        if(!ReadBin8(istream, filename, order, &v8.ui))
             return 0;
         if(type == ET_FP)
             *out = v8.f;
     }
     else
     {
-        if(!ReadBin4(fp, filename, order, bytes, &v4.ui))
+        if(!ReadBin4(istream, filename, order, bytes, &v4.ui))
             return 0;
         if(type == ET_FP)
             *out = v4.f;
@@ -745,7 +763,8 @@ static int ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const Eleme
 
 // Read the RIFF/RIFX WAVE format chunk from a file, validating it against
 // the source parameters and data set metrics.
-static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate, SourceRefT *src)
+static int ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hrirRate,
+    SourceRefT *src)
 {
     uint32_t fourCC, chunkSize;
     uint32_t format, channels, rate, dummy, block, size, bits;
@@ -753,21 +772,21 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
     chunkSize = 0;
     do {
         if(chunkSize > 0)
-            fseek(fp, static_cast<long>(chunkSize), SEEK_CUR);
-        if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
-           !ReadBin4(fp, src->mPath, order, 4, &chunkSize))
+            istream.seekg(static_cast<int>(chunkSize), std::ios::cur);
+        if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+            || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return 0;
     } while(fourCC != FOURCC_FMT);
-    if(!ReadBin4(fp, src->mPath, order, 2, &format) ||
-       !ReadBin4(fp, src->mPath, order, 2, &channels) ||
-       !ReadBin4(fp, src->mPath, order, 4, &rate) ||
-       !ReadBin4(fp, src->mPath, order, 4, &dummy) ||
-       !ReadBin4(fp, src->mPath, order, 2, &block))
+    if(!ReadBin4(istream, src->mPath, order, 2, &format)
+        || !ReadBin4(istream, src->mPath, order, 2, &channels)
+        || !ReadBin4(istream, src->mPath, order, 4, &rate)
+        || !ReadBin4(istream, src->mPath, order, 4, &dummy)
+        || !ReadBin4(istream, src->mPath, order, 2, &block))
         return 0;
     block /= channels;
     if(chunkSize > 14)
     {
-        if(!ReadBin4(fp, src->mPath, order, 2, &size))
+        if(!ReadBin4(istream, src->mPath, order, 2, &size))
             return 0;
         size /= 8;
         if(block > size)
@@ -777,23 +796,23 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
         size = block;
     if(format == WAVE_FORMAT_EXTENSIBLE)
     {
-        fseek(fp, 2, SEEK_CUR);
-        if(!ReadBin4(fp, src->mPath, order, 2, &bits))
+        istream.seekg(2, std::ios::cur);
+        if(!ReadBin4(istream, src->mPath, order, 2, &bits))
             return 0;
         if(bits == 0)
             bits = 8 * size;
-        fseek(fp, 4, SEEK_CUR);
-        if(!ReadBin4(fp, src->mPath, order, 2, &format))
+        istream.seekg(4, std::ios::cur);
+        if(!ReadBin4(istream, src->mPath, order, 2, &format))
             return 0;
-        fseek(fp, static_cast<long>(chunkSize - 26), SEEK_CUR);
+        istream.seekg(static_cast<int>(chunkSize - 26), std::ios::cur);
     }
     else
     {
         bits = 8 * size;
         if(chunkSize > 14)
-            fseek(fp, static_cast<long>(chunkSize - 16), SEEK_CUR);
+            istream.seekg(static_cast<int>(chunkSize - 16), std::ios::cur);
         else
-            fseek(fp, static_cast<long>(chunkSize - 14), SEEK_CUR);
+            istream.seekg(static_cast<int>(chunkSize - 14), std::ios::cur);
     }
     if(format != WAVE_FORMAT_PCM && format != WAVE_FORMAT_IEEE_FLOAT)
     {
@@ -840,7 +859,8 @@ static int ReadWaveFormat(FILE *fp, const ByteOrderT order, const uint hrirRate,
 }
 
 // Read a RIFF/RIFX WAVE data chunk, converting all elements to doubles.
-static int ReadWaveData(FILE *fp, const SourceRefT *src, const ByteOrderT order, const uint n, double *hrir)
+static int ReadWaveData(std::istream &istream, const SourceRefT *src, const ByteOrderT order,
+    const uint n, double *hrir)
 {
     int pre, post, skip;
     uint i;
@@ -852,19 +872,20 @@ static int ReadWaveData(FILE *fp, const SourceRefT *src, const ByteOrderT order,
     {
         skip += pre;
         if(skip > 0)
-            fseek(fp, skip, SEEK_CUR);
-        if(!ReadBinAsDouble(fp, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
+            istream.seekg(skip, std::ios::cur);
+        if(!ReadBinAsDouble(istream, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
             return 0;
         skip = post;
     }
     if(skip > 0)
-        fseek(fp, skip, SEEK_CUR);
+        istream.seekg(skip, std::ios::cur);
     return 1;
 }
 
 // Read the RIFF/RIFX WAVE list or data chunk, converting all elements to
 // doubles.
-static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order, const uint n, double *hrir)
+static int ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT order,
+    const uint n, double *hrir)
 {
     uint32_t fourCC, chunkSize, listSize, count;
     uint block, skip, offset, i;
@@ -872,8 +893,8 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
 
     for(;;)
     {
-        if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
-           !ReadBin4(fp, src->mPath, order, 4, &chunkSize))
+        if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+            || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return 0;
 
         if(fourCC == FOURCC_DATA)
@@ -885,21 +906,21 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
                 fprintf(stderr, "\nError: Bad read from file '%s'.\n", src->mPath);
                 return 0;
             }
-            fseek(fp, static_cast<long>(src->mOffset * block), SEEK_CUR);
-            if(!ReadWaveData(fp, src, order, n, &hrir[0]))
+            istream.seekg(static_cast<long>(src->mOffset * block), std::ios::cur);
+            if(!ReadWaveData(istream, src, order, n, &hrir[0]))
                 return 0;
             return 1;
         }
         else if(fourCC == FOURCC_LIST)
         {
-            if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC))
+            if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC))
                 return 0;
             chunkSize -= 4;
             if(fourCC == FOURCC_WAVL)
                 break;
         }
         if(chunkSize > 0)
-            fseek(fp, static_cast<long>(chunkSize), SEEK_CUR);
+            istream.seekg(static_cast<long>(chunkSize), std::ios::cur);
     }
     listSize = chunkSize;
     block = src->mSize * src->mSkip;
@@ -908,8 +929,8 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
     lastSample = 0.0;
     while(offset < n && listSize > 8)
     {
-        if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
-           !ReadBin4(fp, src->mPath, order, 4, &chunkSize))
+        if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+            || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return 0;
         listSize -= 8 + chunkSize;
         if(fourCC == FOURCC_DATA)
@@ -917,13 +938,13 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
             count = chunkSize / block;
             if(count > skip)
             {
-                fseek(fp, static_cast<long>(skip * block), SEEK_CUR);
+                istream.seekg(static_cast<long>(skip * block), std::ios::cur);
                 chunkSize -= skip * block;
                 count -= skip;
                 skip = 0;
                 if(count > (n - offset))
                     count = n - offset;
-                if(!ReadWaveData(fp, src, order, count, &hrir[offset]))
+                if(!ReadWaveData(istream, src, order, count, &hrir[offset]))
                     return 0;
                 chunkSize -= count * block;
                 offset += count;
@@ -937,7 +958,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
         }
         else if(fourCC == FOURCC_SLNT)
         {
-            if(!ReadBin4(fp, src->mPath, order, 4, &count))
+            if(!ReadBin4(istream, src->mPath, order, 4, &count))
                 return 0;
             chunkSize -= 4;
             if(count > skip)
@@ -957,7 +978,7 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
             }
         }
         if(chunkSize > 0)
-            fseek(fp, static_cast<long>(chunkSize), SEEK_CUR);
+            istream.seekg(static_cast<long>(chunkSize), std::ios::cur);
     }
     if(offset < n)
     {
@@ -969,13 +990,14 @@ static int ReadWaveList(FILE *fp, const SourceRefT *src, const ByteOrderT order,
 
 // Load a source HRIR from an ASCII text file containing a list of elements
 // separated by whitespace or common list operators (',', ';', ':', '|').
-static int LoadAsciiSource(FILE *fp, const SourceRefT *src, const uint n, double *hrir)
+static int LoadAsciiSource(std::istream &istream, const SourceRefT *src,
+    const uint n, double *hrir)
 {
-    TokenReaderT tr;
+    TokenReaderT tr{istream};
     uint i, j;
     double dummy;
 
-    TrSetup(fp, nullptr, 0, nullptr, &tr);
+    TrSetup(nullptr, 0, nullptr, &tr);
     for(i = 0;i < src->mOffset;i++)
     {
         if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits), &dummy))
@@ -995,29 +1017,29 @@ static int LoadAsciiSource(FILE *fp, const SourceRefT *src, const uint n, double
 }
 
 // Load a source HRIR from a binary file.
-static int LoadBinarySource(FILE *fp, const SourceRefT *src, const ByteOrderT order, const uint n, double *hrir)
+static int LoadBinarySource(std::istream &istream, const SourceRefT *src, const ByteOrderT order,
+    const uint n, double *hrir)
 {
-    uint i;
-
-    fseek(fp, static_cast<long>(src->mOffset), SEEK_SET);
-    for(i = 0;i < n;i++)
+    istream.seekg(static_cast<long>(src->mOffset), std::ios::beg);
+    for(uint i{0};i < n;i++)
     {
-        if(!ReadBinAsDouble(fp, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
+        if(!ReadBinAsDouble(istream, src->mPath, order, src->mType, src->mSize, src->mBits, &hrir[i]))
             return 0;
         if(src->mSkip > 0)
-            fseek(fp, static_cast<long>(src->mSkip), SEEK_CUR);
+            istream.seekg(static_cast<long>(src->mSkip), std::ios::cur);
     }
     return 1;
 }
 
 // Load a source HRIR from a RIFF/RIFX WAVE file.
-static int LoadWaveSource(FILE *fp, SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
+static int LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
+    const uint n, double *hrir)
 {
     uint32_t fourCC, dummy;
     ByteOrderT order;
 
-    if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC) ||
-       !ReadBin4(fp, src->mPath, BO_LITTLE, 4, &dummy))
+    if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+        || !ReadBin4(istream, src->mPath, BO_LITTLE, 4, &dummy))
         return 0;
     if(fourCC == FOURCC_RIFF)
         order = BO_LITTLE;
@@ -1029,16 +1051,16 @@ static int LoadWaveSource(FILE *fp, SourceRefT *src, const uint hrirRate, const 
         return 0;
     }
 
-    if(!ReadBin4(fp, src->mPath, BO_LITTLE, 4, &fourCC))
+    if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC))
         return 0;
     if(fourCC != FOURCC_WAVE)
     {
         fprintf(stderr, "\nError: Not a RIFF/RIFX WAVE file '%s'.\n", src->mPath);
         return 0;
     }
-    if(!ReadWaveFormat(fp, order, hrirRate, src))
+    if(!ReadWaveFormat(istream, order, hrirRate, src))
         return 0;
-    if(!ReadWaveList(fp, src, order, n, hrir))
+    if(!ReadWaveList(istream, src, order, n, hrir))
         return 0;
     return 1;
 }
@@ -1068,14 +1090,9 @@ static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uin
         fprintf(stderr, "\nError: Could not load source file '%s'.\n", src->mPath);
         return nullptr;
     }
+    /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
-/* NOTE: Some valid SOFA files are failing this check.
-    {
-        mysofa_close(sofa);
-        fprintf(stderr, "\nError: Malformed source file '%s'.\n", src->mPath);
-        return nullptr;
-    }*/
         fprintf(stderr, "\nWarning: Supposedly malformed source file '%s'.\n", src->mPath);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
@@ -1156,41 +1173,40 @@ static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, do
 // Load a source HRIR from a supported file type.
 static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
 {
-    FILE *fp{nullptr};
+    std::unique_ptr<al::ifstream> istream;
     if(src->mFormat != SF_SOFA)
     {
         if(src->mFormat == SF_ASCII)
-            fp = fopen(src->mPath, "r");
+            istream.reset(new al::ifstream{src->mPath});
         else
-            fp = fopen(src->mPath, "rb");
-        if(fp == nullptr)
+            istream.reset(new al::ifstream{src->mPath, std::ios::binary});
+        if(!istream->good())
         {
             fprintf(stderr, "\nError: Could not open source file '%s'.\n", src->mPath);
             return 0;
         }
     }
-    int result;
+    int result{0};
     switch(src->mFormat)
     {
         case SF_ASCII:
-            result = LoadAsciiSource(fp, src, n, hrir);
+            result = LoadAsciiSource(*istream, src, n, hrir);
             break;
         case SF_BIN_LE:
-            result = LoadBinarySource(fp, src, BO_LITTLE, n, hrir);
+            result = LoadBinarySource(*istream, src, BO_LITTLE, n, hrir);
             break;
         case SF_BIN_BE:
-            result = LoadBinarySource(fp, src, BO_BIG, n, hrir);
+            result = LoadBinarySource(*istream, src, BO_BIG, n, hrir);
             break;
         case SF_WAVE:
-            result = LoadWaveSource(fp, src, hrirRate, n, hrir);
+            result = LoadWaveSource(*istream, src, hrirRate, n, hrir);
             break;
         case SF_SOFA:
             result = LoadSofaSource(src, hrirRate, n, hrir);
             break;
-        default:
-            result = 0;
+        case SF_NONE:
+            break;
     }
-    if(fp) fclose(fp);
     return result;
 }
 
@@ -1833,21 +1849,20 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
                 if(fi >= hData->mFdCount)
                     continue;
 
-                double ef{(90.0 + aer[1]) * (hData->mFds[fi].mEvCount - 1) / 180.0};
+                double ef{(90.0 + aer[1]) / 180.0 * (hData->mFds[fi].mEvCount - 1)};
                 ei = static_cast<uint>(std::round(ef));
-                ef = (ef - ei) * 180.0f / (hData->mFds[fi].mEvCount - 1);
+                ef = (ef - ei) * 180.0 / (hData->mFds[fi].mEvCount - 1);
                 if(std::abs(ef) >= 0.1)
                     continue;
 
-                double af{aer[0] * hData->mFds[fi].mEvs[ei].mAzCount / 360.0f};
+                double af{aer[0] / 360.0 * hData->mFds[fi].mEvs[ei].mAzCount};
                 ai = static_cast<uint>(std::round(af));
-                af = (af - ai) * 360.0f / hData->mFds[fi].mEvs[ei].mAzCount;
+                af = (af - ai) * 360.0 / hData->mFds[fi].mEvs[ei].mAzCount;
                 ai = ai % hData->mFds[fi].mEvs[ei].mAzCount;
                 if(std::abs(af) >= 0.1)
                     continue;
 
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-
                 if(azd->mIrs[0] != nullptr)
                 {
                     TrErrorAt(tr, line, col, "Redefinition of source [ %d, %d, %d ].\n", fi, ei, ai);
@@ -2003,24 +2018,16 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
 }
 
 
-bool LoadDefInput(FILE *fp, const char *startbytes, size_t startbytecount, const char *filename,
-    const uint fftSize, const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
+bool LoadDefInput(std::istream &istream, const char *startbytes, std::streamsize startbytecount,
+    const char *filename, const uint fftSize, const uint truncSize, const ChannelModeT chanMode,
+    HrirDataT *hData)
 {
-    TokenReaderT tr;
+    TokenReaderT tr{istream};
 
-    TrSetup(fp, startbytes, startbytecount, filename, &tr);
-    if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, hData))
-    {
-        if(fp != stdin)
-            fclose(fp);
+    TrSetup(startbytes, startbytecount, filename, &tr);
+    if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, hData)
+        || !ProcessSources(&tr, hData))
         return false;
-    }
-    if(!ProcessSources(&tr, hData))
-    {
-        if(fp != stdin)
-            fclose(fp);
-        return false;
-    }
 
     return true;
 }

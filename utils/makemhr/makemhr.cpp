@@ -74,6 +74,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -87,6 +88,7 @@
 #include "../getopt.h"
 #endif
 
+#include "alfstream.h"
 #include "alstring.h"
 #include "loaddef.h"
 #include "loadsofa.h"
@@ -1321,32 +1323,32 @@ static void NormalizeHrirs(HrirDataT *hData)
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
-    auto proc0_field = [channels,irSize](const LevelPair levels, const HrirFdT &field) -> LevelPair
+    auto proc0_field = [channels,irSize](const LevelPair levels0, const HrirFdT &field) -> LevelPair
     {
-        auto proc_elev = [channels,irSize](const LevelPair levels, const HrirEvT &elev) -> LevelPair
+        auto proc_elev = [channels,irSize](const LevelPair levels1, const HrirEvT &elev) -> LevelPair
         {
-            auto proc_azi = [channels,irSize](const LevelPair levels, const HrirAzT &azi) -> LevelPair
+            auto proc_azi = [channels,irSize](const LevelPair levels2, const HrirAzT &azi) -> LevelPair
             {
-                auto proc_channel = [irSize](const LevelPair levels, const double *ir) -> LevelPair
+                auto proc_channel = [irSize](const LevelPair levels3, const double *ir) -> LevelPair
                 {
                     /* Calculate the peak amplitude and RMS of this IR. */
                     auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
-                        [](const LevelPair current, const double impulse) -> LevelPair
+                        [](const LevelPair cur, const double impulse) -> LevelPair
                         {
-                            return LevelPair{std::max(std::abs(impulse), current.amp),
-                                current.rms + impulse*impulse};
+                            return {std::max(std::abs(impulse), cur.amp),
+                                cur.rms + impulse*impulse};
                         });
                     current.rms = std::sqrt(current.rms / irSize);
 
                     /* Accumulate levels by taking the maximum amplitude and RMS. */
-                    return LevelPair{std::max(current.amp, levels.amp),
-                        std::max(current.rms, levels.rms)};
+                    return LevelPair{std::max(current.amp, levels3.amp),
+                        std::max(current.rms, levels3.rms)};
                 };
-                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels, proc_channel);
+                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels2, proc_channel);
             };
-            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels, proc_azi);
+            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels1, proc_azi);
         };
-        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels, proc_elev);
+        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels0, proc_elev);
     };
     const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount,
         LevelPair{0.0, 0.0}, proc0_field);
@@ -1528,64 +1530,59 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const char *outName)
+static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
+    const uint fftSize, const int equalize, const int surface, const double limit,
+    const uint truncSize, const HeadModelT model, const double radius, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
-    char startbytes[4]{};
-    size_t startbytecount{0u};
     HrirDataT hData;
-    FILE *fp;
-    int ret;
 
     if(!inName)
     {
         inName = "stdin";
-        fp = stdin;
+        fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
+        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, chanMode, &hData))
+            return 0;
     }
     else
     {
-        fp = fopen(inName, "r");
-        if(fp == nullptr)
+        std::unique_ptr<al::ifstream> input{new al::ifstream{inName}};
+        if(!input->is_open())
         {
             fprintf(stderr, "Error: Could not open input file '%s'\n", inName);
             return 0;
         }
 
-        startbytecount = fread(startbytes, 1, sizeof(startbytes), fp);
-        if(startbytecount != sizeof(startbytes))
+        char startbytes[4]{};
+        input->read(startbytes, sizeof(startbytes));
+        std::streamsize startbytecount{input->gcount()};
+        if(startbytecount != sizeof(startbytes) || !input->good())
         {
-            fclose(fp);
             fprintf(stderr, "Error: Could not read input file '%s'\n", inName);
             return 0;
         }
 
-        if(startbytes[0] == '\x89' && startbytes[1] == 'H' && startbytes[2] == 'D' &&
-           startbytes[3] == 'F')
+        if(startbytes[0] == '\x89' && startbytes[1] == 'H' && startbytes[2] == 'D'
+            && startbytes[3] == 'F')
         {
-            fclose(fp);
-            fp = nullptr;
-
+            input = nullptr;
             fprintf(stdout, "Reading HRTF data from %s...\n", inName);
             if(!LoadSofaFile(inName, fftSize, truncSize, chanMode, &hData))
                 return 0;
         }
-    }
-    if(fp != nullptr)
-    {
-        fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-        const bool success{LoadDefInput(fp, startbytes, startbytecount, inName, fftSize, truncSize,
-            chanMode, &hData)};
-        if(fp != stdin)
-            fclose(fp);
-        if(!success)
-            return 0;
+        else
+        {
+            fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
+            if(!LoadDefInput(*input, startbytes, startbytecount, inName, fftSize, truncSize, chanMode, &hData))
+                return 0;
+        }
     }
 
     if(equalize)
     {
-        uint c = (hData.mChannelType == CT_STEREO) ? 2 : 1;
-        uint m = 1 + hData.mFftSize / 2;
-        std::vector<double> dfa(c * m);
+        uint c{(hData.mChannelType == CT_STEREO) ? 2u : 1u};
+        uint m{hData.mFftSize/2u + 1u};
+        auto dfa = std::vector<double>(c * m);
 
         if(hData.mFdCount > 1)
         {
@@ -1614,12 +1611,10 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     NormalizeHrirs(&hData);
     fprintf(stdout, "Calculating impulse delays...\n");
     CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
-    snprintf(rateStr, 8, "%u", hData.mIrRate);
-    StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
+    snprintf(rateStr, sizeof(rateStr), "%u", hData.mIrRate);
+    StrSubst(outName, "%r", rateStr, sizeof(expName), expName);
     fprintf(stdout, "Creating MHR data set %s...\n", expName);
-    ret = StoreMhr(&hData, expName);
-
-    return ret;
+    return StoreMhr(&hData, expName);
 }
 
 static void PrintHelp(const char *argv0, FILE *ofile)

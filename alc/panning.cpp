@@ -586,6 +586,18 @@ void InitHrtfPanning(ALCdevice *device)
     ALuint ambi_order{1};
     if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode"))
     {
+        struct HrtfModeEntry {
+            char name[8];
+            RenderMode mode;
+            ALuint order;
+        };
+        static constexpr HrtfModeEntry hrtf_modes[]{
+            { "full", HrtfRender, 1 },
+            { "ambi1", NormalRender, 1 },
+            { "ambi2", NormalRender, 2 },
+            { "ambi3", NormalRender, 3 },
+        };
+
         const char *mode{modeopt->c_str()};
         if(al::strcasecmp(mode, "basic") == 0)
         {
@@ -593,25 +605,16 @@ void InitHrtfPanning(ALCdevice *device)
             mode = "ambi2";
         }
 
-        if(al::strcasecmp(mode, "full") == 0)
-            device->mRenderMode = HrtfRender;
-        else if(al::strcasecmp(mode, "ambi1") == 0)
-        {
-            device->mRenderMode = NormalRender;
-            ambi_order = 1;
-        }
-        else if(al::strcasecmp(mode, "ambi2") == 0)
-        {
-            device->mRenderMode = NormalRender;
-            ambi_order = 2;
-        }
-        else if(al::strcasecmp(mode, "ambi3") == 0)
-        {
-            device->mRenderMode = NormalRender;
-            ambi_order = 3;
-        }
-        else
+        auto match_entry = [mode](const HrtfModeEntry &entry) -> bool
+        { return al::strcasecmp(mode, entry.name) == 0; };
+        auto iter = std::find_if(std::begin(hrtf_modes), std::end(hrtf_modes), match_entry);
+        if(iter == std::end(hrtf_modes))
             ERR("Unexpected hrtf-mode: %s\n", mode);
+        else
+        {
+            device->mRenderMode = iter->mode;
+            ambi_order = iter->order;
+        }
     }
     TRACE("%s HRTF rendering enabled, using \"%s\"\n",
         (device->mRenderMode == HrtfRender) ? "Full" :

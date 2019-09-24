@@ -1422,14 +1422,13 @@ IF(ALSOFT_UTILS)
     MESSAGE(STATUS "")
 ENDIF()
 
-IF(ALSOFT_EXAMPLES OR ALSOFT_TESTS)
-    # Add a static library with common functions used by multiple targets
-    ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
-    TARGET_COMPILE_DEFINITIONS(ex-common PUBLIC ${CPP_DEFS})
-    TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
-    TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
-    TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL)
-ENDIF()
+
+# Add a static library with common functions used by multiple example targets
+ADD_LIBRARY(ex-common STATIC EXCLUDE_FROM_ALL examples/common/alhelpers.c)
+TARGET_COMPILE_DEFINITIONS(ex-common PUBLIC ${CPP_DEFS})
+TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
+TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
+TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL)
 
 IF(ALSOFT_TESTS)
     ADD_EXECUTABLE(altonegen examples/altonegen.c)

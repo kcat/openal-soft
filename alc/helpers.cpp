@@ -70,6 +70,7 @@
 
 #include "alcmain.h"
 #include "almalloc.h"
+#include "alfstream.h"
 #include "alstring.h"
 #include "compat.h"
 #include "cpu_caps.h"

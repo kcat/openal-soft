@@ -22,16 +22,22 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 
 #include <cmath>
+#include <memory>
 #include <vector>
 
 #include <mysofa.h>
 
 #include "win_main_utf8.h"
 
+
 using uint = unsigned int;
+
+struct MySofaDeleter {
+    void operator()(MYSOFA_HRTF *sofa) { mysofa_free(sofa); }
+};
+using MySofaHrtfPtr = std::unique_ptr<MYSOFA_HRTF,MySofaDeleter>;
 
 // Per-field measurement info.
 struct HrirFdT {
@@ -45,20 +51,13 @@ static const char *SofaErrorStr(int err)
 {
     switch(err)
     {
-        case MYSOFA_OK:
-            return "OK";
-        case MYSOFA_INVALID_FORMAT:
-            return "Invalid format";
-        case MYSOFA_UNSUPPORTED_FORMAT:
-            return "Unsupported format";
-        case MYSOFA_INTERNAL_ERROR:
-            return "Internal error";
-        case MYSOFA_NO_MEMORY:
-            return "Out of memory";
-        case MYSOFA_READ_ERROR:
-            return "Read error";
+    case MYSOFA_OK: return "OK";
+    case MYSOFA_INVALID_FORMAT: return "Invalid format";
+    case MYSOFA_UNSUPPORTED_FORMAT: return "Unsupported format";
+    case MYSOFA_INTERNAL_ERROR: return "Internal error";
+    case MYSOFA_NO_MEMORY: return "Out of memory";
+    case MYSOFA_READ_ERROR: return "Read error";
     }
-
     return "Unknown";
 }
 
@@ -237,10 +236,11 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
         {
             float ev{90.0f + elems[ei]};
             float eif{std::round(ev / step)};
+            const uint ev_start{static_cast<uint>(eif)};
 
-            if(std::fabs(eif - static_cast<uint>(eif)) < (0.1f / step))
+            if(std::fabs(eif - static_cast<float>(ev_start)) < (0.1f/step))
             {
-                evStart = static_cast<uint>(eif);
+                evStart = ev_start;
                 break;
             }
         }
@@ -259,7 +259,7 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
 
         for(uint ei{evStart};ei < evCount;ei++)
         {
-            float ev{-90.0f + ei * 180.0f / (evCount - 1)};
+            float ev{-90.0f + static_cast<float>(ei)*180.0f/static_cast<float>(evCount - 1)};
             uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist }, { 0.1f, 0.1f, 0.001f }, elems.data())};
 
             if(azCount > (m / 3))
@@ -312,48 +312,33 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
 // Load and inspect the given SOFA file.
 static void SofaInfo(const char *filename)
 {
-    struct MYSOFA_EASY sofa;
-
-    sofa.lookup = nullptr;
-    sofa.neighborhood = nullptr;
-
     int err;
-    sofa.hrtf = mysofa_load(filename, &err);
-
-    if(!sofa.hrtf)
+    MySofaHrtfPtr sofa{mysofa_load(filename, &err)};
+    if(!sofa)
     {
-        mysofa_close(&sofa);
         fprintf(stdout, "Error: Could not load source file '%s'.\n", filename);
         return;
     }
 
-    err = mysofa_check(sofa.hrtf);
+    /* NOTE: Some valid SOFA files are failing this check. */
+    err = mysofa_check(sofa.get());
     if(err != MYSOFA_OK)
-/* NOTE: Some valid SOFA files are failing this check.
-    {
-        mysofa_close(&sofa);
-        fprintf(stdout, "Error: Malformed source file '%s' (%s).\n", filename, SofaErrorStr(err));
+        fprintf(stdout, "Warning: Supposedly malformed source file '%s' (%s).\n", filename,
+            SofaErrorStr(err));
 
-        return;
-    }
-*/
-        fprintf(stdout, "Warning: Supposedly malformed source file '%s' (%s).\n", filename, SofaErrorStr(err));
+    mysofa_tocartesian(sofa.get());
 
-    mysofa_tocartesian(sofa.hrtf);
+    PrintSofaAttributes("Info", sofa->attributes);
 
-    PrintSofaAttributes("Info", sofa.hrtf->attributes);
+    fprintf(stdout, "Measurements: %u\n", sofa->M);
+    fprintf(stdout, "Receivers: %u\n", sofa->R);
+    fprintf(stdout, "Emitters: %u\n", sofa->E);
+    fprintf(stdout, "Samples: %u\n", sofa->N);
 
-    fprintf(stdout, "Measurements: %u\n", sofa.hrtf->M);
-    fprintf(stdout, "Receivers: %u\n", sofa.hrtf->R);
-    fprintf(stdout, "Emitters: %u\n", sofa.hrtf->E);
-    fprintf(stdout, "Samples: %u\n", sofa.hrtf->N);
+    PrintSofaArray("SampleRate", &sofa->DataSamplingRate);
+    PrintSofaArray("DataDelay", &sofa->DataDelay);
 
-    PrintSofaArray("SampleRate", &sofa.hrtf->DataSamplingRate);
-    PrintSofaArray("DataDelay", &sofa.hrtf->DataDelay);
-
-    PrintCompatibleLayout(sofa.hrtf->M, sofa.hrtf->SourcePosition.values);
-
-    mysofa_free(sofa.hrtf);
+    PrintCompatibleLayout(sofa->M, sofa->SourcePosition.values);
 }
 
 int main(int argc, char *argv[])

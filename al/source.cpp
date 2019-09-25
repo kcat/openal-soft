@@ -2641,20 +2641,23 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     al::vector<ALsource*> extra_sources;
-    std::array<ALsource*,16> source_storage;
-    ALsource **srchandles{source_storage.data()};
-    if UNLIKELY(static_cast<ALuint>(n) > source_storage.size())
+    std::array<ALsource*,8> source_storage;
+    al::span<ALsource*> srchandles;
+    if LIKELY(static_cast<ALuint>(n) <= source_storage.size())
+        srchandles = {source_storage.data(), static_cast<ALuint>(n)};
+    else
     {
         extra_sources.resize(static_cast<ALuint>(n));
-        srchandles = extra_sources.data();
+        srchandles = {extra_sources.data(), extra_sources.size()};
     }
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
-    for(ALsizei i{0};i < n;i++)
+    for(auto &srchdl : srchandles)
     {
-        srchandles[i] = LookupSource(context.get(), sources[i]);
-        if(!srchandles[i])
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+        srchdl = LookupSource(context.get(), *sources);
+        if(!srchdl)
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+        ++sources;
     }
 
     ALCdevice *device{context->mDevice.get()};
@@ -2663,7 +2666,7 @@ START_API_FUNC
     if UNLIKELY(!device->Connected.load(std::memory_order_acquire))
     {
         /* TODO: Send state change event? */
-        std::for_each(srchandles, srchandles+n,
+        std::for_each(srchandles.begin(), srchandles.end(),
             [](ALsource *source) -> void
             {
                 source->OffsetType = AL_NONE;
@@ -2684,10 +2687,10 @@ START_API_FUNC
     };
     auto free_voices = std::accumulate(context->mVoices.begin(), context->mVoices.end(),
         ALuint{0}, count_free_voices);
-    if UNLIKELY(static_cast<ALuint>(n) > free_voices)
+    if UNLIKELY(srchandles.size() > free_voices)
     {
         /* Increase the number of voices to handle the request. */
-        const ALuint need_voices{static_cast<ALuint>(n) - free_voices};
+        const size_t need_voices{srchandles.size() - free_voices};
         context->mVoices.resize(context->mVoices.size() + need_voices);
     }
 
@@ -2869,7 +2872,7 @@ START_API_FUNC
             SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
         }
     };
-    std::for_each(srchandles, srchandles+n, start_source);
+    std::for_each(srchandles.begin(), srchandles.end(), start_source);
 }
 END_API_FUNC
 
@@ -2890,20 +2893,23 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     al::vector<ALsource*> extra_sources;
-    std::array<ALsource*,16> source_storage;
-    ALsource **srchandles{source_storage.data()};
-    if UNLIKELY(static_cast<ALuint>(n) > source_storage.size())
+    std::array<ALsource*,8> source_storage;
+    al::span<ALsource*> srchandles;
+    if LIKELY(static_cast<ALuint>(n) <= source_storage.size())
+        srchandles = {source_storage.data(), static_cast<ALuint>(n)};
+    else
     {
         extra_sources.resize(static_cast<ALuint>(n));
-        srchandles = extra_sources.data();
+        srchandles = {extra_sources.data(), extra_sources.size()};
     }
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
-    for(ALsizei i{0};i < n;i++)
+    for(auto &srchdl : srchandles)
     {
-        srchandles[i] = LookupSource(context.get(), sources[i]);
-        if(!srchandles[i])
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+        srchdl = LookupSource(context.get(), *sources);
+        if(!srchdl)
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+        ++sources;
     }
 
     ALCdevice *device{context->mDevice.get()};
@@ -2924,7 +2930,7 @@ START_API_FUNC
             SendStateChangeEvent(context.get(), source->id, AL_PAUSED);
         }
     };
-    std::for_each(srchandles, srchandles+n, pause_source);
+    std::for_each(srchandles.begin(), srchandles.end(), pause_source);
 }
 END_API_FUNC
 
@@ -2945,20 +2951,23 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     al::vector<ALsource*> extra_sources;
-    std::array<ALsource*,16> source_storage;
-    ALsource **srchandles{source_storage.data()};
-    if UNLIKELY(static_cast<ALuint>(n) > source_storage.size())
+    std::array<ALsource*,8> source_storage;
+    al::span<ALsource*> srchandles;
+    if LIKELY(static_cast<ALuint>(n) <= source_storage.size())
+        srchandles = {source_storage.data(), static_cast<ALuint>(n)};
+    else
     {
         extra_sources.resize(static_cast<ALuint>(n));
-        srchandles = extra_sources.data();
+        srchandles = {extra_sources.data(), extra_sources.size()};
     }
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
-    for(ALsizei i{0};i < n;i++)
+    for(auto &srchdl : srchandles)
     {
-        srchandles[i] = LookupSource(context.get(), sources[i]);
-        if(!srchandles[i])
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+        srchdl = LookupSource(context.get(), *sources);
+        if(!srchdl)
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+        ++sources;
     }
 
     ALCdevice *device{context->mDevice.get()};
@@ -2989,7 +2998,7 @@ START_API_FUNC
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     };
-    std::for_each(srchandles, srchandles+n, stop_source);
+    std::for_each(srchandles.begin(), srchandles.end(), stop_source);
 }
 END_API_FUNC
 
@@ -3010,20 +3019,23 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     al::vector<ALsource*> extra_sources;
-    std::array<ALsource*,16> source_storage;
-    ALsource **srchandles{source_storage.data()};
-    if UNLIKELY(static_cast<ALuint>(n) > source_storage.size())
+    std::array<ALsource*,8> source_storage;
+    al::span<ALsource*> srchandles;
+    if LIKELY(static_cast<ALuint>(n) <= source_storage.size())
+        srchandles = {source_storage.data(), static_cast<ALuint>(n)};
+    else
     {
         extra_sources.resize(static_cast<ALuint>(n));
-        srchandles = extra_sources.data();
+        srchandles = {extra_sources.data(), extra_sources.size()};
     }
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
-    for(ALsizei i{0};i < n;i++)
+    for(auto &srchdl : srchandles)
     {
-        srchandles[i] = LookupSource(context.get(), sources[i]);
-        if(!srchandles[i])
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
+        srchdl = LookupSource(context.get(), *sources);
+        if(!srchdl)
+            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+        ++sources;
     }
 
     ALCdevice *device{context->mDevice.get()};
@@ -3050,7 +3062,7 @@ START_API_FUNC
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     };
-    std::for_each(srchandles, srchandles+n, rewind_source);
+    std::for_each(srchandles.begin(), srchandles.end(), rewind_source);
 }
 END_API_FUNC
 

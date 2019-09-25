@@ -301,7 +301,7 @@ template<>
 struct FmtTypeTraits<FmtUByte> {
     using Type = ALubyte;
     static constexpr inline float to_float(const Type val) noexcept
-    { return val*(1.0f/128.0f) - 128.0f; }
+    { return val*(1.0f/128.0f) - 1.0f; }
 };
 template<>
 struct FmtTypeTraits<FmtShort> {

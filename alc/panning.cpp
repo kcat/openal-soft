@@ -639,8 +639,8 @@ void InitHrtfPanning(ALCdevice *device)
     );
     AllocChannels(device, static_cast<ALuint>(count), device->channelsFromFmt());
 
-    BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), static_cast<ALuint>(count),
-        AmbiPoints, AmbiMatrix, al::size(AmbiPoints), AmbiOrderHFGain);
+    BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), AmbiPoints, AmbiMatrix,
+        AmbiOrderHFGain);
 
     HrtfEntry *Hrtf{device->mHrtf};
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);

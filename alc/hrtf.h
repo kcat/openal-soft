@@ -9,6 +9,7 @@
 #include "AL/al.h"
 
 #include "almalloc.h"
+#include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
 #include "vector.h"
@@ -107,8 +108,8 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
  * frequency gains for the decoder. The calculated impulse responses are
  * ordered and scaled according to the matrix input.
  */
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuint NumChannels,
-    const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS],
-    const size_t AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
+    const al::span<const AngularPoint> AmbiPoints, const ALfloat (*AmbiMatrix)[MAX_AMBI_CHANNELS],
+    const ALfloat *AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

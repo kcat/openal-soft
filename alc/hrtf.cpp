@@ -290,9 +290,9 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
     return std::unique_ptr<DirectHrtfState>{new (FamCount{num_chans}) DirectHrtfState{num_chans}};
 }
 
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuint NumChannels,
-    const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS],
-    const size_t AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
+    const al::span<const AngularPoint> AmbiPoints, const ALfloat (*AmbiMatrix)[MAX_AMBI_CHANNELS],
+    const ALfloat *AmbiOrderHFGain)
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {
@@ -309,12 +309,9 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
      */
     static constexpr bool DualBand{true};
 
-    ASSUME(NumChannels > 0);
-    ASSUME(AmbiCount > 0);
-
     ALuint min_delay{HRTF_HISTORY_LENGTH};
     ALuint max_delay{0};
-    al::vector<ImpulseResponse> impres; impres.reserve(AmbiCount);
+    al::vector<ImpulseResponse> impres; impres.reserve(AmbiPoints.size());
     auto calc_res = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
     {
         ImpulseResponse res;
@@ -373,7 +370,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
 
         return res;
     };
-    std::transform(AmbiPoints, AmbiPoints+AmbiCount, std::back_inserter(impres), calc_res);
+    std::transform(AmbiPoints.begin(), AmbiPoints.end(), std::back_inserter(impres), calc_res);
 
     /* For dual-band processing, add a 16-sample delay to compensate for the HF
      * scale on the minimum-phase response.
@@ -382,9 +379,9 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
 
-    auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(NumChannels);
+    auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(state->Coeffs.size());
     auto tmpflt = al::vector<std::array<double,HRIR_LENGTH*4>>(3);
-    for(size_t c{0u};c < AmbiCount;++c)
+    for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const al::span<const double2,HRIR_LENGTH> hrir{impres[c].hrir};
         const ALuint ldelay{impres[c].ldelay - min_delay + base_delay};
@@ -393,7 +390,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
         if /*constexpr*/(!DualBand)
         {
             /* For single-band decoding, apply the HF scale to the response. */
-            for(ALuint i{0u};i < NumChannels;++i)
+            for(size_t i{0u};i < state->Coeffs.size();++i)
             {
                 const double mult{double{AmbiOrderHFGain[OrderFromChan[i]]} * AmbiMatrix[c][i]};
                 const ALuint numirs{minu(Hrtf->irSize, HRIR_LENGTH-maxu(ldelay, rdelay))};
@@ -433,7 +430,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
         splitter.process(tmpflt[0].data(), tmpflt[1].data(), tmpflt[2].data(), tmpflt[2].size());
 
         /* Apply left ear response with delay and HF scale. */
-        for(ALuint i{0u};i < NumChannels;++i)
+        for(size_t i{0u};i < state->Coeffs.size();++i)
         {
             const ALdouble mult{AmbiMatrix[c][i]};
             const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
@@ -453,7 +450,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
         splitter.clear();
         splitter.process(tmpflt[0].data(), tmpflt[1].data(), tmpflt[2].data(), tmpflt[2].size());
 
-        for(ALuint i{0u};i < NumChannels;++i)
+        for(size_t i{0u};i < state->Coeffs.size();++i)
         {
             const ALdouble mult{AmbiMatrix[c][i]};
             const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
@@ -465,7 +462,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     tmpflt.clear();
     impres.clear();
 
-    for(ALuint i{0u};i < NumChannels;++i)
+    for(size_t i{0u};i < state->Coeffs.size();++i)
     {
         auto copy_arr = [](const double2 &in) noexcept -> float2
         { return float2{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };

@@ -294,6 +294,12 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_CHANNELS],
     const size_t AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
+    using double2 = std::array<double,2>;
+    struct ImpulseResponse {
+        std::array<double2,HRIR_LENGTH> hrir;
+        ALuint ldelay, rdelay;
+    };
+
     static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
     };
@@ -308,30 +314,66 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
 
     ALuint min_delay{HRTF_HISTORY_LENGTH};
     ALuint max_delay{0};
-    auto idx = al::vector<ALuint>(AmbiCount);
-    auto calc_idxs = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) noexcept -> ALuint
+    al::vector<ImpulseResponse> impres; impres.reserve(AmbiCount);
+    auto calc_res = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
     {
+        ImpulseResponse res;
+
         auto &field = Hrtf->field[0];
-        /* Calculate elevation index. */
-        const auto ev_limit = static_cast<float>(field.evCount-1);
-        const ALuint evidx{float2uint(clampf((90.0f+pt.Elev)/180.0f, 0.0f, 1.0f)*ev_limit + 0.5f)};
 
-        const ALuint azcount{Hrtf->elev[evidx].azCount};
-        const ALuint iroffset{Hrtf->elev[evidx].irOffset};
+        /* Calculate the elevation indices. */
+        const auto elev0 = CalcEvIndex(field.evCount, pt.Elev);
+        const ALsizei elev1_idx{mini(elev0.idx+1, field.evCount-1)};
+        const ALsizei ir0offset{Hrtf->elev[elev0.idx].irOffset};
+        const ALsizei ir1offset{Hrtf->elev[elev1_idx].irOffset};
 
-        /* Calculate azimuth index for this elevation. */
-        const float az_norm{(360.0f+pt.Azim) / 360.0f};
-        const ALuint azidx{float2uint(az_norm*static_cast<float>(azcount) + 0.5f) % azcount};
+        /* Calculate azimuth indices. */
+        const auto az0 = CalcAzIndex(Hrtf->elev[elev0.idx].azCount, pt.Azim);
+        const auto az1 = CalcAzIndex(Hrtf->elev[elev1_idx].azCount, pt.Azim);
 
-        /* Calculate the index for the impulse response. */
-        const ALuint iridx{iroffset + azidx};
+        /* Calculate the HRIR indices to blend. */
+        const ALuint idx[4]{
+            static_cast<ALuint>(ir0offset + az0.idx),
+            static_cast<ALuint>(ir0offset + ((az0.idx+1) % Hrtf->elev[elev0.idx].azCount)),
+            static_cast<ALuint>(ir1offset + az1.idx),
+            static_cast<ALuint>(ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount))};
 
-        min_delay = minu(min_delay, minu(Hrtf->delays[iridx][0], Hrtf->delays[iridx][1]));
-        max_delay = maxu(max_delay, maxu(Hrtf->delays[iridx][0], Hrtf->delays[iridx][1]));
+        /* Calculate bilinear blending weights. */
+        const ALfloat blend[4]{
+            (1.0f-elev0.blend) * (1.0f-az0.blend),
+            (1.0f-elev0.blend) * (     az0.blend),
+            (     elev0.blend) * (1.0f-az1.blend),
+            (     elev0.blend) * (     az1.blend)};
 
-        return iridx;
+        /* Calculate the blended HRIR delays. */
+        res.ldelay = fastf2u(
+            Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
+            Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]);
+        res.rdelay = fastf2u(
+            Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
+            Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]);
+
+        const size_t irSize{Hrtf->irSize};
+        ASSUME(irSize >= MIN_IR_SIZE);
+
+        /* Calculate the blended HRIR coefficients. */
+        double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
+        std::fill(coeffout, coeffout + irSize*2, 0.0);
+        for(ALsizei c{0};c < 4;c++)
+        {
+            const ALfloat *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]*irSize])};
+            const ALfloat mult{blend[c]};
+            auto blend_coeffs = [mult](const float src, const double coeff) noexcept -> double
+            { return src*mult + coeff; };
+            std::transform(srccoeffs, srccoeffs + irSize*2, coeffout, coeffout, blend_coeffs);
+        }
+
+        min_delay = minu(min_delay, minu(res.ldelay, res.rdelay));
+        max_delay = maxu(max_delay, maxu(res.ldelay, res.rdelay));
+
+        return res;
     };
-    std::transform(AmbiPoints, AmbiPoints+AmbiCount, idx.begin(), calc_idxs);
+    std::transform(AmbiPoints, AmbiPoints+AmbiCount, std::back_inserter(impres), calc_res);
 
     /* For dual-band processing, add a 16-sample delay to compensate for the HF
      * scale on the minimum-phase response.
@@ -340,27 +382,26 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
     const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
 
-    auto tmpres = al::vector<std::array<std::array<ALdouble,2>,HRIR_LENGTH>>(NumChannels);
-    auto tmpfilt = al::vector<std::array<ALdouble,HRIR_LENGTH*4>>(3);
+    auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(NumChannels);
+    auto tmpflt = al::vector<std::array<double,HRIR_LENGTH*4>>(3);
     for(size_t c{0u};c < AmbiCount;++c)
     {
-        const ALfloat (*fir)[2]{&Hrtf->coeffs[idx[c] * Hrtf->irSize]};
-        const ALuint ldelay{Hrtf->delays[idx[c]][0] - min_delay + base_delay};
-        const ALuint rdelay{Hrtf->delays[idx[c]][1] - min_delay + base_delay};
+        const al::span<const double2,HRIR_LENGTH> hrir{impres[c].hrir};
+        const ALuint ldelay{impres[c].ldelay - min_delay + base_delay};
+        const ALuint rdelay{impres[c].rdelay - min_delay + base_delay};
 
-        if(!DualBand)
+        if /*constexpr*/(!DualBand)
         {
             /* For single-band decoding, apply the HF scale to the response. */
             for(ALuint i{0u};i < NumChannels;++i)
             {
-                const ALdouble mult{ALdouble{AmbiOrderHFGain[OrderFromChan[i]]} *
-                    AmbiMatrix[c][i]};
+                const double mult{double{AmbiOrderHFGain[OrderFromChan[i]]} * AmbiMatrix[c][i]};
                 const ALuint numirs{minu(Hrtf->irSize, HRIR_LENGTH-maxu(ldelay, rdelay))};
                 ALuint lidx{ldelay}, ridx{rdelay};
                 for(ALuint j{0};j < numirs;++j)
                 {
-                    tmpres[i][lidx++][0] += fir[j][0] * mult;
-                    tmpres[i][ridx++][1] += fir[j][1] * mult;
+                    tmpres[i][lidx++][0] += hrir[j][0] * mult;
+                    tmpres[i][ridx++][1] += hrir[j][1] * mult;
                 }
             }
             continue;
@@ -373,24 +414,23 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
          */
 
         /* Load the (left) HRIR backwards, into a temp buffer with padding. */
-        std::fill(tmpfilt[2].begin(), tmpfilt[2].end(), 0.0);
-        std::transform(fir, fir+Hrtf->irSize, tmpfilt[2].rbegin() + HRIR_LENGTH*3,
-            [](const ALfloat (&ir)[2]) noexcept -> ALdouble { return ir[0]; });
+        std::fill(tmpflt[2].begin(), tmpflt[2].end(), 0.0);
+        std::transform(hrir.begin(), hrir.begin()+Hrtf->irSize, tmpflt[2].rbegin() + HRIR_LENGTH*3,
+            [](const double2 &ir) noexcept -> double { return ir[0]; });
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
          * sample array. This produces the forward response with a backwards
          * phase-shift (+n degrees becomes -n degrees).
          */
-        splitter.applyAllpass(tmpfilt[2].data(), tmpfilt[2].size());
-        std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
+        splitter.applyAllpass(tmpflt[2].data(), tmpflt[2].size());
+        std::reverse(tmpflt[2].begin(), tmpflt[2].end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
          * which cancels out with the backwards phase-shift to get the original
          * phase on the split signal.
          */
         splitter.clear();
-        splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
-            tmpfilt[2].size());
+        splitter.process(tmpflt[0].data(), tmpflt[1].data(), tmpflt[2].data(), tmpflt[2].size());
 
         /* Apply left ear response with delay and HF scale. */
         for(ALuint i{0u};i < NumChannels;++i)
@@ -399,20 +439,19 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
             const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
             ALuint j{HRIR_LENGTH*3 - ldelay};
             for(ALuint lidx{0};lidx < HRIR_LENGTH;++lidx,++j)
-                tmpres[i][lidx][0] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
+                tmpres[i][lidx][0] += (tmpflt[0][j]*hfgain + tmpflt[1][j]) * mult;
         }
 
         /* Now run the same process on the right HRIR. */
-        std::fill(tmpfilt[2].begin(), tmpfilt[2].end(), 0.0);
-        std::transform(fir, fir+Hrtf->irSize, tmpfilt[2].rbegin() + HRIR_LENGTH*3,
-            [](const ALfloat (&ir)[2]) noexcept -> ALdouble { return ir[1]; });
+        std::fill(tmpflt[2].begin(), tmpflt[2].end(), 0.0);
+        std::transform(hrir.begin(), hrir.begin()+Hrtf->irSize, tmpflt[2].rbegin() + HRIR_LENGTH*3,
+            [](const double2 &ir) noexcept -> double { return ir[1]; });
 
-        splitter.applyAllpass(tmpfilt[2].data(), tmpfilt[2].size());
-        std::reverse(tmpfilt[2].begin(), tmpfilt[2].end());
+        splitter.applyAllpass(tmpflt[2].data(), tmpflt[2].size());
+        std::reverse(tmpflt[2].begin(), tmpflt[2].end());
 
         splitter.clear();
-        splitter.process(tmpfilt[0].data(), tmpfilt[1].data(), tmpfilt[2].data(),
-            tmpfilt[2].size());
+        splitter.process(tmpflt[0].data(), tmpflt[1].data(), tmpflt[2].data(), tmpflt[2].size());
 
         for(ALuint i{0u};i < NumChannels;++i)
         {
@@ -420,15 +459,15 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALuin
             const ALdouble hfgain{AmbiOrderHFGain[OrderFromChan[i]]};
             ALuint j{HRIR_LENGTH*3 - rdelay};
             for(ALuint ridx{0};ridx < HRIR_LENGTH;++ridx,++j)
-                tmpres[i][ridx][1] += (tmpfilt[0][j]*hfgain + tmpfilt[1][j]) * mult;
+                tmpres[i][ridx][1] += (tmpflt[0][j]*hfgain + tmpflt[1][j]) * mult;
         }
     }
-    tmpfilt.clear();
-    idx.clear();
+    tmpflt.clear();
+    impres.clear();
 
     for(ALuint i{0u};i < NumChannels;++i)
     {
-        auto copy_arr = [](const std::array<double,2> &in) noexcept -> float2
+        auto copy_arr = [](const double2 &in) noexcept -> float2
         { return float2{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };
         std::transform(tmpres[i].begin(), tmpres[i].end(), state->Coeffs[i].begin(),
             copy_arr);

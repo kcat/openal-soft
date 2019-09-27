@@ -135,7 +135,7 @@ inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 } // namespace
 
 
-ResamplerFunc SelectResampler(Resampler resampler)
+ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
 {
     switch(resampler)
     {
@@ -159,6 +159,18 @@ ResamplerFunc SelectResampler(Resampler resampler)
             return Resample_<CubicTag,CTag>;
         case Resampler::BSinc12:
         case Resampler::BSinc24:
+            if(increment <= FRACTIONONE)
+            {
+#ifdef HAVE_NEON
+                if((CPUCapFlags&CPU_CAP_NEON))
+                    return Resample_<FastBSincTag,NEONTag>;
+#endif
+#ifdef HAVE_SSE
+                if((CPUCapFlags&CPU_CAP_SSE))
+                    return Resample_<FastBSincTag,SSETag>;
+#endif
+                return Resample_<FastBSincTag,CTag>;
+            }
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
                 return Resample_<BSincTag,NEONTag>;

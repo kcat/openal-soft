@@ -370,7 +370,7 @@ void aluInit(void);
 
 void aluInitMixer(void);
 
-ResamplerFunc SelectResampler(Resampler resampler);
+ResamplerFunc SelectResampler(Resampler resampler, ALuint increment);
 
 /* aluInitRenderer
  *

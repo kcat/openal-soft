@@ -171,7 +171,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
             BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc24);
         else if(resampler == Resampler::BSinc12)
             BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc12);
-        converter->mResample = SelectResampler(resampler);
+        converter->mResample = SelectResampler(resampler, converter->mIncrement);
     }
 
     return converter;

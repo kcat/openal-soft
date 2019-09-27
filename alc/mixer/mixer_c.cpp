@@ -41,6 +41,26 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
         r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
     return r;
 }
+inline ALfloat do_fastbsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALuint frac)
+{
+    const size_t m{istate.bsinc.m};
+
+    // Calculate the phase index and factor.
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
+    const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
+    const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+        (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+#undef FRAC_PHASE_BITDIFF
+
+    const ALfloat *fil{istate.bsinc.filter + m*pi*4};
+    const ALfloat *phd{fil + m*2};
+
+    // Apply the phase interpolated filter.
+    ALfloat r{0.0f};
+    for(size_t j_f{0};j_f < m;j_f++)
+        r += (fil[j_f] + pf*phd[j_f]) * vals[j_f];
+    return r;
+}
 
 using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALuint);
 template<SamplerT &Sampler>
@@ -97,6 +117,11 @@ template<>
 const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
+
+template<>
+const ALfloat *Resample_<FastBSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
+    ALuint frac, ALuint increment, const al::span<float> dst)
+{ return DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 
 static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALuint IrSize,

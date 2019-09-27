@@ -66,6 +66,53 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
     return dst.begin();
 }
 
+template<>
+const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
+    const ALfloat *RESTRICT src, ALuint frac, ALuint increment, const al::span<float> dst)
+{
+    const ALfloat *const filter{state->bsinc.filter};
+    const size_t m{state->bsinc.m};
+
+    src -= state->bsinc.l;
+    for(float &out_sample : dst)
+    {
+        // Calculate the phase index and factor.
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
+        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
+        const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+#undef FRAC_PHASE_BITDIFF
+
+        // Apply the phase interpolated filter.
+        __m128 r4{_mm_setzero_ps()};
+        {
+            const __m128 pf4{_mm_set1_ps(pf)};
+            const float *fil{filter + m*pi*4};
+            const float *phd{fil + m*2};
+            size_t td{m >> 2};
+            size_t j{0u};
+
+#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+            do {
+                /* f = fil + pf*phd */
+                const __m128 f4 = MLA4(_mm_load_ps(fil), pf4, _mm_load_ps(phd));
+                /* r += f*src */
+                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
+                fil += 4; phd += 4; j += 4;
+            } while(--td);
+#undef MLA4
+        }
+        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
+        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+        out_sample = _mm_cvtss_f32(r4);
+
+        frac += increment;
+        src  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
+    }
+    return dst.begin();
+}
+
 
 static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALuint IrSize,
     const HrirArray &Coeffs, const ALfloat left, const ALfloat right)

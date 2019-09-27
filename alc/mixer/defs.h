@@ -23,7 +23,8 @@ enum ResampleType {
     PointTag,
     LerpTag,
     CubicTag,
-    BSincTag
+    BSincTag,
+    FastBSincTag
 };
 
 template<ResampleType TypeTag, InstSetType InstTag>

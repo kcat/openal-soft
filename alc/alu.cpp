@@ -951,7 +951,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc24);
     else if(props->mResampler == Resampler::BSinc12)
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc12);
-    voice->mResampler = SelectResampler(props->mResampler);
+    voice->mResampler = SelectResampler(props->mResampler, voice->mStep);
 
     /* Calculate gains */
     const ALlistener &Listener = ALContext->mListener;
@@ -1281,7 +1281,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc24);
     else if(props->mResampler == Resampler::BSinc12)
         BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc12);
-    voice->mResampler = SelectResampler(props->mResampler);
+    voice->mResampler = SelectResampler(props->mResampler, voice->mStep);
 
     ALfloat spread{0.0f};
     if(props->Radius > Distance)

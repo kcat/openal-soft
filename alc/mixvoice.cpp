@@ -161,6 +161,9 @@ ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
         case Resampler::BSinc24:
             if(increment <= FRACTIONONE)
             {
+                /* fall-through */
+        case Resampler::FastBSinc12:
+        case Resampler::FastBSinc24:
 #ifdef HAVE_NEON
                 if((CPUCapFlags&CPU_CAP_NEON))
                     return Resample_<FastBSincTag,NEONTag>;
@@ -191,7 +194,7 @@ void aluInitMixer()
     if(auto resopt = ConfigValueStr(nullptr, nullptr, "resampler"))
     {
         struct ResamplerEntry {
-            const char name[12];
+            const char name[16];
             const Resampler resampler;
         };
         constexpr ResamplerEntry ResamplerList[]{
@@ -199,7 +202,9 @@ void aluInitMixer()
             { "point", Resampler::Point },
             { "cubic", Resampler::Cubic },
             { "bsinc12", Resampler::BSinc12 },
+            { "fast_bsinc12", Resampler::FastBSinc12 },
             { "bsinc24", Resampler::BSinc24 },
+            { "fast_bsinc24", Resampler::FastBSinc24 },
         };
 
         const char *str{resopt->c_str()};

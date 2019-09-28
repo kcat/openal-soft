@@ -46,7 +46,9 @@ enum class Resampler {
     Point,
     Linear,
     Cubic,
+    FastBSinc12,
     BSinc12,
+    FastBSinc24,
     BSinc24,
 
     Max = BSinc24

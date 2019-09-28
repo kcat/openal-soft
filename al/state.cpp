@@ -63,7 +63,9 @@ constexpr ALchar alErrOutOfMemory[] = "Out of Memory";
 constexpr ALchar alPointResampler[] = "Nearest";
 constexpr ALchar alLinearResampler[] = "Linear";
 constexpr ALchar alCubicResampler[] = "Cubic";
+constexpr ALchar alFastBSinc12Resampler[] = "11th order Sinc (fast)";
 constexpr ALchar alBSinc12Resampler[] = "11th order Sinc";
+constexpr ALchar alFastBSinc24Resampler[] = "23rd order Sinc (fast)";
 constexpr ALchar alBSinc24Resampler[] = "23rd order Sinc";
 
 } // namespace
@@ -798,8 +800,9 @@ START_API_FUNC
 {
     const char *ResamplerNames[] = {
         alPointResampler, alLinearResampler,
-        alCubicResampler, alBSinc12Resampler,
-        alBSinc24Resampler,
+        alCubicResampler, alFastBSinc12Resampler,
+        alBSinc12Resampler, alFastBSinc24Resampler,
+        alBSinc24Resampler
     };
     static_assert(al::size(ResamplerNames) == static_cast<ALuint>(Resampler::Max)+1,
         "Incorrect ResamplerNames list");

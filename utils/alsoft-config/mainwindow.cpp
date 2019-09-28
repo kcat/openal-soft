@@ -101,7 +101,9 @@ static const struct NameValuePair {
     { "Linear", "linear" },
     { "Default (Linear)", "" },
     { "Cubic Spline", "cubic" },
+    { "11th order Sinc (fast)", "fast_bsinc12" },
     { "11th order Sinc", "bsinc12" },
+    { "23rd order Sinc (fast)", "fast_bsinc24" },
     { "23rd order Sinc", "bsinc24" },
 
     { "", "" }

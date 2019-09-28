@@ -191,8 +191,8 @@ ALuint SampleConverter::availableOut(ALuint srcframes) const
         return 0;
     }
 
-    if(prepcount < MAX_RESAMPLE_PADDING*2 &&
-       static_cast<ALuint>(MAX_RESAMPLE_PADDING*2 - prepcount) >= srcframes)
+    if(prepcount < MAX_RESAMPLER_PADDING
+        && static_cast<ALuint>(MAX_RESAMPLER_PADDING - prepcount) >= srcframes)
     {
         /* Not enough input samples to generate an output sample. */
         return 0;
@@ -200,7 +200,7 @@ ALuint SampleConverter::availableOut(ALuint srcframes) const
 
     auto DataSize64 = static_cast<uint64_t>(prepcount);
     DataSize64 += srcframes;
-    DataSize64 -= MAX_RESAMPLE_PADDING*2;
+    DataSize64 -= MAX_RESAMPLER_PADDING;
     DataSize64 <<= FRACTIONBITS;
     DataSize64 -= mFracOffset;
 
@@ -235,10 +235,10 @@ ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *d
             mSrcPrepCount = 0;
             continue;
         }
-        ALuint toread{minu(NumSrcSamples, BUFFERSIZE - MAX_RESAMPLE_PADDING*2)};
+        ALuint toread{minu(NumSrcSamples, BUFFERSIZE - MAX_RESAMPLER_PADDING)};
 
-        if(prepcount < MAX_RESAMPLE_PADDING*2 &&
-            static_cast<ALuint>(MAX_RESAMPLE_PADDING*2 - prepcount) >= toread)
+        if(prepcount < MAX_RESAMPLER_PADDING
+            && static_cast<ALuint>(MAX_RESAMPLER_PADDING - prepcount) >= toread)
         {
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
@@ -257,7 +257,7 @@ ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *d
         ALuint DataPosFrac{mFracOffset};
         auto DataSize64 = static_cast<uint64_t>(prepcount);
         DataSize64 += toread;
-        DataSize64 -= MAX_RESAMPLE_PADDING*2;
+        DataSize64 -= MAX_RESAMPLER_PADDING;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
 
@@ -294,7 +294,7 @@ ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *d
             }
 
             /* Now resample, and store the result in the output buffer. */
-            const ALfloat *ResampledData{mResample(&mState, SrcData+MAX_RESAMPLE_PADDING,
+            const ALfloat *ResampledData{mResample(&mState, SrcData+(MAX_RESAMPLER_PADDING>>1),
                 DataPosFrac, increment, {DstData, DstSize})};
 
             StoreSamples(DstSamples, ResampledData, mChan.size(), mDstType, DstSize);
@@ -305,7 +305,7 @@ ALuint SampleConverter::convert(const ALvoid **src, ALuint *srcframes, ALvoid *d
          */
         DataPosFrac += increment*DstSize;
         mSrcPrepCount = mini(prepcount + static_cast<ALint>(toread - (DataPosFrac>>FRACTIONBITS)),
-            MAX_RESAMPLE_PADDING*2);
+            MAX_RESAMPLER_PADDING);
         mFracOffset = DataPosFrac & FRACTIONMASK;
 
         /* Update the src and dst pointers in case there's still more to do. */

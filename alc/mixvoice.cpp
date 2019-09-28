@@ -67,7 +67,8 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
               "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
 
 /* BSinc24 requires up to 23 extra samples before the current position, and 24 after. */
-static_assert(MAX_RESAMPLE_PADDING >= 24, "MAX_RESAMPLE_PADDING must be at least 24!");
+static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= 48,
+              "MAX_RESAMPLER_PADDING must be a multiple of two and at least 48!");
 
 
 Resampler ResamplerDefault{Resampler::Linear};
@@ -654,18 +655,18 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
         /* Calculate the last read src sample pos. */
         DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
         /* +1 to get the src sample count, include padding. */
-        DataSize64 += 1 + MAX_RESAMPLE_PADDING*2;
+        DataSize64 += 1 + MAX_RESAMPLER_PADDING;
 
         auto SrcBufferSize = static_cast<ALuint>(
-            minu64(DataSize64, BUFFERSIZE + MAX_RESAMPLE_PADDING*2 + 1));
-        if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLE_PADDING*2)
+            minu64(DataSize64, BUFFERSIZE + MAX_RESAMPLER_PADDING + 1));
+        if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLER_PADDING)
         {
-            SrcBufferSize = BUFFERSIZE + MAX_RESAMPLE_PADDING*2;
+            SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
             /* If the source buffer got saturated, we can't fill the desired
              * dst size. Figure out how many samples we can actually mix from
              * this.
              */
-            DataSize64 = SrcBufferSize - MAX_RESAMPLE_PADDING*2;
+            DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
             DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
             DstBufferSize = static_cast<ALuint>(minu64(DataSize64, DstBufferSize));
 
@@ -685,11 +686,11 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
             /* Load the previous samples into the source data first, then load
              * what we can from the buffer queue.
              */
-            auto srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLE_PADDING,
+            auto srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLER_PADDING>>1,
                 SrcData.begin());
 
             if UNLIKELY(!BufferListItem)
-                srciter = std::copy(chandata.mPrevSamples.begin()+MAX_RESAMPLE_PADDING,
+                srciter = std::copy(chandata.mPrevSamples.begin()+(MAX_RESAMPLER_PADDING>>1),
                     chandata.mPrevSamples.end(), srciter);
             else if(isstatic)
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
@@ -714,8 +715,9 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 chandata.mPrevSamples.size(), chandata.mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
-            const ALfloat *ResampledData{Resample(&mResampleState, &SrcData[MAX_RESAMPLE_PADDING],
-                DataPosFrac, increment, {Device->ResampledData, DstBufferSize})};
+            const ALfloat *ResampledData{Resample(&mResampleState,
+                &SrcData[MAX_RESAMPLER_PADDING>>1], DataPosFrac, increment,
+                {Device->ResampledData, DstBufferSize})};
             if((mFlags&VOICE_IS_AMBISONIC))
             {
                 const ALfloat hfscale{chandata.mAmbiScale};

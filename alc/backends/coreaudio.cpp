@@ -598,7 +598,7 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
     uint64_t FrameCount64{mDevice->UpdateSize};
     FrameCount64 = static_cast<uint64_t>(FrameCount64*outputFormat.mSampleRate + mDevice->Frequency-1) /
         mDevice->Frequency;
-    FrameCount64 += MAX_RESAMPLE_PADDING*2;
+    FrameCount64 += MAX_RESAMPLER_PADDING;
     if(FrameCount64 > std::numeric_limits<uint32_t>::max()/2)
     {
         ERR("FrameCount too large\n");

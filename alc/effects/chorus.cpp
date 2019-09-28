@@ -139,7 +139,7 @@ ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
 
 void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
-    constexpr ALsizei mindelay{MAX_RESAMPLE_PADDING << FRACTIONBITS};
+    constexpr ALsizei mindelay{(MAX_RESAMPLER_PADDING>>1) << FRACTIONBITS};
 
     switch(props->Chorus.Waveform)
     {

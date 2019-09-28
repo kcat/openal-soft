@@ -30,7 +30,7 @@ struct SampleConverter {
     alignas(16) ALfloat mDstSamples[BUFFERSIZE]{};
 
     struct ChanSamples {
-        alignas(16) ALfloat PrevSamples[MAX_RESAMPLE_PADDING*2];
+        alignas(16) ALfloat PrevSamples[MAX_RESAMPLER_PADDING];
     };
     al::FlexArray<ChanSamples> mChan;
 

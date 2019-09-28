@@ -254,7 +254,7 @@ struct ALvoice {
     std::array<SendData,MAX_SENDS> mSend;
 
     struct ChannelData {
-        alignas(16) std::array<ALfloat,MAX_RESAMPLE_PADDING*2> mPrevSamples;
+        alignas(16) std::array<ALfloat,MAX_RESAMPLER_PADDING> mPrevSamples;
 
         ALfloat mAmbiScale;
         BandSplitter mAmbiSplitter;

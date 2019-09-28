@@ -154,10 +154,11 @@ struct BFChannelConfig {
 
 using FloatBufferLine = std::array<float,BUFFERSIZE>;
 
-/* Maximum number of samples to pad on either end of a buffer for resampling.
- * Note that both the beginning and end need padding!
+/* Maximum number of samples to pad on the ends of a buffer for resampling.
+ * Note that the padding is symmetric (half at the beginning and half at the
+ * end)!
  */
-#define MAX_RESAMPLE_PADDING 24
+#define MAX_RESAMPLER_PADDING 48
 
 
 struct FrontStablizer {
@@ -269,7 +270,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
-    alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLE_PADDING*2];
+    alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLER_PADDING];
     alignas(16) ALfloat ResampledData[BUFFERSIZE];
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
     union {

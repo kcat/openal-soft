@@ -24,7 +24,6 @@
 
 struct ALbufferlistitem;
 struct ALeffectslot;
-struct BSincTable;
 
 
 enum class DistanceModel;

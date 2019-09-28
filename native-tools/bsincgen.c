@@ -257,7 +257,7 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
 " * width) suffers to reduce the CPU cost. The bandlimiting will cut all sound\n"
 " * after downsampling by ~%.2f octaves.\n"
 " */\n"
-"alignas(16) static constexpr float %s_tab[%d] = {\n",
+"alignas(16) constexpr float %s_tab[%d] = {\n",
             order, (((order%100)/10) == 1) ? "th" :
                    ((order%10) == 1) ? "st" :
                    ((order%10) == 2) ? "nd" :
@@ -286,7 +286,7 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
             fprintf(output, "\n");
         }
     }
-    fprintf(output, "};\nconst BSincTable %s = {\n", tabname);
+    fprintf(output, "};\nconstexpr BSincTable %s = {\n", tabname);
 
     /* The scaleBase is calculated from the Kaiser window transition width.
        It represents the absolute limit to the filter before it fully cuts
@@ -344,6 +344,7 @@ int main(int argc, char *argv[])
 "#pragma once\n\n"
 "static_assert(BSINC_SCALE_COUNT == %d, \"Unexpected BSINC_SCALE_COUNT value!\");\n"
 "static_assert(BSINC_PHASE_COUNT == %d, \"Unexpected BSINC_PHASE_COUNT value!\");\n\n"
+"namespace {\n\n"
 "struct BSincTable {\n"
 "    const float scaleBase, scaleRange;\n"
 "    const unsigned int m[BSINC_SCALE_COUNT];\n"
@@ -355,6 +356,7 @@ int main(int argc, char *argv[])
     /* An 11th order filter with a -40dB drop at nyquist. */
     BsiGenerateTables(output, "bsinc12", 40.0, 11);
 
+    fprintf(output, "} // namespace\n");
     if(output != stdout)
         fclose(output);
     output = NULL;

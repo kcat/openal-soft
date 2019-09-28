@@ -135,60 +135,6 @@ inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 } // namespace
 
 
-ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
-{
-    switch(resampler)
-    {
-        case Resampler::Point:
-            return Resample_<PointTag,CTag>;
-        case Resampler::Linear:
-#ifdef HAVE_NEON
-            if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_<LerpTag,NEONTag>;
-#endif
-#ifdef HAVE_SSE4_1
-            if((CPUCapFlags&CPU_CAP_SSE4_1))
-                return Resample_<LerpTag,SSE4Tag>;
-#endif
-#ifdef HAVE_SSE2
-            if((CPUCapFlags&CPU_CAP_SSE2))
-                return Resample_<LerpTag,SSE2Tag>;
-#endif
-            return Resample_<LerpTag,CTag>;
-        case Resampler::Cubic:
-            return Resample_<CubicTag,CTag>;
-        case Resampler::BSinc12:
-        case Resampler::BSinc24:
-            if(increment <= FRACTIONONE)
-            {
-                /* fall-through */
-        case Resampler::FastBSinc12:
-        case Resampler::FastBSinc24:
-#ifdef HAVE_NEON
-                if((CPUCapFlags&CPU_CAP_NEON))
-                    return Resample_<FastBSincTag,NEONTag>;
-#endif
-#ifdef HAVE_SSE
-                if((CPUCapFlags&CPU_CAP_SSE))
-                    return Resample_<FastBSincTag,SSETag>;
-#endif
-                return Resample_<FastBSincTag,CTag>;
-            }
-#ifdef HAVE_NEON
-            if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_<BSincTag,NEONTag>;
-#endif
-#ifdef HAVE_SSE
-            if((CPUCapFlags&CPU_CAP_SSE))
-                return Resample_<BSincTag,SSETag>;
-#endif
-            return Resample_<BSincTag,CTag>;
-    }
-
-    return Resample_<PointTag,CTag>;
-}
-
-
 void aluInitMixer()
 {
     if(auto resopt = ConfigValueStr(nullptr, nullptr, "resampler"))

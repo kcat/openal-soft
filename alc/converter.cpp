@@ -10,6 +10,7 @@
 #include "AL/al.h"
 
 #include "albyte.h"
+#include "alu.h"
 #include "fpu_modes.h"
 #include "mixer/defs.h"
 
@@ -161,18 +162,13 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
     auto step = static_cast<ALuint>(
-        mind(srcRate*ALdouble{FRACTIONONE}/dstRate + 0.5, MAX_PITCH*FRACTIONONE));
+        mind(srcRate*double{FRACTIONONE}/dstRate + 0.5, MAX_PITCH*FRACTIONONE));
     converter->mIncrement = maxu(step, 1);
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_<CopyTag,CTag>;
     else
-    {
-        if(resampler == Resampler::BSinc24 || resampler == Resampler::FastBSinc24)
-            BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc24);
-        else if(resampler == Resampler::BSinc12 || resampler == Resampler::FastBSinc12)
-            BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc12);
-        converter->mResample = SelectResampler(resampler, converter->mIncrement);
-    }
+        converter->mResample = PrepareResampler(resampler, converter->mIncrement,
+            &converter->mState);
 
     return converter;
 }

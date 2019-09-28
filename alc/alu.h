@@ -85,11 +85,6 @@ union InterpState {
 using ResamplerFunc = const ALfloat*(*)(const InterpState *state, const ALfloat *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst);
 
-void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table);
-
-extern const BSincTable bsinc12;
-extern const BSincTable bsinc24;
-
 
 enum {
     AF_None = 0,
@@ -372,8 +367,6 @@ void aluInit(void);
 
 void aluInitMixer(void);
 
-ResamplerFunc SelectResampler(Resampler resampler, ALuint increment);
-
 /* aluInitRenderer
  *
  * Set up the appropriate panning method and mixing method given the device
@@ -382,6 +375,8 @@ ResamplerFunc SelectResampler(Resampler resampler, ALuint increment);
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq);
 
 void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
+
+ResamplerFunc PrepareResampler(Resampler resampler, ALuint increment, InterpState *state);
 
 /**
  * Calculates ambisonic encoder coefficients using the X, Y, and Z direction

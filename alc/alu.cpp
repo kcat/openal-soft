@@ -147,11 +147,109 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
     return MixDirectHrtf_<CTag>;
 }
 
+
+inline void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
+{
+    size_t si{BSINC_SCALE_COUNT - 1};
+    float sf{0.0f};
+
+    if(increment > FRACTIONONE)
+    {
+        sf = FRACTIONONE / static_cast<float>(increment);
+        sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
+        si = float2uint(sf);
+        /* The interpolation factor is fit to this diagonally-symmetric curve
+         * to reduce the transition ripple caused by interpolating different
+         * scales of the sinc function.
+         */
+        sf = 1.0f - std::cos(std::asin(sf - static_cast<float>(si)));
+    }
+
+    state->sf = sf;
+    state->m = table->m[si];
+    state->l = (state->m/2) - 1;
+    state->filter = table->Tab + table->filterOffset[si];
+}
+
+inline ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
+{
+    switch(resampler)
+    {
+    case Resampler::Point:
+        return Resample_<PointTag,CTag>;
+    case Resampler::Linear:
+#ifdef HAVE_NEON
+        if((CPUCapFlags&CPU_CAP_NEON))
+            return Resample_<LerpTag,NEONTag>;
+#endif
+#ifdef HAVE_SSE4_1
+        if((CPUCapFlags&CPU_CAP_SSE4_1))
+            return Resample_<LerpTag,SSE4Tag>;
+#endif
+#ifdef HAVE_SSE2
+        if((CPUCapFlags&CPU_CAP_SSE2))
+            return Resample_<LerpTag,SSE2Tag>;
+#endif
+        return Resample_<LerpTag,CTag>;
+    case Resampler::Cubic:
+        return Resample_<CubicTag,CTag>;
+    case Resampler::BSinc12:
+    case Resampler::BSinc24:
+        if(increment <= FRACTIONONE)
+        {
+            /* fall-through */
+        case Resampler::FastBSinc12:
+        case Resampler::FastBSinc24:
+#ifdef HAVE_NEON
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return Resample_<FastBSincTag,NEONTag>;
+#endif
+#ifdef HAVE_SSE
+            if((CPUCapFlags&CPU_CAP_SSE))
+                return Resample_<FastBSincTag,SSETag>;
+#endif
+            return Resample_<FastBSincTag,CTag>;
+        }
+#ifdef HAVE_NEON
+        if((CPUCapFlags&CPU_CAP_NEON))
+            return Resample_<BSincTag,NEONTag>;
+#endif
+#ifdef HAVE_SSE
+        if((CPUCapFlags&CPU_CAP_SSE))
+            return Resample_<BSincTag,SSETag>;
+#endif
+        return Resample_<BSincTag,CTag>;
+    }
+
+    return Resample_<PointTag,CTag>;
+}
+
 } // namespace
 
 void aluInit(void)
 {
     MixDirectHrtf = SelectHrtfMixer();
+}
+
+
+ResamplerFunc PrepareResampler(Resampler resampler, ALuint increment, InterpState *state)
+{
+    switch(resampler)
+    {
+    case Resampler::Point:
+    case Resampler::Linear:
+    case Resampler::Cubic:
+        break;
+    case Resampler::FastBSinc12:
+    case Resampler::BSinc12:
+        BsincPrepare(increment, &state->bsinc, &bsinc12);
+        break;
+    case Resampler::FastBSinc24:
+    case Resampler::BSinc24:
+        BsincPrepare(increment, &state->bsinc, &bsinc24);
+        break;
+    }
+    return SelectResampler(resampler, increment);
 }
 
 
@@ -193,36 +291,6 @@ void ALCdevice::ProcessBs2b(const size_t SamplesToDo)
     /* Now apply the BS2B binaural/crossfeed filter. */
     bs2b_cross_feed(Bs2b.get(), RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
         SamplesToDo);
-}
-
-
-/* Prepares the interpolator for a given rate (determined by increment).
- *
- * With a bit of work, and a trade of memory for CPU cost, this could be
- * modified for use with an interpolated increment for buttery-smooth pitch
- * changes.
- */
-void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
-{
-    size_t si{BSINC_SCALE_COUNT - 1};
-    float sf{0.0f};
-
-    if(increment > FRACTIONONE)
-    {
-        sf = FRACTIONONE / static_cast<float>(increment);
-        sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
-        si = float2uint(sf);
-        /* The interpolation factor is fit to this diagonally-symmetric curve
-         * to reduce the transition ripple caused by interpolating different
-         * scales of the sinc function.
-         */
-        sf = 1.0f - std::cos(std::asin(sf - static_cast<float>(si)));
-    }
-
-    state->sf = sf;
-    state->m = table->m[si];
-    state->l = (state->m/2) - 1;
-    state->filter = table->Tab + table->filterOffset[si];
 }
 
 
@@ -943,15 +1011,11 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     /* Calculate the stepping value */
     const auto Pitch = static_cast<ALfloat>(voice->mFrequency) /
         static_cast<ALfloat>(Device->Frequency) * props->Pitch;
-    if(Pitch > static_cast<ALfloat>(MAX_PITCH))
+    if(Pitch > float{MAX_PITCH})
         voice->mStep = MAX_PITCH<<FRACTIONBITS;
     else
         voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
-    if(props->mResampler == Resampler::BSinc24 || props->mResampler == Resampler::FastBSinc24)
-        BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc24);
-    else if(props->mResampler == Resampler::BSinc12 || props->mResampler == Resampler::FastBSinc12)
-        BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc12);
-    voice->mResampler = SelectResampler(props->mResampler, voice->mStep);
+    voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
     const ALlistener &Listener = ALContext->mListener;
@@ -1273,15 +1337,11 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
      * fixed-point stepping value.
      */
     Pitch *= static_cast<ALfloat>(voice->mFrequency)/static_cast<ALfloat>(Device->Frequency);
-    if(Pitch > static_cast<ALfloat>(MAX_PITCH))
+    if(Pitch > float{MAX_PITCH})
         voice->mStep = MAX_PITCH<<FRACTIONBITS;
     else
         voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
-    if(props->mResampler == Resampler::BSinc24 || props->mResampler == Resampler::FastBSinc24)
-        BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc24);
-    else if(props->mResampler == Resampler::BSinc12 || props->mResampler == Resampler::FastBSinc12)
-        BsincPrepare(voice->mStep, &voice->mResampleState.bsinc, &bsinc12);
-    voice->mResampler = SelectResampler(props->mResampler, voice->mStep);
+    voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     ALfloat spread{0.0f};
     if(props->Radius > Distance)

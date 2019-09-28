@@ -62,19 +62,19 @@ constexpr ALchar alErrOutOfMemory[] = "Out of Memory";
 /* Resampler strings */
 template<Resampler rtype> struct ResamplerName { };
 template<> struct ResamplerName<Resampler::Point>
-{ static const ALchar *Get() noexcept { return "Nearest"; } };
+{ static constexpr const ALchar *Get() noexcept { return "Nearest"; } };
 template<> struct ResamplerName<Resampler::Linear>
-{ static const ALchar *Get() noexcept { return "Linear"; } };
+{ static constexpr const ALchar *Get() noexcept { return "Linear"; } };
 template<> struct ResamplerName<Resampler::Cubic>
-{ static const ALchar *Get() noexcept { return "Cubic"; } };
+{ static constexpr const ALchar *Get() noexcept { return "Cubic"; } };
 template<> struct ResamplerName<Resampler::FastBSinc12>
-{ static const ALchar *Get() noexcept { return "11th order Sinc (fast)"; } };
+{ static constexpr const ALchar *Get() noexcept { return "11th order Sinc (fast)"; } };
 template<> struct ResamplerName<Resampler::BSinc12>
-{ static const ALchar *Get() noexcept { return "11th order Sinc"; } };
+{ static constexpr const ALchar *Get() noexcept { return "11th order Sinc"; } };
 template<> struct ResamplerName<Resampler::FastBSinc24>
-{ static const ALchar *Get() noexcept { return "23rd order Sinc (fast)"; } };
+{ static constexpr const ALchar *Get() noexcept { return "23rd order Sinc (fast)"; } };
 template<> struct ResamplerName<Resampler::BSinc24>
-{ static const ALchar *Get() noexcept { return "23rd order Sinc"; } };
+{ static constexpr const ALchar *Get() noexcept { return "23rd order Sinc"; } };
 
 const ALchar *GetResamplerName(const Resampler rtype) noexcept
 {
@@ -90,6 +90,7 @@ const ALchar *GetResamplerName(const Resampler rtype) noexcept
     HANDLE_RESAMPLER(Resampler::BSinc24);
     }
 #undef HANDLE_RESAMPLER
+    throw std::runtime_error{"Unexpected resampler index"};
 }
 
 } // namespace

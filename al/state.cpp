@@ -60,13 +60,37 @@ constexpr ALchar alErrInvalidOp[] = "Invalid Operation";
 constexpr ALchar alErrOutOfMemory[] = "Out of Memory";
 
 /* Resampler strings */
-constexpr ALchar alPointResampler[] = "Nearest";
-constexpr ALchar alLinearResampler[] = "Linear";
-constexpr ALchar alCubicResampler[] = "Cubic";
-constexpr ALchar alFastBSinc12Resampler[] = "11th order Sinc (fast)";
-constexpr ALchar alBSinc12Resampler[] = "11th order Sinc";
-constexpr ALchar alFastBSinc24Resampler[] = "23rd order Sinc (fast)";
-constexpr ALchar alBSinc24Resampler[] = "23rd order Sinc";
+template<Resampler rtype> struct ResamplerName { };
+template<> struct ResamplerName<Resampler::Point>
+{ static const ALchar *Get() noexcept { return "Nearest"; } };
+template<> struct ResamplerName<Resampler::Linear>
+{ static const ALchar *Get() noexcept { return "Linear"; } };
+template<> struct ResamplerName<Resampler::Cubic>
+{ static const ALchar *Get() noexcept { return "Cubic"; } };
+template<> struct ResamplerName<Resampler::FastBSinc12>
+{ static const ALchar *Get() noexcept { return "11th order Sinc (fast)"; } };
+template<> struct ResamplerName<Resampler::BSinc12>
+{ static const ALchar *Get() noexcept { return "11th order Sinc"; } };
+template<> struct ResamplerName<Resampler::FastBSinc24>
+{ static const ALchar *Get() noexcept { return "23rd order Sinc (fast)"; } };
+template<> struct ResamplerName<Resampler::BSinc24>
+{ static const ALchar *Get() noexcept { return "23rd order Sinc"; } };
+
+const ALchar *GetResamplerName(const Resampler rtype) noexcept
+{
+#define HANDLE_RESAMPLER(r) case r: return ResamplerName<r>::Get()
+    switch(rtype)
+    {
+    HANDLE_RESAMPLER(Resampler::Point);
+    HANDLE_RESAMPLER(Resampler::Linear);
+    HANDLE_RESAMPLER(Resampler::Cubic);
+    HANDLE_RESAMPLER(Resampler::FastBSinc12);
+    HANDLE_RESAMPLER(Resampler::BSinc12);
+    HANDLE_RESAMPLER(Resampler::FastBSinc24);
+    HANDLE_RESAMPLER(Resampler::BSinc24);
+    }
+#undef HANDLE_RESAMPLER
+}
 
 } // namespace
 
@@ -798,15 +822,6 @@ END_API_FUNC
 AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
 START_API_FUNC
 {
-    const char *ResamplerNames[] = {
-        alPointResampler, alLinearResampler,
-        alCubicResampler, alFastBSinc12Resampler,
-        alBSinc12Resampler, alFastBSinc24Resampler,
-        alBSinc24Resampler
-    };
-    static_assert(al::size(ResamplerNames) == static_cast<ALuint>(Resampler::Max)+1,
-        "Incorrect ResamplerNames list");
-
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return nullptr;
 
@@ -814,10 +829,10 @@ START_API_FUNC
     switch(pname)
     {
     case AL_RESAMPLER_NAME_SOFT:
-        if(index < 0 || static_cast<size_t>(index) >= al::size(ResamplerNames))
+        if(index < 0 || index > static_cast<ALint>(Resampler::Max))
             context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
         else
-            value = ResamplerNames[index];
+            value = GetResamplerName(static_cast<Resampler>(index));
         break;
 
     default:

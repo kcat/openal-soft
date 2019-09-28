@@ -82,6 +82,10 @@
 #include "bsinc_inc.h"
 
 
+static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= bsinc24.m[0],
+    "MAX_RESAMPLER_PADDING is not a multiple of two, or is too small");
+
+
 namespace {
 
 using namespace std::placeholders;

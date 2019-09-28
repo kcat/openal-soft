@@ -66,10 +66,6 @@
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
               "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
 
-/* BSinc24 requires up to 23 extra samples before the current position, and 24 after. */
-static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= 48,
-              "MAX_RESAMPLER_PADDING must be a multiple of two and at least 48!");
-
 
 Resampler ResamplerDefault{Resampler::Linear};
 

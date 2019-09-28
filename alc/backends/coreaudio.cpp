@@ -618,7 +618,7 @@ ALCenum CoreAudioCapture::open(const ALCchar *name)
     if(outputFormat.mSampleRate != mDevice->Frequency)
         mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
             mFormat.mChannelsPerFrame, static_cast<ALuint>(hardwareFormat.mSampleRate),
-            mDevice->Frequency, Resampler::BSinc24);
+            mDevice->Frequency, Resampler::FastBSinc24);
 
     mRing = CreateRingBuffer(outputFrameCount, mFrameSize, false);
     if(!mRing) return ALC_INVALID_VALUE;

@@ -57,14 +57,14 @@ namespace detail_ {
     template<typename T, size_t E>
     struct is_span_<span<T,E>> : std::true_type { };
     template<typename T>
-    struct is_span : is_span_<typename std::remove_cv<T>::type> { };
+    using is_span = is_span_<typename std::remove_cv<T>::type>;
 
     template<typename T>
     struct is_std_array_ : std::false_type { };
     template<typename T, size_t N>
     struct is_std_array_<std::array<T,N>> : std::true_type { };
     template<typename T>
-    struct is_std_array : is_std_array_<typename std::remove_cv<T>::type> { };
+    using is_std_array = is_std_array_<typename std::remove_cv<T>::type>;
 
     template<typename T, typename = void>
     struct has_size_and_data : std::false_type { };

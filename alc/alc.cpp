@@ -912,9 +912,13 @@ constexpr ALCint alcEFXMinorVersion = 0;
 
 
 /* To avoid extraneous allocations, a 0-sized FlexArray<ALCcontext*> is defined
- * globally as a sharable object.
+ * globally as a sharable object. MSVC warns that a zero-sized array will have
+ * zero objects here, so silence that.
  */
+DIAGNOSTIC_PUSH
+MVSDIAGNOSTIC(warning(disable : 4815))
 al::FlexArray<ALCcontext*> EmptyContextArray{0u};
+DIAGNOSTIC_POP
 
 
 using DeviceRef = al::intrusive_ptr<ALCdevice>;

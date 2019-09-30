@@ -76,7 +76,7 @@ template<> struct ResamplerName<Resampler::FastBSinc24>
 template<> struct ResamplerName<Resampler::BSinc24>
 { static constexpr const ALchar *Get() noexcept { return "23rd order Sinc"; } };
 
-const ALchar *GetResamplerName(const Resampler rtype) noexcept
+const ALchar *GetResamplerName(const Resampler rtype)
 {
 #define HANDLE_RESAMPLER(r) case r: return ResamplerName<r>::Get()
     switch(rtype)
@@ -90,6 +90,7 @@ const ALchar *GetResamplerName(const Resampler rtype) noexcept
     HANDLE_RESAMPLER(Resampler::BSinc24);
     }
 #undef HANDLE_RESAMPLER
+    /* Should never get here. */
     throw std::runtime_error{"Unexpected resampler index"};
 }
 

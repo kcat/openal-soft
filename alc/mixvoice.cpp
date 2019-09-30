@@ -820,7 +820,8 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 
             ++buffers_done;
             BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);
-            if(!BufferListItem && !(BufferListItem=BufferLoopItem))
+            if(!BufferListItem) BufferListItem = BufferLoopItem;
+            if(!BufferListItem)
             {
                 if LIKELY(vstate == ALvoice::Playing)
                     vstate = ALvoice::Stopped;

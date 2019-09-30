@@ -3159,7 +3159,8 @@ START_API_FUNC
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
 
-    if(!(BufferList=source->queue))
+    BufferList = source->queue;
+    if(!BufferList)
         source->queue = BufferListStart;
     else
     {

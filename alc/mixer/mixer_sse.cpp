@@ -36,9 +36,9 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         {
             const __m128 pf4{_mm_set1_ps(pf)};
             const float *fil{filter + m*pi*4};
-            const float *scd{fil + m};
-            const float *phd{scd + m};
-            const float *spd{phd + m};
+            const float *phd{fil + m};
+            const float *scd{phd + m};
+            const float *spd{scd + m};
             size_t td{m >> 2};
             size_t j{0u};
 
@@ -88,7 +88,7 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
         {
             const __m128 pf4{_mm_set1_ps(pf)};
             const float *fil{filter + m*pi*4};
-            const float *phd{fil + m*2};
+            const float *phd{fil + m};
             size_t td{m >> 2};
             size_t j{0u};
 

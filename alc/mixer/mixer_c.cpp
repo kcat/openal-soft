@@ -31,9 +31,9 @@ inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals,
 #undef FRAC_PHASE_BITDIFF
 
     const ALfloat *fil{istate.bsinc.filter + m*pi*4};
-    const ALfloat *scd{fil + m};
-    const ALfloat *phd{scd + m};
-    const ALfloat *spd{phd + m};
+    const ALfloat *phd{fil + m};
+    const ALfloat *scd{phd + m};
+    const ALfloat *spd{scd + m};
 
     // Apply the scale and phase interpolated filter.
     ALfloat r{0.0f};
@@ -53,7 +53,7 @@ inline ALfloat do_fastbsinc(const InterpState &istate, const ALfloat *RESTRICT v
 #undef FRAC_PHASE_BITDIFF
 
     const ALfloat *fil{istate.bsinc.filter + m*pi*4};
-    const ALfloat *phd{fil + m*2};
+    const ALfloat *phd{fil + m};
 
     // Apply the phase interpolated filter.
     ALfloat r{0.0f};

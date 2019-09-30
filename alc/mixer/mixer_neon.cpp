@@ -91,9 +91,9 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
             const float *fil{filter + m*pi*4};
-            const float *scd{fil + m};
-            const float *phd{scd + m};
-            const float *spd{phd + m};
+            const float *phd{fil + m};
+            const float *scd{phd + m};
+            const float *spd{scd + m};
             size_t td{m >> 2};
             size_t j{0u};
 
@@ -140,7 +140,7 @@ const ALfloat *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
             const float *fil{filter + m*pi*4};
-            const float *phd{fil + m*2};
+            const float *phd{fil + m};
             size_t td{m >> 2};
             size_t j{0u};
 

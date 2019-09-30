@@ -137,8 +137,8 @@ static double CalcKaiserBeta(const double rejection)
 static void BsiGenerateTables(FILE *output, const char *tabname, const double rejection, const int order)
 {
     static double   filter[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
-    static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static double phDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
+    static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static double spDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static int mt[BSINC_SCALE_COUNT];
     static double at[BSINC_SCALE_COUNT];
@@ -147,8 +147,8 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     int si, pi, i;
 
     memset(filter, 0, sizeof(filter));
-    memset(scDeltas, 0, sizeof(scDeltas));
     memset(phDeltas, 0, sizeof(phDeltas));
+    memset(scDeltas, 0, sizeof(scDeltas));
     memset(spDeltas, 0, sizeof(spDeltas));
 
     /* Calculate windowing parameters.  The width describes the transition
@@ -172,8 +172,8 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     }
 
     /* Calculate the Kaiser-windowed Sinc filter coefficients for each scale
-       and phase.
-    */
+     * and phase.
+     */
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
@@ -195,25 +195,9 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
         }
     }
 
-    /* Linear interpolation between scales is simplified by pre-calculating
-       the delta (b - a) in: x = a + f (b - a)
-
-       Given a difference in points between scales, the destination points
-       will be 0, thus: x = a + f (-a)
-    */
-    for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
-    {
-        const int m = mt[si];
-        const int o = num_points_min - (m / 2);
-
-        for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
-        {
-            for(i = 0; i < m; i++)
-                scDeltas[si][pi][o + i] = filter[si + 1][pi][o + i] - filter[si][pi][o + i];
-        }
-    }
-
-    // Linear interpolation between phases is also simplified.
+    /* Linear interpolation between phases is simplified by pre-calculating the
+     * delta (b - a) in: x = a + f (b - a)
+     */
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
@@ -226,9 +210,26 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
         }
     }
 
+    /* Linear interpolation between scales is also simplified.
+     *
+     * Given a difference in points between scales, the destination points will
+     * be 0, thus: x = a + f (-a)
+     */
+    for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
+    {
+        const int m = mt[si];
+        const int o = num_points_min - (m / 2);
+
+        for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
+        {
+            for(i = 0; i < m; i++)
+                scDeltas[si][pi][o + i] = filter[si + 1][pi][o + i] - filter[si][pi][o + i];
+        }
+    }
+
     /* This last simplification is done to complete the bilinear equation for
-       the combination of scale and phase.
-    */
+     * the combination of phase and scale.
+     */
     for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
     {
         const int m = mt[si];
@@ -241,11 +242,11 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
         }
     }
 
-    // Make sure the number of points is a multiple of 4 (for SIMD).
+    /* Make sure the number of points is a multiple of 4 (for SIMD). */
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         mt[si] = (mt[si]+3) & ~3;
 
-    // Calculate the table size.
+    /* Calculate the table size. */
     i = 0;
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         i += 4 * BSINC_PHASE_COUNT * mt[si];
@@ -276,10 +277,10 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
                 fprintf(output, " %+14.9ef,", filter[si][pi][o + i]);
             fprintf(output, "\n   ");
             for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
+                fprintf(output, " %+14.9ef,", phDeltas[si][pi][o + i]);
             fprintf(output, "\n   ");
             for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", phDeltas[si][pi][o + i]);
+                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
             fprintf(output, "\n   ");
             for(i = 0; i < m; i++)
                 fprintf(output, " %+14.9ef,", spDeltas[si][pi][o + i]);

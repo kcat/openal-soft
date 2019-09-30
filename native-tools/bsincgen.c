@@ -53,7 +53,7 @@
 // The number of distinct scale and phase intervals within the filter table.
 // Must be the same as in alu.h!
 #define BSINC_SCALE_COUNT 16
-#define BSINC_PHASE_COUNT 16
+#define BSINC_PHASE_COUNT 32
 
 /* 48 points includes the doubling for downsampling, so the maximum number of
  * base sample points is 24, which is 23rd order.
@@ -353,8 +353,8 @@ int main(int argc, char *argv[])
 "};\n\n", BSINC_SCALE_COUNT, BSINC_PHASE_COUNT);
     /* A 23rd order filter with a -60dB drop at nyquist. */
     BsiGenerateTables(output, "bsinc24", 60.0, 23);
-    /* An 11th order filter with a -40dB drop at nyquist. */
-    BsiGenerateTables(output, "bsinc12", 40.0, 11);
+    /* An 11th order filter with a -60dB drop at nyquist. */
+    BsiGenerateTables(output, "bsinc12", 60.0, 11);
 
     fprintf(output, "} // namespace\n");
     if(output != stdout)

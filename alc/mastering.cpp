@@ -44,7 +44,7 @@ using namespace std::placeholders;
  */
 ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const ALfloat in)
 {
-    static constexpr ALsizei mask{BUFFERSIZE - 1};
+    static constexpr ALuint mask{BUFFERSIZE - 1};
     const ALuint length{Hold->mLength};
     ALfloat (&values)[BUFFERSIZE] = Hold->mValues;
     ALuint (&expiries)[BUFFERSIZE] = Hold->mExpiries;
@@ -133,7 +133,7 @@ static void CrestDetector(Compressor *Comp, const ALuint SamplesToDo)
 
     auto calc_crest = [&y2_rms,&y2_peak,a_crest](const ALfloat x_abs) noexcept -> ALfloat
     {
-        ALfloat x2 = maxf(0.000001f, x_abs * x_abs);
+        const ALfloat x2{clampf(x_abs * x_abs, 0.000001f, 1000000.0f)};
 
         y2_peak = maxf(x2, lerp(x2, y2_peak, a_crest));
         y2_rms = lerp(x2, y2_rms, a_crest);
@@ -398,6 +398,7 @@ std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALfloat 
         {
             Comp->mDelay = ::new (static_cast<void*>(Comp.get() + 1)) FloatBufferLine[NumChans];
         }
+        std::fill_n(Comp->mDelay, NumChans, FloatBufferLine{});
     }
 
     Comp->mCrestCoeff = std::exp(-1.0f / (0.200f * SampleRate)); // 200ms

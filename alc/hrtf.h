@@ -80,7 +80,7 @@ struct HrtfFilter {
 struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
     ALuint IrSize{0};
-    alignas(16) HrirArray Values;
+    alignas(16) HrirArray Values{};
     al::FlexArray<HrirArray,16> Coeffs;
 
     DirectHrtfState(size_t numchans) : Coeffs{numchans} { }

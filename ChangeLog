@@ -5,7 +5,7 @@ openal-soft-1.20.0:
 
     Partially implemented the Vocal Morpher effect.
 
-    Fixed the bsinc SSE resampler on non-GCC compilers.
+    Fixed the bsinc SSE resamplers on non-GCC compilers.
 
     Fixed OpenSL capture.
 
@@ -15,13 +15,20 @@ openal-soft-1.20.0:
 
     Fixed performance problems relating to semaphores on macOS.
 
-    Modified alcResetDeviceSOFT to attempt recovery of lost devices.
+    Modified the bsinc12 resampler's transition band to better avoid aliasing
+    noise.
+
+    Modified alcResetDeviceSOFT to attempt recovery of disconnected devices.
 
     Modified the virtual speaker layout for HRTF B-Format decoding.
 
     Modified the PulseAudio backend to use a custom processing loop.
 
     Renamed the makehrtf utility to makemhr.
+
+    Improved the efficiency of the bsinc resamplers when up-sampling.
+
+    Improved the quality of the bsinc resamplers slightly.
 
     Improved the efficiency of the HRTF mixers.
 
@@ -31,7 +38,10 @@ openal-soft-1.20.0:
 
     Improved handling of sources that end prematurely, to avoid loud clicks.
 
-    Improved some reverb processing loops.
+    Improved the performance of some reverb processing loops.
+
+    Added fast_bsinc resamplers that improve efficiency at the cost of some
+    quality. Notably, when down-sampling with pitch ramping.
 
     Added support for SOFA input files with makemhr.
 

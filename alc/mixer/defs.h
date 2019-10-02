@@ -5,8 +5,10 @@
 
 #include "alcmain.h"
 #include "alspan.h"
-#include "alu.h"
 #include "hrtf.h"
+
+union InterpState;
+struct MixHrtfFilter;
 
 
 enum InstSetType {
@@ -39,11 +41,17 @@ void MixRow_(const al::span<float> OutBuffer, const al::span<const float> Gains,
     const float *InSamples, const size_t InStride);
 
 template<InstSetType InstTag>
-void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize, MixHrtfFilter *hrtfparams, const size_t BufferSize);
+void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples,
+    float2 *AccumSamples, const size_t OutPos, const ALuint IrSize, MixHrtfFilter *hrtfparams,
+    const size_t BufferSize);
 template<InstSetType InstTag>
-void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
+void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const ALfloat *InSamples,
+    float2 *AccumSamples, const size_t OutPos, const ALuint IrSize, const HrtfFilter *oldparams,
+    MixHrtfFilter *newparams, const size_t BufferSize);
 template<InstSetType InstTag>
-void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State, const size_t BufferSize);
+void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
+    const size_t BufferSize);
 
 /* Vectorized resampler helpers */
 inline void InitPosArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr,

@@ -632,6 +632,7 @@ SET(ALC_OBJS
     alc/uhjfilter.h
     alc/uiddefs.cpp
     alc/voice.cpp
+    alc/voice.h
     alc/mixer/defs.h
     alc/mixer/hrtfbase.h
     alc/mixer/mixer_c.cpp

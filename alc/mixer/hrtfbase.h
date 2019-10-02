@@ -6,6 +6,7 @@
 #include "alu.h"
 #include "../hrtf.h"
 #include "opthelpers.h"
+#include "voice.h"
 
 
 using ApplyCoeffsT = void(size_t Offset, float2 *RESTRICT Values, const ALuint irSize,

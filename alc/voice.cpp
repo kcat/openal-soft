@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "voice.h"
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -30,7 +32,6 @@
 #include <iterator>
 #include <memory>
 #include <new>
-#include <string>
 #include <utility>
 
 #include "AL/al.h"
@@ -69,9 +70,6 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 
 Resampler ResamplerDefault{Resampler::Linear};
 
-MixerFunc MixSamples = Mix_<CTag>;
-RowMixerFunc MixRowSamples = MixRow_<CTag>;
-
 namespace {
 
 using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
@@ -83,32 +81,6 @@ using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &Ri
 
 HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
 HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
-
-inline MixerFunc SelectMixer()
-{
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_<NEONTag>;
-#endif
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_<SSETag>;
-#endif
-    return Mix_<CTag>;
-}
-
-inline RowMixerFunc SelectRowMixer()
-{
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixRow_<NEONTag>;
-#endif
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixRow_<SSETag>;
-#endif
-    return MixRow_<CTag>;
-}
 
 inline HrtfMixerFunc SelectHrtfMixer()
 {
@@ -180,8 +152,6 @@ void aluInitMixer()
 
     MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
-    MixSamples = SelectMixer();
-    MixRowSamples = SelectRowMixer();
 }
 
 

@@ -11,6 +11,7 @@
 #include "alnumeric.h"
 #include "alu.h"
 #include "devformat.h"
+#include "voice.h"
 
 
 struct SampleConverter {

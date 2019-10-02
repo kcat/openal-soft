@@ -25,14 +25,12 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <climits>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -78,6 +76,7 @@
 #include "threads.h"
 #include "uhjfilter.h"
 #include "vecmat.h"
+#include "voice.h"
 
 #include "bsinc_inc.h"
 
@@ -122,13 +121,10 @@ const ALfloat ConeScale{InitConeScale()};
 /* Localized Z scalar for mono sources */
 const ALfloat ZScale{InitZScale()};
 
+MixerFunc MixSamples{Mix_<CTag>};
+RowMixerFunc MixRowSamples{MixRow_<CTag>};
 
 namespace {
-
-void ClearArray(ALfloat (&f)[MAX_OUTPUT_CHANNELS])
-{
-    std::fill(std::begin(f), std::end(f), 0.0f);
-}
 
 struct ChanMap {
     Channel channel;
@@ -136,7 +132,39 @@ struct ChanMap {
     ALfloat elevation;
 };
 
+void ClearArray(ALfloat (&f)[MAX_OUTPUT_CHANNELS])
+{
+    std::fill(std::begin(f), std::end(f), 0.0f);
+}
+
 HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_<CTag>;
+
+inline MixerFunc SelectMixer()
+{
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return Mix_<NEONTag>;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return Mix_<SSETag>;
+#endif
+    return Mix_<CTag>;
+}
+
+inline RowMixerFunc SelectRowMixer()
+{
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixRow_<NEONTag>;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixRow_<SSETag>;
+#endif
+    return MixRow_<CTag>;
+}
+
 inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_NEON
@@ -232,6 +260,8 @@ inline ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
 
 void aluInit(void)
 {
+    MixSamples = SelectMixer();
+    MixRowSamples = SelectRowMixer();
     MixDirectHrtf = SelectHrtfMixer();
 }
 

@@ -22,6 +22,7 @@
 #include "logging.h"
 #include "threads.h"
 #include "vector.h"
+#include "voice.h"
 
 struct ALeffectslot;
 struct ALeffectslotProps;

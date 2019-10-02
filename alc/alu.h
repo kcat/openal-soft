@@ -25,291 +25,14 @@
 struct ALbufferlistitem;
 struct ALeffectslot;
 
-
 enum class DistanceModel;
+
 
 #define MAX_PITCH  255
 #define MAX_SENDS  16
 
 
 #define DITHER_RNG_SEED 22222
-
-
-enum SpatializeMode {
-    SpatializeOff = AL_FALSE,
-    SpatializeOn = AL_TRUE,
-    SpatializeAuto = AL_AUTO_SOFT
-};
-
-enum class Resampler {
-    Point,
-    Linear,
-    Cubic,
-    FastBSinc12,
-    BSinc12,
-    FastBSinc24,
-    BSinc24,
-
-    Max = BSinc24
-};
-extern Resampler ResamplerDefault;
-
-/* The number of distinct scale and phase intervals within the bsinc filter
- * table.
- */
-#define BSINC_SCALE_BITS  4
-#define BSINC_SCALE_COUNT (1<<BSINC_SCALE_BITS)
-#define BSINC_PHASE_BITS  5
-#define BSINC_PHASE_COUNT (1<<BSINC_PHASE_BITS)
-
-/* Interpolator state.  Kind of a misnomer since the interpolator itself is
- * stateless.  This just keeps it from having to recompute scale-related
- * mappings for every sample.
- */
-struct BsincState {
-    ALfloat sf; /* Scale interpolation factor. */
-    ALuint m;   /* Coefficient count. */
-    ALuint l;   /* Left coefficient offset. */
-    /* Filter coefficients, followed by the scale, phase, and scale-phase
-     * delta coefficients. Starting at phase index 0, each subsequent phase
-     * index follows contiguously.
-     */
-    const ALfloat *filter;
-};
-
-union InterpState {
-    BsincState bsinc;
-};
-
-using ResamplerFunc = const ALfloat*(*)(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst);
-
-
-enum {
-    AF_None = 0,
-    AF_LowPass = 1,
-    AF_HighPass = 2,
-    AF_BandPass = AF_LowPass | AF_HighPass
-};
-
-
-struct MixHrtfFilter {
-    const HrirArray *Coeffs;
-    ALsizei Delay[2];
-    ALfloat Gain;
-    ALfloat GainStep;
-};
-
-
-struct DirectParams {
-    BiquadFilter LowPass;
-    BiquadFilter HighPass;
-
-    NfcFilter NFCtrlFilter;
-
-    struct {
-        HrtfFilter Old;
-        HrtfFilter Target;
-        HrtfState State;
-    } Hrtf;
-
-    struct {
-        ALfloat Current[MAX_OUTPUT_CHANNELS];
-        ALfloat Target[MAX_OUTPUT_CHANNELS];
-    } Gains;
-};
-
-struct SendParams {
-    BiquadFilter LowPass;
-    BiquadFilter HighPass;
-
-    struct {
-        ALfloat Current[MAX_OUTPUT_CHANNELS];
-        ALfloat Target[MAX_OUTPUT_CHANNELS];
-    } Gains;
-};
-
-
-struct ALvoicePropsBase {
-    ALfloat Pitch;
-    ALfloat Gain;
-    ALfloat OuterGain;
-    ALfloat MinGain;
-    ALfloat MaxGain;
-    ALfloat InnerAngle;
-    ALfloat OuterAngle;
-    ALfloat RefDistance;
-    ALfloat MaxDistance;
-    ALfloat RolloffFactor;
-    std::array<ALfloat,3> Position;
-    std::array<ALfloat,3> Velocity;
-    std::array<ALfloat,3> Direction;
-    std::array<ALfloat,3> OrientAt;
-    std::array<ALfloat,3> OrientUp;
-    ALboolean HeadRelative;
-    DistanceModel mDistanceModel;
-    Resampler mResampler;
-    ALboolean DirectChannels;
-    SpatializeMode mSpatializeMode;
-
-    ALboolean DryGainHFAuto;
-    ALboolean WetGainAuto;
-    ALboolean WetGainHFAuto;
-    ALfloat   OuterGainHF;
-
-    ALfloat AirAbsorptionFactor;
-    ALfloat RoomRolloffFactor;
-    ALfloat DopplerFactor;
-
-    std::array<ALfloat,2> StereoPan;
-
-    ALfloat Radius;
-
-    /** Direct filter and auxiliary send info. */
-    struct {
-        ALfloat Gain;
-        ALfloat GainHF;
-        ALfloat HFReference;
-        ALfloat GainLF;
-        ALfloat LFReference;
-    } Direct;
-    struct SendData {
-        ALeffectslot *Slot;
-        ALfloat Gain;
-        ALfloat GainHF;
-        ALfloat HFReference;
-        ALfloat GainLF;
-        ALfloat LFReference;
-    } Send[MAX_SENDS];
-};
-
-struct ALvoiceProps : public ALvoicePropsBase {
-    std::atomic<ALvoiceProps*> next{nullptr};
-
-    DEF_NEWDEL(ALvoiceProps)
-};
-
-#define VOICE_IS_STATIC    (1u<<0)
-#define VOICE_IS_FADING    (1u<<1) /* Fading sources use gain stepping for smooth transitions. */
-#define VOICE_IS_AMBISONIC (1u<<2) /* Voice needs HF scaling for ambisonic upsampling. */
-#define VOICE_HAS_HRTF     (1u<<3)
-#define VOICE_HAS_NFC      (1u<<4)
-
-struct ALvoice {
-    enum State {
-        Stopped = 0,
-        Playing = 1,
-        Stopping = 2
-    };
-
-    std::atomic<ALvoiceProps*> mUpdate{nullptr};
-
-    std::atomic<ALuint> mSourceID{0u};
-    std::atomic<State> mPlayState{Stopped};
-
-    ALvoicePropsBase mProps;
-
-    /**
-     * Source offset in samples, relative to the currently playing buffer, NOT
-     * the whole queue.
-     */
-    std::atomic<ALuint> mPosition;
-    /** Fractional (fixed-point) offset to the next sample. */
-    std::atomic<ALuint> mPositionFrac;
-
-    /* Current buffer queue item being played. */
-    std::atomic<ALbufferlistitem*> mCurrentBuffer;
-
-    /* Buffer queue item to loop to at end of queue (will be NULL for non-
-     * looping voices).
-     */
-    std::atomic<ALbufferlistitem*> mLoopBuffer;
-
-    /* Properties for the attached buffer(s). */
-    FmtChannels mFmtChannels;
-    ALuint mFrequency;
-    ALuint mNumChannels;
-    ALuint mSampleSize;
-
-    /** Current target parameters used for mixing. */
-    ALuint mStep;
-
-    ResamplerFunc mResampler;
-
-    InterpState mResampleState;
-
-    ALuint mFlags;
-
-    struct DirectData {
-        int FilterType;
-        al::span<FloatBufferLine> Buffer;
-    };
-    DirectData mDirect;
-
-    struct SendData {
-        int FilterType;
-        al::span<FloatBufferLine> Buffer;
-    };
-    std::array<SendData,MAX_SENDS> mSend;
-
-    struct ChannelData {
-        alignas(16) std::array<ALfloat,MAX_RESAMPLER_PADDING> mPrevSamples;
-
-        ALfloat mAmbiScale;
-        BandSplitter mAmbiSplitter;
-
-        DirectParams mDryParams;
-        std::array<SendParams,MAX_SENDS> mWetParams;
-    };
-    std::array<ChannelData,MAX_INPUT_CHANNELS> mChans;
-
-    ALvoice() = default;
-    ALvoice(const ALvoice&) = delete;
-    ALvoice(ALvoice&& rhs) noexcept { *this = std::move(rhs); }
-    ~ALvoice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
-    ALvoice& operator=(const ALvoice&) = delete;
-    ALvoice& operator=(ALvoice&& rhs) noexcept
-    {
-        ALvoiceProps *old_update{mUpdate.load(std::memory_order_relaxed)};
-        mUpdate.store(rhs.mUpdate.exchange(old_update, std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mSourceID.store(rhs.mSourceID.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        mPlayState.store(rhs.mPlayState.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mProps = rhs.mProps;
-
-        mPosition.store(rhs.mPosition.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        mPositionFrac.store(rhs.mPositionFrac.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mCurrentBuffer.store(rhs.mCurrentBuffer.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-        mLoopBuffer.store(rhs.mLoopBuffer.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mFmtChannels = rhs.mFmtChannels;
-        mFrequency = rhs.mFrequency;
-        mNumChannels = rhs.mNumChannels;
-        mSampleSize = rhs.mSampleSize;
-
-        mStep = rhs.mStep;
-        mResampler = rhs.mResampler;
-
-        mResampleState = rhs.mResampleState;
-
-        mFlags = rhs.mFlags;
-
-        mDirect = rhs.mDirect;
-        mSend = rhs.mSend;
-        mChans = rhs.mChans;
-
-        return *this;
-    }
-
-    void mix(ALvoice::State vstate, ALCcontext *Context, const ALuint SamplesToDo);
-};
 
 
 using MixerFunc = void(*)(const al::span<const float> InSamples,
@@ -320,6 +43,9 @@ using RowMixerFunc = void(*)(const al::span<float> OutBuffer, const al::span<con
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const size_t BufferSize);
+
+extern MixerFunc MixSamples;
+extern RowMixerFunc MixRowSamples;
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */
@@ -368,8 +94,6 @@ void aluInitMixer(void);
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq);
 
 void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
-
-ResamplerFunc PrepareResampler(Resampler resampler, ALuint increment, InterpState *state);
 
 /**
  * Calculates ambisonic encoder coefficients using the X, Y, and Z direction
@@ -440,9 +164,6 @@ inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexce
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples);
 /* Caller must lock the device state, and the mixer must not be running. */
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...) DECL_FORMAT(printf, 2, 3);
-
-extern MixerFunc MixSamples;
-extern RowMixerFunc MixRowSamples;
 
 extern const ALfloat ConeScale;
 extern const ALfloat ZScale;

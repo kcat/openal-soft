@@ -296,7 +296,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {
-        std::array<double2,HRIR_LENGTH> hrir;
+        alignas(16) std::array<double2,HRIR_LENGTH> hrir;
         ALuint ldelay, rdelay;
     };
 

@@ -1423,12 +1423,22 @@ IF(ALSOFT_UTILS)
 ENDIF()
 
 
+# Some systems need to link with -lrt for clock_gettime as used by the common
+# eaxmple functions.
+SET(RT_LIB )
+CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
+IF(HAVE_LIBRT)
+    SET(RT_LIB rt)
+ENDIF()
+
 # Add a static library with common functions used by multiple example targets
-ADD_LIBRARY(ex-common STATIC EXCLUDE_FROM_ALL examples/common/alhelpers.c)
+ADD_LIBRARY(ex-common STATIC EXCLUDE_FROM_ALL
+    examples/common/alhelpers.c
+    examples/common/alhelpers.h)
 TARGET_COMPILE_DEFINITIONS(ex-common PUBLIC ${CPP_DEFS})
 TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
 TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
-TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL)
+TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
 
 IF(ALSOFT_TESTS)
     ADD_EXECUTABLE(altonegen examples/altonegen.c)

@@ -842,13 +842,6 @@ constexpr ALchar alExtList[] =
 std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 
 /* Thread-local current context */
-void ReleaseThreadCtx(ALCcontext *context)
-{
-    const bool result{context->releaseIfNoDelete()};
-    ERR("Context %p current for thread being destroyed%s!\n",
-        decltype(std::declval<void*>()){context}, result ? "" : ", leak detected");
-}
-
 class ThreadCtx {
     ALCcontext *ctx{nullptr};
 
@@ -856,8 +849,11 @@ public:
     ~ThreadCtx()
     {
         if(ctx)
-            ReleaseThreadCtx(ctx);
-        ctx = nullptr;
+        {
+            const bool result{ctx->releaseIfNoDelete()};
+            ERR("Context %p current for thread being destroyed%s!\n",
+                decltype(std::declval<void*>()){ctx}, result ? "" : ", leak detected");
+        }
     }
 
     ALCcontext *get() const noexcept { return ctx; }

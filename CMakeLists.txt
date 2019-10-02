@@ -390,6 +390,14 @@ IF(HAVE_LIBM)
     SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
 ENDIF()
 
+# Some systems need to link with -lrt for clock_gettime as used by the common
+# eaxmple functions.
+SET(RT_LIB )
+CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
+IF(HAVE_LIBRT)
+    SET(RT_LIB rt)
+ENDIF()
+
 # Check for the dlopen API (for dynamicly loading backend libs)
 IF(ALSOFT_DLOPEN)
     CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)
@@ -1422,14 +1430,6 @@ IF(ALSOFT_UTILS)
     MESSAGE(STATUS "")
 ENDIF()
 
-
-# Some systems need to link with -lrt for clock_gettime as used by the common
-# eaxmple functions.
-SET(RT_LIB )
-CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
-IF(HAVE_LIBRT)
-    SET(RT_LIB rt)
-ENDIF()
 
 # Add a static library with common functions used by multiple example targets
 ADD_LIBRARY(ex-common STATIC EXCLUDE_FROM_ALL

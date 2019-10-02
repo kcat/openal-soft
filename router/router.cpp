@@ -81,7 +81,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
     {
         if(drv.Module == module)
         {
-            TRACE("Skipping already-loaded module %p\n", module);
+            TRACE("Skipping already-loaded module %p\n", decltype(std::declval<void*>()){module});
             FreeLibrary(module);
             return;
         }
@@ -99,8 +99,8 @@ static void AddModule(HMODULE module, const WCHAR *name)
     /* Load required functions. */
     int err = 0;
 #define LOAD_PROC(x) do {                                                     \
-    newdrv.x = reinterpret_cast<decltype(newdrv.x)>(                          \
-        GetProcAddress(module, #x));                                          \
+    newdrv.x = reinterpret_cast<decltype(newdrv.x)>(reinterpret_cast<void*>(  \
+        GetProcAddress(module, #x)));                                         \
     if(!newdrv.x)                                                             \
     {                                                                         \
         ERR("Failed to find entry point for %s in %ls\n", #x, name);          \
@@ -233,7 +233,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
         DriverList.pop_back();
         return;
     }
-    TRACE("Loaded module %p, %ls, ALC %d.%d\n", module, name,
+    TRACE("Loaded module %p, %ls, ALC %d.%d\n", decltype(std::declval<void*>()){module}, name,
           newdrv.ALCVer>>8, newdrv.ALCVer&255);
 #undef LOAD_PROC
 }

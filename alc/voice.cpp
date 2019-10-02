@@ -74,6 +74,13 @@ RowMixerFunc MixRowSamples = MixRow_<CTag>;
 
 namespace {
 
+using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+    MixHrtfFilter *hrtfparams, const size_t BufferSize);
+using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
+
 HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
 HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
 

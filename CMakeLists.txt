@@ -625,13 +625,13 @@ SET(ALC_OBJS
     alc/logging.h
     alc/mastering.cpp
     alc/mastering.h
-    alc/mixvoice.cpp
     alc/panning.cpp
     alc/ringbuffer.cpp
     alc/ringbuffer.h
     alc/uhjfilter.cpp
     alc/uhjfilter.h
     alc/uiddefs.cpp
+    alc/voice.cpp
     alc/mixer/defs.h
     alc/mixer/hrtfbase.h
     alc/mixer/mixer_c.cpp

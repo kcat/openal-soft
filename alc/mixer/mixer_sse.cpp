@@ -13,6 +13,56 @@
 #include "hrtfbase.h"
 
 
+namespace {
+
+inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
+{
+    const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
+
+    ASSUME(IrSize >= 4);
+    /* This isn't technically correct to test alignment, but it's true for
+     * systems that support SSE, which is the only one that needs to know the
+     * alignment of Values (which alternates between 8- and 16-byte aligned).
+     */
+    if(reinterpret_cast<intptr_t>(Values)&0x8)
+    {
+        __m128 imp0, imp1;
+        __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
+        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
+        imp0 = _mm_mul_ps(lrlr, coeffs);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
+        ALuint i{1};
+        for(;i < IrSize-1;i += 2)
+        {
+            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
+            vals = _mm_load_ps(&Values[i][0]);
+            imp1 = _mm_mul_ps(lrlr, coeffs);
+            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
+            vals = _mm_add_ps(imp0, vals);
+            _mm_store_ps(&Values[i][0], vals);
+            imp0 = imp1;
+        }
+        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
+        imp0 = _mm_movehl_ps(imp0, imp0);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
+    }
+    else
+    {
+        for(ALuint i{0};i < IrSize;i += 2)
+        {
+            __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
+            __m128 vals{_mm_load_ps(&Values[i][0])};
+            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
+            _mm_store_ps(&Values[i][0], vals);
+        }
+    }
+}
+
+} // namespace
+
 template<>
 const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
@@ -113,49 +163,6 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
     return dst.begin();
 }
 
-
-static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALuint IrSize,
-    const HrirArray &Coeffs, const float left, const float right)
-{
-    const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
-
-    ASSUME(IrSize >= 4);
-
-    if((Offset&1))
-    {
-        __m128 imp0, imp1;
-        __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
-        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
-        imp0 = _mm_mul_ps(lrlr, coeffs);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
-        ALuint i{1};
-        for(;i < IrSize-1;i += 2)
-        {
-            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-            vals = _mm_load_ps(&Values[i][0]);
-            imp1 = _mm_mul_ps(lrlr, coeffs);
-            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
-            vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(&Values[i][0], vals);
-            imp0 = imp1;
-        }
-        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
-        imp0 = _mm_movehl_ps(imp0, imp0);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
-    }
-    else
-    {
-        for(ALuint i{0};i < IrSize;i += 2)
-        {
-            __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
-            __m128 vals{_mm_load_ps(&Values[i][0])};
-            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
-            _mm_store_ps(&Values[i][0], vals);
-        }
-    }
-}
 
 template<>
 void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,

@@ -13,6 +13,32 @@
 #include "hrtfbase.h"
 
 
+namespace {
+
+inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
+{
+    float32x4_t leftright4;
+    {
+        float32x2_t leftright2 = vdup_n_f32(0.0);
+        leftright2 = vset_lane_f32(left, leftright2, 0);
+        leftright2 = vset_lane_f32(right, leftright2, 1);
+        leftright4 = vcombine_f32(leftright2, leftright2);
+    }
+
+    ASSUME(IrSize >= 4);
+    for(ALuint c{0};c < IrSize;c += 2)
+    {
+        float32x4_t vals = vld1q_f32(&Values[c][0]);
+        float32x4_t coefs = vld1q_f32(&Coeffs[c][0]);
+
+        vals = vmlaq_f32(vals, coefs, leftright4);
+
+        vst1q_f32(&Values[c][0], vals);
+    }
+}
+
+} // namespace
 
 template<>
 const ALfloat *Resample_<LerpTag,NEONTag>(const InterpState*, const ALfloat *RESTRICT src,
@@ -162,30 +188,6 @@ const ALfloat *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
     return dst.begin();
 }
 
-
-static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALuint IrSize,
-    const HrirArray &Coeffs, const float left, const float right)
-{
-    ASSUME(IrSize >= 4);
-
-    float32x4_t leftright4;
-    {
-        float32x2_t leftright2 = vdup_n_f32(0.0);
-        leftright2 = vset_lane_f32(left, leftright2, 0);
-        leftright2 = vset_lane_f32(right, leftright2, 1);
-        leftright4 = vcombine_f32(leftright2, leftright2);
-    }
-
-    for(ALuint c{0};c < IrSize;c += 2)
-    {
-        float32x4_t vals = vld1q_f32(&Values[c][0]);
-        float32x4_t coefs = vld1q_f32(&Coeffs[c][0]);
-
-        vals = vmlaq_f32(vals, coefs, leftright4);
-
-        vst1q_f32(&Values[c][0], vals);
-    }
-}
 
 template<>
 void MixHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,

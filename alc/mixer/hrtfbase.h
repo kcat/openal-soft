@@ -9,10 +9,10 @@
 #include "voice.h"
 
 
-using ApplyCoeffsT = void(size_t Offset, float2 *RESTRICT Values, const ALuint irSize,
-    const HrirArray &Coeffs, const float left, const float right);
+using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const ALuint irSize, const HrirArray &Coeffs,
+    const float left, const float right);
 
-template<ApplyCoeffsT &ApplyCoeffs>
+template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const float *InSamples, float2 *RESTRICT AccumSamples, const size_t OutPos,
     const ALuint IrSize, MixHrtfFilter *hrtfparams, const size_t BufferSize)
@@ -33,7 +33,7 @@ inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
         const float g{gain + gainstep*stepcount};
         const float left{InSamples[Delay[0]++] * g};
         const float right{InSamples[Delay[1]++] * g};
-        ApplyCoeffs(i, AccumSamples+i, IrSize, Coeffs, left, right);
+        ApplyCoeffs(AccumSamples+i, IrSize, Coeffs, left, right);
 
         stepcount += 1.0f;
     }
@@ -46,7 +46,7 @@ inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     hrtfparams->Gain = gain + gainstep*stepcount;
 }
 
-template<ApplyCoeffsT &ApplyCoeffs>
+template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const float *InSamples, float2 *RESTRICT AccumSamples, const size_t OutPos,
     const ALuint IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams,
@@ -70,7 +70,7 @@ inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
         const float g{oldGain + oldGainStep*stepcount};
         const float left{InSamples[Delay[0]++] * g};
         const float right{InSamples[Delay[1]++] * g};
-        ApplyCoeffs(i, AccumSamples+i, IrSize, OldCoeffs, left, right);
+        ApplyCoeffs(AccumSamples+i, IrSize, OldCoeffs, left, right);
 
         stepcount += 1.0f;
     }
@@ -84,7 +84,7 @@ inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
         const float g{newGainStep*stepcount};
         const float left{InSamples[Delay[0]++] * g};
         const float right{InSamples[Delay[1]++] * g};
-        ApplyCoeffs(i, AccumSamples+i, IrSize, NewCoeffs, left, right);
+        ApplyCoeffs(AccumSamples+i, IrSize, NewCoeffs, left, right);
 
         stepcount += 1.0f;
     }
@@ -97,7 +97,7 @@ inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
     newparams->Gain = newGainStep*stepcount;
 }
 
-template<ApplyCoeffsT &ApplyCoeffs>
+template<ApplyCoeffsT ApplyCoeffs>
 inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *RESTRICT AccumSamples,
     DirectHrtfState *State, const size_t BufferSize)
@@ -116,7 +116,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         for(size_t i{0u};i < BufferSize;++i)
         {
             const float insample{input[i]};
-            ApplyCoeffs(i, AccumSamples+i, IrSize, Coeffs, insample, insample);
+            ApplyCoeffs(AccumSamples+i, IrSize, Coeffs, insample, insample);
         }
     }
     for(size_t i{0u};i < BufferSize;++i)

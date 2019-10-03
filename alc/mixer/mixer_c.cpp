@@ -68,7 +68,7 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
     ALuint increment, const al::span<float> dst)
 {
     const InterpState istate{*state};
-    auto proc_sample = [&src,&frac,istate,increment]() -> ALfloat
+    auto proc_sample = [&src,&frac,istate,increment]() -> float
     {
         const float ret{Sampler(istate, src, frac)};
 
@@ -81,6 +81,17 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
     std::generate(dst.begin(), dst.end(), proc_sample);
 
     return dst.begin();
+}
+
+inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
+{
+    ASSUME(IrSize >= 4);
+    for(ALuint c{0};c < IrSize;++c)
+    {
+        Values[c][0] += Coeffs[c][0] * left;
+        Values[c][1] += Coeffs[c][1] * right;
+    }
 }
 
 } // namespace
@@ -123,17 +134,6 @@ const ALfloat *Resample_<FastBSincTag,CTag>(const InterpState *state, const ALfl
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
-
-static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALuint IrSize,
-    const HrirArray &Coeffs, const float left, const float right)
-{
-    ASSUME(IrSize >= 4);
-    for(ALuint c{0};c < IrSize;++c)
-    {
-        Values[c][0] += Coeffs[c][0] * left;
-        Values[c][1] += Coeffs[c][1] * right;
-    }
-}
 
 template<>
 void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,

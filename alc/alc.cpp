@@ -877,6 +877,9 @@ ALeffect DefaultEffect;
  */
 bool SuspendDefers{true};
 
+/* Initial seed for dithering. */
+constexpr ALuint DitherRNGSeed{22222u};
+
 
 /************************************************
  * ALC information
@@ -1861,7 +1864,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->FixedLatency = nanoseconds::zero();
 
     device->DitherDepth = 0.0f;
-    device->DitherSeed = DITHER_RNG_SEED;
+    device->DitherSeed = DitherRNGSeed;
 
     /*************************************************************************
      * Update device format request if HRTF is requested

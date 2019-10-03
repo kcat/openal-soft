@@ -4,12 +4,15 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "al/buffer.h"
 #include "alspan.h"
 #include "alu.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "hrtf.h"
+
+enum class DistanceModel;
 
 
 enum SpatializeMode {

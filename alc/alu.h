@@ -2,37 +2,21 @@
 #define ALU_H
 
 #include <array>
-#include <atomic>
 #include <cmath>
 #include <cstddef>
 
 #include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
 
-#include "al/buffer.h"
 #include "alcmain.h"
-#include "almalloc.h"
 #include "alspan.h"
-#include "ambidefs.h"
-#include "devformat.h"
-#include "filters/biquad.h"
-#include "filters/nfc.h"
-#include "filters/splitter.h"
-#include "hrtf.h"
 #include "logging.h"
 
 struct ALbufferlistitem;
 struct ALeffectslot;
 
-enum class DistanceModel;
-
 
 #define MAX_PITCH  255
 #define MAX_SENDS  16
-
-
-#define DITHER_RNG_SEED 22222
 
 
 using MixerFunc = void(*)(const al::span<const float> InSamples,

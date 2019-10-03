@@ -13,64 +13,64 @@
 
 namespace {
 
-inline ALfloat do_point(const InterpState&, const ALfloat *RESTRICT vals, const ALuint)
+inline float do_point(const InterpState&, const float *RESTRICT vals, const ALuint)
 { return vals[0]; }
-inline ALfloat do_lerp(const InterpState&, const ALfloat *RESTRICT vals, const ALuint frac)
+inline float do_lerp(const InterpState&, const float *RESTRICT vals, const ALuint frac)
 { return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
-inline ALfloat do_cubic(const InterpState&, const ALfloat *RESTRICT vals, const ALuint frac)
+inline float do_cubic(const InterpState&, const float *RESTRICT vals, const ALuint frac)
 { return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
-inline ALfloat do_bsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALuint frac)
+inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const ALuint frac)
 {
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
     const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+    const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
         (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    const ALfloat *fil{istate.bsinc.filter + m*pi*4};
-    const ALfloat *phd{fil + m};
-    const ALfloat *scd{phd + m};
-    const ALfloat *spd{scd + m};
+    const float *fil{istate.bsinc.filter + m*pi*4};
+    const float *phd{fil + m};
+    const float *scd{phd + m};
+    const float *spd{scd + m};
 
     // Apply the scale and phase interpolated filter.
-    ALfloat r{0.0f};
+    float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
     return r;
 }
-inline ALfloat do_fastbsinc(const InterpState &istate, const ALfloat *RESTRICT vals, const ALuint frac)
+inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals, const ALuint frac)
 {
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
     const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+    const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
         (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
-    const ALfloat *fil{istate.bsinc.filter + m*pi*4};
-    const ALfloat *phd{fil + m};
+    const float *fil{istate.bsinc.filter + m*pi*4};
+    const float *phd{fil + m};
 
     // Apply the phase interpolated filter.
-    ALfloat r{0.0f};
+    float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + pf*phd[j_f]) * vals[j_f];
     return r;
 }
 
-using SamplerT = ALfloat(const InterpState&, const ALfloat*RESTRICT, const ALuint);
+using SamplerT = float(const InterpState&, const float*RESTRICT, const ALuint);
 template<SamplerT &Sampler>
-const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst)
+const float *DoResample(const InterpState *state, const float *RESTRICT src, ALuint frac,
+    ALuint increment, const al::span<float> dst)
 {
     const InterpState istate{*state};
     auto proc_sample = [&src,&frac,istate,increment]() -> ALfloat
     {
-        const ALfloat ret{Sampler(istate, src, frac)};
+        const float ret{Sampler(istate, src, frac)};
 
         frac += increment;
         src  += frac>>FRACTIONBITS;
@@ -125,7 +125,7 @@ const ALfloat *Resample_<FastBSincTag,CTag>(const InterpState *state, const ALfl
 
 
 static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const ALuint IrSize,
-    const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
+    const HrirArray &Coeffs, const float left, const float right)
 {
     ASSUME(IrSize >= 4);
     for(ALuint c{0};c < IrSize;++c)
@@ -137,7 +137,7 @@ static inline void ApplyCoeffs(size_t /*Offset*/, float2 *RESTRICT Values, const
 
 template<>
 void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+    const float *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -146,7 +146,7 @@ void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void MixHrtfBlend_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+    const float *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -157,9 +157,7 @@ template<>
 void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const size_t BufferSize)
-{
-    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize);
-}
+{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize); }
 
 
 template<>

@@ -134,7 +134,7 @@ struct ALvoicePropsBase {
     bool DryGainHFAuto;
     bool WetGainAuto;
     bool WetGainHFAuto;
-    float   OuterGainHF;
+    float OuterGainHF;
 
     float AirAbsorptionFactor;
     float RoomRolloffFactor;
@@ -232,9 +232,9 @@ struct ALvoice {
     std::array<SendData,MAX_SENDS> mSend;
 
     struct ChannelData {
-        alignas(16) std::array<ALfloat,MAX_RESAMPLER_PADDING> mPrevSamples;
+        alignas(16) std::array<float,MAX_RESAMPLER_PADDING> mPrevSamples;
 
-        ALfloat mAmbiScale;
+        float mAmbiScale;
         BandSplitter mAmbiSplitter;
 
         DirectParams mDryParams;

@@ -7,8 +7,8 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "alcmain.h"
-#include "alu.h"
 
+#include "alu.h"
 #include "defs.h"
 #include "hrtfbase.h"
 
@@ -17,7 +17,7 @@ template<>
 const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 {
-    const ALfloat *const filter{state->bsinc.filter};
+    const float *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
     const size_t m{state->bsinc.m};
 
@@ -27,7 +27,7 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
             (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
@@ -70,7 +70,7 @@ template<>
 const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
     const ALfloat *RESTRICT src, ALuint frac, ALuint increment, const al::span<float> dst)
 {
-    const ALfloat *const filter{state->bsinc.filter};
+    const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
 
     src -= state->bsinc.l;
@@ -79,7 +79,7 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const ALfloat pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
             (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
@@ -115,7 +115,7 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
 
 
 static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALuint IrSize,
-    const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
+    const HrirArray &Coeffs, const float left, const float right)
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
 
@@ -159,7 +159,7 @@ static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALu
 
 template<>
 void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+    const float *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -168,7 +168,7 @@ void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 
 template<>
 void MixHrtfBlend_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+    const float *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
@@ -179,9 +179,7 @@ template<>
 void MixDirectHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const size_t BufferSize)
-{
-    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize);
-}
+{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize); }
 
 
 template<>

@@ -50,7 +50,7 @@ struct BsincState {
     float sf; /* Scale interpolation factor. */
     ALuint m; /* Coefficient count. */
     ALuint l; /* Left coefficient offset. */
-    /* Filter coefficients, followed by the scale, phase, and scale-phase
+    /* Filter coefficients, followed by the phase, scale, and scale-phase
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.
      */

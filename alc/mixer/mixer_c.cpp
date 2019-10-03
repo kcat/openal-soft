@@ -62,8 +62,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     return r;
 }
 
-using SamplerT = float(const InterpState&, const float*RESTRICT, const ALuint);
-template<SamplerT &Sampler>
+using SamplerT = float(&)(const InterpState&, const float*RESTRICT, const ALuint);
+template<SamplerT Sampler>
 const float *DoResample(const InterpState *state, const float *RESTRICT src, ALuint frac,
     ALuint increment, const al::span<float> dst)
 {

@@ -42,29 +42,22 @@ namespace {
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
-inline ALfloat Sin(ALuint index)
+inline float Sin(ALuint index)
 {
-    return std::sin(static_cast<ALfloat>(index) *
-        (al::MathDefs<float>::Tau() / ALfloat{WAVEFORM_FRACONE}));
+    constexpr float scale{al::MathDefs<float>::Tau() / WAVEFORM_FRACONE};
+    return std::sin(static_cast<float>(index) * scale);
 }
 
-inline ALfloat Saw(ALuint index)
-{
-    return static_cast<ALfloat>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f;
-}
+inline float Saw(ALuint index)
+{ return static_cast<float>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f; }
 
-inline ALfloat Square(ALuint index)
-{
-    return static_cast<ALfloat>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
-}
+inline float Square(ALuint index)
+{ return static_cast<float>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1); }
 
-inline ALfloat One(ALuint)
-{
-    return 1.0f;
-}
+inline float One(ALuint) { return 1.0f; }
 
-template<ALfloat func(ALuint)>
-void Modulate(ALfloat *RESTRICT dst, ALuint index, const ALuint step, size_t todo)
+template<float (&func)(ALuint)>
+void Modulate(float *RESTRICT dst, ALuint index, const ALuint step, size_t todo)
 {
     for(size_t i{0u};i < todo;i++)
     {
@@ -76,7 +69,7 @@ void Modulate(ALfloat *RESTRICT dst, ALuint index, const ALuint step, size_t tod
 
 
 struct ModulatorState final : public EffectState {
-    void (*mGetSamples)(ALfloat*RESTRICT, ALuint, const ALuint, size_t){};
+    void (*mGetSamples)(float*RESTRICT, ALuint, const ALuint, size_t){};
 
     ALuint mIndex{0};
     ALuint mStep{1};

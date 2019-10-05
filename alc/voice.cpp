@@ -423,7 +423,7 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
 }
 
 
-void DoHrtfMix(ALvoice::DirectData &Direct, const float TargetGain, DirectParams &parms,
+void DoHrtfMix(ALvoice::TargetData &Direct, const float TargetGain, DirectParams &parms,
     const float *samples, const ALuint DstBufferSize, const ALuint Counter, const ALuint OutPos,
     const ALuint IrSize, ALCdevice *Device)
 {
@@ -519,7 +519,7 @@ void DoHrtfMix(ALvoice::DirectData &Direct, const float TargetGain, DirectParams
         parms.Hrtf.State.Values.begin());
 }
 
-void DoNfcMix(ALvoice::DirectData &Direct, const float *TargetGains, DirectParams &parms,
+void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParams &parms,
     const float *samples, const ALuint DstBufferSize, const ALuint Counter, const ALuint OutPos,
     ALCdevice *Device)
 {

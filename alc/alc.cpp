@@ -2193,7 +2193,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 std::fill(std::begin(voice.mProps.Send)+num_sends, std::end(voice.mProps.Send),
                     ALvoiceProps::SendData{});
 
-                std::fill(voice.mSend.begin()+num_sends, voice.mSend.end(), ALvoice::SendData{});
+                std::fill(voice.mSend.begin()+num_sends, voice.mSend.end(), ALvoice::TargetData{});
                 auto clear_chan_sends = [num_sends](ALvoice::ChannelData &chandata) -> void
                 {
                     std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),

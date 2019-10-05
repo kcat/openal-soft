@@ -222,17 +222,12 @@ struct ALvoice {
 
     ALuint mFlags;
 
-    struct DirectData {
+    struct TargetData {
         int FilterType;
         al::span<FloatBufferLine> Buffer;
     };
-    DirectData mDirect;
-
-    struct SendData {
-        int FilterType;
-        al::span<FloatBufferLine> Buffer;
-    };
-    std::array<SendData,MAX_SENDS> mSend;
+    TargetData mDirect;
+    std::array<TargetData,MAX_SENDS> mSend;
 
     struct ChannelData {
         alignas(16) std::array<float,MAX_RESAMPLER_PADDING> mPrevSamples;

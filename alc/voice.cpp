@@ -525,7 +525,7 @@ void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParam
 {
     const size_t outcount{Device->NumChannelsPerOrder[0]};
     MixSamples({samples, DstBufferSize}, Direct.Buffer.first(outcount),
-        parms.Gains.Current, TargetGains, Counter, OutPos);
+        parms.Gains.Current.data(), TargetGains, Counter, OutPos);
 
     const al::span<float> nfcsamples{Device->NfcSampleData, DstBufferSize};
     size_t chanoffset{outcount};
@@ -536,7 +536,7 @@ void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParam
         if(chancount < 1) return;
         (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples, nfcsamples.size());
         MixSamples(nfcsamples, Direct.Buffer.subspan(chanoffset, chancount),
-            parms.Gains.Current+chanoffset, TargetGains+chanoffset, Counter, OutPos);
+            &parms.Gains.Current[chanoffset], &TargetGains[chanoffset], Counter, OutPos);
         chanoffset += chancount;
     };
     apply_nfc(&NfcFilter::process1, Device->NumChannelsPerOrder[1]);
@@ -548,7 +548,7 @@ void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParam
 
 void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 {
-    static constexpr ALfloat SilentTarget[MAX_OUTPUT_CHANNELS]{};
+    static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
 
     ASSUME(SamplesToDo > 0);
 
@@ -584,8 +584,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
             {
                 DirectParams &parms = chandata.mDryParams;
                 if(!(mFlags&VOICE_HAS_HRTF))
-                    std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
-                        std::begin(parms.Gains.Current));
+                    parms.Gains.Current = parms.Gains.Target;
                 else
                     parms.Hrtf.Old = parms.Hrtf.Target;
             }
@@ -595,8 +594,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                     continue;
 
                 SendParams &parms = chandata.mWetParams[send];
-                std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
-                    std::begin(parms.Gains.Current));
+                parms.Gains.Current = parms.Gains.Target;
             }
         }
     }
@@ -720,17 +718,17 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 }
                 else if((mFlags&VOICE_HAS_NFC))
                 {
-                    const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
-                        SilentTarget : parms.Gains.Target};
+                    const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
+                        SilentTarget.data() : parms.Gains.Target.data()};
                     DoNfcMix(mDirect, TargetGains, parms, samples, DstBufferSize, Counter, OutPos,
                         Device);
                 }
                 else
                 {
-                    const ALfloat *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
-                        SilentTarget : parms.Gains.Target};
-                    MixSamples({samples, DstBufferSize}, mDirect.Buffer, parms.Gains.Current,
-                        TargetGains, Counter, OutPos);
+                    const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
+                        SilentTarget.data() : parms.Gains.Target.data()};
+                    MixSamples({samples, DstBufferSize}, mDirect.Buffer,
+                        parms.Gains.Current.data(), TargetGains, Counter, OutPos);
                 }
             }
 
@@ -743,10 +741,10 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
                     ResampledData, DstBufferSize, mSend[send].FilterType)};
 
-                const ALfloat *TargetGains{UNLIKELY(vstate==ALvoice::Stopping) ? SilentTarget :
-                    parms.Gains.Target};
-                MixSamples({samples, DstBufferSize}, mSend[send].Buffer, parms.Gains.Current,
-                    TargetGains, Counter, OutPos);
+                const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
+                    SilentTarget.data() : parms.Gains.Target.data()};
+                MixSamples({samples, DstBufferSize}, mSend[send].Buffer,
+                    parms.Gains.Current.data(), TargetGains, Counter, OutPos);
             }
         }
         /* Update positions */

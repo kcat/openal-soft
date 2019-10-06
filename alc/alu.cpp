@@ -132,11 +132,6 @@ struct ChanMap {
     ALfloat elevation;
 };
 
-void ClearArray(ALfloat (&f)[MAX_OUTPUT_CHANNELS])
-{
-    std::fill(std::begin(f), std::end(f), 0.0f);
-}
-
 HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_<CTag>;
 
 inline MixerFunc SelectMixer()
@@ -633,9 +628,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         [NumSends](ALvoice::ChannelData &chandata) -> void
         {
             chandata.mDryParams.Hrtf.Target = HrtfFilter{};
-            ClearArray(chandata.mDryParams.Gains.Target);
+            chandata.mDryParams.Gains.Target.fill(0.0f);
             std::for_each(chandata.mWetParams.begin(), chandata.mWetParams.begin()+NumSends,
-                [](SendParams &params) -> void { ClearArray(params.Gains.Target); });
+                [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
         });
 
     voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);

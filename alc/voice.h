@@ -1,6 +1,8 @@
 #ifndef VOICE_H
 #define VOICE_H
 
+#include <array>
+
 #include "AL/al.h"
 #include "AL/alext.h"
 
@@ -96,8 +98,8 @@ struct DirectParams {
     } Hrtf;
 
     struct {
-        float Current[MAX_OUTPUT_CHANNELS];
-        float Target[MAX_OUTPUT_CHANNELS];
+        std::array<float,MAX_OUTPUT_CHANNELS> Current;
+        std::array<float,MAX_OUTPUT_CHANNELS> Target;
     } Gains;
 };
 
@@ -106,8 +108,8 @@ struct SendParams {
     BiquadFilter HighPass;
 
     struct {
-        float Current[MAX_OUTPUT_CHANNELS];
-        float Target[MAX_OUTPUT_CHANNELS];
+        std::array<float,MAX_OUTPUT_CHANNELS> Current;
+        std::array<float,MAX_OUTPUT_CHANNELS> Target;
     } Gains;
 };
 

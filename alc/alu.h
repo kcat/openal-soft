@@ -93,8 +93,8 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
  * The components are ordered such that OpenAL's X, Y, and Z are the first,
  * second, and third parameters respectively -- simply negate X and Z.
  */
-void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
-                    ALfloat (&coeffs)[MAX_AMBI_CHANNELS]);
+void CalcAmbiCoeffs(const float y, const float z, const float x, const float spread,
+    const al::span<float,MAX_AMBI_CHANNELS> coeffs);
 
 /**
  * CalcDirectionCoeffs
@@ -103,7 +103,8 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
  * vector must be normalized (unit length), and the spread is the angular width
  * of the sound (0...tau).
  */
-inline void CalcDirectionCoeffs(const ALfloat (&dir)[3], ALfloat spread, ALfloat (&coeffs)[MAX_AMBI_CHANNELS])
+inline void CalcDirectionCoeffs(const float (&dir)[3], const float spread,
+    const al::span<float,MAX_AMBI_CHANNELS> coeffs)
 {
     /* Convert from OpenAL coords to Ambisonics. */
     CalcAmbiCoeffs(-dir[0], dir[1], -dir[2], spread, coeffs);
@@ -116,11 +117,12 @@ inline void CalcDirectionCoeffs(const ALfloat (&dir)[3], ALfloat spread, ALfloat
  * azimuth and elevation parameters are in radians, going right and up
  * respectively.
  */
-inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat (&coeffs)[MAX_AMBI_CHANNELS])
+inline void CalcAngleCoeffs(const float azimuth, const float elevation, const float spread,
+    const al::span<float,MAX_AMBI_CHANNELS> coeffs)
 {
-    ALfloat x = -std::sin(azimuth) * std::cos(elevation);
-    ALfloat y = std::sin(elevation);
-    ALfloat z = std::cos(azimuth) * std::cos(elevation);
+    const float x{-std::sin(azimuth) * std::cos(elevation)};
+    const float y{ std::sin(elevation)};
+    const float z{ std::cos(azimuth) * std::cos(elevation)};
 
     CalcAmbiCoeffs(x, y, z, spread, coeffs);
 }
@@ -134,7 +136,8 @@ inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, 
  * coeffs are a 'slice' of a transform matrix for the input channel, used to
  * scale and orient the sound samples.
  */
-void ComputePanGains(const MixParams *mix, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
+void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
+    const al::span<float,MAX_OUTPUT_CHANNELS> gains);
 
 
 inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexcept

@@ -874,8 +874,8 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
 }
 
 
-void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
-                    ALfloat (&coeffs)[MAX_AMBI_CHANNELS])
+void CalcAmbiCoeffs(const float y, const float z, const float x, const float spread,
+    const al::span<float,MAX_AMBI_CHANNELS> coeffs)
 {
     /* Zeroth-order */
     coeffs[0]  = 1.0f; /* ACN 0 = 1 */
@@ -934,14 +934,14 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
          * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
          * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
          */
-        ALfloat ca = std::cos(spread * 0.5f);
+        const float ca{std::cos(spread * 0.5f)};
         /* Increase the source volume by up to +3dB for a full spread. */
-        ALfloat scale = std::sqrt(1.0f + spread/al::MathDefs<float>::Tau());
+        const float scale{std::sqrt(1.0f + spread/al::MathDefs<float>::Tau())};
 
-        ALfloat ZH0_norm = scale;
-        ALfloat ZH1_norm = 0.5f * (ca+1.f) * scale;
-        ALfloat ZH2_norm = 0.5f * (ca+1.f)*ca * scale;
-        ALfloat ZH3_norm = 0.125f * (ca+1.f)*(5.f*ca*ca-1.f) * scale;
+        const float ZH0_norm{scale};
+        const float ZH1_norm{scale * 0.5f * (ca+1.f)};
+        const float ZH2_norm{scale * 0.5f * (ca+1.f)*ca};
+        const float ZH3_norm{scale * 0.125f * (ca+1.f)*(5.f*ca*ca-1.f)};
 
         /* Zeroth-order */
         coeffs[0]  *= ZH0_norm;
@@ -966,13 +966,14 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
     }
 }
 
-void ComputePanGains(const MixParams *mix, const ALfloat *RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
+void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
+    const al::span<float,MAX_OUTPUT_CHANNELS> gains)
 {
     auto ambimap = mix->AmbiMap.cbegin();
 
-    auto iter = std::transform(ambimap, ambimap+mix->Buffer.size(), std::begin(gains),
-        [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
+    auto iter = std::transform(ambimap, ambimap+mix->Buffer.size(), gains.begin(),
+        [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> float
         { return chanmap.Scale * coeffs[chanmap.Index] * ingain; }
     );
-    std::fill(iter, std::end(gains), 0.0f);
+    std::fill(iter, gains.end(), 0.0f);
 }

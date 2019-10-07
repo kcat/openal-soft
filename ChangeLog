@@ -30,18 +30,18 @@ openal-soft-1.20.0:
 
     Improved the quality of the bsinc resamplers slightly.
 
-    Improved the efficiency of the HRTF mixers.
+    Improved the efficiency of the HRTF filters.
 
     Improved the HRTF B-Format decoder coefficient generation.
 
-    Improved reverb fading to be more consistent with pan fading.
+    Improved reverb feedback fading to be more consistent with pan fading.
 
-    Improved handling of sources that end prematurely, to avoid loud clicks.
+    Improved handling of sources that end prematurely, avoiding loud clicks.
 
     Improved the performance of some reverb processing loops.
 
-    Added fast_bsinc resamplers that improve efficiency at the cost of some
-    quality. Notably, when down-sampling with pitch ramping.
+    Added fast_bsinc12 and 24 resamplers that improve efficiency at the cost of
+    some quality. Notably, down-sampling has less smooth pitch ramping.
 
     Added support for SOFA input files with makemhr.
 

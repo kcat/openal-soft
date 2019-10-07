@@ -551,6 +551,7 @@ SET(COMMON_OBJS
     common/intrusive_ptr.h
     common/math_defs.h
     common/opthelpers.h
+    common/pragmadefs.h
     common/strutils.cpp
     common/strutils.h
     common/threads.cpp

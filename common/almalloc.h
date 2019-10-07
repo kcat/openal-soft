@@ -10,23 +10,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "pragmadefs.h"
 
-#ifdef _MSC_VER
-#define DIAGNOSTIC_PUSH __pragma(warning(push))
-#define GNUDIAGNOSTIC(x)
-#define MVSDIAGNOSTIC(...) __pragma(__VA_ARGS__)
-#define DIAGNOSTIC_POP __pragma(warning(pop))
-#elif defined(__GNUC__) || defined(__clang__)
-#define DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
-#define GNUDIAGNOSTIC(x) _Pragma(x)
-#define MVSDIAGNOSTIC(...)
-#define DIAGNOSTIC_POP _Pragma("GCC diagnostic push")
-#else
-#define DIAGNOSTIC_PUSH
-#define GNUDIAGNOSTIC(x)
-#define MVSDIAGNOSTIC(...)
-#define DIAGNOSTIC_POP
-#endif
 
 void *al_malloc(size_t alignment, size_t size);
 void *al_calloc(size_t alignment, size_t size);
@@ -119,7 +104,7 @@ inline T* assume_aligned(T *ptr) noexcept
  * destructor is trivial (a no-op). So disable that warning for this call.
  */
 DIAGNOSTIC_PUSH
-MVSDIAGNOSTIC(warning(disable : 4100))
+msc_pragma(warning(disable : 4100))
 template<typename T>
 inline void destroy_at(T *ptr) { ptr->~T(); }
 DIAGNOSTIC_POP
@@ -263,8 +248,8 @@ struct FlexArray {
 
     const index_type mSize;
 DIAGNOSTIC_PUSH
-GNUDIAGNOSTIC("GCC diagnostic ignored \"-Wpedantic\"")
-MVSDIAGNOSTIC(warning(disable : 4200))
+std_pragma("GCC diagnostic ignored \"-Wpedantic\"")
+msc_pragma(warning(disable : 4200))
     alignas(alignment) element_type mArray[0];
 DIAGNOSTIC_POP
 

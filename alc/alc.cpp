@@ -86,6 +86,7 @@
 #include "logging.h"
 #include "mastering.h"
 #include "opthelpers.h"
+#include "pragmadefs.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 #include "threads.h"
@@ -915,7 +916,7 @@ constexpr ALCint alcEFXMinorVersion = 0;
  * zero objects here, so silence that.
  */
 DIAGNOSTIC_PUSH
-MVSDIAGNOSTIC(warning(disable : 4815))
+msc_pragma(warning(disable : 4815))
 al::FlexArray<ALCcontext*> EmptyContextArray{0u};
 DIAGNOSTIC_POP
 

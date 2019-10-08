@@ -296,15 +296,15 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    lock();
+    std::unique_lock<JackPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         if(mRing->writeSpace() < mDevice->UpdateSize)
         {
-            unlock();
+            dlock.unlock();
             mSem.wait();
-            lock();
+            dlock.lock();
             continue;
         }
 
@@ -320,7 +320,6 @@ int JackPlayback::mixerProc()
             aluMixData(mDevice, data.second.buf, len2);
         mRing->writeAdvance(todo);
     }
-    unlock();
 
     return 0;
 }
@@ -484,11 +483,10 @@ ClockLatency JackPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    lock();
+    std::lock_guard<JackPlayback> _{*this};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace()};
     ret.Latency /= mDevice->Frequency;
-    unlock();
 
     return ret;
 }

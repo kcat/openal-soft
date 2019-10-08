@@ -276,17 +276,18 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
 
         if(SUCCEEDED(err))
         {
-            lock();
+            std::unique_lock<DSoundPlayback> dlock{*this};
             aluMixData(mDevice, WritePtr1, WriteCnt1/FrameSize);
             if(WriteCnt2 > 0)
                 aluMixData(mDevice, WritePtr2, WriteCnt2/FrameSize);
-            unlock();
+            dlock.unlock();
 
             mBuffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
+            std::lock_guard<DSoundPlayback> _{*this};
             aluHandleDisconnect(mDevice, "Failed to lock output buffer: 0x%lx", err);
             return 1;
         }

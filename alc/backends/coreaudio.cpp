@@ -81,9 +81,8 @@ CoreAudioPlayback::~CoreAudioPlayback()
 OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*,
     const AudioTimeStamp*, UInt32, UInt32, AudioBufferList *ioData)
 {
-    lock();
+    std::lock_guard<CoreAudioPlayback> _{*this};
     aluMixData(mDevice, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize/mFrameSize);
-    unlock();
     return noErr;
 }
 

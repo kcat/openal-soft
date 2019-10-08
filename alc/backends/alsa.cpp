@@ -471,7 +471,7 @@ int AlsaPlayback::mixerProc()
         avail -= avail%update_size;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
-        lock();
+        std::lock_guard<AlsaPlayback> _{*this};
         while(avail > 0)
         {
             snd_pcm_uframes_t frames{avail};
@@ -498,7 +498,6 @@ int AlsaPlayback::mixerProc()
 
             avail -= frames;
         }
-        unlock();
     }
 
     return 0;
@@ -551,7 +550,7 @@ int AlsaPlayback::mixerNoMMapProc()
             continue;
         }
 
-        lock();
+        std::lock_guard<AlsaPlayback> _{*this};
         al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         aluMixData(mDevice, WritePtr, static_cast<ALuint>(avail));
@@ -586,7 +585,6 @@ int AlsaPlayback::mixerNoMMapProc()
                 if(ret < 0) break;
             }
         }
-        unlock();
     }
 
     return 0;
@@ -847,7 +845,7 @@ ClockLatency AlsaPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    lock();
+    std::lock_guard<AlsaPlayback> _{*this};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     snd_pcm_sframes_t delay{};
     int err{snd_pcm_delay(mPcmHandle, &delay)};
@@ -858,7 +856,6 @@ ClockLatency AlsaPlayback::getClockLatency()
     }
     ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
     ret.Latency /= mDevice->Frequency;
-    unlock();
 
     return ret;
 }
@@ -1188,7 +1185,7 @@ ClockLatency AlsaCapture::getClockLatency()
 {
     ClockLatency ret;
 
-    lock();
+    std::lock_guard<AlsaCapture> _{*this};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     snd_pcm_sframes_t delay{};
     int err{snd_pcm_delay(mPcmHandle, &delay)};
@@ -1199,7 +1196,6 @@ ClockLatency AlsaCapture::getClockLatency()
     }
     ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
     ret.Latency /= mDevice->Frequency;
-    unlock();
 
     return ret;
 }

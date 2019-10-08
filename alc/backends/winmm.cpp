@@ -183,16 +183,16 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    lock();
+    std::unique_lock<WinMMPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         ALsizei todo = mWritable.load(std::memory_order_acquire);
         if(todo < 1)
         {
-            unlock();
+            dlock.unlock();
             mSem.wait();
-            lock();
+            dlock.lock();
             continue;
         }
 
@@ -207,7 +207,6 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
         } while(--todo);
         mIdx = static_cast<ALuint>(widx);
     }
-    unlock();
 
     return 0;
 }
@@ -427,16 +426,16 @@ int WinMMCapture::captureProc()
 {
     althrd_setname(RECORD_THREAD_NAME);
 
-    lock();
+    std::unique_lock<WinMMCapture> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         ALuint todo{mReadable.load(std::memory_order_acquire)};
         if(todo < 1)
         {
-            unlock();
+            dlock.unlock();
             mSem.wait();
-            lock();
+            dlock.lock();
             continue;
         }
 
@@ -451,7 +450,6 @@ int WinMMCapture::captureProc()
         } while(--todo);
         mIdx = static_cast<ALuint>(widx);
     }
-    unlock();
 
     return 0;
 }

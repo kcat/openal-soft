@@ -689,10 +689,10 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         hr = mRender->GetBuffer(len, &buffer);
         if(SUCCEEDED(hr))
         {
-            lock();
+            std::unique_lock<WasapiPlayback> dlock{*this};
             aluMixData(mDevice, buffer, len);
             mPadding.store(written + len, std::memory_order_relaxed);
-            unlock();
+            dlock.unlock();
             hr = mRender->ReleaseBuffer(len, 0);
         }
         if(FAILED(hr))
@@ -1136,11 +1136,10 @@ ClockLatency WasapiPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    lock();
+    std::lock_guard<WasapiPlayback> _{*this};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= mDevice->Frequency;
-    unlock();
 
     return ret;
 }

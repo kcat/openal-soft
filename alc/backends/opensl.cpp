@@ -228,7 +228,7 @@ int OpenSLPlayback::mixerProc()
         PRINTERR(result, "bufferQueue->GetInterface SL_IID_PLAY");
     }
 
-    lock();
+    std::unique_lock<OpenSLPlayback> dlock{*this};
     if(SL_RESULT_SUCCESS != result)
         aluHandleDisconnect(mDevice, "Failed to get playback buffer: 0x%08x", result);
 
@@ -254,9 +254,9 @@ int OpenSLPlayback::mixerProc()
 
             if(mRing->writeSpace() == 0)
             {
-                unlock();
+                dlock.unlock();
                 mSem.wait();
-                lock();
+                dlock.lock();
                 continue;
             }
         }
@@ -292,7 +292,6 @@ int OpenSLPlayback::mixerProc()
             data.first.buf += mDevice->UpdateSize*mFrameSize;
         }
     }
-    unlock();
 
     return 0;
 }
@@ -617,11 +616,10 @@ ClockLatency OpenSLPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    lock();
+    std::lock_guard<OpenSLPlayback> _{*this};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace() * mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;
-    unlock();
 
     return ret;
 }

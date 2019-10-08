@@ -91,7 +91,7 @@ int SolarisBackend::mixerProc()
 
     const ALuint frame_size{mDevice->frameSizeFromFmt()};
 
-    lock();
+    std::unique_lock<SolarisBackend> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -99,9 +99,9 @@ int SolarisBackend::mixerProc()
         pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        unlock();
+        dlock.unlock();
         int pret{poll(&pollitem, 1, 1000)};
-        lock();
+        dlock.lock();
         if(pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
@@ -137,7 +137,6 @@ int SolarisBackend::mixerProc()
             write_ptr += wrote;
         }
     }
-    unlock();
 
     return 0;
 }

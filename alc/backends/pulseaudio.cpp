@@ -1321,47 +1321,51 @@ ALCenum PulseCapture::captureSamples(al::byte *buffer, ALCuint samples)
     mLastReadable -= static_cast<ALCuint>(dstbuf.size());
     while(!dstbuf.empty())
     {
-        if(mCapBuffer.empty())
+        if(!mCapBuffer.empty())
         {
-            if UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire))
-                break;
-            std::lock_guard<std::mutex> _{pulse_lock};
-            const pa_stream_state_t state{pa_stream_get_state(mStream)};
-            if UNLIKELY(!PA_STREAM_IS_GOOD(state))
-            {
-                aluHandleDisconnect(mDevice, "Bad capture state: %u", state);
-                break;
-            }
-            const void *capbuf;
-            size_t caplen;
-            if UNLIKELY(pa_stream_peek(mStream, &capbuf, &caplen) < 0)
-            {
-                aluHandleDisconnect(mDevice, "Failed retrieving capture samples: %s",
-                    pa_strerror(pa_context_errno(mContext)));
-                break;
-            }
-            if(caplen == 0) break;
-            if UNLIKELY(!capbuf)
-                mCapLen = -static_cast<ssize_t>(caplen);
+            const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
+            if UNLIKELY(mCapLen < 0)
+                std::fill_n(dstbuf.begin(), rem, mSilentVal);
             else
-                mCapLen = static_cast<ssize_t>(caplen);
-            mCapBuffer = {static_cast<const al::byte*>(capbuf), caplen};
+                std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
+            dstbuf = dstbuf.subspan(rem);
+            mCapBuffer = mCapBuffer.subspan(rem);
+
+            continue;
         }
 
-        const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
-        if UNLIKELY(mCapLen < 0)
-            std::fill_n(dstbuf.begin(), rem, mSilentVal);
-        else
-            std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
-        dstbuf = dstbuf.subspan(rem);
-        mCapBuffer = mCapBuffer.subspan(rem);
+        if UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire))
+            break;
 
-        if(mCapBuffer.empty())
+        std::unique_lock<std::mutex> plock{pulse_lock};
+        if(mCapLen != 0)
         {
-            std::lock_guard<std::mutex> _{pulse_lock};
             pa_stream_drop(mStream);
+            mCapBuffer = {};
             mCapLen = 0;
         }
+        const pa_stream_state_t state{pa_stream_get_state(mStream)};
+        if UNLIKELY(!PA_STREAM_IS_GOOD(state))
+        {
+            aluHandleDisconnect(mDevice, "Bad capture state: %u", state);
+            break;
+        }
+        const void *capbuf;
+        size_t caplen;
+        if UNLIKELY(pa_stream_peek(mStream, &capbuf, &caplen) < 0)
+        {
+            aluHandleDisconnect(mDevice, "Failed retrieving capture samples: %s",
+                pa_strerror(pa_context_errno(mContext)));
+            break;
+        }
+        plock.unlock();
+
+        if(caplen == 0) break;
+        if UNLIKELY(!capbuf)
+            mCapLen = -static_cast<ssize_t>(caplen);
+        else
+            mCapLen = static_cast<ssize_t>(caplen);
+        mCapBuffer = {static_cast<const al::byte*>(capbuf), caplen};
     }
     if(!dstbuf.empty())
         std::fill(dstbuf.begin(), dstbuf.end(), mSilentVal);

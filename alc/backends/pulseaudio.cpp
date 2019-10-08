@@ -1211,7 +1211,7 @@ void PulseCapture::open(const ALCchar *name)
         chanmap = X71ChanMap;
         break;
     case DevFmtAmbi3D:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
     SetChannelOrderFromMap(mDevice, chanmap);

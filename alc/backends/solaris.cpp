@@ -151,11 +151,8 @@ void SolarisBackend::open(const ALCchar *name)
 
     mFd = ::open(solaris_driver.c_str(), O_WRONLY);
     if(mFd == -1)
-    {
-        ERR("Could not open %s: %s\n", solaris_driver.c_str(), strerror(errno));
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s",
             solaris_driver.c_str(), strerror(errno)};
-    }
 
     mDevice->DeviceName = name;
 }

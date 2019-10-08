@@ -336,11 +336,9 @@ void JackPlayback::open(const ALCchar *name)
     jack_status_t status;
     mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
     if(mClient == nullptr)
-    {
-        ERR("jack_client_open() failed, status = 0x%02x\n", status);
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to connect to JACK server: 0x%02x",
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open client connection: 0x%02x",
             status};
-    }
+
     if((status&JackServerStarted))
         TRACE("JACK server started\n");
     if((status&JackNameNotUnique))

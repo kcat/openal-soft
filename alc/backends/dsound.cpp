@@ -341,10 +341,7 @@ void DSoundPlayback::open(const ALCchar *name)
     if(SUCCEEDED(hr))
         hr = mDS->SetCooperativeLevel(GetForegroundWindow(), DSSCL_PRIORITY);
     if(FAILED(hr))
-    {
-        ERR("Device init failed: 0x%08lx\n", hr);
         throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
-    }
 
     mDevice->DeviceName = name;
 }
@@ -753,8 +750,6 @@ void DSoundCapture::open(const ALCchar *name)
 
     if(FAILED(hr))
     {
-        ERR("Device init failed: 0x%08lx\n", hr);
-
         mRing = nullptr;
         if(mDSCbuffer)
             mDSCbuffer->Release();

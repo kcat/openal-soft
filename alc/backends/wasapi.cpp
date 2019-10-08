@@ -762,7 +762,6 @@ void WasapiPlayback::open(const ALCchar *name)
 
         mDevId.clear();
 
-        ERR("Device init failed: 0x%08lx\n", hr);
         throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
     }
 }
@@ -1336,7 +1335,6 @@ void WasapiCapture::open(const ALCchar *name)
 
         mDevId.clear();
 
-        ERR("Device init failed: 0x%08lx\n", hr);
         throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
     }
 

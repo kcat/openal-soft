@@ -117,10 +117,7 @@ void SndioPlayback::open(const ALCchar *name)
 
     mSndHandle = sio_open(nullptr, SIO_PLAY, 0);
     if(mSndHandle == nullptr)
-    {
-        ERR("Could not open device\n");
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open sound device"};
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open backend device"};
 
     mDevice->DeviceName = name;
 }
@@ -329,10 +326,7 @@ void SndioCapture::open(const ALCchar *name)
 
     mSndHandle = sio_open(nullptr, SIO_REC, 0);
     if(mSndHandle == nullptr)
-    {
-        ERR("Could not open device\n");
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open sound device"};
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open backend device"};
 
     sio_par par;
     sio_initpar(&par);
@@ -364,7 +358,6 @@ void SndioCapture::open(const ALCchar *name)
         par.sig = 0;
         break;
     case DevFmtFloat:
-        ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
         throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
@@ -381,40 +374,26 @@ void SndioCapture::open(const ALCchar *name)
     mDevice->BufferSize = par.appbufsz;
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
-    {
-        ERR("Failed to set device parameters\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set device praameters"};
-    }
 
     if(par.bits != par.bps*8)
-    {
-        ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
         throw al::backend_exception{ALC_INVALID_VALUE,
             "Padded samples not supported (got %u of %u bits)", par.bits, par.bps*8};
-    }
 
-    if(!((mDevice->FmtType == DevFmtByte && par.bits == 8 && par.sig != 0) ||
-         (mDevice->FmtType == DevFmtUByte && par.bits == 8 && par.sig == 0) ||
-         (mDevice->FmtType == DevFmtShort && par.bits == 16 && par.sig != 0) ||
-         (mDevice->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0) ||
-         (mDevice->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0) ||
-         (mDevice->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0)) ||
-       mDevice->channelsFromFmt() != par.rchan || mDevice->Frequency != par.rate)
-    {
-        ERR("Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead\n",
+    if(!((mDevice->FmtType == DevFmtByte && par.bits == 8 && par.sig != 0)
+        || (mDevice->FmtType == DevFmtUByte && par.bits == 8 && par.sig == 0)
+        || (mDevice->FmtType == DevFmtShort && par.bits == 16 && par.sig != 0)
+        || (mDevice->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0)
+        || (mDevice->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0)
+        || (mDevice->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0))
+        || mDevice->channelsFromFmt() != par.rchan || mDevice->Frequency != par.rate)
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead",
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
-            mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate);
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not set format %s %s %uhz",
-            DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
-            mDevice->Frequency};
-    }
+            mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate};
 
     mRing = CreateRingBuffer(mDevice->BufferSize, par.bps*par.rchan, false);
-    if(!mRing)
-    {
-        ERR("Failed to allocate %u-byte ringbuffer\n", mDevice->BufferSize*par.bps*par.rchan);
-        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Failed to allocate ring buffer"};
-    }
+    if(!mRing) throw al::backend_exception{ALC_OUT_OF_MEMORY, "Failed to allocate ring buffer"};
 
     SetDefaultChannelOrder(mDevice);
 

@@ -350,11 +350,8 @@ void OSSPlayback::open(const ALCchar *name)
 
     mFd = ::open(devname, O_WRONLY);
     if(mFd == -1)
-    {
-        ERR("Could not open %s: %s\n", devname, strerror(errno));
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
             strerror(errno)};
-    }
 
     mDevice->DeviceName = name;
 }
@@ -560,11 +557,8 @@ void OSScapture::open(const ALCchar *name)
 
     mFd = ::open(devname, O_RDONLY);
     if(mFd == -1)
-    {
-        ERR("Could not open %s: %s\n", devname, strerror(errno));
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
             strerror(errno)};
-    }
 
     int ossFormat{};
     switch(mDevice->FmtType)
@@ -582,7 +576,6 @@ void OSScapture::open(const ALCchar *name)
     case DevFmtInt:
     case DevFmtUInt:
     case DevFmtFloat:
-        ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
         throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
@@ -596,47 +589,30 @@ void OSScapture::open(const ALCchar *name)
     ALuint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
     audio_buf_info info{};
-    const char *err;
 #define CHECKERR(func) if((func) < 0) {                                       \
-    err = #func;                                                              \
-    goto err;                                                                 \
+    throw al::backend_exception{ALC_INVALID_VALUE, #func " failed: %s", strerror(errno)}; \
 }
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_GETISPACE, &info));
-    if(0)
-    {
-    err:
-        ERR("%s failed: %s\n", err, strerror(errno));
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s failed: %s", err, strerror(errno)};
-    }
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
-    {
-        ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
-            numChannels);
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set %s capture",
-            DevFmtChannelsString(mDevice->FmtChans)};
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to set %s, got %d channels instead", DevFmtChannelsString(mDevice->FmtChans),
+            numChannels};
 
-    if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte) ||
-         (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte) ||
-         (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
-    {
-        ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(mDevice->FmtType), ossFormat);
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set %s samples",
-            DevFmtTypeString(mDevice->FmtType)};
-    }
+    if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte)
+        || (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte)
+        || (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to set %s samples, got OSS format %#x", DevFmtTypeString(mDevice->FmtType),
+            ossFormat};
 
     mRing = CreateRingBuffer(mDevice->BufferSize, frameSize, false);
-    if(!mRing)
-    {
-        ERR("Ring buffer create failed\n");
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
-    }
+    if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
 
     mDevice->DeviceName = name;
 }

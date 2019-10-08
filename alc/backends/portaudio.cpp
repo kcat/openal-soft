@@ -166,7 +166,6 @@ retry_open:
             mParams.sampleFormat = paInt16;
             goto retry_open;
         }
-        ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
         throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open stream: %s",
             Pa_GetErrorText(err)};
     }
@@ -314,7 +313,6 @@ void PortCapture::open(const ALCchar *name)
         break;
     case DevFmtUInt:
     case DevFmtUShort:
-        ERR("%s samples not supported\n", DevFmtTypeString(mDevice->FmtType));
         throw al::backend_exception{ALC_INVALID_VALUE, "%s samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
@@ -323,11 +321,8 @@ void PortCapture::open(const ALCchar *name)
     PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->Frequency,
         paFramesPerBufferUnspecified, paNoFlag, &PortCapture::readCallbackC, this)};
     if(err != paNoError)
-    {
-        ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
         throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open stream: %s",
             Pa_GetErrorText(err)};
-    }
 
     mDevice->DeviceName = name;
 }

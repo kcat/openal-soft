@@ -616,11 +616,8 @@ void AlsaPlayback::open(const ALCchar *name)
     TRACE("Opening device \"%s\"\n", driver);
     int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
     if(err < 0)
-    {
-        ERR("Could not open playback device '%s': %s\n", driver, snd_strerror(err));
-        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA playback \"%s\"",
+        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA device \"%s\"",
             driver};
-    }
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
@@ -917,11 +914,8 @@ void AlsaCapture::open(const ALCchar *name)
     TRACE("Opening device \"%s\"\n", driver);
     int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
     if(err < 0)
-    {
-        ERR("Could not open capture device '%s': %s\n", driver, snd_strerror(err));
-        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA capture \"%s\"",
+        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA device \"%s\"",
             driver};
-    }
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
@@ -989,11 +983,7 @@ void AlsaCapture::open(const ALCchar *name)
     if(needring)
     {
         mRing = CreateRingBuffer(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
-        if(!mRing)
-        {
-            ERR("ring buffer create failed\n");
-            throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
-        }
+        if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
     }
 
     mDevice->DeviceName = name;

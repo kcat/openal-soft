@@ -108,26 +108,17 @@ void CoreAudioPlayback::open(const ALCchar *name)
 
     AudioComponent comp{AudioComponentFindNext(NULL, &desc)};
     if(comp == nullptr)
-    {
-        ERR("AudioComponentFindNext failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not find audio component"};
-    }
 
     OSStatus err{AudioComponentInstanceNew(comp, &mAudioUnit)};
     if(err != noErr)
-    {
-        ERR("AudioComponentInstanceNew failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not create component instance: %u",
             err};
-    }
 
     /* init and start the default audio unit... */
     err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
-    {
-        ERR("AudioUnitInitialize failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not initialize audio unit: %u", err};
-    }
 
     mDevice->DeviceName = name;
 }
@@ -418,41 +409,29 @@ void CoreAudioCapture::open(const ALCchar *name)
     // Search for component with given description
     comp = AudioComponentFindNext(NULL, &desc);
     if(comp == NULL)
-    {
-        ERR("AudioComponentFindNext failed\n");
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not finda udio component"};
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not find audio component"};
 
     // Open the component
     err = AudioComponentInstanceNew(comp, &mAudioUnit);
     if(err != noErr)
-    {
-        ERR("AudioComponentInstanceNew failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not create component instance: %u",
             err};
-    }
 
     // Turn off AudioUnit output
     enableIO = 0;
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
         kAudioUnitScope_Output, 0, &enableIO, sizeof(ALuint));
     if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE,
             "Could not disable audio unit output property: %u", err};
-    }
 
     // Turn on AudioUnit input
     enableIO = 1;
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
         kAudioUnitScope_Input, 1, &enableIO, sizeof(ALuint));
     if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE,
             "Could not enable audio unit input property: %u", err};
-    }
 
 #if !TARGET_OS_IOS
     {
@@ -467,24 +446,15 @@ void CoreAudioCapture::open(const ALCchar *name)
         err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, nullptr,
             &propertySize, &inputDevice);
         if(err != noErr)
-        {
-            ERR("AudioObjectGetPropertyData failed\n");
             throw al::backend_exception{ALC_INVALID_VALUE, "Could not get input device: %u", err};
-        }
         if(inputDevice == kAudioDeviceUnknown)
-        {
-            ERR("No input device found\n");
             throw al::backend_exception{ALC_INVALID_VALUE, "Unknown input device"};
-        }
 
         // Track the input device
         err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
             kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
         if(err != noErr)
-        {
-            ERR("AudioUnitSetProperty failed\n");
             throw al::backend_exception{ALC_INVALID_VALUE, "Could not set input device: %u", err};
-        }
     }
 #endif
 
@@ -495,28 +465,19 @@ void CoreAudioCapture::open(const ALCchar *name)
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_SetInputCallback,
         kAudioUnitScope_Global, 0, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not set capture callback: %u", err};
-    }
 
     // Initialize the device
     err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
-    {
-        ERR("AudioUnitInitialize failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not initialize audio unit: %u", err};
-    }
 
     // Get the hardware format
     propertySize = sizeof(AudioStreamBasicDescription);
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
         1, &hardwareFormat, &propertySize);
     if(err != noErr || propertySize != sizeof(AudioStreamBasicDescription))
-    {
-        ERR("AudioUnitGetProperty failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not get input format: %u", err};
-    }
 
     // Set up the requested format description
     switch(mDevice->FmtType)
@@ -540,7 +501,6 @@ void CoreAudioCapture::open(const ALCchar *name)
     case DevFmtByte:
     case DevFmtUShort:
     case DevFmtUInt:
-        ERR("%s samples not supported\n", DevFmtTypeString(mDevice->FmtType));
         throw al::backend_exception{ALC_INVALID_VALUE, "%s samples not suppoted",
             DevFmtTypeString(mDevice->FmtType)};
     }
@@ -560,7 +520,6 @@ void CoreAudioCapture::open(const ALCchar *name)
     case DevFmtX61:
     case DevFmtX71:
     case DevFmtAmbi3D:
-        ERR("%s not supported\n", DevFmtChannelsString(mDevice->FmtChans));
         throw al::backend_exception{ALC_INVALID_VALUE, "%s not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
@@ -586,10 +545,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
         1, &outputFormat, sizeof(outputFormat));
     if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed\n");
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not set input format: %u", err};
-    }
 
     // Set the AudioUnit output format frame count
     uint64_t FrameCount64{mDevice->UpdateSize};
@@ -597,21 +553,15 @@ void CoreAudioCapture::open(const ALCchar *name)
         mDevice->Frequency;
     FrameCount64 += MAX_RESAMPLER_PADDING;
     if(FrameCount64 > std::numeric_limits<uint32_t>::max()/2)
-    {
-        ERR("FrameCount too large\n");
         throw al::backend_exception{ALC_INVALID_VALUE,
-            "Calculated frame count is too lareg: %" PRIu64, FrameCount64};
-    }
+            "Calculated frame count is too large: %" PRIu64, FrameCount64};
 
     outputFrameCount = static_cast<uint32_t>(FrameCount64);
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
         kAudioUnitScope_Output, 0, &outputFrameCount, sizeof(outputFrameCount));
     if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed: %d\n", err);
         throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set capture frame count: %u",
             err};
-    }
 
     // Set up sample converter if needed
     if(outputFormat.mSampleRate != mDevice->Frequency)

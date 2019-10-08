@@ -127,8 +127,9 @@ struct WinMMPlayback final : public BackendBase {
     WinMMPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~WinMMPlayback() override;
 
-    static void CALLBACK waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2);
     void CALLBACK waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR param1, DWORD_PTR param2);
+    static void CALLBACK waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
+    { reinterpret_cast<WinMMPlayback*>(instance)->waveOutProc(device, msg, param1, param2); }
 
     int mixerProc();
 
@@ -161,10 +162,6 @@ WinMMPlayback::~WinMMPlayback()
     al_free(mWaveBuffer[0].lpData);
     std::fill(mWaveBuffer.begin(), mWaveBuffer.end(), WAVEHDR{});
 }
-
-
-void CALLBACK WinMMPlayback::waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
-{ reinterpret_cast<WinMMPlayback*>(instance)->waveOutProc(device, msg, param1, param2); }
 
 /* WinMMPlayback::waveOutProc
  *
@@ -256,7 +253,6 @@ retry_open:
             mDevice->FmtType = DevFmtShort;
             goto retry_open;
         }
-        ERR("waveOutOpen failed: %u\n", res);
         throw al::backend_exception{ALC_INVALID_VALUE, "waveOutOpen failed: %u", res};
     }
 
@@ -368,8 +364,9 @@ struct WinMMCapture final : public BackendBase {
     WinMMCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~WinMMCapture() override;
 
-    static void CALLBACK waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2);
     void CALLBACK waveInProc(HWAVEIN device, UINT msg, DWORD_PTR param1, DWORD_PTR param2);
+    static void CALLBACK waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
+    { reinterpret_cast<WinMMCapture*>(instance)->waveInProc(device, msg, param1, param2); }
 
     int captureProc();
 
@@ -406,9 +403,6 @@ WinMMCapture::~WinMMCapture()
     al_free(mWaveBuffer[0].lpData);
     std::fill(mWaveBuffer.begin(), mWaveBuffer.end(), WAVEHDR{});
 }
-
-void CALLBACK WinMMCapture::waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
-{ reinterpret_cast<WinMMCapture*>(instance)->waveInProc(device, msg, param1, param2); }
 
 /* WinMMCapture::waveInProc
  *
@@ -513,10 +507,7 @@ void WinMMCapture::open(const ALCchar *name)
         reinterpret_cast<DWORD_PTR>(&WinMMCapture::waveInProcC),
         reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
     if(res != MMSYSERR_NOERROR)
-    {
-        ERR("waveInOpen failed: %u\n", res);
         throw al::backend_exception{ALC_INVALID_VALUE, "waveInOpen failed: %u", res};
-    }
 
     // Ensure each buffer is 50ms each
     DWORD BufferSize{mFormat.nAvgBytesPerSec / 20u};

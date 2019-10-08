@@ -52,8 +52,9 @@ struct Sdl2Backend final : public BackendBase {
     Sdl2Backend(ALCdevice *device) noexcept : BackendBase{device} { }
     ~Sdl2Backend() override;
 
-    static void audioCallbackC(void *ptr, Uint8 *stream, int len);
     void audioCallback(Uint8 *stream, int len);
+    static void audioCallbackC(void *ptr, Uint8 *stream, int len)
+    { static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); }
 
     void open(const ALCchar *name) override;
     bool reset() override;
@@ -79,9 +80,6 @@ Sdl2Backend::~Sdl2Backend()
         SDL_CloseAudioDevice(mDeviceID);
     mDeviceID = 0;
 }
-
-void Sdl2Backend::audioCallbackC(void *ptr, Uint8 *stream, int len)
-{ static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); }
 
 void Sdl2Backend::audioCallback(Uint8 *stream, int len)
 {
@@ -130,16 +128,15 @@ void Sdl2Backend::open(const ALCchar *name)
         throw al::backend_exception{ALC_INVALID_VALUE, "%s", SDL_GetError()};
 
     mDevice->Frequency = static_cast<ALuint>(have.freq);
+
     if(have.channels == 1)
         mDevice->FmtChans = DevFmtMono;
     else if(have.channels == 2)
         mDevice->FmtChans = DevFmtStereo;
     else
-    {
-        ERR("Got unhandled SDL channel count: %d\n", int{have.channels});
         throw al::backend_exception{ALC_INVALID_VALUE, "Unhandled SDL channel count: %d",
             int{have.channels}};
-    }
+
     switch(have.format)
     {
     case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
@@ -149,7 +146,6 @@ void Sdl2Backend::open(const ALCchar *name)
     case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
     case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
     default:
-        ERR("Got unsupported SDL format: 0x%04x\n", have.format);
         throw al::backend_exception{ALC_INVALID_VALUE, "Unhandled SDL format: 0x%04x",
             have.format};
     }

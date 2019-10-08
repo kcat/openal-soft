@@ -146,9 +146,9 @@ struct OpenSLPlayback final : public BackendBase {
     OpenSLPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~OpenSLPlayback() override;
 
+    void process(SLAndroidSimpleBufferQueueItf bq);
     static void processC(SLAndroidSimpleBufferQueueItf bq, void *context)
     { static_cast<OpenSLPlayback*>(context)->process(bq); }
-    void process(SLAndroidSimpleBufferQueueItf bq);
 
     int mixerProc();
 
@@ -339,8 +339,8 @@ void OpenSLPlayback::open(const ALCchar *name)
         mEngineObj = nullptr;
         mEngine = nullptr;
 
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to initialize OpenSL: 0x%08x",
-            result};
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to initialize OpenSL device: 0x%08x", result};
     }
 
     mDevice->DeviceName = name;
@@ -629,9 +629,9 @@ struct OpenSLCapture final : public BackendBase {
     OpenSLCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~OpenSLCapture() override;
 
+    void process(SLAndroidSimpleBufferQueueItf bq);
     static void processC(SLAndroidSimpleBufferQueueItf bq, void *context)
     { static_cast<OpenSLCapture*>(context)->process(bq); }
-    void process(SLAndroidSimpleBufferQueueItf bq);
 
     void open(const ALCchar *name) override;
     bool start() override;
@@ -839,8 +839,8 @@ void OpenSLCapture::open(const ALCchar* name)
         mEngineObj = nullptr;
         mEngine = nullptr;
 
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to initialize OpenSL: 0x%08x",
-            result};
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to initialize OpenSL device: 0x%08x", result};
     }
 
     mDevice->DeviceName = name;

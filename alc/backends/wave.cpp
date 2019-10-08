@@ -223,11 +223,8 @@ void WaveBackend::open(const ALCchar *name)
     mFile = fopen(fname, "wb");
 #endif
     if(!mFile)
-    {
-        ERR("Could not open file '%s': %s\n", fname, strerror(errno));
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not open file '%s': %s", fname,
             strerror(errno)};
-    }
 
     mDevice->DeviceName = name;
 }

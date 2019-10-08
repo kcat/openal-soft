@@ -55,6 +55,7 @@
 #include <condition_variable>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "compat.h"
@@ -610,7 +611,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     HRESULT openProxy() override;
     void closeProxy() override;
 
@@ -708,7 +709,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
 }
 
 
-ALCenum WasapiPlayback::open(const ALCchar *name)
+void WasapiPlayback::open(const ALCchar *name)
 {
     HRESULT hr{S_OK};
 
@@ -762,10 +763,8 @@ ALCenum WasapiPlayback::open(const ALCchar *name)
         mDevId.clear();
 
         ERR("Device init failed: 0x%08lx\n", hr);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
     }
-
-    return ALC_NO_ERROR;
 }
 
 HRESULT WasapiPlayback::openProxy()
@@ -815,7 +814,9 @@ void WasapiPlayback::closeProxy()
 bool WasapiPlayback::reset()
 {
     HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
-    return SUCCEEDED(hr) ? true : false;
+    if(FAILED(hr))
+        throw al::backend_exception{ALC_INVALID_VALUE, "0x%08lx", hr};
+    return true;
 }
 
 HRESULT WasapiPlayback::resetProxy()
@@ -1151,7 +1152,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 
     int recordProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     HRESULT openProxy() override;
     void closeProxy() override;
 
@@ -1283,7 +1284,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 }
 
 
-ALCenum WasapiCapture::open(const ALCchar *name)
+void WasapiCapture::open(const ALCchar *name)
 {
     HRESULT hr{S_OK};
 
@@ -1337,18 +1338,16 @@ ALCenum WasapiCapture::open(const ALCchar *name)
         mDevId.clear();
 
         ERR("Device init failed: 0x%08lx\n", hr);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
     }
 
     hr = pushMessage(MsgType::ResetDevice).get();
     if(FAILED(hr))
     {
         if(hr == E_OUTOFMEMORY)
-            return ALC_OUT_OF_MEMORY;
-        return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_OUT_OF_MEMORY, "Out of memory"};
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device reset failed"};
     }
-
-    return ALC_NO_ERROR;
 }
 
 HRESULT WasapiCapture::openProxy()

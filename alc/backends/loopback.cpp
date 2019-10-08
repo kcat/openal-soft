@@ -31,7 +31,7 @@ namespace {
 struct LoopbackBackend final : public BackendBase {
     LoopbackBackend(ALCdevice *device) noexcept : BackendBase{device} { }
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -40,10 +40,9 @@ struct LoopbackBackend final : public BackendBase {
 };
 
 
-ALCenum LoopbackBackend::open(const ALCchar *name)
+void LoopbackBackend::open(const ALCchar *name)
 {
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool LoopbackBackend::reset()

@@ -32,7 +32,7 @@ inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
 ClockLatency GetClockLatency(ALCdevice *device);
 
 struct BackendBase {
-    virtual ALCenum open(const ALCchar *name) = 0;
+    virtual void open(const ALCchar *name) = 0;
 
     virtual bool reset();
     virtual bool start() = 0;

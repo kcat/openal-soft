@@ -31,6 +31,7 @@
 #include <thread>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alu.h"
 #include "logging.h"
@@ -51,7 +52,7 @@ struct NullBackend final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -108,16 +109,14 @@ int NullBackend::mixerProc()
 }
 
 
-ALCenum NullBackend::open(const ALCchar *name)
+void NullBackend::open(const ALCchar *name)
 {
     if(!name)
         name = nullDevice;
     else if(strcmp(name, nullDevice) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     mDevice->DeviceName = name;
-
-    return ALC_NO_ERROR;
 }
 
 bool NullBackend::reset()

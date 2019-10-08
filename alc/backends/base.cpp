@@ -9,6 +9,7 @@
 #include "AL/al.h"
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alnumeric.h"
 #include "atomic.h"
 
@@ -29,7 +30,7 @@ BackendBase::BackendBase(ALCdevice *device) noexcept : mDevice{device}
 BackendBase::~BackendBase() = default;
 
 bool BackendBase::reset()
-{ return false; }
+{ throw al::backend_exception{ALC_INVALID_VALUE, "Invalid BackendVase call"}; }
 
 ALCenum BackendBase::captureSamples(al::byte*, ALCuint)
 { return ALC_INVALID_DEVICE; }

@@ -3548,16 +3548,9 @@ START_API_FUNC
     device->NumAuxSends = DEFAULT_SENDS;
 
     try {
-        /* Create the device backend. */
-        device->Backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
-
-        /* Find a playback device to open */
-        ALCenum err{device->Backend->open(deviceName)};
-        if(err != ALC_NO_ERROR)
-        {
-            alcSetError(nullptr, err);
-            return nullptr;
-        }
+        auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
+        backend->open(deviceName);
+        device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
         WARN("Failed to open playback device: %s\n", e.what());
@@ -3811,17 +3804,13 @@ START_API_FUNC
     device->BufferSize = static_cast<ALuint>(samples);
 
     try {
-        device->Backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
-
         TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
             DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
             device->Frequency, device->UpdateSize, device->BufferSize);
-        ALCenum err{device->Backend->open(deviceName)};
-        if(err != ALC_NO_ERROR)
-        {
-            alcSetError(nullptr, err);
-            return nullptr;
-        }
+
+        auto backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
+        backend->open(deviceName);
+        device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
         WARN("Failed to open capture device: %s\n", e.what());
@@ -4000,11 +3989,10 @@ START_API_FUNC
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
     try {
-        device->Backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
+        auto backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
             BackendType::Playback);
-
-        // Open the "backend"
-        device->Backend->open("Loopback");
+        backend->open("Loopback");
+        device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
         WARN("Failed to open loopback device: %s\n", e.what());

@@ -32,6 +32,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "dynload.h"
 #include "ringbuffer.h"
 #include "threads.h"
@@ -153,15 +154,17 @@ struct JackPlayback final : public BackendBase {
     JackPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
-    static int bufferSizeNotifyC(jack_nframes_t numframes, void *arg);
+    static int bufferSizeNotifyC(jack_nframes_t numframes, void *arg)
+    { return static_cast<JackPlayback*>(arg)->bufferSizeNotify(numframes); }
     int bufferSizeNotify(jack_nframes_t numframes);
 
-    static int processC(jack_nframes_t numframes, void *arg);
+    static int processC(jack_nframes_t numframes, void *arg)
+    { return static_cast<JackPlayback*>(arg)->process(numframes); }
     int process(jack_nframes_t numframes);
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -194,9 +197,6 @@ JackPlayback::~JackPlayback()
 }
 
 
-int JackPlayback::bufferSizeNotifyC(jack_nframes_t numframes, void *arg)
-{ return static_cast<JackPlayback*>(arg)->bufferSizeNotify(numframes); }
-
 int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
 {
     std::lock_guard<std::mutex> _{mDevice->StateLock};
@@ -220,9 +220,6 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
     return 0;
 }
 
-
-int JackPlayback::processC(jack_nframes_t numframes, void *arg)
-{ return static_cast<JackPlayback*>(arg)->process(numframes); }
 
 int JackPlayback::process(jack_nframes_t numframes)
 {
@@ -329,12 +326,12 @@ int JackPlayback::mixerProc()
 }
 
 
-ALCenum JackPlayback::open(const ALCchar *name)
+void JackPlayback::open(const ALCchar *name)
 {
     if(!name)
         name = jackDevice;
     else if(strcmp(name, jackDevice) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     const char *client_name{"alsoft"};
     jack_status_t status;
@@ -342,7 +339,8 @@ ALCenum JackPlayback::open(const ALCchar *name)
     if(mClient == nullptr)
     {
         ERR("jack_client_open() failed, status = 0x%02x\n", status);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to connect to JACK server: 0x%02x",
+            status};
     }
     if((status&JackServerStarted))
         TRACE("JACK server started\n");
@@ -356,7 +354,6 @@ ALCenum JackPlayback::open(const ALCchar *name)
     jack_set_buffer_size_callback(mClient, &JackPlayback::bufferSizeNotifyC, this);
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool JackPlayback::reset()

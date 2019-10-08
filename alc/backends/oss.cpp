@@ -45,6 +45,7 @@
 
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -248,7 +249,7 @@ struct OSSPlayback final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -329,7 +330,7 @@ int OSSPlayback::mixerProc()
 }
 
 
-ALCenum OSSPlayback::open(const ALCchar *name)
+void OSSPlayback::open(const ALCchar *name)
 {
     const char *devname{DefaultPlayback.c_str()};
     if(!name)
@@ -344,7 +345,7 @@ ALCenum OSSPlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         devname = iter->device_name.c_str();
     }
 
@@ -352,11 +353,11 @@ ALCenum OSSPlayback::open(const ALCchar *name)
     if(mFd == -1)
     {
         ERR("Could not open %s: %s\n", devname, strerror(errno));
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
+            strerror(errno)};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool OSSPlayback::reset()
@@ -469,7 +470,7 @@ struct OSScapture final : public BackendBase {
 
     int recordProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -539,7 +540,7 @@ int OSScapture::recordProc()
 }
 
 
-ALCenum OSScapture::open(const ALCchar *name)
+void OSScapture::open(const ALCchar *name)
 {
     const char *devname{DefaultCapture.c_str()};
     if(!name)
@@ -554,7 +555,7 @@ ALCenum OSScapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         devname = iter->device_name.c_str();
     }
 
@@ -562,27 +563,29 @@ ALCenum OSScapture::open(const ALCchar *name)
     if(mFd == -1)
     {
         ERR("Could not open %s: %s\n", devname, strerror(errno));
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
+            strerror(errno)};
     }
 
     int ossFormat{};
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            ossFormat = AFMT_S8;
-            break;
-        case DevFmtUByte:
-            ossFormat = AFMT_U8;
-            break;
-        case DevFmtShort:
-            ossFormat = AFMT_S16_NE;
-            break;
-        case DevFmtUShort:
-        case DevFmtInt:
-        case DevFmtUInt:
-        case DevFmtFloat:
-            ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
-            return ALC_INVALID_VALUE;
+    case DevFmtByte:
+        ossFormat = AFMT_S8;
+        break;
+    case DevFmtUByte:
+        ossFormat = AFMT_U8;
+        break;
+    case DevFmtShort:
+        ossFormat = AFMT_S16_NE;
+        break;
+    case DevFmtUShort:
+    case DevFmtInt:
+    case DevFmtUInt:
+    case DevFmtFloat:
+        ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+            DevFmtTypeString(mDevice->FmtType)};
     }
 
     ALuint periods{4};
@@ -608,9 +611,7 @@ ALCenum OSScapture::open(const ALCchar *name)
     {
     err:
         ERR("%s failed: %s\n", err, strerror(errno));
-        close(mFd);
-        mFd = -1;
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s failed: %s", err, strerror(errno)};
     }
 #undef CHECKERR
 
@@ -618,9 +619,8 @@ ALCenum OSScapture::open(const ALCchar *name)
     {
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
             numChannels);
-        close(mFd);
-        mFd = -1;
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set %s capture",
+            DevFmtChannelsString(mDevice->FmtChans)};
     }
 
     if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte) ||
@@ -628,22 +628,18 @@ ALCenum OSScapture::open(const ALCchar *name)
          (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
     {
         ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(mDevice->FmtType), ossFormat);
-        close(mFd);
-        mFd = -1;
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set %s samples",
+            DevFmtTypeString(mDevice->FmtType)};
     }
 
     mRing = CreateRingBuffer(mDevice->BufferSize, frameSize, false);
     if(!mRing)
     {
         ERR("Ring buffer create failed\n");
-        close(mFd);
-        mFd = -1;
-        return ALC_OUT_OF_MEMORY;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool OSScapture::start()

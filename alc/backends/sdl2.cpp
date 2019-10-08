@@ -30,6 +30,7 @@
 #include "AL/al.h"
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alu.h"
 #include "logging.h"
@@ -54,7 +55,7 @@ struct Sdl2Backend final : public BackendBase {
     static void audioCallbackC(void *ptr, Uint8 *stream, int len);
     void audioCallback(Uint8 *stream, int len);
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -89,20 +90,20 @@ void Sdl2Backend::audioCallback(Uint8 *stream, int len)
     aluMixData(mDevice, stream, ulen / mFrameSize);
 }
 
-ALCenum Sdl2Backend::open(const ALCchar *name)
+void Sdl2Backend::open(const ALCchar *name)
 {
     SDL_AudioSpec want{}, have{};
 
     want.freq = static_cast<int>(mDevice->Frequency);
     switch(mDevice->FmtType)
     {
-        case DevFmtUByte: want.format = AUDIO_U8; break;
-        case DevFmtByte: want.format = AUDIO_S8; break;
-        case DevFmtUShort: want.format = AUDIO_U16SYS; break;
-        case DevFmtShort: want.format = AUDIO_S16SYS; break;
-        case DevFmtUInt: /* fall-through */
-        case DevFmtInt: want.format = AUDIO_S32SYS; break;
-        case DevFmtFloat: want.format = AUDIO_F32; break;
+    case DevFmtUByte: want.format = AUDIO_U8; break;
+    case DevFmtByte: want.format = AUDIO_S8; break;
+    case DevFmtUShort: want.format = AUDIO_U16SYS; break;
+    case DevFmtShort: want.format = AUDIO_S16SYS; break;
+    case DevFmtUInt: /* fall-through */
+    case DevFmtInt: want.format = AUDIO_S32SYS; break;
+    case DevFmtFloat: want.format = AUDIO_F32; break;
     }
     want.channels = (mDevice->FmtChans == DevFmtMono) ? 1 : 2;
     want.samples = static_cast<Uint16>(mDevice->UpdateSize);
@@ -114,19 +115,19 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
      */
     if(!name || strcmp(name, defaultDeviceName) == 0)
         mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
-                                        SDL_AUDIO_ALLOW_ANY_CHANGE);
+            SDL_AUDIO_ALLOW_ANY_CHANGE);
     else
     {
         const size_t prefix_len = strlen(DEVNAME_PREFIX);
         if(strncmp(name, DEVNAME_PREFIX, prefix_len) == 0)
             mDeviceID = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
-                                            SDL_AUDIO_ALLOW_ANY_CHANGE);
+                SDL_AUDIO_ALLOW_ANY_CHANGE);
         else
             mDeviceID = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have,
-                                            SDL_AUDIO_ALLOW_ANY_CHANGE);
+                SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
     if(mDeviceID == 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s", SDL_GetError()};
 
     mDevice->Frequency = static_cast<ALuint>(have.freq);
     if(have.channels == 1)
@@ -136,19 +137,21 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
     else
     {
         ERR("Got unhandled SDL channel count: %d\n", int{have.channels});
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Unhandled SDL channel count: %d",
+            int{have.channels}};
     }
     switch(have.format)
     {
-        case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
-        case AUDIO_S8:     mDevice->FmtType = DevFmtByte;   break;
-        case AUDIO_U16SYS: mDevice->FmtType = DevFmtUShort; break;
-        case AUDIO_S16SYS: mDevice->FmtType = DevFmtShort;  break;
-        case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
-        case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
-        default:
-            ERR("Got unsupported SDL format: 0x%04x\n", have.format);
-            return ALC_INVALID_VALUE;
+    case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
+    case AUDIO_S8:     mDevice->FmtType = DevFmtByte;   break;
+    case AUDIO_U16SYS: mDevice->FmtType = DevFmtUShort; break;
+    case AUDIO_S16SYS: mDevice->FmtType = DevFmtShort;  break;
+    case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
+    case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
+    default:
+        ERR("Got unsupported SDL format: 0x%04x\n", have.format);
+        throw al::backend_exception{ALC_INVALID_VALUE, "Unhandled SDL format: 0x%04x",
+            have.format};
     }
     mDevice->UpdateSize = have.samples;
     mDevice->BufferSize = have.samples * 2; /* SDL always (tries to) use two periods. */
@@ -160,7 +163,6 @@ ALCenum Sdl2Backend::open(const ALCchar *name)
     mUpdateSize = mDevice->UpdateSize;
 
     mDevice->DeviceName = name ? name : defaultDeviceName;
-    return ALC_NO_ERROR;
 }
 
 bool Sdl2Backend::reset()

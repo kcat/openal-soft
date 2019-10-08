@@ -40,6 +40,7 @@
 #include "albyte.h"
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -394,7 +395,7 @@ struct AlsaPlayback final : public BackendBase {
     int mixerProc();
     int mixerNoMMapProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -592,7 +593,7 @@ int AlsaPlayback::mixerNoMMapProc()
 }
 
 
-ALCenum AlsaPlayback::open(const ALCchar *name)
+void AlsaPlayback::open(const ALCchar *name)
 {
     const char *driver{};
     if(name)
@@ -605,7 +606,7 @@ ALCenum AlsaPlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         driver = iter->device_name.c_str();
     }
     else
@@ -619,15 +620,14 @@ ALCenum AlsaPlayback::open(const ALCchar *name)
     if(err < 0)
     {
         ERR("Could not open playback device '%s': %s\n", driver, snd_strerror(err));
-        return ALC_OUT_OF_MEMORY;
+        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA playback \"%s\"",
+            driver};
     }
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
     mDevice->DeviceName = name;
-
-    return ALC_NO_ERROR;
 }
 
 bool AlsaPlayback::reset()
@@ -868,7 +868,7 @@ struct AlsaCapture final : public BackendBase {
     AlsaCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -895,7 +895,7 @@ AlsaCapture::~AlsaCapture()
 }
 
 
-ALCenum AlsaCapture::open(const ALCchar *name)
+void AlsaCapture::open(const ALCchar *name)
 {
     const char *driver{};
     if(name)
@@ -908,7 +908,7 @@ ALCenum AlsaCapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         driver = iter->device_name.c_str();
     }
     else
@@ -922,7 +922,8 @@ ALCenum AlsaCapture::open(const ALCchar *name)
     if(err < 0)
     {
         ERR("Could not open capture device '%s': %s\n", driver, snd_strerror(err));
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA capture \"%s\"",
+            driver};
     }
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
@@ -994,24 +995,16 @@ ALCenum AlsaCapture::open(const ALCchar *name)
         if(!mRing)
         {
             ERR("ring buffer create failed\n");
-            goto error2;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
         }
     }
 
     mDevice->DeviceName = name;
-
-    return ALC_NO_ERROR;
+    return;
 
 error:
-    ERR("%s failed: %s\n", funcerr, snd_strerror(err));
     if(hp) snd_pcm_hw_params_free(hp);
-
-error2:
-    mRing = nullptr;
-    snd_pcm_close(mPcmHandle);
-    mPcmHandle = nullptr;
-
-    return ALC_INVALID_VALUE;
+    throw al::backend_exception{ALC_INVALID_VALUE, "%s failed: %s", funcerr, snd_strerror(err)};
 }
 
 

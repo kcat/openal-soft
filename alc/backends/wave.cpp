@@ -38,6 +38,7 @@
 #include "albyte.h"
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
@@ -96,7 +97,7 @@ struct WaveBackend final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -202,15 +203,15 @@ int WaveBackend::mixerProc()
     return 0;
 }
 
-ALCenum WaveBackend::open(const ALCchar *name)
+void WaveBackend::open(const ALCchar *name)
 {
     const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
-    if(!fname[0]) return ALC_INVALID_VALUE;
+    if(!fname[0]) throw al::backend_exception{ALC_INVALID_VALUE, "No wave output filename"};
 
     if(!name)
         name = waveDevice;
     else if(strcmp(name, waveDevice) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
 #ifdef _WIN32
     {
@@ -223,12 +224,11 @@ ALCenum WaveBackend::open(const ALCchar *name)
     if(!mFile)
     {
         ERR("Could not open file '%s': %s\n", fname, strerror(errno));
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open file '%s': %s", fname,
+            strerror(errno)};
     }
 
     mDevice->DeviceName = name;
-
-    return ALC_NO_ERROR;
 }
 
 bool WaveBackend::reset()

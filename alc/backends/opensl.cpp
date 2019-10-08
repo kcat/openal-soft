@@ -28,10 +28,12 @@
 
 #include <new>
 #include <array>
+#include <cstring>
 #include <thread>
 #include <functional>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "compat.h"
 #include "endiantest.h"
@@ -58,26 +60,24 @@ SLuint32 GetChannelMask(DevFmtChannels chans)
 {
     switch(chans)
     {
-        case DevFmtMono: return SL_SPEAKER_FRONT_CENTER;
-        case DevFmtStereo: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT;
-        case DevFmtQuad: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
-                                SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
-        case DevFmtX51: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
-                               SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
-                               SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
-        case DevFmtX51Rear: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
-                                   SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
-                                   SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
-        case DevFmtX61: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
-                               SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
-                               SL_SPEAKER_BACK_CENTER|
-                               SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
-        case DevFmtX71: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
-                               SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
-                               SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT|
-                               SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
-        case DevFmtAmbi3D:
-            break;
+    case DevFmtMono: return SL_SPEAKER_FRONT_CENTER;
+    case DevFmtStereo: return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
+    case DevFmtQuad: return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT |
+        SL_SPEAKER_BACK_LEFT | SL_SPEAKER_BACK_RIGHT;
+    case DevFmtX51: return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT |
+        SL_SPEAKER_FRONT_CENTER | SL_SPEAKER_LOW_FREQUENCY | SL_SPEAKER_SIDE_LEFT |
+        SL_SPEAKER_SIDE_RIGHT;
+    case DevFmtX51Rear: return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT |
+        SL_SPEAKER_FRONT_CENTER | SL_SPEAKER_LOW_FREQUENCY | SL_SPEAKER_BACK_LEFT |
+        SL_SPEAKER_BACK_RIGHT;
+    case DevFmtX61: return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT |
+        SL_SPEAKER_FRONT_CENTER | SL_SPEAKER_LOW_FREQUENCY | SL_SPEAKER_BACK_CENTER |
+        SL_SPEAKER_SIDE_LEFT | SL_SPEAKER_SIDE_RIGHT;
+    case DevFmtX71: return SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT |
+        SL_SPEAKER_FRONT_CENTER | SL_SPEAKER_LOW_FREQUENCY | SL_SPEAKER_BACK_LEFT |
+        SL_SPEAKER_BACK_RIGHT | SL_SPEAKER_SIDE_LEFT | SL_SPEAKER_SIDE_RIGHT;
+    case DevFmtAmbi3D:
+        break;
     }
     return 0;
 }
@@ -87,16 +87,16 @@ SLuint32 GetTypeRepresentation(DevFmtType type)
 {
     switch(type)
     {
-        case DevFmtUByte:
-        case DevFmtUShort:
-        case DevFmtUInt:
-            return SL_ANDROID_PCM_REPRESENTATION_UNSIGNED_INT;
-        case DevFmtByte:
-        case DevFmtShort:
-        case DevFmtInt:
-            return SL_ANDROID_PCM_REPRESENTATION_SIGNED_INT;
-        case DevFmtFloat:
-            return SL_ANDROID_PCM_REPRESENTATION_FLOAT;
+    case DevFmtUByte:
+    case DevFmtUShort:
+    case DevFmtUInt:
+        return SL_ANDROID_PCM_REPRESENTATION_UNSIGNED_INT;
+    case DevFmtByte:
+    case DevFmtShort:
+    case DevFmtInt:
+        return SL_ANDROID_PCM_REPRESENTATION_SIGNED_INT;
+    case DevFmtFloat:
+        return SL_ANDROID_PCM_REPRESENTATION_FLOAT;
     }
     return 0;
 }
@@ -106,31 +106,31 @@ const char *res_str(SLresult result)
 {
     switch(result)
     {
-        case SL_RESULT_SUCCESS: return "Success";
-        case SL_RESULT_PRECONDITIONS_VIOLATED: return "Preconditions violated";
-        case SL_RESULT_PARAMETER_INVALID: return "Parameter invalid";
-        case SL_RESULT_MEMORY_FAILURE: return "Memory failure";
-        case SL_RESULT_RESOURCE_ERROR: return "Resource error";
-        case SL_RESULT_RESOURCE_LOST: return "Resource lost";
-        case SL_RESULT_IO_ERROR: return "I/O error";
-        case SL_RESULT_BUFFER_INSUFFICIENT: return "Buffer insufficient";
-        case SL_RESULT_CONTENT_CORRUPTED: return "Content corrupted";
-        case SL_RESULT_CONTENT_UNSUPPORTED: return "Content unsupported";
-        case SL_RESULT_CONTENT_NOT_FOUND: return "Content not found";
-        case SL_RESULT_PERMISSION_DENIED: return "Permission denied";
-        case SL_RESULT_FEATURE_UNSUPPORTED: return "Feature unsupported";
-        case SL_RESULT_INTERNAL_ERROR: return "Internal error";
-        case SL_RESULT_UNKNOWN_ERROR: return "Unknown error";
-        case SL_RESULT_OPERATION_ABORTED: return "Operation aborted";
-        case SL_RESULT_CONTROL_LOST: return "Control lost";
+    case SL_RESULT_SUCCESS: return "Success";
+    case SL_RESULT_PRECONDITIONS_VIOLATED: return "Preconditions violated";
+    case SL_RESULT_PARAMETER_INVALID: return "Parameter invalid";
+    case SL_RESULT_MEMORY_FAILURE: return "Memory failure";
+    case SL_RESULT_RESOURCE_ERROR: return "Resource error";
+    case SL_RESULT_RESOURCE_LOST: return "Resource lost";
+    case SL_RESULT_IO_ERROR: return "I/O error";
+    case SL_RESULT_BUFFER_INSUFFICIENT: return "Buffer insufficient";
+    case SL_RESULT_CONTENT_CORRUPTED: return "Content corrupted";
+    case SL_RESULT_CONTENT_UNSUPPORTED: return "Content unsupported";
+    case SL_RESULT_CONTENT_NOT_FOUND: return "Content not found";
+    case SL_RESULT_PERMISSION_DENIED: return "Permission denied";
+    case SL_RESULT_FEATURE_UNSUPPORTED: return "Feature unsupported";
+    case SL_RESULT_INTERNAL_ERROR: return "Internal error";
+    case SL_RESULT_UNKNOWN_ERROR: return "Unknown error";
+    case SL_RESULT_OPERATION_ABORTED: return "Operation aborted";
+    case SL_RESULT_CONTROL_LOST: return "Control lost";
 #ifdef SL_RESULT_READONLY
-        case SL_RESULT_READONLY: return "ReadOnly";
+    case SL_RESULT_READONLY: return "ReadOnly";
 #endif
 #ifdef SL_RESULT_ENGINEOPTION_UNSUPPORTED
-        case SL_RESULT_ENGINEOPTION_UNSUPPORTED: return "Engine option unsupported";
+    case SL_RESULT_ENGINEOPTION_UNSUPPORTED: return "Engine option unsupported";
 #endif
 #ifdef SL_RESULT_SOURCE_SINK_INCOMPATIBLE
-        case SL_RESULT_SOURCE_SINK_INCOMPATIBLE: return "Source/Sink incompatible";
+    case SL_RESULT_SOURCE_SINK_INCOMPATIBLE: return "Source/Sink incompatible";
 #endif
     }
     return "Unknown error code";
@@ -152,7 +152,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -298,12 +298,12 @@ int OpenSLPlayback::mixerProc()
 }
 
 
-ALCenum OpenSLPlayback::open(const ALCchar *name)
+void OpenSLPlayback::open(const ALCchar *name)
 {
     if(!name)
         name = opensl_device;
     else if(strcmp(name, opensl_device) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     // create engine
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
@@ -340,11 +340,11 @@ ALCenum OpenSLPlayback::open(const ALCchar *name)
         mEngineObj = nullptr;
         mEngine = nullptr;
 
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to initialize OpenSL: 0x%08x",
+            result};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool OpenSLPlayback::reset()
@@ -635,7 +635,7 @@ struct OpenSLCapture final : public BackendBase {
     { static_cast<OpenSLCapture*>(context)->process(bq); }
     void process(SLAndroidSimpleBufferQueueItf bq);
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -676,12 +676,12 @@ void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf)
 }
 
 
-ALCenum OpenSLCapture::open(const ALCchar* name)
+void OpenSLCapture::open(const ALCchar* name)
 {
     if(!name)
         name = opensl_device;
     else if(strcmp(name, opensl_device) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
     PRINTERR(result, "slCreateEngine");
@@ -841,11 +841,11 @@ ALCenum OpenSLCapture::open(const ALCchar* name)
         mEngineObj = nullptr;
         mEngine = nullptr;
 
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to initialize OpenSL: 0x%08x",
+            result};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool OpenSLCapture::start()

@@ -30,6 +30,7 @@
 #include <functional>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "threads.h"
 #include "vector.h"
@@ -49,7 +50,7 @@ struct SndioPlayback final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -106,22 +107,21 @@ int SndioPlayback::mixerProc()
 }
 
 
-ALCenum SndioPlayback::open(const ALCchar *name)
+void SndioPlayback::open(const ALCchar *name)
 {
     if(!name)
         name = sndio_device;
     else if(strcmp(name, sndio_device) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     mSndHandle = sio_open(nullptr, SIO_PLAY, 0);
     if(mSndHandle == nullptr)
     {
         ERR("Could not open device\n");
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open sound device"};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool SndioPlayback::reset()
@@ -249,7 +249,7 @@ struct SndioCapture final : public BackendBase {
 
     int recordProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -319,18 +319,18 @@ int SndioCapture::recordProc()
 }
 
 
-ALCenum SndioCapture::open(const ALCchar *name)
+void SndioCapture::open(const ALCchar *name)
 {
     if(!name)
         name = sndio_device;
     else if(strcmp(name, sndio_device) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     mSndHandle = sio_open(nullptr, SIO_REC, 0);
     if(mSndHandle == nullptr)
     {
         ERR("Could not open device\n");
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open sound device"};
     }
 
     sio_par par;
@@ -338,33 +338,34 @@ ALCenum SndioCapture::open(const ALCchar *name)
 
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            par.bps = 1;
-            par.sig = 1;
-            break;
-        case DevFmtUByte:
-            par.bps = 1;
-            par.sig = 0;
-            break;
-        case DevFmtShort:
-            par.bps = 2;
-            par.sig = 1;
-            break;
-        case DevFmtUShort:
-            par.bps = 2;
-            par.sig = 0;
-            break;
-        case DevFmtInt:
-            par.bps = 4;
-            par.sig = 1;
-            break;
-        case DevFmtUInt:
-            par.bps = 4;
-            par.sig = 0;
-            break;
-        case DevFmtFloat:
-            ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
-            return ALC_INVALID_VALUE;
+    case DevFmtByte:
+        par.bps = 1;
+        par.sig = 1;
+        break;
+    case DevFmtUByte:
+        par.bps = 1;
+        par.sig = 0;
+        break;
+    case DevFmtShort:
+        par.bps = 2;
+        par.sig = 1;
+        break;
+    case DevFmtUShort:
+        par.bps = 2;
+        par.sig = 0;
+        break;
+    case DevFmtInt:
+        par.bps = 4;
+        par.sig = 1;
+        break;
+    case DevFmtUInt:
+        par.bps = 4;
+        par.sig = 0;
+        break;
+    case DevFmtFloat:
+        ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+            DevFmtTypeString(mDevice->FmtType)};
     }
     par.bits = par.bps * 8;
     par.le = SIO_LE_NATIVE;
@@ -381,13 +382,14 @@ ALCenum SndioCapture::open(const ALCchar *name)
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
     {
         ERR("Failed to set device parameters\n");
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set device praameters"};
     }
 
     if(par.bits != par.bps*8)
     {
         ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Padded samples not supported (got %u of %u bits)", par.bits, par.bps*8};
     }
 
     if(!((mDevice->FmtType == DevFmtByte && par.bits == 8 && par.sig != 0) ||
@@ -401,20 +403,21 @@ ALCenum SndioCapture::open(const ALCchar *name)
         ERR("Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead\n",
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not set format %s %s %uhz",
+            DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
+            mDevice->Frequency};
     }
 
     mRing = CreateRingBuffer(mDevice->BufferSize, par.bps*par.rchan, false);
     if(!mRing)
     {
         ERR("Failed to allocate %u-byte ringbuffer\n", mDevice->BufferSize*par.bps*par.rchan);
-        return ALC_OUT_OF_MEMORY;
+        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Failed to allocate ring buffer"};
     }
 
     SetDefaultChannelOrder(mDevice);
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool SndioCapture::start()

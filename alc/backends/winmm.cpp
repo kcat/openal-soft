@@ -38,6 +38,7 @@
 #include <functional>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "strutils.h"
@@ -131,7 +132,7 @@ struct WinMMPlayback final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -212,7 +213,7 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
 }
 
 
-ALCenum WinMMPlayback::open(const ALCchar *name)
+void WinMMPlayback::open(const ALCchar *name)
 {
     if(PlaybackDevices.empty())
         ProbePlaybackDevices();
@@ -221,7 +222,8 @@ ALCenum WinMMPlayback::open(const ALCchar *name)
     auto iter = name ?
         std::find(PlaybackDevices.cbegin(), PlaybackDevices.cend(), name) :
         PlaybackDevices.cbegin();
-    if(iter == PlaybackDevices.cend()) return ALC_INVALID_VALUE;
+    if(iter == PlaybackDevices.cend())
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
 retry_open:
@@ -256,11 +258,10 @@ retry_open:
             goto retry_open;
         }
         ERR("waveOutOpen failed: %u\n", res);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "waveOutOpen failed: %u", res};
     }
 
     mDevice->DeviceName = PlaybackDevices[DeviceID];
-    return ALC_NO_ERROR;
 }
 
 bool WinMMPlayback::reset()
@@ -373,7 +374,7 @@ struct WinMMCapture final : public BackendBase {
 
     int captureProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -456,7 +457,7 @@ int WinMMCapture::captureProc()
 }
 
 
-ALCenum WinMMCapture::open(const ALCchar *name)
+void WinMMCapture::open(const ALCchar *name)
 {
     if(CaptureDevices.empty())
         ProbeCaptureDevices();
@@ -465,36 +466,39 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     auto iter = name ?
         std::find(CaptureDevices.cbegin(), CaptureDevices.cend(), name) :
         CaptureDevices.cbegin();
-    if(iter == CaptureDevices.cend()) return ALC_INVALID_VALUE;
+    if(iter == CaptureDevices.cend())
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
     auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter));
 
     switch(mDevice->FmtChans)
     {
-        case DevFmtMono:
-        case DevFmtStereo:
-            break;
+    case DevFmtMono:
+    case DevFmtStereo:
+        break;
 
-        case DevFmtQuad:
-        case DevFmtX51:
-        case DevFmtX51Rear:
-        case DevFmtX61:
-        case DevFmtX71:
-        case DevFmtAmbi3D:
-            return ALC_INVALID_ENUM;
+    case DevFmtQuad:
+    case DevFmtX51:
+    case DevFmtX51Rear:
+    case DevFmtX61:
+    case DevFmtX71:
+    case DevFmtAmbi3D:
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture not supported",
+            DevFmtChannelsString(mDevice->FmtChans)};
     }
 
     switch(mDevice->FmtType)
     {
-        case DevFmtUByte:
-        case DevFmtShort:
-        case DevFmtInt:
-        case DevFmtFloat:
-            break;
+    case DevFmtUByte:
+    case DevFmtShort:
+    case DevFmtInt:
+    case DevFmtFloat:
+        break;
 
-        case DevFmtByte:
-        case DevFmtUShort:
-        case DevFmtUInt:
-            return ALC_INVALID_ENUM;
+    case DevFmtByte:
+    case DevFmtUShort:
+    case DevFmtUInt:
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s samples not supported",
+            DevFmtTypeString(mDevice->FmtType)};
     }
 
     mFormat = WAVEFORMATEX{};
@@ -513,7 +517,7 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     if(res != MMSYSERR_NOERROR)
     {
         ERR("waveInOpen failed: %u\n", res);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "waveInOpen failed: %u", res};
     }
 
     // Ensure each buffer is 50ms each
@@ -526,7 +530,7 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     CapturedDataSize = static_cast<ALuint>(maxz(CapturedDataSize, BufferSize*mWaveBuffer.size()));
 
     mRing = CreateRingBuffer(CapturedDataSize, mFormat.nBlockAlign, false);
-    if(!mRing) return ALC_INVALID_VALUE;
+    if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Could not create ring buffer"};
 
     al_free(mWaveBuffer[0].lpData);
     mWaveBuffer[0] = WAVEHDR{};
@@ -540,7 +544,6 @@ ALCenum WinMMCapture::open(const ALCchar *name)
     }
 
     mDevice->DeviceName = CaptureDevices[DeviceID];
-    return ALC_NO_ERROR;
 }
 
 bool WinMMCapture::start()

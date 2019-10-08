@@ -45,6 +45,7 @@
 #include <functional>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "compat.h"
@@ -166,7 +167,7 @@ struct DSoundPlayback final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -298,7 +299,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     return 0;
 }
 
-ALCenum DSoundPlayback::open(const ALCchar *name)
+void DSoundPlayback::open(const ALCchar *name)
 {
     HRESULT hr;
     if(PlaybackDevices.empty())
@@ -325,7 +326,7 @@ ALCenum DSoundPlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         guid = &iter->guid;
     }
 
@@ -341,11 +342,10 @@ ALCenum DSoundPlayback::open(const ALCchar *name)
     if(FAILED(hr))
     {
         ERR("Device init failed: 0x%08lx\n", hr);
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool DSoundPlayback::reset()
@@ -596,7 +596,7 @@ struct DSoundCapture final : public BackendBase {
     DSoundCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~DSoundCapture() override;
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -627,7 +627,7 @@ DSoundCapture::~DSoundCapture()
 }
 
 
-ALCenum DSoundCapture::open(const ALCchar *name)
+void DSoundCapture::open(const ALCchar *name)
 {
     HRESULT hr;
     if(CaptureDevices.empty())
@@ -654,79 +654,60 @@ ALCenum DSoundCapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         guid = &iter->guid;
     }
 
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-        case DevFmtUShort:
-        case DevFmtUInt:
-            WARN("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
-            return ALC_INVALID_ENUM;
+    case DevFmtByte:
+    case DevFmtUShort:
+    case DevFmtUInt:
+        WARN("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+            DevFmtTypeString(mDevice->FmtType)};
 
-        case DevFmtUByte:
-        case DevFmtShort:
-        case DevFmtInt:
-        case DevFmtFloat:
-            break;
+    case DevFmtUByte:
+    case DevFmtShort:
+    case DevFmtInt:
+    case DevFmtFloat:
+        break;
     }
 
     WAVEFORMATEXTENSIBLE InputType{};
     switch(mDevice->FmtChans)
     {
-        case DevFmtMono:
-            InputType.dwChannelMask = SPEAKER_FRONT_CENTER;
-            break;
-        case DevFmtStereo:
-            InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                      SPEAKER_FRONT_RIGHT;
-            break;
-        case DevFmtQuad:
-            InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                      SPEAKER_FRONT_RIGHT |
-                                      SPEAKER_BACK_LEFT |
-                                      SPEAKER_BACK_RIGHT;
-            break;
-        case DevFmtX51:
-            InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                      SPEAKER_FRONT_RIGHT |
-                                      SPEAKER_FRONT_CENTER |
-                                      SPEAKER_LOW_FREQUENCY |
-                                      SPEAKER_SIDE_LEFT |
-                                      SPEAKER_SIDE_RIGHT;
-            break;
-        case DevFmtX51Rear:
-            InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                      SPEAKER_FRONT_RIGHT |
-                                      SPEAKER_FRONT_CENTER |
-                                      SPEAKER_LOW_FREQUENCY |
-                                      SPEAKER_BACK_LEFT |
-                                      SPEAKER_BACK_RIGHT;
-            break;
-        case DevFmtX61:
-            InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                      SPEAKER_FRONT_RIGHT |
-                                      SPEAKER_FRONT_CENTER |
-                                      SPEAKER_LOW_FREQUENCY |
-                                      SPEAKER_BACK_CENTER |
-                                      SPEAKER_SIDE_LEFT |
-                                      SPEAKER_SIDE_RIGHT;
-            break;
-        case DevFmtX71:
-            InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                      SPEAKER_FRONT_RIGHT |
-                                      SPEAKER_FRONT_CENTER |
-                                      SPEAKER_LOW_FREQUENCY |
-                                      SPEAKER_BACK_LEFT |
-                                      SPEAKER_BACK_RIGHT |
-                                      SPEAKER_SIDE_LEFT |
-                                      SPEAKER_SIDE_RIGHT;
-            break;
-        case DevFmtAmbi3D:
-            WARN("%s capture not supported\n", DevFmtChannelsString(mDevice->FmtChans));
-            return ALC_INVALID_ENUM;
+    case DevFmtMono:
+        InputType.dwChannelMask = SPEAKER_FRONT_CENTER;
+        break;
+    case DevFmtStereo:
+        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+        break;
+    case DevFmtQuad:
+        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT |
+            SPEAKER_BACK_RIGHT;
+        break;
+    case DevFmtX51:
+        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
+            SPEAKER_LOW_FREQUENCY | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
+        break;
+    case DevFmtX51Rear:
+        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
+            SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+        break;
+    case DevFmtX61:
+        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
+            SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_CENTER | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
+        break;
+    case DevFmtX71:
+        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
+            SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_SIDE_LEFT |
+            SPEAKER_SIDE_RIGHT;
+        break;
+    case DevFmtAmbi3D:
+        WARN("%s capture not supported\n", DevFmtChannelsString(mDevice->FmtChans));
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture not supported",
+            DevFmtChannelsString(mDevice->FmtChans)};
     }
 
     InputType.Format.wFormatTag = WAVE_FORMAT_PCM;
@@ -781,14 +762,13 @@ ALCenum DSoundCapture::open(const ALCchar *name)
             mDSC->Release();
         mDSC = nullptr;
 
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
     }
 
     mBufferBytes = DSCBDescription.dwBufferBytes;
     SetDefaultWFXChannelOrder(mDevice);
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool DSoundCapture::start()

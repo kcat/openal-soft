@@ -34,6 +34,7 @@
 #include <algorithm>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "threads.h"
 
@@ -174,7 +175,7 @@ struct PlaybackWrapper final : public BackendBase {
     PlaybackWrapper(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PlaybackWrapper() override;
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -613,11 +614,18 @@ PlaybackWrapper::~PlaybackWrapper()
         qsa_close_playback(this);
 }
 
-ALCenum PlaybackWrapper::open(const ALCchar *name)
-{ return qsa_open_playback(this, name); }
+void PlaybackWrapper::open(const ALCchar *name)
+{
+    if(auto err = qsa_open_playback(this, name))
+        throw al::backend_exception{ALC_INVALID_VALUE, "%d", err};
+}
 
 bool PlaybackWrapper::reset()
-{ return qsa_reset_playback(this); }
+{
+    if(!qsa_reset_playback(this))
+        throw al::backend_exception{ALC_INVALID_VALUE, ""};
+    return true;
+}
 
 bool PlaybackWrapper::start()
 { return qsa_start_playback(this); }
@@ -634,7 +642,7 @@ struct CaptureWrapper final : public BackendBase {
     CaptureWrapper(ALCdevice *device) noexcept : BackendBase{device} { }
     ~CaptureWrapper() override;
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -891,8 +899,11 @@ CaptureWrapper::~CaptureWrapper()
         qsa_close_capture(this);
 }
 
-ALCenum CaptureWrapper::open(const ALCchar *name)
-{ return qsa_open_capture(this, name); }
+void CaptureWrapper::open(const ALCchar *name)
+{
+    if(auto err = qsa_open_capture(this, name))
+        throw al::backend_exception{ALC_INVALID_VALUE, "%d", err};
+}
 
 bool CaptureWrapper::start()
 { qsa_start_capture(this); return true; }

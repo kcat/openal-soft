@@ -663,7 +663,7 @@ struct PulsePlayback final : public BackendBase {
     static void streamMovedCallbackC(pa_stream *stream, void *pdata);
     void streamMovedCallback(pa_stream *stream);
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -818,7 +818,7 @@ void PulsePlayback::streamMovedCallback(pa_stream *stream)
 }
 
 
-ALCenum PulsePlayback::open(const ALCchar *name)
+void PulsePlayback::open(const ALCchar *name)
 {
     const char *pulse_name{nullptr};
     const char *dev_name{nullptr};
@@ -873,8 +873,6 @@ ALCenum PulsePlayback::open(const ALCchar *name)
     }
     else
         mDevice->DeviceName = dev_name;
-
-    return ALC_NO_ERROR;
 }
 
 bool PulsePlayback::reset()
@@ -1107,7 +1105,7 @@ struct PulseCapture final : public BackendBase {
     static void streamMovedCallbackC(pa_stream *stream, void *pdata);
     void streamMovedCallback(pa_stream *stream);
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
@@ -1192,7 +1190,7 @@ void PulseCapture::streamMovedCallback(pa_stream *stream)
 }
 
 
-ALCenum PulseCapture::open(const ALCchar *name)
+void PulseCapture::open(const ALCchar *name)
 {
     const char *pulse_name{nullptr};
     if(name)
@@ -1218,53 +1216,53 @@ ALCenum PulseCapture::open(const ALCchar *name)
     pa_channel_map chanmap{};
     switch(mDevice->FmtChans)
     {
-        case DevFmtMono:
-            chanmap = MonoChanMap;
-            break;
-        case DevFmtStereo:
-            chanmap = StereoChanMap;
-            break;
-        case DevFmtQuad:
-            chanmap = QuadChanMap;
-            break;
-        case DevFmtX51:
-            chanmap = X51ChanMap;
-            break;
-        case DevFmtX51Rear:
-            chanmap = X51RearChanMap;
-            break;
-        case DevFmtX61:
-            chanmap = X61ChanMap;
-            break;
-        case DevFmtX71:
-            chanmap = X71ChanMap;
-            break;
-        case DevFmtAmbi3D:
-            throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
-                DevFmtChannelsString(mDevice->FmtChans)};
+    case DevFmtMono:
+        chanmap = MonoChanMap;
+        break;
+    case DevFmtStereo:
+        chanmap = StereoChanMap;
+        break;
+    case DevFmtQuad:
+        chanmap = QuadChanMap;
+        break;
+    case DevFmtX51:
+        chanmap = X51ChanMap;
+        break;
+    case DevFmtX51Rear:
+        chanmap = X51RearChanMap;
+        break;
+    case DevFmtX61:
+        chanmap = X61ChanMap;
+        break;
+    case DevFmtX71:
+        chanmap = X71ChanMap;
+        break;
+    case DevFmtAmbi3D:
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+            DevFmtChannelsString(mDevice->FmtChans)};
     }
     SetChannelOrderFromMap(mDevice, chanmap);
 
     switch(mDevice->FmtType)
     {
-        case DevFmtUByte:
-            mSilentVal = al::byte(0x80);
-            mSpec.format = PA_SAMPLE_U8;
-            break;
-        case DevFmtShort:
-            mSpec.format = PA_SAMPLE_S16NE;
-            break;
-        case DevFmtInt:
-            mSpec.format = PA_SAMPLE_S32NE;
-            break;
-        case DevFmtFloat:
-            mSpec.format = PA_SAMPLE_FLOAT32NE;
-            break;
-        case DevFmtByte:
-        case DevFmtUShort:
-        case DevFmtUInt:
-            throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
-                DevFmtTypeString(mDevice->FmtType)};
+    case DevFmtUByte:
+        mSilentVal = al::byte(0x80);
+        mSpec.format = PA_SAMPLE_U8;
+        break;
+    case DevFmtShort:
+        mSpec.format = PA_SAMPLE_S16NE;
+        break;
+    case DevFmtInt:
+        mSpec.format = PA_SAMPLE_S32NE;
+        break;
+    case DevFmtFloat:
+        mSpec.format = PA_SAMPLE_FLOAT32NE;
+        break;
+    case DevFmtByte:
+    case DevFmtUShort:
+    case DevFmtUInt:
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+            DevFmtTypeString(mDevice->FmtType)};
     }
     mSpec.rate = mDevice->Frequency;
     mSpec.channels = static_cast<uint8_t>(mDevice->channelsFromFmt());
@@ -1297,8 +1295,6 @@ ALCenum PulseCapture::open(const ALCchar *name)
             &PulseCapture::sourceNameCallbackC, this)};
         wait_for_operation(op, plock);
     }
-
-    return ALC_NO_ERROR;
 }
 
 bool PulseCapture::start()

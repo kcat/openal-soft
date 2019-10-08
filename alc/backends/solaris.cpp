@@ -39,6 +39,7 @@
 #include <functional>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "alconfig.h"
 #include "threads.h"
@@ -61,7 +62,7 @@ struct SolarisBackend final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
+    void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
@@ -142,22 +143,22 @@ int SolarisBackend::mixerProc()
 }
 
 
-ALCenum SolarisBackend::open(const ALCchar *name)
+void SolarisBackend::open(const ALCchar *name)
 {
     if(!name)
         name = solaris_device;
     else if(strcmp(name, solaris_device) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     mFd = ::open(solaris_driver.c_str(), O_WRONLY);
     if(mFd == -1)
     {
         ERR("Could not open %s: %s\n", solaris_driver.c_str(), strerror(errno));
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s",
+            solaris_driver.c_str(), strerror(errno)};
     }
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
 bool SolarisBackend::reset()

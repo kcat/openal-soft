@@ -305,7 +305,7 @@ void al_print(FILE *logfile, const char *fmt, ...)
     va_end(args);
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fprintf(logfile, "%ls", wstr.c_str());
+    fputws(wstr.c_str(), logfile);
     fflush(logfile);
 }
 

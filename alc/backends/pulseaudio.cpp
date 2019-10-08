@@ -642,34 +642,41 @@ struct PulsePlayback final : public BackendBase {
     PulsePlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PulsePlayback() override;
 
-    static void bufferAttrCallbackC(pa_stream *stream, void *pdata);
     void bufferAttrCallback(pa_stream *stream);
+    static void bufferAttrCallbackC(pa_stream *stream, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->bufferAttrCallback(stream); }
 
-    static void contextStateCallbackC(pa_context *context, void *pdata);
     void contextStateCallback(pa_context *context);
+    static void contextStateCallbackC(pa_context *context, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->contextStateCallback(context); }
 
-    static void streamStateCallbackC(pa_stream *stream, void *pdata);
     void streamStateCallback(pa_stream *stream);
+    static void streamStateCallbackC(pa_stream *stream, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->streamStateCallback(stream); }
 
-    static void streamWriteCallbackC(pa_stream *stream, size_t nbytes, void *pdata);
     void streamWriteCallback(pa_stream *stream, size_t nbytes);
+    static void streamWriteCallbackC(pa_stream *stream, size_t nbytes, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->streamWriteCallback(stream, nbytes); }
 
-    static void sinkInfoCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
     void sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol);
+    static void sinkInfoCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->sinkInfoCallback(context, info, eol); }
 
-    static void sinkNameCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
     void sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol);
+    static void sinkNameCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->sinkNameCallback(context, info, eol); }
 
-    static void streamMovedCallbackC(pa_stream *stream, void *pdata);
     void streamMovedCallback(pa_stream *stream);
+    static void streamMovedCallbackC(pa_stream *stream, void *pdata)
+    { static_cast<PulsePlayback*>(pdata)->streamMovedCallback(stream); }
 
     void open(const ALCchar *name) override;
     bool reset() override;
     bool start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
-    void lock() override;
-    void unlock() override;
+    void lock() override { pulse_lock.lock(); }
+    void unlock() override { pulse_lock.unlock(); }
 
     std::string mDeviceName;
 
@@ -695,9 +702,6 @@ PulsePlayback::~PulsePlayback()
 }
 
 
-void PulsePlayback::bufferAttrCallbackC(pa_stream *stream, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->bufferAttrCallback(stream); }
-
 void PulsePlayback::bufferAttrCallback(pa_stream *stream)
 {
     /* FIXME: Update the device's UpdateSize (and/or BufferSize) using the new
@@ -709,9 +713,6 @@ void PulsePlayback::bufferAttrCallback(pa_stream *stream)
     TRACE("minreq=%d, tlength=%d, prebuf=%d\n", mAttr.minreq, mAttr.tlength, mAttr.prebuf);
 }
 
-void PulsePlayback::contextStateCallbackC(pa_context *context, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->contextStateCallback(context); }
-
 void PulsePlayback::contextStateCallback(pa_context *context)
 {
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
@@ -721,9 +722,6 @@ void PulsePlayback::contextStateCallback(pa_context *context)
     }
     pulse_condvar.notify_all();
 }
-
-void PulsePlayback::streamStateCallbackC(pa_stream *stream, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->streamStateCallback(stream); }
 
 void PulsePlayback::streamStateCallback(pa_stream *stream)
 {
@@ -735,9 +733,6 @@ void PulsePlayback::streamStateCallback(pa_stream *stream)
     pulse_condvar.notify_all();
 }
 
-void PulsePlayback::streamWriteCallbackC(pa_stream *stream, size_t nbytes, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->streamWriteCallback(stream, nbytes); }
-
 void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes)
 {
     void *buf{pa_xmalloc(nbytes)};
@@ -747,9 +742,6 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes)
     if UNLIKELY(ret != PA_OK)
         ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
 }
-
-void PulsePlayback::sinkInfoCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->sinkInfoCallback(context, info, eol); }
 
 void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int eol)
 {
@@ -795,9 +787,6 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
         info->active_port && strcmp(info->active_port->name, "analog-output-headphones") == 0);
 }
 
-void PulsePlayback::sinkNameCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->sinkNameCallback(context, info, eol); }
-
 void PulsePlayback::sinkNameCallback(pa_context*, const pa_sink_info *info, int eol)
 {
     if(eol)
@@ -807,9 +796,6 @@ void PulsePlayback::sinkNameCallback(pa_context*, const pa_sink_info *info, int 
     }
     mDevice->DeviceName = info->description;
 }
-
-void PulsePlayback::streamMovedCallbackC(pa_stream *stream, void *pdata)
-{ static_cast<PulsePlayback*>(pdata)->streamMovedCallback(stream); }
 
 void PulsePlayback::streamMovedCallback(pa_stream *stream)
 {
@@ -1058,7 +1044,8 @@ ClockLatency PulsePlayback::getClockLatency()
     pa_usec_t latency;
     int neg, err;
 
-    { std::lock_guard<std::mutex> _{pulse_lock};
+    {
+        std::lock_guard<std::mutex> _{pulse_lock};
         ret.ClockTime = GetDeviceClockTime(mDevice);
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
@@ -1082,28 +1069,25 @@ ClockLatency PulsePlayback::getClockLatency()
 }
 
 
-void PulsePlayback::lock()
-{ pulse_lock.lock(); }
-
-void PulsePlayback::unlock()
-{ pulse_lock.unlock(); }
-
-
 struct PulseCapture final : public BackendBase {
     PulseCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
-    static void contextStateCallbackC(pa_context *context, void *pdata);
     void contextStateCallback(pa_context *context);
+    static void contextStateCallbackC(pa_context *context, void *pdata)
+    { static_cast<PulseCapture*>(pdata)->contextStateCallback(context); }
 
-    static void streamStateCallbackC(pa_stream *stream, void *pdata);
     void streamStateCallback(pa_stream *stream);
+    static void streamStateCallbackC(pa_stream *stream, void *pdata)
+    { static_cast<PulseCapture*>(pdata)->streamStateCallback(stream); }
 
-    static void sourceNameCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata);
     void sourceNameCallback(pa_context *context, const pa_source_info *info, int eol);
+    static void sourceNameCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata)
+    { static_cast<PulseCapture*>(pdata)->sourceNameCallback(context, info, eol); }
 
-    static void streamMovedCallbackC(pa_stream *stream, void *pdata);
     void streamMovedCallback(pa_stream *stream);
+    static void streamMovedCallbackC(pa_stream *stream, void *pdata)
+    { static_cast<PulseCapture*>(pdata)->streamMovedCallback(stream); }
 
     void open(const ALCchar *name) override;
     bool start() override;
@@ -1111,8 +1095,8 @@ struct PulseCapture final : public BackendBase {
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
     ClockLatency getClockLatency() override;
-    void lock() override;
-    void unlock() override;
+    void lock() override { pulse_lock.lock(); }
+    void unlock() override { pulse_lock.unlock(); }
 
     std::string mDeviceName;
 
@@ -1141,8 +1125,6 @@ PulseCapture::~PulseCapture()
     mStream = nullptr;
 }
 
-void PulseCapture::contextStateCallbackC(pa_context *context, void *pdata)
-{ static_cast<PulseCapture*>(pdata)->contextStateCallback(context); }
 
 void PulseCapture::contextStateCallback(pa_context *context)
 {
@@ -1154,9 +1136,6 @@ void PulseCapture::contextStateCallback(pa_context *context)
     pulse_condvar.notify_all();
 }
 
-void PulseCapture::streamStateCallbackC(pa_stream *stream, void *pdata)
-{ static_cast<PulseCapture*>(pdata)->streamStateCallback(stream); }
-
 void PulseCapture::streamStateCallback(pa_stream *stream)
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
@@ -1167,9 +1146,6 @@ void PulseCapture::streamStateCallback(pa_stream *stream)
     pulse_condvar.notify_all();
 }
 
-void PulseCapture::sourceNameCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata)
-{ static_cast<PulseCapture*>(pdata)->sourceNameCallback(context, info, eol); }
-
 void PulseCapture::sourceNameCallback(pa_context*, const pa_source_info *info, int eol)
 {
     if(eol)
@@ -1179,9 +1155,6 @@ void PulseCapture::sourceNameCallback(pa_context*, const pa_source_info *info, i
     }
     mDevice->DeviceName = info->description;
 }
-
-void PulseCapture::streamMovedCallbackC(pa_stream *stream, void *pdata)
-{ static_cast<PulseCapture*>(pdata)->streamMovedCallback(stream); }
 
 void PulseCapture::streamMovedCallback(pa_stream *stream)
 {
@@ -1406,7 +1379,8 @@ ClockLatency PulseCapture::getClockLatency()
     pa_usec_t latency;
     int neg, err;
 
-    { std::lock_guard<std::mutex> _{pulse_lock};
+    {
+        std::lock_guard<std::mutex> _{pulse_lock};
         ret.ClockTime = GetDeviceClockTime(mDevice);
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
@@ -1423,13 +1397,6 @@ ClockLatency PulseCapture::getClockLatency()
 
     return ret;
 }
-
-
-void PulseCapture::lock()
-{ pulse_lock.lock(); }
-
-void PulseCapture::unlock()
-{ pulse_lock.unlock(); }
 
 } // namespace
 

@@ -30,7 +30,7 @@ BackendBase::BackendBase(ALCdevice *device) noexcept : mDevice{device}
 BackendBase::~BackendBase() = default;
 
 bool BackendBase::reset()
-{ throw al::backend_exception{ALC_INVALID_VALUE, "Invalid BackendVase call"}; }
+{ throw al::backend_exception{ALC_INVALID_DEVICE, "Invalid BackendBase call"}; }
 
 ALCenum BackendBase::captureSamples(al::byte*, ALCuint)
 { return ALC_INVALID_DEVICE; }

@@ -216,6 +216,29 @@ ALSA_FUNCS(MAKE_FUNC);
 #endif
 
 
+struct HwParamsDeleter {
+    void operator()(snd_pcm_hw_params_t *ptr) { snd_pcm_hw_params_free(ptr); }
+};
+using HwParamsPtr = std::unique_ptr<snd_pcm_hw_params_t,HwParamsDeleter>;
+HwParamsPtr CreateHwParams()
+{
+    snd_pcm_hw_params_t *hp{};
+    snd_pcm_hw_params_malloc(&hp);
+    return HwParamsPtr{hp};
+}
+
+struct SwParamsDeleter {
+    void operator()(snd_pcm_sw_params_t *ptr) { snd_pcm_sw_params_free(ptr); }
+};
+using SwParamsPtr = std::unique_ptr<snd_pcm_sw_params_t,SwParamsDeleter>;
+SwParamsPtr CreateSwParams()
+{
+    snd_pcm_sw_params_t *sp{};
+    snd_pcm_sw_params_malloc(&sp);
+    return SwParamsPtr{sp};
+}
+
+
 struct DevMap {
     std::string name;
     std::string device_name;
@@ -630,27 +653,27 @@ bool AlsaPlayback::reset()
     snd_pcm_format_t format{SND_PCM_FORMAT_UNKNOWN};
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            format = SND_PCM_FORMAT_S8;
-            break;
-        case DevFmtUByte:
-            format = SND_PCM_FORMAT_U8;
-            break;
-        case DevFmtShort:
-            format = SND_PCM_FORMAT_S16;
-            break;
-        case DevFmtUShort:
-            format = SND_PCM_FORMAT_U16;
-            break;
-        case DevFmtInt:
-            format = SND_PCM_FORMAT_S32;
-            break;
-        case DevFmtUInt:
-            format = SND_PCM_FORMAT_U32;
-            break;
-        case DevFmtFloat:
-            format = SND_PCM_FORMAT_FLOAT;
-            break;
+    case DevFmtByte:
+        format = SND_PCM_FORMAT_S8;
+        break;
+    case DevFmtUByte:
+        format = SND_PCM_FORMAT_U8;
+        break;
+    case DevFmtShort:
+        format = SND_PCM_FORMAT_S16;
+        break;
+    case DevFmtUShort:
+        format = SND_PCM_FORMAT_U16;
+        break;
+    case DevFmtInt:
+        format = SND_PCM_FORMAT_S32;
+        break;
+    case DevFmtUInt:
+        format = SND_PCM_FORMAT_U32;
+        break;
+    case DevFmtFloat:
+        format = SND_PCM_FORMAT_FLOAT;
+        break;
     }
 
     bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", 1)};
@@ -658,25 +681,22 @@ bool AlsaPlayback::reset()
     ALuint bufferLen{static_cast<ALuint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
     ALuint rate{mDevice->Frequency};
 
-    snd_pcm_uframes_t periodSizeInFrames{};
-    snd_pcm_uframes_t bufferSizeInFrames{};
-    snd_pcm_sw_params_t *sp{};
-    snd_pcm_hw_params_t *hp{};
-    snd_pcm_access_t access{};
-    const char *funcerr{};
     int err{};
-
-    snd_pcm_hw_params_malloc(&hp);
-#define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
-    CHECK(snd_pcm_hw_params_any(mPcmHandle, hp));
+    HwParamsPtr hp{CreateHwParams()};
+#define CHECK(x) do {                                                         \
+    if((err=(x)) < 0)                                                         \
+        throw al::backend_exception{ALC_INVALID_VALUE, #x " failed: %s", snd_strerror(err)}; \
+} while(0)
+    CHECK(snd_pcm_hw_params_any(mPcmHandle, hp.get()));
     /* set interleaved access */
-    if(!allowmmap || snd_pcm_hw_params_set_access(mPcmHandle, hp, SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0)
+    if(!allowmmap
+        || snd_pcm_hw_params_set_access(mPcmHandle, hp.get(), SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0)
     {
         /* No mmap */
-        CHECK(snd_pcm_hw_params_set_access(mPcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
+        CHECK(snd_pcm_hw_params_set_access(mPcmHandle, hp.get(), SND_PCM_ACCESS_RW_INTERLEAVED));
     }
     /* test and set format (implicitly sets sample bits) */
-    if(snd_pcm_hw_params_test_format(mPcmHandle, hp, format) < 0)
+    if(snd_pcm_hw_params_test_format(mPcmHandle, hp.get(), format) < 0)
     {
         static const struct {
             snd_pcm_format_t format;
@@ -694,16 +714,16 @@ bool AlsaPlayback::reset()
         for(const auto &fmt : formatlist)
         {
             format = fmt.format;
-            if(snd_pcm_hw_params_test_format(mPcmHandle, hp, format) >= 0)
+            if(snd_pcm_hw_params_test_format(mPcmHandle, hp.get(), format) >= 0)
             {
                 mDevice->FmtType = fmt.fmttype;
                 break;
             }
         }
     }
-    CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp, format));
+    CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp.get(), format));
     /* test and set channels (implicitly sets frame bits) */
-    if(snd_pcm_hw_params_test_channels(mPcmHandle, hp, mDevice->channelsFromFmt()) < 0)
+    if(snd_pcm_hw_params_test_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()) < 0)
     {
         static const DevFmtChannels channellist[] = {
             DevFmtStereo,
@@ -715,7 +735,7 @@ bool AlsaPlayback::reset()
 
         for(const auto &chan : channellist)
         {
-            if(snd_pcm_hw_params_test_channels(mPcmHandle, hp, ChannelsFromDevFmt(chan, 0)) >= 0)
+            if(snd_pcm_hw_params_test_channels(mPcmHandle, hp.get(), ChannelsFromDevFmt(chan, 0)) >= 0)
             {
                 mDevice->FmtChans = chan;
                 mDevice->mAmbiOrder = 0;
@@ -723,40 +743,42 @@ bool AlsaPlayback::reset()
             }
         }
     }
-    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp, mDevice->channelsFromFmt()));
+    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
     if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", 0) ||
        !mDevice->Flags.get<FrequencyRequest>())
     {
-        if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp, 0) < 0)
+        if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 0) < 0)
             ERR("Failed to disable ALSA resampler\n");
     }
-    else if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp, 1) < 0)
+    else if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 1) < 0)
         ERR("Failed to enable ALSA resampler\n");
-    CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp, &rate, nullptr));
+    CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp.get(), &rate, nullptr));
     /* set period time (implicitly constrains period/buffer parameters) */
-    if((err=snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp, &periodLen, nullptr)) < 0)
+    if((err=snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp.get(), &periodLen, nullptr)) < 0)
         ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
     /* set buffer time (implicitly sets buffer size/bytes/time and period size/bytes) */
-    if((err=snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp, &bufferLen, nullptr)) < 0)
+    if((err=snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp.get(), &bufferLen, nullptr)) < 0)
         ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
-    CHECK(snd_pcm_hw_params(mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params(mPcmHandle, hp.get()));
 
     /* retrieve configuration info */
-    CHECK(snd_pcm_hw_params_get_access(hp, &access));
-    CHECK(snd_pcm_hw_params_get_period_size(hp, &periodSizeInFrames, nullptr));
-    CHECK(snd_pcm_hw_params_get_buffer_size(hp, &bufferSizeInFrames));
-    snd_pcm_hw_params_free(hp);
+    snd_pcm_uframes_t periodSizeInFrames{};
+    snd_pcm_uframes_t bufferSizeInFrames{};
+    snd_pcm_access_t access{};
+
+    CHECK(snd_pcm_hw_params_get_access(hp.get(), &access));
+    CHECK(snd_pcm_hw_params_get_period_size(hp.get(), &periodSizeInFrames, nullptr));
+    CHECK(snd_pcm_hw_params_get_buffer_size(hp.get(), &bufferSizeInFrames));
     hp = nullptr;
 
-    snd_pcm_sw_params_malloc(&sp);
-    CHECK(snd_pcm_sw_params_current(mPcmHandle, sp));
-    CHECK(snd_pcm_sw_params_set_avail_min(mPcmHandle, sp, periodSizeInFrames));
-    CHECK(snd_pcm_sw_params_set_stop_threshold(mPcmHandle, sp, bufferSizeInFrames));
-    CHECK(snd_pcm_sw_params(mPcmHandle, sp));
+    SwParamsPtr sp{CreateSwParams()};
+    CHECK(snd_pcm_sw_params_current(mPcmHandle, sp.get()));
+    CHECK(snd_pcm_sw_params_set_avail_min(mPcmHandle, sp.get(), periodSizeInFrames));
+    CHECK(snd_pcm_sw_params_set_stop_threshold(mPcmHandle, sp.get(), bufferSizeInFrames));
+    CHECK(snd_pcm_sw_params(mPcmHandle, sp.get()));
 #undef CHECK
-    snd_pcm_sw_params_free(sp);
     sp = nullptr;
 
     mDevice->BufferSize = static_cast<ALuint>(bufferSizeInFrames);
@@ -766,35 +788,21 @@ bool AlsaPlayback::reset()
     SetDefaultChannelOrder(mDevice);
 
     return true;
-
-error:
-    ERR("%s failed: %s\n", funcerr, snd_strerror(err));
-    if(hp) snd_pcm_hw_params_free(hp);
-    if(sp) snd_pcm_sw_params_free(sp);
-    return false;
 }
 
 bool AlsaPlayback::start()
 {
-    snd_pcm_hw_params_t *hp{};
-    snd_pcm_access_t access;
-    const char *funcerr;
-    int err;
-
-    snd_pcm_hw_params_malloc(&hp);
-#define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
-    CHECK(snd_pcm_hw_params_current(mPcmHandle, hp));
+    int err{};
+    snd_pcm_access_t access{};
+    HwParamsPtr hp{CreateHwParams()};
+#define CHECK(x) do {                                                         \
+    if((err=(x)) < 0)                                                         \
+        throw al::backend_exception{ALC_INVALID_VALUE, #x " failed: %s", snd_strerror(err)}; \
+} while(0)
+    CHECK(snd_pcm_hw_params_current(mPcmHandle, hp.get()));
     /* retrieve configuration info */
-    CHECK(snd_pcm_hw_params_get_access(hp, &access));
+    CHECK(snd_pcm_hw_params_get_access(hp.get(), &access));
 #undef CHECK
-    if(0)
-    {
-    error:
-        ERR("%s failed: %s\n", funcerr, snd_strerror(err));
-        if(hp) snd_pcm_hw_params_free(hp);
-        return false;
-    }
-    snd_pcm_hw_params_free(hp);
     hp = nullptr;
 
     int (AlsaPlayback::*thread_func)(){};
@@ -822,8 +830,6 @@ bool AlsaPlayback::start()
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
-    }
-    catch(...) {
     }
     mBuffer.clear();
     return false;
@@ -923,72 +929,67 @@ void AlsaCapture::open(const ALCchar *name)
     snd_pcm_format_t format{SND_PCM_FORMAT_UNKNOWN};
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            format = SND_PCM_FORMAT_S8;
-            break;
-        case DevFmtUByte:
-            format = SND_PCM_FORMAT_U8;
-            break;
-        case DevFmtShort:
-            format = SND_PCM_FORMAT_S16;
-            break;
-        case DevFmtUShort:
-            format = SND_PCM_FORMAT_U16;
-            break;
-        case DevFmtInt:
-            format = SND_PCM_FORMAT_S32;
-            break;
-        case DevFmtUInt:
-            format = SND_PCM_FORMAT_U32;
-            break;
-        case DevFmtFloat:
-            format = SND_PCM_FORMAT_FLOAT;
-            break;
+    case DevFmtByte:
+        format = SND_PCM_FORMAT_S8;
+        break;
+    case DevFmtUByte:
+        format = SND_PCM_FORMAT_U8;
+        break;
+    case DevFmtShort:
+        format = SND_PCM_FORMAT_S16;
+        break;
+    case DevFmtUShort:
+        format = SND_PCM_FORMAT_U16;
+        break;
+    case DevFmtInt:
+        format = SND_PCM_FORMAT_S32;
+        break;
+    case DevFmtUInt:
+        format = SND_PCM_FORMAT_U32;
+        break;
+    case DevFmtFloat:
+        format = SND_PCM_FORMAT_FLOAT;
+        break;
     }
 
     snd_pcm_uframes_t bufferSizeInFrames{maxu(mDevice->BufferSize, 100*mDevice->Frequency/1000)};
     snd_pcm_uframes_t periodSizeInFrames{minu(mDevice->BufferSize, 25*mDevice->Frequency/1000)};
 
     bool needring{false};
-    const char *funcerr{};
-    snd_pcm_hw_params_t *hp{};
-    snd_pcm_hw_params_malloc(&hp);
-#define CHECK(x) if((funcerr=#x),(err=(x)) < 0) goto error
-    CHECK(snd_pcm_hw_params_any(mPcmHandle, hp));
+    HwParamsPtr hp{CreateHwParams()};
+#define CHECK(x) do {                                                         \
+    if((err=(x)) < 0)                                                         \
+        throw al::backend_exception{ALC_INVALID_VALUE, #x " failed: %s", snd_strerror(err)}; \
+} while(0)
+    CHECK(snd_pcm_hw_params_any(mPcmHandle, hp.get()));
     /* set interleaved access */
-    CHECK(snd_pcm_hw_params_set_access(mPcmHandle, hp, SND_PCM_ACCESS_RW_INTERLEAVED));
+    CHECK(snd_pcm_hw_params_set_access(mPcmHandle, hp.get(), SND_PCM_ACCESS_RW_INTERLEAVED));
     /* set format (implicitly sets sample bits) */
-    CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp, format));
+    CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp.get(), format));
     /* set channels (implicitly sets frame bits) */
-    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp, mDevice->channelsFromFmt()));
+    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
-    CHECK(snd_pcm_hw_params_set_rate(mPcmHandle, hp, mDevice->Frequency, 0));
+    CHECK(snd_pcm_hw_params_set_rate(mPcmHandle, hp.get(), mDevice->Frequency, 0));
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    if(snd_pcm_hw_params_set_buffer_size_min(mPcmHandle, hp, &bufferSizeInFrames) < 0)
+    if(snd_pcm_hw_params_set_buffer_size_min(mPcmHandle, hp.get(), &bufferSizeInFrames) < 0)
     {
         TRACE("Buffer too large, using intermediate ring buffer\n");
         needring = true;
-        CHECK(snd_pcm_hw_params_set_buffer_size_near(mPcmHandle, hp, &bufferSizeInFrames));
+        CHECK(snd_pcm_hw_params_set_buffer_size_near(mPcmHandle, hp.get(), &bufferSizeInFrames));
     }
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
-    CHECK(snd_pcm_hw_params_set_period_size_near(mPcmHandle, hp, &periodSizeInFrames, nullptr));
+    CHECK(snd_pcm_hw_params_set_period_size_near(mPcmHandle, hp.get(), &periodSizeInFrames, nullptr));
     /* install and prepare hardware configuration */
-    CHECK(snd_pcm_hw_params(mPcmHandle, hp));
+    CHECK(snd_pcm_hw_params(mPcmHandle, hp.get()));
     /* retrieve configuration info */
-    CHECK(snd_pcm_hw_params_get_period_size(hp, &periodSizeInFrames, nullptr));
+    CHECK(snd_pcm_hw_params_get_period_size(hp.get(), &periodSizeInFrames, nullptr));
 #undef CHECK
-    snd_pcm_hw_params_free(hp);
     hp = nullptr;
 
     if(needring)
         mRing = CreateRingBuffer(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
 
     mDevice->DeviceName = name;
-    return;
-
-error:
-    if(hp) snd_pcm_hw_params_free(hp);
-    throw al::backend_exception{ALC_INVALID_VALUE, "%s failed: %s", funcerr, snd_strerror(err)};
 }
 
 
@@ -996,18 +997,13 @@ bool AlsaCapture::start()
 {
     int err{snd_pcm_prepare(mPcmHandle)};
     if(err < 0)
-        ERR("prepare failed: %s\n", snd_strerror(err));
-    else
-    {
-        err = snd_pcm_start(mPcmHandle);
-        if(err < 0)
-            ERR("start failed: %s\n", snd_strerror(err));
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "snd_pcm_prepare failed: %s",
+            snd_strerror(err)};
+
+    err = snd_pcm_start(mPcmHandle);
     if(err < 0)
-    {
-        aluHandleDisconnect(mDevice, "Capture state failure: %s", snd_strerror(err));
-        return false;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "snd_pcm_start failed: %s",
+            snd_strerror(err)};
 
     mDoCapture = true;
     return true;

@@ -814,7 +814,8 @@ void PulsePlayback::open(const ALCchar *name)
 
     mContext = connect_context(plock);
 
-    pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE | PA_STREAM_FIX_CHANNELS};
+    pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
+        PA_STREAM_FIX_CHANNELS};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 1))
         flags |= PA_STREAM_DONT_MOVE;
 

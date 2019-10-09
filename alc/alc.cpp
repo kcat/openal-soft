@@ -2241,9 +2241,16 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(!device->Flags.get<DevicePaused>())
     {
-        if(device->Backend->start() == false)
+        try {
+            auto backend = device->Backend.get();
+            if(!backend->start())
+                throw al::backend_exception{ALC_INVALID_DEVICE, "Backend error"};
+            device->Flags.set<DeviceRunning>();
+        }
+        catch(al::backend_exception& e) {
+            WARN("Failed to start playback: %s\n", e.what());
             return ALC_INVALID_DEVICE;
-        device->Flags.set<DeviceRunning>();
+        }
     }
 
     return ALC_NO_ERROR;
@@ -3874,11 +3881,14 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else if(!dev->Flags.get<DeviceRunning>())
     {
-        if(dev->Backend->start())
+        try {
+            auto backend = dev->Backend.get();
+            if(!backend->start())
+                throw al::backend_exception{ALC_INVALID_DEVICE, "Device start failure"};
             dev->Flags.set<DeviceRunning>();
-        else
-        {
-            aluHandleDisconnect(dev.get(), "Device start failure");
+        }
+        catch(al::backend_exception& e) {
+            aluHandleDisconnect(dev.get(), "%s", e.what());
             alcSetError(dev.get(), ALC_INVALID_DEVICE);
         }
     }
@@ -4101,13 +4111,16 @@ START_API_FUNC
     if(dev->mContexts.load()->empty())
         return;
 
-    if(dev->Backend->start() == false)
-    {
-        aluHandleDisconnect(dev.get(), "Device start failure");
-        alcSetError(dev.get(), ALC_INVALID_DEVICE);
-        return;
+    try {
+        auto backend = dev->Backend.get();
+        if(!backend->start())
+            throw al::backend_exception{ALC_INVALID_DEVICE, "Device start failure"};
+        dev->Flags.set<DeviceRunning>();
     }
-    dev->Flags.set<DeviceRunning>();
+    catch(al::backend_exception& e) {
+        aluHandleDisconnect(dev.get(), "%s", e.what());
+        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+    }
 }
 END_API_FUNC
 

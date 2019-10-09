@@ -646,10 +646,6 @@ struct PulsePlayback final : public BackendBase {
     static void bufferAttrCallbackC(pa_stream *stream, void *pdata) noexcept
     { static_cast<PulsePlayback*>(pdata)->bufferAttrCallback(stream); }
 
-    void contextStateCallback(pa_context *context) noexcept;
-    static void contextStateCallbackC(pa_context *context, void *pdata) noexcept
-    { static_cast<PulsePlayback*>(pdata)->contextStateCallback(context); }
-
     void streamStateCallback(pa_stream *stream) noexcept;
     static void streamStateCallbackC(pa_stream *stream, void *pdata) noexcept
     { static_cast<PulsePlayback*>(pdata)->streamStateCallback(stream); }
@@ -711,16 +707,6 @@ void PulsePlayback::bufferAttrCallback(pa_stream *stream) noexcept
      */
     mAttr = *(pa_stream_get_buffer_attr(stream));
     TRACE("minreq=%d, tlength=%d, prebuf=%d\n", mAttr.minreq, mAttr.tlength, mAttr.prebuf);
-}
-
-void PulsePlayback::contextStateCallback(pa_context *context) noexcept
-{
-    if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
-    {
-        ERR("Received context failure!\n");
-        aluHandleDisconnect(mDevice, "Playback state failure");
-    }
-    pulse_condvar.notify_all();
 }
 
 void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
@@ -827,7 +813,6 @@ void PulsePlayback::open(const ALCchar *name)
     std::unique_lock<std::mutex> plock{pulse_lock};
 
     mContext = connect_context(plock);
-    pa_context_set_state_callback(mContext, &PulsePlayback::contextStateCallbackC, this);
 
     pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE | PA_STREAM_FIX_CHANNELS};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 1))
@@ -1073,10 +1058,6 @@ struct PulseCapture final : public BackendBase {
     PulseCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
-    void contextStateCallback(pa_context *context) noexcept;
-    static void contextStateCallbackC(pa_context *context, void *pdata) noexcept
-    { static_cast<PulseCapture*>(pdata)->contextStateCallback(context); }
-
     void streamStateCallback(pa_stream *stream) noexcept;
     static void streamStateCallbackC(pa_stream *stream, void *pdata) noexcept
     { static_cast<PulseCapture*>(pdata)->streamStateCallback(stream); }
@@ -1126,16 +1107,6 @@ PulseCapture::~PulseCapture()
 }
 
 
-void PulseCapture::contextStateCallback(pa_context *context) noexcept
-{
-    if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
-    {
-        ERR("Received context failure!\n");
-        aluHandleDisconnect(mDevice, "Capture state failure");
-    }
-    pulse_condvar.notify_all();
-}
-
 void PulseCapture::streamStateCallback(pa_stream *stream) noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
@@ -1184,7 +1155,6 @@ void PulseCapture::open(const ALCchar *name)
     std::unique_lock<std::mutex> plock{pulse_lock};
 
     mContext = connect_context(plock);
-    pa_context_set_state_callback(mContext, &PulseCapture::contextStateCallbackC, this);
 
     pa_channel_map chanmap{};
     switch(mDevice->FmtChans)

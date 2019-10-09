@@ -52,8 +52,8 @@ struct Sdl2Backend final : public BackendBase {
     Sdl2Backend(ALCdevice *device) noexcept : BackendBase{device} { }
     ~Sdl2Backend() override;
 
-    void audioCallback(Uint8 *stream, int len);
-    static void audioCallbackC(void *ptr, Uint8 *stream, int len)
+    void audioCallback(Uint8 *stream, int len) noexcept;
+    static void audioCallbackC(void *ptr, Uint8 *stream, int len) noexcept
     { static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); }
 
     void open(const ALCchar *name) override;
@@ -81,7 +81,7 @@ Sdl2Backend::~Sdl2Backend()
     mDeviceID = 0;
 }
 
-void Sdl2Backend::audioCallback(Uint8 *stream, int len)
+void Sdl2Backend::audioCallback(Uint8 *stream, int len) noexcept
 {
     const auto ulen = static_cast<unsigned int>(len);
     assert((ulen % mFrameSize) == 0);

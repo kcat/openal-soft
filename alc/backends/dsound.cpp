@@ -124,13 +124,12 @@ al::vector<DevMap> CaptureDevices;
 
 bool checkName(const al::vector<DevMap> &list, const std::string &name)
 {
-    return std::find_if(list.cbegin(), list.cend(),
-        [&name](const DevMap &entry) -> bool
-        { return entry.name == name; }
-    ) != list.cend();
+    auto match_name = [&name](const DevMap &entry) -> bool
+    { return entry.name == name; };
+    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
 }
 
-BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, void *data)
+BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, void *data) noexcept
 {
     if(!guid)
         return TRUE;

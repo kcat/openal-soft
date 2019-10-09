@@ -154,13 +154,13 @@ struct JackPlayback final : public BackendBase {
     JackPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
-    static int bufferSizeNotifyC(jack_nframes_t numframes, void *arg)
+    int bufferSizeNotify(jack_nframes_t numframes) noexcept;
+    static int bufferSizeNotifyC(jack_nframes_t numframes, void *arg) noexcept
     { return static_cast<JackPlayback*>(arg)->bufferSizeNotify(numframes); }
-    int bufferSizeNotify(jack_nframes_t numframes);
 
-    static int processC(jack_nframes_t numframes, void *arg)
+    int process(jack_nframes_t numframes) noexcept;
+    static int processC(jack_nframes_t numframes, void *arg) noexcept
     { return static_cast<JackPlayback*>(arg)->process(numframes); }
-    int process(jack_nframes_t numframes);
 
     int mixerProc();
 
@@ -197,7 +197,7 @@ JackPlayback::~JackPlayback()
 }
 
 
-int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
+int JackPlayback::bufferSizeNotify(jack_nframes_t numframes) noexcept
 {
     std::lock_guard<std::mutex> _{mDevice->StateLock};
     mDevice->UpdateSize = numframes;
@@ -217,7 +217,7 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
 }
 
 
-int JackPlayback::process(jack_nframes_t numframes)
+int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
     jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
     ALsizei numchans{0};

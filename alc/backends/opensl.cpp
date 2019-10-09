@@ -146,8 +146,8 @@ struct OpenSLPlayback final : public BackendBase {
     OpenSLPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~OpenSLPlayback() override;
 
-    void process(SLAndroidSimpleBufferQueueItf bq);
-    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context)
+    void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
+    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
     { static_cast<OpenSLPlayback*>(context)->process(bq); }
 
     int mixerProc();
@@ -197,7 +197,7 @@ OpenSLPlayback::~OpenSLPlayback()
 
 
 /* this callback handler is called every time a buffer finishes playing */
-void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf)
+void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf) noexcept
 {
     /* A note on the ringbuffer usage: The buffer queue seems to hold on to the
      * pointer passed to the Enqueue method, rather than copying the audio.
@@ -622,8 +622,8 @@ struct OpenSLCapture final : public BackendBase {
     OpenSLCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~OpenSLCapture() override;
 
-    void process(SLAndroidSimpleBufferQueueItf bq);
-    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context)
+    void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
+    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
     { static_cast<OpenSLCapture*>(context)->process(bq); }
 
     void open(const ALCchar *name) override;
@@ -660,7 +660,7 @@ OpenSLCapture::~OpenSLCapture()
 }
 
 
-void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf)
+void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf) noexcept
 {
     /* A new chunk has been written into the ring buffer, advance it. */
     mRing->writeAdvance(1);

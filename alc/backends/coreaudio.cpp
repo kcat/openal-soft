@@ -47,16 +47,16 @@ struct CoreAudioPlayback final : public BackendBase {
     CoreAudioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~CoreAudioPlayback() override;
 
+    OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
+        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
+        AudioBufferList *ioData) noexcept;
     static OSStatus MixerProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
-        AudioBufferList *ioData)
+        AudioBufferList *ioData) noexcept
     {
         return static_cast<CoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp,
             inBusNumber, inNumberFrames, ioData);
     }
-    OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
-        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
-        AudioBufferList *ioData);
 
     void open(const ALCchar *name) override;
     bool reset() override;
@@ -78,8 +78,8 @@ CoreAudioPlayback::~CoreAudioPlayback()
 }
 
 
-OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*,
-    const AudioTimeStamp*, UInt32, UInt32, AudioBufferList *ioData)
+OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32,
+    UInt32, AudioBufferList *ioData) noexcept
 {
     std::lock_guard<CoreAudioPlayback> _{*this};
     aluMixData(mDevice, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize/mFrameSize);
@@ -291,16 +291,16 @@ struct CoreAudioCapture final : public BackendBase {
     CoreAudioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~CoreAudioCapture() override;
 
+    OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
+        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
+        UInt32 inNumberFrames, AudioBufferList *ioData) noexcept;
     static OSStatus RecordProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
-        AudioBufferList *ioData)
+        AudioBufferList *ioData) noexcept
     {
         return static_cast<CoreAudioCapture*>(inRefCon)->RecordProc(ioActionFlags, inTimeStamp,
             inBusNumber, inNumberFrames, ioData);
     }
-    OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
-        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
-        UInt32 inNumberFrames, AudioBufferList *ioData);
 
     void open(const ALCchar *name) override;
     bool start() override;
@@ -330,7 +330,7 @@ CoreAudioCapture::~CoreAudioCapture()
 
 OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
     const AudioTimeStamp *inTimeStamp, UInt32, UInt32 inNumberFrames,
-    AudioBufferList*)
+    AudioBufferList*) noexcept
 {
     AudioUnitRenderActionFlags flags = 0;
     union {

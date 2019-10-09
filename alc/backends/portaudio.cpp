@@ -75,15 +75,15 @@ struct PortPlayback final : public BackendBase {
     PortPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PortPlayback() override;
 
+    int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) noexcept;
     static int writeCallbackC(const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-        const PaStreamCallbackFlags statusFlags, void *userData)
+        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
     {
         return static_cast<PortPlayback*>(userData)->writeCallback(inputBuffer, outputBuffer,
             framesPerBuffer, timeInfo, statusFlags);
     }
-    int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
-        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags);
 
     void open(const ALCchar *name) override;
     bool reset() override;
@@ -106,9 +106,8 @@ PortPlayback::~PortPlayback()
 }
 
 
-int PortPlayback::writeCallback(const void*, void *outputBuffer,
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo*,
-    const PaStreamCallbackFlags)
+int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long framesPerBuffer,
+    const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
 {
     std::lock_guard<PortPlayback> _{*this};
     aluMixData(mDevice, outputBuffer, static_cast<ALuint>(framesPerBuffer));
@@ -232,15 +231,15 @@ struct PortCapture final : public BackendBase {
     PortCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PortCapture() override;
 
+    int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) noexcept;
     static int readCallbackC(const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-        const PaStreamCallbackFlags statusFlags, void *userData)
+        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
     {
         return static_cast<PortCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
             framesPerBuffer, timeInfo, statusFlags);
     }
-    int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
-        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags);
 
     void open(const ALCchar *name) override;
     bool start() override;
@@ -265,9 +264,8 @@ PortCapture::~PortCapture()
 }
 
 
-int PortCapture::readCallback(const void *inputBuffer, void*,
-    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo*,
-    const PaStreamCallbackFlags)
+int PortCapture::readCallback(const void *inputBuffer, void*, unsigned long framesPerBuffer,
+    const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
 {
     mRing->write(inputBuffer, framesPerBuffer);
     return 0;

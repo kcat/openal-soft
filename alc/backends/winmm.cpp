@@ -127,8 +127,8 @@ struct WinMMPlayback final : public BackendBase {
     WinMMPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~WinMMPlayback() override;
 
-    void CALLBACK waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR param1, DWORD_PTR param2);
-    static void CALLBACK waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
+    void CALLBACK waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
+    static void CALLBACK waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2) noexcept
     { reinterpret_cast<WinMMPlayback*>(instance)->waveOutProc(device, msg, param1, param2); }
 
     int mixerProc();
@@ -168,7 +168,7 @@ WinMMPlayback::~WinMMPlayback()
  * Posts a message to 'WinMMPlayback::mixerProc' everytime a WaveOut Buffer is
  * completed and returns to the application (for more data)
  */
-void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT, UINT msg, DWORD_PTR, DWORD_PTR)
+void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT, UINT msg, DWORD_PTR, DWORD_PTR) noexcept
 {
     if(msg != WOM_DONE) return;
     mWritable.fetch_add(1, std::memory_order_acq_rel);
@@ -364,8 +364,8 @@ struct WinMMCapture final : public BackendBase {
     WinMMCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~WinMMCapture() override;
 
-    void CALLBACK waveInProc(HWAVEIN device, UINT msg, DWORD_PTR param1, DWORD_PTR param2);
-    static void CALLBACK waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2)
+    void CALLBACK waveInProc(HWAVEIN device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
+    static void CALLBACK waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2) noexcept
     { reinterpret_cast<WinMMCapture*>(instance)->waveInProc(device, msg, param1, param2); }
 
     int captureProc();
@@ -409,7 +409,7 @@ WinMMCapture::~WinMMCapture()
  * Posts a message to 'WinMMCapture::captureProc' everytime a WaveIn Buffer is
  * completed and returns to the application (with more data).
  */
-void CALLBACK WinMMCapture::waveInProc(HWAVEIN, UINT msg, DWORD_PTR, DWORD_PTR)
+void CALLBACK WinMMCapture::waveInProc(HWAVEIN, UINT msg, DWORD_PTR, DWORD_PTR) noexcept
 {
     if(msg != WIM_DATA) return;
     mReadable.fetch_add(1, std::memory_order_acq_rel);

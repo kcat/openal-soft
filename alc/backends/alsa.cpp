@@ -981,10 +981,7 @@ void AlsaCapture::open(const ALCchar *name)
     hp = nullptr;
 
     if(needring)
-    {
         mRing = CreateRingBuffer(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
-        if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
-    }
 
     mDevice->DeviceName = name;
     return;

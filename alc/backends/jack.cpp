@@ -212,11 +212,7 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
 
     mRing = nullptr;
     mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
-    if(!mRing)
-    {
-        ERR("Failed to reallocate ringbuffer\n");
-        aluHandleDisconnect(mDevice, "Failed to reallocate %u-sample buffer", bufsize);
-    }
+
     return 0;
 }
 
@@ -407,11 +403,6 @@ bool JackPlayback::reset()
 
     mRing = nullptr;
     mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
-    if(!mRing)
-    {
-        ERR("Failed to allocate ringbuffer\n");
-        return false;
-    }
 
     SetDefaultChannelOrder(mDevice);
 

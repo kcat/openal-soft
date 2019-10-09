@@ -519,7 +519,6 @@ void WinMMCapture::open(const ALCchar *name)
     CapturedDataSize = static_cast<ALuint>(maxz(CapturedDataSize, BufferSize*mWaveBuffer.size()));
 
     mRing = CreateRingBuffer(CapturedDataSize, mFormat.nBlockAlign, false);
-    if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Could not create ring buffer"};
 
     al_free(mWaveBuffer[0].lpData);
     mWaveBuffer[0] = WAVEHDR{};

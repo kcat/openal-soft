@@ -393,7 +393,6 @@ void SndioCapture::open(const ALCchar *name)
             mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate};
 
     mRing = CreateRingBuffer(mDevice->BufferSize, par.bps*par.rchan, false);
-    if(!mRing) throw al::backend_exception{ALC_OUT_OF_MEMORY, "Failed to allocate ring buffer"};
 
     SetDefaultChannelOrder(mDevice);
 

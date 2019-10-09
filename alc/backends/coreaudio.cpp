@@ -570,7 +570,6 @@ void CoreAudioCapture::open(const ALCchar *name)
             mDevice->Frequency, Resampler::FastBSinc24);
 
     mRing = CreateRingBuffer(outputFrameCount, mFrameSize, false);
-    if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Failed to allocate ring buffer"};
 
     mDevice->DeviceName = name;
 }

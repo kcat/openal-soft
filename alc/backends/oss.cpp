@@ -612,7 +612,6 @@ void OSScapture::open(const ALCchar *name)
             ossFormat};
 
     mRing = CreateRingBuffer(mDevice->BufferSize, frameSize, false);
-    if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
 
     mDevice->DeviceName = name;
 }

@@ -1601,11 +1601,6 @@ HRESULT WasapiCapture::resetProxy()
 
     buffer_len = maxu(mDevice->BufferSize, buffer_len);
     mRing = CreateRingBuffer(buffer_len, mDevice->frameSizeFromFmt(), false);
-    if(!mRing)
-    {
-        ERR("Failed to allocate capture ring buffer\n");
-        return E_OUTOFMEMORY;
-    }
 
     hr = mClient->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))

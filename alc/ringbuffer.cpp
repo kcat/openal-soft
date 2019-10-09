@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstdint>
+#include <stdexcept>
 
 #include "almalloc.h"
 
@@ -45,7 +46,8 @@ RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
 #endif
     }
     ++power_of_two;
-    if(power_of_two < sz) return nullptr;
+    if(power_of_two <= sz || power_of_two > std::numeric_limits<size_t>::max()/elem_sz)
+        throw std::overflow_error{"Ring buffer size overflow"};
 
     const size_t bufbytes{power_of_two * elem_sz};
     RingBufferPtr rb{new (FamCount{bufbytes}) RingBuffer{bufbytes}};

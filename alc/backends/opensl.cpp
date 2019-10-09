@@ -521,14 +521,7 @@ bool OpenSLPlayback::reset()
     if(SL_RESULT_SUCCESS == result)
     {
         const ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
-        try {
-            mRing = CreateRingBuffer(num_updates, mFrameSize*mDevice->UpdateSize, true);
-        }
-        catch(std::exception& e) {
-            ERR("Failed allocating ring buffer %ux%ux%u: %s\n", mDevice->UpdateSize,
-                num_updates, mFrameSize, e.what());
-            result = SL_RESULT_MEMORY_FAILURE;
-        }
+        mRing = CreateRingBuffer(num_updates, mFrameSize*mDevice->UpdateSize, true);
     }
 
     if(SL_RESULT_SUCCESS != result)
@@ -703,16 +696,10 @@ void OpenSLCapture::open(const ALCchar* name)
             mDevice->Frequency/100*5)};
         ALuint num_updates{(length+update_len-1) / update_len};
 
-        try {
-            mRing = CreateRingBuffer(num_updates, update_len*mFrameSize, false);
+        mRing = CreateRingBuffer(num_updates, update_len*mFrameSize, false);
 
-            mDevice->UpdateSize = update_len;
-            mDevice->BufferSize = static_cast<ALuint>(mRing->writeSpace() * update_len);
-        }
-        catch(std::exception& e) {
-            ERR("Failed to allocate ring buffer: %s\n", e.what());
-            result = SL_RESULT_MEMORY_FAILURE;
-        }
+        mDevice->UpdateSize = update_len;
+        mDevice->BufferSize = static_cast<ALuint>(mRing->writeSpace() * update_len);
     }
     if(SL_RESULT_SUCCESS == result)
     {

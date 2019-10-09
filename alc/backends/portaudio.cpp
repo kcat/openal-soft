@@ -286,7 +286,6 @@ void PortCapture::open(const ALCchar *name)
     ALuint frame_size{mDevice->frameSizeFromFmt()};
 
     mRing = CreateRingBuffer(samples, frame_size, false);
-    if(!mRing) throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create ring buffer"};
 
     auto devidopt = ConfigValueInt(nullptr, "port", "capture");
     if(devidopt && *devidopt >= 0) mParams.device = *devidopt;

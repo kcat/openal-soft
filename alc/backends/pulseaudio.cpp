@@ -986,20 +986,6 @@ bool PulsePlayback::reset()
     mDevice->BufferSize = mAttr.tlength / mFrameSize;
     mDevice->UpdateSize = mAttr.minreq / mFrameSize;
 
-    /* HACK: prebuf should be 0 as that's what we set it to. However on some
-     * systems it comes back as non-0, so we have to make sure the device will
-     * write enough audio to start playback. The lack of manual start control
-     * may have unintended consequences, but it's better than not starting at
-     * all.
-     */
-    if(mAttr.prebuf != 0)
-    {
-        ALuint len{mAttr.prebuf / mFrameSize};
-        if(len <= mDevice->BufferSize)
-            ERR("Non-0 prebuf, %u samples (%u bytes), device has %u samples\n",
-                len, mAttr.prebuf, mDevice->BufferSize);
-    }
-
     return true;
 }
 

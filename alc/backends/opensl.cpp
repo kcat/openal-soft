@@ -869,9 +869,18 @@ void OpenSLCapture::stop()
 
 ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
-    SLAndroidSimpleBufferQueueItf bufferQueue;
-    SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &bufferQueue)};
-    PRINTERR(result, "recordObj->GetInterface");
+    SLAndroidSimpleBufferQueueItf bufferQueue{};
+    if LIKELY(mDevice->Connected.load(std::memory_order_acquire))
+    {
+        const SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+            &bufferQueue)};
+        PRINTERR(result, "recordObj->GetInterface");
+        if UNLIKELY(SL_RESULT_SUCCESS != result)
+        {
+            aluHandleDisconnect(mDevice, "Failed to get capture buffer queue: 0x%08x", result);
+            bufferQueue = nullptr;
+        }
+    }
 
     const ALuint update_size{mDevice->UpdateSize};
     const ALuint chunk_size{update_size * mFrameSize};
@@ -890,11 +899,19 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
         {
             /* Finished a chunk, reset the offset and advance the read pointer. */
             mSplOffset = 0;
-
             mRing->readAdvance(1);
-            result = VCALL(bufferQueue,Enqueue)(data.first.buf, chunk_size);
-            PRINTERR(result, "bufferQueue->Enqueue");
-            if(SL_RESULT_SUCCESS != result) break;
+
+            if LIKELY(bufferQueue)
+            {
+                const SLresult result{VCALL(bufferQueue,Enqueue)(data.first.buf, chunk_size)};
+                PRINTERR(result, "bufferQueue->Enqueue");
+                if UNLIKELY(SL_RESULT_SUCCESS != result)
+                {
+                    aluHandleDisconnect(mDevice, "Failed to update capture buffer: 0x%08x",
+                        result);
+                    bufferQueue = nullptr;
+                }
+            }
 
             data.first.len--;
             if(!data.first.len)
@@ -904,12 +921,6 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
         }
 
         i += rem;
-    }
-
-    if UNLIKELY(SL_RESULT_SUCCESS != result)
-    {
-        aluHandleDisconnect(mDevice, "Failed to update capture buffer: 0x%08x", result);
-        return ALC_INVALID_DEVICE;
     }
 
     return ALC_NO_ERROR;

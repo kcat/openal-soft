@@ -1654,11 +1654,11 @@ void ApplyDither(const al::span<FloatBufferLine> Samples, ALuint *dither_seed,
  * chokes on that given the inline specializations.
  */
 template<typename T>
-inline T SampleConv(ALfloat) noexcept;
+inline T SampleConv(float) noexcept;
 
-template<> inline ALfloat SampleConv(ALfloat val) noexcept
+template<> inline float SampleConv(float val) noexcept
 { return val; }
-template<> inline ALint SampleConv(ALfloat val) noexcept
+template<> inline int32_t SampleConv(float val) noexcept
 {
     /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
      * This means a normalized float has at most 25 bits of signed precision.
@@ -1667,21 +1667,21 @@ template<> inline ALint SampleConv(ALfloat val) noexcept
      */
     return fastf2i(clampf(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
-template<> inline ALshort SampleConv(ALfloat val) noexcept
-{ return static_cast<ALshort>(fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f))); }
-template<> inline ALbyte SampleConv(ALfloat val) noexcept
-{ return static_cast<ALbyte>(fastf2i(clampf(val*128.0f, -128.0f, 127.0f))); }
+template<> inline int16_t SampleConv(float val) noexcept
+{ return static_cast<int16_t>(fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f))); }
+template<> inline int8_t SampleConv(float val) noexcept
+{ return static_cast<int8_t>(fastf2i(clampf(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
-template<> inline ALuint SampleConv(ALfloat val) noexcept
-{ return static_cast<ALuint>(SampleConv<ALint>(val)) + 2147483648u; }
-template<> inline ALushort SampleConv(ALfloat val) noexcept
-{ return static_cast<ALushort>(SampleConv<ALshort>(val) + 32768); }
-template<> inline ALubyte SampleConv(ALfloat val) noexcept
-{ return static_cast<ALubyte>(SampleConv<ALbyte>(val) + 128); }
+template<> inline uint32_t SampleConv(float val) noexcept
+{ return static_cast<uint32_t>(SampleConv<int32_t>(val)) + 2147483648u; }
+template<> inline uint16_t SampleConv(float val) noexcept
+{ return static_cast<uint16_t>(SampleConv<int16_t>(val) + 32768); }
+template<> inline uint8_t SampleConv(float val) noexcept
+{ return static_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
 
 template<DevFmtType T>
-void Write(const al::span<const FloatBufferLine> InBuffer, ALvoid *OutBuffer, const size_t Offset,
+void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
     const ALuint SamplesToDo)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
@@ -1694,7 +1694,7 @@ void Write(const al::span<const FloatBufferLine> InBuffer, ALvoid *OutBuffer, co
     {
         ASSUME(SamplesToDo > 0);
         SampleType *out{outbase++};
-        auto conv_sample = [numchans,&out](const ALfloat s) noexcept -> void
+        auto conv_sample = [numchans,&out](const float s) noexcept -> void
         {
             *out = SampleConv<SampleType>(s);
             out += numchans;

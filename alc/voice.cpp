@@ -546,7 +546,7 @@ void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParam
 
 } // namespace
 
-void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
+void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 {
     static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
 
@@ -778,30 +778,24 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
                 /* Handle non-looping static source */
                 if(DataPosInt >= BufferListItem->mSampleLen)
                 {
-                    if LIKELY(vstate == ALvoice::Playing)
-                        vstate = ALvoice::Stopped;
                     BufferListItem = nullptr;
                     break;
                 }
             }
         }
-        else while(1)
+        else
         {
             /* Handle streaming source */
-            if(BufferListItem->mSampleLen > DataPosInt)
-                break;
+            do {
+                if(BufferListItem->mSampleLen > DataPosInt)
+                    break;
 
-            DataPosInt -= BufferListItem->mSampleLen;
+                DataPosInt -= BufferListItem->mSampleLen;
 
-            ++buffers_done;
-            BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);
-            if(!BufferListItem) BufferListItem = BufferLoopItem;
-            if(!BufferListItem)
-            {
-                if LIKELY(vstate == ALvoice::Playing)
-                    vstate = ALvoice::Stopped;
-                break;
-            }
+                ++buffers_done;
+                BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);
+                if(!BufferListItem) BufferListItem = BufferLoopItem;
+            } while(BufferListItem);
         }
     } while(OutPos < SamplesToDo);
 
@@ -821,7 +815,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
     mPosition.store(DataPosInt, std::memory_order_relaxed);
     mPositionFrac.store(DataPosFrac, std::memory_order_relaxed);
     mCurrentBuffer.store(BufferListItem, std::memory_order_relaxed);
-    if(vstate == ALvoice::Stopped)
+    if(!BufferListItem)
     {
         mLoopBuffer.store(nullptr, std::memory_order_relaxed);
         mSourceID.store(0u, std::memory_order_relaxed);
@@ -844,7 +838,7 @@ void ALvoice::mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo)
         }
     }
 
-    if(vstate == ALvoice::Stopped)
+    if(!BufferListItem)
     {
         /* If the voice just ended, set it to Stopping so the next render
          * ensures any residual noise fades to 0 amplitude.

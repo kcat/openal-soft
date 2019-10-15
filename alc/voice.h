@@ -287,7 +287,7 @@ struct ALvoice {
         return *this;
     }
 
-    void mix(State vstate, ALCcontext *Context, const ALuint SamplesToDo);
+    void mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo);
 };
 
 #endif /* VOICE_H */

@@ -11,13 +11,13 @@
 // The limit to the number of 'distances' listed in the data set definition.
 #define MAX_FD_COUNT                 (16)
 
-// The limits to the number of 'azimuths' listed in the data set definition.
+// The limits to the number of 'elevations' listed in the data set definition.
 #define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (128)
+#define MAX_EV_COUNT                 (181)
 
 // The limits for each of the 'azimuths' listed in the data set definition.
 #define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (128)
+#define MAX_AZ_COUNT                 (360)
 
 // The limits for the 'distance' from source to listener for each field in
 // the definition file.

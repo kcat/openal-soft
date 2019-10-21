@@ -88,10 +88,10 @@ using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 #define MAX_FD_DISTANCE              (2.5f)
 
 #define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (128)
+#define MAX_EV_COUNT                 (181)
 
 #define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (128)
+#define MAX_AZ_COUNT                 (360)
 
 #define MAX_HRIR_DELAY               (HRTF_HISTORY_LENGTH-1)
 

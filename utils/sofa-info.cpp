@@ -174,9 +174,17 @@ static double GetUniformStepSize(const double epsilon, const uint m, const doubl
         count = 1;
 
         if(counts[0] > m/2)
-            return steps[0];
+            break;
     }
 
+    if(counts[0] > 255)
+    {
+        uint i{2u};
+        while(counts[0]/i > 255 && (counts[0]%i) != 0)
+            ++i;
+        counts[0] /= i;
+        steps[0] *= i;
+    }
     if(counts[0] > 5)
         return steps[0];
     return 0.0;

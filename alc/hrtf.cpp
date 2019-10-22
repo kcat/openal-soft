@@ -91,7 +91,7 @@ using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 #define MAX_EV_COUNT                 (181)
 
 #define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (360)
+#define MAX_AZ_COUNT                 (255)
 
 #define MAX_HRIR_DELAY               (HRTF_HISTORY_LENGTH-1)
 

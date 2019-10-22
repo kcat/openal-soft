@@ -9,15 +9,18 @@
 #define MAX_PATH_LEN                 (256)
 
 // The limit to the number of 'distances' listed in the data set definition.
+// Must be less than 256
 #define MAX_FD_COUNT                 (16)
 
 // The limits to the number of 'elevations' listed in the data set definition.
+// Must be less than 256.
 #define MIN_EV_COUNT                 (5)
 #define MAX_EV_COUNT                 (181)
 
 // The limits for each of the 'azimuths' listed in the data set definition.
+// Must be less than 256.
 #define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (360)
+#define MAX_AZ_COUNT                 (255)
 
 // The limits for the 'distance' from source to listener for each field in
 // the definition file.

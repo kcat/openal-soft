@@ -1462,10 +1462,12 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
-            for(ti = 0;ti < channels;ti++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
-                    hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[ti] -= minHrtd;
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+
+                for(ti = 0;ti < channels;ti++)
+                    azd->mDelays[ti] -= minHrtd;
             }
         }
     }

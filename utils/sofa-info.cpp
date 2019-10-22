@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 
+#include <array>
 #include <cmath>
 #include <memory>
 #include <vector>
@@ -33,6 +34,7 @@
 
 
 using uint = unsigned int;
+using double3 = std::array<double,3>;
 
 struct MySofaDeleter {
     void operator()(MYSOFA_HRTF *sofa) { mysofa_free(sofa); }
@@ -41,7 +43,7 @@ using MySofaHrtfPtr = std::unique_ptr<MYSOFA_HRTF,MySofaDeleter>;
 
 // Per-field measurement info.
 struct HrirFdT {
-    float mDistance{0.0f};
+    double mDistance{0.0};
     uint mEvCount{0u};
     uint mEvStart{0u};
     std::vector<uint> mAzCounts;
@@ -83,19 +85,18 @@ static void PrintSofaArray(const char *prefix, struct MYSOFA_ARRAY *array)
  * of other axes as necessary.  The epsilons are used to constrain the
  * equality of unique elements.
  */
-static uint GetUniquelySortedElems(const uint m, const float *triplets, const uint axis,
-                                   const float *const (&filters)[3], const float (&epsilons)[3],
-                                   float *elems)
+static uint GetUniquelySortedElems(const uint m, const double3 *aers, const uint axis,
+    const double *const (&filters)[3], const double (&epsilons)[3], double *elems)
 {
     uint count{0u};
-    for(uint i{0u};i < 3*m;i += 3)
+    for(uint i{0u};i < m;++i)
     {
-        float elem = triplets[i + axis];
+        const double elem{aers[i][axis]};
 
         uint j;
         for(j = 0;j < 3;j++)
         {
-            if(filters[j] && std::fabs(triplets[i + j] - *filters[j]) > epsilons[j])
+            if(filters[j] && std::fabs(aers[i][j] - *filters[j]) > epsilons[j])
                 break;
         }
         if(j < 3)
@@ -103,7 +104,7 @@ static uint GetUniquelySortedElems(const uint m, const float *triplets, const ui
 
         for(j = 0;j < count;j++)
         {
-            const float delta{elem - elems[j]};
+            const double delta{elem - elems[j]};
 
             if(delta > epsilons[axis])
                 continue;
@@ -131,17 +132,17 @@ static uint GetUniquelySortedElems(const uint m, const float *triplets, const ui
  * half, but in degenerate cases this can fall to a minimum of 5 (the lower
  * limit on elevations necessary to build a layout).
  */
-static float GetUniformStepSize(const float epsilon, const uint m, const float *elems)
+static double GetUniformStepSize(const double epsilon, const uint m, const double *elems)
 {
-    std::vector<float> steps(m, 0.0f);
-    std::vector<uint> counts(m, 0u);
+    auto steps = std::vector<double>(m, 0.0);
+    auto counts = std::vector<uint>(m, 0u);
     uint count{0u};
 
     for(uint stride{1u};stride < m/2;stride++)
     {
         for(uint i{0u};i < m-stride;i++)
         {
-            const float step{elems[i + stride] - elems[i]};
+            const double step{elems[i + stride] - elems[i]};
 
             uint j;
             for(j = 0;j < count;j++)
@@ -178,7 +179,7 @@ static float GetUniformStepSize(const float epsilon, const uint m, const float *
 
     if(counts[0] > 5)
         return steps[0];
-    return 0.0f;
+    return 0.0;
 }
 
 /* Attempts to produce a compatible layout.  Most data sets tend to be
@@ -189,20 +190,22 @@ static float GetUniformStepSize(const float epsilon, const uint m, const float *
  */
 static void PrintCompatibleLayout(const uint m, const float *xyzs)
 {
-    std::vector<float> aers(3*m, 0.0f);
-    std::vector<float> elems(m, 0.0f);
+    auto aers = std::vector<double3>(m, double3{});
+    auto elems = std::vector<double>(m, {});
 
     fprintf(stdout, "\n");
 
-    for(uint i{0u};i < 3*m;i += 3)
+    for(uint i{0u};i < m;++i)
     {
-        aers[i] = xyzs[i];
-        aers[i + 1] = xyzs[i + 1];
-        aers[i + 2] = xyzs[i + 2];
-        mysofa_c2s(&aers[i]);
+        float aer[3]{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
+        mysofa_c2s(&aer[0]);
+        aers[i][0] = aer[0];
+        aers[i][1] = aer[1];
+        aers[i][2] = aer[2];
     }
 
-    uint fdCount{GetUniquelySortedElems(m, aers.data(), 2, { nullptr, nullptr, nullptr }, { 0.1f, 0.1f, 0.001f }, elems.data())};
+    uint fdCount{GetUniquelySortedElems(m, aers.data(), 2, { nullptr, nullptr, nullptr },
+        { 0.1, 0.1, 0.001 }, elems.data())};
     if(fdCount > (m / 3))
     {
         fprintf(stdout, "Incompatible layout (inumerable radii).\n");
@@ -215,8 +218,9 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
 
     for(uint fi{0u};fi < fdCount;fi++)
     {
-        float dist{fds[fi].mDistance};
-        uint evCount{GetUniquelySortedElems(m, aers.data(), 1, { nullptr, nullptr, &dist }, { 0.1f, 0.1f, 0.001f }, elems.data())};
+        const double dist{fds[fi].mDistance};
+        uint evCount{GetUniquelySortedElems(m, aers.data(), 1, { nullptr, nullptr, &dist },
+            { 0.1, 0.1, 0.001 }, elems.data())};
 
         if(evCount > (m / 3))
         {
@@ -224,8 +228,8 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
             return;
         }
 
-        float step{GetUniformStepSize(0.1f, evCount, elems.data())};
-        if(step <= 0.0f)
+        double step{GetUniformStepSize(0.1, evCount, elems.data())};
+        if(step <= 0.0)
         {
             fprintf(stdout, "Incompatible layout (non-uniform elevations).\n");
             return;
@@ -234,18 +238,18 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
         uint evStart{0u};
         for(uint ei{0u};ei < evCount;ei++)
         {
-            float ev{90.0f + elems[ei]};
-            float eif{std::round(ev / step)};
+            double ev{90.0 + elems[ei]};
+            double eif{std::round(ev / step)};
             const uint ev_start{static_cast<uint>(eif)};
 
-            if(std::fabs(eif - static_cast<float>(ev_start)) < (0.1f/step))
+            if(std::fabs(eif - static_cast<double>(ev_start)) < (0.1/step))
             {
                 evStart = ev_start;
                 break;
             }
         }
 
-        evCount = static_cast<uint>(std::round(180.0f / step)) + 1;
+        evCount = static_cast<uint>(std::round(180.0 / step)) + 1;
         if(evCount < 5)
         {
             fprintf(stdout, "Incompatible layout (too few uniform elevations).\n");
@@ -259,8 +263,9 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
 
         for(uint ei{evStart};ei < evCount;ei++)
         {
-            float ev{-90.0f + static_cast<float>(ei)*180.0f/static_cast<float>(evCount - 1)};
-            uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist }, { 0.1f, 0.1f, 0.001f }, elems.data())};
+            double ev{-90.0 + static_cast<double>(ei)*180.0/static_cast<double>(evCount - 1)};
+            uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist },
+                { 0.1, 0.1, 0.001 }, elems.data())};
 
             if(azCount > (m / 3))
             {
@@ -270,8 +275,8 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
 
             if(ei > 0 && ei < (evCount - 1))
             {
-                step = GetUniformStepSize(0.1f, azCount, elems.data());
-                if(step <= 0.0f)
+                step = GetUniformStepSize(0.1, azCount, elems.data());
+                if(step <= 0.0)
                 {
                     fprintf(stdout, "Incompatible layout (non-uniform azimuths).\n");
                     return;

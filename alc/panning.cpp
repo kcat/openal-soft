@@ -627,11 +627,12 @@ void InitHrtfPanning(ALCdevice *device)
             ambi_order = iter->order;
         }
     }
-    TRACE("%s HRTF rendering enabled, using \"%s\"\n",
-        (device->mRenderMode == HrtfRender) ? "Full" :
-        (ambi_order >= 3) ? "Third-Order" :
-        (ambi_order == 2) ? "Second-Order" :
-        (ambi_order == 1) ? "First-Order" : "Unknown",
+    TRACE("%u%s order %sHRTF rendering enabled, using \"%s\"\n", ambi_order,
+        (((ambi_order%100)/10) == 1) ? "th" :
+        ((ambi_order%10) == 1) ? "st" :
+        ((ambi_order%10) == 2) ? "nd" :
+        ((ambi_order%10) == 3) ? "rd" : "th",
+        (device->mRenderMode == HrtfRender) ? "+ Full " : "",
         device->HrtfName.c_str());
 
     if(ambi_order >= 3)

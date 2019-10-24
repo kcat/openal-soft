@@ -1129,9 +1129,10 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
         break;
     }
 
+    const char *new_mark{""};
     if(loaded_entry == LoadedHrtfs.end())
     {
-        TRACE("Got new file \"%s\"\n", filename.c_str());
+        new_mark = " (new)";
 
         LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+1));
         loaded_entry = LoadedHrtfs.end()-1;
@@ -1160,7 +1161,7 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
     list.emplace_back(EnumeratedHrtf{newname, loaded_entry->get()});
     const EnumeratedHrtf &entry = list.back();
 
-    TRACE("Adding file entry \"%s\"\n", entry.name.c_str());
+    TRACE("Adding file entry \"%s\"%s\n", entry.name.c_str(), new_mark);
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
@@ -1188,9 +1189,10 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
         break;
     }
 
+    const char *new_mark{""};
     if(loaded_entry == LoadedHrtfs.end())
     {
-        TRACE("Got new file \"%s\"\n", filename.c_str());
+        new_mark = " (new)";
 
         LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+32));
         loaded_entry = LoadedHrtfs.end()-1;
@@ -1212,7 +1214,7 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
     list.emplace_back(EnumeratedHrtf{newname, loaded_entry->get()});
     const EnumeratedHrtf &entry = list.back();
 
-    TRACE("Adding built-in entry \"%s\"\n", entry.name.c_str());
+    TRACE("Adding built-in entry \"%s\"%s\n", entry.name.c_str(), new_mark);
 }
 
 

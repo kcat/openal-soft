@@ -71,6 +71,7 @@
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alfstream.h"
+#include "alspan.h"
 #include "alstring.h"
 #include "compat.h"
 #include "cpu_caps.h"
@@ -325,18 +326,22 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     HANDLE hdl{FindFirstFileW(wpath.c_str(), &fdata)};
     if(hdl != INVALID_HANDLE_VALUE)
     {
-        size_t base = results->size();
+        const auto base = results->cend() - results->cbegin();
+
         do {
             results->emplace_back();
             std::string &str = results->back();
             str = path;
             str += '\\';
             str += wstr_to_utf8(fdata.cFileName);
-            TRACE(" got %s\n", str.c_str());
         } while(FindNextFileW(hdl, &fdata));
         FindClose(hdl);
 
-        std::sort(results->begin()+base, results->end());
+        const al::span<std::string> newlist{std::addressof(*(results->begin()+base)),
+            std::addressof(*results->end())};
+        std::sort(newlist.begin(), newlist.end());
+        for(const auto &name : newlist)
+            TRACE(" got %s\n", name.c_str());
     }
 }
 
@@ -516,7 +521,7 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     DIR *dir{opendir(path)};
     if(dir != nullptr)
     {
-        auto base = results->cend() - results->cbegin();
+        const auto base = results->cend() - results->cbegin();
         const size_t extlen{strlen(ext)};
 
         struct dirent *dirent;
@@ -525,7 +530,7 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
             if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue;
 
-            size_t len{strlen(dirent->d_name)};
+            const size_t len{strlen(dirent->d_name)};
             if(len <= extlen) continue;
             if(al::strcasecmp(dirent->d_name+len-extlen, ext) != 0)
                 continue;
@@ -536,11 +541,14 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
             if(str.back() != '/')
                 str.push_back('/');
             str += dirent->d_name;
-            TRACE(" got %s\n", str.c_str());
         }
         closedir(dir);
 
-        std::sort(results->begin()+base, results->end());
+        const al::span<std::string> newlist{std::addressof(*(results->begin()+base)),
+            std::addressof(*results->end())};
+        std::sort(newlist.begin(), newlist.end());
+        for(const auto &name : newlist)
+            TRACE(" got %s\n", name.c_str());
     }
 }
 

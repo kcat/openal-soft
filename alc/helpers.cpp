@@ -324,25 +324,23 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     std::wstring wpath{utf8_to_wstr(pathstr.c_str())};
     WIN32_FIND_DATAW fdata;
     HANDLE hdl{FindFirstFileW(wpath.c_str(), &fdata)};
-    if(hdl != INVALID_HANDLE_VALUE)
-    {
-        const auto base = results->cend() - results->cbegin();
+    if(hdl == INVALID_HANDLE_VALUE) return;
 
-        do {
-            results->emplace_back();
-            std::string &str = results->back();
-            str = path;
-            str += '\\';
-            str += wstr_to_utf8(fdata.cFileName);
-        } while(FindNextFileW(hdl, &fdata));
-        FindClose(hdl);
+    const auto base = results->size();
 
-        const al::span<std::string> newlist{std::addressof(*(results->begin()+base)),
-            std::addressof(*results->end())};
-        std::sort(newlist.begin(), newlist.end());
-        for(const auto &name : newlist)
-            TRACE(" got %s\n", name.c_str());
-    }
+    do {
+        results->emplace_back();
+        std::string &str = results->back();
+        str = path;
+        str += '\\';
+        str += wstr_to_utf8(fdata.cFileName);
+    } while(FindNextFileW(hdl, &fdata));
+    FindClose(hdl);
+
+    const al::span<std::string> newlist{results->data()+base, results->size()-base};
+    std::sort(newlist.begin(), newlist.end());
+    for(const auto &name : newlist)
+        TRACE(" got %s\n", name.c_str());
 }
 
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
@@ -519,37 +517,35 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
 {
     TRACE("Searching %s for *%s\n", path, ext);
     DIR *dir{opendir(path)};
-    if(dir != nullptr)
+    if(!dir) return;
+
+    const auto base = results->size();
+    const size_t extlen{strlen(ext)};
+
+    struct dirent *dirent;
+    while((dirent=readdir(dir)) != nullptr)
     {
-        const auto base = results->cend() - results->cbegin();
-        const size_t extlen{strlen(ext)};
+        if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
+            continue;
 
-        struct dirent *dirent;
-        while((dirent=readdir(dir)) != nullptr)
-        {
-            if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
-                continue;
+        const size_t len{strlen(dirent->d_name)};
+        if(len <= extlen) continue;
+        if(al::strcasecmp(dirent->d_name+len-extlen, ext) != 0)
+            continue;
 
-            const size_t len{strlen(dirent->d_name)};
-            if(len <= extlen) continue;
-            if(al::strcasecmp(dirent->d_name+len-extlen, ext) != 0)
-                continue;
-
-            results->emplace_back();
-            std::string &str = results->back();
-            str = path;
-            if(str.back() != '/')
-                str.push_back('/');
-            str += dirent->d_name;
-        }
-        closedir(dir);
-
-        const al::span<std::string> newlist{std::addressof(*(results->begin()+base)),
-            std::addressof(*results->end())};
-        std::sort(newlist.begin(), newlist.end());
-        for(const auto &name : newlist)
-            TRACE(" got %s\n", name.c_str());
+        results->emplace_back();
+        std::string &str = results->back();
+        str = path;
+        if(str.back() != '/')
+            str.push_back('/');
+        str += dirent->d_name;
     }
+    closedir(dir);
+
+    const al::span<std::string> newlist{results->data()+base, results->size()-base};
+    std::sort(newlist.begin(), newlist.end());
+    for(const auto &name : newlist)
+        TRACE(" got %s\n", name.c_str());
 }
 
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)

@@ -300,7 +300,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
         ALuint ldelay, rdelay;
     };
 
-    static constexpr int OrderFromChan[MAX_AMBI_CHANNELS]{
+    static const int OrderFromChan[MAX_AMBI_CHANNELS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
     };
     /* Set this to true for dual-band HRTF processing. May require better
@@ -718,7 +718,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
         }
     }
 
-    static constexpr ALfloat distance{0.0f};
+    static const ALfloat distance{0.0f};
     return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
         irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
@@ -817,7 +817,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
         }
     }
 
-    static constexpr ALfloat distance{0.0f};
+    static const ALfloat distance{0.0f};
     return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
         irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);

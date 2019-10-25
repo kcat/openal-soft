@@ -557,7 +557,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         UserFmtChannels channels;
         UserFmtType type;
     };
-    static constexpr std::array<FormatMap,46> UserFmtList{{
+    static const std::array<FormatMap,46> UserFmtList{{
         { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
         { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
         { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },

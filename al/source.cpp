@@ -2808,20 +2808,18 @@ START_API_FUNC
             const ALuint *OrderFromChan;
             if(voice->mFmtChannels == FmtBFormat2D)
             {
-                static constexpr ALuint Order2DFromChan[MAX_AMBI2D_CHANNELS]{
-                    0, 1,1, 2,2, 3,3
-                };
+                static const ALuint Order2DFromChan[MAX_AMBI2D_CHANNELS]{
+                    0, 1,1, 2,2, 3,3,};
                 OrderFromChan = Order2DFromChan;
             }
             else
             {
-                static constexpr ALuint Order3DFromChan[MAX_AMBI_CHANNELS]{
-                    0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
-                };
+                static const ALuint Order3DFromChan[MAX_AMBI_CHANNELS]{
+                    0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,};
                 OrderFromChan = Order3DFromChan;
             }
 
-            BandSplitter splitter{400.0f / static_cast<ALfloat>(device->Frequency)};
+            BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
 
             const auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
             auto init_ambi = [scales,&OrderFromChan,&splitter](ALvoice::ChannelData &chandata) -> void

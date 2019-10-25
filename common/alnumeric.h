@@ -308,7 +308,7 @@ inline float fast_roundf(float f) noexcept
     /* Integral limit, where sub-integral precision is not available for
      * floats.
      */
-    static constexpr float ilim[2] = {
+    static const float ilim[2]{
          8388608.0f /*  0x1.0p+23 */,
         -8388608.0f /* -0x1.0p+23 */
     };

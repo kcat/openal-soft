@@ -423,7 +423,7 @@ void InitPanning(ALCdevice *device)
         ALfloat nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
         if(nfc_delay > 0.0f)
         {
-            static constexpr ALuint chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
+            static const ALuint chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
                 chans_per_order);
         }
@@ -470,8 +470,8 @@ void InitPanning(ALCdevice *device)
 void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
     const ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    static constexpr ALuint chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
-    static constexpr ALuint chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
+    static const ALuint chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
+    static const ALuint chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
 
     if(!hqdec && conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
@@ -522,7 +522,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
 
 void InitHrtfPanning(ALCdevice *device)
 {
-    static constexpr AngularPoint AmbiPoints[]{
+    static const AngularPoint AmbiPoints[]{
         { Deg2Rad(  0.000000f), Deg2Rad(   0.000000f) },
         { Deg2Rad(  0.000000f), Deg2Rad( 180.000000f) },
         { Deg2Rad(  0.000000f), Deg2Rad( -90.000000f) },
@@ -550,7 +550,7 @@ void InitHrtfPanning(ALCdevice *device)
         { Deg2Rad( 35.264390f), Deg2Rad( 135.000000f) },
         { Deg2Rad(-35.264390f), Deg2Rad( 135.000000f) },
     };
-    static constexpr ALfloat AmbiMatrix[][MAX_AMBI_CHANNELS]{
+    static const float AmbiMatrix[][MAX_AMBI_CHANNELS]{
         { 3.84615387e-02f,  0.00000000e+00f,  0.00000000e+00f,  8.33950391e-02f,  0.00000000e+00f,  0.00000000e+00f, -4.96903997e-02f,  0.00000000e+00f,  8.60662966e-02f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f, -7.49473409e-02f,  0.00000000e+00f,  9.67566016e-02f },
         { 3.84615387e-02f,  0.00000000e+00f,  0.00000000e+00f, -8.33950391e-02f,  0.00000000e+00f,  0.00000000e+00f, -4.96903997e-02f,  0.00000000e+00f,  8.60662966e-02f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  7.49473409e-02f,  0.00000000e+00f, -9.67566016e-02f },
         { 3.84615387e-02f,  8.33950391e-02f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f, -4.96903997e-02f,  0.00000000e+00f, -8.60662966e-02f, -9.67566016e-02f,  0.00000000e+00f, -7.49473409e-02f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f },
@@ -578,15 +578,15 @@ void InitHrtfPanning(ALCdevice *device)
         { 3.84615385e-02f, -3.33333332e-02f,  3.33333335e-02f, -3.33333332e-02f,  4.55645099e-02f, -4.55645100e-02f,  5.38752428e-10f, -4.55645100e-02f,  0.00000000e+00f, -2.95742381e-02f,  6.33865691e-02f, -2.29081068e-02f, -3.74087810e-02f, -2.29081068e-02f,  0.00000000e+00f,  2.95742381e-02f },
         { 3.84615385e-02f, -3.33333332e-02f, -3.33333335e-02f, -3.33333332e-02f,  4.55645099e-02f,  4.55645100e-02f,  5.38752429e-10f,  4.55645100e-02f,  0.00000000e+00f, -2.95742381e-02f, -6.33865691e-02f, -2.29081068e-02f,  3.74087810e-02f, -2.29081068e-02f,  0.00000000e+00f,  2.95742381e-02f },
     };
-    static constexpr ALfloat AmbiOrderHFGain1O[MAX_AMBI_ORDER+1]{
+    static const float AmbiOrderHFGain1O[MAX_AMBI_ORDER+1]{
         3.60555128e+00f, 2.08166600e+00f
     }, AmbiOrderHFGain2O[MAX_AMBI_ORDER+1]{
         2.68741925e+00f, 2.08166600e+00f, 1.07496770e+00f
     }, AmbiOrderHFGain3O[MAX_AMBI_ORDER+1]{
         2.12652604e+00f, 1.83122879e+00f, 1.30214339e+00f, 6.48052398e-01f
     };
-    static constexpr ALuint ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
-    const ALfloat *AmbiOrderHFGain{AmbiOrderHFGain1O};
+    static const ALuint ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
+    const float *AmbiOrderHFGain{AmbiOrderHFGain1O};
 
     static_assert(al::size(AmbiPoints) == al::size(AmbiMatrix), "Ambisonic HRTF mismatch");
 
@@ -602,7 +602,7 @@ void InitHrtfPanning(ALCdevice *device)
             RenderMode mode;
             ALuint order;
         };
-        static constexpr HrtfModeEntry hrtf_modes[]{
+        static const HrtfModeEntry hrtf_modes[]{
             { "full", HrtfRender, 1 },
             { "ambi1", NormalRender, 1 },
             { "ambi2", NormalRender, 2 },
@@ -662,7 +662,7 @@ void InitHrtfPanning(ALCdevice *device)
 void InitUhjPanning(ALCdevice *device)
 {
     /* UHJ is always 2D first-order. */
-    static constexpr size_t count{Ambi2DChannelsFromOrder(1)};
+    constexpr size_t count{Ambi2DChannelsFromOrder(1)};
 
     device->mAmbiOrder = 1;
 

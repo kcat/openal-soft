@@ -509,7 +509,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     ALeffectslot *(&SendSlots)[MAX_SENDS], const ALvoicePropsBase *props,
     const ALlistener &Listener, const ALCdevice *Device)
 {
-    static constexpr ChanMap MonoMap[1]{
+    static const ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
     }, RearMap[2]{
         { BackLeft,  Deg2Rad(-150.0f), Deg2Rad(0.0f) },

@@ -385,7 +385,7 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     DirectorySearch(path.c_str(), ext, &results);
 
     /* Search the local and global data dirs. */
-    static constexpr int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+    static const int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
     for(int id : ids)
     {
         WCHAR buffer[MAX_PATH];

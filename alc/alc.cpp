@@ -1988,7 +1988,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
              * constexpr variable to avoid a reference on
              * FrontStablizer::DelayLength...
              */
-            static constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
+            constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
             device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
         }
         break;
@@ -3568,7 +3568,7 @@ START_API_FUNC
     deviceName = device->DeviceName.c_str();
     if(auto chanopt = ConfigValueStr(deviceName, nullptr, "channels"))
     {
-        static constexpr struct ChannelMap {
+        static const struct ChannelMap {
             const char name[16];
             DevFmtChannels chans;
             ALuint order;
@@ -3601,7 +3601,7 @@ START_API_FUNC
     }
     if(auto typeopt = ConfigValueStr(deviceName, nullptr, "sample-type"))
     {
-        static constexpr struct TypeMap {
+        static const struct TypeMap {
             const char name[16];
             DevFmtType type;
         } typelist[] = {

@@ -742,7 +742,7 @@ START_API_FUNC
         ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Deprecated) && context->mEventCb)
         {
-            static constexpr ALCchar msg[] =
+            static const char msg[] =
                 "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
             const ALsizei msglen{sizeof(msg)-1};
             (*context->mEventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,

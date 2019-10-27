@@ -72,15 +72,16 @@ namespace detail_ {
     struct has_size_and_data<T,
         void_t<decltype(al::size(std::declval<T>())), decltype(al::data(std::declval<T>()))>>
         : std::true_type { };
+
+    template<typename T>
+    using remove_pointer_t = typename std::remove_pointer<T>::type;
 } // namespace detail_
 
 #define REQUIRES(...) bool rt_=true, typename std::enable_if<rt_ && (__VA_ARGS__),bool>::type = true
-#define USABLE_CONTAINER_DATA(...)                                            \
-    std::is_convertible<typename std::remove_pointer<decltype(al::data(std::declval<__VA_ARGS__>()))>::type(*)[],element_type(*)[]>::value
 #define IS_VALID_CONTAINER(C)                                                 \
     !detail_::is_span<C>::value && !detail_::is_std_array<C>::value &&        \
     !std::is_array<C>::value && detail_::has_size_and_data<C>::value &&       \
-    USABLE_CONTAINER_DATA(C&)
+    std::is_convertible<detail_::remove_pointer_t<decltype(al::data(std::declval<C&>()))>(*)[],element_type(*)[]>::value
 
 template<typename T, size_t E>
 class span {
@@ -289,7 +290,6 @@ constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const -> s
 }
 
 #undef IS_VALID_CONTAINER
-#undef USABLE_CONTAINER_DATA
 #undef REQUIRES
 
 } // namespace al

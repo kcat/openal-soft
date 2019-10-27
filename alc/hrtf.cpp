@@ -84,8 +84,8 @@ using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 #define MIN_FD_COUNT                 (1)
 #define MAX_FD_COUNT                 (16)
 
-#define MIN_FD_DISTANCE              (0.05f)
-#define MAX_FD_DISTANCE              (2.5f)
+#define MIN_FD_DISTANCE              (50)
+#define MAX_FD_DISTANCE              (2500)
 
 #define MIN_EV_COUNT                 (5)
 #define MAX_EV_COUNT                 (181)
@@ -491,7 +491,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
 namespace {
 
 std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const ALuint fdCount,
-    const ALubyte *evCount, const ALfloat *distance, const ALushort *azCount,
+    const ALubyte *evCount, const ALushort *distance, const ALushort *azCount,
     const ALushort *irOffset, ALushort irCount, const ALfloat (*coeffs)[2],
     const ALubyte (*delays)[2], const char *filename)
 {
@@ -541,7 +541,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const A
         /* Copy input data to storage. */
         for(ALuint i{0};i < fdCount;i++)
         {
-            field_[i].distance = distance[i];
+            field_[i].distance = distance[i] / 1000.0f;
             field_[i].evCount = evCount[i];
         }
         for(ALuint i{0};i < evTotal;i++)
@@ -718,7 +718,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
         }
     }
 
-    static const ALfloat distance{0.0f};
+    static const ALushort distance{0};
     return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
         irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
@@ -817,7 +817,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
         }
     }
 
-    static const ALfloat distance{0.0f};
+    static const ALushort distance{0};
     return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
         irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
@@ -869,12 +869,12 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    auto distance = al::vector<ALfloat>(fdCount);
+    auto distance = al::vector<ALushort>(fdCount);
     auto evCount = al::vector<ALubyte>(fdCount);
     auto azCount = al::vector<ALushort>{};
     for(size_t f{0};f < fdCount;f++)
     {
-        distance[f] = GetLE_ALushort(data) / 1000.0f;
+        distance[f] = GetLE_ALushort(data);
         evCount[f] = GetLE_ALubyte(data);
         if(!data || data.eof())
         {
@@ -884,13 +884,13 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
 
         if(distance[f] < MIN_FD_DISTANCE || distance[f] > MAX_FD_DISTANCE)
         {
-            ERR("Unsupported field distance[%zu]=%f (%f to %f meters)\n", f, distance[f],
+            ERR("Unsupported field distance[%zu]=%d (%d to %d millimeters)\n", f, distance[f],
                 MIN_FD_DISTANCE, MAX_FD_DISTANCE);
             failed = AL_TRUE;
         }
         if(f > 0 && distance[f] <= distance[f-1])
         {
-            ERR("Field distance[%zu] is not after previous (%f > %f)\n", f, distance[f],
+            ERR("Field distance[%zu] is not after previous (%d > %d)\n", f, distance[f],
                 distance[f-1]);
             failed = AL_TRUE;
         }
@@ -1033,7 +1033,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
 
     if(fdCount > 1)
     {
-        auto distance_ = al::vector<ALfloat>(distance.size());
+        auto distance_ = al::vector<ALushort>(distance.size());
         auto evCount_ = al::vector<ALubyte>(evCount.size());
         auto azCount_ = al::vector<ALushort>(azCount.size());
         auto evOffset_ = al::vector<ALushort>(evOffset.size());

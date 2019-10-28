@@ -267,27 +267,25 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         GetConfigValue(nullptr, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ? "device" : "capture",
             "default")});
 
-    if(stream == SND_PCM_STREAM_PLAYBACK)
+    const char *customdevs{GetConfigValue(nullptr, "alsa",
+        (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices" : "custom-captures", "")};
+    while(const char *curdev{customdevs})
     {
-        const char *customdevs;
-        const char *next{GetConfigValue(nullptr, "alsa", "custom-devices", "")};
-        while((customdevs=next) != nullptr && customdevs[0])
+        if(!curdev[0]) break;
+        customdevs = strchr(curdev, ';');
+        const char *sep{strchr(curdev, '=')};
+        if(!sep)
         {
-            next = strchr(customdevs, ';');
-            const char *sep{strchr(customdevs, '=')};
-            if(!sep)
-            {
-                std::string spec{next ? std::string(customdevs, next++) : std::string(customdevs)};
-                ERR("Invalid ALSA device specification \"%s\"\n", spec.c_str());
-                continue;
-            }
-
-            const char *oldsep{sep++};
-            devlist.emplace_back(DevMap{std::string(customdevs, oldsep),
-                next ? std::string(sep, next++) : std::string(sep)});
-            const auto &entry = devlist.back();
-            TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
+            std::string spec{customdevs ? std::string(curdev, customdevs++) : std::string(curdev)};
+            ERR("Invalid ALSA device specification \"%s\"\n", spec.c_str());
+            continue;
         }
+
+        const char *oldsep{sep++};
+        devlist.emplace_back(DevMap{std::string(curdev, oldsep),
+            customdevs ? std::string(sep, customdevs++) : std::string(sep)});
+        const auto &entry = devlist.back();
+        TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
     }
 
     const std::string main_prefix{

@@ -1283,8 +1283,6 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
             pathlist = next;
         }
     }
-    else if(ConfigValueExists(devname, nullptr, "hrtf_tables"))
-        ERR("The hrtf_tables option is deprecated, please use hrtf-paths instead.\n");
 
     if(usedefaults)
     {
@@ -1298,23 +1296,15 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
             AddBuiltInEntry(list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
     }
 
-    if(!list.empty())
+    if(auto defhrtfopt = ConfigValueStr(devname, nullptr, "default-hrtf"))
     {
-        if(auto defhrtfopt = ConfigValueStr(devname, nullptr, "default-hrtf"))
-        {
-            auto iter = std::find_if(list.begin(), list.end(),
-                [&defhrtfopt](const EnumeratedHrtf &entry) -> bool
-                { return entry.name == *defhrtfopt; }
-            );
-            if(iter == list.end())
-                WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
-            else if(iter != list.begin())
-            {
-                EnumeratedHrtf entry{std::move(*iter)};
-                list.erase(iter);
-                list.insert(list.begin(), std::move(entry));
-            }
-        }
+        auto find_entry = [&defhrtfopt](const EnumeratedHrtf &entry) -> bool
+        { return entry.name == *defhrtfopt; };
+        auto iter = std::find_if(list.begin(), list.end(), find_entry);
+        if(iter == list.end())
+            WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
+        else if(iter != list.begin())
+            std::rotate(list.begin(), iter, iter+1);
     }
 
     return list;

@@ -72,12 +72,11 @@ Resampler ResamplerDefault{Resampler::Linear};
 
 namespace {
 
-using HrtfMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+using HrtfMixerFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize);
-using HrtfMixerBlendFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
-    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
+using HrtfMixerBlendFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples,
+    const ALuint IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams,
+    const size_t BufferSize);
 
 HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
 HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
@@ -423,12 +422,10 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
 }
 
 
-void DoHrtfMix(ALvoice::TargetData &Direct, const float TargetGain, DirectParams &parms,
-    const float *samples, const ALuint DstBufferSize, const ALuint Counter, const ALuint OutPos,
-    const ALuint IrSize, ALCdevice *Device)
+void DoHrtfMix(const float TargetGain, DirectParams &parms, const float *samples,
+    const ALuint DstBufferSize, const ALuint Counter, ALuint OutPos, const ALuint IrSize,
+    ALCdevice *Device)
 {
-    const ALuint OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
-    const ALuint OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
     auto &HrtfSamples = Device->HrtfSourceData;
     auto &AccumSamples = Device->HrtfAccumData;
 
@@ -439,12 +436,6 @@ void DoHrtfMix(ALvoice::TargetData &Direct, const float TargetGain, DirectParams
     /* Copy the last used samples back into the history buffer for later. */
     std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.State.History.size(),
         parms.Hrtf.State.History.begin());
-
-    /* Copy the current filtered values being accumulated into the temp buffer. */
-    auto accum_iter = std::copy_n(parms.Hrtf.State.Values.begin(), parms.Hrtf.State.Values.size(),
-        std::begin(AccumSamples));
-    /* Clear the accumulation buffer that will start getting filled in. */
-    std::fill_n(accum_iter, DstBufferSize, float2{});
 
     /* If fading, the old gain is not silence, and this is the first mixing
      * pass, fade between the IRs.
@@ -473,14 +464,15 @@ void DoHrtfMix(ALvoice::TargetData &Direct, const float TargetGain, DirectParams
         hrtfparams.Gain = 0.0f;
         hrtfparams.GainStep = gain / static_cast<float>(fademix);
 
-        MixHrtfBlendSamples(Direct.Buffer[OutLIdx], Direct.Buffer[OutRIdx], HrtfSamples,
-            AccumSamples, OutPos, IrSize, &parms.Hrtf.Old, &hrtfparams, fademix);
+        MixHrtfBlendSamples(HrtfSamples, AccumSamples+OutPos, IrSize, &parms.Hrtf.Old, &hrtfparams,
+            fademix);
         /* Update the old parameters with the result. */
         parms.Hrtf.Old = parms.Hrtf.Target;
         if(fademix < Counter)
             parms.Hrtf.Old.Gain = hrtfparams.Gain;
         else
             parms.Hrtf.Old.Gain = TargetGain;
+        OutPos += fademix;
     }
 
     if LIKELY(fademix < DstBufferSize)
@@ -503,8 +495,7 @@ void DoHrtfMix(ALvoice::TargetData &Direct, const float TargetGain, DirectParams
         hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
         hrtfparams.Gain = parms.Hrtf.Old.Gain;
         hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo);
-        MixHrtfSamples(Direct.Buffer[OutLIdx], Direct.Buffer[OutRIdx], HrtfSamples+fademix,
-            AccumSamples+fademix, OutPos+fademix, IrSize, &hrtfparams, todo);
+        MixHrtfSamples(HrtfSamples+fademix, AccumSamples+OutPos, IrSize, &hrtfparams, todo);
         /* Store the interpolated gain or the final target gain depending if
          * the fade is done.
          */
@@ -513,10 +504,6 @@ void DoHrtfMix(ALvoice::TargetData &Direct, const float TargetGain, DirectParams
         else
             parms.Hrtf.Old.Gain = TargetGain;
     }
-
-    /* Copy the new in-progress accumulation values back for the next mix. */
-    std::copy_n(std::begin(AccumSamples) + DstBufferSize, parms.Hrtf.State.Values.size(),
-        parms.Hrtf.State.Values.begin());
 }
 
 void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParams &parms,
@@ -713,8 +700,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 {
                     const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
-                    DoHrtfMix(mDirect, TargetGain, parms, samples, DstBufferSize, Counter, OutPos,
-                        IrSize, Device);
+                    DoHrtfMix(TargetGain, parms, samples, DstBufferSize, Counter, OutPos, IrSize,
+                        Device);
                 }
                 else if((mFlags&VOICE_HAS_NFC))
                 {

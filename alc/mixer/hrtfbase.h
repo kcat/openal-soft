@@ -13,9 +13,8 @@ using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const ALuint irSize, const
     const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const float *InSamples, float2 *RESTRICT AccumSamples, const size_t OutPos,
-    const ALuint IrSize, MixHrtfFilter *hrtfparams, const size_t BufferSize)
+inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const ALuint IrSize,
+    MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
 
@@ -38,17 +37,11 @@ inline void MixHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
         stepcount += 1.0f;
     }
 
-    for(size_t i{0u};i < BufferSize;++i)
-        LeftOut[OutPos+i]  += AccumSamples[i][0];
-    for(size_t i{0u};i < BufferSize;++i)
-        RightOut[OutPos+i] += AccumSamples[i][1];
-
     hrtfparams->Gain = gain + gainstep*stepcount;
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const float *InSamples, float2 *RESTRICT AccumSamples, const size_t OutPos,
+inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSamples,
     const ALuint IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams,
     const size_t BufferSize)
 {
@@ -89,11 +82,6 @@ inline void MixHrtfBlendBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut
         stepcount += 1.0f;
     }
 
-    for(size_t i{0u};i < BufferSize;++i)
-        LeftOut[OutPos+i]  += AccumSamples[i][0];
-    for(size_t i{0u};i < BufferSize;++i)
-        RightOut[OutPos+i] += AccumSamples[i][1];
-
     newparams->Gain = newGainStep*stepcount;
 }
 
@@ -105,9 +93,6 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
     ASSUME(BufferSize > 0);
 
     const ALuint IrSize{State->IrSize};
-
-    auto accum_iter = std::copy_n(State->Values.begin(), State->Values.size(), AccumSamples);
-    std::fill_n(accum_iter, BufferSize, float2{});
 
     auto coeff_iter = State->Coeffs.begin();
     for(const FloatBufferLine &input : InSamples)
@@ -124,7 +109,11 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
     for(size_t i{0u};i < BufferSize;++i)
         RightOut[i] += AccumSamples[i][1];
 
-    std::copy_n(AccumSamples + BufferSize, State->Values.size(), State->Values.begin());
+    /* Copy the new in-progress accumulation values to the front and clear the
+     * following samples for the next mix.
+     */
+    auto accum_iter = std::copy_n(AccumSamples+BufferSize, HRIR_LENGTH, AccumSamples);
+    std::fill_n(accum_iter, BufferSize, float2{});
 }
 
 #endif /* MIXER_HRTFBASE_H */

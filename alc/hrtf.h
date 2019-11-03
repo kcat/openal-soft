@@ -68,7 +68,6 @@ using HrirArray = std::array<float2,HRIR_LENGTH>;
 
 struct HrtfState {
     alignas(16) std::array<ALfloat,HRTF_HISTORY_LENGTH> History;
-    alignas(16) HrirArray Values;
 };
 
 struct HrtfFilter {
@@ -80,7 +79,6 @@ struct HrtfFilter {
 struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
     ALuint IrSize{0};
-    alignas(16) HrirArray Values{};
     al::FlexArray<HrirArray,16> Coeffs;
 
     DirectHrtfState(size_t numchans) : Coeffs{numchans} { }

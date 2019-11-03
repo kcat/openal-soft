@@ -136,21 +136,16 @@ const ALfloat *Resample_<FastBSincTag,CTag>(const InterpState *state, const ALfl
 
 
 template<>
-void MixHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const float *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+void MixHrtf_<CTag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
     MixHrtfFilter *hrtfparams, const size_t BufferSize)
-{
-    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
-        hrtfparams, BufferSize);
-}
+{ MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, BufferSize); }
 
 template<>
-void MixHrtfBlend_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const float *InSamples, float2 *AccumSamples, const size_t OutPos, const ALuint IrSize,
+void MixHrtfBlend_<CTag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
     const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
 {
-    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
-        oldparams, newparams, BufferSize);
+    MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
+        BufferSize);
 }
 
 template<>

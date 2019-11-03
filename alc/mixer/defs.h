@@ -41,13 +41,11 @@ void MixRow_(const al::span<float> OutBuffer, const al::span<const float> Gains,
     const float *InSamples, const size_t InStride);
 
 template<InstSetType InstTag>
-void MixHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const float *InSamples,
-    float2 *AccumSamples, const size_t OutPos, const ALuint IrSize, MixHrtfFilter *hrtfparams,
-    const size_t BufferSize);
+void MixHrtf_(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+    MixHrtfFilter *hrtfparams, const size_t BufferSize);
 template<InstSetType InstTag>
-void MixHrtfBlend_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, const float *InSamples,
-    float2 *AccumSamples, const size_t OutPos, const ALuint IrSize, const HrtfFilter *oldparams,
-    MixHrtfFilter *newparams, const size_t BufferSize);
+void MixHrtfBlend_(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize);
 template<InstSetType InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,

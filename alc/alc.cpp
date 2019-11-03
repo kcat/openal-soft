@@ -1853,6 +1853,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Limiter = nullptr;
     device->ChannelDelay.clear();
 
+    std::fill(std::begin(device->HrtfAccumData), std::end(device->HrtfAccumData), float2{});
+
     device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.Buffer = {};
     std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);

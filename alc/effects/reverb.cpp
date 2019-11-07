@@ -642,8 +642,8 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
         t60.LFFilter.clear();
     }
 
-    mMod.Coeff = powf(MODULATION_FILTER_COEFF, 
-                      MODULATION_FILTER_CONST / frequency);
+    mMod.Coeff = std::pow(MODULATION_FILTER_COEFF, 
+                          MODULATION_FILTER_CONST / frequency);
 
     std::fill(std::begin(mMod.Index), std::end(mMod.Index), 0);
     std::fill(std::begin(mMod.Range), std::end(mMod.Range), 1);

@@ -52,7 +52,7 @@ inline float Saw(ALuint index)
 { return static_cast<float>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f; }
 
 inline float Square(ALuint index)
-{ return static_cast<float>(((index>>(WAVEFORM_FRACBITS-2))&2) - 1); }
+{ return static_cast<float>(static_cast<int>((index>>(WAVEFORM_FRACBITS-2))&2) - 1); }
 
 inline float One(ALuint) { return 1.0f; }
 

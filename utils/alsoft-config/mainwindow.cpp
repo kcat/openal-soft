@@ -129,7 +129,6 @@ static const struct NameValuePair {
 }, hrtfModeList[] = {
     { "1st Order Ambisonic", "ambi1" },
     { "2nd Order Ambisonic", "ambi2" },
-    { "3rd Order Ambisonic", "ambi3" },
     { "Default (Full)", "" },
     { "Full", "full" },
 
@@ -742,10 +741,13 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     QString hrtfmode{settings.value("hrtf-mode").toString().trimmed()};
-    ui->hrtfmodeSlider->setValue(3);
-    ui->hrtfmodeLabel->setText(hrtfModeList[3].name);
-    /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
-    if(hrtfmode == "basic") hrtfmode = "ambi2";
+    ui->hrtfmodeSlider->setValue(2);
+    ui->hrtfmodeLabel->setText(hrtfModeList[2].name);
+    /* The "basic" mode name is no longer supported, and "ambi3" is temporarily
+     * disabled. Use "ambi2" instead.
+     */
+    if(hrtfmode == "basic" || hrtfmode == "ambi3")
+        hrtfmode = "ambi2";
     for(int i = 0;hrtfModeList[i].name[0];i++)
     {
         if(hrtfmode == hrtfModeList[i].value)

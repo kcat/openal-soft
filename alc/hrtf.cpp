@@ -355,7 +355,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
 
         /* Calculate the blended HRIR coefficients. */
         double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
-        std::fill(coeffout, coeffout + irSize*2, 0.0);
+        std::fill(coeffout, coeffout + HRIR_LENGTH*2, 0.0);
         for(ALsizei c{0};c < 4;c++)
         {
             const ALfloat *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]*irSize])};

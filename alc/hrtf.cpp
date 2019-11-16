@@ -319,14 +319,14 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
         auto &field = Hrtf->field[0];
 
         /* Calculate the elevation indices. */
-        const auto elev0 = CalcEvIndex(field.evCount, pt.Elev);
+        const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
         const ALsizei elev1_idx{mini(elev0.idx+1, field.evCount-1)};
         const ALsizei ir0offset{Hrtf->elev[elev0.idx].irOffset};
         const ALsizei ir1offset{Hrtf->elev[elev1_idx].irOffset};
 
         /* Calculate azimuth indices. */
-        const auto az0 = CalcAzIndex(Hrtf->elev[elev0.idx].azCount, pt.Azim);
-        const auto az1 = CalcAzIndex(Hrtf->elev[elev1_idx].azCount, pt.Azim);
+        const auto az0 = CalcAzIndex(Hrtf->elev[elev0.idx].azCount, pt.Azim.value);
+        const auto az1 = CalcAzIndex(Hrtf->elev[elev1_idx].azCount, pt.Azim.value);
 
         /* Calculate the HRIR indices to blend. */
         const ALuint idx[4]{

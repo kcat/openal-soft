@@ -527,7 +527,16 @@ void InitHrtfPanning(ALCdevice *device)
     constexpr float PI_4{al::MathDefs<float>::Pi() / 4.0f};
     constexpr float PI3_4{al::MathDefs<float>::Pi() * 3.0f / 4.0f};
     const float CornerElev{static_cast<float>(std::atan2(1.0, std::sqrt(2.0)))};
-    static const AngularPoint AmbiPoints[]{
+    static const AngularPoint AmbiPoints1O[]{
+        { ElevRadius{ CornerElev}, AzimRadius{ -PI_4} },
+        { ElevRadius{ CornerElev}, AzimRadius{-PI3_4} },
+        { ElevRadius{ CornerElev}, AzimRadius{  PI_4} },
+        { ElevRadius{ CornerElev}, AzimRadius{ PI3_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{ -PI_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{-PI3_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{  PI_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{ PI3_4} },
+    }, AmbiPoints2O[]{
         { ElevRadius{       0.0f}, AzimRadius{  0.0f} },
         { ElevRadius{       0.0f}, AzimRadius{    PI} },
         { ElevRadius{       0.0f}, AzimRadius{ -PI_2} },
@@ -535,27 +544,36 @@ void InitHrtfPanning(ALCdevice *device)
         { ElevRadius{       PI_2}, AzimRadius{  0.0f} },
         { ElevRadius{      -PI_2}, AzimRadius{  0.0f} },
         { ElevRadius{       PI_4}, AzimRadius{ -PI_2} },
-        { ElevRadius{      -PI_4}, AzimRadius{ -PI_2} },
         { ElevRadius{       PI_4}, AzimRadius{  PI_2} },
+        { ElevRadius{      -PI_4}, AzimRadius{ -PI_2} },
         { ElevRadius{      -PI_4}, AzimRadius{  PI_2} },
         { ElevRadius{       PI_4}, AzimRadius{  0.0f} },
-        { ElevRadius{      -PI_4}, AzimRadius{  0.0f} },
         { ElevRadius{       PI_4}, AzimRadius{    PI} },
+        { ElevRadius{      -PI_4}, AzimRadius{  0.0f} },
         { ElevRadius{      -PI_4}, AzimRadius{    PI} },
         { ElevRadius{       0.0f}, AzimRadius{ -PI_4} },
-        { ElevRadius{       0.0f}, AzimRadius{  PI_4} },
         { ElevRadius{       0.0f}, AzimRadius{-PI3_4} },
+        { ElevRadius{       0.0f}, AzimRadius{  PI_4} },
         { ElevRadius{       0.0f}, AzimRadius{ PI3_4} },
         { ElevRadius{ CornerElev}, AzimRadius{ -PI_4} },
-        { ElevRadius{-CornerElev}, AzimRadius{ -PI_4} },
-        { ElevRadius{ CornerElev}, AzimRadius{  PI_4} },
-        { ElevRadius{-CornerElev}, AzimRadius{  PI_4} },
         { ElevRadius{ CornerElev}, AzimRadius{-PI3_4} },
-        { ElevRadius{-CornerElev}, AzimRadius{-PI3_4} },
+        { ElevRadius{ CornerElev}, AzimRadius{  PI_4} },
         { ElevRadius{ CornerElev}, AzimRadius{ PI3_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{ -PI_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{-PI3_4} },
+        { ElevRadius{-CornerElev}, AzimRadius{  PI_4} },
         { ElevRadius{-CornerElev}, AzimRadius{ PI3_4} },
     };
-    static const float AmbiMatrix[][MAX_AMBI_CHANNELS]{
+    static const float AmbiMatrix1O[][MAX_AMBI_CHANNELS]{
+        { 1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f },
+        { 1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f, -1.250000000e-01f },
+        { 1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f },
+        { 1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f, -1.250000000e-01f },
+        { 1.250000000e-01f,  1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f },
+        { 1.250000000e-01f,  1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f },
+        { 1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f },
+        { 1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f },
+    }, AmbiMatrix2O[][MAX_AMBI_CHANNELS]{
         { 3.846153846e-02f,  0.000000000e+00f,  0.000000000e+00f,  6.661733875e-02f,  0.000000000e+00f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  8.606629658e-02f },
         { 3.846153846e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.661733875e-02f,  0.000000000e+00f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  8.606629658e-02f },
         { 3.846153846e-02f,  6.661733875e-02f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f, -8.606629658e-02f },
@@ -563,35 +581,35 @@ void InitHrtfPanning(ALCdevice *device)
         { 3.846153846e-02f,  0.000000000e+00f,  6.661733875e-02f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  9.938079900e-02f,  0.000000000e+00f,  0.000000000e+00f },
         { 3.846153846e-02f,  0.000000000e+00f, -6.661733875e-02f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  9.938079900e-02f,  0.000000000e+00f,  0.000000000e+00f },
         { 3.846153846e-02f,  4.710557198e-02f,  4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  6.834676493e-02f,  2.484519975e-02f,  0.000000000e+00f, -4.303314829e-02f },
-        { 3.846153846e-02f,  4.710557198e-02f, -4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.834676493e-02f,  2.484519975e-02f,  0.000000000e+00f, -4.303314829e-02f },
         { 3.846153846e-02f, -4.710557198e-02f,  4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.834676493e-02f,  2.484519975e-02f,  0.000000000e+00f, -4.303314829e-02f },
+        { 3.846153846e-02f,  4.710557198e-02f, -4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.834676493e-02f,  2.484519975e-02f,  0.000000000e+00f, -4.303314829e-02f },
         { 3.846153846e-02f, -4.710557198e-02f, -4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  6.834676493e-02f,  2.484519975e-02f,  0.000000000e+00f, -4.303314829e-02f },
         { 3.846153846e-02f,  0.000000000e+00f,  4.710557198e-02f,  4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  2.484519975e-02f,  6.834676493e-02f,  4.303314829e-02f },
-        { 3.846153846e-02f,  0.000000000e+00f, -4.710557198e-02f,  4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  2.484519975e-02f, -6.834676493e-02f,  4.303314829e-02f },
         { 3.846153846e-02f,  0.000000000e+00f,  4.710557198e-02f, -4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  2.484519975e-02f, -6.834676493e-02f,  4.303314829e-02f },
+        { 3.846153846e-02f,  0.000000000e+00f, -4.710557198e-02f,  4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  2.484519975e-02f, -6.834676493e-02f,  4.303314829e-02f },
         { 3.846153846e-02f,  0.000000000e+00f, -4.710557198e-02f, -4.710557198e-02f,  0.000000000e+00f,  0.000000000e+00f,  2.484519975e-02f,  6.834676493e-02f,  4.303314829e-02f },
         { 3.846153846e-02f,  4.710557198e-02f,  0.000000000e+00f,  4.710557198e-02f,  6.834676493e-02f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  0.000000000e+00f },
-        { 3.846153846e-02f, -4.710557198e-02f,  0.000000000e+00f,  4.710557198e-02f, -6.834676493e-02f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  0.000000000e+00f },
         { 3.846153846e-02f,  4.710557198e-02f,  0.000000000e+00f, -4.710557198e-02f, -6.834676493e-02f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  0.000000000e+00f },
+        { 3.846153846e-02f, -4.710557198e-02f,  0.000000000e+00f,  4.710557198e-02f, -6.834676493e-02f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  0.000000000e+00f },
         { 3.846153846e-02f, -4.710557198e-02f,  0.000000000e+00f, -4.710557198e-02f,  6.834676493e-02f,  0.000000000e+00f, -4.969039950e-02f,  0.000000000e+00f,  0.000000000e+00f },
         { 3.846153846e-02f,  3.846153846e-02f,  3.846153846e-02f,  3.846153846e-02f,  4.556450996e-02f,  4.556450996e-02f,  0.000000000e+00f,  4.556450996e-02f,  0.000000000e+00f },
-        { 3.846153846e-02f,  3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f,  4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f, -4.556450996e-02f,  0.000000000e+00f },
-        { 3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f,  3.846153846e-02f, -4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f,  4.556450996e-02f,  0.000000000e+00f },
-        { 3.846153846e-02f, -3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f, -4.556450996e-02f,  4.556450996e-02f,  0.000000000e+00f, -4.556450996e-02f,  0.000000000e+00f },
         { 3.846153846e-02f,  3.846153846e-02f,  3.846153846e-02f, -3.846153846e-02f, -4.556450996e-02f,  4.556450996e-02f,  0.000000000e+00f, -4.556450996e-02f,  0.000000000e+00f },
-        { 3.846153846e-02f,  3.846153846e-02f, -3.846153846e-02f, -3.846153846e-02f, -4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f,  4.556450996e-02f,  0.000000000e+00f },
+        { 3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f,  3.846153846e-02f, -4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f,  4.556450996e-02f,  0.000000000e+00f },
         { 3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f, -3.846153846e-02f,  4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f, -4.556450996e-02f,  0.000000000e+00f },
+        { 3.846153846e-02f,  3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f,  4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f, -4.556450996e-02f,  0.000000000e+00f },
+        { 3.846153846e-02f,  3.846153846e-02f, -3.846153846e-02f, -3.846153846e-02f, -4.556450996e-02f, -4.556450996e-02f,  0.000000000e+00f,  4.556450996e-02f,  0.000000000e+00f },
+        { 3.846153846e-02f, -3.846153846e-02f, -3.846153846e-02f,  3.846153846e-02f, -4.556450996e-02f,  4.556450996e-02f,  0.000000000e+00f, -4.556450996e-02f,  0.000000000e+00f },
         { 3.846153846e-02f, -3.846153846e-02f, -3.846153846e-02f, -3.846153846e-02f,  4.556450996e-02f,  4.556450996e-02f,  0.000000000e+00f,  4.556450996e-02f,  0.000000000e+00f },
     };
     static const float AmbiOrderHFGain1O[MAX_AMBI_ORDER+1]{
-        3.605551275e+00f, 2.081665999e+00f
+        2.000000000e+00f, 1.154700538e+00f
     }, AmbiOrderHFGain2O[MAX_AMBI_ORDER+1]{
         2.687419249e+00f, 2.081665999e+00f, 1.074967700e+00f
     };
     static const ALuint ChansPerOrder[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
-    const float *AmbiOrderHFGain{AmbiOrderHFGain1O};
 
-    static_assert(al::size(AmbiPoints) == al::size(AmbiMatrix), "Ambisonic HRTF mismatch");
+    static_assert(al::size(AmbiPoints1O) == al::size(AmbiMatrix1O), "First-Order Ambisonic HRTF mismatch");
+    static_assert(al::size(AmbiPoints2O) == al::size(AmbiMatrix2O), "Second-Order Ambisonic HRTF mismatch");
 
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
@@ -637,10 +655,21 @@ void InitHrtfPanning(ALCdevice *device)
         (device->mRenderMode == HrtfRender) ? "+ Full " : "",
         device->HrtfName.c_str());
 
+    al::span<const AngularPoint> AmbiPoints{};
+    const float (*AmbiMatrix)[MAX_AMBI_CHANNELS]{};
+    const float *AmbiOrderHFGain{};
     if(ambi_order >= 2)
+    {
+        AmbiPoints = AmbiPoints2O;
+        AmbiMatrix = AmbiMatrix2O;
         AmbiOrderHFGain = AmbiOrderHFGain2O;
-    else if(ambi_order == 1)
+    }
+    else /*if(ambi_order == 1)*/
+    {
+        AmbiPoints = AmbiPoints1O;
+        AmbiMatrix = AmbiMatrix1O;
         AmbiOrderHFGain = AmbiOrderHFGain1O;
+    }
     device->mAmbiOrder = ambi_order;
 
     const size_t count{AmbiChannelsFromOrder(ambi_order)};

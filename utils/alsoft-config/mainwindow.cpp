@@ -14,6 +14,11 @@
 #include "ui_mainwindow.h"
 #include "verstr.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#endif
+
 namespace {
 
 static const struct {
@@ -139,7 +144,14 @@ static QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
     static const char fname[] = "alsoft.ini";
-    QByteArray base = qgetenv("AppData");
+    auto get_appdata_path = []() noexcept -> QString
+    {
+        WCHAR buffer[MAX_PATH];
+        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+            return QString::fromWCharArray(buffer);
+        return QString();
+    };
+    QString base = get_appdata_path();
 #else
     static const char fname[] = "alsoft.conf";
     QByteArray base = qgetenv("XDG_CONFIG_HOME");
@@ -158,7 +170,14 @@ static QString getDefaultConfigName()
 static QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
-    QByteArray base = qgetenv("AppData");
+    auto get_appdata_path = []() noexcept -> QString
+    {
+        WCHAR buffer[MAX_PATH];
+        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+            return QString::fromWCharArray(buffer);
+        return QString();
+    };
+    QString base = get_appdata_path();
 #else
     QByteArray base = qgetenv("XDG_DATA_HOME");
     if(base.isEmpty())

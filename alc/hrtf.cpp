@@ -264,16 +264,16 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     ASSUME(irSize >= MIN_IR_SIZE);
 
     /* Calculate the sample offsets for the HRIR indices. */
-    idx[0] *= irSize;
-    idx[1] *= irSize;
-    idx[2] *= irSize;
-    idx[3] *= irSize;
+    idx[0] *= HRIR_LENGTH;
+    idx[1] *= HRIR_LENGTH;
+    idx[2] *= HRIR_LENGTH;
+    idx[3] *= HRIR_LENGTH;
 
     /* Calculate the blended HRIR coefficients. */
     ALfloat *coeffout{al::assume_aligned<16>(&coeffs[0][0])};
     coeffout[0] = PassthruCoeff * (1.0f-dirfact);
     coeffout[1] = PassthruCoeff * (1.0f-dirfact);
-    std::fill(coeffout+2, coeffout + irSize*2, 0.0f);
+    std::fill(coeffout+2, coeffout + HRIR_LENGTH*2, 0.0f);
     for(ALsizei c{0};c < 4;c++)
     {
         const ALfloat *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]])};
@@ -358,7 +358,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
         std::fill(coeffout, coeffout + HRIR_LENGTH*2, 0.0);
         for(ALsizei c{0};c < 4;c++)
         {
-            const ALfloat *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]*irSize])};
+            const ALfloat *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]*HRIR_LENGTH])};
             const ALfloat mult{blend[c]};
             auto blend_coeffs = [mult](const float src, const double coeff) noexcept -> double
             { return src*mult + coeff; };
@@ -504,7 +504,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const A
     total  = RoundUp(total, alignof(HrtfEntry::Elevation)); /* Align for elevation infos */
     total += sizeof(Hrtf->elev[0])*evTotal;
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
-    total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
+    total += sizeof(Hrtf->coeffs[0])*HRIR_LENGTH*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
 
     Hrtf.reset(new (al_calloc(16, total)) HrtfEntry{});
@@ -531,7 +531,7 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const A
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
         auto coeffs_ = reinterpret_cast<ALfloat(*)[2]>(base + offset);
-        offset += sizeof(coeffs_[0])*irSize*irCount;
+        offset += sizeof(coeffs_[0])*HRIR_LENGTH*irCount;
 
         auto delays_ = reinterpret_cast<ALubyte(*)[2]>(base + offset);
         offset += sizeof(delays_[0])*irCount;
@@ -549,10 +549,18 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const A
             elev_[i].azCount = azCount[i];
             elev_[i].irOffset = irOffset[i];
         }
-        for(ALuint i{0};i < ALuint{irSize}*irCount;i++)
+        for(ALuint i{0};i < irCount;i++)
         {
-            coeffs_[i][0] = coeffs[i][0];
-            coeffs_[i][1] = coeffs[i][1];
+            for(ALuint j{0};j < ALuint{irSize};j++)
+            {
+                coeffs_[i*HRIR_LENGTH + j][0] = coeffs[i*irSize + j][0];
+                coeffs_[i*HRIR_LENGTH + j][1] = coeffs[i*irSize + j][1];
+            }
+            for(ALuint j{irSize};j < HRIR_LENGTH;j++)
+            {
+                coeffs_[i*HRIR_LENGTH + j][0] = 0.0f;
+                coeffs_[i*HRIR_LENGTH + j][1] = 0.0f;
+            }
         }
         for(ALuint i{0};i < irCount;i++)
         {

@@ -55,17 +55,15 @@
 
 
 struct HrtfHandle {
-    std::unique_ptr<HrtfEntry> entry;
-    al::FlexArray<char> filename;
+    std::unique_ptr<HrtfEntry> mEntry;
+    al::FlexArray<char> mFilename;
 
-    HrtfHandle(size_t fname_len) : filename{fname_len} { }
-    HrtfHandle(const HrtfHandle&) = delete;
-    HrtfHandle& operator=(const HrtfHandle&) = delete;
+    HrtfHandle(size_t fname_len) : mFilename{fname_len} { }
 
     static std::unique_ptr<HrtfHandle> Create(size_t fname_len)
     { return std::unique_ptr<HrtfHandle>{new (FamCount{fname_len}) HrtfHandle{fname_len}}; }
 
-    DEF_FAM_NEWDEL(HrtfHandle, filename)
+    DEF_FAM_NEWDEL(HrtfHandle, mFilename)
 };
 
 namespace {
@@ -1120,7 +1118,7 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
     auto loaded_entry = LoadedHrtfs.begin();
     for(;loaded_entry != LoadedHrtfs.end();++loaded_entry)
     {
-        if(filename != (*loaded_entry)->filename.data())
+        if(filename != (*loaded_entry)->mFilename.data())
             continue;
 
         /* Check if this entry has already been added to the list. */
@@ -1144,8 +1142,8 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
 
         LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+1));
         loaded_entry = LoadedHrtfs.end()-1;
-        std::copy(filename.begin(), filename.end(), (*loaded_entry)->filename.begin());
-        (*loaded_entry)->filename.back() = '\0';
+        std::copy(filename.begin(), filename.end(), (*loaded_entry)->mFilename.begin());
+        (*loaded_entry)->mFilename.back() = '\0';
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
@@ -1180,7 +1178,7 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
     auto loaded_entry = LoadedHrtfs.begin();
     for(;loaded_entry != LoadedHrtfs.end();++loaded_entry)
     {
-        if(filename != (*loaded_entry)->filename.data())
+        if(filename != (*loaded_entry)->mFilename.data())
             continue;
 
         /* Check if this entry has already been added to the list. */
@@ -1204,7 +1202,7 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
 
         LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+32));
         loaded_entry = LoadedHrtfs.end()-1;
-        snprintf((*loaded_entry)->filename.data(), (*loaded_entry)->filename.size(), "!%u_%s",
+        snprintf((*loaded_entry)->mFilename.data(), (*loaded_entry)->mFilename.size(), "!%u_%s",
             residx, filename.c_str());
     }
 
@@ -1322,9 +1320,9 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 {
     std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
-    if(handle->entry)
+    if(handle->mEntry)
     {
-        HrtfEntry *hrtf{handle->entry.get()};
+        HrtfEntry *hrtf{handle->mEntry.get()};
         hrtf->IncRef();
         return hrtf;
     }
@@ -1333,9 +1331,9 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     const char *name{""};
     ALint residx{};
     char ch{};
-    if(sscanf(handle->filename.data(), "!%d%c", &residx, &ch) == 2 && ch == '_')
+    if(sscanf(handle->mFilename.data(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
-        name = strchr(handle->filename.data(), ch)+1;
+        name = strchr(handle->mFilename.data(), ch)+1;
 
         TRACE("Loading %s...\n", name);
         ResData res{GetResource(residx)};
@@ -1348,13 +1346,13 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     }
     else
     {
-        name = handle->filename.data();
+        name = handle->mFilename.data();
 
-        TRACE("Loading %s...\n", handle->filename.data());
-        auto fstr = al::make_unique<al::ifstream>(handle->filename.data(), std::ios::binary);
+        TRACE("Loading %s...\n", handle->mFilename.data());
+        auto fstr = al::make_unique<al::ifstream>(handle->mFilename.data(), std::ios::binary);
         if(!fstr->is_open())
         {
-            ERR("Could not open %s\n", handle->filename.data());
+            ERR("Could not open %s\n", handle->mFilename.data());
             return nullptr;
         }
         stream = std::move(fstr);
@@ -1391,9 +1389,9 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
     }
 
     TRACE("Loaded HRTF support for sample rate: %uhz\n", hrtf->sampleRate);
-    handle->entry = std::move(hrtf);
+    handle->mEntry = std::move(hrtf);
 
-    return handle->entry.get();
+    return handle->mEntry.get();
 }
 
 
@@ -1414,11 +1412,11 @@ void HrtfEntry::DecRef()
         /* Go through and clear all unused HRTFs. */
         auto delete_unused = [](HrtfHandlePtr &handle) -> void
         {
-            HrtfEntry *entry{handle->entry.get()};
+            HrtfEntry *entry{handle->mEntry.get()};
             if(entry && ReadRef(entry->mRef) == 0)
             {
-                TRACE("Unloading unused HRTF %s\n", handle->filename.data());
-                handle->entry = nullptr;
+                TRACE("Unloading unused HRTF %s\n", handle->mFilename.data());
+                handle->mEntry = nullptr;
             }
         };
         std::for_each(LoadedHrtfs.begin(), LoadedHrtfs.end(), delete_unused);

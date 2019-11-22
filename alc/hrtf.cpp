@@ -360,7 +360,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
             const ALfloat mult{blend[c]};
             auto blend_coeffs = [mult](const float src, const double coeff) noexcept -> double
             { return src*mult + coeff; };
-            std::transform(srccoeffs, srccoeffs + irSize*2, coeffout, coeffout, blend_coeffs);
+            std::transform(srccoeffs, srccoeffs + HRIR_LENGTH*2, coeffout, coeffout, blend_coeffs);
         }
 
         min_delay = minu(min_delay, minu(res.ldelay, res.rdelay));
@@ -391,7 +391,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
             for(size_t i{0u};i < state->Coeffs.size();++i)
             {
                 const double mult{double{AmbiOrderHFGain[OrderFromChan[i]]} * AmbiMatrix[c][i]};
-                const ALuint numirs{minu(Hrtf->irSize, HRIR_LENGTH-maxu(ldelay, rdelay))};
+                const ALuint numirs{HRIR_LENGTH - maxu(ldelay, rdelay)};
                 ALuint lidx{ldelay}, ridx{rdelay};
                 for(ALuint j{0};j < numirs;++j)
                 {
@@ -410,7 +410,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
 
         /* Load the (left) HRIR backwards, into a temp buffer with padding. */
         std::fill(tmpflt[2].begin(), tmpflt[2].end(), 0.0);
-        std::transform(hrir.begin(), hrir.begin()+Hrtf->irSize, tmpflt[2].rbegin() + HRIR_LENGTH*3,
+        std::transform(hrir.cbegin(), hrir.cend(), tmpflt[2].rbegin() + HRIR_LENGTH*3,
             [](const double2 &ir) noexcept -> double { return ir[0]; });
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
@@ -439,7 +439,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
 
         /* Now run the same process on the right HRIR. */
         std::fill(tmpflt[2].begin(), tmpflt[2].end(), 0.0);
-        std::transform(hrir.begin(), hrir.begin()+Hrtf->irSize, tmpflt[2].rbegin() + HRIR_LENGTH*3,
+        std::transform(hrir.cbegin(), hrir.cend(), tmpflt[2].rbegin() + HRIR_LENGTH*3,
             [](const double2 &ir) noexcept -> double { return ir[1]; });
 
         splitter.applyAllpass(tmpflt[2].data(), tmpflt[2].size());
@@ -464,7 +464,7 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
     {
         auto copy_arr = [](const double2 &in) noexcept -> float2
         { return float2{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };
-        std::transform(tmpres[i].begin(), tmpres[i].end(), state->Coeffs[i].begin(),
+        std::transform(tmpres[i].cbegin(), tmpres[i].cend(), state->Coeffs[i].begin(),
             copy_arr);
     }
     tmpres.clear();

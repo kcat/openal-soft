@@ -52,8 +52,8 @@ openal-soft-1.20.0:
 
     Added basic support for multi-field HRTFs.
 
-    Added an option for mixing first-, second-, or third-order B-Format with
-    HRTF output. This can improve HRTF performance given a number of sources.
+    Added an option for mixing first- or second-order B-Format with HRTF
+    output. This can improve HRTF performance given a number of sources.
 
     Added an RC file for proper DLL version information.
 

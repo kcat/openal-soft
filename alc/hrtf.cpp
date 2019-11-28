@@ -1368,6 +1368,11 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
                 for(size_t k{0};k < HRIR_LENGTH;++k)
                     coeffs[k][j] = static_cast<float>(inout[1][k]);
             }
+
+            ALubyte (&delays)[2] = const_cast<ALubyte(&)[2]>(hrtf->delays[i]);
+            for(size_t j{0};j < 2;++j)
+                delays[j] = static_cast<ALubyte>(minu(MAX_HRIR_DELAY,
+                    (delays[j]*devrate + hrtf->sampleRate/2) / hrtf->sampleRate));
         }
 
         /* Scale the IR size for the new sample rate and update the stored

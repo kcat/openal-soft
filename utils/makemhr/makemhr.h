@@ -4,6 +4,8 @@
 #include <vector>
 #include <complex>
 
+#include "polyphase_resampler.h"
+
 
 // The maximum path length used when processing filenames.
 #define MAX_PATH_LEN                 (256)
@@ -109,16 +111,6 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
 void MagnitudeResponse(const uint n, const complex_d *in, double *out);
 void FftForward(const uint n, complex_d *inout);
 void FftInverse(const uint n, complex_d *inout);
-
-
-// The resampler metrics and FIR filter.
-struct ResamplerT {
-    uint mP, mQ, mM, mL;
-    std::vector<double> mF;
-};
-
-void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRate);
-void ResamplerRun(ResamplerT *rs, const uint inN, const double *in, const uint outN, double *out);
 
 
 // Performs linear interpolation.

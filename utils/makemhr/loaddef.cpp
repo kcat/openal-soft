@@ -1710,9 +1710,9 @@ static double AverageHrirOnset(const uint rate, const uint n, const double *hrir
 {
     std::vector<double> upsampled(10 * n);
     {
-        ResamplerT rs;
-        ResamplerSetup(&rs, rate, 10 * rate);
-        ResamplerRun(&rs, n, hrir, 10 * n, upsampled.data());
+        PPhaseResampler rs;
+        rs.init(rate, 10 * rate);
+        rs.process(n, hrir, 10 * n, upsampled.data());
     }
 
     double mag{0.0};

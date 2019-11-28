@@ -812,12 +812,12 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
     {
-        const EnumeratedHrtf &entry = device->HrtfList[static_cast<ALuint>(hrtf_id)];
-        HrtfStore *hrtf{GetLoadedHrtf(entry.hrtf)};
+        const std::string &hrtfname = device->HrtfList[static_cast<ALuint>(hrtf_id)];
+        HrtfStore *hrtf{GetLoadedHrtf(hrtfname)};
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->mHrtf = hrtf;
-            device->HrtfName = entry.name;
+            device->HrtfName = hrtfname;
         }
         else if(hrtf)
             hrtf->DecRef();
@@ -825,9 +825,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     if(!device->mHrtf)
     {
-        auto find_hrtf = [device](const EnumeratedHrtf &entry) -> bool
+        auto find_hrtf = [device](const std::string &hrtfname) -> bool
         {
-            HrtfStore *hrtf{GetLoadedHrtf(entry.hrtf)};
+            HrtfStore *hrtf{GetLoadedHrtf(hrtfname)};
             if(!hrtf) return false;
             if(hrtf->sampleRate != device->Frequency)
             {
@@ -835,7 +835,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                 return false;
             }
             device->mHrtf = hrtf;
-            device->HrtfName = entry.name;
+            device->HrtfName = hrtfname;
             return true;
         };
         std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);

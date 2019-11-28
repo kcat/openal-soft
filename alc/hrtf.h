@@ -14,8 +14,6 @@
 #include "atomic.h"
 #include "vector.h"
 
-struct HrtfHandle;
-
 
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
@@ -56,12 +54,6 @@ struct HrtfStore {
     DEF_PLACE_NEWDEL()
 };
 
-struct EnumeratedHrtf {
-    std::string name;
-
-    HrtfHandle *hrtf;
-};
-
 
 using float2 = std::array<float,2>;
 using HrirArray = std::array<float2,HRIR_LENGTH>;
@@ -96,8 +88,8 @@ struct AngularPoint {
 };
 
 
-al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
-HrtfStore *GetLoadedHrtf(HrtfHandle *handle);
+al::vector<std::string> EnumerateHrtf(const char *devname);
+HrtfStore *GetLoadedHrtf(const std::string &name);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
     ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2]);

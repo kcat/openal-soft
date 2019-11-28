@@ -1894,9 +1894,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(!device->HrtfList.empty())
             {
                 if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
-                    hrtf = GetLoadedHrtf(device->HrtfList[static_cast<ALuint>(hrtf_id)].hrtf);
+                    hrtf = GetLoadedHrtf(device->HrtfList[static_cast<ALuint>(hrtf_id)]);
                 else
-                    hrtf = GetLoadedHrtf(device->HrtfList.front().hrtf);
+                    hrtf = GetLoadedHrtf(device->HrtfList.front());
             }
 
             if(hrtf)
@@ -4145,7 +4145,7 @@ START_API_FUNC
     {
         case ALC_HRTF_SPECIFIER_SOFT:
             if(index >= 0 && static_cast<size_t>(index) < dev->HrtfList.size())
-                return dev->HrtfList[static_cast<ALuint>(index)].name.c_str();
+                return dev->HrtfList[static_cast<ALuint>(index)].c_str();
             alcSetError(dev.get(), ALC_INVALID_VALUE);
             break;
 

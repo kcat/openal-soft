@@ -231,7 +231,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     al::bitfield<DeviceFlagsCount> Flags{};
 
     std::string HrtfName;
-    al::vector<EnumeratedHrtf> HrtfList;
+    al::vector<std::string> HrtfList;
     ALCenum HrtfStatus{ALC_FALSE};
 
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};

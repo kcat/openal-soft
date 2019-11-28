@@ -54,23 +54,19 @@
 #include "opthelpers.h"
 
 
-struct HrtfHandle {
-    std::unique_ptr<HrtfStore> mEntry;
-    al::FlexArray<char> mFilename;
-
-    HrtfHandle(size_t fname_len) : mFilename{fname_len} { }
-
-    static std::unique_ptr<HrtfHandle> Create(size_t fname_len)
-    { return std::unique_ptr<HrtfHandle>{new (FamCount{fname_len}) HrtfHandle{fname_len}}; }
-
-    DEF_FAM_NEWDEL(HrtfHandle, mFilename)
-};
-
 namespace {
 
 using namespace std::placeholders;
 
-using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
+struct HrtfEntry {
+    std::string mDispName;
+    std::string mFilename;
+};
+
+struct LoadedHrtf {
+    std::string mFilename;
+    std::unique_ptr<HrtfStore> mEntry;
+};
 
 /* Data set limits must be the same as or more flexible than those defined in
  * the makemhr utility.
@@ -102,7 +98,10 @@ constexpr ALchar magicMarker02[8]{'M','i','n','P','H','R','0','2'};
 constexpr ALfloat PassthruCoeff{0.707106781187f/*sqrt(0.5)*/};
 
 std::mutex LoadedHrtfLock;
-al::vector<HrtfHandlePtr> LoadedHrtfs;
+al::vector<LoadedHrtf> LoadedHrtfs;
+
+std::mutex EnumeratedHrtfLock;
+al::vector<HrtfEntry> EnumeratedHrtfs;
 
 
 class databuf final : public std::streambuf {
@@ -1104,46 +1103,24 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
 }
 
 
-bool checkName(al::vector<EnumeratedHrtf> &list, const std::string &name)
+bool checkName(const std::string &name)
 {
-    return std::find_if(list.cbegin(), list.cend(),
-        [&name](const EnumeratedHrtf &entry)
-        { return name == entry.name; }
-    ) != list.cend();
+    auto match_name = [&name](const HrtfEntry &entry) -> bool { return name == entry.mDispName; };
+    auto &enum_names = EnumeratedHrtfs;
+    return std::find_if(enum_names.cbegin(), enum_names.cend(), match_name) != enum_names.cend();
 }
 
-void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
+void AddFileEntry(const std::string &filename)
 {
     /* Check if this file has already been loaded globally. */
-    auto loaded_entry = LoadedHrtfs.begin();
-    for(;loaded_entry != LoadedHrtfs.end();++loaded_entry)
+    auto enum_iter = std::lower_bound(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(), filename,
+        [](const HrtfEntry &entry, const std::string &fname) -> bool
+        { return entry.mFilename < fname; }
+    );
+    if(enum_iter != EnumeratedHrtfs.cend() && enum_iter->mFilename == filename)
     {
-        if(filename != (*loaded_entry)->mFilename.data())
-            continue;
-
-        /* Check if this entry has already been added to the list. */
-        auto iter = std::find_if(list.cbegin(), list.cend(),
-            [loaded_entry](const EnumeratedHrtf &entry) -> bool
-            { return loaded_entry->get() == entry.hrtf; }
-        );
-        if(iter != list.cend())
-        {
-            TRACE("Skipping duplicate file entry %s\n", filename.c_str());
-            return;
-        }
-
-        break;
-    }
-
-    const char *new_mark{""};
-    if(loaded_entry == LoadedHrtfs.end())
-    {
-        new_mark = " (new)";
-
-        LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+1));
-        loaded_entry = LoadedHrtfs.end()-1;
-        std::copy(filename.begin(), filename.end(), (*loaded_entry)->mFilename.begin());
-        (*loaded_entry)->mFilename.back() = '\0';
+        TRACE("Skipping duplicate file entry %s\n", filename.c_str());
+        return;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
@@ -1158,69 +1135,48 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
         filename.substr(namepos) : filename.substr(namepos, extpos-namepos)};
     std::string newname{basename};
     int count{1};
-    while(checkName(list, newname))
+    while(checkName(newname))
     {
         newname = basename;
         newname += " #";
         newname += std::to_string(++count);
     }
-    list.emplace_back(EnumeratedHrtf{newname, loaded_entry->get()});
-    const EnumeratedHrtf &entry = list.back();
+    const HrtfEntry &entry = *EnumeratedHrtfs.insert(enum_iter, HrtfEntry{newname, filename});
 
-    TRACE("Adding file entry \"%s\"%s\n", entry.name.c_str(), new_mark);
+    TRACE("Adding file entry \"%s\"\n", entry.mFilename.c_str());
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename, ALuint residx)
+void AddBuiltInEntry(const std::string &dispname, ALuint residx)
 {
-    auto loaded_entry = LoadedHrtfs.begin();
-    for(;loaded_entry != LoadedHrtfs.end();++loaded_entry)
+    const std::string filename{'!'+std::to_string(residx)+'_'+dispname};
+
+    auto enum_iter = std::lower_bound(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(), filename,
+        [](const HrtfEntry &entry, const std::string &fname) -> bool
+        { return entry.mFilename < fname; }
+    );
+    if(enum_iter != EnumeratedHrtfs.cend() && enum_iter->mFilename == filename)
     {
-        if(filename != (*loaded_entry)->mFilename.data())
-            continue;
-
-        /* Check if this entry has already been added to the list. */
-        auto iter = std::find_if(list.cbegin(), list.cend(),
-            [loaded_entry](const EnumeratedHrtf &entry) -> bool
-            { return loaded_entry->get() == entry.hrtf; }
-        );
-        if(iter != list.cend())
-        {
-            TRACE("Skipping duplicate file entry %s\n", filename.c_str());
-            return;
-        }
-
-        break;
-    }
-
-    const char *new_mark{""};
-    if(loaded_entry == LoadedHrtfs.end())
-    {
-        new_mark = " (new)";
-
-        LoadedHrtfs.emplace_back(HrtfHandle::Create(filename.length()+32));
-        loaded_entry = LoadedHrtfs.end()-1;
-        snprintf((*loaded_entry)->mFilename.data(), (*loaded_entry)->mFilename.size(), "!%u_%s",
-            residx, filename.c_str());
+        TRACE("Skipping duplicate file entry %s\n", filename.c_str());
+        return;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
 
-    std::string newname{filename};
+    std::string newname{dispname};
     int count{1};
-    while(checkName(list, newname))
+    while(checkName(newname))
     {
-        newname = filename;
+        newname = dispname;
         newname += " #";
         newname += std::to_string(++count);
     }
-    list.emplace_back(EnumeratedHrtf{newname, loaded_entry->get()});
-    const EnumeratedHrtf &entry = list.back();
+    const HrtfEntry &entry = *EnumeratedHrtfs.insert(enum_iter, HrtfEntry{newname, filename});
 
-    TRACE("Adding built-in entry \"%s\"%s\n", entry.name.c_str(), new_mark);
+    TRACE("Adding built-in entry \"%s\"\n", entry.mFilename.c_str());
 }
 
 
@@ -1251,9 +1207,10 @@ ResData GetResource(int name)
 } // namespace
 
 
-al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
+al::vector<std::string> EnumerateHrtf(const char *devname)
 {
-    al::vector<EnumeratedHrtf> list;
+    std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
+    EnumeratedHrtfs.clear();
 
     bool usedefaults{true};
     if(auto pathopt = ConfigValueStr(devname, nullptr, "hrtf-paths"))
@@ -1283,7 +1240,7 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
             {
                 const std::string pname{pathlist, end};
                 for(const auto &fname : SearchDataFiles(".mhr", pname.c_str()))
-                    AddFileEntry(list, fname);
+                    AddFileEntry(fname);
             }
 
             pathlist = next;
@@ -1293,20 +1250,23 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     if(usedefaults)
     {
         for(const auto &fname : SearchDataFiles(".mhr", "openal/hrtf"))
-            AddFileEntry(list, fname);
+            AddFileEntry(fname);
 
         if(!GetResource(IDR_DEFAULT_44100_MHR).empty())
-            AddBuiltInEntry(list, "Built-In 44100hz", IDR_DEFAULT_44100_MHR);
+            AddBuiltInEntry("Built-In 44100hz", IDR_DEFAULT_44100_MHR);
 
         if(!GetResource(IDR_DEFAULT_48000_MHR).empty())
-            AddBuiltInEntry(list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
+            AddBuiltInEntry("Built-In 48000hz", IDR_DEFAULT_48000_MHR);
     }
+
+    al::vector<std::string> list;
+    list.reserve(EnumeratedHrtfs.size());
+    for(auto &entry : EnumeratedHrtfs)
+        list.emplace_back(entry.mDispName);
 
     if(auto defhrtfopt = ConfigValueStr(devname, nullptr, "default-hrtf"))
     {
-        auto find_entry = [&defhrtfopt](const EnumeratedHrtf &entry) -> bool
-        { return entry.name == *defhrtfopt; };
-        auto iter = std::find_if(list.begin(), list.end(), find_entry);
+        auto iter = std::find(list.begin(), list.end(), *defhrtfopt);
         if(iter == list.end())
             WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
         else if(iter != list.begin())
@@ -1316,11 +1276,21 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     return list;
 }
 
-HrtfStore *GetLoadedHrtf(HrtfHandle *handle)
+HrtfStore *GetLoadedHrtf(const std::string &name)
 {
-    std::lock_guard<std::mutex> _{LoadedHrtfLock};
+    std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
+    auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
+        [&name](const HrtfEntry &entry) -> bool { return entry.mDispName == name; }
+    );
+    if(entry_iter == EnumeratedHrtfs.cend())
+        return nullptr;
+    const std::string &fname = entry_iter->mFilename;
 
-    if(handle->mEntry)
+    std::lock_guard<std::mutex> __{LoadedHrtfLock};
+    auto handle = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
+        [&fname](LoadedHrtf &hrtf) -> bool { return hrtf.mFilename == fname; }
+    );
+    if(handle != LoadedHrtfs.end() && handle->mEntry)
     {
         HrtfStore *hrtf{handle->mEntry.get()};
         hrtf->IncRef();
@@ -1328,31 +1298,26 @@ HrtfStore *GetLoadedHrtf(HrtfHandle *handle)
     }
 
     std::unique_ptr<std::istream> stream;
-    const char *name{""};
     ALint residx{};
     char ch{};
-    if(sscanf(handle->mFilename.data(), "!%d%c", &residx, &ch) == 2 && ch == '_')
+    if(sscanf(entry_iter->mFilename.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
-        name = strchr(handle->mFilename.data(), ch)+1;
-
-        TRACE("Loading %s...\n", name);
+        TRACE("Loading %s...\n", fname.c_str());
         ResData res{GetResource(residx)};
         if(res.empty())
         {
-            ERR("Could not get resource %u, %s\n", residx, name);
+            ERR("Could not get resource %u, %s\n", residx, name.c_str());
             return nullptr;
         }
         stream = al::make_unique<idstream>(res.begin(), res.end());
     }
     else
     {
-        name = handle->mFilename.data();
-
-        TRACE("Loading %s...\n", handle->mFilename.data());
-        auto fstr = al::make_unique<al::ifstream>(handle->mFilename.data(), std::ios::binary);
+        TRACE("Loading %s...\n", fname.c_str());
+        auto fstr = al::make_unique<al::ifstream>(fname.c_str(), std::ios::binary);
         if(!fstr->is_open())
         {
-            ERR("Could not open %s\n", handle->mFilename.data());
+            ERR("Could not open %s\n", fname.c_str());
             return nullptr;
         }
         stream = std::move(fstr);
@@ -1362,36 +1327,36 @@ HrtfStore *GetLoadedHrtf(HrtfHandle *handle)
     char magic[sizeof(magicMarker02)];
     stream->read(magic, sizeof(magic));
     if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
-        ERR("%s data is too short (%zu bytes)\n", name, stream->gcount());
+        ERR("%s data is too short (%zu bytes)\n", name.c_str(), stream->gcount());
     else if(memcmp(magic, magicMarker02, sizeof(magicMarker02)) == 0)
     {
         TRACE("Detected data set format v2\n");
-        hrtf = LoadHrtf02(*stream, name);
+        hrtf = LoadHrtf02(*stream, name.c_str());
     }
     else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
     {
         TRACE("Detected data set format v1\n");
-        hrtf = LoadHrtf01(*stream, name);
+        hrtf = LoadHrtf01(*stream, name.c_str());
     }
     else if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
     {
         TRACE("Detected data set format v0\n");
-        hrtf = LoadHrtf00(*stream, name);
+        hrtf = LoadHrtf00(*stream, name.c_str());
     }
     else
-        ERR("Invalid header in %s: \"%.8s\"\n", name, magic);
+        ERR("Invalid header in %s: \"%.8s\"\n", name.c_str(), magic);
     stream.reset();
 
     if(!hrtf)
     {
-        ERR("Failed to load %s\n", name);
+        ERR("Failed to load %s\n", name.c_str());
         return nullptr;
     }
 
     TRACE("Loaded HRTF support for sample rate: %uhz\n", hrtf->sampleRate);
-    handle->mEntry = std::move(hrtf);
+    LoadedHrtfs.emplace_back(LoadedHrtf{fname, std::move(hrtf)});
 
-    return handle->mEntry.get();
+    return LoadedHrtfs.back().mEntry.get();
 }
 
 
@@ -1409,16 +1374,19 @@ void HrtfStore::DecRef()
     {
         std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
-        /* Go through and clear all unused HRTFs. */
-        auto delete_unused = [](HrtfHandlePtr &handle) -> void
+        /* Go through and remove all unused HRTFs. */
+        auto remove_unused = [](LoadedHrtf &hrtf) -> bool
         {
-            HrtfStore *entry{handle->mEntry.get()};
+            HrtfStore *entry{hrtf.mEntry.get()};
             if(entry && ReadRef(entry->mRef) == 0)
             {
-                TRACE("Unloading unused HRTF %s\n", handle->mFilename.data());
-                handle->mEntry = nullptr;
+                TRACE("Unloading unused HRTF %s\n", hrtf.mFilename.data());
+                hrtf.mEntry = nullptr;
+                return true;
             }
+            return false;
         };
-        std::for_each(LoadedHrtfs.begin(), LoadedHrtfs.end(), delete_unused);
+        auto iter = std::remove_if(LoadedHrtfs.begin(), LoadedHrtfs.end(), remove_unused);
+        LoadedHrtfs.erase(iter, LoadedHrtfs.end());
     }
 }

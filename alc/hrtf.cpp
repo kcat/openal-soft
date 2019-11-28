@@ -52,6 +52,7 @@
 #include "logging.h"
 #include "math_defs.h"
 #include "opthelpers.h"
+#include "polyphase_resampler.h"
 
 
 namespace {
@@ -1270,7 +1271,7 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
     return list;
 }
 
-HrtfStore *GetLoadedHrtf(const std::string &name)
+HrtfStore *GetLoadedHrtf(const std::string &name, ALuint devrate)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
@@ -1284,17 +1285,23 @@ HrtfStore *GetLoadedHrtf(const std::string &name)
     auto handle = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
         [&fname](LoadedHrtf &hrtf) -> bool { return hrtf.mFilename == fname; }
     );
-    if(handle != LoadedHrtfs.end() && handle->mEntry)
+    if(handle != LoadedHrtfs.end())
     {
-        HrtfStore *hrtf{handle->mEntry.get()};
-        hrtf->IncRef();
-        return hrtf;
+        do {
+            HrtfStore *hrtf{handle->mEntry.get()};
+            if(hrtf && hrtf->sampleRate == devrate)
+            {
+                hrtf->IncRef();
+                return hrtf;
+            }
+            ++handle;
+        } while(handle != LoadedHrtfs.end() && handle->mFilename == fname);
     }
 
     std::unique_ptr<std::istream> stream;
     ALint residx{};
     char ch{};
-    if(sscanf(entry_iter->mFilename.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
+    if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
         TRACE("Loading %s...\n", fname.c_str());
         ResData res{GetResource(residx)};
@@ -1347,7 +1354,44 @@ HrtfStore *GetLoadedHrtf(const std::string &name)
         return nullptr;
     }
 
-    TRACE("Loaded HRTF support for sample rate: %uhz\n", hrtf->sampleRate);
+    if(hrtf->sampleRate != devrate)
+    {
+        /* Calculate the last elevation's index and get the total IR count. */
+        const size_t lastEv{std::accumulate(hrtf->field, hrtf->field+hrtf->fdCount, size_t{0},
+            [](const size_t curval, const HrtfStore::Field &field) noexcept -> size_t
+            { return curval + field.evCount; }
+        ) - 1};
+        const size_t irCount{size_t{hrtf->elev[lastEv].irOffset} + hrtf->elev[lastEv].azCount};
+
+        /* Resample all the IRs. */
+        std::array<std::array<double,HRIR_LENGTH>,2> inout;
+        PPhaseResampler rs;
+        rs.init(hrtf->sampleRate, devrate);
+        for(size_t i{0};i < irCount;++i)
+        {
+            for(size_t j{0};j < 2;++j)
+            {
+                HrirArray &coeffs = const_cast<HrirArray&>(hrtf->coeffs[i]);
+                std::transform(coeffs.cbegin(), coeffs.cend(), inout[0].begin(),
+                    [j](const float2 &in) noexcept -> double { return in[j]; });
+                rs.process(HRIR_LENGTH, inout[0].data(), HRIR_LENGTH, inout[1].data());
+                for(size_t k{0};k < HRIR_LENGTH;++k)
+                    coeffs[k][j] = static_cast<float>(inout[1][k]);
+            }
+        }
+
+        /* Scale the IR size for the new sample rate and update the stored
+         * sample rate.
+         */
+        const uint64_t irSize{(uint64_t{hrtf->irSize}*devrate + hrtf->sampleRate-1) /
+            hrtf->sampleRate};
+        hrtf->irSize  = static_cast<ALuint>(minu64(HRIR_LENGTH, irSize) + (MOD_IR_SIZE-1));
+        hrtf->irSize -= hrtf->irSize % MOD_IR_SIZE;
+        hrtf->sampleRate = devrate;
+    }
+
+    TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),
+        hrtf->sampleRate, hrtf->irSize);
     LoadedHrtfs.emplace_back(LoadedHrtf{fname, std::move(hrtf)});
 
     return LoadedHrtfs.back().mEntry.get();

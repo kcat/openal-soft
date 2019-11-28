@@ -1888,32 +1888,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            HrtfStore *hrtf{nullptr};
-            if(device->HrtfList.empty())
-                device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-            if(!device->HrtfList.empty())
-            {
-                if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
-                    hrtf = GetLoadedHrtf(device->HrtfList[static_cast<ALuint>(hrtf_id)]);
-                else
-                    hrtf = GetLoadedHrtf(device->HrtfList.front());
-            }
-
-            if(hrtf)
-            {
-                device->FmtChans = DevFmtStereo;
-                device->Frequency = hrtf->sampleRate;
-                device->Flags.set<ChannelsRequest, FrequencyRequest>();
-                if(HrtfStore *oldhrtf{device->mHrtf})
-                    oldhrtf->DecRef();
-                device->mHrtf = hrtf;
-            }
-            else
-            {
-                hrtf_userreq = Hrtf_Default;
-                hrtf_appreq = Hrtf_Disable;
-                device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-            }
+            device->FmtChans = DevFmtStereo;
+            device->Flags.set<ChannelsRequest>();
         }
     }
 

@@ -89,7 +89,7 @@ struct AngularPoint {
 
 
 al::vector<std::string> EnumerateHrtf(const char *devname);
-HrtfStore *GetLoadedHrtf(const std::string &name);
+HrtfStore *GetLoadedHrtf(const std::string &name, ALuint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
     ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2]);

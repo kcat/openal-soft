@@ -23,6 +23,9 @@
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
 
+using float2 = std::array<float,2>;
+using HrirArray = std::array<float2,HRIR_LENGTH>;
+
 
 struct HrtfStore {
     RefCount mRef;
@@ -45,7 +48,7 @@ struct HrtfStore {
         ALushort irOffset;
     };
     Elevation *elev;
-    const ALfloat (*coeffs)[2];
+    const HrirArray *coeffs;
     const ALubyte (*delays)[2];
 
     void IncRef();
@@ -54,9 +57,6 @@ struct HrtfStore {
     DEF_PLACE_NEWDEL()
 };
 
-
-using float2 = std::array<float,2>;
-using HrirArray = std::array<float2,HRIR_LENGTH>;
 
 struct HrtfState {
     alignas(16) std::array<ALfloat,HRTF_HISTORY_LENGTH> History;

@@ -1123,7 +1123,6 @@ if(ALSOFT_EMBED_HRTF_DATA)
     ENDMACRO()
 
     make_hrtf_header(default-44100.mhr "hrtf_default_44100")
-    make_hrtf_header(default-48000.mhr "hrtf_default_48000")
 endif()
 
 ADD_CUSTOM_COMMAND(OUTPUT "${OpenAL_BINARY_DIR}/bsinc_inc.h"
@@ -1362,7 +1361,7 @@ ENDIF()
 
 # Install HRTF definitions
 IF(ALSOFT_HRTF_DEFS)
-    INSTALL(FILES hrtf/default-44100.mhr hrtf/default-48000.mhr
+    INSTALL(FILES hrtf/default-44100.mhr
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/hrtf)
     MESSAGE(STATUS "Installing HRTF definitions")
     MESSAGE(STATUS "")

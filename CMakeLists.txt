@@ -1112,7 +1112,7 @@ option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library foot
 if(ALSOFT_EMBED_HRTF_DATA)
     MACRO(make_hrtf_header FILENAME VARNAME)
         SET(infile  "${OpenAL_SOURCE_DIR}/hrtf/${FILENAME}")
-        SET(outfile  "${OpenAL_BINARY_DIR}/${FILENAME}.h")
+        SET(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.h")
 
         ADD_CUSTOM_COMMAND(OUTPUT "${outfile}"
             COMMAND "${BIN2H_COMMAND}" "${infile}" "${outfile}" ${VARNAME}
@@ -1122,7 +1122,7 @@ if(ALSOFT_EMBED_HRTF_DATA)
         SET(ALC_OBJS  ${ALC_OBJS} "${outfile}")
     ENDMACRO()
 
-    make_hrtf_header(default-44100.mhr "hrtf_default_44100")
+    make_hrtf_header("Default HRTF.mhr" "hrtf_default")
 endif()
 
 ADD_CUSTOM_COMMAND(OUTPUT "${OpenAL_BINARY_DIR}/bsinc_inc.h"
@@ -1361,7 +1361,7 @@ ENDIF()
 
 # Install HRTF definitions
 IF(ALSOFT_HRTF_DEFS)
-    INSTALL(FILES hrtf/default-44100.mhr
+    INSTALL(FILES "hrtf/Default HRTF.mhr"
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/hrtf)
     MESSAGE(STATUS "Installing HRTF definitions")
     MESSAGE(STATUS "")

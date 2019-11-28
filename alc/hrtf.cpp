@@ -1172,7 +1172,7 @@ void AddBuiltInEntry(const std::string &dispname, ALuint residx)
 }
 
 
-#define IDR_DEFAULT_44100_MHR 1
+#define IDR_DEFAULT_HRTF_MHR 1
 
 using ResData = al::span<const char>;
 #ifndef ALSOFT_EMBED_HRTF_DATA
@@ -1182,12 +1182,12 @@ ResData GetResource(int /*name*/)
 
 #else
 
-#include "default-44100.mhr.h"
+#include "hrtf_default.h"
 
 ResData GetResource(int name)
 {
-    if(name == IDR_DEFAULT_44100_MHR)
-        return {reinterpret_cast<const char*>(hrtf_default_44100), sizeof(hrtf_default_44100)};
+    if(name == IDR_DEFAULT_HRTF_MHR)
+        return {reinterpret_cast<const char*>(hrtf_default), sizeof(hrtf_default)};
     return ResData{};
 }
 #endif
@@ -1240,8 +1240,8 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
         for(const auto &fname : SearchDataFiles(".mhr", "openal/hrtf"))
             AddFileEntry(fname);
 
-        if(!GetResource(IDR_DEFAULT_44100_MHR).empty())
-            AddBuiltInEntry("Built-In 44100hz", IDR_DEFAULT_44100_MHR);
+        if(!GetResource(IDR_DEFAULT_HRTF_MHR).empty())
+            AddBuiltInEntry("Built-In HRTF", IDR_DEFAULT_HRTF_MHR);
     }
 
     al::vector<std::string> list;

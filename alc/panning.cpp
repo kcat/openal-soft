@@ -812,8 +812,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
     {
+        const char *devname{device->DeviceName.c_str()};
         const std::string &hrtfname = device->HrtfList[static_cast<ALuint>(hrtf_id)];
-        if(HrtfStore *hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
+        if(HrtfStore *hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
         {
             device->mHrtf = hrtf;
             device->HrtfName = hrtfname;
@@ -822,9 +823,10 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     if(!device->mHrtf)
     {
-        auto find_hrtf = [device](const std::string &hrtfname) -> bool
+        const char *devname{device->DeviceName.c_str()};
+        auto find_hrtf = [device,devname](const std::string &hrtfname) -> bool
         {
-            HrtfStore *hrtf{GetLoadedHrtf(hrtfname, device->Frequency)};
+            HrtfStore *hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)};
             if(!hrtf) return false;
             device->mHrtf = hrtf;
             device->HrtfName = hrtfname;

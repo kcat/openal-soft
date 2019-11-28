@@ -342,9 +342,6 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
             Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
             Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]);
 
-        const size_t irSize{Hrtf->irSize};
-        ASSUME(irSize >= MIN_IR_SIZE);
-
         /* Calculate the blended HRIR coefficients. */
         double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
         std::fill(coeffout, coeffout + HRIR_LENGTH*2, 0.0);
@@ -1264,7 +1261,7 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
     return list;
 }
 
-HrtfStore *GetLoadedHrtf(const std::string &name, ALuint devrate)
+HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
@@ -1362,9 +1359,9 @@ HrtfStore *GetLoadedHrtf(const std::string &name, ALuint devrate)
         rs.init(hrtf->sampleRate, devrate);
         for(size_t i{0};i < irCount;++i)
         {
+            HrirArray &coeffs = const_cast<HrirArray&>(hrtf->coeffs[i]);
             for(size_t j{0};j < 2;++j)
             {
-                HrirArray &coeffs = const_cast<HrirArray&>(hrtf->coeffs[i]);
                 std::transform(coeffs.cbegin(), coeffs.cend(), inout[0].begin(),
                     [j](const float2 &in) noexcept -> double { return in[j]; });
                 rs.process(HRIR_LENGTH, inout[0].data(), HRIR_LENGTH, inout[1].data());
@@ -1381,6 +1378,15 @@ HrtfStore *GetLoadedHrtf(const std::string &name, ALuint devrate)
         hrtf->irSize  = static_cast<ALuint>(minu64(HRIR_LENGTH, irSize) + (MOD_IR_SIZE-1));
         hrtf->irSize -= hrtf->irSize % MOD_IR_SIZE;
         hrtf->sampleRate = devrate;
+    }
+
+    if(auto hrtfsizeopt = ConfigValueUInt(devname, nullptr, "hrtf-size"))
+    {
+        if(*hrtfsizeopt > 0 && *hrtfsizeopt < hrtf->irSize)
+        {
+            hrtf->irSize  = maxu(*hrtfsizeopt, MIN_IR_SIZE);
+            hrtf->irSize -= hrtf->irSize % MOD_IR_SIZE;
+        }
     }
 
     TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),

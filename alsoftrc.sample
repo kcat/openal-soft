@@ -128,6 +128,13 @@
 #  usage (still less than "full", given some number of active sources).
 #hrtf-mode = full
 
+## hrtf-size:
+#  Specifies the impulse response size, in samples, for the HRTF filter. Larger
+#  values increase the filter quality, while smaller values reduce processing
+#  cost. A value of 0 (default) uses the full filter size in the dataset, and
+#  the default dataset has a filter size of 32 samples at 44.1khz.
+#hrtf-size = 0
+
 ## default-hrtf:
 #  Specifies the default HRTF to use. When multiple HRTFs are available, this
 #  determines the preferred one to use if none are specifically requested. Note

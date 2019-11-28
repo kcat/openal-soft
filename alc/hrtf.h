@@ -26,7 +26,7 @@ struct HrtfHandle;
 #define HRIR_MASK        (HRIR_LENGTH-1)
 
 
-struct HrtfEntry {
+struct HrtfStore {
     RefCount mRef;
 
     ALuint sampleRate;
@@ -97,9 +97,9 @@ struct AngularPoint {
 
 
 al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
-HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
+HrtfStore *GetLoadedHrtf(HrtfHandle *handle);
 
-void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
+void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
     ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2]);
 
 /**
@@ -108,7 +108,7 @@ void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, AL
  * frequency gains for the decoder. The calculated impulse responses are
  * ordered and scaled according to the matrix input.
  */
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
+void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     const al::span<const AngularPoint> AmbiPoints, const ALfloat (*AmbiMatrix)[MAX_AMBI_CHANNELS],
     const ALfloat *AmbiOrderHFGain);
 

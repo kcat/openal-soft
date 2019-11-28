@@ -295,7 +295,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     /* HRTF state and info */
     std::unique_ptr<DirectHrtfState> mHrtfState;
-    HrtfEntry *mHrtf{nullptr};
+    HrtfStore *mHrtf{nullptr};
 
     /* Ambisonic-to-UHJ encoder */
     std::unique_ptr<Uhj2Encoder> Uhj_Encoder;

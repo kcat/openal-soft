@@ -1888,7 +1888,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            HrtfEntry *hrtf{nullptr};
+            HrtfStore *hrtf{nullptr};
             if(device->HrtfList.empty())
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
             if(!device->HrtfList.empty())
@@ -1904,7 +1904,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->FmtChans = DevFmtStereo;
                 device->Frequency = hrtf->sampleRate;
                 device->Flags.set<ChannelsRequest, FrequencyRequest>();
-                if(HrtfEntry *oldhrtf{device->mHrtf})
+                if(HrtfStore *oldhrtf{device->mHrtf})
                     oldhrtf->DecRef();
                 device->mHrtf = hrtf;
             }

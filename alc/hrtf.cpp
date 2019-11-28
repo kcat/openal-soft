@@ -55,7 +55,7 @@
 
 
 struct HrtfHandle {
-    std::unique_ptr<HrtfEntry> mEntry;
+    std::unique_ptr<HrtfStore> mEntry;
     al::FlexArray<char> mFilename;
 
     HrtfHandle(size_t fname_len) : mFilename{fname_len} { }
@@ -206,7 +206,7 @@ IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
+void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
     ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2])
 {
     const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
@@ -288,7 +288,7 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
     return std::unique_ptr<DirectHrtfState>{new (FamCount{num_chans}) DirectHrtfState{num_chans}};
 }
 
-void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
+void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     const al::span<const AngularPoint> AmbiPoints, const ALfloat (*AmbiMatrix)[MAX_AMBI_CHANNELS],
     const ALfloat *AmbiOrderHFGain)
 {
@@ -488,24 +488,24 @@ void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state,
 
 namespace {
 
-std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const ALuint fdCount,
+std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const ALuint fdCount,
     const ALubyte *evCount, const ALushort *distance, const ALushort *azCount,
     const ALushort *irOffset, ALushort irCount, const ALfloat (*coeffs)[2],
     const ALubyte (*delays)[2], const char *filename)
 {
-    std::unique_ptr<HrtfEntry> Hrtf;
+    std::unique_ptr<HrtfStore> Hrtf;
 
     ALuint evTotal{std::accumulate(evCount, evCount+fdCount, 0u)};
-    size_t total{sizeof(HrtfEntry)};
-    total  = RoundUp(total, alignof(HrtfEntry::Field)); /* Align for field infos */
-    total += sizeof(HrtfEntry::Field)*fdCount;
-    total  = RoundUp(total, alignof(HrtfEntry::Elevation)); /* Align for elevation infos */
+    size_t total{sizeof(HrtfStore)};
+    total  = RoundUp(total, alignof(HrtfStore::Field)); /* Align for field infos */
+    total += sizeof(HrtfStore::Field)*fdCount;
+    total  = RoundUp(total, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
     total += sizeof(Hrtf->elev[0])*evTotal;
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
     total += sizeof(Hrtf->coeffs[0])*HRIR_LENGTH*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
 
-    Hrtf.reset(new (al_calloc(16, total)) HrtfEntry{});
+    Hrtf.reset(new (al_calloc(16, total)) HrtfStore{});
     if(!Hrtf)
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
@@ -517,14 +517,14 @@ std::unique_ptr<HrtfEntry> CreateHrtfStore(ALuint rate, ALushort irSize, const A
 
         /* Set up pointers to storage following the main HRTF struct. */
         char *base = reinterpret_cast<char*>(Hrtf.get());
-        uintptr_t offset = sizeof(HrtfEntry);
+        uintptr_t offset = sizeof(HrtfStore);
 
-        offset = RoundUp(offset, alignof(HrtfEntry::Field)); /* Align for field infos */
-        auto field_ = reinterpret_cast<HrtfEntry::Field*>(base + offset);
+        offset = RoundUp(offset, alignof(HrtfStore::Field)); /* Align for field infos */
+        auto field_ = reinterpret_cast<HrtfStore::Field*>(base + offset);
         offset += sizeof(field_[0])*fdCount;
 
-        offset = RoundUp(offset, alignof(HrtfEntry::Elevation)); /* Align for elevation infos */
-        auto elev_ = reinterpret_cast<HrtfEntry::Elevation*>(base + offset);
+        offset = RoundUp(offset, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
+        auto elev_ = reinterpret_cast<HrtfStore::Elevation*>(base + offset);
         offset += sizeof(elev_[0])*evTotal;
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
@@ -612,7 +612,7 @@ ALuint GetLE_ALuint(std::istream &data)
     return static_cast<ALuint>(ret);
 }
 
-std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irCount{GetLE_ALushort(data)};
@@ -730,7 +730,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf00(std::istream &data, const char *filename)
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
-std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irSize{GetLE_ALubyte(data)};
@@ -835,7 +835,7 @@ std::unique_ptr<HrtfEntry> LoadHrtf01(std::istream &data, const char *filename)
 #define CHANTYPE_LEFTONLY  0
 #define CHANTYPE_LEFTRIGHT 1
 
-std::unique_ptr<HrtfEntry> LoadHrtf02(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALubyte sampleType{GetLE_ALubyte(data)};
@@ -1316,13 +1316,13 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     return list;
 }
 
-HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
+HrtfStore *GetLoadedHrtf(HrtfHandle *handle)
 {
     std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
     if(handle->mEntry)
     {
-        HrtfEntry *hrtf{handle->mEntry.get()};
+        HrtfStore *hrtf{handle->mEntry.get()};
         hrtf->IncRef();
         return hrtf;
     }
@@ -1358,7 +1358,7 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
         stream = std::move(fstr);
     }
 
-    std::unique_ptr<HrtfEntry> hrtf;
+    std::unique_ptr<HrtfStore> hrtf;
     char magic[sizeof(magicMarker02)];
     stream->read(magic, sizeof(magic));
     if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
@@ -1395,13 +1395,13 @@ HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 }
 
 
-void HrtfEntry::IncRef()
+void HrtfStore::IncRef()
 {
     auto ref = IncrementRef(mRef);
     TRACE("HrtfEntry %p increasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
 }
 
-void HrtfEntry::DecRef()
+void HrtfStore::DecRef()
 {
     auto ref = DecrementRef(mRef);
     TRACE("HrtfEntry %p decreasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
@@ -1412,7 +1412,7 @@ void HrtfEntry::DecRef()
         /* Go through and clear all unused HRTFs. */
         auto delete_unused = [](HrtfHandlePtr &handle) -> void
         {
-            HrtfEntry *entry{handle->mEntry.get()};
+            HrtfStore *entry{handle->mEntry.get()};
             if(entry && ReadRef(entry->mRef) == 0)
             {
                 TRACE("Unloading unused HRTF %s\n", handle->mFilename.data());

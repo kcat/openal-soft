@@ -684,7 +684,7 @@ void InitHrtfPanning(ALCdevice *device)
     BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), AmbiPoints, AmbiMatrix,
         AmbiOrderHFGain);
 
-    HrtfEntry *Hrtf{device->mHrtf};
+    HrtfStore *Hrtf{device->mHrtf};
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, ChansPerOrder);
 }
 
@@ -708,7 +708,7 @@ void InitUhjPanning(ALCdevice *device)
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
-    HrtfEntry *old_hrtf{device->mHrtf};
+    HrtfStore *old_hrtf{device->mHrtf};
 
     device->mHrtfState = nullptr;
     device->mHrtf = nullptr;
@@ -813,7 +813,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
     {
         const EnumeratedHrtf &entry = device->HrtfList[static_cast<ALuint>(hrtf_id)];
-        HrtfEntry *hrtf{GetLoadedHrtf(entry.hrtf)};
+        HrtfStore *hrtf{GetLoadedHrtf(entry.hrtf)};
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->mHrtf = hrtf;
@@ -827,7 +827,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     {
         auto find_hrtf = [device](const EnumeratedHrtf &entry) -> bool
         {
-            HrtfEntry *hrtf{GetLoadedHrtf(entry.hrtf)};
+            HrtfStore *hrtf{GetLoadedHrtf(entry.hrtf)};
             if(!hrtf) return false;
             if(hrtf->sampleRate != device->Frequency)
             {

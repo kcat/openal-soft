@@ -90,6 +90,11 @@ struct LoadedHrtf {
 
 #define MAX_HRIR_DELAY               (HRTF_HISTORY_LENGTH-1)
 
+#define HRIR_DELAY_FRACBITS 2
+#define HRIR_DELAY_FRACONE (1<<HRIR_DELAY_FRACBITS)
+
+static_assert(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE < 256, "MAX_HRIR_DELAY or DELAY_FRAC too large");
+
 constexpr ALchar magicMarker00[8]{'M','i','n','P','H','R','0','0'};
 constexpr ALchar magicMarker01[8]{'M','i','n','P','H','R','0','1'};
 constexpr ALchar magicMarker02[8]{'M','i','n','P','H','R','0','2'};
@@ -249,12 +254,12 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
     };
 
     /* Calculate the blended HRIR delays. */
-    delays[0] = fastf2u(
-        Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
-        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]);
-    delays[1] = fastf2u(
-        Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
-        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]);
+    float d{Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
+        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]};
+    delays[0] = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
+    d = Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
+        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[1];
+    delays[1] = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
 
     const ALuint irSize{Hrtf->irSize};
     ASSUME(irSize >= MIN_IR_SIZE);
@@ -333,12 +338,12 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
             (     elev0.blend) * (     az1.blend)};
 
         /* Calculate the blended HRIR delays. */
-        res.ldelay = fastf2u(
-            Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
-            Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]);
-        res.rdelay = fastf2u(
-            Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
-            Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]);
+        float d{Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
+            Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]};
+        res.ldelay = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
+        d = Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
+            Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3];
+        res.rdelay = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
 
         /* Calculate the blended HRIR coefficients. */
         double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
@@ -689,6 +694,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
             ERR("Invalid delays[%zd]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
             failed = AL_TRUE;
         }
+        delays[i][0] <<= HRIR_DELAY_FRACBITS;
     }
     if(failed)
         return nullptr;
@@ -788,6 +794,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
             ERR("Invalid delays[%zd]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
             failed = AL_TRUE;
         }
+        delays[i][0] <<= HRIR_DELAY_FRACBITS;
     }
     if(failed)
         return nullptr;
@@ -950,6 +957,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
                 ERR("Invalid delays[%zu][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
                 failed = AL_TRUE;
             }
+            delays[i][0] <<= HRIR_DELAY_FRACBITS;
         }
     }
     else if(channelType == CHANTYPE_LEFTRIGHT)
@@ -993,6 +1001,8 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
                 ERR("Invalid delays[%zu][1]: %d (%d)\n", i, delays[i][1], MAX_HRIR_DELAY);
                 failed = AL_TRUE;
             }
+            delays[i][0] <<= HRIR_DELAY_FRACBITS;
+            delays[i][1] <<= HRIR_DELAY_FRACBITS;
         }
     }
     if(failed)
@@ -1362,7 +1372,7 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
 
             ALubyte (&delays)[2] = const_cast<ALubyte(&)[2]>(hrtf->delays[i]);
             for(size_t j{0};j < 2;++j)
-                delays[j] = static_cast<ALubyte>(minu(MAX_HRIR_DELAY,
+                delays[j] = static_cast<ALubyte>(minu(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE,
                     (delays[j]*devrate + hrtf->sampleRate/2) / hrtf->sampleRate));
         }
 

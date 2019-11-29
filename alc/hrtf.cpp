@@ -1174,21 +1174,20 @@ void AddBuiltInEntry(const std::string &dispname, ALuint residx)
 
 #define IDR_DEFAULT_HRTF_MHR 1
 
-using ResData = al::span<const char>;
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
-ResData GetResource(int /*name*/)
-{ return ResData{}; }
+al::span<const char> GetResource(int /*name*/)
+{ return {}; }
 
 #else
 
 #include "hrtf_default.h"
 
-ResData GetResource(int name)
+al::span<const char> GetResource(int name)
 {
     if(name == IDR_DEFAULT_HRTF_MHR)
         return {reinterpret_cast<const char*>(hrtf_default), sizeof(hrtf_default)};
-    return ResData{};
+    return {};
 }
 #endif
 
@@ -1294,7 +1293,7 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
         TRACE("Loading %s...\n", fname.c_str());
-        ResData res{GetResource(residx)};
+        al::span<const char> res{GetResource(residx)};
         if(res.empty())
         {
             ERR("Could not get resource %u, %s\n", residx, name.c_str());

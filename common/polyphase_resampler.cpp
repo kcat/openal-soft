@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "opthelpers.h"
+
 
 namespace {
 
@@ -22,7 +24,7 @@ using uint = unsigned int;
  */
 double Sinc(const double x)
 {
-    if(std::abs(x) < EPSILON)
+    if UNLIKELY(std::abs(x) < EPSILON)
         return 1.0;
     return std::sin(M_PI * x) / (M_PI * x);
 }
@@ -99,7 +101,7 @@ uint Gcd(uint x, uint y)
 uint CalcKaiserOrder(const double rejection, const double transition)
 {
     double w_t = 2.0 * M_PI * transition;
-    if(rejection > 21.0)
+    if LIKELY(rejection > 21.0)
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));
 }
@@ -107,7 +109,7 @@ uint CalcKaiserOrder(const double rejection, const double transition)
 // Calculates the beta value of the Kaiser window.  Rejection is in dB.
 double CalcKaiserBeta(const double rejection)
 {
-    if(rejection > 50.0)
+    if LIKELY(rejection > 50.0)
         return 0.1102 * (rejection - 8.7);
     if(rejection >= 21.0)
         return (0.5842 * std::pow(rejection - 21.0, 0.4)) +
@@ -174,37 +176,48 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
 // polyphase filter implementation.
 void PPhaseResampler::process(const uint inN, const double *in, const uint outN, double *out)
 {
-    if(outN == 0)
+    if UNLIKELY(outN == 0)
         return;
-
-    const uint p{mP}, q{mQ}, m{mM}, l{mL};
 
     // Handle in-place operation.
     std::vector<double> workspace;
     double *work{out};
-    if(work == in)
+    if UNLIKELY(work == in)
     {
         workspace.resize(outN);
         work = workspace.data();
     }
 
     // Resample the input.
+    const uint p{mP}, q{mQ}, m{mM}, l{mL};
     const double *f{mF.data()};
     for(uint i{0};i < outN;i++)
     {
-        double r{0.0};
         // Input starts at l to compensate for the filter delay.  This will
         // drop any build-up from the first half of the filter.
-        uint j_f{(l + (q * i)) % p};
-        uint j_s{(l + (q * i)) / p};
-        while(j_f < m)
+        size_t j_f{(l + q*i) % p};
+        size_t j_s{(l + q*i) / p};
+
+        // Only take input when 0 <= j_s < inN.
+        double r{0.0};
+        if LIKELY(j_f < m)
         {
-            // Only take input when 0 <= j_s < inN.  This single unsigned
-            // comparison catches both cases.
-            if(j_s < inN)
-                r += f[j_f] * in[j_s];
-            j_f += p;
-            j_s--;
+            size_t filt_len{(m-j_f+p-1) / p};
+            if LIKELY(j_s+1 > inN)
+            {
+                size_t skip{std::min<size_t>(j_s+1 - inN, filt_len)};
+                j_f += p*skip;
+                j_s -= skip;
+                filt_len -= skip;
+            }
+            if(size_t todo{std::min<size_t>(j_s+1, filt_len)})
+            {
+                do {
+                    r += f[j_f] * in[j_s];
+                    j_f += p;
+                    --j_s;
+                } while(--todo);
+            }
         }
         work[i] = r;
     }

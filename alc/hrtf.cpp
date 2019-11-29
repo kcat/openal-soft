@@ -175,27 +175,27 @@ public:
 };
 
 
-struct IdxBlend { ALsizei idx; ALfloat blend; };
+struct IdxBlend { ALuint idx; float blend; };
 /* Calculate the elevation index given the polar elevation in radians. This
  * will return an index between 0 and (evcount - 1).
  */
-IdxBlend CalcEvIndex(ALsizei evcount, ALfloat ev)
+IdxBlend CalcEvIndex(ALuint evcount, float ev)
 {
     ev = (al::MathDefs<float>::Pi()*0.5f + ev) * static_cast<float>(evcount-1) /
         al::MathDefs<float>::Pi();
-    ALsizei idx{float2int(ev)};
+    ALuint idx{float2uint(ev)};
 
-    return IdxBlend{mini(idx, evcount-1), ev-static_cast<float>(idx)};
+    return IdxBlend{minu(idx, evcount-1), ev-static_cast<float>(idx)};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1).
  */
-IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
+IdxBlend CalcAzIndex(ALuint azcount, float az)
 {
     az = (al::MathDefs<float>::Tau()+az) * static_cast<float>(azcount) /
         al::MathDefs<float>::Tau();
-    ALsizei idx{float2int(az)};
+    ALuint idx{float2uint(az)};
 
     return IdxBlend{idx%azcount, az-static_cast<float>(idx)};
 }
@@ -206,14 +206,14 @@ IdxBlend CalcAzIndex(ALsizei azcount, ALfloat az)
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
-    ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2])
+void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
+    float spread, HrirArray &coeffs, ALuint (&delays)[2])
 {
-    const ALfloat dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
+    const float dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
 
     const auto *field = Hrtf->field;
     const auto *field_end = field + Hrtf->fdCount-1;
-    ALsizei ebase{0};
+    size_t ebase{0};
     while(distance < field->distance && field != field_end)
     {
         ebase += field->evCount;
@@ -222,16 +222,16 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, AL
 
     /* Claculate the elevation indinces. */
     const auto elev0 = CalcEvIndex(field->evCount, elevation);
-    const ALsizei elev1_idx{mini(elev0.idx+1, field->evCount-1)};
-    const ALsizei ir0offset{Hrtf->elev[ebase + elev0.idx].irOffset};
-    const ALsizei ir1offset{Hrtf->elev[ebase + elev1_idx].irOffset};
+    const size_t elev1_idx{minu(elev0.idx+1, field->evCount-1)};
+    const size_t ir0offset{Hrtf->elev[ebase + elev0.idx].irOffset};
+    const size_t ir1offset{Hrtf->elev[ebase + elev1_idx].irOffset};
 
     /* Calculate azimuth indices. */
     const auto az0 = CalcAzIndex(Hrtf->elev[ebase + elev0.idx].azCount, azimuth);
     const auto az1 = CalcAzIndex(Hrtf->elev[ebase + elev1_idx].azCount, azimuth);
 
     /* Calculate the HRIR indices to blend. */
-    ALsizei idx[4]{
+    const size_t idx[4]{
         ir0offset + az0.idx,
         ir0offset + ((az0.idx+1) % Hrtf->elev[ebase + elev0.idx].azCount),
         ir1offset + az1.idx,
@@ -241,7 +241,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
      */
-    const ALfloat blend[4]{
+    const float blend[4]{
         (1.0f-elev0.blend) * (1.0f-az0.blend) * dirfact,
         (1.0f-elev0.blend) * (     az0.blend) * dirfact,
         (     elev0.blend) * (1.0f-az1.blend) * dirfact,
@@ -249,20 +249,18 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, AL
     };
 
     /* Calculate the blended HRIR delays. */
-    delays[0] = fastf2i(
+    delays[0] = fastf2u(
         Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
-        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]
-    );
-    delays[1] = fastf2i(
+        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]);
+    delays[1] = fastf2u(
         Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
-        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]
-    );
+        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]);
 
     const ALuint irSize{Hrtf->irSize};
     ASSUME(irSize >= MIN_IR_SIZE);
 
     /* Calculate the blended HRIR coefficients. */
-    ALfloat *coeffout{al::assume_aligned<16>(&coeffs[0][0])};
+    float *coeffout{al::assume_aligned<16>(&coeffs[0][0])};
     coeffout[0] = PassthruCoeff * (1.0f-dirfact);
     coeffout[1] = PassthruCoeff * (1.0f-dirfact);
     std::fill(coeffout+2, coeffout + HRIR_LENGTH*2, 0.0f);
@@ -312,23 +310,23 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
         /* Calculate the elevation indices. */
         const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
-        const ALsizei elev1_idx{mini(elev0.idx+1, field.evCount-1)};
-        const ALsizei ir0offset{Hrtf->elev[elev0.idx].irOffset};
-        const ALsizei ir1offset{Hrtf->elev[elev1_idx].irOffset};
+        const size_t elev1_idx{minu(elev0.idx+1, field.evCount-1)};
+        const size_t ir0offset{Hrtf->elev[elev0.idx].irOffset};
+        const size_t ir1offset{Hrtf->elev[elev1_idx].irOffset};
 
         /* Calculate azimuth indices. */
         const auto az0 = CalcAzIndex(Hrtf->elev[elev0.idx].azCount, pt.Azim.value);
         const auto az1 = CalcAzIndex(Hrtf->elev[elev1_idx].azCount, pt.Azim.value);
 
         /* Calculate the HRIR indices to blend. */
-        const ALuint idx[4]{
-            static_cast<ALuint>(ir0offset + az0.idx),
-            static_cast<ALuint>(ir0offset + ((az0.idx+1) % Hrtf->elev[elev0.idx].azCount)),
-            static_cast<ALuint>(ir1offset + az1.idx),
-            static_cast<ALuint>(ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount))};
+        const size_t idx[4]{
+            ir0offset + az0.idx,
+            ir0offset + ((az0.idx+1) % Hrtf->elev[elev0.idx].azCount),
+            ir1offset + az1.idx,
+            ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount)};
 
         /* Calculate bilinear blending weights. */
-        const ALfloat blend[4]{
+        const float blend[4]{
             (1.0f-elev0.blend) * (1.0f-az0.blend),
             (1.0f-elev0.blend) * (     az0.blend),
             (     elev0.blend) * (1.0f-az1.blend),
@@ -364,8 +362,8 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     /* For dual-band processing, add a 16-sample delay to compensate for the HF
      * scale on the minimum-phase response.
      */
-    static constexpr ALsizei base_delay{DualBand ? 16 : 0};
-    const ALdouble xover_norm{400.0 / Hrtf->sampleRate};
+    static constexpr ALuint base_delay{DualBand ? 16 : 0};
+    const double xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
 
     auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(state->Coeffs.size());
@@ -545,11 +543,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const A
                 coeffs_[i][j][0] = coeffs[i*irSize + j][0];
                 coeffs_[i][j][1] = coeffs[i*irSize + j][1];
             }
-            for(ALuint j{irSize};j < HRIR_LENGTH;j++)
-            {
-                coeffs_[i][j][0] = 0.0f;
-                coeffs_[i][j][1] = 0.0f;
-            }
+            std::fill(coeffs_[i].begin()+irSize, coeffs_[i].end(), float2{});
         }
         for(ALuint i{0};i < irCount;i++)
         {

@@ -59,13 +59,13 @@ struct HrtfStore {
 
 
 struct HrtfState {
-    alignas(16) std::array<ALfloat,HRTF_HISTORY_LENGTH> History;
+    alignas(16) std::array<float,HRTF_HISTORY_LENGTH> History;
 };
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
-    ALsizei Delay[2];
-    ALfloat Gain;
+    ALuint Delay[2];
+    float Gain;
 };
 
 struct DirectHrtfState {
@@ -91,8 +91,8 @@ struct AngularPoint {
 al::vector<std::string> EnumerateHrtf(const char *devname);
 HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate);
 
-void GetHrtfCoeffs(const HrtfStore *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat distance,
-    ALfloat spread, HrirArray &coeffs, ALsizei (&delays)[2]);
+void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
+    float spread, HrirArray &coeffs, ALuint (&delays)[2]);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

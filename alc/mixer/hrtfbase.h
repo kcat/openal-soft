@@ -22,10 +22,9 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
     const float gainstep{hrtfparams->GainStep};
     const float gain{hrtfparams->Gain};
 
-    ALsizei Delay[2]{
+    size_t Delay[2]{
         HRTF_HISTORY_LENGTH - hrtfparams->Delay[0],
         HRTF_HISTORY_LENGTH - hrtfparams->Delay[1] };
-    ASSUME(Delay[0] >= 0 && Delay[1] >= 0);
     float stepcount{0.0f};
     for(size_t i{0u};i < BufferSize;++i)
     {
@@ -53,10 +52,9 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
     ASSUME(BufferSize > 0);
 
-    ALsizei Delay[2]{
+    size_t Delay[2]{
         HRTF_HISTORY_LENGTH - oldparams->Delay[0],
         HRTF_HISTORY_LENGTH - oldparams->Delay[1] };
-    ASSUME(Delay[0] >= 0 && Delay[1] >= 0);
     float stepcount{0.0f};
     for(size_t i{0u};i < BufferSize;++i)
     {
@@ -70,7 +68,6 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
     Delay[0] = HRTF_HISTORY_LENGTH - newparams->Delay[0];
     Delay[1] = HRTF_HISTORY_LENGTH - newparams->Delay[1];
-    ASSUME(Delay[0] >= 0 && Delay[1] >= 0);
     stepcount = 0.0f;
     for(size_t i{0u};i < BufferSize;++i)
     {

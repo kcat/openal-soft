@@ -79,7 +79,7 @@ enum {
 
 struct MixHrtfFilter {
     const HrirArray *Coeffs;
-    ALsizei Delay[2];
+    ALuint Delay[2];
     float Gain;
     float GainStep;
 };

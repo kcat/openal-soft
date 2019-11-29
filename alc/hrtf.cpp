@@ -1271,20 +1271,18 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
     const std::string &fname = entry_iter->mFilename;
 
     std::lock_guard<std::mutex> __{LoadedHrtfLock};
-    auto handle = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
-        [&fname](LoadedHrtf &hrtf) -> bool { return hrtf.mFilename == fname; }
+    auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
+        [](LoadedHrtf &hrtf, const std::string &fname) -> bool { return hrtf.mFilename < fname; }
     );
-    if(handle != LoadedHrtfs.end())
+    while(handle != LoadedHrtfs.end() && handle->mFilename == fname)
     {
-        do {
-            HrtfStore *hrtf{handle->mEntry.get()};
-            if(hrtf && hrtf->sampleRate == devrate)
-            {
-                hrtf->IncRef();
-                return hrtf;
-            }
-            ++handle;
-        } while(handle != LoadedHrtfs.end() && handle->mFilename == fname);
+        HrtfStore *hrtf{handle->mEntry.get()};
+        if(hrtf && hrtf->sampleRate == devrate)
+        {
+            hrtf->IncRef();
+            return hrtf;
+        }
+        ++handle;
     }
 
     std::unique_ptr<std::istream> stream;
@@ -1395,9 +1393,9 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
 
     TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),
         hrtf->sampleRate, hrtf->irSize);
-    LoadedHrtfs.emplace_back(LoadedHrtf{fname, std::move(hrtf)});
+    handle = LoadedHrtfs.emplace(handle, LoadedHrtf{fname, std::move(hrtf)});
 
-    return LoadedHrtfs.back().mEntry.get();
+    return handle->mEntry.get();
 }
 
 

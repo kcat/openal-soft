@@ -1265,9 +1265,9 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
     const std::string &fname = entry_iter->mFilename;
 
     std::lock_guard<std::mutex> __{LoadedHrtfLock};
-    auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [](LoadedHrtf &hrtf, const std::string &fname) -> bool { return hrtf.mFilename < fname; }
-    );
+    auto hrtf_lt_fname = [](LoadedHrtf &hrtf, const std::string &filename) -> bool
+    { return hrtf.mFilename < filename; };
+    auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname, hrtf_lt_fname);
     while(handle != LoadedHrtfs.end() && handle->mFilename == fname)
     {
         HrtfStore *hrtf{handle->mEntry.get()};

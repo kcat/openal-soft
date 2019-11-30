@@ -1369,20 +1369,23 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
                 for(size_t k{0};k < HRIR_LENGTH;++k)
                     coeffs[k][j] = static_cast<float>(inout[1][k]);
             }
+        }
+        rs = {};
 
-            ALubyte (&delays)[2] = const_cast<ALubyte(&)[2]>(hrtf->delays[i]);
-            for(size_t j{0};j < 2;++j)
-                delays[j] = static_cast<ALubyte>(minu(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE,
-                    (delays[j]*devrate + hrtf->sampleRate/2) / hrtf->sampleRate));
+        const ALuint srate{hrtf->sampleRate};
+        for(size_t i{0};i < irCount;++i)
+        {
+            for(ALubyte &delay : const_cast<ALubyte(&)[2]>(hrtf->delays[i]))
+                delay = static_cast<ALubyte>(minu64(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE,
+                    (uint64_t{delay}*devrate + srate/2) / srate));
         }
 
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        const uint64_t irSize{(uint64_t{hrtf->irSize}*devrate + hrtf->sampleRate-1) /
-            hrtf->sampleRate};
-        hrtf->irSize  = static_cast<ALuint>(minu64(HRIR_LENGTH, irSize) + (MOD_IR_SIZE-1));
-        hrtf->irSize -= hrtf->irSize % MOD_IR_SIZE;
+        uint64_t newIrSize{(uint64_t{hrtf->irSize}*devrate + srate-1) / srate};
+        newIrSize = minu64(HRIR_LENGTH, newIrSize) + (MOD_IR_SIZE-1);
+        hrtf->irSize = static_cast<ALuint>(newIrSize - (newIrSize%MOD_IR_SIZE));
         hrtf->sampleRate = devrate;
     }
 

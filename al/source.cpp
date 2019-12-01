@@ -2788,6 +2788,7 @@ START_API_FUNC
         ALbuffer *buffer{BufferList->mBuffer};
         voice->mFrequency = buffer->Frequency;
         voice->mFmtChannels = buffer->mFmtChannels;
+        voice->mAmbiOrder = 1;
         voice->mNumChannels = ChannelsFromFmt(buffer->mFmtChannels);
         voice->mSampleSize  = BytesFromFmt(buffer->mFmtType);
 

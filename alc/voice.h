@@ -211,6 +211,7 @@ struct ALvoice {
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
+    ALuint mAmbiOrder;
     ALuint mFrequency;
     ALuint mNumChannels;
     ALuint mSampleSize;
@@ -269,6 +270,7 @@ struct ALvoice {
             std::memory_order_relaxed);
 
         mFmtChannels = rhs.mFmtChannels;
+        mAmbiOrder = rhs.mAmbiOrder;
         mFrequency = rhs.mFrequency;
         mNumChannels = rhs.mNumChannels;
         mSampleSize = rhs.mSampleSize;

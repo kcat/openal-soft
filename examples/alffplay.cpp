@@ -95,6 +95,16 @@ typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void 
 typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
 #endif
+
+#ifndef AL_SOFT_bformat_ex
+#define AL_SOFT_bformat_ex
+#define AL_AMBISONIC_LAYOUT_SOFT                 0x1997
+#define AL_AMBISONIC_SCALING_SOFT                0x1998
+#define AL_FUMA_SOFT                             0x0000
+#define AL_ACN_SOFT                              0x0001
+#define AL_SN3D_SOFT                             0x0001
+#define AL_N3D_SOFT                              0x0002
+#endif
 #endif /* ALLOW_EXPERIMENTAL_EXTS */
 }
 
@@ -777,6 +787,11 @@ int AudioState::handler()
         sleep_time = AudioBufferTotalTime;
     }
 #endif
+#ifdef AL_SOFT_bformat_ex
+    const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFTX_bformat_ex") != AL_FALSE};
+    ALenum ambi_layout{AL_FUMA_SOFT};
+    ALenum ambi_scale{AL_FUMA_SOFT};
+#endif
 
     /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
@@ -947,9 +962,7 @@ int AudioState::handler()
     if(!mDstChanLayout)
     {
         /* OpenAL only supports first-order ambisonics with AL_EXT_BFORMAT, so
-         * we have to drop any extra channels. It also only supports FuMa
-         * channel ordering and normalization, so a custom matrix is needed to
-         * scale and reorder the source from AmbiX.
+         * we have to drop any extra channels.
          */
         mSwresCtx.reset(swr_alloc_set_opts(nullptr,
             (1_i64<<4)-1, mDstSampleFmt, mCodecCtx->sample_rate,
@@ -960,12 +973,23 @@ int AudioState::handler()
          * channel order and normalization, so we can only assume AmbiX as the
          * defacto-standard. This is not true for .amb files, which use FuMa.
          */
-        std::vector<double> mtx(64*64, 0.0);
-        mtx[0 + 0*64] = std::sqrt(0.5);
-        mtx[3 + 1*64] = 1.0;
-        mtx[1 + 2*64] = 1.0;
-        mtx[2 + 3*64] = 1.0;
-        swr_set_matrix(mSwresCtx.get(), mtx.data(), 64);
+#ifdef AL_SOFT_bformat_ex
+        ambi_layout = AL_ACN_SOFT;
+        ambi_scale = AL_SN3D_SOFT;
+        if(!has_bfmt_ex)
+#endif
+        {
+            /* Without AL_SOFT_bformat_ex, OpenAL only supports FuMa channel
+             * ordering and normalization, so a custom matrix is needed to
+             * scale and reorder the source from AmbiX.
+             */
+            std::vector<double> mtx(64*64, 0.0);
+            mtx[0 + 0*64] = std::sqrt(0.5);
+            mtx[3 + 1*64] = 1.0;
+            mtx[1 + 2*64] = 1.0;
+            mtx[2 + 3*64] = 1.0;
+            swr_set_matrix(mSwresCtx.get(), mtx.data(), 64);
+        }
     }
     else
         mSwresCtx.reset(swr_alloc_set_opts(nullptr,
@@ -995,6 +1019,16 @@ int AudioState::handler()
     if(alGetError() != AL_NO_ERROR)
         goto finish;
 
+#ifdef AL_SOFT_bformat_ex
+    if(has_bfmt_ex)
+    {
+        for(ALuint bufid : mBuffers)
+        {
+            alBufferi(bufid, AL_AMBISONIC_LAYOUT_SOFT, ambi_layout);
+            alBufferi(bufid, AL_AMBISONIC_SCALING_SOFT, ambi_scale);
+        }
+    }
+#endif
 #ifdef AL_SOFT_map_buffer
     if(alBufferStorageSOFT)
     {

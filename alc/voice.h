@@ -9,6 +9,7 @@
 #include "al/buffer.h"
 #include "alspan.h"
 #include "alu.h"
+#include "devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
@@ -211,10 +212,12 @@ struct ALvoice {
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
-    ALuint mAmbiOrder;
     ALuint mFrequency;
     ALuint mNumChannels;
     ALuint mSampleSize;
+    AmbiLayout mAmbiLayout;
+    AmbiNorm mAmbiScaling;
+    ALuint mAmbiOrder;
 
     /** Current target parameters used for mixing. */
     ALuint mStep;
@@ -270,10 +273,12 @@ struct ALvoice {
             std::memory_order_relaxed);
 
         mFmtChannels = rhs.mFmtChannels;
-        mAmbiOrder = rhs.mAmbiOrder;
         mFrequency = rhs.mFrequency;
         mNumChannels = rhs.mNumChannels;
         mSampleSize = rhs.mSampleSize;
+        mAmbiLayout = rhs.mAmbiLayout;
+        mAmbiScaling = rhs.mAmbiScaling;
+        mAmbiOrder = rhs.mAmbiOrder;
 
         mStep = rhs.mStep;
         mResampler = rhs.mResampler;

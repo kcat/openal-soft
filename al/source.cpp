@@ -2788,9 +2788,11 @@ START_API_FUNC
         ALbuffer *buffer{BufferList->mBuffer};
         voice->mFrequency = buffer->Frequency;
         voice->mFmtChannels = buffer->mFmtChannels;
-        voice->mAmbiOrder = 1;
         voice->mNumChannels = ChannelsFromFmt(buffer->mFmtChannels);
         voice->mSampleSize  = BytesFromFmt(buffer->mFmtType);
+        voice->mAmbiLayout = static_cast<AmbiLayout>(buffer->AmbiLayout);
+        voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
+        voice->mAmbiOrder = 1;
 
         /* Clear the stepping value so the mixer knows not to mix this until
          * the update gets applied.
@@ -3136,6 +3138,10 @@ START_API_FUNC
             BufferFmt = buffer;
         else if(BufferFmt->Frequency != buffer->Frequency ||
                 BufferFmt->mFmtChannels != buffer->mFmtChannels ||
+                ((BufferFmt->mFmtChannels == FmtBFormat2D ||
+                  BufferFmt->mFmtChannels == FmtBFormat3D) &&
+                 (BufferFmt->AmbiLayout != buffer->AmbiLayout ||
+                  BufferFmt->AmbiScaling != buffer->AmbiScaling)) ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");

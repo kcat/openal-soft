@@ -337,6 +337,26 @@ inline ALuint dither_rng(ALuint *seed) noexcept
 }
 
 
+auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
+{
+    if(scaletype == AmbiNorm::FuMa) return AmbiScale::FromFuMa;
+    if(scaletype == AmbiNorm::SN3D) return AmbiScale::FromSN3D;
+    return AmbiScale::FromN3D;
+}
+
+auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI_CHANNELS>&
+{
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
+    return AmbiIndex::FromACN;
+}
+
+auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI2D_CHANNELS>&
+{
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D;
+    return AmbiIndex::From2D;
+}
+
+
 inline alu::Vector aluCrossproduct(const alu::Vector &in1, const alu::Vector &in2)
 {
     return alu::Vector{
@@ -875,18 +895,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             /* Convert the rotation matrix for FuMa input ordering and scaling,
              * and whether input is 2D or 3D.
              */
-            const uint8_t *index_map{};
-            const float *scales{};
-            if(voice->mFmtChannels == FmtBFormat2D)
-            {
-                index_map = AmbiIndex::FromFuMa2D.data();
-                scales = AmbiScale::FromFuMa.data();
-            }
-            else
-            {
-                index_map = AmbiIndex::FromFuMa.data();
-                scales = AmbiScale::FromFuMa.data();
-            }
+            const uint8_t *index_map{(voice->mFmtChannels == FmtBFormat2D) ?
+                GetAmbi2DLayout(voice->mAmbiLayout).data() :
+                GetAmbiLayout(voice->mAmbiLayout).data()};
+            const float *scales{GetAmbiScales(voice->mAmbiScaling).data()};
 
             static const uint8_t OrderFromChan[MAX_AMBI_CHANNELS]{
                 0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,

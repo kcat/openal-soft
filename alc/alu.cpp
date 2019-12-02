@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <climits>
 #include <cmath>
@@ -502,6 +503,162 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
     return azimuth;
 }
 
+
+/* Begin ambisonic rotation helpers.
+ *
+ * Rotating first-order B-Format just needs a straight-forward X/Y/Z rotation
+ * matrix. Higher orders, however, are more complicated. The method implemented
+ * here is a recursive algorithm (the rotation for first-order is used to help
+ * generate the second-order rotation, which helps generate the third-order
+ * rotation, etc).
+ *
+ * Adapted from
+ * <https://github.com/polarch/Spherical-Harmonic-Transform/blob/master/getSHrotMtx.m>,
+ * provided under the BSD 3-Clause license.
+ *
+ * Copyright (c) 2015, Archontis Politis
+ * Copyright (c) 2019, Christopher Robinson
+ *
+ * The u, v, and w coefficients used for generating higher-order rotations are
+ * precomputed since they're constant. The second-order coefficients are
+ * followed by the third-order coefficients, etc.
+ */
+struct RotatorCoeffs {
+    float u, v, w;
+
+    template<size_t N0, size_t N1>
+    static std::array<RotatorCoeffs,N0+N1> ConcatArrays(const std::array<RotatorCoeffs,N0> &lhs,
+        const std::array<RotatorCoeffs,N1> &rhs)
+    {
+        std::array<RotatorCoeffs,N0+N1> ret;
+        auto iter = std::copy(lhs.cbegin(), lhs.cend(), ret.begin());
+        std::copy(rhs.cbegin(), rhs.cend(), iter);
+        return ret;
+    }
+
+    template<int l, int num_elems=l*2+1>
+    static std::array<RotatorCoeffs,num_elems*num_elems> GenCoeffs()
+    {
+        std::array<RotatorCoeffs,num_elems*num_elems> ret{};
+        auto coeffs = ret.begin();
+
+        for(int m{-l};m <= l;++m)
+        {
+            for(int n{-l};n <= l;++n)
+            {
+                // compute u,v,w terms of Eq.8.1 (Table I)
+                const bool d{m == 0}; // the delta function d_m0
+                const float denom{static_cast<float>((std::abs(n) == l) ?
+                    (2*l) * (2*l - 1) : (l*l - n*n))};
+
+                const int abs_m{std::abs(m)};
+                coeffs->u = std::sqrt(static_cast<float>(l*l - m*m)/denom);
+                coeffs->v = std::sqrt(static_cast<float>(l+abs_m-1) * static_cast<float>(l+abs_m) /
+                    denom) * (1.0f+d) * (1.0f - 2.0f*d) * 0.5f;
+                coeffs->w = std::sqrt(static_cast<float>(l-abs_m-1) * static_cast<float>(l-abs_m) /
+                    denom) * (1.0f-d) * -0.5f;
+                ++coeffs;
+            }
+        }
+
+        return ret;
+    }
+};
+const auto RotatorCoeffArray = RotatorCoeffs::ConcatArrays(RotatorCoeffs::GenCoeffs<2>(),
+    RotatorCoeffs::GenCoeffs<3>());
+
+/**
+ * Given the matrix R, pre-filled with the (zeroth- and) first-order rotation
+ * coefficients, this fills in the coefficients for the higher orders up to and
+ * including L. The matrix is in ACN layout.
+ */
+void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R, const int L)
+{
+    /* Don't do anything for < 2nd order. */
+    if(L < 2) return;
+
+    auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
+        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+    {
+        const float ri1{ R[static_cast<ALuint>(i+2)][ 1+2]};
+        const float rim1{R[static_cast<ALuint>(i+2)][-1+2]};
+        const float ri0{ R[static_cast<ALuint>(i+2)][ 0+2]};
+
+        auto vec = R[static_cast<ALuint>(a+l-1) + last_band].cbegin() + last_band;
+        if(n == -l)
+            return ri1*vec[0] + rim1*vec[static_cast<ALuint>(l-1)*size_t{2}];
+        if(n == l)
+            return ri1*vec[static_cast<ALuint>(l-1)*size_t{2}] - rim1*vec[0];
+        return ri0*vec[static_cast<ALuint>(n+l-1)];
+    };
+
+    auto U = [P](const int l, const int m, const int n, const size_t last_band,
+        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+    {
+        return P(0, l, m, n, last_band, R);
+    };
+    auto V = [P](const int l, const int m, const int n, const size_t last_band,
+        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+    {
+        if(m > 0)
+        {
+            const bool d{m == 1};
+            const float p0{P( 1, l,  m-1, n, last_band, R)};
+            const float p1{P(-1, l, -m+1, n, last_band, R)};
+            return d ? p0*std::sqrt(2.0f) : (p0 - p1);
+        }
+        const bool d{m == -1};
+        const float p0{P( 1, l,  m+1, n, last_band, R)};
+        const float p1{P(-1, l, -m-1, n, last_band, R)};
+        return d ? p1*std::sqrt(2.0f) : (p0 + p1);
+    };
+    auto W = [P](const int l, const int m, const int n, const size_t last_band,
+        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+    {
+        assert(m != 0);
+        if(m > 0)
+        {
+            const float p0{P( 1, l,  m+1, n, last_band, R)};
+            const float p1{P(-1, l, -m-1, n, last_band, R)};
+            return p0 + p1;
+        }
+        const float p0{P( 1, l,  m-1, n, last_band, R)};
+        const float p1{P(-1, l, -m+1, n, last_band, R)};
+        return p0 - p1;
+    };
+
+    // compute rotation matrix of each subsequent band recursively
+    auto coeffs = RotatorCoeffArray.cbegin();
+    size_t band_idx{4}, last_band{1};
+    for(int l{2};l <= L;++l)
+    {
+        size_t y{band_idx};
+        for(int m{-l};m <= l;++m,++y)
+        {
+            size_t x{band_idx};
+            for(int n{-l};n <= l;++n,++x)
+            {
+                float r{0.0f};
+
+                // computes Eq.8.1
+                const float u{coeffs->u};
+                if(u != 0.0f) r += u * U(l, m, n, last_band, R);
+                const float v{coeffs->v};
+                if(v != 0.0f) r += v * V(l, m, n, last_band, R);
+                const float w{coeffs->w};
+                if(w != 0.0f) r += w * W(l, m, n, last_band, R);
+
+                R[y][x] = r;
+                ++coeffs;
+            }
+        }
+        last_band = band_idx;
+        band_idx += static_cast<ALuint>(l)*size_t{2} + 1;
+    }
+}
+/* End ambisonic rotation helpers. */
+
+
 void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypos,
     const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const ALfloat DryGain,
     const ALfloat DryGainHF, const ALfloat DryGainLF, const ALfloat (&WetGain)[MAX_SENDS],
@@ -554,15 +711,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     const ALuint NumSends{Device->NumAuxSends};
 
     bool DirectChannels{props->DirectChannels != AL_FALSE};
+    const ALuint num_channels{voice->mNumChannels};
     const ChanMap *chans{nullptr};
-    ALuint num_channels{0};
-    bool isbformat{false};
     ALfloat downmix_gain{1.0f};
     switch(voice->mFmtChannels)
     {
     case FmtMono:
         chans = MonoMap;
-        num_channels = 1;
         /* Mono buffers are never played direct. */
         DirectChannels = false;
         break;
@@ -573,52 +728,39 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         StereoMap[1].angle = -props->StereoPan[1];
 
         chans = StereoMap;
-        num_channels = 2;
         downmix_gain = 1.0f / 2.0f;
         break;
 
     case FmtRear:
         chans = RearMap;
-        num_channels = 2;
         downmix_gain = 1.0f / 2.0f;
         break;
 
     case FmtQuad:
         chans = QuadMap;
-        num_channels = 4;
         downmix_gain = 1.0f / 4.0f;
         break;
 
     case FmtX51:
         chans = X51Map;
-        num_channels = 6;
         /* NOTE: Excludes LFE. */
         downmix_gain = 1.0f / 5.0f;
         break;
 
     case FmtX61:
         chans = X61Map;
-        num_channels = 7;
         /* NOTE: Excludes LFE. */
         downmix_gain = 1.0f / 6.0f;
         break;
 
     case FmtX71:
         chans = X71Map;
-        num_channels = 8;
         /* NOTE: Excludes LFE. */
         downmix_gain = 1.0f / 7.0f;
         break;
 
     case FmtBFormat2D:
-        num_channels = 3;
-        isbformat = true;
-        DirectChannels = false;
-        break;
-
     case FmtBFormat3D:
-        num_channels = 4;
-        isbformat = true;
         DirectChannels = false;
         break;
     }
@@ -634,7 +776,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         });
 
     voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
-    if(isbformat)
+    if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
     {
         /* Special handling for B-Format sources. */
 
@@ -679,7 +821,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             }
 
             /* NOTE: W needs to be scaled due to FuMa normalization. */
-            const ALfloat &scale0 = AmbiScale::FromFuMa[0];
+            const float scale0{AmbiScale::FromFuMa[0]};
             ComputePanGains(&Device->Dry, coeffs, DryGain*scale0,
                 voice->mChans[0].mDryParams.Gains.Target);
             for(ALuint i{0};i < NumSends;i++)
@@ -719,31 +861,58 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             alu::Vector U{aluCrossproduct(N, V)};
             U.normalize();
 
-            /* Build a rotate + conversion matrix (FuMa -> ACN+N3D). NOTE: This
-             * matrix is transposed, for the inputs to align on the rows and
-             * outputs on the columns.
+            /* Build a rotation matrix. Manually fill the zeroth- and first-
+             * order elements, then construct the rotation for the higher
+             * orders.
              */
-            const ALfloat &wscale = AmbiScale::FromFuMa[0];
-            const ALfloat &yscale = AmbiScale::FromFuMa[1];
-            const ALfloat &zscale = AmbiScale::FromFuMa[2];
-            const ALfloat &xscale = AmbiScale::FromFuMa[3];
-            const ALfloat matrix[4][MAX_AMBI_CHANNELS]{
-            //      ACN0          ACN1          ACN2          ACN3
-                { wscale,         0.0f,         0.0f,         0.0f }, // FuMa W
-                {   0.0f, -N[0]*xscale,  N[1]*xscale, -N[2]*xscale }, // FuMa X
-                {   0.0f,  U[0]*yscale, -U[1]*yscale,  U[2]*yscale }, // FuMa Y
-                {   0.0f, -V[0]*zscale,  V[1]*zscale, -V[2]*zscale }  // FuMa Z
-            };
+            std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> shrot{};
+            shrot[0][0] = 1.0f;
+            shrot[1][1] =  U[0]; shrot[1][2] = -V[0]; shrot[1][3] = -N[0];
+            shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
+            shrot[3][1] =  U[2]; shrot[3][2] = -V[2]; shrot[3][3] = -N[2];
+            AmbiRotator(shrot, static_cast<int>(minu(voice->mAmbiOrder, Device->mAmbiOrder)));
 
+            /* Convert the rotation matrix for FuMa input ordering and scaling,
+             * and whether input is 2D or 3D.
+             */
+            const uint8_t *index_map{};
+            const float *scales{};
+            if(voice->mFmtChannels == FmtBFormat2D)
+            {
+                index_map = AmbiIndex::FromFuMa2D.data();
+                scales = AmbiScale::FromFuMa.data();
+            }
+            else
+            {
+                index_map = AmbiIndex::FromFuMa.data();
+                scales = AmbiScale::FromFuMa.data();
+            }
+
+            static const uint8_t OrderFromChan[MAX_AMBI_CHANNELS]{
+                0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
+            };
+            static const uint8_t ChansPerOrder[MAX_AMBI_ORDER+1]{1, 3, 5, 7,};
+            static const uint8_t OrderOffset[MAX_AMBI_ORDER+1]{0, 1, 4, 9,};
             for(ALuint c{0};c < num_channels;c++)
             {
-                ComputePanGains(&Device->Dry, matrix[c], DryGain,
+                const size_t acn{index_map[c]};
+                const size_t order{OrderFromChan[acn]};
+                const size_t tocopy{ChansPerOrder[order]};
+                const size_t offset{OrderOffset[order]};
+                const float scale{scales[acn]};
+                auto in = shrot.cbegin() + offset;
+
+                float coeffs[MAX_AMBI_CHANNELS]{};
+                for(size_t x{0};x < tocopy;++x)
+                    coeffs[offset+x] = in[x][acn] * scale;
+
+                ComputePanGains(&Device->Dry, coeffs, DryGain,
                     voice->mChans[c].mDryParams.Gains.Target);
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, matrix[c], WetGain[i],
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }

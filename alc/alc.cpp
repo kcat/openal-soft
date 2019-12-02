@@ -825,6 +825,7 @@ constexpr ALchar alExtList[] =
     "AL_EXT_SOURCE_RADIUS "
     "AL_EXT_STEREO_ANGLES "
     "AL_LOKI_quadriphonic "
+    "AL_SOFTX_bformat_ex "
     "AL_SOFT_block_alignment "
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "

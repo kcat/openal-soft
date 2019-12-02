@@ -1090,6 +1090,26 @@ START_API_FUNC
             albuf->PackAlign = static_cast<ALuint>(value);
         break;
 
+    case AL_AMBISONIC_LAYOUT_SOFT:
+        if UNLIKELY(ReadRef(albuf->ref) != 0)
+            context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic layout",
+                buffer);
+        else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_ACN_SOFT)
+            context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic layout %04x", value);
+        else
+            albuf->AmbiLayout = value;
+        break;
+
+    case AL_AMBISONIC_SCALING_SOFT:
+        if UNLIKELY(ReadRef(albuf->ref) != 0)
+            context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic scaling",
+                buffer);
+        else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_SN3D_SOFT && value != AL_N3D_SOFT)
+            context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling %04x", value);
+        else
+            albuf->AmbiScaling = value;
+        break;
+
     default:
         context->setError(AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
@@ -1125,6 +1145,8 @@ START_API_FUNC
         {
         case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         case AL_PACK_BLOCK_ALIGNMENT_SOFT:
+        case AL_AMBISONIC_LAYOUT_SOFT:
+        case AL_AMBISONIC_SCALING_SOFT:
             alBufferi(buffer, param, values[0]);
             return;
         }
@@ -1277,6 +1299,14 @@ START_API_FUNC
         *value = static_cast<ALint>(albuf->PackAlign);
         break;
 
+    case AL_AMBISONIC_LAYOUT_SOFT:
+        *value = albuf->AmbiLayout;
+        break;
+
+    case AL_AMBISONIC_SCALING_SOFT:
+        *value = albuf->AmbiScaling;
+        break;
+
     default:
         context->setError(AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
@@ -1317,6 +1347,8 @@ START_API_FUNC
     case AL_SAMPLE_LENGTH_SOFT:
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
+    case AL_AMBISONIC_LAYOUT_SOFT:
+    case AL_AMBISONIC_SCALING_SOFT:
         alGetBufferi(buffer, param, values);
         return;
     }

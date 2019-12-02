@@ -79,6 +79,9 @@ struct ALbuffer {
     ALuint OriginalSize{0};
     ALuint OriginalAlign{0};
 
+    ALenum AmbiLayout{AL_FUMA_SOFT};
+    ALenum AmbiScaling{AL_FUMA_SOFT};
+
     ALuint LoopStart{0u};
     ALuint LoopEnd{0u};
 

@@ -2802,11 +2802,11 @@ START_API_FUNC
         voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
         if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
 
-        /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is
-         * mixing in first order. No HF scaling is necessary to mix it.
+        /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
+         * higher order than the voice. No HF scaling is necessary to mix it.
          */
         if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
-            && device->mAmbiOrder > 1)
+            && device->mAmbiOrder > voice->mAmbiOrder)
         {
             const ALuint *OrderFromChan;
             if(voice->mFmtChannels == FmtBFormat2D)
@@ -2822,14 +2822,17 @@ START_API_FUNC
                 OrderFromChan = Order3DFromChan;
             }
 
-            BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
+            const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
 
-            const auto scales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
-            auto init_ambi = [scales,&OrderFromChan,&splitter](ALvoice::ChannelData &chandata) -> void
+            const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder,
+                device->mAmbiOrder);
+            auto init_ambi = [device,&scales,&OrderFromChan,splitter](ALvoice::ChannelData &chandata) -> void
             {
                 chandata.mPrevSamples.fill(0.0f);
                 chandata.mAmbiScale = scales[*(OrderFromChan++)];
                 chandata.mAmbiSplitter = splitter;
+                chandata.mDryParams = DirectParams{};
+                std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
             };
             std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
                 init_ambi);
@@ -2839,19 +2842,15 @@ START_API_FUNC
         else
         {
             /* Clear previous samples. */
-            auto clear_prevs = [](ALvoice::ChannelData &chandata) -> void
-            { chandata.mPrevSamples.fill(0.0f); };
+            auto clear_prevs = [device](ALvoice::ChannelData &chandata) -> void
+            {
+                chandata.mPrevSamples.fill(0.0f);
+                chandata.mDryParams = DirectParams{};
+                std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+            };
             std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
                 clear_prevs);
         }
-
-        auto clear_params = [device](ALvoice::ChannelData &chandata) -> void
-        {
-            chandata.mDryParams = DirectParams{};
-            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
-        };
-        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
-            clear_params);
 
         if(device->AvgSpeakerDist > 0.0f)
         {

@@ -2194,6 +2194,58 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(voice.mSourceID.load(std::memory_order_relaxed) == 0u)
                 return;
 
+            voice.mStep = 0;
+            voice.mFlags |= VOICE_IS_FADING;
+
+            if((voice.mFmtChannels == FmtBFormat2D || voice.mFmtChannels == FmtBFormat3D)
+                && device->mAmbiOrder > voice.mAmbiOrder)
+            {
+                const ALuint *OrderFromChan;
+                if(voice.mFmtChannels == FmtBFormat2D)
+                {
+                    static const ALuint Order2DFromChan[MAX_AMBI2D_CHANNELS]{
+                        0, 1,1, 2,2, 3,3,};
+                    OrderFromChan = Order2DFromChan;
+                }
+                else
+                {
+                    static const ALuint Order3DFromChan[MAX_AMBI_CHANNELS]{
+                        0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,};
+                    OrderFromChan = Order3DFromChan;
+                }
+
+                const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
+
+                const auto scales = BFormatDec::GetHFOrderScales(voice.mAmbiOrder,
+                    device->mAmbiOrder);
+                auto init_ambi = [device,&scales,&OrderFromChan,splitter](ALvoice::ChannelData &chandata) -> void
+                {
+                    chandata.mPrevSamples.fill(0.0f);
+                    chandata.mAmbiScale = scales[*(OrderFromChan++)];
+                    chandata.mAmbiSplitter = splitter;
+                    chandata.mDryParams = DirectParams{};
+                    std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+                };
+                std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
+                    init_ambi);
+
+                voice.mFlags |= VOICE_IS_AMBISONIC;
+            }
+            else
+            {
+                /* Clear previous samples. */
+                auto clear_prevs = [device](ALvoice::ChannelData &chandata) -> void
+                {
+                    chandata.mPrevSamples.fill(0.0f);
+                    chandata.mDryParams = DirectParams{};
+                    std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+                };
+                std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
+                    clear_prevs);
+
+                voice.mFlags &= ~VOICE_IS_AMBISONIC;
+            }
+
             if(device->AvgSpeakerDist > 0.0f)
             {
                 /* Reinitialize the NFC filters for new parameters. */

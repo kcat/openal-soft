@@ -80,11 +80,11 @@ struct DirectHrtfState {
     DEF_FAM_NEWDEL(DirectHrtfState, Coeffs)
 };
 
-struct ElevRadius { float value; };
-struct AzimRadius { float value; };
+struct EvRadians { float value; };
+struct AzRadians { float value; };
 struct AngularPoint {
-    ElevRadius Elev;
-    AzimRadius Azim;
+    EvRadians Elev;
+    AzRadians Azim;
 };
 
 

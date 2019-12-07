@@ -331,19 +331,19 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
             ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount)};
 
         /* Calculate bilinear blending weights. */
-        const float blend[4]{
-            (1.0f-elev0.blend) * (1.0f-az0.blend),
-            (1.0f-elev0.blend) * (     az0.blend),
-            (     elev0.blend) * (1.0f-az1.blend),
-            (     elev0.blend) * (     az1.blend)};
+        const double blend[4]{
+            (1.0-elev0.blend) * (1.0-az0.blend),
+            (1.0-elev0.blend) * (    az0.blend),
+            (    elev0.blend) * (1.0-az1.blend),
+            (    elev0.blend) * (    az1.blend)};
 
         /* Calculate the blended HRIR delays. */
-        float d{Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
+        double d{Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
             Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]};
-        res.ldelay = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
+        res.ldelay = fastf2u(static_cast<float>(d) * float{1.0f/HRIR_DELAY_FRACONE});
         d = Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
             Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3];
-        res.rdelay = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
+        res.rdelay = fastf2u(static_cast<float>(d) * float{1.0f/HRIR_DELAY_FRACONE});
 
         /* Calculate the blended HRIR coefficients. */
         double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
@@ -351,7 +351,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         for(ALsizei c{0};c < 4;c++)
         {
             const float *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]][0].data())};
-            const float mult{blend[c]};
+            const double mult{blend[c]};
             auto blend_coeffs = [mult](const float src, const double coeff) noexcept -> double
             { return src*mult + coeff; };
             std::transform(srccoeffs, srccoeffs + HRIR_LENGTH*2, coeffout, coeffout, blend_coeffs);

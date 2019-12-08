@@ -27,6 +27,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -37,6 +38,8 @@
 
 #include "mysofa.h"
 
+
+using namespace std::placeholders;
 
 using double3 = std::array<double,3>;
 
@@ -60,10 +63,10 @@ static const char *SofaErrorStr(int err)
  * of other axes as necessary.  The epsilons are used to constrain the
  * equality of unique elements.
  */
-static uint GetUniquelySortedElems(const uint m, const double3 *aers, const uint axis,
-    const double *const (&filters)[3], const double (&epsilons)[3], double *elems)
+static std::vector<double> GetUniquelySortedElems(const uint m, const double3 *aers,
+    const uint axis, const double *const (&filters)[3], const double (&epsilons)[3])
 {
-    uint count{0u};
+    std::vector<double> elems;
     for(uint i{0u};i < m;++i)
     {
         const double elem{aers[i][axis]};
@@ -71,97 +74,93 @@ static uint GetUniquelySortedElems(const uint m, const double3 *aers, const uint
         uint j;
         for(j = 0;j < 3;j++)
         {
-            if(filters[j] && std::fabs(aers[i][j] - *filters[j]) > epsilons[j])
+            if(filters[j] && std::abs(aers[i][j] - *filters[j]) > epsilons[j])
                 break;
         }
         if(j < 3)
             continue;
 
-        for(j = 0;j < count;j++)
+        auto iter = elems.begin();
+        for(;iter != elems.end();++iter)
         {
-            const double delta{elem - elems[j]};
+            const double delta{elem - *iter};
+            if(delta > epsilons[axis]) continue;
+            if(delta >= -epsilons[axis]) break;
 
-            if(delta > epsilons[axis])
-                continue;
-
-            if(delta >= -epsilons[axis])
-                break;
-
-            for(uint k{count};k > j;k--)
-                elems[k] = elems[k - 1];
-
-            elems[j] = elem;
-            count++;
+            iter = elems.emplace(iter, elem);
             break;
         }
-
-        if(j >= count)
-            elems[count++] = elem;
+        if(iter == elems.end())
+            elems.emplace_back(elem);
     }
-
-    return count;
+    return elems;
 }
 
-/* Given a list of elements, this will produce the smallest step size that
- * can uniformly cover a fair portion of the list.  Ideally this will be over
- * half, but in degenerate cases this can fall to a minimum of 5 (the lower
- * limit on elevations necessary to build a layout).
+/* Given a list of azimuths, this will produce the smallest step size that can
+ * uniformly cover the list. Ideally this will be over half, but in degenerate
+ * cases this can fall to a minimum of 5 (the lower limit).
  */
-static double GetUniformStepSize(const double epsilon, const uint m, const double *elems)
+static double GetUniformAzimStep(const double epsilon, const size_t m, const double *elems)
 {
-    auto steps = std::vector<double>(m, 0.0);
-    auto counts = std::vector<uint>(m, 0u);
-    uint count{0u};
+    if(m < 5) return 0.0;
 
-    for(uint stride{1u};stride < m/2;stride++)
+    /* Get the maximum count possible, given the first two elements. It would
+     * be impossible to have more than this since the first element must be
+     * included.
+     */
+    uint count{static_cast<uint>(std::ceil(360.0 / (elems[1]-elems[0])))};
+    count = std::min(count, uint{MAX_AZ_COUNT});
+
+    for(;count >= 5;--count)
     {
-        for(uint i{0u};i < m-stride;i++)
+        /* Given the stepping value for this number of elements, check each
+         * multiple to ensure there's a matching element.
+         */
+        const double step{360.0 / count};
+        bool good{true};
+        size_t idx{1u};
+        for(uint mult{1u};mult < count && good;++mult)
         {
-            const double step{elems[i + stride] - elems[i]};
-
-            uint j;
-            for(j = 0;j < count;j++)
-            {
-                if(std::fabs(step - steps[j]) < epsilon)
-                {
-                    counts[j]++;
-                    break;
-                }
-            }
-
-            if(j >= count)
-            {
-                steps[j] = step;
-                counts[j] = 1;
-                count++;
-            }
+            const double target{step*mult + elems[0]};
+            while(idx < m && target-elems[idx] > epsilon)
+                ++idx;
+            good &= (idx < m) && !(std::abs(target-elems[idx++]) > epsilon);
         }
-
-        for(uint i{1u};i < count;i++)
-        {
-            if(counts[i] > counts[0])
-            {
-                steps[0] = steps[i];
-                counts[0] = counts[i];
-            }
-        }
-
-        count = 1;
-
-        if(counts[0] > m/2)
-            break;
+        if(good)
+            return step;
     }
+    return 0.0;
+}
 
-    if(counts[0] > 255)
+/* Given a list of elevations, this will produce the smallest step size that
+ * can uniformly cover the list. Ideally this will be over half, but in
+ * degenerate cases this can fall to a minimum of 5 (the lower limit).
+ */
+static double GetUniformElevStep(const double epsilon, const size_t m, const double *elems)
+{
+    if(m < 5) return 0.0;
+
+    uint count{static_cast<uint>(std::ceil(180.0 / (elems[1]-elems[0])))};
+    count = std::min(count, uint{MAX_EV_COUNT}-1u);
+
+    for(;count >= 5;--count)
     {
-        uint i{2u};
-        while(counts[0]/i > 255 && (counts[0]%i) != 0)
-            ++i;
-        counts[0] /= i;
-        steps[0] *= i;
+        const double step{180.0 / count};
+        bool good{true};
+        size_t idx{1u};
+        /* Elevations don't need to match all multiples if there's not enough
+         * elements to check. Missing elevations can be synthesized.
+         */
+        for(uint mult{1u};mult <= count && idx < m && good;++mult)
+        {
+            const double target{step*mult + elems[0]};
+            while(idx < m && target-elems[idx] > epsilon)
+                ++idx;
+            good &= !(idx < m) || !(std::abs(target-elems[idx++]) > epsilon);
+        }
+        if(good)
+            return step;
     }
-    if(counts[0] > 5)
-        return steps[0];
     return 0.0;
 }
 
@@ -174,8 +173,6 @@ static double GetUniformStepSize(const double epsilon, const uint m, const doubl
 static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 {
     auto aers = std::vector<double3>(m, double3{});
-    auto elems = std::vector<double>(m, 0.0);
-
     for(uint i{0u};i < m;++i)
     {
         float aer[3]{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
@@ -185,9 +182,8 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         aers[i][2] = aer[2];
     }
 
-    const uint fdCount{GetUniquelySortedElems(m, aers.data(), 2, { nullptr, nullptr, nullptr },
-        { 0.1, 0.1, 0.001 }, elems.data())};
-    if(fdCount > MAX_FD_COUNT)
+    auto radii = GetUniquelySortedElems(m, aers.data(), 2, {}, {0.1, 0.1, 0.001});
+    if(radii.size() > MAX_FD_COUNT)
     {
         fprintf(stdout, "Incompatible layout (inumerable radii).\n");
         return false;
@@ -196,100 +192,110 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
     double distances[MAX_FD_COUNT]{};
     uint evCounts[MAX_FD_COUNT]{};
     auto azCounts = std::vector<uint>(MAX_FD_COUNT*MAX_EV_COUNT, 0u);
-    for(uint fi{0u};fi < fdCount;fi++)
-    {
-        distances[fi] = elems[fi];
-        if(fi > 0 && distances[fi] <= distances[fi-1])
-        {
-            fprintf(stderr, "Distances must increase.\n");
-            return 0;
-        }
-    }
-    if(distances[0] < hData->mRadius)
-    {
-        fprintf(stderr, "Distance cannot start below head radius.\n");
-        return 0;
-    }
 
-    for(uint fi{0u};fi < fdCount;fi++)
+    auto dist_end = std::copy_if(radii.cbegin(), radii.cend(), std::begin(distances),
+        std::bind(std::greater_equal<double>{}, _1, hData->mRadius));
+    auto fdCount = static_cast<uint>(std::distance(std::begin(distances), dist_end));
+
+    for(uint fi{0u};fi < fdCount;)
     {
         const double dist{distances[fi]};
-        uint evCount{GetUniquelySortedElems(m, aers.data(), 1, { nullptr, nullptr, &dist },
-            { 0.1, 0.1, 0.001 }, elems.data())};
+        auto elevs = GetUniquelySortedElems(m, aers.data(), 1, {nullptr, nullptr, &dist},
+            {0.1, 0.1, 0.001});
 
-        if(evCount > MAX_EV_COUNT)
+        /* Remove elevations that don't have a valid set of azimuths. */
+        auto invalid_elev = [&dist,&aers,m](const double ev) -> bool
         {
-            fprintf(stderr, "Incompatible layout (innumerable elevations).\n");
-            return false;
-        }
+            auto azim = GetUniquelySortedElems(m, aers.data(), 0, {nullptr, &ev, &dist},
+                {0.1, 0.1, 0.001});
 
-        double step{GetUniformStepSize(0.1, evCount, elems.data())};
+            if(std::abs(90.0 - std::abs(ev)) < 0.1)
+                return azim.size() != 1;
+            if(azim.empty() || !(std::abs(azim[0]) < 0.1))
+                return true;
+            return GetUniformAzimStep(0.1, azim.size(), azim.data()) <= 0.0;
+        };
+        elevs.erase(std::remove_if(elevs.begin(), elevs.end(), invalid_elev), elevs.end());
+
+        /* Reverse the elevations so it increments starting with -90 (flipped
+         * from +90). This makes it easier to work out a proper stepping value.
+         */
+        std::reverse(elevs.begin(), elevs.end());
+        for(auto &ev : elevs) ev *= -1.0;
+
+        double step{GetUniformElevStep(0.1, elevs.size(), elevs.data())};
         if(step <= 0.0)
         {
-            fprintf(stderr, "Incompatible layout (non-uniform elevations).\n");
-            return false;
+            fprintf(stdout, "Non-uniform elevations on field distance %f.\n", dist);
+            std::copy(&distances[fi+1], &distances[fdCount], &distances[fi]);
+            --fdCount;
+            continue;
         }
 
-        uint evStart{0u};
-        for(uint ei{0u};ei < evCount;ei++)
-        {
-            double ev{90.0 + elems[ei]};
-            double eif{std::round(ev / step)};
-            const uint ei_start{static_cast<uint>(eif)};
+        /* Re-reverse the elevations to restore the correct order. */
+        for(auto &ev : elevs) ev *= -1.0;
+        std::reverse(elevs.begin(), elevs.end());
 
-            if(std::fabs(eif - static_cast<double>(ei_start)) < (0.1/step))
+        uint evStart{0u};
+        for(uint ei{0u};ei < elevs.size();ei++)
+        {
+            if(!(elevs[ei] < 0.0))
             {
-                evStart = ei_start;
+                fprintf(stdout, "Too many missing elevations on field distance %f.\n", dist);
+                return false;
+            }
+
+            double eif{(90.0+elevs[ei]) / step};
+            const double ev_start{std::round(eif)};
+
+            if(std::abs(eif - ev_start) < (0.1/step))
+            {
+                evStart = static_cast<uint>(ev_start);
                 break;
             }
         }
 
-        evCount = static_cast<uint>(std::round(180.0 / step)) + 1;
+        const auto evCount = static_cast<uint>(std::round(180.0 / step)) + 1;
         if(evCount < 5)
         {
-            fprintf(stderr, "Incompatible layout (too few uniform elevations).\n");
-            return false;
+            fprintf(stdout, "Too few uniform elevations on field distance %f.\n", dist);
+            std::copy(&distances[fi+1], &distances[fdCount], &distances[fi]);
+            --fdCount;
+            continue;
         }
-
         evCounts[fi] = evCount;
 
         for(uint ei{evStart};ei < evCount;ei++)
         {
             const double ev{-90.0 + ei*180.0/(evCount - 1)};
-            const uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist },
-                { 0.1, 0.1, 0.001 }, elems.data())};
+            auto azims = GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist },
+                { 0.1, 0.1, 0.001 });
 
-            if(ei > 0 && ei < (evCount - 1))
+            if(ei == 0 || ei == (evCount-1))
             {
-                step = GetUniformStepSize(0.1, azCount, elems.data());
-                if(step <= 0.0)
+                if(azims.size() != 1)
                 {
-                    fprintf(stderr, "Incompatible layout (non-uniform azimuths).\n");
+                    fprintf(stdout, "Non-singular poles on field distance %f.\n", dist);
                     return false;
                 }
-
-                azCounts[fi*MAX_EV_COUNT + ei] = static_cast<uint>(std::round(360.0 / step));
-                if(azCounts[fi*MAX_EV_COUNT + ei] > MAX_AZ_COUNT)
-                {
-                    fprintf(stderr,
-                        "Incompatible layout (too many azimuths on elev=%f, rad=%f, %u > %u).\n",
-                         ev, dist, azCounts[fi*MAX_EV_COUNT + ei], MAX_AZ_COUNT);
-                    return false;
-                }
-            }
-            else if(azCount != 1)
-            {
-                fprintf(stderr, "Incompatible layout (non-singular poles).\n");
-                return false;
+                azCounts[fi*MAX_EV_COUNT + ei] = 1u;
             }
             else
             {
-                azCounts[fi*MAX_EV_COUNT + ei] = 1;
+                step = GetUniformAzimStep(0.1, azims.size(), azims.data());
+                if(step <= 0.0)
+                {
+                    fprintf(stdout, "Non-uniform azimuths on elevation %f, field distance %f.\n",
+                        ev, dist);
+                    return false;
+                }
+                azCounts[fi*MAX_EV_COUNT + ei] = static_cast<uint>(std::round(360.0 / step));
             }
         }
 
         for(uint ei{0u};ei < evStart;ei++)
             azCounts[fi*MAX_EV_COUNT + ei] = azCounts[fi*MAX_EV_COUNT + evCount - ei - 1];
+        ++fi;
     }
     return PrepareHrirData(fdCount, distances, evCounts, azCounts.data(), hData) != 0;
 }

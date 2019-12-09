@@ -92,6 +92,7 @@ struct LoadedHrtf {
 
 #define HRIR_DELAY_FRACBITS 2
 #define HRIR_DELAY_FRACONE (1<<HRIR_DELAY_FRACBITS)
+#define HRIR_DELAY_FRACHALF (HRIR_DELAY_FRACONE>>1)
 
 static_assert(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE < 256, "MAX_HRIR_DELAY or DELAY_FRAC too large");
 
@@ -304,7 +305,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
      */
     static constexpr bool DualBand{true};
 
-    ALuint min_delay{HRTF_HISTORY_LENGTH};
+    ALuint min_delay{HRTF_HISTORY_LENGTH*HRIR_DELAY_FRACONE};
     ALuint max_delay{0};
     al::vector<ImpulseResponse> impres; impres.reserve(AmbiPoints.size());
     auto calc_res = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
@@ -337,13 +338,13 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
             (    elev0.blend) * (1.0-az1.blend),
             (    elev0.blend) * (    az1.blend)};
 
-        /* Calculate the blended HRIR delays. */
+        /* Calculate the blended HRIR delays (in fixed-point). */
         double d{Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
             Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]};
-        res.ldelay = fastf2u(static_cast<float>(d) * float{1.0f/HRIR_DELAY_FRACONE});
+        res.ldelay = fastf2u(static_cast<float>(d));
         d = Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
             Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3];
-        res.rdelay = fastf2u(static_cast<float>(d) * float{1.0f/HRIR_DELAY_FRACONE});
+        res.rdelay = fastf2u(static_cast<float>(d));
 
         /* Calculate the blended HRIR coefficients. */
         double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
@@ -363,6 +364,8 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         return res;
     };
     std::transform(AmbiPoints.begin(), AmbiPoints.end(), std::back_inserter(impres), calc_res);
+    auto hrir_delay_round = [](const ALuint d) noexcept -> ALuint
+    { return (d+HRIR_DELAY_FRACHALF) >> HRIR_DELAY_FRACBITS; };
 
     /* For dual-band processing, add a 16-sample delay to compensate for the HF
      * scale on the minimum-phase response.
@@ -376,8 +379,8 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const al::span<const double2,HRIR_LENGTH> hrir{impres[c].hrir};
-        const ALuint ldelay{impres[c].ldelay - min_delay + base_delay};
-        const ALuint rdelay{impres[c].rdelay - min_delay + base_delay};
+        const ALuint ldelay{hrir_delay_round(impres[c].ldelay-min_delay) + base_delay};
+        const ALuint rdelay{hrir_delay_round(impres[c].rdelay-min_delay) + base_delay};
 
         if /*constexpr*/(!DualBand)
         {
@@ -463,18 +466,20 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     }
     tmpres.clear();
 
+    max_delay -= min_delay;
     ALuint max_length{HRIR_LENGTH};
     /* Increase the IR size by double the base delay with dual-band processing
      * to account for the head and tail from the HF response scale.
      */
     const ALuint irsize{minu(Hrtf->irSize + base_delay*2, max_length)};
-    max_length = minu(max_delay-min_delay + irsize, max_length);
+    max_length = minu(hrir_delay_round(max_delay) + irsize, max_length);
 
     /* Round up to the next IR size multiple. */
     max_length += MOD_IR_SIZE-1;
     max_length -= max_length%MOD_IR_SIZE;
 
-    TRACE("Skipped delay: %u, max delay: %u, new FIR length: %u\n", min_delay, max_delay-min_delay,
+    TRACE("Skipped delay: %.2f, max delay: %.2f, new FIR length: %u\n",
+        min_delay/double{HRIR_DELAY_FRACONE}, max_delay/double{HRIR_DELAY_FRACONE},
         max_length);
     state->IrSize = max_length;
 }

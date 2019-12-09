@@ -227,7 +227,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         {
             auto azims = GetUniquelySortedElems(aers, 0, {nullptr, &ev, &dist}, {0.1, 0.1, 0.001});
 
-            if(std::abs(90.0 - std::abs(ev)) < 0.1)
+            if(std::abs(ev) > 89.999)
                 return azims.size() != 1;
             if(azims.empty() || !(std::abs(azims[0]) < 0.1))
                 return true;

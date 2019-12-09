@@ -172,6 +172,8 @@ static double GetUniformElevStep(const double epsilon, const std::vector<double>
  */
 static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 {
+    fprintf(stdout, "Detecting compatible layout...\n");
+
     auto aers = std::vector<double3>(m, double3{});
     for(uint i{0u};i < m;++i)
     {
@@ -197,6 +199,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         std::bind(std::greater_equal<double>{}, _1, hData->mRadius));
     auto fdCount = static_cast<uint>(std::distance(std::begin(distances), dist_end));
 
+    uint ir_total{0u};
     for(uint fi{0u};fi < fdCount;)
     {
         const double dist{distances[fi]};
@@ -269,6 +272,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
             const double ev{-90.0 + ei*180.0/(evCount - 1)};
             auto azims = GetUniquelySortedElems(aers, 0, {nullptr, &ev, &dist}, {0.1, 0.1, 0.001});
 
+            uint azCount;
             if(ei == 0 || ei == (evCount-1))
             {
                 if(azims.size() != 1)
@@ -276,7 +280,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
                     fprintf(stdout, "Non-singular poles on field distance %f.\n", dist);
                     return false;
                 }
-                azCounts[fi*MAX_EV_COUNT + ei] = 1u;
+                azCount = 1u;
             }
             else
             {
@@ -287,14 +291,17 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
                         ev, dist);
                     return false;
                 }
-                azCounts[fi*MAX_EV_COUNT + ei] = static_cast<uint>(std::round(360.0 / step));
+                azCount = static_cast<uint>(std::round(360.0 / step));
             }
+            azCounts[fi*MAX_EV_COUNT + ei] = azCount;
+            ir_total += azCount;
         }
 
         for(uint ei{0u};ei < evStart;ei++)
             azCounts[fi*MAX_EV_COUNT + ei] = azCounts[fi*MAX_EV_COUNT + evCount - ei - 1];
         ++fi;
     }
+    fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
     return PrepareHrirData(fdCount, distances, evCounts, azCounts.data(), hData) != 0;
 }
 

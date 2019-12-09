@@ -1113,12 +1113,11 @@ bool checkName(const std::string &name)
 
 void AddFileEntry(const std::string &filename)
 {
-    /* Check if this file has already been loaded globally. */
-    auto enum_iter = std::lower_bound(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(), filename,
-        [](const HrtfEntry &entry, const std::string &fname) -> bool
-        { return entry.mFilename < fname; }
-    );
-    if(enum_iter != EnumeratedHrtfs.cend() && enum_iter->mFilename == filename)
+    /* Check if this file has already been enumerated. */
+    auto enum_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
+        [&filename](const HrtfEntry &entry) -> bool
+        { return entry.mFilename == filename; });
+    if(enum_iter != EnumeratedHrtfs.cend())
     {
         TRACE("Skipping duplicate file entry %s\n", filename.c_str());
         return;
@@ -1142,7 +1141,8 @@ void AddFileEntry(const std::string &filename)
         newname += " #";
         newname += std::to_string(++count);
     }
-    const HrtfEntry &entry = *EnumeratedHrtfs.insert(enum_iter, HrtfEntry{newname, filename});
+    EnumeratedHrtfs.emplace_back(HrtfEntry{newname, filename});
+    const HrtfEntry &entry = EnumeratedHrtfs.back();
 
     TRACE("Adding file entry \"%s\"\n", entry.mFilename.c_str());
 }
@@ -1154,11 +1154,10 @@ void AddBuiltInEntry(const std::string &dispname, ALuint residx)
 {
     const std::string filename{'!'+std::to_string(residx)+'_'+dispname};
 
-    auto enum_iter = std::lower_bound(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(), filename,
-        [](const HrtfEntry &entry, const std::string &fname) -> bool
-        { return entry.mFilename < fname; }
-    );
-    if(enum_iter != EnumeratedHrtfs.cend() && enum_iter->mFilename == filename)
+    auto enum_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
+        [&filename](const HrtfEntry &entry) -> bool
+        { return entry.mFilename == filename; });
+    if(enum_iter != EnumeratedHrtfs.cend())
     {
         TRACE("Skipping duplicate file entry %s\n", filename.c_str());
         return;
@@ -1175,7 +1174,8 @@ void AddBuiltInEntry(const std::string &dispname, ALuint residx)
         newname += " #";
         newname += std::to_string(++count);
     }
-    const HrtfEntry &entry = *EnumeratedHrtfs.insert(enum_iter, HrtfEntry{newname, filename});
+    EnumeratedHrtfs.emplace_back(HrtfEntry{newname, filename});
+    const HrtfEntry &entry = EnumeratedHrtfs.back();
 
     TRACE("Adding built-in entry \"%s\"\n", entry.mFilename.c_str());
 }

@@ -136,13 +136,20 @@ static double GetUniformAzimStep(const double epsilon, const std::vector<double>
  * can uniformly cover the list. Ideally this will be over half, but in
  * degenerate cases this can fall to a minimum of 5 (the lower limit).
  */
-static double GetUniformElevStep(const double epsilon, const std::vector<double> &elems)
+static double GetUniformElevStep(const double epsilon, std::vector<double> &elems)
 {
     if(elems.size() < 5) return 0.0;
 
-    uint count{static_cast<uint>(std::ceil(180.0 / (elems[1]-elems[0])))};
-    count = std::min(count, uint{MAX_EV_COUNT}-1u);
+    /* Reverse the elevations so it increments starting with -90 (flipped from
+     * +90). This makes it easier to work out a proper stepping value.
+     */
+    std::reverse(elems.begin(), elems.end());
+    for(auto &v : elems) v *= -1.0;
 
+    uint count{static_cast<uint>(std::ceil(180.0 / (elems[1]-elems[0])))};
+    count = std::min(count, uint{MAX_EV_COUNT-1u});
+
+    double ret{0.0};
     for(;count >= 5;--count)
     {
         const double step{180.0 / count};
@@ -159,9 +166,16 @@ static double GetUniformElevStep(const double epsilon, const std::vector<double>
             good &= !(idx < elems.size()) || !(std::abs(target-elems[idx++]) > epsilon);
         }
         if(good)
-            return step;
+        {
+            ret = step;
+            break;
+        }
     }
-    return 0.0;
+    /* Re-reverse the elevations to restore the correct order. */
+    for(auto &v : elems) v *= -1.0;
+    std::reverse(elems.begin(), elems.end());
+
+    return ret;
 }
 
 /* Attempts to produce a compatible layout.  Most data sets tend to be
@@ -219,12 +233,6 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         };
         elevs.erase(std::remove_if(elevs.begin(), elevs.end(), invalid_elev), elevs.end());
 
-        /* Reverse the elevations so it increments starting with -90 (flipped
-         * from +90). This makes it easier to work out a proper stepping value.
-         */
-        std::reverse(elevs.begin(), elevs.end());
-        for(auto &ev : elevs) ev *= -1.0;
-
         double step{GetUniformElevStep(0.1, elevs)};
         if(step <= 0.0)
         {
@@ -233,10 +241,6 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
             --fdCount;
             continue;
         }
-
-        /* Re-reverse the elevations to restore the correct order. */
-        for(auto &ev : elevs) ev *= -1.0;
-        std::reverse(elevs.begin(), elevs.end());
 
         uint evStart{0u};
         for(uint ei{0u};ei < elevs.size();ei++)

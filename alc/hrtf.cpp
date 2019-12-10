@@ -826,14 +826,13 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
-#define SAMPLETYPE_S16 0
-#define SAMPLETYPE_S24 1
-
-#define CHANTYPE_LEFTONLY  0
-#define CHANTYPE_LEFTRIGHT 1
-
 std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
 {
+    constexpr ALubyte SampleType_S16{0};
+    constexpr ALubyte SampleType_S24{1};
+    constexpr ALubyte ChanType_LeftOnly{0};
+    constexpr ALubyte ChanType_LeftRight{1};
+
     ALuint rate{GetLE_ALuint(data)};
     ALubyte sampleType{GetLE_ALubyte(data)};
     ALubyte channelType{GetLE_ALubyte(data)};
@@ -846,12 +845,12 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     }
 
     ALboolean failed{AL_FALSE};
-    if(sampleType > SAMPLETYPE_S24)
+    if(sampleType > SampleType_S24)
     {
         ERR("Unsupported sample type: %d\n", sampleType);
         failed = AL_TRUE;
     }
-    if(channelType > CHANTYPE_LEFTRIGHT)
+    if(channelType > ChanType_LeftRight)
     {
         ERR("Unsupported channel type: %d\n", channelType);
         failed = AL_TRUE;
@@ -936,14 +935,14 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
 
     auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irTotal);
     auto delays = al::vector<std::array<ALubyte,2>>(irTotal);
-    if(channelType == CHANTYPE_LEFTONLY)
+    if(channelType == ChanType_LeftOnly)
     {
-        if(sampleType == SAMPLETYPE_S16)
+        if(sampleType == SampleType_S16)
         {
             for(auto &val : coeffs)
                 val[0] = GetLE_ALshort(data) / 32768.0f;
         }
-        else if(sampleType == SAMPLETYPE_S24)
+        else if(sampleType == SampleType_S24)
         {
             for(auto &val : coeffs)
                 val[0] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
@@ -965,9 +964,9 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             delays[i][0] <<= HRIR_DELAY_FRACBITS;
         }
     }
-    else if(channelType == CHANTYPE_LEFTRIGHT)
+    else if(channelType == ChanType_LeftRight)
     {
-        if(sampleType == SAMPLETYPE_S16)
+        if(sampleType == SampleType_S16)
         {
             for(auto &val : coeffs)
             {
@@ -975,7 +974,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
                 val[1] = GetLE_ALshort(data) / 32768.0f;
             }
         }
-        else if(sampleType == SAMPLETYPE_S24)
+        else if(sampleType == SampleType_S24)
         {
             for(auto &val : coeffs)
             {
@@ -1013,7 +1012,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    if(channelType == CHANTYPE_LEFTONLY)
+    if(channelType == ChanType_LeftOnly)
     {
         /* Mirror the left ear responses to the right ear. */
         size_t ebase{0};

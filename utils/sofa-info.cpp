@@ -214,11 +214,9 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
     auto aers = std::vector<double3>(m, double3{});
     for(uint i{0u};i < m;++i)
     {
-        float aer[3]{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
-        mysofa_c2s(&aer[0]);
-        aers[i][0] = aer[0];
-        aers[i][1] = aer[1];
-        aers[i][2] = aer[2];
+        float vals[3]{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
+        mysofa_c2s(&vals[0]);
+        aers[i] = {vals[0], vals[1], vals[2]};
     }
 
     auto radii = GetUniquelySortedElems(aers, 2, {}, {0.1, 0.1, 0.001});

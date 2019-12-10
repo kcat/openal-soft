@@ -487,10 +487,12 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
 namespace {
 
+using ubyte2 = std::array<ALubyte,2>;
+
 std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const ALuint fdCount,
     const ALubyte *evCount, const ALushort *distance, const ALushort *azCount,
-    const ALushort *irOffset, ALushort irCount, const ALfloat (*coeffs)[2],
-    const ALubyte (*delays)[2], const char *filename)
+    const ALushort *irOffset, ALushort irCount, const float2 *coeffs, const ubyte2 *delays,
+    const char *filename)
 {
     std::unique_ptr<HrtfStore> Hrtf;
 
@@ -681,8 +683,8 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irCount);
-    auto delays = al::vector<std::array<ALubyte,2>>(irCount);
+    auto coeffs = al::vector<float2>(irSize*irCount);
+    auto delays = al::vector<ubyte2>(irCount);
     for(auto &val : coeffs)
         val[0] = GetLE_ALshort(data) / 32768.0f;
     for(auto &val : delays)
@@ -722,8 +724,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
 
     static const ALushort distance{0};
     return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
-        irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
+        irCount, coeffs.data(), delays.data(), filename);
 }
 
 std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
@@ -781,8 +782,8 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         irCount = static_cast<ALushort>(irCount + azCount[i]);
     }
 
-    auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irCount);
-    auto delays = al::vector<std::array<ALubyte,2>>(irCount);
+    auto coeffs = al::vector<float2>(irSize*irCount);
+    auto delays = al::vector<ubyte2>(irCount);
     for(auto &val : coeffs)
         val[0] = GetLE_ALshort(data) / 32768.0f;
     for(auto &val : delays)
@@ -822,8 +823,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
 
     static const ALushort distance{0};
     return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
-        irCount, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
+        irCount, coeffs.data(), delays.data(), filename);
 }
 
 std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
@@ -933,8 +933,8 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     std::partial_sum(azCount.cbegin(), azCount.cend()-1, evOffset.begin()+1);
     const auto irTotal = static_cast<ALushort>(evOffset.back() + azCount.back());
 
-    auto coeffs = al::vector<std::array<ALfloat,2>>(irSize*irTotal);
-    auto delays = al::vector<std::array<ALubyte,2>>(irTotal);
+    auto coeffs = al::vector<float2>(irSize*irTotal);
+    auto delays = al::vector<ubyte2>(irTotal);
     if(channelType == ChanType_LeftOnly)
     {
         if(sampleType == SampleType_S16)
@@ -1043,7 +1043,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         auto azCount_ = al::vector<ALushort>(azCount.size());
         auto evOffset_ = al::vector<ALushort>(evOffset.size());
         auto coeffs_ = al::vector<float2>(coeffs.size());
-        auto delays_ = al::vector<std::array<ALubyte,2>>(delays.size());
+        auto delays_ = al::vector<ubyte2>(delays.size());
 
         /* Simple reverse for the per-field elements. */
         std::reverse_copy(distance.cbegin(), distance.cend(), distance_.begin());
@@ -1098,8 +1098,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     }
 
     return CreateHrtfStore(rate, irSize, fdCount, evCount.data(), distance.data(), azCount.data(),
-        evOffset.data(), irTotal, &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
+        evOffset.data(), irTotal, coeffs.data(), delays.data(), filename);
 }
 
 

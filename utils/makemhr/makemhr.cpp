@@ -812,17 +812,16 @@ static void ReconstructHrirs(const HrirDataT *hData)
 
     /* Keep track of the number of IRs done, periodically reporting it. */
     size_t count;
-    while((count=reconstructor.mDone.load()) != total)
-    {
+    do {
+        std::this_thread::sleep_for(std::chrono::milliseconds{50});
+
+        count = reconstructor.mDone.load();
         size_t pcdone{count * 100 / total};
 
         printf("\r%3zu%% done (%zu of %zu)", pcdone, count, total);
         fflush(stdout);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds{50});
-    }
-    size_t pcdone{count * 100 / total};
-    printf("\r%3zu%% done (%zu of %zu)\n", pcdone, count, total);
+    } while(count != total);
+    fputc('\n', stdout);
 
     if(thrd2.joinable()) thrd2.join();
     if(thrd1.joinable()) thrd1.join();

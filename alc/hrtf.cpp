@@ -73,7 +73,6 @@ struct LoadedHrtf {
  * the makemhr utility.
  */
 #define MIN_IR_SIZE                  (8)
-#define MAX_IR_SIZE                  (512)
 #define MOD_IR_SIZE                  (2)
 
 #define MIN_FD_COUNT                 (1)
@@ -622,10 +621,9 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     }
 
     ALboolean failed{AL_FALSE};
-    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+    if(irSize < MIN_IR_SIZE || irSize > HRIR_LENGTH)
     {
-        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
-            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_SIZE, HRIR_LENGTH);
         failed = AL_TRUE;
     }
     if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
@@ -739,10 +737,9 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     }
 
     ALboolean failed{AL_FALSE};
-    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+    if(irSize < MIN_IR_SIZE || irSize > HRIR_LENGTH)
     {
-        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
-            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_SIZE, HRIR_LENGTH);
         failed = AL_TRUE;
     }
     if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
@@ -856,10 +853,9 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         failed = AL_TRUE;
     }
 
-    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+    if(irSize < MIN_IR_SIZE || irSize > HRIR_LENGTH)
     {
-        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
-            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_SIZE, HRIR_LENGTH);
         failed = AL_TRUE;
     }
     if(fdCount < 1 || fdCount > MAX_FD_COUNT)

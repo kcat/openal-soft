@@ -128,15 +128,11 @@ enum HeadModelT {
 
 // The limits to the truncation window size on the command line.
 #define MIN_TRUNCSIZE                (16)
-#define MAX_TRUNCSIZE                (512)
+#define MAX_TRUNCSIZE                (128)
 
 // The limits to the custom head radius on the command line.
 #define MIN_CUSTOM_RADIUS            (0.05)
 #define MAX_CUSTOM_RADIUS            (0.15)
-
-// The truncation window size must be a multiple of the below value to allow
-// for vectorized convolution.
-#define MOD_TRUNCSIZE                (8)
 
 // The defaults for the command line options.
 #define DEFAULT_FFTSIZE              (65536)
@@ -1510,9 +1506,9 @@ int main(int argc, char *argv[])
 
         case 'w':
             truncSize = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE || (truncSize%MOD_TRUNCSIZE))
+            if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected multiple of %u between %u to %u.\n", optarg, opt, MOD_TRUNCSIZE, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
                 exit(EXIT_FAILURE);
             }
             break;

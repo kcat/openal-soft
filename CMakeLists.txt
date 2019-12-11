@@ -1393,6 +1393,15 @@ IF(ALSOFT_UTILS)
 
     find_package(MySOFA)
     if(MYSOFA_FOUND)
+        set(SOFA_SUPPORT_SRCS
+            utils/sofa-support.cpp
+            utils/sofa-support.h)
+        add_library(sofa-support STATIC EXCLUDE_FROM_ALL ${SOFA_SUPPORT_SRCS})
+        target_compile_definitions(sofa-support PRIVATE ${CPP_DEFS})
+        target_include_directories(sofa-support PUBLIC ${OpenAL_SOURCE_DIR}/common)
+        target_compile_options(sofa-support PRIVATE ${C_FLAGS})
+        target_link_libraries(sofa-support PUBLIC common MySOFA::MySOFA PRIVATE ${LINKER_FLAGS})
+
         set(MAKEMHR_SRCS
             utils/makemhr/loaddef.cpp
             utils/makemhr/loaddef.h
@@ -1406,17 +1415,17 @@ IF(ALSOFT_UTILS)
         add_executable(makemhr ${MAKEMHR_SRCS})
         target_compile_definitions(makemhr PRIVATE ${CPP_DEFS})
         target_include_directories(makemhr
-            PRIVATE ${OpenAL_SOURCE_DIR}/common ${OpenAL_BINARY_DIR})
+            PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
-        target_link_libraries(makemhr PRIVATE common ${LINKER_FLAGS} MySOFA::MySOFA)
+        target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} sofa-support)
         set(UTIL_TARGETS ${UTIL_TARGETS} makemhr)
 
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)
         add_executable(sofa-info ${SOFAINFO_SRCS})
         target_compile_definitions(sofa-info PRIVATE ${CPP_DEFS})
-        target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
+        target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
-        target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} MySOFA::MySOFA)
+        target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support)
     endif()
 
     IF(ALSOFT_INSTALL)

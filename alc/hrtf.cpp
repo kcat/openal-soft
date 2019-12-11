@@ -72,9 +72,6 @@ struct LoadedHrtf {
 /* Data set limits must be the same as or more flexible than those defined in
  * the makemhr utility.
  */
-#define MIN_IR_SIZE                  (8)
-#define MOD_IR_SIZE                  (2)
-
 #define MIN_FD_COUNT                 (1)
 #define MAX_FD_COUNT                 (16)
 
@@ -262,7 +259,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
     delays[1] = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
 
     const ALuint irSize{Hrtf->irSize};
-    ASSUME(irSize >= MIN_IR_SIZE);
+    ASSUME(irSize >= MIN_IR_LENGTH);
 
     /* Calculate the blended HRIR coefficients. */
     float *coeffout{al::assume_aligned<16>(&coeffs[0][0])};
@@ -473,10 +470,6 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     const ALuint irsize{minu(Hrtf->irSize + base_delay*2, max_length)};
     max_length = minu(hrir_delay_round(max_delay) + irsize, max_length);
 
-    /* Round up to the next IR size multiple. */
-    max_length += MOD_IR_SIZE-1;
-    max_length -= max_length%MOD_IR_SIZE;
-
     TRACE("Skipped delay: %.2f, max delay: %.2f, new FIR length: %u\n",
         min_delay/double{HRIR_DELAY_FRACONE}, max_delay/double{HRIR_DELAY_FRACONE},
         max_length);
@@ -621,9 +614,9 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     }
 
     ALboolean failed{AL_FALSE};
-    if(irSize < MIN_IR_SIZE || irSize > HRIR_LENGTH)
+    if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
     {
-        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_SIZE, HRIR_LENGTH);
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
         failed = AL_TRUE;
     }
     if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
@@ -737,9 +730,9 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     }
 
     ALboolean failed{AL_FALSE};
-    if(irSize < MIN_IR_SIZE || irSize > HRIR_LENGTH)
+    if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
     {
-        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_SIZE, HRIR_LENGTH);
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
         failed = AL_TRUE;
     }
     if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
@@ -853,9 +846,9 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         failed = AL_TRUE;
     }
 
-    if(irSize < MIN_IR_SIZE || irSize > HRIR_LENGTH)
+    if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
     {
-        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_SIZE, HRIR_LENGTH);
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
         failed = AL_TRUE;
     }
     if(fdCount < 1 || fdCount > MAX_FD_COUNT)
@@ -1382,19 +1375,15 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        uint64_t newIrSize{(uint64_t{hrtf->irSize}*devrate + srate-1) / srate};
-        newIrSize = minu64(HRIR_LENGTH, newIrSize) + (MOD_IR_SIZE-1);
-        hrtf->irSize = static_cast<ALuint>(newIrSize - (newIrSize%MOD_IR_SIZE));
+        const uint64_t newIrSize{(uint64_t{hrtf->irSize}*devrate + srate-1) / srate};
+        hrtf->irSize = static_cast<ALuint>(minu64(HRIR_LENGTH, newIrSize));
         hrtf->sampleRate = devrate;
     }
 
     if(auto hrtfsizeopt = ConfigValueUInt(devname, nullptr, "hrtf-size"))
     {
         if(*hrtfsizeopt > 0 && *hrtfsizeopt < hrtf->irSize)
-        {
-            hrtf->irSize  = maxu(*hrtfsizeopt, MIN_IR_SIZE);
-            hrtf->irSize -= hrtf->irSize % MOD_IR_SIZE;
-        }
+            hrtf->irSize = maxu(*hrtfsizeopt, MIN_IR_LENGTH);
     }
 
     TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),

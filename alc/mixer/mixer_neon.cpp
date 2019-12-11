@@ -26,7 +26,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
 
-    ASSUME(IrSize >= 4);
+    ASSUME(IrSize >= MIN_IR_LENGTH);
     for(ALuint c{0};c < IrSize;c += 2)
     {
         float32x4_t vals = vld1q_f32(&Values[c][0]);

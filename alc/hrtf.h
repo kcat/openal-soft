@@ -19,9 +19,11 @@
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
 #define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
 
-#define HRIR_BITS        (7)
-#define HRIR_LENGTH      (1<<HRIR_BITS)
-#define HRIR_MASK        (HRIR_LENGTH-1)
+#define HRIR_BITS   (7)
+#define HRIR_LENGTH (1<<HRIR_BITS)
+#define HRIR_MASK   (HRIR_LENGTH-1)
+
+#define MIN_IR_LENGTH (8)
 
 using float2 = std::array<float,2>;
 using HrirArray = std::array<float2,HRIR_LENGTH>;

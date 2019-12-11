@@ -86,7 +86,7 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
 inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
     const float left, const float right)
 {
-    ASSUME(IrSize >= 4);
+    ASSUME(IrSize >= MIN_IR_LENGTH);
     for(ALuint c{0};c < IrSize;++c)
     {
         Values[c][0] += Coeffs[c][0] * left;

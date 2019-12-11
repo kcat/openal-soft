@@ -20,7 +20,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
 
-    ASSUME(IrSize >= 4);
+    ASSUME(IrSize >= MIN_IR_LENGTH);
     /* This isn't technically correct to test alignment, but it's true for
      * systems that support SSE, which is the only one that needs to know the
      * alignment of Values (which alternates between 8- and 16-byte aligned).

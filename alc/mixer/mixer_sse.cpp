@@ -33,9 +33,9 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
-        ALuint i{1};
-        for(;i < IrSize-1;i += 2)
-        {
+        ALuint td{(IrSize>>1) - 1};
+        size_t i{1};
+        do {
             coeffs = _mm_load_ps(&Coeffs[i+1][0]);
             vals = _mm_load_ps(&Values[i][0]);
             imp1 = _mm_mul_ps(lrlr, coeffs);
@@ -43,7 +43,8 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
             vals = _mm_add_ps(imp0, vals);
             _mm_store_ps(&Values[i][0], vals);
             imp0 = imp1;
-        }
+            i += 2;
+        } while(--td);
         vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
@@ -51,9 +52,9 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
     }
     else
     {
-        for(ALuint i{0};i < IrSize;i += 2)
+        for(size_t i{0};i < IrSize;i += 2)
         {
-            __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
+            const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
             __m128 vals{_mm_load_ps(&Values[i][0])};
             vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
             _mm_store_ps(&Values[i][0], vals);

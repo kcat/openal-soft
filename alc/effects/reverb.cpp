@@ -1426,7 +1426,7 @@ ALfloat ReverbState::calcModulation(ALfloat sample, size_t offset, size_t c)
      * sampling rate).  The center of the sinus is moved to reduce the delay
      * of the effect when the time or depth are low. 
      */
-    sinus = 1.0f - cosf(al::MathDefs<float>::Tau() * mMod.Index[c] / mMod.Range[c]);
+    sinus = 1.0f - std::cos(al::MathDefs<float>::Tau() * mMod.Index[c] / mMod.Range[c]);
 
     /* Step the modulation index forward, keeping it bound to its range. */
     mMod.Index[c] = (mMod.Index[c]+1) % mMod.Range[c];

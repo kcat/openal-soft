@@ -895,8 +895,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             shrot[3][1] =  U[2]; shrot[3][2] = -V[2]; shrot[3][3] = -N[2];
             AmbiRotator(shrot, static_cast<int>(minu(voice->mAmbiOrder, Device->mAmbiOrder)));
 
-            /* Convert the rotation matrix for FuMa input ordering and scaling,
-             * and whether input is 2D or 3D.
+            /* Convert the rotation matrix for input ordering and scaling, and
+             * whether input is 2D or 3D.
              */
             const uint8_t *index_map{(voice->mFmtChannels == FmtBFormat2D) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :

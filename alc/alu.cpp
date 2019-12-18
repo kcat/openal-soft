@@ -933,7 +933,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             }
         }
     }
-    else if(DirectChannels)
+    else if(DirectChannels && Device->FmtChans != DevFmtAmbi3D)
     {
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.

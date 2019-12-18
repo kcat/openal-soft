@@ -743,9 +743,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         break;
 
     case FmtStereo:
-        /* Convert counter-clockwise to clockwise. */
-        StereoMap[0].angle = -props->StereoPan[0];
-        StereoMap[1].angle = -props->StereoPan[1];
+        if(!DirectChannels)
+        {
+            /* Convert counter-clockwise to clockwise. */
+            StereoMap[0].angle = -props->StereoPan[0];
+            StereoMap[1].angle = -props->StereoPan[1];
+        }
 
         chans = StereoMap;
         downmix_gain = 1.0f / 2.0f;

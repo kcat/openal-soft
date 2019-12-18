@@ -1579,11 +1579,11 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
         AtomicReplaceHead(context->mFreeVoiceProps, props);
     }
 
-    if((voice->mProps.mSpatializeMode == SpatializeAuto && voice->mFmtChannels == FmtMono) ||
-       voice->mProps.mSpatializeMode == SpatializeOn)
-        CalcAttnSourceParams(voice, &voice->mProps, context);
-    else
+    if(voice->mProps.DirectChannels || voice->mProps.mSpatializeMode == SpatializeOff
+        || (voice->mProps.mSpatializeMode == SpatializeAuto && voice->mFmtChannels != FmtMono))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);
+    else
+        CalcAttnSourceParams(voice, &voice->mProps, context);
 }
 
 

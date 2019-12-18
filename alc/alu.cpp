@@ -843,8 +843,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
             }
 
-            /* NOTE: W needs to be scaled due to FuMa normalization. */
-            const float scale0{AmbiScale::FromFuMa[0]};
+            /* NOTE: W needs to be scaled according to channel scaling. */
+            const float scale0{GetAmbiScales(voice->mAmbiScaling)[0]};
             ComputePanGains(&Device->Dry, coeffs, DryGain*scale0,
                 voice->mChans[0].mDryParams.Gains.Target);
             for(ALuint i{0};i < NumSends;i++)

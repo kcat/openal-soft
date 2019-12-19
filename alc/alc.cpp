@@ -1352,59 +1352,59 @@ al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     return al::nullopt;
 }
 
-ALCboolean IsValidALCType(ALCenum type)
+bool IsValidALCType(ALCenum type)
 {
     switch(type)
     {
-        case ALC_BYTE_SOFT:
-        case ALC_UNSIGNED_BYTE_SOFT:
-        case ALC_SHORT_SOFT:
-        case ALC_UNSIGNED_SHORT_SOFT:
-        case ALC_INT_SOFT:
-        case ALC_UNSIGNED_INT_SOFT:
-        case ALC_FLOAT_SOFT:
-            return ALC_TRUE;
+    case ALC_BYTE_SOFT:
+    case ALC_UNSIGNED_BYTE_SOFT:
+    case ALC_SHORT_SOFT:
+    case ALC_UNSIGNED_SHORT_SOFT:
+    case ALC_INT_SOFT:
+    case ALC_UNSIGNED_INT_SOFT:
+    case ALC_FLOAT_SOFT:
+        return true;
     }
-    return ALC_FALSE;
+    return false;
 }
 
-ALCboolean IsValidALCChannels(ALCenum channels)
+bool IsValidALCChannels(ALCenum channels)
 {
     switch(channels)
     {
-        case ALC_MONO_SOFT:
-        case ALC_STEREO_SOFT:
-        case ALC_QUAD_SOFT:
-        case ALC_5POINT1_SOFT:
-        case ALC_6POINT1_SOFT:
-        case ALC_7POINT1_SOFT:
-        case ALC_BFORMAT3D_SOFT:
-            return ALC_TRUE;
+    case ALC_MONO_SOFT:
+    case ALC_STEREO_SOFT:
+    case ALC_QUAD_SOFT:
+    case ALC_5POINT1_SOFT:
+    case ALC_6POINT1_SOFT:
+    case ALC_7POINT1_SOFT:
+    case ALC_BFORMAT3D_SOFT:
+        return true;
     }
-    return ALC_FALSE;
+    return false;
 }
 
-ALCboolean IsValidAmbiLayout(ALCenum layout)
+bool IsValidAmbiLayout(ALCenum layout)
 {
     switch(layout)
     {
-        case ALC_ACN_SOFT:
-        case ALC_FUMA_SOFT:
-            return ALC_TRUE;
+    case ALC_ACN_SOFT:
+    case ALC_FUMA_SOFT:
+        return true;
     }
-    return ALC_FALSE;
+    return false;
 }
 
-ALCboolean IsValidAmbiScaling(ALCenum scaling)
+bool IsValidAmbiScaling(ALCenum scaling)
 {
     switch(scaling)
     {
-        case ALC_N3D_SOFT:
-        case ALC_SN3D_SOFT:
-        case ALC_FUMA_SOFT:
-            return ALC_TRUE;
+    case ALC_N3D_SOFT:
+    case ALC_SN3D_SOFT:
+    case ALC_FUMA_SOFT:
+        return true;
     }
-    return ALC_FALSE;
+    return false;
 }
 
 

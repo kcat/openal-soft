@@ -1308,8 +1308,10 @@ ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALuint ambiorder) noexcept
     return 0;
 }
 
+namespace {
+
 struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
-static al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
+al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
 {
     static const struct {
         ALenum format;
@@ -1350,7 +1352,7 @@ static al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     return al::nullopt;
 }
 
-static ALCboolean IsValidALCType(ALCenum type)
+ALCboolean IsValidALCType(ALCenum type)
 {
     switch(type)
     {
@@ -1366,7 +1368,7 @@ static ALCboolean IsValidALCType(ALCenum type)
     return ALC_FALSE;
 }
 
-static ALCboolean IsValidALCChannels(ALCenum channels)
+ALCboolean IsValidALCChannels(ALCenum channels)
 {
     switch(channels)
     {
@@ -1382,7 +1384,7 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
     return ALC_FALSE;
 }
 
-static ALCboolean IsValidAmbiLayout(ALCenum layout)
+ALCboolean IsValidAmbiLayout(ALCenum layout)
 {
     switch(layout)
     {
@@ -1393,7 +1395,7 @@ static ALCboolean IsValidAmbiLayout(ALCenum layout)
     return ALC_FALSE;
 }
 
-static ALCboolean IsValidAmbiScaling(ALCenum scaling)
+ALCboolean IsValidAmbiScaling(ALCenum scaling)
 {
     switch(scaling)
     {
@@ -1404,6 +1406,45 @@ static ALCboolean IsValidAmbiScaling(ALCenum scaling)
     }
     return ALC_FALSE;
 }
+
+
+/* Downmixing channel arrays, to map the given format's missing channels to
+ * existing ones. Based on Wine's DSound downmix values, which are based on
+ * PulseAudio's.
+ */
+const std::array<InputRemixMap,6> StereoDownmix{{
+    { FrontCenter, {{{FrontLeft, 0.5f},      {FrontRight, 0.5f}}} },
+    { SideLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
+    { SideRight,   {{{FrontLeft, 0.0f},      {FrontRight, 1.0f/9.0f}}} },
+    { BackLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
+    { BackRight,   {{{FrontLeft, 0.0f},      {FrontRight, 1.0f/9.0f}}} },
+    { BackCenter,  {{{FrontLeft, 0.5f/9.0f}, {FrontRight, 0.5f/9.0f}}} },
+}};
+const std::array<InputRemixMap,4> QuadDownmix{{
+    { FrontCenter, {{{FrontLeft,  0.5f}, {FrontRight, 0.5f}}} },
+    { SideLeft,    {{{FrontLeft,  0.5f}, {BackLeft,   0.5f}}} },
+    { SideRight,   {{{FrontRight, 0.5f}, {BackRight,  0.5f}}} },
+    { BackCenter,  {{{BackLeft,   0.5f}, {BackRight,  0.5f}}} },
+}};
+const std::array<InputRemixMap,3> X51Downmix{{
+    { BackLeft,   {{{SideLeft, 1.0f}, {SideRight, 0.0f}}} },
+    { BackRight,  {{{SideLeft, 0.0f}, {SideRight, 1.0f}}} },
+    { BackCenter, {{{SideLeft, 0.5f}, {SideRight, 0.5f}}} },
+}};
+const std::array<InputRemixMap,3> X51RearDownmix{{
+    { SideLeft,   {{{BackLeft, 1.0f}, {BackRight, 0.0f}}} },
+    { SideRight,  {{{BackLeft, 0.0f}, {BackRight, 1.0f}}} },
+    { BackCenter, {{{BackLeft, 0.5f}, {BackRight, 0.5f}}} },
+}};
+const std::array<InputRemixMap,2> X61Downmix{{
+    { BackLeft,  {{{BackCenter, 0.5f}, {SideLeft,  0.5f}}} },
+    { BackRight, {{{BackCenter, 0.5f}, {SideRight, 0.5f}}} },
+}};
+const std::array<InputRemixMap,1> X71Downmix{{
+    { BackCenter, {{{BackLeft, 0.5f}, {BackRight, 0.5f}}} },
+}};
+
+} // namespace
 
 /************************************************
  * Miscellaneous ALC helpers
@@ -1859,6 +1900,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.Buffer = {};
     std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
+    device->RealOut.RemixMap = {};
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
     device->RealOut.Buffer = {};
     device->MixBuffer.clear();
@@ -1934,6 +1976,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     TRACE("Post-reset: %s, %s, %uhz, %u / %u buffer\n",
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
         device->Frequency, device->UpdateSize, device->BufferSize);
+
+    switch(device->FmtChans)
+    {
+    case DevFmtStereo: device->RealOut.RemixMap = StereoDownmix; break;
+    case DevFmtQuad: device->RealOut.RemixMap = QuadDownmix; break;
+    case DevFmtX51: device->RealOut.RemixMap = X51Downmix; break;
+    case DevFmtX51Rear: device->RealOut.RemixMap = X51RearDownmix; break;
+    case DevFmtX61: device->RealOut.RemixMap = X61Downmix; break;
+    case DevFmtX71: device->RealOut.RemixMap = X71Downmix; break;
+    case DevFmtMono:
+    case DevFmtAmbi3D: break;
+    }
 
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
 

@@ -60,6 +60,14 @@ enum RenderMode {
 };
 
 
+struct InputRemixMap {
+    struct TargetMix { Channel channel; float mix; };
+
+    Channel channel;
+    std::array<TargetMix,2> targets;
+};
+
+
 struct BufferSubList {
     uint64_t FreeMask{~0_u64};
     ALbuffer *Buffers{nullptr}; /* 64 */
@@ -184,6 +192,7 @@ struct MixParams {
 };
 
 struct RealMixParams {
+    al::span<const InputRemixMap> RemixMap;
     std::array<ALuint,MaxChannels> ChannelIndex{};
 
     al::span<FloatBufferLine> Buffer;

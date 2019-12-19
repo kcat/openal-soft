@@ -942,9 +942,23 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
         for(ALuint c{0};c < num_channels;c++)
         {
-            const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+            ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
             if(idx != INVALID_CHANNEL_INDEX)
                 voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+            else
+            {
+                auto match_channel = [chans,c](const InputRemixMap &map) -> bool
+                { return chans[c].channel == map.channel; };
+                auto remap = std::find_if(Device->RealOut.RemixMap.cbegin(),
+                    Device->RealOut.RemixMap.cend(), match_channel);
+                if(remap != Device->RealOut.RemixMap.cend())
+                    for(const auto &target : remap->targets)
+                    {
+                        idx = GetChannelIdxByName(Device->RealOut, target.channel);
+                        if(idx != INVALID_CHANNEL_INDEX)
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = target.mix;
+                    }
+            }
         }
 
         /* Auxiliary sends still use normal channel panning since they mix to

@@ -73,18 +73,16 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     ALfloat cutoff{props->Distortion.LowpassCutoff};
     /* Bandwidth value is constant in octaves. */
     ALfloat bandwidth{(cutoff / 2.0f) / (cutoff * 0.67f)};
-    /* Multiply sampling frequency by the amount of oversampling done during
+    /* Divide normalized frequency by the amount of oversampling done during
      * processing.
      */
     auto frequency = static_cast<ALfloat>(device->Frequency);
-    mLowpass.setParams(BiquadType::LowPass, 1.0f, cutoff / (frequency*4.0f),
-        mLowpass.rcpQFromBandwidth(cutoff / (frequency*4.0f), bandwidth));
+    mLowpass.setParamsFromBandwidth(BiquadType::LowPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
     cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
-    mBandpass.setParams(BiquadType::BandPass, 1.0f, cutoff / (frequency*4.0f),
-        mBandpass.rcpQFromBandwidth(cutoff / (frequency*4.0f), bandwidth));
+    mBandpass.setParamsFromBandwidth(BiquadType::BandPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
     ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);

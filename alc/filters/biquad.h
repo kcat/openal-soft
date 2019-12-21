@@ -1,6 +1,7 @@
 #ifndef FILTERS_BIQUAD_H
 #define FILTERS_BIQUAD_H
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <utility>
@@ -44,6 +45,8 @@ class BiquadFilterR {
     /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
     Real mA1{0.0f}, mA2{0.0f};
 
+    void setParams(BiquadType type, Real f0norm, Real gain, Real rcpQ);
+
 public:
     void clear() noexcept { mZ1 = mZ2 = 0.0f; }
 
@@ -51,17 +54,34 @@ public:
      * Sets the filter state for the specified filter type and its parameters.
      *
      * \param type The type of filter to apply.
+     * \param f0norm The normalized reference frequency (ref / sample_rate).
+     * This is the center point for the Shelf, Peaking, and BandPass filter
+     * types, or the cutoff frequency for the LowPass and HighPass filter
+     * types.
      * \param gain The gain for the reference frequency response. Only used by
-     *             the Shelf and Peaking filter types.
-     * \param f0norm The reference frequency normal (ref_freq / sample_rate).
-     *               This is the center point for the Shelf, Peaking, and
-     *               BandPass filter types, or the cutoff frequency for the
-     *               LowPass and HighPass filter types.
-     * \param rcpQ The reciprocal of the Q coefficient for the filter's
-     *             transition band. Can be generated from rcpQFromSlope or
-     *             rcpQFromBandwidth as needed.
+     * the Shelf and Peaking filter types.
+     * \param slope Slope steepness of the transition band.
      */
-    void setParams(BiquadType type, Real gain, Real f0norm, Real rcpQ);
+    void setParamsFromSlope(BiquadType type, Real f0norm, Real gain, Real slope)
+    {
+        gain = std::max<Real>(gain, 0.001f); /* Limit -60dB */
+        setParams(type, gain, f0norm, rcpQFromSlope(gain, slope));
+    }
+
+    /**
+     * Sets the filter state for the specified filter type and its parameters.
+     *
+     * \param type The type of filter to apply.
+     * \param f0norm The normalized reference frequency (ref / sample_rate).
+     * This is the center point for the Shelf, Peaking, and BandPass filter
+     * types, or the cutoff frequency for the LowPass and HighPass filter
+     * types.
+     * \param gain The gain for the reference frequency response. Only used by
+     * the Shelf and Peaking filter types.
+     * \param bandwidth Normalized bandwidth of the transition band.
+     */
+    void setParamsFromBandwidth(BiquadType type, Real f0norm, Real gain, Real bandwidth)
+    { setParams(type, gain, f0norm, rcpQFromBandwidth(f0norm, bandwidth)); }
 
     void copyParamsFrom(const BiquadFilterR &other)
     {

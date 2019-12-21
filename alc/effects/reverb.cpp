@@ -706,15 +706,13 @@ void T60Filter::calcCoeffs(const ALfloat length, const ALfloat lfDecayTime,
     const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm,
     const ALfloat hf0norm)
 {
-    const ALfloat mfGain{CalcDecayCoeff(length, mfDecayTime)};
-    const ALfloat lfGain{maxf(CalcDecayCoeff(length, lfDecayTime)/mfGain, 0.001f)};
-    const ALfloat hfGain{maxf(CalcDecayCoeff(length, hfDecayTime)/mfGain, 0.001f)};
+    const float mfGain{CalcDecayCoeff(length, mfDecayTime)};
+    const float lfGain{CalcDecayCoeff(length, lfDecayTime) / mfGain};
+    const float hfGain{CalcDecayCoeff(length, hfDecayTime) / mfGain};
 
     MidGain[1] = mfGain;
-    LFFilter.setParams(BiquadType::LowShelf, lfGain, lf0norm,
-        LFFilter.rcpQFromSlope(lfGain, 1.0f));
-    HFFilter.setParams(BiquadType::HighShelf, hfGain, hf0norm,
-        HFFilter.rcpQFromSlope(hfGain, 1.0f));
+    LFFilter.setParamsFromSlope(BiquadType::LowShelf, lf0norm, lfGain, 1.0f);
+    HFFilter.setParamsFromSlope(BiquadType::HighShelf, hf0norm, hfGain, 1.0f);
 }
 
 /* Update the early reflection line lengths and gain coefficients. */
@@ -915,17 +913,10 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     const auto frequency = static_cast<ALfloat>(Device->Frequency);
 
     /* Calculate the master filters */
-    ALfloat hf0norm{minf(props->Reverb.HFReference / frequency, 0.49f)};
-    /* Restrict the filter gains from going below -60dB to keep the filter from
-     * killing most of the signal.
-     */
-    ALfloat gainhf{maxf(props->Reverb.GainHF, 0.001f)};
-    mFilter[0].Lp.setParams(BiquadType::HighShelf, gainhf, hf0norm,
-        mFilter[0].Lp.rcpQFromSlope(gainhf, 1.0f));
-    ALfloat lf0norm{minf(props->Reverb.LFReference / frequency, 0.49f)};
-    ALfloat gainlf{maxf(props->Reverb.GainLF, 0.001f)};
-    mFilter[0].Hp.setParams(BiquadType::LowShelf, gainlf, lf0norm,
-        mFilter[0].Hp.rcpQFromSlope(gainlf, 1.0f));
+    float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
+    mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
+    float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};
+    mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
     for(size_t i{1u};i < NUM_LINES;i++)
     {
         mFilter[i].Lp.copyParamsFrom(mFilter[0].Lp);

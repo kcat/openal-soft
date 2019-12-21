@@ -1171,20 +1171,17 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     }
 
     {
-        const ALfloat hfScale{props->Direct.HFReference / Frequency};
-        const ALfloat lfScale{props->Direct.LFReference / Frequency};
-        const ALfloat gainHF{maxf(DryGain.HF, 0.001f)}; /* Limit -60dB */
-        const ALfloat gainLF{maxf(DryGain.LF, 0.001f)};
+        const float hfNorm{props->Direct.HFReference / Frequency};
+        const float lfNorm{props->Direct.LFReference / Frequency};
 
         voice->mDirect.FilterType = AF_None;
-        if(gainHF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
-        if(gainLF != 1.0f) voice->mDirect.FilterType |= AF_HighPass;
+        if(DryGain.HF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
+        if(DryGain.LF != 1.0f) voice->mDirect.FilterType |= AF_HighPass;
+
         auto &lowpass = voice->mChans[0].mDryParams.LowPass;
         auto &highpass = voice->mChans[0].mDryParams.HighPass;
-        lowpass.setParams(BiquadType::HighShelf, gainHF, hfScale,
-            lowpass.rcpQFromSlope(gainHF, 1.0f));
-        highpass.setParams(BiquadType::LowShelf, gainLF, lfScale,
-            highpass.rcpQFromSlope(gainLF, 1.0f));
+        lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, DryGain.HF, 1.0f);
+        highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, DryGain.LF, 1.0f);
         for(ALuint c{1};c < num_channels;c++)
         {
             voice->mChans[c].mDryParams.LowPass.copyParamsFrom(lowpass);
@@ -1193,21 +1190,17 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     }
     for(ALuint i{0};i < NumSends;i++)
     {
-        const ALfloat hfScale{props->Send[i].HFReference / Frequency};
-        const ALfloat lfScale{props->Send[i].LFReference / Frequency};
-        const ALfloat gainHF{maxf(WetGain[i].HF, 0.001f)};
-        const ALfloat gainLF{maxf(WetGain[i].LF, 0.001f)};
+        const float hfNorm{props->Send[i].HFReference / Frequency};
+        const float lfNorm{props->Send[i].LFReference / Frequency};
 
         voice->mSend[i].FilterType = AF_None;
-        if(gainHF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
-        if(gainLF != 1.0f) voice->mSend[i].FilterType |= AF_HighPass;
+        if(WetGain[i].HF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
+        if(WetGain[i].LF != 1.0f) voice->mSend[i].FilterType |= AF_HighPass;
 
         auto &lowpass = voice->mChans[0].mWetParams[i].LowPass;
         auto &highpass = voice->mChans[0].mWetParams[i].HighPass;
-        lowpass.setParams(BiquadType::HighShelf, gainHF, hfScale,
-            lowpass.rcpQFromSlope(gainHF, 1.0f));
-        highpass.setParams(BiquadType::LowShelf, gainLF, lfScale,
-            highpass.rcpQFromSlope(gainLF, 1.0f));
+        lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, WetGain[i].HF, 1.0f);
+        highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, WetGain[i].LF, 1.0f);
         for(ALuint c{1};c < num_channels;c++)
         {
             voice->mChans[c].mWetParams[i].LowPass.copyParamsFrom(lowpass);

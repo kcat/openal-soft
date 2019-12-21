@@ -122,23 +122,21 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
      */
     gain = maxf(std::sqrt(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
-    mChans[0].filter[0].setParams(BiquadType::LowShelf, gain, f0norm,
-        BiquadFilter::rcpQFromSlope(gain, 0.75f));
+    mChans[0].filter[0].setParamsFromSlope(BiquadType::LowShelf, f0norm, gain, 0.75f);
 
     gain = maxf(std::sqrt(props->Equalizer.Mid1Gain), 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
-    mChans[0].filter[1].setParams(BiquadType::Peaking, gain, f0norm,
-        BiquadFilter::rcpQFromBandwidth(f0norm, props->Equalizer.Mid1Width));
+    mChans[0].filter[1].setParamsFromBandwidth(BiquadType::Peaking, f0norm, gain,
+        props->Equalizer.Mid1Width);
 
     gain = maxf(std::sqrt(props->Equalizer.Mid2Gain), 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
-    mChans[0].filter[2].setParams(BiquadType::Peaking, gain, f0norm,
-        BiquadFilter::rcpQFromBandwidth(f0norm, props->Equalizer.Mid2Width));
+    mChans[0].filter[2].setParamsFromBandwidth(BiquadType::Peaking, f0norm, gain,
+        props->Equalizer.Mid2Width);
 
     gain = maxf(std::sqrt(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
-    mChans[0].filter[3].setParams(BiquadType::HighShelf, gain, f0norm,
-        BiquadFilter::rcpQFromSlope(gain, 0.75f));
+    mChans[0].filter[3].setParamsFromSlope(BiquadType::HighShelf, f0norm, gain, 0.75f);
 
     /* Copy the filter coefficients for the other input channels. */
     for(size_t i{1u};i < slot->Wet.Buffer.size();++i)

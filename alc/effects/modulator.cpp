@@ -115,11 +115,10 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     else /*if(props->Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         mGetSamples = Modulate<Square>;
 
-    ALfloat f0norm{props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency)};
+    float f0norm{props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency)};
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
-    mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
-        BiquadFilter::rcpQFromBandwidth(f0norm, 0.75f));
+    mChans[0].Filter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);
     for(size_t i{1u};i < slot->Wet.Buffer.size();++i)
         mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 

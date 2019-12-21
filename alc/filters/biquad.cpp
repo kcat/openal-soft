@@ -11,7 +11,7 @@
 
 
 template<typename Real>
-void BiquadFilterR<Real>::setParams(BiquadType type, Real gain, Real f0norm, Real rcpQ)
+void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Real rcpQ)
 {
     // Limit gain to -100dB
     assert(gain > 0.00001f);

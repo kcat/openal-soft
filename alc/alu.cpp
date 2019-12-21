@@ -679,12 +679,12 @@ void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNEL
 /* End ambisonic rotation helpers. */
 
 
+struct GainTriplet { float Base, HF, LF; };
+
 void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypos,
-    const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const ALfloat DryGain,
-    const ALfloat DryGainHF, const ALfloat DryGainLF, const ALfloat (&WetGain)[MAX_SENDS],
-    const ALfloat (&WetGainLF)[MAX_SENDS], const ALfloat (&WetGainHF)[MAX_SENDS],
-    ALeffectslot *(&SendSlots)[MAX_SENDS], const ALvoicePropsBase *props,
-    const ALlistener &Listener, const ALCdevice *Device)
+    const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const GainTriplet &DryGain,
+    const al::span<const GainTriplet,MAX_SENDS> WetGain, ALeffectslot *(&SendSlots)[MAX_SENDS],
+    const ALvoicePropsBase *props, const ALlistener &Listener, const ALCdevice *Device)
 {
     static const ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
@@ -845,12 +845,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
             /* NOTE: W needs to be scaled according to channel scaling. */
             const float scale0{GetAmbiScales(voice->mAmbiScaling)[0]};
-            ComputePanGains(&Device->Dry, coeffs, DryGain*scale0,
+            ComputePanGains(&Device->Dry, coeffs, DryGain.Base*scale0,
                 voice->mChans[0].mDryParams.Gains.Target);
             for(ALuint i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i]*scale0,
+                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base*scale0,
                         voice->mChans[0].mWetParams[i].Gains.Target);
             }
         }
@@ -921,13 +921,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(size_t x{0};x < tocopy;++x)
                     coeffs[offset+x] = in[x][acn] * scale;
 
-                ComputePanGains(&Device->Dry, coeffs, DryGain,
+                ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -944,10 +944,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         {
             ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
             if(idx != INVALID_CHANNEL_INDEX)
-                voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+                voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
             else
             {
-                auto match_channel = [chans,c](const InputRemixMap &map) -> bool
+                auto match_channel = [chans,c](const InputRemixMap &map) noexcept -> bool
                 { return chans[c].channel == map.channel; };
                 auto remap = std::find_if(Device->RealOut.RemixMap.cbegin(),
                     Device->RealOut.RemixMap.cend(), match_channel);
@@ -956,7 +956,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     {
                         idx = GetChannelIdxByName(Device->RealOut, target.channel);
                         if(idx != INVALID_CHANNEL_INDEX)
-                            voice->mChans[c].mDryParams.Gains.Target[idx] = target.mix;
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base *
+                                target.mix;
                     }
             }
         }
@@ -972,7 +973,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             for(ALuint i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                         voice->mChans[c].mWetParams[i].Gains.Target);
             }
         }
@@ -995,7 +996,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             GetHrtfCoeffs(Device->mHrtf, ev, az, Distance, Spread,
                 voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
                 voice->mChans[0].mDryParams.Hrtf.Target.Delay);
-            voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain * downmix_gain;
+            voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
             for(ALuint c{1};c < num_channels;c++)
@@ -1019,7 +1020,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1043,7 +1044,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     std::numeric_limits<float>::infinity(), Spread,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
                     voice->mChans[c].mDryParams.Hrtf.Target.Delay);
-                voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain;
+                voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base;
 
                 /* Normal panning for auxiliary sends. */
                 ALfloat coeffs[MAX_AMBI_CHANNELS];
@@ -1052,7 +1053,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1104,17 +1105,17 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     {
                         const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
                         if(idx != INVALID_CHANNEL_INDEX)
-                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
                     }
                     continue;
                 }
 
-                ComputePanGains(&Device->Dry, coeffs, DryGain * downmix_gain,
+                ComputePanGains(&Device->Dry, coeffs, DryGain.Base * downmix_gain,
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i] * downmix_gain,
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1145,7 +1146,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     {
                         const ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
                         if(idx != INVALID_CHANNEL_INDEX)
-                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain;
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
                     }
                     continue;
                 }
@@ -1157,12 +1158,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                     chans[c].elevation, Spread, coeffs
                 );
 
-                ComputePanGains(&Device->Dry, coeffs, DryGain,
+                ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i],
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1172,8 +1173,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     {
         const ALfloat hfScale{props->Direct.HFReference / Frequency};
         const ALfloat lfScale{props->Direct.LFReference / Frequency};
-        const ALfloat gainHF{maxf(DryGainHF, 0.001f)}; /* Limit -60dB */
-        const ALfloat gainLF{maxf(DryGainLF, 0.001f)};
+        const ALfloat gainHF{maxf(DryGain.HF, 0.001f)}; /* Limit -60dB */
+        const ALfloat gainLF{maxf(DryGain.LF, 0.001f)};
 
         voice->mDirect.FilterType = AF_None;
         if(gainHF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
@@ -1194,8 +1195,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     {
         const ALfloat hfScale{props->Send[i].HFReference / Frequency};
         const ALfloat lfScale{props->Send[i].LFReference / Frequency};
-        const ALfloat gainHF{maxf(WetGainHF[i], 0.001f)};
-        const ALfloat gainLF{maxf(WetGainLF[i], 0.001f)};
+        const ALfloat gainHF{maxf(WetGain[i].HF, 0.001f)};
+        const ALfloat gainLF{maxf(WetGain[i].LF, 0.001f)};
 
         voice->mSend[i].FilterType = AF_None;
         if(gainHF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
@@ -1246,23 +1247,22 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
 
     /* Calculate gains */
     const ALlistener &Listener = ALContext->mListener;
-    ALfloat DryGain{clampf(props->Gain, props->MinGain, props->MaxGain)};
-    DryGain *= props->Direct.Gain * Listener.Params.Gain;
-    DryGain  = minf(DryGain, GAIN_MIX_MAX);
-    ALfloat DryGainHF{props->Direct.GainHF};
-    ALfloat DryGainLF{props->Direct.GainLF};
-    ALfloat WetGain[MAX_SENDS], WetGainHF[MAX_SENDS], WetGainLF[MAX_SENDS];
+    GainTriplet DryGain;
+    DryGain.Base  = minf(clampf(props->Gain, props->MinGain, props->MaxGain) * props->Direct.Gain *
+        Listener.Params.Gain, GAIN_MIX_MAX);
+    DryGain.HF = props->Direct.GainHF;
+    DryGain.LF = props->Direct.GainLF;
+    GainTriplet WetGain[MAX_SENDS];
     for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
-        WetGain[i]  = clampf(props->Gain, props->MinGain, props->MaxGain);
-        WetGain[i] *= props->Send[i].Gain * Listener.Params.Gain;
-        WetGain[i]  = minf(WetGain[i], GAIN_MIX_MAX);
-        WetGainHF[i] = props->Send[i].GainHF;
-        WetGainLF[i] = props->Send[i].GainLF;
+        WetGain[i].Base = minf(clampf(props->Gain, props->MinGain, props->MaxGain) *
+            props->Send[i].Gain * Listener.Params.Gain, GAIN_MIX_MAX);
+        WetGain[i].HF = props->Send[i].GainHF;
+        WetGain[i].LF = props->Send[i].GainLF;
     }
 
-    CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, DryGainHF, DryGainLF,
-        WetGain, WetGainLF, WetGainHF, SendSlots, props, Listener, Device);
+    CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, WetGain, SendSlots, props,
+        Listener, Device);
 }
 
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
@@ -1353,19 +1353,13 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     const ALfloat Distance{ToSource.normalize()};
 
     /* Initial source gain */
-    ALfloat DryGain{props->Gain};
-    ALfloat DryGainHF{1.0f};
-    ALfloat DryGainLF{1.0f};
-    ALfloat WetGain[MAX_SENDS], WetGainHF[MAX_SENDS], WetGainLF[MAX_SENDS];
+    GainTriplet DryGain{props->Gain, 1.0f, 1.0f};
+    GainTriplet WetGain[MAX_SENDS];
     for(ALuint i{0};i < NumSends;i++)
-    {
-        WetGain[i] = props->Gain;
-        WetGainHF[i] = 1.0f;
-        WetGainLF[i] = 1.0f;
-    }
+        WetGain[i] = DryGain;
 
     /* Calculate distance attenuation */
-    ALfloat ClampedDist{Distance};
+    float ClampedDist{Distance};
 
     switch(Listener.Params.SourceDistanceModel ?
            props->mDistanceModel : Listener.Params.mDistanceModel)
@@ -1379,12 +1373,12 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 ClampedDist = props->RefDistance;
             else
             {
-                ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RolloffFactor);
-                if(dist > 0.0f) DryGain *= props->RefDistance / dist;
+                float dist{lerp(props->RefDistance, ClampedDist, props->RolloffFactor)};
+                if(dist > 0.0f) DryGain.Base *= props->RefDistance / dist;
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     dist = lerp(props->RefDistance, ClampedDist, RoomRolloff[i]);
-                    if(dist > 0.0f) WetGain[i] *= props->RefDistance / dist;
+                    if(dist > 0.0f) WetGain[i].Base *= props->RefDistance / dist;
                 }
             }
             break;
@@ -1398,14 +1392,14 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 ClampedDist = props->RefDistance;
             else
             {
-                ALfloat attn = props->RolloffFactor * (ClampedDist-props->RefDistance) /
-                               (props->MaxDistance-props->RefDistance);
-                DryGain *= maxf(1.0f - attn, 0.0f);
+                float attn{props->RolloffFactor * (ClampedDist-props->RefDistance) /
+                    (props->MaxDistance-props->RefDistance)};
+                DryGain.Base *= maxf(1.0f - attn, 0.0f);
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     attn = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
                            (props->MaxDistance-props->RefDistance);
-                    WetGain[i] *= maxf(1.0f - attn, 0.0f);
+                    WetGain[i].Base *= maxf(1.0f - attn, 0.0f);
                 }
             }
             break;
@@ -1419,9 +1413,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 ClampedDist = props->RefDistance;
             else
             {
-                DryGain *= std::pow(ClampedDist/props->RefDistance, -props->RolloffFactor);
+                DryGain.Base *= std::pow(ClampedDist/props->RefDistance, -props->RolloffFactor);
                 for(ALuint i{0};i < NumSends;i++)
-                    WetGain[i] *= std::pow(ClampedDist/props->RefDistance, -RoomRolloff[i]);
+                    WetGain[i].Base *= std::pow(ClampedDist/props->RefDistance, -RoomRolloff[i]);
             }
             break;
 
@@ -1433,68 +1427,62 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        const ALfloat Angle{Rad2Deg(std::acos(-aluDotproduct(Direction, ToSource)) *
+        const float Angle{Rad2Deg(std::acos(-aluDotproduct(Direction, ToSource)) *
             ConeScale * 2.0f)};
 
-        ALfloat ConeVolume, ConeHF;
+        float ConeGain, ConeHF;
         if(!(Angle > props->InnerAngle))
         {
-            ConeVolume = 1.0f;
+            ConeGain = 1.0f;
             ConeHF = 1.0f;
         }
         else if(Angle < props->OuterAngle)
         {
-            ALfloat scale = (            Angle-props->InnerAngle) /
-                            (props->OuterAngle-props->InnerAngle);
-            ConeVolume = lerp(1.0f, props->OuterGain, scale);
+            const float scale{(Angle-props->InnerAngle) / (props->OuterAngle-props->InnerAngle)};
+            ConeGain = lerp(1.0f, props->OuterGain, scale);
             ConeHF = lerp(1.0f, props->OuterGainHF, scale);
         }
         else
         {
-            ConeVolume = props->OuterGain;
+            ConeGain = props->OuterGain;
             ConeHF = props->OuterGainHF;
         }
 
-        DryGain *= ConeVolume;
+        DryGain.Base *= ConeGain;
         if(props->DryGainHFAuto)
-            DryGainHF *= ConeHF;
+            DryGain.HF *= ConeHF;
         if(props->WetGainAuto)
-            std::transform(std::begin(WetGain), std::begin(WetGain)+NumSends, std::begin(WetGain),
-                [ConeVolume](ALfloat gain) noexcept -> ALfloat { return gain * ConeVolume; }
-            );
+            std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
+                [ConeGain](GainTriplet &gain) noexcept -> void { gain.Base *= ConeGain; });
         if(props->WetGainHFAuto)
-            std::transform(std::begin(WetGainHF), std::begin(WetGainHF)+NumSends,
-                std::begin(WetGainHF),
-                [ConeHF](ALfloat gain) noexcept -> ALfloat { return gain * ConeHF; }
-            );
+            std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
+                [ConeHF](GainTriplet &gain) noexcept -> void { gain.HF *= ConeHF; });
     }
 
     /* Apply gain and frequency filters */
-    DryGain = clampf(DryGain, props->MinGain, props->MaxGain);
-    DryGain = minf(DryGain*props->Direct.Gain*Listener.Params.Gain, GAIN_MIX_MAX);
-    DryGainHF *= props->Direct.GainHF;
-    DryGainLF *= props->Direct.GainLF;
+    DryGain.Base = minf(clampf(DryGain.Base, props->MinGain, props->MaxGain) * props->Direct.Gain *
+        Listener.Params.Gain, GAIN_MIX_MAX);
+    DryGain.HF *= props->Direct.GainHF;
+    DryGain.LF *= props->Direct.GainLF;
     for(ALuint i{0};i < NumSends;i++)
     {
-        WetGain[i] = clampf(WetGain[i], props->MinGain, props->MaxGain);
-        WetGain[i] = minf(WetGain[i]*props->Send[i].Gain*Listener.Params.Gain, GAIN_MIX_MAX);
-        WetGainHF[i] *= props->Send[i].GainHF;
-        WetGainLF[i] *= props->Send[i].GainLF;
+        WetGain[i].Base = minf(clampf(WetGain[i].Base, props->MinGain, props->MaxGain) *
+            props->Send[i].Gain * Listener.Params.Gain, GAIN_MIX_MAX);
+        WetGain[i].HF *= props->Send[i].GainHF;
+        WetGain[i].LF *= props->Send[i].GainLF;
     }
 
     /* Distance-based air absorption and initial send decay. */
     if(ClampedDist > props->RefDistance && props->RolloffFactor > 0.0f)
     {
-        ALfloat meters_base{(ClampedDist-props->RefDistance) * props->RolloffFactor *
-                            Listener.Params.MetersPerUnit};
+        const float meters_base{(ClampedDist-props->RefDistance) * props->RolloffFactor *
+            Listener.Params.MetersPerUnit};
         if(props->AirAbsorptionFactor > 0.0f)
         {
-            ALfloat hfattn{std::pow(AIRABSORBGAINHF, meters_base * props->AirAbsorptionFactor)};
-            DryGainHF *= hfattn;
-            std::transform(std::begin(WetGainHF), std::begin(WetGainHF)+NumSends,
-                std::begin(WetGainHF),
-                [hfattn](ALfloat gain) noexcept -> ALfloat { return gain * hfattn; }
-            );
+            const float hfattn{std::pow(AIRABSORBGAINHF, meters_base*props->AirAbsorptionFactor)};
+            DryGain.HF *= hfattn;
+            std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
+                [hfattn](GainTriplet &gain) noexcept -> void { gain.HF *= hfattn; });
         }
 
         if(props->WetGainAuto)
@@ -1509,16 +1497,16 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                     continue;
 
                 const ALfloat gain{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i])};
-                WetGain[i] *= gain;
+                WetGain[i].Base *= gain;
                 /* Yes, the wet path's air absorption is applied with
                  * WetGainAuto on, rather than WetGainHFAuto.
                  */
                 if(gain > 0.0f)
                 {
                     ALfloat gainhf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i])};
-                    WetGainHF[i] *= minf(gainhf / gain, 1.0f);
+                    WetGain[i].HF *= minf(gainhf / gain, 1.0f);
                     ALfloat gainlf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i])};
-                    WetGainLF[i] *= minf(gainlf / gain, 1.0f);
+                    WetGain[i].LF *= minf(gainlf / gain, 1.0f);
                 }
             }
         }
@@ -1577,8 +1565,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
     CalcPanningAndFilters(voice, ToSource[0], ToSource[1], ToSource[2]*ZScale,
-        Distance*Listener.Params.MetersPerUnit, spread, DryGain, DryGainHF, DryGainLF, WetGain,
-        WetGainLF, WetGainHF, SendSlots, props, Listener, Device);
+        Distance*Listener.Params.MetersPerUnit, spread, DryGain, WetGain, SendSlots, props,
+        Listener, Device);
 }
 
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)

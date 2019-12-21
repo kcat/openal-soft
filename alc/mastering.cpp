@@ -23,7 +23,7 @@
 static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 2");
 
 struct SlidingHold {
-    alignas(16) ALfloat mValues[BUFFERSIZE];
+    alignas(16) float mValues[BUFFERSIZE];
     ALuint mExpiries[BUFFERSIZE];
     ALuint mLowerIndex;
     ALuint mUpperIndex;
@@ -42,11 +42,11 @@ using namespace std::placeholders;
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const ALfloat in)
+ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const float in)
 {
     static constexpr ALuint mask{BUFFERSIZE - 1};
     const ALuint length{Hold->mLength};
-    ALfloat (&values)[BUFFERSIZE] = Hold->mValues;
+    float (&values)[BUFFERSIZE] = Hold->mValues;
     ALuint (&expiries)[BUFFERSIZE] = Hold->mExpiries;
     ALuint lowerIndex{Hold->mLowerIndex};
     ALuint upperIndex{Hold->mUpperIndex};
@@ -101,7 +101,7 @@ void ShiftSlidingHold(SlidingHold *Hold, const ALuint n)
  */
 void LinkChannels(Compressor *Comp, const ALuint SamplesToDo, const FloatBufferLine *OutBuffer)
 {
-    const ALuint numChans{Comp->mNumChans};
+    const size_t numChans{Comp->mNumChans};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
@@ -111,7 +111,7 @@ void LinkChannels(Compressor *Comp, const ALuint SamplesToDo, const FloatBufferL
 
     auto fill_max = [SamplesToDo,side_begin](const FloatBufferLine &input) -> void
     {
-        const ALfloat *RESTRICT buffer{al::assume_aligned<16>(input.data())};
+        const float *RESTRICT buffer{al::assume_aligned<16>(input.data())};
         auto max_abs = std::bind(maxf, _1, std::bind(static_cast<float(&)(float)>(std::fabs), _2));
         std::transform(side_begin, side_begin+SamplesToDo, buffer, side_begin, max_abs);
     };
@@ -125,15 +125,15 @@ void LinkChannels(Compressor *Comp, const ALuint SamplesToDo, const FloatBufferL
  */
 static void CrestDetector(Compressor *Comp, const ALuint SamplesToDo)
 {
-    const ALfloat a_crest{Comp->mCrestCoeff};
-    ALfloat y2_peak{Comp->mLastPeakSq};
-    ALfloat y2_rms{Comp->mLastRmsSq};
+    const float a_crest{Comp->mCrestCoeff};
+    float y2_peak{Comp->mLastPeakSq};
+    float y2_rms{Comp->mLastRmsSq};
 
     ASSUME(SamplesToDo > 0);
 
-    auto calc_crest = [&y2_rms,&y2_peak,a_crest](const ALfloat x_abs) noexcept -> ALfloat
+    auto calc_crest = [&y2_rms,&y2_peak,a_crest](const float x_abs) noexcept -> float
     {
-        const ALfloat x2{clampf(x_abs * x_abs, 0.000001f, 1000000.0f)};
+        const float x2{clampf(x_abs * x_abs, 0.000001f, 1000000.0f)};
 
         y2_peak = maxf(x2, lerp(x2, y2_peak, a_crest));
         y2_rms = lerp(x2, y2_rms, a_crest);
@@ -157,7 +157,7 @@ void PeakDetector(Compressor *Comp, const ALuint SamplesToDo)
     /* Clamp the minimum amplitude to near-zero and convert to logarithm. */
     auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::transform(side_begin, side_begin+SamplesToDo, side_begin,
-        std::bind(static_cast<float(&)(float)>(std::log), std::bind(maxf, 0.000001f, _1)));
+        [](const float s) -> float { return std::log(maxf(0.000001f, s)); });
 }
 
 /* An optional hold can be used to extend the peak detector so it can more
@@ -172,7 +172,7 @@ void PeakHoldDetector(Compressor *Comp, const ALuint SamplesToDo)
     ALuint i{0};
     auto detect_peak = [&i,hold](const ALfloat x_abs) -> ALfloat
     {
-        const ALfloat x_G{std::log(maxf(0.000001f, x_abs))};
+        const float x_G{std::log(maxf(0.000001f, x_abs))};
         return UpdateSlidingHold(hold, i++, x_G);
     };
     auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
@@ -194,42 +194,41 @@ void GainCompressor(Compressor *Comp, const ALuint SamplesToDo)
     const bool autoPostGain{Comp->mAuto.PostGain};
     const bool autoDeclip{Comp->mAuto.Declip};
     const ALuint lookAhead{Comp->mLookAhead};
-    const ALfloat threshold{Comp->mThreshold};
-    const ALfloat slope{Comp->mSlope};
-    const ALfloat attack{Comp->mAttack};
-    const ALfloat release{Comp->mRelease};
-    const ALfloat c_est{Comp->mGainEstimate};
-    const ALfloat a_adp{Comp->mAdaptCoeff};
-    const ALfloat *crestFactor{Comp->mCrestFactor};
-    ALfloat postGain{Comp->mPostGain};
-    ALfloat knee{Comp->mKnee};
-    ALfloat t_att{attack};
-    ALfloat t_rel{release - attack};
-    ALfloat a_att{std::exp(-1.0f / t_att)};
-    ALfloat a_rel{std::exp(-1.0f / t_rel)};
-    ALfloat y_1{Comp->mLastRelease};
-    ALfloat y_L{Comp->mLastAttack};
-    ALfloat c_dev{Comp->mLastGainDev};
+    const float threshold{Comp->mThreshold};
+    const float slope{Comp->mSlope};
+    const float attack{Comp->mAttack};
+    const float release{Comp->mRelease};
+    const float c_est{Comp->mGainEstimate};
+    const float a_adp{Comp->mAdaptCoeff};
+    const float *crestFactor{Comp->mCrestFactor};
+    float postGain{Comp->mPostGain};
+    float knee{Comp->mKnee};
+    float t_att{attack};
+    float t_rel{release - attack};
+    float a_att{std::exp(-1.0f / t_att)};
+    float a_rel{std::exp(-1.0f / t_rel)};
+    float y_1{Comp->mLastRelease};
+    float y_L{Comp->mLastAttack};
+    float c_dev{Comp->mLastGainDev};
 
     ASSUME(SamplesToDo > 0);
 
-    for(ALfloat &sideChain : al::span<float>{Comp->mSideChain, SamplesToDo})
+    for(float &sideChain : al::span<float>{Comp->mSideChain, SamplesToDo})
     {
         if(autoKnee)
             knee = maxf(0.0f, 2.5f * (c_dev + c_est));
-        const ALfloat knee_h{0.5f * knee};
+        const float knee_h{0.5f * knee};
 
         /* This is the gain computer.  It applies a static compression curve
          * to the control signal.
          */
-        const ALfloat x_over{std::addressof(sideChain)[lookAhead] - threshold};
-        const ALfloat y_G{
+        const float x_over{std::addressof(sideChain)[lookAhead] - threshold};
+        const float y_G{
             (x_over <= -knee_h) ? 0.0f :
             (std::fabs(x_over) < knee_h) ? (x_over + knee_h) * (x_over + knee_h) / (2.0f * knee) :
-            x_over
-        };
+            x_over};
 
-        const ALfloat y2_crest{*(crestFactor++)};
+        const float y2_crest{*(crestFactor++)};
         if(autoAttack)
         {
             t_att = 2.0f*attack/y2_crest;
@@ -245,7 +244,7 @@ void GainCompressor(Compressor *Comp, const ALuint SamplesToDo)
          * detector.  The attack time is subtracted from the release time
          * above to compensate for the chained operating mode.
          */
-        const ALfloat x_L{-slope * y_G};
+        const float x_L{-slope * y_G};
         y_1 = maxf(x_L, lerp(x_L, y_1, a_rel));
         y_L = lerp(y_1, y_L, a_att);
 
@@ -285,14 +284,14 @@ void GainCompressor(Compressor *Comp, const ALuint SamplesToDo)
  */
 void SignalDelay(Compressor *Comp, const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
 {
-    const ALuint numChans{Comp->mNumChans};
+    const size_t numChans{Comp->mNumChans};
     const ALuint lookAhead{Comp->mLookAhead};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
     ASSUME(lookAhead > 0);
 
-    for(ALuint c{0};c < numChans;c++)
+    for(size_t c{0};c < numChans;c++)
     {
         ALfloat *inout{al::assume_aligned<16>(OutBuffer[c].data())};
         ALfloat *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
@@ -313,36 +312,12 @@ void SignalDelay(Compressor *Comp, const ALuint SamplesToDo, FloatBufferLine *Ou
 
 } // namespace
 
-/* The compressor is initialized with the following settings:
- *
- *   NumChans       - Number of channels to process.
- *   SampleRate     - Sample rate to process.
- *   AutoKnee       - Whether to automate the knee width parameter.
- *   AutoAttack     - Whether to automate the attack time parameter.
- *   AutoRelease    - Whether to automate the release time parameter.
- *   AutoPostGain   - Whether to automate the make-up (post) gain parameter.
- *   AutoDeclip     - Whether to automate clipping reduction.  Ignored when
- *                    not automating make-up gain.
- *   LookAheadTime  - Look-ahead time (in seconds).
- *   HoldTime       - Peak hold-time (in seconds).
- *   PreGainDb      - Gain applied before detection (in dB).
- *   PostGainDb     - Make-up gain applied after compression (in dB).
- *   ThresholdDb    - Triggering threshold (in dB).
- *   Ratio          - Compression ratio (x:1).  Set to INFINITY for true
- *                    limiting.  Ignored when automating knee width.
- *   KneeDb         - Knee width (in dB).  Ignored when automating knee
- *                    width.
- *   AttackTimeMin  - Attack time (in seconds).  Acts as a maximum when
- *                    automating attack time.
- *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
- *                    automating release time.
- */
-std::unique_ptr<Compressor> CompressorInit(const ALuint NumChans, const ALfloat SampleRate,
-    const ALboolean AutoKnee, const ALboolean AutoAttack, const ALboolean AutoRelease,
-    const ALboolean AutoPostGain, const ALboolean AutoDeclip, const ALfloat LookAheadTime,
-    const ALfloat HoldTime, const ALfloat PreGainDb, const ALfloat PostGainDb,
-    const ALfloat ThresholdDb, const ALfloat Ratio, const ALfloat KneeDb, const ALfloat AttackTime,
-    const ALfloat ReleaseTime)
+
+std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const float SampleRate,
+    const bool AutoKnee, const bool AutoAttack, const bool AutoRelease, const bool AutoPostGain,
+    const bool AutoDeclip, const float LookAheadTime, const float HoldTime, const float PreGainDb,
+    const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
+    const float AttackTime, const float ReleaseTime)
 {
     const auto lookAhead = static_cast<ALuint>(
         clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
@@ -421,17 +396,17 @@ Compressor::~Compressor()
 
 void Compressor::process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
 {
-    const ALuint numChans{mNumChans};
+    const size_t numChans{mNumChans};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
 
-    const ALfloat preGain{mPreGain};
+    const float preGain{mPreGain};
     if(preGain != 1.0f)
     {
         auto apply_gain = [SamplesToDo,preGain](FloatBufferLine &input) noexcept -> void
         {
-            ALfloat *buffer{al::assume_aligned<16>(input.data())};
+            float *buffer{al::assume_aligned<16>(input.data())};
             std::transform(buffer, buffer+SamplesToDo, buffer,
                 std::bind(std::multiplies<float>{}, _1, preGain));
         };

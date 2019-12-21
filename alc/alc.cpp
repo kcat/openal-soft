@@ -1633,11 +1633,11 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
-static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
+static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
 {
-    return CompressorInit(static_cast<ALuint>(device->RealOut.Buffer.size()),
-        static_cast<float>(device->Frequency), AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f,
-        0.002f, 0.0f, 0.0f, threshold, INFINITY, 0.0f, 0.020f, 0.200f);
+    return Compressor::Create(device->RealOut.Buffer.size(), static_cast<float>(device->Frequency),
+        AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f, 0.0f, 0.0f, threshold,
+        std::numeric_limits<float>::infinity(), 0.0f, 0.020f, 0.200f);
 }
 
 /* UpdateClockBase

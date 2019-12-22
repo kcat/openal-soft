@@ -87,7 +87,7 @@ int NullBackend::mixerProc()
         while(avail-done >= mDevice->UpdateSize)
         {
             std::lock_guard<NullBackend> _{*this};
-            aluMixData(mDevice, nullptr, mDevice->UpdateSize);
+            aluMixData(mDevice, nullptr, mDevice->UpdateSize, 0u);
             done += mDevice->UpdateSize;
         }
 

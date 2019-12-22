@@ -446,6 +446,7 @@ int AlsaPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
+    const size_t samplebits{mDevice->bytesFromFmt() * 8};
     const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
     const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
@@ -507,7 +508,7 @@ int AlsaPlayback::mixerProc()
             }
 
             char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
-            aluMixData(mDevice, WritePtr, static_cast<ALuint>(frames));
+            aluMixData(mDevice, WritePtr, static_cast<ALuint>(frames), areas->step / samplebits);
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
             if(commitres < 0 || (static_cast<snd_pcm_uframes_t>(commitres)-frames) != 0)
@@ -529,6 +530,7 @@ int AlsaPlayback::mixerNoMMapProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
+    const size_t frame_step{mDevice->channelsFromFmt()};
     const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
     const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
@@ -574,7 +576,7 @@ int AlsaPlayback::mixerNoMMapProc()
         std::lock_guard<AlsaPlayback> _{*this};
         al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
-        aluMixData(mDevice, WritePtr, static_cast<ALuint>(avail));
+        aluMixData(mDevice, WritePtr, static_cast<ALuint>(avail), frame_step);
         while(avail > 0)
         {
             snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr,

@@ -763,7 +763,7 @@ void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
 void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexcept
 {
     void *buf{pa_xmalloc(nbytes)};
-    aluMixData(mDevice, buf, static_cast<ALuint>(nbytes/mFrameSize));
+    aluMixData(mDevice, buf, static_cast<ALuint>(nbytes/mFrameSize), mDevice->channelsFromFmt());
 
     int ret{pa_stream_write(stream, buf, nbytes, pa_xfree, 0, PA_SEEK_RELATIVE)};
     if UNLIKELY(ret != PA_OK)

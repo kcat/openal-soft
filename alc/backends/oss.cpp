@@ -277,6 +277,7 @@ int OSSPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
+    const size_t frame_step{mDevice->channelsFromFmt()};
     const ALuint frame_size{mDevice->frameSizeFromFmt()};
 
     std::unique_lock<OSSPlayback> dlock{*this};
@@ -306,7 +307,7 @@ int OSSPlayback::mixerProc()
 
         ALubyte *write_ptr{mMixData.data()};
         size_t to_write{mMixData.size()};
-        aluMixData(mDevice, write_ptr, static_cast<ALuint>(to_write/frame_size));
+        aluMixData(mDevice, write_ptr, static_cast<ALuint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(mFd, write_ptr, to_write)};

@@ -126,6 +126,7 @@ int WaveBackend::mixerProc()
 
     althrd_setname(MIXER_THREAD_NAME);
 
+    const size_t frameStep{mDevice->channelsFromFmt()};
     const ALuint frameSize{mDevice->frameSizeFromFmt()};
 
     int64_t done{0};
@@ -147,7 +148,7 @@ int WaveBackend::mixerProc()
         {
             {
                 std::lock_guard<WaveBackend> _{*this};
-                aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize);
+                aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize, frameStep);
             }
             done += mDevice->UpdateSize;
 

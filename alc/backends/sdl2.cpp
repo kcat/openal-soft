@@ -85,7 +85,7 @@ void Sdl2Backend::audioCallback(Uint8 *stream, int len) noexcept
 {
     const auto ulen = static_cast<unsigned int>(len);
     assert((ulen % mFrameSize) == 0);
-    aluMixData(mDevice, stream, ulen / mFrameSize);
+    aluMixData(mDevice, stream, ulen / mFrameSize, mDevice->channelsFromFmt());
 }
 
 void Sdl2Backend::open(const ALCchar *name)

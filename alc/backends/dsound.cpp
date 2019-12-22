@@ -219,6 +219,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         return 1;
     }
 
+    const size_t FrameStep{mDevice->channelsFromFmt()};
     ALuint FrameSize{mDevice->frameSizeFromFmt()};
     DWORD FragSize{mDevice->UpdateSize * FrameSize};
 
@@ -276,9 +277,9 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         if(SUCCEEDED(err))
         {
             std::unique_lock<DSoundPlayback> dlock{*this};
-            aluMixData(mDevice, WritePtr1, WriteCnt1/FrameSize);
+            aluMixData(mDevice, WritePtr1, WriteCnt1/FrameSize, FrameStep);
             if(WriteCnt2 > 0)
-                aluMixData(mDevice, WritePtr2, WriteCnt2/FrameSize);
+                aluMixData(mDevice, WritePtr2, WriteCnt2/FrameSize, FrameStep);
             dlock.unlock();
 
             mBuffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);

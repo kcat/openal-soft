@@ -106,6 +106,19 @@ inline int64_t ScaleCeil(int64_t val, int64_t new_scale, int64_t old_scale)
 }
 
 
+class GuidPrinter {
+    char mMsg[64];
+
+public:
+    GuidPrinter(const GUID &guid)
+    {
+        std::snprintf(mMsg, al::size(mMsg), "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
+            DWORD{guid.Data1}, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
+            guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    }
+    const char *c_str() const { return mMsg; }
+};
+
 struct PropVariant {
     PROPVARIANT mProp;
 
@@ -356,21 +369,6 @@ void TraceFormat(const char *msg, const WAVEFORMATEX *format)
     constexpr size_t fmtex_extra_size{sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)};
     if(format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= fmtex_extra_size)
     {
-        class GuidPrinter {
-            char mMsg[64];
-
-        public:
-            GuidPrinter(const GUID &guid)
-            {
-                std::snprintf(mMsg, al::size(mMsg),
-                    "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
-                    DWORD{guid.Data1}, guid.Data2, guid.Data3,
-                    guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
-                    guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-            }
-            const char *c_str() const { return mMsg; }
-        };
-
         const WAVEFORMATEXTENSIBLE *fmtex{
             CONTAINING_RECORD(format, const WAVEFORMATEXTENSIBLE, Format)};
         TRACE("%s:\n"
@@ -452,7 +450,8 @@ struct WasapiProxy {
     {
         std::promise<HRESULT> promise;
         std::future<HRESULT> future{promise.get_future()};
-        { std::lock_guard<std::mutex> _{mMsgQueueLock};
+        {
+            std::lock_guard<std::mutex> _{mMsgQueueLock};
             mMsgQueue.emplace_back(Msg{type, this, std::move(promise)});
         }
         mMsgQueueCond.notify_one();
@@ -463,7 +462,8 @@ struct WasapiProxy {
     {
         std::promise<HRESULT> promise;
         std::future<HRESULT> future{promise.get_future()};
-        { std::lock_guard<std::mutex> _{mMsgQueueLock};
+        {
+            std::lock_guard<std::mutex> _{mMsgQueueLock};
             mMsgQueue.emplace_back(Msg{type, nullptr, std::move(promise)});
         }
         mMsgQueueCond.notify_one();
@@ -631,6 +631,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     IAudioRenderClient *mRender{nullptr};
     HANDLE mNotifyEvent{nullptr};
 
+    UINT32 mFrameStep{0u};
     std::atomic<UINT32> mPadding{0u};
 
     std::atomic<bool> mKillNow{true};
@@ -690,7 +691,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(SUCCEEDED(hr))
         {
             std::unique_lock<WasapiPlayback> dlock{*this};
-            aluMixData(mDevice, buffer, len);
+            aluMixData(mDevice, buffer, len, mFrameStep);
             mPadding.store(written + len, std::memory_order_relaxed);
             dlock.unlock();
             hr = mRender->ReleaseBuffer(len, 0);
@@ -988,6 +989,11 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->FmtChans = DevFmtX61;
         else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
             mDevice->FmtChans = DevFmtX71;
+        else if(OutputType.Format.nChannels >= 2 && (OutputType.dwChannelMask&STEREO) == STEREO)
+        {
+            TRACE("Mixing stereo over channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+            mDevice->FmtChans = DevFmtStereo;
+        }
         else
         {
             ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
@@ -1026,6 +1032,7 @@ HRESULT WasapiPlayback::resetProxy()
         }
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     }
+    mFrameStep = OutputType.Format.nChannels;
 
     EndpointFormFactor formfactor = UnknownFormFactor;
     get_device_formfactor(mMMDev, &formfactor);

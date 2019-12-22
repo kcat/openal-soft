@@ -4144,7 +4144,7 @@ START_API_FUNC
     else
     {
         BackendLockGuard _{*dev->Backend};
-        aluMixData(dev.get(), buffer, static_cast<ALuint>(samples));
+        aluMixData(dev.get(), buffer, static_cast<ALuint>(samples), dev->channelsFromFmt());
     }
 }
 END_API_FUNC

@@ -228,6 +228,8 @@ int OpenSLPlayback::mixerProc()
         PRINTERR(result, "bufferQueue->GetInterface SL_IID_PLAY");
     }
 
+    const size_t frame_step{mDevice->channelsFromFmt()};
+
     std::unique_lock<OpenSLPlayback> dlock{*this};
     if(SL_RESULT_SUCCESS != result)
         aluHandleDisconnect(mDevice, "Failed to get playback buffer: 0x%08x", result);
@@ -263,10 +265,10 @@ int OpenSLPlayback::mixerProc()
 
         auto data = mRing->getWriteVector();
         aluMixData(mDevice, data.first.buf,
-            static_cast<ALuint>(data.first.len*mDevice->UpdateSize));
+            static_cast<ALuint>(data.first.len*mDevice->UpdateSize), frame_step);
         if(data.second.len > 0)
             aluMixData(mDevice, data.second.buf,
-                static_cast<ALuint>(data.second.len*mDevice->UpdateSize));
+                static_cast<ALuint>(data.second.len*mDevice->UpdateSize), frame_step);
 
         size_t todo{data.first.len + data.second.len};
         mRing->writeAdvance(todo);

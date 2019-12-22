@@ -148,7 +148,8 @@ inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexce
 }
 
 
-void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples);
+void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
+    const size_t FrameStep);
 /* Caller must lock the device state, and the mixer must not be running. */
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...) DECL_FORMAT(printf, 2, 3);
 

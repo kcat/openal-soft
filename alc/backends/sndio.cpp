@@ -77,6 +77,7 @@ int SndioPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
+    const size_t frameStep{mDevice->channelsFromFmt()};
     const ALuint frameSize{mDevice->frameSizeFromFmt()};
 
     while(!mKillNow.load(std::memory_order_acquire) &&
@@ -87,7 +88,7 @@ int SndioPlayback::mixerProc()
 
         {
             std::lock_guard<SndioPlayback> _{*this};
-            aluMixData(mDevice, WritePtr, static_cast<ALuint>(len/frameSize));
+            aluMixData(mDevice, WritePtr, static_cast<ALuint>(len/frameSize), frameStep);
         }
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {

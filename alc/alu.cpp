@@ -1861,22 +1861,21 @@ template<> inline uint8_t SampleConv(float val) noexcept
 
 template<DevFmtType T>
 void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
-    const ALuint SamplesToDo)
+    const ALuint SamplesToDo, const size_t FrameStep)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
-    const size_t numchans{InBuffer.size()};
-    ASSUME(numchans > 0);
+    ASSUME(FrameStep > 0);
 
-    SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*numchans;
-    auto conv_channel = [&outbase,SamplesToDo,numchans](const FloatBufferLine &inbuf) -> void
+    SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*FrameStep;
+    auto conv_channel = [&outbase,SamplesToDo,FrameStep](const FloatBufferLine &inbuf) -> void
     {
         ASSUME(SamplesToDo > 0);
         SampleType *out{outbase++};
-        auto conv_sample = [numchans,&out](const float s) noexcept -> void
+        auto conv_sample = [FrameStep,&out](const float s) noexcept -> void
         {
             *out = SampleConv<SampleType>(s);
-            out += numchans;
+            out += FrameStep;
         };
         std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);
     };
@@ -1885,7 +1884,8 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
 
 } // namespace
 
-void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples)
+void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
+    const size_t FrameStep)
 {
     FPUCtl mixer_mode{};
     for(ALuint SamplesDone{0u};SamplesDone < NumSamples;)
@@ -1956,15 +1956,15 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, const ALuint NumSamples)
              */
             switch(device->FmtType)
             {
-#define HANDLE_WRITE(T) case T:                                            \
-    Write<T>(RealOut, OutBuffer, SamplesDone, SamplesToDo); break;
-                HANDLE_WRITE(DevFmtByte)
-                HANDLE_WRITE(DevFmtUByte)
-                HANDLE_WRITE(DevFmtShort)
-                HANDLE_WRITE(DevFmtUShort)
-                HANDLE_WRITE(DevFmtInt)
-                HANDLE_WRITE(DevFmtUInt)
-                HANDLE_WRITE(DevFmtFloat)
+#define HANDLE_WRITE(T) case T:                                               \
+    Write<T>(RealOut, OutBuffer, SamplesDone, SamplesToDo, FrameStep); break;
+            HANDLE_WRITE(DevFmtByte)
+            HANDLE_WRITE(DevFmtUByte)
+            HANDLE_WRITE(DevFmtShort)
+            HANDLE_WRITE(DevFmtUShort)
+            HANDLE_WRITE(DevFmtInt)
+            HANDLE_WRITE(DevFmtUInt)
+            HANDLE_WRITE(DevFmtFloat)
 #undef HANDLE_WRITE
             }
         }

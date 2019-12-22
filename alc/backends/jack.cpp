@@ -292,6 +292,8 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
+    const size_t frame_step{mDevice->channelsFromFmt()};
+
     std::unique_lock<JackPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
@@ -311,9 +313,9 @@ int JackPlayback::mixerProc()
         ALuint len1{minu(static_cast<ALuint>(data.first.len), todo)};
         ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
 
-        aluMixData(mDevice, data.first.buf, len1);
+        aluMixData(mDevice, data.first.buf, len1, frame_step);
         if(len2 > 0)
-            aluMixData(mDevice, data.second.buf, len2);
+            aluMixData(mDevice, data.second.buf, len2, frame_step);
         mRing->writeAdvance(todo);
     }
 

@@ -94,6 +94,25 @@ inline constexpr REFERENCE_TIME operator "" _reftime(unsigned long long int n) n
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
+/* TODO: This can't be constexpr in C++11. */
+inline uint32_t MaskFromTopBits(uint32_t b) noexcept
+{
+    b |= b>>1;
+    b |= b>>2;
+    b |= b>>4;
+    b |= b>>8;
+    b |= b>>16;
+    return b;
+}
+const uint32_t MonoMask{MaskFromTopBits(MONO)};
+const uint32_t StereoMask{MaskFromTopBits(STEREO)};
+const uint32_t QuadMask{MaskFromTopBits(QUAD)};
+const uint32_t X51Mask{MaskFromTopBits(X5DOT1)};
+const uint32_t X51RearMask{MaskFromTopBits(X5DOT1REAR)};
+const uint32_t X61Mask{MaskFromTopBits(X6DOT1)};
+const uint32_t X71Mask{MaskFromTopBits(X7DOT1)};
+const uint32_t X71WideMask{MaskFromTopBits(X7DOT1_WIDE)};
+
 #define REFTIME_PER_SEC 10000000_reftime
 
 #define DEVNAME_HEAD "OpenAL Soft on "
@@ -858,90 +877,92 @@ HRESULT WasapiPlayback::resetProxy()
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
     if(!mDevice->Flags.get<ChannelsRequest>())
     {
-        if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-            mDevice->FmtChans = DevFmtMono;
-        else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-            mDevice->FmtChans = DevFmtStereo;
-        else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-            mDevice->FmtChans = DevFmtX51;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1REAR)
-            mDevice->FmtChans = DevFmtX51Rear;
-        else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
-        else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
+        const uint32_t chancount{OutputType.Format.nChannels};
+        const DWORD chanmask{OutputType.dwChannelMask};
+        if(chancount >= 8 && ((chanmask&X71Mask)==X7DOT1 || (chanmask&X71WideMask)==X7DOT1_WIDE))
             mDevice->FmtChans = DevFmtX71;
+        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
+            mDevice->FmtChans = DevFmtX61;
+        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
+            mDevice->FmtChans = DevFmtX51;
+        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
+            mDevice->FmtChans = DevFmtX51Rear;
+        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
+            mDevice->FmtChans = DevFmtStereo;
+        else if(chancount >= 1 && (chanmask&MonoMask) == MONO)
+            mDevice->FmtChans = DevFmtMono;
         else
-            ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+            ERR("Unhandled channel config: %d -- 0x%08lx\n", chancount, chanmask);
     }
 
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     switch(mDevice->FmtChans)
     {
-        case DevFmtMono:
-            OutputType.Format.nChannels = 1;
-            OutputType.dwChannelMask = MONO;
-            break;
-        case DevFmtAmbi3D:
-            mDevice->FmtChans = DevFmtStereo;
-            /*fall-through*/
-        case DevFmtStereo:
-            OutputType.Format.nChannels = 2;
-            OutputType.dwChannelMask = STEREO;
-            break;
-        case DevFmtQuad:
-            OutputType.Format.nChannels = 4;
-            OutputType.dwChannelMask = QUAD;
-            break;
-        case DevFmtX51:
-            OutputType.Format.nChannels = 6;
-            OutputType.dwChannelMask = X5DOT1;
-            break;
-        case DevFmtX51Rear:
-            OutputType.Format.nChannels = 6;
-            OutputType.dwChannelMask = X5DOT1REAR;
-            break;
-        case DevFmtX61:
-            OutputType.Format.nChannels = 7;
-            OutputType.dwChannelMask = X6DOT1;
-            break;
-        case DevFmtX71:
-            OutputType.Format.nChannels = 8;
-            OutputType.dwChannelMask = X7DOT1;
-            break;
+    case DevFmtMono:
+        OutputType.Format.nChannels = 1;
+        OutputType.dwChannelMask = MONO;
+        break;
+    case DevFmtAmbi3D:
+        mDevice->FmtChans = DevFmtStereo;
+        /*fall-through*/
+    case DevFmtStereo:
+        OutputType.Format.nChannels = 2;
+        OutputType.dwChannelMask = STEREO;
+        break;
+    case DevFmtQuad:
+        OutputType.Format.nChannels = 4;
+        OutputType.dwChannelMask = QUAD;
+        break;
+    case DevFmtX51:
+        OutputType.Format.nChannels = 6;
+        OutputType.dwChannelMask = X5DOT1;
+        break;
+    case DevFmtX51Rear:
+        OutputType.Format.nChannels = 6;
+        OutputType.dwChannelMask = X5DOT1REAR;
+        break;
+    case DevFmtX61:
+        OutputType.Format.nChannels = 7;
+        OutputType.dwChannelMask = X6DOT1;
+        break;
+    case DevFmtX71:
+        OutputType.Format.nChannels = 8;
+        OutputType.dwChannelMask = X7DOT1;
+        break;
     }
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            mDevice->FmtType = DevFmtUByte;
-            /* fall-through */
-        case DevFmtUByte:
-            OutputType.Format.wBitsPerSample = 8;
-            OutputType.Samples.wValidBitsPerSample = 8;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-            break;
-        case DevFmtUShort:
-            mDevice->FmtType = DevFmtShort;
-            /* fall-through */
-        case DevFmtShort:
-            OutputType.Format.wBitsPerSample = 16;
-            OutputType.Samples.wValidBitsPerSample = 16;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-            break;
-        case DevFmtUInt:
-            mDevice->FmtType = DevFmtInt;
-            /* fall-through */
-        case DevFmtInt:
-            OutputType.Format.wBitsPerSample = 32;
-            OutputType.Samples.wValidBitsPerSample = 32;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-            break;
-        case DevFmtFloat:
-            OutputType.Format.wBitsPerSample = 32;
-            OutputType.Samples.wValidBitsPerSample = 32;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-            break;
+    case DevFmtByte:
+        mDevice->FmtType = DevFmtUByte;
+        /* fall-through */
+    case DevFmtUByte:
+        OutputType.Format.wBitsPerSample = 8;
+        OutputType.Samples.wValidBitsPerSample = 8;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        break;
+    case DevFmtUShort:
+        mDevice->FmtType = DevFmtShort;
+        /* fall-through */
+    case DevFmtShort:
+        OutputType.Format.wBitsPerSample = 16;
+        OutputType.Samples.wValidBitsPerSample = 16;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        break;
+    case DevFmtUInt:
+        mDevice->FmtType = DevFmtInt;
+        /* fall-through */
+    case DevFmtInt:
+        OutputType.Format.wBitsPerSample = 32;
+        OutputType.Samples.wValidBitsPerSample = 32;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        break;
+    case DevFmtFloat:
+        OutputType.Format.wBitsPerSample = 32;
+        OutputType.Samples.wValidBitsPerSample = 32;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+        break;
     }
     OutputType.Format.nSamplesPerSec = mDevice->Frequency;
 
@@ -975,25 +996,22 @@ HRESULT WasapiPlayback::resetProxy()
         wfx = nullptr;
 
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
-        if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-            mDevice->FmtChans = DevFmtMono;
-        else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-            mDevice->FmtChans = DevFmtStereo;
-        else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-            mDevice->FmtChans = DevFmtX51;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1REAR)
-            mDevice->FmtChans = DevFmtX51Rear;
-        else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
-        else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
+        const uint32_t chancount{OutputType.Format.nChannels};
+        const DWORD chanmask{OutputType.dwChannelMask};
+        if(chancount >= 8 && ((chanmask&X71Mask)==X7DOT1 || (chanmask&X71WideMask)==X7DOT1_WIDE))
             mDevice->FmtChans = DevFmtX71;
-        else if(OutputType.Format.nChannels >= 2 && (OutputType.dwChannelMask&STEREO) == STEREO)
-        {
-            TRACE("Mixing stereo over channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
+            mDevice->FmtChans = DevFmtX61;
+        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
+            mDevice->FmtChans = DevFmtX51;
+        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
+            mDevice->FmtChans = DevFmtX51Rear;
+        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
             mDevice->FmtChans = DevFmtStereo;
-        }
+        else if(chancount >= 1 && (chanmask&MonoMask) == MONO)
+            mDevice->FmtChans = DevFmtMono;
         else
         {
             ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
@@ -1034,10 +1052,10 @@ HRESULT WasapiPlayback::resetProxy()
     }
     mFrameStep = OutputType.Format.nChannels;
 
-    EndpointFormFactor formfactor = UnknownFormFactor;
+    EndpointFormFactor formfactor{UnknownFormFactor};
     get_device_formfactor(mMMDev, &formfactor);
-    mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo &&
-        (formfactor == Headphones || formfactor == Headset));
+    mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo
+        && (formfactor == Headphones || formfactor == Headset));
 
     SetDefaultWFXChannelOrder(mDevice);
 

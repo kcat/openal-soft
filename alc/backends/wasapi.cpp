@@ -43,16 +43,17 @@
 #include <ksmedia.h>
 #endif
 
-#include <deque>
-#include <mutex>
+#include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <functional>
+#include <future>
+#include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
-#include <string>
-#include <future>
-#include <algorithm>
-#include <functional>
-#include <condition_variable>
 
 #include "alcmain.h"
 #include "alexcpt.h"
@@ -82,8 +83,14 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 namespace {
 
-inline constexpr REFERENCE_TIME operator "" _reftime(unsigned long long int n) noexcept
-{ return static_cast<REFERENCE_TIME>(n); }
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+
+using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10000000>>;
+
+inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) noexcept
+{ return ReferenceTime{static_cast<REFERENCE_TIME>(n)}; }
+
 
 #define MONO SPEAKER_FRONT_CENTER
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
@@ -113,15 +120,14 @@ const uint32_t X61Mask{MaskFromTopBits(X6DOT1)};
 const uint32_t X71Mask{MaskFromTopBits(X7DOT1)};
 const uint32_t X71WideMask{MaskFromTopBits(X7DOT1_WIDE)};
 
-#define REFTIME_PER_SEC 10000000_reftime
-
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
-/* Scales the given value using 64-bit integer math, ceiling the result. */
-inline int64_t ScaleCeil(int64_t val, int64_t new_scale, int64_t old_scale)
+/* Scales the given reftime value, ceiling the result. */
+inline ALuint RefTime2Samples(const ReferenceTime &val, ALuint srate)
 {
-    return (val*new_scale + old_scale-1) / old_scale;
+    const auto retval = (val*srate + (seconds{1}-1_reftime)) / seconds{1};
+    return static_cast<ALuint>(retval);
 }
 
 
@@ -870,8 +876,8 @@ HRESULT WasapiPlayback::resetProxy()
     CoTaskMemFree(wfx);
     wfx = nullptr;
 
-    const REFERENCE_TIME per_time{mDevice->UpdateSize * REFTIME_PER_SEC / mDevice->Frequency};
-    const REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
+    const ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
+    const ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
 
     if(!mDevice->Flags.get<FrequencyRequest>())
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
@@ -1014,7 +1020,8 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->FmtChans = DevFmtMono;
         else
         {
-            ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
+            ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels,
+                OutputType.dwChannelMask);
             mDevice->FmtChans = DevFmtStereo;
             OutputType.Format.nChannels = 2;
             OutputType.dwChannelMask = STEREO;
@@ -1059,17 +1066,17 @@ HRESULT WasapiPlayback::resetProxy()
 
     SetDefaultWFXChannelOrder(mDevice);
 
-    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buf_time,
-        0, &OutputType.Format, nullptr);
+    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+        buf_time.count(), 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
         return hr;
     }
 
-    UINT32 buffer_len{}, min_len{};
-    REFERENCE_TIME min_per{};
-    hr = mClient->GetDevicePeriod(&min_per, nullptr);
+    UINT32 buffer_len{};
+    ReferenceTime min_per{};
+    hr = mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
     if(SUCCEEDED(hr))
         hr = mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
@@ -1081,10 +1088,7 @@ HRESULT WasapiPlayback::resetProxy()
     /* Find the nearest multiple of the period size to the update size */
     if(min_per < per_time)
         min_per *= maxi64((per_time + min_per/2) / min_per, 1);
-    min_len = static_cast<UINT32>(ScaleCeil(min_per, mDevice->Frequency, REFTIME_PER_SEC));
-    min_len = minu(min_len, buffer_len/2);
-
-    mDevice->UpdateSize = min_len;
+    mDevice->UpdateSize = minu(RefTime2Samples(min_per, mDevice->Frequency), buffer_len/2);
     mDevice->BufferSize = buffer_len;
 
     hr = mClient->SetEventHandle(mNotifyEvent);
@@ -1432,8 +1436,8 @@ HRESULT WasapiCapture::resetProxy()
     mClient = static_cast<IAudioClient*>(ptr);
 
     // Make sure buffer is at least 100ms in size
-    REFERENCE_TIME buf_time{mDevice->BufferSize * REFTIME_PER_SEC / mDevice->Frequency};
-    buf_time = maxu64(buf_time, REFTIME_PER_SEC/10);
+    ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
+    buf_time = std::max(buf_time, ReferenceTime{milliseconds{100}});
 
     WAVEFORMATEXTENSIBLE OutputType{};
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -1602,8 +1606,8 @@ HRESULT WasapiCapture::resetProxy()
             mDevice->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
     }
 
-    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buf_time,
-        0, &OutputType.Format, nullptr);
+    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+        buf_time.count(), 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
@@ -1611,8 +1615,8 @@ HRESULT WasapiCapture::resetProxy()
     }
 
     UINT32 buffer_len{};
-    REFERENCE_TIME min_per{};
-    hr = mClient->GetDevicePeriod(&min_per, nullptr);
+    ReferenceTime min_per{};
+    hr = mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
     if(SUCCEEDED(hr))
         hr = mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
@@ -1620,11 +1624,9 @@ HRESULT WasapiCapture::resetProxy()
         ERR("Failed to get buffer size: 0x%08lx\n", hr);
         return hr;
     }
-    mDevice->UpdateSize = static_cast<ALuint>(ScaleCeil(min_per, mDevice->Frequency,
-        REFTIME_PER_SEC));
+    mDevice->UpdateSize = RefTime2Samples(min_per, mDevice->Frequency);
     mDevice->BufferSize = buffer_len;
 
-    buffer_len = maxu(mDevice->BufferSize, buffer_len);
     mRing = CreateRingBuffer(buffer_len, mDevice->frameSizeFromFmt(), false);
 
     hr = mClient->SetEventHandle(mNotifyEvent);

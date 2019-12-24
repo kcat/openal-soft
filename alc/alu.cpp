@@ -1927,13 +1927,13 @@ void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
         const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
 
         /* Apply front image stablization for surround sound, if applicable. */
-        if(device->Stablizer)
+        if(FrontStablizer *stablizer{device->Stablizer.get()})
         {
             const ALuint lidx{GetChannelIdxByName(device->RealOut, FrontLeft)};
             const ALuint ridx{GetChannelIdxByName(device->RealOut, FrontRight)};
             const ALuint cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
 
-            ApplyStablizer(device->Stablizer.get(), RealOut, lidx, ridx, cidx, SamplesToDo);
+            ApplyStablizer(stablizer, RealOut, lidx, ridx, cidx, SamplesToDo);
         }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */

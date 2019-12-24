@@ -588,14 +588,15 @@ const auto RotatorCoeffArray = RotatorCoeffs::ConcatArrays(RotatorCoeffs::GenCoe
     RotatorCoeffs::GenCoeffs<3>());
 
 /**
- * Given the matrix R, pre-filled with the (zeroth- and) first-order rotation
+ * Given the matrix, pre-filled with the (zeroth- and) first-order rotation
  * coefficients, this fills in the coefficients for the higher orders up to and
- * including L. The matrix is in ACN layout.
+ * including the given order. The matrix is in ACN layout.
  */
-void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R, const int L)
+void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &matrix,
+    const int order)
 {
     /* Don't do anything for < 2nd order. */
-    if(L < 2) return;
+    if(order < 2) return;
 
     auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
         const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
@@ -650,7 +651,7 @@ void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNEL
     // compute rotation matrix of each subsequent band recursively
     auto coeffs = RotatorCoeffArray.cbegin();
     size_t band_idx{4}, last_band{1};
-    for(int l{2};l <= L;++l)
+    for(int l{2};l <= order;++l)
     {
         size_t y{band_idx};
         for(int m{-l};m <= l;++m,++y)
@@ -662,13 +663,13 @@ void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNEL
 
                 // computes Eq.8.1
                 const float u{coeffs->u};
-                if(u != 0.0f) r += u * U(l, m, n, last_band, R);
+                if(u != 0.0f) r += u * U(l, m, n, last_band, matrix);
                 const float v{coeffs->v};
-                if(v != 0.0f) r += v * V(l, m, n, last_band, R);
+                if(v != 0.0f) r += v * V(l, m, n, last_band, matrix);
                 const float w{coeffs->w};
-                if(w != 0.0f) r += w * W(l, m, n, last_band, R);
+                if(w != 0.0f) r += w * W(l, m, n, last_band, matrix);
 
-                R[y][x] = r;
+                matrix[y][x] = r;
                 ++coeffs;
             }
         }

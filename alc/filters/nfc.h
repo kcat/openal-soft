@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include "alspan.h"
+
 
 struct NfcFilter1 {
     float base_gain, gain;
@@ -46,16 +48,16 @@ public:
     void adjust(const float w0) noexcept;
 
     /* Near-field control filter for first-order ambisonic channels (1-3). */
-    void process1(float *RESTRICT dst, const float *RESTRICT src, const size_t count);
+    void process1(const al::span<const float> src, float *RESTRICT dst);
 
     /* Near-field control filter for second-order ambisonic channels (4-8). */
-    void process2(float *RESTRICT dst, const float *RESTRICT src, const size_t count);
+    void process2(const al::span<const float> src, float *RESTRICT dst);
 
     /* Near-field control filter for third-order ambisonic channels (9-15). */
-    void process3(float *RESTRICT dst, const float *RESTRICT src, const size_t count);
+    void process3(const al::span<const float> src, float *RESTRICT dst);
 
     /* Near-field control filter for fourth-order ambisonic channels (16-24). */
-    void process4(float *RESTRICT dst, const float *RESTRICT src, const size_t count);
+    void process4(const al::span<const float> src, float *RESTRICT dst);
 };
 
 #endif /* FILTER_NFC_H */

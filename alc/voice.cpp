@@ -422,8 +422,8 @@ ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *Buf
 }
 
 
-void DoHrtfMix(const float TargetGain, DirectParams &parms, const float *samples,
-    const ALuint DstBufferSize, const ALuint Counter, ALuint OutPos, const ALuint IrSize,
+void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &parms,
+    const float TargetGain, const ALuint Counter, ALuint OutPos, const ALuint IrSize,
     ALCdevice *Device)
 {
     auto &HrtfSamples = Device->HrtfSourceData;
@@ -506,23 +506,23 @@ void DoHrtfMix(const float TargetGain, DirectParams &parms, const float *samples
     }
 }
 
-void DoNfcMix(ALvoice::TargetData &Direct, const float *TargetGains, DirectParams &parms,
-    const float *samples, const ALuint DstBufferSize, const ALuint Counter, const ALuint OutPos,
+void DoNfcMix(const al::span<const float> samples, const al::span<FloatBufferLine> OutBuffer,
+    DirectParams &parms, const float *TargetGains, const ALuint Counter, const ALuint OutPos,
     ALCdevice *Device)
 {
     const size_t outcount{Device->NumChannelsPerOrder[0]};
-    MixSamples({samples, DstBufferSize}, Direct.Buffer.first(outcount),
-        parms.Gains.Current.data(), TargetGains, Counter, OutPos);
+    MixSamples(samples, OutBuffer.first(outcount), parms.Gains.Current.data(), TargetGains,
+        Counter, OutPos);
 
-    const al::span<float> nfcsamples{Device->NfcSampleData, DstBufferSize};
+    const al::span<float> nfcsamples{Device->NfcSampleData, samples.size()};
     size_t chanoffset{outcount};
     using FilterProc = void (NfcFilter::*)(float*,const float*,const size_t);
-    auto apply_nfc = [&Direct,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](
+    auto apply_nfc = [OutBuffer,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](
         const FilterProc process, const size_t chancount) -> void
     {
         if(chancount < 1) return;
-        (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples, nfcsamples.size());
-        MixSamples(nfcsamples, Direct.Buffer.subspan(chanoffset, chancount),
+        (parms.NFCtrlFilter.*process)(nfcsamples.data(), samples.data(), nfcsamples.size());
+        MixSamples(nfcsamples, OutBuffer.subspan(chanoffset, chancount),
             &parms.Gains.Current[chanoffset], &TargetGains[chanoffset], Counter, OutPos);
         chanoffset += chancount;
     };
@@ -700,15 +700,15 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 {
                     const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
-                    DoHrtfMix(TargetGain, parms, samples, DstBufferSize, Counter, OutPos, IrSize,
+                    DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos, IrSize,
                         Device);
                 }
                 else if((mFlags&VOICE_HAS_NFC))
                 {
                     const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget.data() : parms.Gains.Target.data()};
-                    DoNfcMix(mDirect, TargetGains, parms, samples, DstBufferSize, Counter, OutPos,
-                        Device);
+                    DoNfcMix({samples, DstBufferSize}, mDirect.Buffer, parms, TargetGains, Counter,
+                        OutPos, Device);
                 }
                 else
                 {

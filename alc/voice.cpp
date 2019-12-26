@@ -678,15 +678,15 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 {Device->ResampledData, DstBufferSize})};
             if((mFlags&VOICE_IS_AMBISONIC))
             {
-                const ALfloat hfscale{chandata.mAmbiScale};
+                const float hfscale{chandata.mAmbiScale};
                 /* Beware the evil const_cast. It's safe since it's pointing to
                  * either SourceData or ResampledData (both non-const), but the
                  * resample method takes the source as const float* and may
                  * return it without copying to output, making it currently
                  * unavoidable.
                  */
-                chandata.mAmbiSplitter.applyHfScale(const_cast<ALfloat*>(ResampledData), hfscale,
-                    DstBufferSize);
+                const al::span<float> samples{const_cast<float*>(ResampledData), DstBufferSize};
+                chandata.mAmbiSplitter.applyHfScale(samples, hfscale);
             }
 
             /* Now filter and mix to the appropriate outputs. */

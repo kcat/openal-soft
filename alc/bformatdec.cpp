@@ -152,8 +152,8 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     if(mDualBand)
     {
         for(ALuint i{0};i < mNumChannels;i++)
-            mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i].data(),
-                SamplesToDo);
+            mXOver[i].process({InSamples[i].data(), SamplesToDo}, mSamplesHF[i].data(),
+                mSamplesLF[i].data());
 
         ALfloat (*mixmtx)[sNumBands][MAX_AMBI_CHANNELS]{mMatrix.Dual};
         ALuint enabled{mEnabled};

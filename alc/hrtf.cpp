@@ -372,6 +372,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
     auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(state->Coeffs.size());
     auto tmpflt = al::vector<std::array<double,HRIR_LENGTH*4>>(3);
+    const al::span<double,HRIR_LENGTH*4> tempir{tmpflt[2].data(), tmpflt[2].size()};
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const al::span<const double2,HRIR_LENGTH> hrir{impres[c].hrir};
@@ -402,23 +403,23 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
          */
 
         /* Load the (left) HRIR backwards, into a temp buffer with padding. */
-        std::fill(tmpflt[2].begin(), tmpflt[2].end(), 0.0);
-        std::transform(hrir.cbegin(), hrir.cend(), tmpflt[2].rbegin() + HRIR_LENGTH*3,
+        std::fill(tempir.begin(), tempir.end(), 0.0);
+        std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
             [](const double2 &ir) noexcept -> double { return ir[0]; });
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
          * sample array. This produces the forward response with a backwards
          * phase-shift (+n degrees becomes -n degrees).
          */
-        splitter.applyAllpass(tmpflt[2].data(), tmpflt[2].size());
-        std::reverse(tmpflt[2].begin(), tmpflt[2].end());
+        splitter.applyAllpass(tempir);
+        std::reverse(tempir.begin(), tempir.end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
          * which cancels out with the backwards phase-shift to get the original
          * phase on the split signal.
          */
         splitter.clear();
-        splitter.process(tmpflt[0].data(), tmpflt[1].data(), tmpflt[2].data(), tmpflt[2].size());
+        splitter.process(tempir, tmpflt[0].data(), tmpflt[1].data());
 
         /* Apply left ear response with delay and HF scale. */
         for(size_t i{0u};i < state->Coeffs.size();++i)
@@ -431,15 +432,15 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         }
 
         /* Now run the same process on the right HRIR. */
-        std::fill(tmpflt[2].begin(), tmpflt[2].end(), 0.0);
-        std::transform(hrir.cbegin(), hrir.cend(), tmpflt[2].rbegin() + HRIR_LENGTH*3,
+        std::fill(tempir.begin(), tempir.end(), 0.0);
+        std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
             [](const double2 &ir) noexcept -> double { return ir[1]; });
 
-        splitter.applyAllpass(tmpflt[2].data(), tmpflt[2].size());
-        std::reverse(tmpflt[2].begin(), tmpflt[2].end());
+        splitter.applyAllpass(tempir);
+        std::reverse(tempir.begin(), tempir.end());
 
         splitter.clear();
-        splitter.process(tmpflt[0].data(), tmpflt[1].data(), tmpflt[2].data(), tmpflt[2].size());
+        splitter.process(tempir, tmpflt[0].data(), tmpflt[1].data());
 
         for(size_t i{0u};i < state->Coeffs.size();++i)
         {

@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include "alspan.h"
+
 
 /* Band splitter. Splits a signal into two phase-matching frequency bands. */
 template<typename Real>
@@ -19,15 +21,15 @@ public:
 
     void init(Real f0norm);
     void clear() noexcept { mLpZ1 = mLpZ2 = mApZ1 = 0.0f; }
-    void process(Real *hpout, Real *lpout, const Real *input, const size_t count);
+    void process(const al::span<const Real> input, Real *hpout, Real *lpout);
 
-    void applyHfScale(Real *samples, const Real hfscale, const size_t count);
+    void applyHfScale(const al::span<Real> samples, const Real hfscale);
 
     /* The all-pass portion of the band splitter. Applies the same phase shift
      * without splitting the signal. Note that each use of this method is
      * indepedent, it does not track history between calls.
      */
-    void applyAllpass(Real *samples, const size_t count) const;
+    void applyAllpass(const al::span<Real> samples) const;
 };
 using BandSplitter = BandSplitterR<float>;
 

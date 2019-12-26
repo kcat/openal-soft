@@ -448,7 +448,7 @@ struct ReverbState final : public EffectState {
              * higher-order output.
              */
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            mAmbiSplitter[0][c].applyHfScale(tmpspan.data(), hfscale, todo);
+            mAmbiSplitter[0][c].applyHfScale(tmpspan, hfscale);
 
             MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], counter,
                 offset);
@@ -460,7 +460,7 @@ struct ReverbState final : public EffectState {
                 mLateSamples[0].size());
 
             const ALfloat hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            mAmbiSplitter[1][c].applyHfScale(tmpspan.data(), hfscale, todo);
+            mAmbiSplitter[1][c].applyHfScale(tmpspan, hfscale);
 
             MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], counter,
                 offset);

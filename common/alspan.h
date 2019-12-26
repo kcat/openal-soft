@@ -137,10 +137,10 @@ public:
     constexpr const_iterator cbegin() const noexcept { return mData; }
     constexpr const_iterator cend() const noexcept { return mData+E; }
 
-    constexpr reverse_iterator rbegin() const noexcept { return end(); }
-    constexpr reverse_iterator rend() const noexcept { return begin(); }
-    constexpr const_reverse_iterator crbegin() const noexcept { return cend(); }
-    constexpr const_reverse_iterator crend() const noexcept { return cbegin(); }
+    constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{end()}; }
+    constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
+    constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator{cend()}; }
+    constexpr const_reverse_iterator crend() const noexcept { return const_reverse_iterator{cbegin()}; }
 
     template<size_t C>
     constexpr span<element_type,C> first() const
@@ -232,10 +232,10 @@ public:
     constexpr const_iterator cbegin() const noexcept { return mData; }
     constexpr const_iterator cend() const noexcept { return mDataEnd; }
 
-    constexpr reverse_iterator rbegin() const noexcept { return end(); }
-    constexpr reverse_iterator rend() const noexcept { return begin(); }
-    constexpr const_reverse_iterator crbegin() const noexcept { return cend(); }
-    constexpr const_reverse_iterator crend() const noexcept { return cbegin(); }
+    constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{end()}; }
+    constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
+    constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator{cend()}; }
+    constexpr const_reverse_iterator crend() const noexcept { return const_reverse_iterator{cbegin()}; }
 
     template<size_t C>
     constexpr span<element_type,C> first() const

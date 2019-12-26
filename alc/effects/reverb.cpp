@@ -286,10 +286,10 @@ struct T60Filter {
         const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm);
 
     /* Applies the two T60 damping filter sections. */
-    void process(ALfloat *samples, const size_t todo)
+    void process(const al::span<float> samples)
     {
-        HFFilter.process(samples, samples, todo);
-        LFFilter.process(samples, samples, todo);
+        HFFilter.process(samples, samples.begin());
+        LFFilter.process(samples, samples.begin());
     }
 };
 
@@ -1359,7 +1359,7 @@ void ReverbState::lateUnfaded(const size_t offset, const size_t todo)
                     late_delay.Line[late_feedb_tap++][j]*midGain;
             } while(--td);
         }
-        mLate.T60[j].process(mTempSamples[j].data(), todo);
+        mLate.T60[j].process({mTempSamples[j].data(), todo});
     }
 
     /* Apply a vector all-pass to improve micro-surface diffusion, and write
@@ -1420,7 +1420,7 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloa
                     late_delay.Line[late_feedb_tap1++][j]*gfade1;
             } while(--td);
         }
-        mLate.T60[j].process(mTempSamples[j].data(), todo);
+        mLate.T60[j].process({mTempSamples[j].data(), todo});
     }
 
     mLate.VecAp.processFaded(mTempSamples, offset, mixX, mixY, fade, fadeStep, todo);
@@ -1445,9 +1445,9 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         MixRowSamples(tmpspan, {B2A[c], numInput}, samplesIn[0].data(), samplesIn[0].size());
 
         /* Band-pass the incoming samples and feed the initial delay line. */
-        mFilter[c].Lp.process(mTempLine.data(), mTempLine.data(), samplesToDo);
-        mFilter[c].Hp.process(mTempLine.data(), mTempLine.data(), samplesToDo);
-        mDelay.write(offset, c, mTempLine.data(), samplesToDo);
+        mFilter[c].Lp.process(tmpspan, tmpspan.begin());
+        mFilter[c].Hp.process(tmpspan, tmpspan.begin());
+        mDelay.write(offset, c, tmpspan.cbegin(), samplesToDo);
     }
 
     /* Process reverb for these samples. */

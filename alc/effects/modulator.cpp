@@ -146,7 +146,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
         {
             alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
 
-            chandata->Filter.process(temps, &input[base], td);
+            chandata->Filter.process({&input[base], td}, temps);
             for(size_t i{0u};i < td;i++)
                 temps[i] *= modsamples[i];
 

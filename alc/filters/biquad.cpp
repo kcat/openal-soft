@@ -89,10 +89,8 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Rea
 }
 
 template<typename Real>
-void BiquadFilterR<Real>::process(Real *dst, const Real *src, const size_t numsamples)
+void BiquadFilterR<Real>::process(const al::span<const Real> src, Real *dst)
 {
-    ASSUME(numsamples > 0);
-
     const Real b0{mB0};
     const Real b1{mB1};
     const Real b2{mB2};
@@ -111,12 +109,12 @@ void BiquadFilterR<Real>::process(Real *dst, const Real *src, const size_t numsa
      */
     auto proc_sample = [b0,b1,b2,a1,a2,&z1,&z2](Real input) noexcept -> Real
     {
-        Real output = input*b0 + z1;
+        const Real output{input*b0 + z1};
         z1 = input*b1 - output*a1 + z2;
         z2 = input*b2 - output*a2;
         return output;
     };
-    std::transform(src, src+numsamples, dst, proc_sample);
+    std::transform(src.cbegin(), src.cend(), dst, proc_sample);
 
     mZ1 = z1;
     mZ2 = z2;

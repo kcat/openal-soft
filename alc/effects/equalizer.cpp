@@ -117,25 +117,26 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * and peaking filters' gain is for the centerpoint of the transition band,
-     * meaning its dB needs to be doubled for the shelf or peak to reach the
-     * provided gain.
+     * while the effect property gains are for the shelf/peak itself. So the
+     * property gains need their dB halved (sqrt of linear gain) for the
+     * shelf/peak to reach the provided gain.
      */
-    gain = maxf(std::sqrt(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
-    f0norm = props->Equalizer.LowCutoff/frequency;
+    gain = std::sqrt(props->Equalizer.LowGain);
+    f0norm = props->Equalizer.LowCutoff / frequency;
     mChans[0].filter[0].setParamsFromSlope(BiquadType::LowShelf, f0norm, gain, 0.75f);
 
-    gain = maxf(std::sqrt(props->Equalizer.Mid1Gain), 0.0625f);
-    f0norm = props->Equalizer.Mid1Center/frequency;
+    gain = std::sqrt(props->Equalizer.Mid1Gain);
+    f0norm = props->Equalizer.Mid1Center / frequency;
     mChans[0].filter[1].setParamsFromBandwidth(BiquadType::Peaking, f0norm, gain,
         props->Equalizer.Mid1Width);
 
-    gain = maxf(std::sqrt(props->Equalizer.Mid2Gain), 0.0625f);
-    f0norm = props->Equalizer.Mid2Center/frequency;
+    gain = std::sqrt(props->Equalizer.Mid2Gain);
+    f0norm = props->Equalizer.Mid2Center / frequency;
     mChans[0].filter[2].setParamsFromBandwidth(BiquadType::Peaking, f0norm, gain,
         props->Equalizer.Mid2Width);
 
-    gain = maxf(std::sqrt(props->Equalizer.HighGain), 0.0625f);
-    f0norm = props->Equalizer.HighCutoff/frequency;
+    gain = std::sqrt(props->Equalizer.HighGain);
+    f0norm = props->Equalizer.HighCutoff / frequency;
     mChans[0].filter[3].setParamsFromSlope(BiquadType::HighShelf, f0norm, gain, 0.75f);
 
     /* Copy the filter coefficients for the other input channels. */
@@ -157,16 +158,17 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
 
 void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
+    const al::span<float> buffer{mSampleBuffer, samplesToDo};
     auto chandata = std::addressof(mChans[0]);
     for(const auto &input : samplesIn)
     {
-        chandata->filter[0].process(mSampleBuffer, input.data(), samplesToDo);
-        chandata->filter[1].process(mSampleBuffer, mSampleBuffer, samplesToDo);
-        chandata->filter[2].process(mSampleBuffer, mSampleBuffer, samplesToDo);
-        chandata->filter[3].process(mSampleBuffer, mSampleBuffer, samplesToDo);
+        chandata->filter[0].process({input.data(), samplesToDo}, buffer.begin());
+        chandata->filter[1].process(buffer, buffer.begin());
+        chandata->filter[2].process(buffer, buffer.begin());
+        chandata->filter[3].process(buffer, buffer.begin());
 
-        MixSamples({mSampleBuffer, samplesToDo}, samplesOut, chandata->CurrentGains,
-            chandata->TargetGains, samplesToDo, 0);
+        MixSamples(buffer, samplesOut, chandata->CurrentGains, chandata->TargetGains, samplesToDo,
+            0u);
         ++chandata;
     }
 }

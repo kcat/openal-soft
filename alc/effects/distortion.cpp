@@ -20,10 +20,9 @@
 
 #include "config.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
-
-#include <cmath>
 
 #include "al/auxeffectslot.h"
 #include "alcmain.h"
@@ -114,26 +113,25 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        mLowpass.process(mBuffer[1], mBuffer[0], todo);
+        mLowpass.process({mBuffer[0], todo}, mBuffer[1]);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
          * waveshaping are intended to modify waveform without boost/clipping/
          * attenuation process.
          */
-        for(size_t i{0u};i < todo;i++)
+        auto proc_sample = [fc](float smp) -> float
         {
-            ALfloat smp{mBuffer[1][i]};
-
-            smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
-            smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
-            smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
-
-            mBuffer[0][i] = smp;
-        }
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp)) * -1.0f;
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
+            return smp;
+        };
+        std::transform(std::begin(mBuffer[1]), std::begin(mBuffer[1])+todo, std::begin(mBuffer[0]),
+            proc_sample);
 
         /* Third step, do bandpass filtering of distorted signal. */
-        mBandpass.process(mBuffer[1], mBuffer[0], todo);
+        mBandpass.process({mBuffer[0], todo}, mBuffer[1]);
 
         todo >>= 2;
         const ALfloat *outgains{mGain};

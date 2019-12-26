@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "alspan.h"
 #include "math_defs.h"
 
 
@@ -114,14 +115,14 @@ public:
     }
 
 
-    void process(Real *dst, const Real *src, const size_t numsamples);
+    void process(const al::span<const Real> src, Real *dst);
 
     /* Rather hacky. It's just here to support "manual" processing. */
     std::pair<Real,Real> getComponents() const noexcept { return {mZ1, mZ2}; }
     void setComponents(Real z1, Real z2) noexcept { mZ1 = z1; mZ2 = z2; }
     Real processOne(const Real in, Real &z1, Real &z2) const noexcept
     {
-        Real out{in*mB0 + z1};
+        const Real out{in*mB0 + z1};
         z1 = in*mB1 - out*mA1 + z2;
         z2 = in*mB2 - out*mA2;
         return out;

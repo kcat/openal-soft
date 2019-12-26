@@ -86,7 +86,7 @@ public:
     void setParamsFromSlope(BiquadType type, Real f0norm, Real gain, Real slope)
     {
         gain = std::max<Real>(gain, 0.001f); /* Limit -60dB */
-        setParams(type, gain, f0norm, rcpQFromSlope(gain, slope));
+        setParams(type, f0norm, gain, rcpQFromSlope(gain, slope));
     }
 
     /**
@@ -102,7 +102,7 @@ public:
      * \param bandwidth Normalized bandwidth of the transition band.
      */
     void setParamsFromBandwidth(BiquadType type, Real f0norm, Real gain, Real bandwidth)
-    { setParams(type, gain, f0norm, rcpQFromBandwidth(f0norm, bandwidth)); }
+    { setParams(type, f0norm, gain, rcpQFromBandwidth(f0norm, bandwidth)); }
 
     void copyParamsFrom(const BiquadFilterR &other)
     {

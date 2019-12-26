@@ -47,6 +47,27 @@ class BiquadFilterR {
 
     void setParams(BiquadType type, Real f0norm, Real gain, Real rcpQ);
 
+    /**
+     * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using
+     * the reference gain and shelf slope parameter.
+     * \param gain 0 < gain
+     * \param slope 0 < slope <= 1
+     */
+    static Real rcpQFromSlope(Real gain, Real slope)
+    { return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
+
+    /**
+     * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the
+     * normalized reference frequency and bandwidth.
+     * \param f0norm 0 < f0norm < 0.5.
+     * \param bandwidth 0 < bandwidth
+     */
+    static Real rcpQFromBandwidth(Real f0norm, Real bandwidth)
+    {
+        const Real w0{al::MathDefs<Real>::Tau() * f0norm};
+        return 2.0f*std::sinh(std::log(Real{2.0f})/2.0f*bandwidth*w0/std::sin(w0));
+    }
+
 public:
     void clear() noexcept { mZ1 = mZ2 = 0.0f; }
 
@@ -104,27 +125,6 @@ public:
         z1 = in*mB1 - out*mA1 + z2;
         z2 = in*mB2 - out*mA2;
         return out;
-    }
-
-    /**
-     * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using
-     * the reference gain and shelf slope parameter.
-     * \param gain 0 < gain
-     * \param slope 0 < slope <= 1
-     */
-    static Real rcpQFromSlope(Real gain, Real slope)
-    { return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
-
-    /**
-     * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the
-     * normalized reference frequency and bandwidth.
-     * \param f0norm 0 < f0norm < 0.5.
-     * \param bandwidth 0 < bandwidth
-     */
-    static Real rcpQFromBandwidth(Real f0norm, Real bandwidth)
-    {
-        const Real w0{al::MathDefs<Real>::Tau() * f0norm};
-        return 2.0f*std::sinh(std::log(Real{2.0f})/2.0f*bandwidth*w0/std::sin(w0));
     }
 };
 

@@ -24,6 +24,12 @@ enum SpatializeMode {
     SpatializeAuto = AL_AUTO_SOFT
 };
 
+enum class DirectMode : unsigned char {
+    Off = AL_FALSE,
+    DropMismatch = AL_DROP_UNMATCHED_SOFT,
+    RemixMismatch = AL_REMIX_UNMATCHED_SOFT
+};
+
 enum class Resampler {
     Point,
     Linear,
@@ -134,7 +140,7 @@ struct ALvoicePropsBase {
     bool HeadRelative;
     DistanceModel mDistanceModel;
     Resampler mResampler;
-    bool DirectChannels;
+    DirectMode DirectChannels;
     SpatializeMode mSpatializeMode;
 
     bool DryGainHFAuto;

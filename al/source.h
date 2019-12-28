@@ -53,7 +53,7 @@ struct ALsource {
     bool Looping;
     DistanceModel mDistanceModel;
     Resampler mResampler;
-    bool DirectChannels;
+    DirectMode DirectChannels;
     SpatializeMode mSpatialize;
 
     bool DryGainHFAuto;

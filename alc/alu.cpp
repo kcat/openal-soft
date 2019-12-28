@@ -731,7 +731,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     const auto Frequency = static_cast<ALfloat>(Device->Frequency);
     const ALuint NumSends{Device->NumAuxSends};
 
-    bool DirectChannels{props->DirectChannels != AL_FALSE};
+    DirectMode DirectChannels{props->DirectChannels};
     const ALuint num_channels{voice->mNumChannels};
     const ChanMap *chans{nullptr};
     ALfloat downmix_gain{1.0f};
@@ -740,11 +740,11 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     case FmtMono:
         chans = MonoMap;
         /* Mono buffers are never played direct. */
-        DirectChannels = false;
+        DirectChannels = DirectMode::Off;
         break;
 
     case FmtStereo:
-        if(!DirectChannels)
+        if(DirectChannels == DirectMode::Off)
         {
             /* Convert counter-clockwise to clockwise. */
             StereoMap[0].angle = -props->StereoPan[0];
@@ -785,7 +785,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
     case FmtBFormat2D:
     case FmtBFormat3D:
-        DirectChannels = false;
+        DirectChannels = DirectMode::Off;
         break;
     }
     ASSUME(num_channels > 0);
@@ -934,7 +934,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             }
         }
     }
-    else if(DirectChannels && Device->FmtChans != DevFmtMono && Device->FmtChans != DevFmtAmbi3D)
+    else if(DirectChannels != DirectMode::Off && Device->FmtChans != DevFmtMono
+        && Device->FmtChans != DevFmtAmbi3D)
     {
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.
@@ -946,7 +947,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
             if(idx != INVALID_CHANNEL_INDEX)
                 voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
-            else
+            else if(DirectChannels == DirectMode::RemixMismatch)
             {
                 auto match_channel = [chans,c](const InputRemixMap &map) noexcept -> bool
                 { return chans[c].channel == map.channel; };
@@ -1575,7 +1576,8 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
         AtomicReplaceHead(context->mFreeVoiceProps, props);
     }
 
-    if(voice->mProps.DirectChannels || voice->mProps.mSpatializeMode == SpatializeOff
+    if(voice->mProps.DirectChannels != DirectMode::Off
+        || voice->mProps.mSpatializeMode == SpatializeOff
         || (voice->mProps.mSpatializeMode == SpatializeAuto && voice->mFmtChannels != FmtMono))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);
     else

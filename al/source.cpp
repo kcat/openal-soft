@@ -1276,9 +1276,10 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DIRECT_CHANNELS_SOFT:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
+        CHECKVAL(values[0] == AL_FALSE || values[0] == AL_DROP_UNMATCHED_SOFT /* aka AL_TRUE */
+            || values[0] == AL_REMIX_UNMATCHED_SOFT);
 
-        Source->DirectChannels = values[0] != AL_FALSE;
+        Source->DirectChannels = static_cast<DirectMode>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_DISTANCE_MODEL:
@@ -1826,7 +1827,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DIRECT_CHANNELS_SOFT:
         CHECKSIZE(values, 1);
-        values[0] = Source->DirectChannels;
+        values[0] = static_cast<int>(Source->DirectChannels);
         return true;
 
     case AL_DISTANCE_MODEL:
@@ -3277,7 +3278,7 @@ ALsource::ALsource(ALuint num_sends)
     Looping = AL_FALSE;
     mDistanceModel = DistanceModel::Default;
     mResampler = ResamplerDefault;
-    DirectChannels = AL_FALSE;
+    DirectChannels = DirectMode::Off;
     mSpatialize = SpatializeAuto;
 
     StereoPan[0] = Deg2Rad( 30.0f);

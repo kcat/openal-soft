@@ -125,7 +125,7 @@ using seconds_d64 = std::chrono::duration<double>;
 
 const std::string AppName{"alffplay"};
 
-bool EnableDirectOut{false};
+ALenum DirectOutMode{AL_FALSE};
 bool EnableWideStereo{false};
 bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
@@ -1008,8 +1008,8 @@ int AudioState::handler()
     alGenBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
     alGenSources(1, &mSource);
 
-    if(EnableDirectOut)
-        alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
+    if(DirectOutMode)
+        alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, DirectOutMode);
     if (EnableWideStereo) {
         ALfloat angles[2] = {static_cast<ALfloat>(M_PI / 3.0),
                              static_cast<ALfloat>(-M_PI / 3.0)};
@@ -1768,13 +1768,18 @@ int main(int argc, char *argv[])
     {
         if(strcmp(argv[fileidx], "-direct") == 0)
         {
-            if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
-                std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
-            else
+            if(alIsExtensionPresent("AL_SOFT_direct_channels_remix"))
+            {
+                std::cout<< "Found AL_SOFT_direct_channels_remix" <<std::endl;
+                DirectOutMode = AL_REMIX_UNMATCHED_SOFT;
+            }
+            else if(alIsExtensionPresent("AL_SOFT_direct_channels"))
             {
                 std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
-                EnableDirectOut = true;
+                DirectOutMode = AL_DROP_UNMATCHED_SOFT;
             }
+            else
+                std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
         }
         else if(strcmp(argv[fileidx], "-wide") == 0)
         {

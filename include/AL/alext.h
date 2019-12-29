@@ -509,6 +509,12 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #endif
 #endif
 
+#ifndef AL_SOFT_direct_channels_remix
+#define AL_SOFT_direct_channels_remix 1
+#define AL_DROP_UNMATCHED_SOFT                   0x0001
+#define AL_REMIX_UNMATCHED_SOFT                  0x0002
+#endif
+
 #ifdef __cplusplus
 }
 #endif

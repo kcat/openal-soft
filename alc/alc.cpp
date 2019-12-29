@@ -782,6 +782,9 @@ constexpr struct {
     DECL(AL_EVENT_TYPE_ERROR_SOFT),
     DECL(AL_EVENT_TYPE_PERFORMANCE_SOFT),
     DECL(AL_EVENT_TYPE_DEPRECATED_SOFT),
+
+    DECL(AL_DROP_UNMATCHED_SOFT),
+    DECL(AL_REMIX_UNMATCHED_SOFT),
 };
 #undef DECL
 
@@ -829,6 +832,7 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_block_alignment "
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "
+    "AL_SOFT_direct_channels_remix "
     "AL_SOFTX_effect_chain "
     "AL_SOFTX_events "
     "AL_SOFTX_filter_gain_ex "

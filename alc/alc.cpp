@@ -1416,6 +1416,15 @@ bool IsValidAmbiScaling(ALCenum scaling)
  * existing ones. Based on Wine's DSound downmix values, which are based on
  * PulseAudio's.
  */
+const std::array<InputRemixMap,7> MonoDownmix{{
+    { FrontLeft,   {{{FrontCenter, 0.5f},      {LFE, 0.0f}}} },
+    { FrontRight,  {{{FrontCenter, 0.5f},      {LFE, 0.0f}}} },
+    { SideLeft,    {{{FrontCenter, 0.5f/9.0f}, {LFE, 0.0f}}} },
+    { SideRight,   {{{FrontCenter, 0.5f/9.0f}, {LFE, 0.0f}}} },
+    { BackLeft,    {{{FrontCenter, 0.5f/9.0f}, {LFE, 0.0f}}} },
+    { BackRight,   {{{FrontCenter, 0.5f/9.0f}, {LFE, 0.0f}}} },
+    { BackCenter,  {{{FrontCenter, 1.0f/9.0f}, {LFE, 0.0f}}} },
+}};
 const std::array<InputRemixMap,6> StereoDownmix{{
     { FrontCenter, {{{FrontLeft, 0.5f},      {FrontRight, 0.5f}}} },
     { SideLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
@@ -1983,13 +1992,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     switch(device->FmtChans)
     {
+    case DevFmtMono: device->RealOut.RemixMap = MonoDownmix; break;
     case DevFmtStereo: device->RealOut.RemixMap = StereoDownmix; break;
     case DevFmtQuad: device->RealOut.RemixMap = QuadDownmix; break;
     case DevFmtX51: device->RealOut.RemixMap = X51Downmix; break;
     case DevFmtX51Rear: device->RealOut.RemixMap = X51RearDownmix; break;
     case DevFmtX61: device->RealOut.RemixMap = X61Downmix; break;
     case DevFmtX71: device->RealOut.RemixMap = X71Downmix; break;
-    case DevFmtMono:
     case DevFmtAmbi3D: break;
     }
 

@@ -411,7 +411,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
          * sample array. This produces the forward response with a backwards
          * phase-shift (+n degrees becomes -n degrees).
          */
-        splitter.applyAllpass(tempir);
+        splitter.applyAllpass({tempir.data(), tempir.size()});
         std::reverse(tempir.begin(), tempir.end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
@@ -436,7 +436,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
             [](const double2 &ir) noexcept -> double { return ir[1]; });
 
-        splitter.applyAllpass(tempir);
+        splitter.applyAllpass({tempir.data(), tempir.size()});
         std::reverse(tempir.begin(), tempir.end());
 
         splitter.clear();

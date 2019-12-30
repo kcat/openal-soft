@@ -970,32 +970,25 @@ ENDIF()
 
 # Check CoreAudio backend
 OPTION(ALSOFT_REQUIRE_COREAUDIO "Require CoreAudio backend" OFF)
-FIND_LIBRARY(COREAUDIO_FRAMEWORK
-    NAMES CoreAudio
-    PATHS /System/Library/Frameworks
-)
-IF(COREAUDIO_FRAMEWORK)
+FIND_LIBRARY(COREAUDIO_FRAMEWORK NAMES CoreAudio)
+FIND_PATH(AUDIOUNIT_INCLUDE_DIR NAMES AudioUnit/AudioUnit.h)
+IF(COREAUDIO_FRAMEWORK AND AUDIOUNIT_INCLUDE_DIR)
     OPTION(ALSOFT_BACKEND_COREAUDIO "Enable CoreAudio backend" ON)
     IF(ALSOFT_BACKEND_COREAUDIO)
         SET(HAVE_COREAUDIO 1)
         SET(ALC_OBJS  ${ALC_OBJS} alc/backends/coreaudio.cpp alc/backends/coreaudio.h)
         SET(BACKENDS  "${BACKENDS} CoreAudio,")
-        SET(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} ${EXTRA_LIBS})
-        SET(EXTRA_LIBS /System/Library/Frameworks/AudioUnit.framework ${EXTRA_LIBS})
-        SET(EXTRA_LIBS /System/Library/Frameworks/ApplicationServices.framework ${EXTRA_LIBS})
+        SET(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} /System/Library/Frameworks/AudioUnit.framework
+            /System/Library/Frameworks/ApplicationServices.framework ${EXTRA_LIBS})
 
         # Some versions of OSX may need the AudioToolbox framework. Add it if
         # it's found.
-        FIND_LIBRARY(AUDIOTOOLBOX_LIBRARY
-            NAMES AudioToolbox
-            PATHS
-                ~/Library/Frameworks
-                /Library/Frameworks
-                /System/Library/Frameworks
-        )
+        FIND_LIBRARY(AUDIOTOOLBOX_LIBRARY NAMES AudioToolbox)
         IF(AUDIOTOOLBOX_LIBRARY)
             SET(EXTRA_LIBS ${AUDIOTOOLBOX_LIBRARY} ${EXTRA_LIBS})
         ENDIF()
+
+        SET(INC_PATHS ${INC_PATHS} ${AUDIOUNIT_INCLUDE_DIR})
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_COREAUDIO AND NOT HAVE_COREAUDIO)

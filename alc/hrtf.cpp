@@ -464,12 +464,11 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     tmpres.clear();
 
     max_delay -= min_delay;
-    ALuint max_length{HRIR_LENGTH};
     /* Increase the IR size by double the base delay with dual-band processing
      * to account for the head and tail from the HF response scale.
      */
-    const ALuint irsize{minu(Hrtf->irSize + base_delay*2, max_length)};
-    max_length = minu(hrir_delay_round(max_delay) + irsize, max_length);
+    const ALuint irsize{minu(Hrtf->irSize + base_delay*2, HRIR_LENGTH)};
+    const ALuint max_length{minu(hrir_delay_round(max_delay) + irsize, HRIR_LENGTH)};
 
     TRACE("Skipped delay: %.2f, max delay: %.2f, new FIR length: %u\n",
         min_delay/double{HRIR_DELAY_FRACONE}, max_delay/double{HRIR_DELAY_FRACONE},

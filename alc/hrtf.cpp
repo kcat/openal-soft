@@ -479,8 +479,6 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
 namespace {
 
-using ubyte2 = std::array<ALubyte,2>;
-
 std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const ALuint fdCount,
     const ALubyte *evCount, const ALushort *distance, const ALushort *azCount,
     const ALushort *irOffset, ALushort irCount, const HrirArray *coeffs, const ubyte2 *delays,
@@ -524,7 +522,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const A
         auto coeffs_ = reinterpret_cast<HrirArray*>(base + offset);
         offset += sizeof(coeffs_[0])*irCount;
 
-        auto delays_ = reinterpret_cast<ALubyte(*)[2]>(base + offset);
+        auto delays_ = reinterpret_cast<ubyte2*>(base + offset);
         offset += sizeof(delays_[0])*irCount;
 
         assert(offset == total);
@@ -541,11 +539,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const A
             elev_[i].irOffset = irOffset[i];
         }
         std::copy_n(coeffs, irCount, coeffs_);
-        for(ALuint i{0};i < irCount;i++)
-        {
-            delays_[i][0] = delays[i][0];
-            delays_[i][1] = delays[i][1];
-        }
+        std::copy_n(delays, irCount, delays_);
 
         /* Finally, assign the storage pointers. */
         Hrtf->field = field_;
@@ -1378,7 +1372,7 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
         const ALuint srate{hrtf->sampleRate};
         for(size_t i{0};i < irCount;++i)
         {
-            for(ALubyte &delay : const_cast<ALubyte(&)[2]>(hrtf->delays[i]))
+            for(ALubyte &delay : const_cast<ubyte2&>(hrtf->delays[i]))
                 delay = static_cast<ALubyte>(minu64(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE,
                     (uint64_t{delay}*devrate + srate/2) / srate));
         }

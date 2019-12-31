@@ -27,6 +27,7 @@
 
 using float2 = std::array<float,2>;
 using HrirArray = std::array<float2,HRIR_LENGTH>;
+using ubyte2 = std::array<ALubyte,2>;
 
 
 struct HrtfStore {
@@ -51,7 +52,7 @@ struct HrtfStore {
     };
     Elevation *elev;
     const HrirArray *coeffs;
-    const ALubyte (*delays)[2];
+    const ubyte2 *delays;
 
     void IncRef();
     void DecRef();

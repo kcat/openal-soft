@@ -65,10 +65,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
 
     mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->Speakers.size(), 0u,
         [](ALuint mask, const ALuint &chan) noexcept -> ALuint
-        { return mask | (1 << chan); }
-    );
-
-    const ALfloat xover_norm{conf->XOverFreq / static_cast<float>(srate)};
+        { return mask | (1 << chan); });
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     const std::array<float,MAX_AMBI_CHANNELS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
@@ -93,7 +90,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
     }
     else
     {
-        mXOver[0].init(xover_norm);
+        mXOver[0].init(conf->XOverFreq / static_cast<float>(srate));
         std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
@@ -118,18 +115,15 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
     }
 }
 
-BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
-    const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
-    const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS])
+BFormatDec::BFormatDec(const ALuint inchans, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
+    const al::span<const ALuint> chanmap)
 {
     mSamples.resize(2);
     mNumChannels = inchans;
 
-    ASSUME(chancount > 0);
-    mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+chancount, 0u,
+    mEnabled = std::accumulate(chanmap.begin(), chanmap.end(), 0u,
         [](ALuint mask, const ALuint &chan) noexcept -> ALuint
-        { return mask | (1 << chan); }
-    );
+        { return mask | (1 << chan); });
 
     const ChannelDec *incoeffs{chancoeffs};
     auto set_coeffs = [this,inchans,&incoeffs](const ALuint chanidx) noexcept -> void
@@ -140,7 +134,7 @@ BFormatDec::BFormatDec(const ALuint inchans, const ALsizei chancount,
         ASSUME(inchans > 0);
         std::copy_n(std::begin(coeffs), inchans, std::begin(mtx));
     };
-    std::for_each(chanmap, chanmap+chancount, set_coeffs);
+    std::for_each(chanmap.begin(), chanmap.end(), set_coeffs);
 }
 
 

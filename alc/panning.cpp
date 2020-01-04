@@ -460,10 +460,9 @@ void InitPanning(ALCdevice *device)
         TRACE("Enabling %s-order%s ambisonic decoder\n",
             (coeffcount > 5) ? "third" :
             (coeffcount > 3) ? "second" : "first",
-            ""
-        );
-        device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount,
-            static_cast<ALsizei>(chanmap.size()), chancoeffs, idxmap);
+            "");
+        device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount, chancoeffs,
+            al::span<const ALuint>{idxmap, chanmap.size()});
     }
 }
 

@@ -65,7 +65,6 @@ constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::FromFuMa;
 constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> AmbiIndex::FromFuMa2D;
 constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::FromACN;
 constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> AmbiIndex::From2D;
-constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::From3D;
 
 
 namespace {
@@ -486,7 +485,7 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         count = static_cast<ALuint>(AmbiChannelsFromOrder(order));
-        std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
+        std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -664,7 +663,7 @@ void InitHrtfPanning(ALCdevice *device)
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
     device->mHrtfState = DirectHrtfState::Create(count);
 
-    std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
+    std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+count,
         std::begin(device->Dry.AmbiMap),
         [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
@@ -889,8 +888,8 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
     slot->MixBuffer.resize(count);
     slot->MixBuffer.shrink_to_fit();
 
-    auto acnmap_end = AmbiIndex::From3D.begin() + count;
-    auto iter = std::transform(AmbiIndex::From3D.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
+    auto acnmap_end = AmbiIndex::FromACN.begin() + count;
+    auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; }
     );

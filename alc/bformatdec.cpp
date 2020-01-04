@@ -78,12 +78,10 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
             ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanmap[i]];
             for(size_t j{0},k{0};j < coeff_count;j++)
             {
-                const size_t l{periphonic ? j : AmbiIndex::From2D[j]};
-                if(!(conf->ChanMask&(1u<<l))) continue;
-                mtx[j] = conf->HFMatrix[i][k] / coeff_scale[l] *
-                    ((l>=9) ? conf->HFOrderGain[3] :
-                    (l>=4) ? conf->HFOrderGain[2] :
-                    (l>=1) ? conf->HFOrderGain[1] : conf->HFOrderGain[0]);
+                const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
+                if(!(conf->ChanMask&(1u<<acn))) continue;
+                mtx[j] = conf->HFMatrix[i][k] / coeff_scale[acn] *
+                    conf->HFOrderGain[AmbiIndex::OrderFromChannel[acn]];
                 ++k;
             }
         }
@@ -99,16 +97,12 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
             ALfloat (&mtx)[sNumBands][MAX_AMBI_CHANNELS] = mMatrix.Dual[chanmap[i]];
             for(size_t j{0},k{0};j < coeff_count;j++)
             {
-                const size_t l{periphonic ? j : AmbiIndex::From2D[j]};
-                if(!(conf->ChanMask&(1u<<l))) continue;
-                mtx[sHFBand][j] = conf->HFMatrix[i][k] / coeff_scale[l] *
-                    ((l>=9) ? conf->HFOrderGain[3] :
-                    (l>=4) ? conf->HFOrderGain[2] :
-                    (l>=1) ? conf->HFOrderGain[1] : conf->HFOrderGain[0]) * ratio;
-                mtx[sLFBand][j] = conf->LFMatrix[i][k] / coeff_scale[l] *
-                    ((l>=9) ? conf->LFOrderGain[3] :
-                    (l>=4) ? conf->LFOrderGain[2] :
-                    (l>=1) ? conf->LFOrderGain[1] : conf->LFOrderGain[0]) / ratio;
+                const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
+                if(!(conf->ChanMask&(1u<<acn))) continue;
+                mtx[sHFBand][j] = conf->HFMatrix[i][k] / coeff_scale[acn] *
+                    conf->HFOrderGain[AmbiIndex::OrderFromChannel[acn]] * ratio;
+                mtx[sLFBand][j] = conf->LFMatrix[i][k] / coeff_scale[acn] *
+                    conf->LFOrderGain[AmbiIndex::OrderFromChannel[acn]] / ratio;
                 ++k;
             }
         }

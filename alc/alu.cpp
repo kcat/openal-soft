@@ -904,15 +904,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 GetAmbiLayout(voice->mAmbiLayout).data()};
             const float *scales{GetAmbiScales(voice->mAmbiScaling).data()};
 
-            static const uint8_t OrderFromChan[MAX_AMBI_CHANNELS]{
-                0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
-            };
             static const uint8_t ChansPerOrder[MAX_AMBI_ORDER+1]{1, 3, 5, 7,};
             static const uint8_t OrderOffset[MAX_AMBI_ORDER+1]{0, 1, 4, 9,};
             for(ALuint c{0};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
-                const size_t order{OrderFromChan[acn]};
+                const size_t order{AmbiIndex::OrderFromChannel[acn]};
                 const size_t tocopy{ChansPerOrder[order]};
                 const size_t offset{OrderOffset[order]};
                 const float scale{scales[acn]};

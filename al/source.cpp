@@ -2809,19 +2809,9 @@ START_API_FUNC
         if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
             && device->mAmbiOrder > voice->mAmbiOrder)
         {
-            const ALuint *OrderFromChan;
-            if(voice->mFmtChannels == FmtBFormat2D)
-            {
-                static const ALuint Order2DFromChan[MAX_AMBI2D_CHANNELS]{
-                    0, 1,1, 2,2, 3,3,};
-                OrderFromChan = Order2DFromChan;
-            }
-            else
-            {
-                static const ALuint Order3DFromChan[MAX_AMBI_CHANNELS]{
-                    0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,};
-                OrderFromChan = Order3DFromChan;
-            }
+            const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
+                AmbiIndex::OrderFrom2DChannel.data() :
+                AmbiIndex::OrderFromChannel.data()};
 
             const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
 

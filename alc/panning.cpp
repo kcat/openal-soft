@@ -65,6 +65,8 @@ constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::FromFuMa;
 constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> AmbiIndex::FromFuMa2D;
 constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::FromACN;
 constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> AmbiIndex::From2D;
+constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> AmbiIndex::OrderFromChannel;
+constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> AmbiIndex::OrderFrom2DChannel;
 
 
 namespace {

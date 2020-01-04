@@ -120,6 +120,13 @@ struct AmbiIndex {
     static constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> From2D{{
         0, 1,3, 4,8, 9,15
     }};
+
+    static constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> OrderFromChannel{{
+        0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
+    }};
+    static constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> OrderFrom2DChannel{{
+        0, 1,1, 2,2, 3,3,
+    }};
 };
 
 #endif /* AMBIDEFS_H */

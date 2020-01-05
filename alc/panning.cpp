@@ -905,19 +905,20 @@ void CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
     coeffs[2]  = 1.732050808f * z; /* ACN 2 = sqrt(3) * Z */
     coeffs[3]  = 1.732050808f * x; /* ACN 3 = sqrt(3) * X */
     /* Second-order */
-    coeffs[4]  = 3.872983346f * x * y;             /* ACN 4 = sqrt(15) * X * Y */
-    coeffs[5]  = 3.872983346f * y * z;             /* ACN 5 = sqrt(15) * Y * Z */
-    coeffs[6]  = 1.118033989f * (z*z*3.0f - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
-    coeffs[7]  = 3.872983346f * x * z;             /* ACN 7 = sqrt(15) * X * Z */
-    coeffs[8]  = 1.936491673f * (x*x - y*y);       /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
+    const float xx{x*x}, yy{y*y}, zz{z*z};
+    coeffs[4]  = 3.872983346f * x * y;            /* ACN 4 = sqrt(15) * X * Y */
+    coeffs[5]  = 3.872983346f * y * z;            /* ACN 5 = sqrt(15) * Y * Z */
+    coeffs[6]  = 1.118033989f * (3.0f*zz - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
+    coeffs[7]  = 3.872983346f * x * z;            /* ACN 7 = sqrt(15) * X * Z */
+    coeffs[8]  = 1.936491673f * (xx - yy);        /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
     /* Third-order */
-    coeffs[9]  =  2.091650066f * y * (x*x*3.0f - y*y);  /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
-    coeffs[10] = 10.246950766f * z * x * y;             /* ACN 10 = sqrt(105) * Z * X * Y */
-    coeffs[11] =  1.620185175f * y * (z*z*5.0f - 1.0f); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
-    coeffs[12] =  1.322875656f * z * (z*z*5.0f - 3.0f); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
-    coeffs[13] =  1.620185175f * x * (z*z*5.0f - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
-    coeffs[14] =  5.123475383f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
-    coeffs[15] =  2.091650066f * x * (x*x - y*y*3.0f);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
+    coeffs[9]  =  2.091650066f * y * (3.0f*xx - yy);   /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
+    coeffs[10] = 10.246950766f * z * x * y;            /* ACN 10 = sqrt(105) * Z * X * Y */
+    coeffs[11] =  1.620185175f * y * (5.0f*zz - 1.0f); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
+    coeffs[12] =  1.322875656f * z * (5.0f*zz - 3.0f); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
+    coeffs[13] =  1.620185175f * x * (5.0f*zz - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
+    coeffs[14] =  5.123475383f * z * (xx - yy);        /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
+    coeffs[15] =  2.091650066f * x * (xx - 3.0f*yy);   /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
     /* Fourth-order */
     /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
     /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */

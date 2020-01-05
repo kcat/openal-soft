@@ -4,8 +4,8 @@ openal-soft-1.20.1:
     AL_DIRECT_CHANNELS_SOFT to optionally remix input channels that don't have
     a matching output channel.
 
-    Implemented the AL_SOFT_bformat_ex extension. This allows B-Format buffer
-    data to use N3D or SN3D scaling, or ACN channel ordering.
+    Implemented the AL_SOFT_bformat_ex extension. This extends B-Format buffer
+    support for N3D or SN3D scaling, or ACN channel ordering.
 
     Improved handling of unsupported channel configurations with WASAPI. Such
     setups will now try to output at least a stereo mix.

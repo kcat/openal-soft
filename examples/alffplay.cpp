@@ -95,16 +95,6 @@ typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void 
 typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
 #endif
-
-#ifndef AL_SOFT_bformat_ex
-#define AL_SOFT_bformat_ex
-#define AL_AMBISONIC_LAYOUT_SOFT                 0x1997
-#define AL_AMBISONIC_SCALING_SOFT                0x1998
-#define AL_FUMA_SOFT                             0x0000
-#define AL_ACN_SOFT                              0x0001
-#define AL_SN3D_SOFT                             0x0001
-#define AL_N3D_SOFT                              0x0002
-#endif
 #endif /* ALLOW_EXPERIMENTAL_EXTS */
 }
 
@@ -788,7 +778,7 @@ int AudioState::handler()
     }
 #endif
 #ifdef AL_SOFT_bformat_ex
-    const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFTX_bformat_ex") != AL_FALSE};
+    const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
     ALenum ambi_layout{AL_FUMA_SOFT};
     ALenum ambi_scale{AL_FUMA_SOFT};
 #endif
@@ -976,7 +966,17 @@ int AudioState::handler()
 #ifdef AL_SOFT_bformat_ex
         ambi_layout = AL_ACN_SOFT;
         ambi_scale = AL_SN3D_SOFT;
-        if(!has_bfmt_ex)
+        if(has_bfmt_ex)
+        {
+            /* An identity matrix that doesn't remix any channels. */
+            std::vector<double> mtx(64*64, 0.0);
+            mtx[0 + 0*64] = 1.0;
+            mtx[1 + 1*64] = 1.0;
+            mtx[2 + 2*64] = 1.0;
+            mtx[3 + 3*64] = 1.0;
+            swr_set_matrix(mSwresCtx.get(), mtx.data(), 64);
+        }
+        else
 #endif
         {
             /* Without AL_SOFT_bformat_ex, OpenAL only supports FuMa channel

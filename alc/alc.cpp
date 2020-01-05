@@ -785,6 +785,13 @@ constexpr struct {
 
     DECL(AL_DROP_UNMATCHED_SOFT),
     DECL(AL_REMIX_UNMATCHED_SOFT),
+
+    DECL(AL_AMBISONIC_LAYOUT_SOFT),
+    DECL(AL_AMBISONIC_SCALING_SOFT),
+    DECL(AL_FUMA_SOFT),
+    DECL(AL_ACN_SOFT),
+    DECL(AL_SN3D_SOFT),
+    DECL(AL_N3D_SOFT),
 };
 #undef DECL
 
@@ -828,7 +835,7 @@ constexpr ALchar alExtList[] =
     "AL_EXT_SOURCE_RADIUS "
     "AL_EXT_STEREO_ANGLES "
     "AL_LOKI_quadriphonic "
-    "AL_SOFTX_bformat_ex "
+    "AL_SOFT_bformat_ex "
     "AL_SOFT_block_alignment "
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "

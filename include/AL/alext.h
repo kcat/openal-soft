@@ -515,6 +515,21 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define AL_REMIX_UNMATCHED_SOFT                  0x0002
 #endif
 
+#ifndef AL_SOFT_bformat_ex
+#define AL_SOFT_bformat_ex 1
+#define AL_AMBISONIC_LAYOUT_SOFT                 0x1997
+#define AL_AMBISONIC_SCALING_SOFT                0x1998
+
+/* Ambisonic layouts */
+#define AL_FUMA_SOFT                             0x0000
+#define AL_ACN_SOFT                              0x0001
+
+/* Ambisonic scalings (normalization) */
+/*#define AL_FUMA_SOFT*/
+#define AL_SN3D_SOFT                             0x0001
+#define AL_N3D_SOFT                              0x0002
+#endif
+
 #ifdef __cplusplus
 }
 #endif

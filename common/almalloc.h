@@ -146,7 +146,7 @@ inline void uninitialized_default_construct(T first, const T last)
         }
     }
     catch(...) {
-        destroy(first, current);
+        al::destroy(first, current);
         throw;
     }
 }
@@ -165,7 +165,7 @@ inline T uninitialized_default_construct_n(T first, N count)
             } while(--count);
         }
         catch(...) {
-            destroy(first, current);
+            al::destroy(first, current);
             throw;
         }
     }
@@ -187,7 +187,7 @@ inline T1 uninitialized_move(T0 first, const T0 last, const T1 output)
         }
     }
     catch(...) {
-        destroy(output, current);
+        al::destroy(output, current);
         throw;
     }
     return current;
@@ -208,7 +208,7 @@ inline T1 uninitialized_move_n(T0 first, N count, const T1 output)
             } while(--count);
         }
         catch(...) {
-            destroy(output, current);
+            al::destroy(output, current);
             throw;
         }
     }
@@ -265,8 +265,8 @@ DIAGNOSTIC_POP
     }
 
     FlexArray(index_type size) : mSize{size}
-    { if(mSize > 0) uninitialized_default_construct_n(std::addressof(mArray[0]), mSize); }
-    ~FlexArray() { if(mSize > 0) destroy_n(std::addressof(mArray[0]), mSize); }
+    { al::uninitialized_default_construct_n(mArray, mSize); }
+    ~FlexArray() { al::destroy_n(mArray, mSize); }
 
     FlexArray(const FlexArray&) = delete;
     FlexArray& operator=(const FlexArray&) = delete;

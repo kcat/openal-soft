@@ -498,29 +498,31 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
     }
 }
 
-void DoNfcMix(const al::span<const float> samples, const al::span<FloatBufferLine> OutBuffer,
-    DirectParams &parms, const float *TargetGains, const ALuint Counter, const ALuint OutPos,
-    ALCdevice *Device)
+void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, DirectParams &parms,
+    const float *TargetGains, const ALuint Counter, const ALuint OutPos, ALCdevice *Device)
 {
-    const size_t outcount{Device->NumChannelsPerOrder[0]};
-    MixSamples(samples, OutBuffer.first(outcount), parms.Gains.Current.data(), TargetGains,
-        Counter, OutPos);
+    using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
+    static constexpr FilterProc NfcProcess[MAX_AMBI_ORDER+1]{
+        nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3};
+
+    float *CurrentGains{parms.Gains.Current.data()};
+    MixSamples(samples, {OutBuffer, 1u}, CurrentGains, TargetGains, Counter, OutPos);
+    ++OutBuffer;
+    ++CurrentGains;
+    ++TargetGains;
 
     const al::span<float> nfcsamples{Device->NfcSampleData, samples.size()};
-    size_t chanoffset{outcount};
-    using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
-    auto apply_nfc = [OutBuffer,&parms,samples,TargetGains,Counter,OutPos,&chanoffset,nfcsamples](
-        const FilterProc process, const size_t chancount) -> void
+    size_t order{1};
+    while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
-        if(chancount < 1) return;
-        (parms.NFCtrlFilter.*process)(samples, nfcsamples.data());
-        MixSamples(nfcsamples, OutBuffer.subspan(chanoffset, chancount),
-            &parms.Gains.Current[chanoffset], &TargetGains[chanoffset], Counter, OutPos);
-        chanoffset += chancount;
-    };
-    apply_nfc(&NfcFilter::process1, Device->NumChannelsPerOrder[1]);
-    apply_nfc(&NfcFilter::process2, Device->NumChannelsPerOrder[2]);
-    apply_nfc(&NfcFilter::process3, Device->NumChannelsPerOrder[3]);
+        (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples.data());
+        MixSamples(nfcsamples, {OutBuffer, chancount}, CurrentGains, TargetGains, Counter, OutPos);
+        OutBuffer += chancount;
+        CurrentGains += chancount;
+        TargetGains += chancount;
+        if(++order == MAX_AMBI_ORDER+1)
+            break;
+    }
 }
 
 } // namespace
@@ -699,8 +701,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 {
                     const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
                         SilentTarget.data() : parms.Gains.Target.data()};
-                    DoNfcMix({samples, DstBufferSize}, mDirect.Buffer, parms, TargetGains, Counter,
-                        OutPos, Device);
+                    DoNfcMix({samples, DstBufferSize}, mDirect.Buffer.data(), parms, TargetGains,
+                        Counter, OutPos, Device);
                 }
                 else
                 {

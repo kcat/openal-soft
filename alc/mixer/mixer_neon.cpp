@@ -191,12 +191,12 @@ const ALfloat *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
 
 template<>
 void MixHrtf_<NEONTag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
-    MixHrtfFilter *hrtfparams, const size_t BufferSize)
+    const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, BufferSize); }
 
 template<>
 void MixHrtfBlend_<NEONTag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
-    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
+    const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
         BufferSize);

@@ -73,9 +73,9 @@ Resampler ResamplerDefault{Resampler::Linear};
 namespace {
 
 using HrtfMixerFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples, const ALuint IrSize,
-    MixHrtfFilter *hrtfparams, const size_t BufferSize);
+    const MixHrtfFilter *hrtfparams, const size_t BufferSize);
 using HrtfMixerBlendFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples,
-    const ALuint IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams,
+    const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize);
 
 HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
@@ -468,10 +468,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
             fademix);
         /* Update the old parameters with the result. */
         parms.Hrtf.Old = parms.Hrtf.Target;
-        if(fademix < Counter)
-            parms.Hrtf.Old.Gain = hrtfparams.Gain;
-        else
-            parms.Hrtf.Old.Gain = TargetGain;
+        parms.Hrtf.Old.Gain = gain;
         OutPos += fademix;
     }
 
@@ -496,13 +493,8 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
         hrtfparams.Gain = parms.Hrtf.Old.Gain;
         hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo);
         MixHrtfSamples(HrtfSamples+fademix, AccumSamples+OutPos, IrSize, &hrtfparams, todo);
-        /* Store the interpolated gain or the final target gain depending if
-         * the fade is done.
-         */
-        if(DstBufferSize < Counter)
-            parms.Hrtf.Old.Gain = gain;
-        else
-            parms.Hrtf.Old.Gain = TargetGain;
+        /* Store the now-current gain for next time. */
+        parms.Hrtf.Old.Gain = gain;
     }
 }
 

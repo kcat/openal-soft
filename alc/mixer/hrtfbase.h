@@ -14,7 +14,7 @@ using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const ALuint irSize, const
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const ALuint IrSize,
-    MixHrtfFilter *hrtfparams, const size_t BufferSize)
+    const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
 
@@ -35,13 +35,11 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
 
         stepcount += 1.0f;
     }
-
-    hrtfparams->Gain = gain + gainstep*stepcount;
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSamples,
-    const ALuint IrSize, const HrtfFilter *oldparams, MixHrtfFilter *newparams,
+    const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize)
 {
     const auto &OldCoeffs = oldparams->Coeffs;
@@ -78,8 +76,6 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
         stepcount += 1.0f;
     }
-
-    newparams->Gain = newGainStep*stepcount;
 }
 
 template<ApplyCoeffsT ApplyCoeffs>

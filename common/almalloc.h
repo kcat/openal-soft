@@ -265,8 +265,8 @@ DIAGNOSTIC_POP
     }
 
     FlexArray(index_type size) : mSize{size}
-    { uninitialized_default_construct_n(mArray, mSize); }
-    ~FlexArray() { destroy_n(mArray, mSize); }
+    { if(mSize > 0) uninitialized_default_construct_n(std::addressof(mArray[0]), mSize); }
+    ~FlexArray() { if(mSize > 0) destroy_n(std::addressof(mArray[0]), mSize); }
 
     FlexArray(const FlexArray&) = delete;
     FlexArray& operator=(const FlexArray&) = delete;

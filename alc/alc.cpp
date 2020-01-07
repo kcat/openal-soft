@@ -939,8 +939,8 @@ using DeviceRef = al::intrusive_ptr<ALCdevice>;
 /************************************************
  * Device lists
  ************************************************/
-al::vector<DeviceRef> DeviceList;
-al::vector<ContextRef> ContextList;
+al::vector<ALCdevice*> DeviceList;
+al::vector<ALCcontext*> ContextList;
 
 std::recursive_mutex ListLock;
 
@@ -2404,9 +2404,12 @@ ALCdevice::~ALCdevice()
 static DeviceRef VerifyDevice(ALCdevice *device)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device);
-    if(iter != DeviceList.cend() && *iter == device)
-        return *iter;
+    auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
+    if(iter != DeviceList.end() && *iter == device)
+    {
+        (*iter)->add_ref();
+        return DeviceRef{*iter};
+    }
     return nullptr;
 }
 
@@ -2626,9 +2629,12 @@ bool ALCcontext::deinit()
 static ContextRef VerifyContext(ALCcontext *context)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context);
-    if(iter != ContextList.cend() && *iter == context)
-        return *iter;
+    auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
+    if(iter != ContextList.end() && *iter == context)
+    {
+        (*iter)->add_ref();
+        return ContextRef{*iter};
+    }
     return nullptr;
 }
 
@@ -3452,7 +3458,7 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(ContextList.cbegin(), ContextList.cend(), context.get());
-        ContextList.emplace(iter, context);
+        ContextList.emplace(iter, context.get());
     }
 
     if(context->mDefaultSlot)
@@ -3464,7 +3470,7 @@ START_API_FUNC
     }
 
     TRACE("Created context %p\n", decltype(std::declval<void*>()){context.get()});
-    return context.get();
+    return context.release();
 }
 END_API_FUNC
 
@@ -3483,10 +3489,10 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return;
     }
-    /* Hold an extra reference to this context so it remains valid until the
-     * ListLock is released.
+    /* Hold a reference to this context so it remains valid until the ListLock
+     * is released.
      */
-    ContextRef ctx{std::move(*iter)};
+    ContextRef ctx{*iter};
     ContextList.erase(iter);
 
     ALCdevice *Device{ctx->mDevice.get()};
@@ -3797,12 +3803,12 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        DeviceList.emplace(iter, device);
+        DeviceList.emplace(iter, device.get());
     }
 
     TRACE("Created device %p, \"%s\"\n", decltype(std::declval<void*>()){device.get()},
         device->DeviceName.c_str());
-    return device.get();
+    return device.release();
 }
 END_API_FUNC
 
@@ -3822,14 +3828,14 @@ START_API_FUNC
     }
     if((*iter)->Type == Capture)
     {
-        alcSetError(iter->get(), ALC_INVALID_DEVICE);
+        alcSetError(*iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
 
     /* Erase the device, and any remaining contexts left on it, from their
      * respective lists.
      */
-    DeviceRef dev{std::move(*iter)};
+    DeviceRef dev{*iter};
     DeviceList.erase(iter);
 
     std::unique_lock<std::mutex> statelock{dev->StateLock};
@@ -3839,7 +3845,7 @@ START_API_FUNC
         auto ctxiter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);
         if(ctxiter != ContextList.end() && *ctxiter == ctx)
         {
-            orphanctxs.emplace_back(std::move(*ctxiter));
+            orphanctxs.emplace_back(ContextRef{*ctxiter});
             ContextList.erase(ctxiter);
         }
     }
@@ -3923,12 +3929,12 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        DeviceList.emplace(iter, device);
+        DeviceList.emplace(iter, device.get());
     }
 
     TRACE("Created capture device %p, \"%s\"\n", decltype(std::declval<void*>()){device.get()},
         device->DeviceName.c_str());
-    return device.get();
+    return device.release();
 }
 END_API_FUNC
 
@@ -3944,11 +3950,11 @@ START_API_FUNC
     }
     if((*iter)->Type != Capture)
     {
-        alcSetError(iter->get(), ALC_INVALID_DEVICE);
+        alcSetError(*iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
 
-    DeviceRef dev{std::move(*iter)};
+    DeviceRef dev{*iter};
     DeviceList.erase(iter);
     listlock.unlock();
 
@@ -4108,11 +4114,11 @@ START_API_FUNC
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
-        DeviceList.emplace(iter, device);
+        DeviceList.emplace(iter, device.get());
     }
 
     TRACE("Created loopback device %p\n", decltype(std::declval<void*>()){device.get()});
-    return device.get();
+    return device.release();
 }
 END_API_FUNC
 

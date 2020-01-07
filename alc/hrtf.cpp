@@ -288,7 +288,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {
-        alignas(16) std::array<double2,HRIR_LENGTH> hrir;
+        const HrirArray &hrir;
         ALuint ldelay, rdelay;
     };
 
@@ -303,53 +303,26 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     al::vector<ImpulseResponse> impres; impres.reserve(AmbiPoints.size());
     auto calc_res = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
     {
-        ImpulseResponse res;
+        auto CalcClosestEvIndex = [](ALuint evcount, float ev) -> ALuint
+        {
+            ev = (al::MathDefs<float>::Pi()*0.5f + ev) * static_cast<float>(evcount-1) /
+                al::MathDefs<float>::Pi();
+            return minu(float2uint(ev+0.5f), evcount-1);
+        };
+        auto CalcClosestAzIndex = [](ALuint azcount, float az) -> ALuint
+        {
+            az = (al::MathDefs<float>::Tau()+az) * static_cast<float>(azcount) /
+                al::MathDefs<float>::Tau();
+            return float2uint(az+0.5f) % azcount;
+        };
 
         auto &field = Hrtf->field[0];
+        const size_t elevIdx{CalcClosestEvIndex(field.evCount, pt.Elev.value)};
+        const size_t azIdx{CalcClosestAzIndex(Hrtf->elev[elevIdx].azCount, pt.Azim.value)};
+        const size_t irOffset{Hrtf->elev[elevIdx].irOffset + azIdx};
 
-        /* Calculate the elevation indices. */
-        const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
-        const size_t elev1_idx{minu(elev0.idx+1, field.evCount-1)};
-        const size_t ir0offset{Hrtf->elev[elev0.idx].irOffset};
-        const size_t ir1offset{Hrtf->elev[elev1_idx].irOffset};
-
-        /* Calculate azimuth indices. */
-        const auto az0 = CalcAzIndex(Hrtf->elev[elev0.idx].azCount, pt.Azim.value);
-        const auto az1 = CalcAzIndex(Hrtf->elev[elev1_idx].azCount, pt.Azim.value);
-
-        /* Calculate the HRIR indices to blend. */
-        const size_t idx[4]{
-            ir0offset + az0.idx,
-            ir0offset + ((az0.idx+1) % Hrtf->elev[elev0.idx].azCount),
-            ir1offset + az1.idx,
-            ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount)};
-
-        /* Calculate bilinear blending weights. */
-        const double blend[4]{
-            (1.0-elev0.blend) * (1.0-az0.blend),
-            (1.0-elev0.blend) * (    az0.blend),
-            (    elev0.blend) * (1.0-az1.blend),
-            (    elev0.blend) * (    az1.blend)};
-
-        /* Calculate the blended HRIR delays (in fixed-point). */
-        double d{Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
-            Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]};
-        res.ldelay = fastf2u(static_cast<float>(d));
-        d = Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
-            Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3];
-        res.rdelay = fastf2u(static_cast<float>(d));
-
-        /* Calculate the blended HRIR coefficients. */
-        double *coeffout{al::assume_aligned<16>(&res.hrir[0][0])};
-        std::fill(coeffout, coeffout + HRIR_LENGTH*2, 0.0);
-        for(ALsizei c{0};c < 4;c++)
-        {
-            const float *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]][0].data())};
-            const double mult{blend[c]};
-            auto blend_coeffs = [mult](const float src, const double coeff) noexcept -> double
-            { return src*mult + coeff; };
-            std::transform(srccoeffs, srccoeffs + HRIR_LENGTH*2, coeffout, coeffout, blend_coeffs);
-        }
+        ImpulseResponse res{Hrtf->coeffs[irOffset],
+            Hrtf->delays[irOffset][0], Hrtf->delays[irOffset][1]};
 
         min_delay = minu(min_delay, minu(res.ldelay, res.rdelay));
         max_delay = maxu(max_delay, maxu(res.ldelay, res.rdelay));
@@ -372,7 +345,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     const al::span<double,HRIR_LENGTH*4> tempir{tmpflt[2].data(), tmpflt[2].size()};
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
-        const al::span<const double2,HRIR_LENGTH> hrir{impres[c].hrir};
+        const HrirArray &hrir{impres[c].hrir};
         const ALuint ldelay{hrir_delay_round(impres[c].ldelay-min_delay) + base_delay};
         const ALuint rdelay{hrir_delay_round(impres[c].rdelay-min_delay) + base_delay};
 
@@ -403,7 +376,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         /* Load the (left) HRIR backwards, into a temp buffer with padding. */
         std::fill(tempir.begin(), tempir.end(), 0.0);
         std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
-            [](const double2 &ir) noexcept -> double { return ir[0]; });
+            [](const float2 &ir) noexcept -> double { return ir[0]; });
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
          * sample array. This produces the forward response with a backwards
@@ -422,8 +395,8 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         /* Apply left ear response with delay and HF scale. */
         for(size_t i{0u};i < state->Coeffs.size();++i)
         {
-            const ALdouble mult{AmbiMatrix[c][i]};
-            const ALdouble hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
+            const double mult{AmbiMatrix[c][i]};
+            const double hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
             ALuint j{HRIR_LENGTH*3 - ldelay};
             for(ALuint lidx{0};lidx < HRIR_LENGTH;++lidx,++j)
                 tmpres[i][lidx][0] += (tmpflt[0][j]*hfgain + tmpflt[1][j]) * mult;
@@ -432,7 +405,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         /* Now run the same process on the right HRIR. */
         std::fill(tempir.begin(), tempir.end(), 0.0);
         std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
-            [](const double2 &ir) noexcept -> double { return ir[1]; });
+            [](const float2 &ir) noexcept -> double { return ir[1]; });
 
         splitter.applyAllpass({tempir.data(), tempir.size()});
         std::reverse(tempir.begin(), tempir.end());
@@ -442,8 +415,8 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
         for(size_t i{0u};i < state->Coeffs.size();++i)
         {
-            const ALdouble mult{AmbiMatrix[c][i]};
-            const ALdouble hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
+            const double mult{AmbiMatrix[c][i]};
+            const double hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
             ALuint j{HRIR_LENGTH*3 - rdelay};
             for(ALuint ridx{0};ridx < HRIR_LENGTH;++ridx,++j)
                 tmpres[i][ridx][1] += (tmpflt[0][j]*hfgain + tmpflt[1][j]) * mult;

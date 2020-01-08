@@ -1563,7 +1563,17 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 {
     ALvoiceProps *props{voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
-    if(!props && !force) return;
+    if(voice->mSourceID.load(std::memory_order_relaxed) == 0)
+    {
+        /* Don't update voices that no longer have a source. But make sure any
+         * update struct it has is returned to the free list.
+         */
+        if UNLIKELY(props)
+            AtomicReplaceHead(context->mFreeVoiceProps, props);
+        return;
+    }
+    if(!props && !force)
+        return;
 
     if(props)
     {
@@ -1592,14 +1602,10 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
         force |= CalcListenerParams(ctx);
         force = std::accumulate(slots.begin(), slots.end(), force,
             [ctx](const bool f, ALeffectslot *slot) -> bool
-            { return CalcEffectSlotParams(slot, ctx) | f; }
-        );
+            { return CalcEffectSlotParams(slot, ctx) | f; });
 
         auto calc_params = [ctx,force](ALvoice &voice) -> void
-        {
-            if(voice.mSourceID.load(std::memory_order_acquire) != 0)
-                CalcSourceParams(&voice, ctx, force);
-        };
+        { CalcSourceParams(&voice, ctx, force); };
         std::for_each(voices.begin(), voices.end(), calc_params);
     }
     IncrementRef(ctx->mUpdateCount);
@@ -1621,17 +1627,15 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
         {
             for(auto &buffer : slot->MixBuffer)
                 std::fill_n(buffer.begin(), SamplesToDo, 0.0f);
-        }
-    );
+        });
 
     /* Process voices that have a playing source. */
-    std::for_each(voices.begin(), voices.end(),
-        [SamplesToDo,ctx](ALvoice &voice) -> void
-        {
-            const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
-            if(vstate != ALvoice::Stopped) voice.mix(vstate, ctx, SamplesToDo);
-        }
-    );
+    auto mix_voice = [SamplesToDo,ctx](ALvoice &voice) -> void
+    {
+        const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
+        if(vstate != ALvoice::Stopped) voice.mix(vstate, ctx, SamplesToDo);
+    };
+    std::for_each(voices.begin(), voices.end(), mix_voice);
 
     /* Process effects. */
     if(auxslots.empty()) return;
@@ -1643,18 +1647,19 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
      */
     auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
     auto sorted_slots_end = sorted_slots;
-    auto in_chain = [](const ALeffectslot *slot1, const ALeffectslot *slot2) noexcept -> bool
-    {
-        while((slot1=slot1->Params.Target) != nullptr) {
-            if(slot1 == slot2) return true;
-        }
-        return false;
-    };
 
     *sorted_slots_end = *slots;
     ++sorted_slots_end;
     while(++slots != slots_end)
     {
+        auto in_chain = [](const ALeffectslot *slot1, const ALeffectslot *slot2) noexcept -> bool
+        {
+            while((slot1=slot1->Params.Target) != nullptr) {
+                if(slot1 == slot2) return true;
+            }
+            return false;
+        };
+
         /* If this effect slot targets an effect slot already in the list (i.e.
          * slots outputs to something in sorted_slots), directly or indirectly,
          * insert it prior to that element.
@@ -1674,8 +1679,7 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
         {
             EffectState *state{slot->Params.mEffectState};
             state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
-        }
-    );
+        });
 }
 
 

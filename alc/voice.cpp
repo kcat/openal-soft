@@ -542,7 +542,15 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     const ALuint NumChannels{mNumChannels};
     const ALuint SampleSize{mSampleSize};
     const ALuint increment{mStep};
-    if(increment < 1) return;
+    if UNLIKELY(increment < 1)
+    {
+        /* If the voice is supposed to be stopping but can't be mixed, just
+         * stop it before bailing.
+         */
+        if(vstate == ALvoice::Stopping)
+            mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+        return;
+    }
 
     ASSUME(NumChannels > 0);
     ASSUME(SampleSize > 0);

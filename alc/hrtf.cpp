@@ -255,7 +255,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
         Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]};
     delays[0] = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
     d = Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
-        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[1];
+        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3];
     delays[1] = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
 
     const ALuint irSize{Hrtf->irSize};

@@ -393,7 +393,7 @@ void SndioCapture::open(const ALCchar *name)
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate};
 
-    mRing = CreateRingBuffer(mDevice->BufferSize, par.bps*par.rchan, false);
+    mRing = RingBuffer::Create(mDevice->BufferSize, par.bps*par.rchan, false);
 
     SetDefaultChannelOrder(mDevice);
 

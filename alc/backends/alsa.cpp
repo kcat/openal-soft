@@ -987,7 +987,7 @@ void AlsaCapture::open(const ALCchar *name)
     hp = nullptr;
 
     if(needring)
-        mRing = CreateRingBuffer(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
+        mRing = RingBuffer::Create(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
 
     mDevice->DeviceName = name;
 }

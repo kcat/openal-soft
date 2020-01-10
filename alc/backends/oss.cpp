@@ -612,7 +612,7 @@ void OSScapture::open(const ALCchar *name)
             "Failed to set %s samples, got OSS format %#x", DevFmtTypeString(mDevice->FmtType),
             ossFormat};
 
-    mRing = CreateRingBuffer(mDevice->BufferSize, frameSize, false);
+    mRing = RingBuffer::Create(mDevice->BufferSize, frameSize, false);
 
     mDevice->DeviceName = name;
 }

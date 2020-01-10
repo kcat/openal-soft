@@ -523,7 +523,7 @@ bool OpenSLPlayback::reset()
     if(SL_RESULT_SUCCESS == result)
     {
         const ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
-        mRing = CreateRingBuffer(num_updates, mFrameSize*mDevice->UpdateSize, true);
+        mRing = RingBuffer::Create(num_updates, mFrameSize*mDevice->UpdateSize, true);
     }
 
     if(SL_RESULT_SUCCESS != result)
@@ -698,7 +698,7 @@ void OpenSLCapture::open(const ALCchar* name)
             mDevice->Frequency/100*5)};
         ALuint num_updates{(length+update_len-1) / update_len};
 
-        mRing = CreateRingBuffer(num_updates, update_len*mFrameSize, false);
+        mRing = RingBuffer::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->UpdateSize = update_len;
         mDevice->BufferSize = static_cast<ALuint>(mRing->writeSpace() * update_len);

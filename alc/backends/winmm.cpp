@@ -520,11 +520,11 @@ void WinMMCapture::open(const ALCchar *name)
     ALuint CapturedDataSize{mDevice->BufferSize};
     CapturedDataSize = static_cast<ALuint>(maxz(CapturedDataSize, BufferSize*mWaveBuffer.size()));
 
-    mRing = CreateRingBuffer(CapturedDataSize, mFormat.nBlockAlign, false);
+    mRing = RingBuffer::Create(CapturedDataSize, mFormat.nBlockAlign, false);
 
     al_free(mWaveBuffer[0].lpData);
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize*4));
+    mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize * mWaveBuffer.size()));
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();++i)
     {

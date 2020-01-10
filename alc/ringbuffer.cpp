@@ -30,7 +30,7 @@
 #include "almalloc.h"
 
 
-RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
+RingBufferPtr RingBuffer::Create(size_t sz, size_t elem_sz, int limit_writes)
 {
     size_t power_of_two{0u};
     if(sz > 0)

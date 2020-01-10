@@ -284,7 +284,7 @@ void PortCapture::open(const ALCchar *name)
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
     ALuint frame_size{mDevice->frameSizeFromFmt()};
 
-    mRing = CreateRingBuffer(samples, frame_size, false);
+    mRing = RingBuffer::Create(samples, frame_size, false);
 
     auto devidopt = ConfigValueInt(nullptr, "port", "capture");
     if(devidopt && *devidopt >= 0) mParams.device = *devidopt;

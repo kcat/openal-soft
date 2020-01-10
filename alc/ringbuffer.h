@@ -25,6 +25,7 @@ using ll_ringbuffer_data_pair = std::pair<ll_ringbuffer_data,ll_ringbuffer_data>
 
 
 struct RingBuffer {
+private:
     std::atomic<size_t> mWritePtr{0u};
     std::atomic<size_t> mReadPtr{0u};
     size_t mWriteSize{0u};
@@ -33,6 +34,7 @@ struct RingBuffer {
 
     al::FlexArray<al::byte, 16> mBuffer;
 
+public:
     RingBuffer(const size_t count) : mBuffer{count} { }
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
@@ -82,16 +84,16 @@ struct RingBuffer {
     /** Advance the write pointer `cnt' places. */
     void writeAdvance(size_t cnt) noexcept;
 
+    /**
+     * Create a new ringbuffer to hold at least `sz' elements of `elem_sz'
+     * bytes. The number of elements is rounded up to the next power of two
+     * (even if it is already a power of two, to ensure the requested amount
+     * can be written).
+     */
+    static std::unique_ptr<RingBuffer> Create(size_t sz, size_t elem_sz, int limit_writes);
+
     DEF_FAM_NEWDEL(RingBuffer, mBuffer)
 };
 using RingBufferPtr = std::unique_ptr<RingBuffer>;
-
-
-/**
- * Create a new ringbuffer to hold at least `sz' elements of `elem_sz' bytes.
- * The number of elements is rounded up to the next power of two (even if it is
- * already a power of two, to ensure the requested amount can be written).
- */
-RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes);
 
 #endif /* RINGBUFFER_H */

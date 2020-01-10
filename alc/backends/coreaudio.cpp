@@ -570,7 +570,7 @@ void CoreAudioCapture::open(const ALCchar *name)
             mFormat.mChannelsPerFrame, static_cast<ALuint>(hardwareFormat.mSampleRate),
             mDevice->Frequency, Resampler::FastBSinc24);
 
-    mRing = CreateRingBuffer(outputFrameCount, mFrameSize, false);
+    mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
 
     mDevice->DeviceName = name;
 }

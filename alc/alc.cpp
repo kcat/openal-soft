@@ -2560,7 +2560,7 @@ void ALCcontext::init()
     mListener.Params.mDistanceModel = mDistanceModel;
 
 
-    mAsyncEvents = CreateRingBuffer(511, sizeof(AsyncEvent), false);
+    mAsyncEvents = RingBuffer::Create(511, sizeof(AsyncEvent), false);
     StartEventThrd(this);
 
 

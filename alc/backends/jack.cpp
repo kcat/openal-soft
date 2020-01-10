@@ -211,7 +211,7 @@ int JackPlayback::bufferSizeNotify(jack_nframes_t numframes) noexcept
     TRACE("%u / %u buffer\n", mDevice->UpdateSize, mDevice->BufferSize);
 
     mRing = nullptr;
-    mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
+    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
 
     return 0;
 }
@@ -404,7 +404,7 @@ bool JackPlayback::reset()
     }
 
     mRing = nullptr;
-    mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
+    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
 
     SetDefaultChannelOrder(mDevice);
 

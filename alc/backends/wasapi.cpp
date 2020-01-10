@@ -1627,7 +1627,7 @@ HRESULT WasapiCapture::resetProxy()
     mDevice->UpdateSize = RefTime2Samples(min_per, mDevice->Frequency);
     mDevice->BufferSize = buffer_len;
 
-    mRing = CreateRingBuffer(buffer_len, mDevice->frameSizeFromFmt(), false);
+    mRing = RingBuffer::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
 
     hr = mClient->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))

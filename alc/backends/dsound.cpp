@@ -743,7 +743,7 @@ void DSoundCapture::open(const ALCchar *name)
     if(SUCCEEDED(hr))
         mDSC->CreateCaptureBuffer(&DSCBDescription, &mDSCbuffer, nullptr);
     if(SUCCEEDED(hr))
-         mRing = CreateRingBuffer(mDevice->BufferSize, InputType.Format.nBlockAlign, false);
+         mRing = RingBuffer::Create(mDevice->BufferSize, InputType.Format.nBlockAlign, false);
 
     if(FAILED(hr))
     {

@@ -154,10 +154,6 @@ struct JackPlayback final : public BackendBase {
     JackPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
-    int bufferSizeNotify(jack_nframes_t numframes) noexcept;
-    static int bufferSizeNotifyC(jack_nframes_t numframes, void *arg) noexcept
-    { return static_cast<JackPlayback*>(arg)->bufferSizeNotify(numframes); }
-
     int process(jack_nframes_t numframes) noexcept;
     static int processC(jack_nframes_t numframes, void *arg) noexcept
     { return static_cast<JackPlayback*>(arg)->process(numframes); }
@@ -194,26 +190,6 @@ JackPlayback::~JackPlayback()
     std::fill(std::begin(mPort), std::end(mPort), nullptr);
     jack_client_close(mClient);
     mClient = nullptr;
-}
-
-
-int JackPlayback::bufferSizeNotify(jack_nframes_t numframes) noexcept
-{
-    std::lock_guard<std::mutex> _{mDevice->StateLock};
-    mDevice->UpdateSize = numframes;
-    mDevice->BufferSize = numframes*2;
-
-    const char *devname{mDevice->DeviceName.c_str()};
-    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
-    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
-
-    TRACE("%u / %u buffer\n", mDevice->UpdateSize, mDevice->BufferSize);
-
-    mRing = nullptr;
-    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
-
-    return 0;
 }
 
 
@@ -345,9 +321,6 @@ void JackPlayback::open(const ALCchar *name)
         TRACE("Client name not unique, got `%s' instead\n", client_name);
     }
 
-    jack_set_process_callback(mClient, &JackPlayback::processC, this);
-    jack_set_buffer_size_callback(mClient, &JackPlayback::bufferSizeNotifyC, this);
-
     mDevice->DeviceName = name;
 }
 
@@ -403,9 +376,6 @@ bool JackPlayback::reset()
         }
     }
 
-    mRing = nullptr;
-    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
-
     SetDefaultChannelOrder(mDevice);
 
     return true;
@@ -440,10 +410,26 @@ bool JackPlayback::start()
                 ERR("Failed to connect output port \"%s\" to \"%s\"\n", jack_port_name(port),
                     pname);
             return true;
-        }
-    );
+        });
     jack_free(ports);
 
+    /* Reconfigure buffer metrics in case the server changed it since the reset
+     * (it won't change again after jack_activate), then allocate the ring
+     * buffer with the appropriate size.
+     */
+    mDevice->Frequency = jack_get_sample_rate(mClient);
+    mDevice->UpdateSize = jack_get_buffer_size(mClient);
+    mDevice->BufferSize = mDevice->UpdateSize * 2;
+
+    const char *devname{mDevice->DeviceName.c_str()};
+    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+
+    mRing = nullptr;
+    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
+
+    jack_set_process_callback(mClient, &JackPlayback::processC, this);
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
@@ -454,6 +440,7 @@ bool JackPlayback::start()
     }
     catch(...) {
     }
+    jack_set_process_callback(mClient, nullptr, nullptr);
     jack_deactivate(mClient);
     return false;
 }
@@ -467,6 +454,7 @@ void JackPlayback::stop()
     mThread.join();
 
     jack_deactivate(mClient);
+    jack_set_process_callback(mClient, nullptr, nullptr);
 }
 
 

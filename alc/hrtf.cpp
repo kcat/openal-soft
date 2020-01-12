@@ -1337,33 +1337,44 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
         }
         rs = {};
 
-        size_t max_clipped{0};
-        uint64_t max_delay{0};
-        const ALuint srate{hrtf->sampleRate};
+        /* Scale the delays for the new sample rate. */
+        float max_delay{0.0f};
+        auto new_delays = al::vector<float2>(irCount);
+        const float rate_scale{static_cast<float>(devrate)/static_cast<float>(hrtf->sampleRate)};
         for(size_t i{0};i < irCount;++i)
         {
-            for(ALubyte &delay : const_cast<ubyte2&>(hrtf->delays[i]))
+            for(size_t j{0};j < 2;++j)
             {
-                const uint64_t new_delay{(uint64_t{delay}*devrate + srate/2) / srate};
-                max_delay = maxu64(max_delay, new_delay);
-                if(new_delay <= MAX_HRIR_DELAY*HRIR_DELAY_FRACONE)
-                    delay = static_cast<ALubyte>(new_delay);
-                else
-                {
-                    ++max_clipped;
-                    delay = MAX_HRIR_DELAY*HRIR_DELAY_FRACONE;
-                }
+                const float new_delay{std::round(hrtf->delays[i][j] * rate_scale) /
+                    float{HRIR_DELAY_FRACONE}};
+                max_delay = maxf(max_delay, new_delay);
+                new_delays[i][j] = new_delay;
             }
         }
-        if(max_clipped > 0)
-            WARN("%zu delay%s clamped (max: %.2f)\n", max_clipped, (max_clipped==1)?"":"s",
-                static_cast<double>(max_delay) / double{HRIR_DELAY_FRACONE});
+
+        /* If the new delays exceed the max, scale it down to fit (essentially
+         * shrinking the head radius; not ideal but better than a per-delay
+         * clamp).
+         */
+        float delay_scale{HRIR_DELAY_FRACONE};
+        if(max_delay > MAX_HRIR_DELAY)
+        {
+            WARN("Resampled delay exceeds max (%.2f > %d)\n", max_delay, MAX_HRIR_DELAY);
+            delay_scale *= float{MAX_HRIR_DELAY} / max_delay;
+        }
+
+        for(size_t i{0};i < irCount;++i)
+        {
+            ubyte2 &delays = const_cast<ubyte2&>(hrtf->delays[i]);
+            for(size_t j{0};j < 2;++j)
+                delays[j] = static_cast<ALubyte>(float2int(new_delays[i][j] * delay_scale));
+        }
 
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        const uint64_t newIrSize{(uint64_t{hrtf->irSize}*devrate + srate-1) / srate};
-        hrtf->irSize = static_cast<ALuint>(minu64(HRIR_LENGTH, newIrSize));
+        const float newIrSize{std::round(static_cast<float>(hrtf->irSize) * rate_scale)};
+        hrtf->irSize = static_cast<ALuint>(minf(HRIR_LENGTH, newIrSize));
         hrtf->sampleRate = devrate;
     }
 

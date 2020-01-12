@@ -258,21 +258,18 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
         Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3];
     delays[1] = fastf2u(d * float{1.0f/HRIR_DELAY_FRACONE});
 
-    const ALuint irSize{Hrtf->irSize};
-    ASSUME(irSize >= MIN_IR_LENGTH);
-
     /* Calculate the blended HRIR coefficients. */
     float *coeffout{al::assume_aligned<16>(&coeffs[0][0])};
     coeffout[0] = PassthruCoeff * (1.0f-dirfact);
     coeffout[1] = PassthruCoeff * (1.0f-dirfact);
-    std::fill(coeffout+2, coeffout + HRIR_LENGTH*2, 0.0f);
-    for(ALsizei c{0};c < 4;c++)
+    std::fill_n(coeffout+2, size_t{HRIR_LENGTH-1}*2, 0.0f);
+    for(size_t c{0};c < 4;c++)
     {
         const float *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]][0].data())};
         const float mult{blend[c]};
-        auto blend_coeffs = [mult](const ALfloat src, const ALfloat coeff) noexcept -> ALfloat
+        auto blend_coeffs = [mult](const float src, const float coeff) noexcept -> float
         { return src*mult + coeff; };
-        std::transform(srccoeffs, srccoeffs + irSize*2, coeffout, coeffout, blend_coeffs);
+        std::transform(srccoeffs, srccoeffs + HRIR_LENGTH*2, coeffout, coeffout, blend_coeffs);
     }
 }
 

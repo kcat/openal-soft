@@ -7,8 +7,10 @@ openal-soft-1.20.1:
     Implemented the AL_SOFT_bformat_ex extension. This extends B-Format buffer
     support for N3D or SN3D scaling, or ACN channel ordering.
 
-    Fixed potential voice leak when a source is started and stopped in quick
-    succession.
+    Fixed a potential voice leak when a source is started and stopped or
+    restarted in quick succession.
+
+    Fixed a potential device reset failure with JACK.
 
     Improved handling of unsupported channel configurations with WASAPI. Such
     setups will now try to output at least a stereo mix.

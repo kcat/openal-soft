@@ -169,6 +169,7 @@ struct JackPlayback final : public BackendBase {
     jack_client_t *mClient{nullptr};
     jack_port_t *mPort[MAX_OUTPUT_CHANNELS]{};
 
+    std::atomic<bool> mPlaying{false};
     RingBufferPtr mRing;
     al::semaphore mSem;
 
@@ -196,68 +197,63 @@ JackPlayback::~JackPlayback()
 int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
     jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
-    ALsizei numchans{0};
+    size_t numchans{0};
     for(auto port : mPort)
     {
         if(!port) break;
         out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
     }
 
-    auto data = mRing->getReadVector();
-    jack_nframes_t todo{minu(numframes, static_cast<ALuint>(data.first.len))};
-    std::transform(out, out+numchans, out,
-        [&data,numchans,todo](ALfloat *outbuf) -> ALfloat*
+    jack_nframes_t total{0};
+    if LIKELY(mPlaying.load(std::memory_order_acquire))
+    {
+        auto data = mRing->getReadVector();
+        jack_nframes_t todo{minu(numframes, static_cast<ALuint>(data.first.len))};
+        auto write_first = [&data,numchans,todo](float *outbuf) -> float*
         {
-            const ALfloat *RESTRICT in = reinterpret_cast<ALfloat*>(data.first.buf);
-            std::generate_n(outbuf, todo,
-                [&in,numchans]() noexcept -> ALfloat
+            const float *RESTRICT in = reinterpret_cast<float*>(data.first.buf);
+            auto deinterlace_input = [&in,numchans]() noexcept -> float
+            {
+                float ret{*in};
+                in += numchans;
+                return ret;
+            };
+            std::generate_n(outbuf, todo, deinterlace_input);
+            data.first.buf += sizeof(float);
+            return outbuf + todo;
+        };
+        std::transform(out, out+numchans, out, write_first);
+        total += todo;
+
+        todo = minu(numframes-total, static_cast<ALuint>(data.second.len));
+        if(todo > 0)
+        {
+            auto write_second = [&data,numchans,todo](float *outbuf) -> float*
+            {
+                const float *RESTRICT in = reinterpret_cast<float*>(data.second.buf);
+                auto deinterlace_input = [&in,numchans]() noexcept -> float
                 {
-                    ALfloat ret{*in};
+                    float ret{*in};
                     in += numchans;
                     return ret;
-                }
-            );
-            data.first.buf += sizeof(ALfloat);
-            return outbuf + todo;
-        }
-    );
-    jack_nframes_t total{todo};
-
-    todo = minu(numframes-total, static_cast<ALuint>(data.second.len));
-    if(todo > 0)
-    {
-        std::transform(out, out+numchans, out,
-            [&data,numchans,todo](ALfloat *outbuf) -> ALfloat*
-            {
-                const ALfloat *RESTRICT in = reinterpret_cast<ALfloat*>(data.second.buf);
-                std::generate_n(outbuf, todo,
-                    [&in,numchans]() noexcept -> ALfloat
-                    {
-                        ALfloat ret{*in};
-                        in += numchans;
-                        return ret;
-                    }
-                );
-                data.second.buf += sizeof(ALfloat);
+                };
+                std::generate_n(outbuf, todo, deinterlace_input);
+                data.second.buf += sizeof(float);
                 return outbuf + todo;
-            }
-        );
-        total += todo;
-    }
+            };
+            std::transform(out, out+numchans, out, write_second);
+            total += todo;
+        }
 
-    mRing->readAdvance(total);
-    mSem.post();
+        mRing->readAdvance(total);
+        mSem.post();
+    }
 
     if(numframes > total)
     {
-        todo = numframes-total;
-        std::transform(out, out+numchans, out,
-            [todo](ALfloat *outbuf) -> ALfloat*
-            {
-                std::fill_n(outbuf, todo, 0.0f);
-                return outbuf + todo;
-            }
-        );
+        jack_nframes_t todo{numframes - total};
+        auto clear_buf = [todo](ALfloat *outbuf) -> void { std::fill_n(outbuf, todo, 0.0f); };
+        std::for_each(out, out+numchans, clear_buf);
     }
 
     return 0;
@@ -318,8 +314,10 @@ void JackPlayback::open(const ALCchar *name)
     if((status&JackNameNotUnique))
     {
         client_name = jack_get_client_name(mClient);
-        TRACE("Client name not unique, got `%s' instead\n", client_name);
+        TRACE("Client name not unique, got '%s' instead\n", client_name);
     }
+
+    jack_set_process_callback(mClient, &JackPlayback::processC, this);
 
     mDevice->DeviceName = name;
 }
@@ -429,8 +427,8 @@ bool JackPlayback::start()
     mRing = nullptr;
     mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
 
-    jack_set_process_callback(mClient, &JackPlayback::processC, this);
     try {
+        mPlaying.store(true, std::memory_order_release);
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
         return true;
@@ -440,8 +438,8 @@ bool JackPlayback::start()
     }
     catch(...) {
     }
-    jack_set_process_callback(mClient, nullptr, nullptr);
     jack_deactivate(mClient);
+    mPlaying.store(false, std::memory_order_release);
     return false;
 }
 
@@ -454,7 +452,7 @@ void JackPlayback::stop()
     mThread.join();
 
     jack_deactivate(mClient);
-    jack_set_process_callback(mClient, nullptr, nullptr);
+    mPlaying.store(false, std::memory_order_release);
 }
 
 

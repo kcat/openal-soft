@@ -1337,13 +1337,27 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
         }
         rs = {};
 
+        size_t max_clipped{0};
+        uint64_t max_delay{0};
         const ALuint srate{hrtf->sampleRate};
         for(size_t i{0};i < irCount;++i)
         {
             for(ALubyte &delay : const_cast<ubyte2&>(hrtf->delays[i]))
-                delay = static_cast<ALubyte>(minu64(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE,
-                    (uint64_t{delay}*devrate + srate/2) / srate));
+            {
+                const uint64_t new_delay{(uint64_t{delay}*devrate + srate/2) / srate};
+                max_delay = maxu64(max_delay, new_delay);
+                if(new_delay <= MAX_HRIR_DELAY*HRIR_DELAY_FRACONE)
+                    delay = static_cast<ALubyte>(new_delay);
+                else
+                {
+                    ++max_clipped;
+                    delay = MAX_HRIR_DELAY*HRIR_DELAY_FRACONE;
+                }
+            }
         }
+        if(max_clipped > 0)
+            WARN("%zu delay%s clamped (max: %.2f)\n", max_clipped, (max_clipped==1)?"":"s",
+                static_cast<double>(max_delay) / double{HRIR_DELAY_FRACONE});
 
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.

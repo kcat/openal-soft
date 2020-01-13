@@ -281,8 +281,8 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 }
 
 void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
-    const al::span<const AngularPoint> AmbiPoints, const ALfloat (*AmbiMatrix)[MAX_AMBI_CHANNELS],
-    const ALfloat *AmbiOrderHFGain)
+    const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
+    const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain)
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {

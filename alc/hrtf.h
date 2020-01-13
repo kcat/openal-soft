@@ -104,7 +104,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
  * ordered and scaled according to the matrix input.
  */
 void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
-    const al::span<const AngularPoint> AmbiPoints, const ALfloat (*AmbiMatrix)[MAX_AMBI_CHANNELS],
-    const ALfloat *AmbiOrderHFGain);
+    const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
+    const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

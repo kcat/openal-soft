@@ -640,20 +640,14 @@ void InitHrtfPanning(ALCdevice *device)
         (device->mRenderMode == HrtfRender) ? "+ Full " : "",
         device->HrtfName.c_str());
 
-    al::span<const AngularPoint> AmbiPoints{};
-    const float (*AmbiMatrix)[MAX_AMBI_CHANNELS]{};
-    const float *AmbiOrderHFGain{};
+    al::span<const AngularPoint> AmbiPoints{AmbiPoints1O};
+    const float (*AmbiMatrix)[MAX_AMBI_CHANNELS]{AmbiMatrix1O};
+    al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain{AmbiOrderHFGain1O};
     if(ambi_order >= 2)
     {
         AmbiPoints = AmbiPoints2O;
         AmbiMatrix = AmbiMatrix2O;
         AmbiOrderHFGain = AmbiOrderHFGain2O;
-    }
-    else /*if(ambi_order == 1)*/
-    {
-        AmbiPoints = AmbiPoints1O;
-        AmbiMatrix = AmbiMatrix1O;
-        AmbiOrderHFGain = AmbiOrderHFGain1O;
     }
     device->mAmbiOrder = ambi_order;
 

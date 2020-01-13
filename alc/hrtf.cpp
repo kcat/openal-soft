@@ -512,6 +512,26 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize,
     return Hrtf;
 }
 
+void MirrorLeftHrirs(const al::span<const HrtfStore::Elevation> elevs, HrirArray *coeffs,
+    ubyte2 *delays)
+{
+    for(const auto &elev : elevs)
+    {
+        const ALushort evoffset{elev.irOffset};
+        const ALushort azcount{elev.azCount};
+        for(size_t j{0};j < azcount;j++)
+        {
+            const size_t lidx{evoffset + j};
+            const size_t ridx{evoffset + ((azcount-j) % azcount)};
+
+            const size_t irSize{coeffs[ridx].size()};
+            for(size_t k{0};k < irSize;k++)
+                coeffs[ridx][k][1] = coeffs[lidx][k][0];
+            delays[ridx][1] = delays[lidx][0];
+        }
+    }
+}
+
 ALubyte GetLE_ALubyte(std::istream &data)
 {
     return static_cast<ALubyte>(data.get());
@@ -648,20 +668,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
         return nullptr;
 
     /* Mirror the left ear responses to the right ear. */
-    for(size_t i{0};i < evCount;i++)
-    {
-        const ALushort evoffset{elevs[i].irOffset};
-        const ALushort azcount{elevs[i].azCount};
-        for(size_t j{0};j < azcount;j++)
-        {
-            const size_t lidx{evoffset + j};
-            const size_t ridx{evoffset + ((azcount-j) % azcount)};
-
-            for(size_t k{0};k < irSize;k++)
-                coeffs[ridx][k][1] = coeffs[lidx][k][0];
-            delays[ridx][1] = delays[lidx][0];
-        }
-    }
+    MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
 
     const HrtfStore::Field field[1]{{0.0f, evCount}};
     return CreateHrtfStore(rate, irSize, field, {elevs.data(), elevs.size()}, coeffs.data(),
@@ -745,20 +752,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         return nullptr;
 
     /* Mirror the left ear responses to the right ear. */
-    for(size_t i{0};i < evCount;i++)
-    {
-        const ALushort evoffset{elevs[i].irOffset};
-        const ALushort azcount{elevs[i].azCount};
-        for(size_t j{0};j < azcount;j++)
-        {
-            const size_t lidx{evoffset + j};
-            const size_t ridx{evoffset + ((azcount-j) % azcount)};
-
-            for(size_t k{0};k < irSize;k++)
-                coeffs[ridx][k][1] = coeffs[lidx][k][0];
-            delays[ridx][1] = delays[lidx][0];
-        }
-    }
+    MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
 
     const HrtfStore::Field field[1]{{0.0f, evCount}};
     return CreateHrtfStore(rate, irSize, field, {elevs.data(), elevs.size()}, coeffs.data(),
@@ -914,6 +908,9 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             }
             delays[i][0] <<= HRIR_DELAY_FRACBITS;
         }
+
+        /* Mirror the left ear responses to the right ear. */
+        MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
     }
     else if(channelType == ChanType_LeftRight)
     {
@@ -968,30 +965,6 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     }
     if(failed)
         return nullptr;
-
-    if(channelType == ChanType_LeftOnly)
-    {
-        /* Mirror the left ear responses to the right ear. */
-        size_t ebase{0};
-        for(size_t f{0};f < fdCount;f++)
-        {
-            for(size_t e{0};e < fields[f].evCount;e++)
-            {
-                const ALushort evoffset{elevs[ebase+e].irOffset};
-                const ALushort azcount{elevs[ebase+e].azCount};
-                for(size_t a{0};a < azcount;a++)
-                {
-                    const size_t lidx{evoffset + a};
-                    const size_t ridx{evoffset + ((azcount-a) % azcount)};
-
-                    for(size_t k{0};k < irSize;k++)
-                        coeffs[ridx][k][1] = coeffs[lidx][k][0];
-                    delays[ridx][1] = delays[lidx][0];
-                }
-            }
-            ebase += fields[f].evCount;
-        }
-    }
 
     if(fdCount > 1)
     {

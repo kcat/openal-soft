@@ -373,7 +373,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
         /* Load the (left) HRIR backwards, into a temp buffer with padding. */
         std::fill(tempir.begin(), tempir.end(), 0.0);
-        std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
+        std::transform(hrir.crbegin(), hrir.crend(), tempir.begin(),
             [](const float2 &ir) noexcept -> double { return ir[0]; });
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
@@ -395,14 +395,14 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         {
             const double mult{AmbiMatrix[c][i]};
             const double hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
-            ALuint j{HRIR_LENGTH*3 - ldelay};
-            for(ALuint lidx{0};lidx < HRIR_LENGTH;++lidx,++j)
+            size_t j{tmpflt[0].size()-HRIR_LENGTH - ldelay};
+            for(size_t lidx{0};lidx < HRIR_LENGTH;++lidx,++j)
                 tmpres[i][lidx][0] += (tmpflt[0][j]*hfgain + tmpflt[1][j]) * mult;
         }
 
         /* Now run the same process on the right HRIR. */
         std::fill(tempir.begin(), tempir.end(), 0.0);
-        std::transform(hrir.cbegin(), hrir.cend(), tempir.rbegin() + HRIR_LENGTH*3,
+        std::transform(hrir.crbegin(), hrir.crend(), tempir.begin(),
             [](const float2 &ir) noexcept -> double { return ir[1]; });
 
         splitter.applyAllpass({tempir.data(), tempir.size()});
@@ -415,8 +415,8 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         {
             const double mult{AmbiMatrix[c][i]};
             const double hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
-            ALuint j{HRIR_LENGTH*3 - rdelay};
-            for(ALuint ridx{0};ridx < HRIR_LENGTH;++ridx,++j)
+            size_t j{tmpflt[0].size()-HRIR_LENGTH - rdelay};
+            for(size_t ridx{0};ridx < HRIR_LENGTH;++ridx,++j)
                 tmpres[i][ridx][1] += (tmpflt[0][j]*hfgain + tmpflt[1][j]) * mult;
         }
     }

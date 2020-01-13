@@ -448,19 +448,19 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
 
 namespace {
 
-std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const ALuint fdCount,
-    const ALubyte *evCount, const ALushort *distance, const ALushort *azCount,
-    const ALushort *irOffset, ALushort irCount, const HrirArray *coeffs, const ubyte2 *delays,
-    const char *filename)
+std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize,
+    const al::span<const HrtfStore::Field> fields,
+    const al::span<const HrtfStore::Elevation> elevs, const HrirArray *coeffs,
+    const ubyte2 *delays, const char *filename)
 {
     std::unique_ptr<HrtfStore> Hrtf;
 
-    ALuint evTotal{std::accumulate(evCount, evCount+fdCount, 0u)};
+    const size_t irCount{size_t{elevs.back().azCount} + elevs.back().irOffset};
     size_t total{sizeof(HrtfStore)};
     total  = RoundUp(total, alignof(HrtfStore::Field)); /* Align for field infos */
-    total += sizeof(HrtfStore::Field)*fdCount;
+    total += sizeof(HrtfStore::Field)*fields.size();
     total  = RoundUp(total, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
-    total += sizeof(Hrtf->elev[0])*evTotal;
+    total += sizeof(Hrtf->elev[0])*elevs.size();
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
     total += sizeof(Hrtf->coeffs[0])*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
@@ -473,7 +473,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const A
         InitRef(Hrtf->mRef, 1u);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
-        Hrtf->fdCount = fdCount;
+        Hrtf->fdCount = static_cast<ALuint>(fields.size());
 
         /* Set up pointers to storage following the main HRTF struct. */
         char *base = reinterpret_cast<char*>(Hrtf.get());
@@ -481,11 +481,11 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const A
 
         offset = RoundUp(offset, alignof(HrtfStore::Field)); /* Align for field infos */
         auto field_ = reinterpret_cast<HrtfStore::Field*>(base + offset);
-        offset += sizeof(field_[0])*fdCount;
+        offset += sizeof(field_[0])*fields.size();
 
         offset = RoundUp(offset, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
         auto elev_ = reinterpret_cast<HrtfStore::Elevation*>(base + offset);
-        offset += sizeof(elev_[0])*evTotal;
+        offset += sizeof(elev_[0])*elevs.size();
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
         auto coeffs_ = reinterpret_cast<HrirArray*>(base + offset);
@@ -497,16 +497,8 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(ALuint rate, ALushort irSize, const A
         assert(offset == total);
 
         /* Copy input data to storage. */
-        for(ALuint i{0};i < fdCount;i++)
-        {
-            field_[i].distance = distance[i] / 1000.0f;
-            field_[i].evCount = evCount[i];
-        }
-        for(ALuint i{0};i < evTotal;i++)
-        {
-            elev_[i].azCount = azCount[i];
-            elev_[i].irOffset = irOffset[i];
-        }
+        std::copy(fields.cbegin(), fields.cend(), field_);
+        std::copy(elevs.cbegin(), elevs.cend(), elev_);
         std::copy_n(coeffs, irCount, coeffs_);
         std::copy_n(delays, irCount, delays_);
 
@@ -583,9 +575,9 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    auto evOffset = al::vector<ALushort>(evCount);
-    for(auto &val : evOffset)
-        val = GetLE_ALushort(data);
+    auto elevs = al::vector<HrtfStore::Elevation>(evCount);
+    for(auto &elev : elevs)
+        elev.irOffset = GetLE_ALushort(data);
     if(!data || data.eof())
     {
         ERR("Failed reading %s\n", filename);
@@ -593,37 +585,37 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     }
     for(size_t i{1};i < evCount;i++)
     {
-        if(evOffset[i] <= evOffset[i-1])
+        if(elevs[i].irOffset <= elevs[i-1].irOffset)
         {
-            ERR("Invalid evOffset: evOffset[%zu]=%d (last=%d)\n", i, evOffset[i], evOffset[i-1]);
+            ERR("Invalid evOffset: evOffset[%zu]=%d (last=%d)\n", i, elevs[i].irOffset,
+                elevs[i-1].irOffset);
             failed = AL_TRUE;
         }
     }
-    if(irCount <= evOffset.back())
+    if(irCount <= elevs.back().irOffset)
     {
         ERR("Invalid evOffset: evOffset[%zu]=%d (irCount=%d)\n",
-            evOffset.size()-1, evOffset.back(), irCount);
+            elevs.size()-1, elevs.back().irOffset, irCount);
         failed = AL_TRUE;
     }
     if(failed)
         return nullptr;
 
-    auto azCount = al::vector<ALushort>(evCount);
     for(size_t i{1};i < evCount;i++)
     {
-        azCount[i-1] = static_cast<ALushort>(evOffset[i] - evOffset[i-1]);
-        if(azCount[i-1] < MIN_AZ_COUNT || azCount[i-1] > MAX_AZ_COUNT)
+        elevs[i-1].azCount = static_cast<ALushort>(elevs[i].irOffset - elevs[i-1].irOffset);
+        if(elevs[i-1].azCount < MIN_AZ_COUNT || elevs[i-1].azCount > MAX_AZ_COUNT)
         {
             ERR("Unsupported azimuth count: azCount[%zd]=%d (%d to %d)\n",
-                i-1, azCount[i-1], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                i-1, elevs[i-1].azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
             failed = AL_TRUE;
         }
     }
-    azCount.back() = static_cast<ALushort>(irCount - evOffset.back());
-    if(azCount.back() < MIN_AZ_COUNT || azCount.back() > MAX_AZ_COUNT)
+    elevs.back().azCount = static_cast<ALushort>(irCount - elevs.back().irOffset);
+    if(elevs.back().azCount < MIN_AZ_COUNT || elevs.back().azCount > MAX_AZ_COUNT)
     {
         ERR("Unsupported azimuth count: azCount[%zu]=%d (%d to %d)\n",
-            azCount.size()-1, azCount.back(), MIN_AZ_COUNT, MAX_AZ_COUNT);
+            elevs.size()-1, elevs.back().azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
         failed = AL_TRUE;
     }
     if(failed)
@@ -658,8 +650,8 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     /* Mirror the left ear responses to the right ear. */
     for(size_t i{0};i < evCount;i++)
     {
-        const ALushort evoffset{evOffset[i]};
-        const ALushort azcount{azCount[i]};
+        const ALushort evoffset{elevs[i].irOffset};
+        const ALushort azcount{elevs[i].azCount};
         for(size_t j{0};j < azcount;j++)
         {
             const size_t lidx{evoffset + j};
@@ -671,9 +663,9 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
         }
     }
 
-    static const ALushort distance{0};
-    return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
-        irCount, coeffs.data(), delays.data(), filename);
+    const HrtfStore::Field field[1]{{0.0f, evCount}};
+    return CreateHrtfStore(rate, irSize, field, {elevs.data(), elevs.size()}, coeffs.data(),
+        delays.data(), filename);
 }
 
 std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
@@ -702,8 +694,8 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    auto azCount = al::vector<ALushort>(evCount);
-    std::generate(azCount.begin(), azCount.end(), std::bind(GetLE_ALubyte, std::ref(data)));
+    auto elevs = al::vector<HrtfStore::Elevation>(evCount);
+    for (auto &elev : elevs) elev.azCount = GetLE_ALubyte(data);
     if(!data || data.eof())
     {
         ERR("Failed reading %s\n", filename);
@@ -711,9 +703,9 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     }
     for(size_t i{0};i < evCount;++i)
     {
-        if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
+        if(elevs[i].azCount < MIN_AZ_COUNT || elevs[i].azCount > MAX_AZ_COUNT)
         {
-            ERR("Unsupported azimuth count: azCount[%zd]=%d (%d to %d)\n", i, azCount[i],
+            ERR("Unsupported azimuth count: azCount[%zd]=%d (%d to %d)\n", i, elevs[i].azCount,
                 MIN_AZ_COUNT, MAX_AZ_COUNT);
             failed = AL_TRUE;
         }
@@ -721,14 +713,10 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    auto evOffset = al::vector<ALushort>(evCount);
-    evOffset[0] = 0;
-    ALushort irCount{azCount[0]};
+    elevs[0].irOffset = 0;
     for(size_t i{1};i < evCount;i++)
-    {
-        evOffset[i] = static_cast<ALushort>(evOffset[i-1] + azCount[i-1]);
-        irCount = static_cast<ALushort>(irCount + azCount[i]);
-    }
+        elevs[i].irOffset = static_cast<ALushort>(elevs[i-1].irOffset + elevs[i-1].azCount);
+    const ALushort irCount{static_cast<ALushort>(elevs.back().irOffset + elevs.back().azCount)};
 
     auto coeffs = al::vector<HrirArray>(irCount, HrirArray{});
     auto delays = al::vector<ubyte2>(irCount);
@@ -759,8 +747,8 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     /* Mirror the left ear responses to the right ear. */
     for(size_t i{0};i < evCount;i++)
     {
-        const ALushort evoffset{evOffset[i]};
-        const ALushort azcount{azCount[i]};
+        const ALushort evoffset{elevs[i].irOffset};
+        const ALushort azcount{elevs[i].azCount};
         for(size_t j{0};j < azcount;j++)
         {
             const size_t lidx{evoffset + j};
@@ -772,9 +760,9 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         }
     }
 
-    static const ALushort distance{0};
-    return CreateHrtfStore(rate, irSize, 1, &evCount, &distance, azCount.data(), evOffset.data(),
-        irCount, coeffs.data(), delays.data(), filename);
+    const HrtfStore::Field field[1]{{0.0f, evCount}};
+    return CreateHrtfStore(rate, irSize, field, {elevs.data(), elevs.size()}, coeffs.data(),
+        delays.data(), filename);
 }
 
 std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
@@ -821,56 +809,58 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    auto distance = al::vector<ALushort>(fdCount);
-    auto evCount = al::vector<ALubyte>(fdCount);
-    auto azCount = al::vector<ALushort>{};
+    auto fields = al::vector<HrtfStore::Field>(fdCount);
+    auto elevs = al::vector<HrtfStore::Elevation>{};
     for(size_t f{0};f < fdCount;f++)
     {
-        distance[f] = GetLE_ALushort(data);
-        evCount[f] = GetLE_ALubyte(data);
+        const ALushort distance{GetLE_ALushort(data)};
+        const ALubyte evCount{GetLE_ALubyte(data)};
         if(!data || data.eof())
         {
             ERR("Failed reading %s\n", filename);
             return nullptr;
         }
 
-        if(distance[f] < MIN_FD_DISTANCE || distance[f] > MAX_FD_DISTANCE)
+        if(distance < MIN_FD_DISTANCE || distance > MAX_FD_DISTANCE)
         {
-            ERR("Unsupported field distance[%zu]=%d (%d to %d millimeters)\n", f, distance[f],
+            ERR("Unsupported field distance[%zu]=%d (%d to %d millimeters)\n", f, distance,
                 MIN_FD_DISTANCE, MAX_FD_DISTANCE);
             failed = AL_TRUE;
         }
-        if(f > 0 && distance[f] <= distance[f-1])
+        if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
         {
-            ERR("Field distance[%zu] is not after previous (%d > %d)\n", f, distance[f],
-                distance[f-1]);
-            failed = AL_TRUE;
-        }
-        if(evCount[f] < MIN_EV_COUNT || evCount[f] > MAX_EV_COUNT)
-        {
-            ERR("Unsupported elevation count: evCount[%zu]=%d (%d to %d)\n", f, evCount[f],
+            ERR("Unsupported elevation count: evCount[%zu]=%d (%d to %d)\n", f, evCount,
                 MIN_EV_COUNT, MAX_EV_COUNT);
             failed = AL_TRUE;
         }
         if(failed)
             return nullptr;
 
-        const size_t ebase{azCount.size()};
-        azCount.resize(ebase + evCount[f]);
-        std::generate(azCount.begin()+static_cast<ptrdiff_t>(ebase), azCount.end(),
-            std::bind(GetLE_ALubyte, std::ref(data)));
+        fields[f].distance = distance / 1000.0f;
+        fields[f].evCount = evCount;
+        if(f > 0 && fields[f].distance <= fields[f-1].distance)
+        {
+            ERR("Field distance[%zu] is not after previous (%f > %f)\n", f, fields[f].distance,
+                fields[f-1].distance);
+            return nullptr;
+        }
+
+        const size_t ebase{elevs.size()};
+        elevs.resize(ebase + evCount);
+        for(auto &elev : al::span<HrtfStore::Elevation>(elevs.data()+ebase, evCount))
+            elev.azCount = GetLE_ALubyte(data);
         if(!data || data.eof())
         {
             ERR("Failed reading %s\n", filename);
             return nullptr;
         }
 
-        for(size_t e{0};e < evCount[f];e++)
+        for(size_t e{0};e < evCount;e++)
         {
-            if(azCount[ebase+e] < MIN_AZ_COUNT || azCount[ebase+e] > MAX_AZ_COUNT)
+            if(elevs[ebase+e].azCount < MIN_AZ_COUNT || elevs[ebase+e].azCount > MAX_AZ_COUNT)
             {
                 ERR("Unsupported azimuth count: azCount[%zu][%zu]=%d (%d to %d)\n", f, e,
-                    azCount[ebase+e], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                    elevs[ebase+e].azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
                 failed = AL_TRUE;
             }
         }
@@ -878,10 +868,15 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             return nullptr;
     }
 
-    auto evOffset = al::vector<ALushort>(azCount.size());
-    evOffset[0] = 0;
-    std::partial_sum(azCount.cbegin(), azCount.cend()-1, evOffset.begin()+1);
-    const auto irTotal = static_cast<ALushort>(evOffset.back() + azCount.back());
+    elevs[0].irOffset = 0;
+    std::partial_sum(elevs.cbegin(), elevs.cend(), elevs.begin(),
+        [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)
+            -> HrtfStore::Elevation
+        {
+            return HrtfStore::Elevation{cur.azCount,
+                static_cast<ALushort>(last.azCount + last.irOffset)};
+        });
+    const auto irTotal = static_cast<ALushort>(elevs.back().azCount + elevs.back().irOffset);
 
     auto coeffs = al::vector<HrirArray>(irTotal, HrirArray{});
     auto delays = al::vector<ubyte2>(irTotal);
@@ -980,10 +975,10 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         size_t ebase{0};
         for(size_t f{0};f < fdCount;f++)
         {
-            for(size_t e{0};e < evCount[f];e++)
+            for(size_t e{0};e < fields[f].evCount;e++)
             {
-                const ALushort evoffset{evOffset[ebase+e]};
-                const ALushort azcount{azCount[ebase+e]};
+                const ALushort evoffset{elevs[ebase+e].irOffset};
+                const ALushort azcount{elevs[ebase+e].azCount};
                 for(size_t a{0};a < azcount;a++)
                 {
                     const size_t lidx{evoffset + a};
@@ -994,74 +989,79 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
                     delays[ridx][1] = delays[lidx][0];
                 }
             }
-            ebase += evCount[f];
+            ebase += fields[f].evCount;
         }
     }
 
     if(fdCount > 1)
     {
-        auto distance_ = al::vector<ALushort>(distance.size());
-        auto evCount_ = al::vector<ALubyte>(evCount.size());
-        auto azCount_ = al::vector<ALushort>(azCount.size());
-        auto evOffset_ = al::vector<ALushort>(evOffset.size());
+        auto fields_ = al::vector<HrtfStore::Field>(fields.size());
+        auto elevs_ = al::vector<HrtfStore::Elevation>(elevs.size());
         auto coeffs_ = al::vector<HrirArray>(coeffs.size());
         auto delays_ = al::vector<ubyte2>(delays.size());
 
         /* Simple reverse for the per-field elements. */
-        std::reverse_copy(distance.cbegin(), distance.cend(), distance_.begin());
-        std::reverse_copy(evCount.cbegin(), evCount.cend(), evCount_.begin());
+        std::reverse_copy(fields.cbegin(), fields.cend(), fields_.begin());
 
         /* Each field has a group of elevations, which each have an azimuth
          * count. Reverse the order of the groups, keeping the relative order
          * of per-group azimuth counts.
          */
-        auto azcnt_end = azCount_.end();
-        auto copy_azs = [&azCount,&azcnt_end](const ptrdiff_t ebase, const ALubyte num_evs) -> ptrdiff_t
+        auto elevs__end = elevs_.end();
+        auto copy_azs = [&elevs,&elevs__end](const ptrdiff_t ebase, const HrtfStore::Field &field)
+            -> ptrdiff_t
         {
-            auto azcnt_src = azCount.begin()+ebase;
-            azcnt_end = std::copy_backward(azcnt_src, azcnt_src+num_evs, azcnt_end);
-            return ebase + num_evs;
+            auto elevs_src = elevs.begin()+ebase;
+            elevs__end = std::copy_backward(elevs_src, elevs_src+field.evCount, elevs__end);
+            return ebase + field.evCount;
         };
-        std::accumulate(evCount.cbegin(), evCount.cend(), ptrdiff_t{0}, copy_azs);
-        assert(azCount_.begin() == azcnt_end);
+        std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_azs);
+        assert(elevs_.begin() == elevs__end);
 
         /* Reestablish the IR offset for each elevation index, given the new
          * ordering of elevations.
          */
-        evOffset_[0] = 0;
-        std::partial_sum(azCount_.cbegin(), azCount_.cend()-1, evOffset_.begin()+1);
+        elevs_[0].irOffset = 0;
+        std::partial_sum(elevs_.cbegin(), elevs_.cend(), elevs_.begin(),
+            [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)
+                -> HrtfStore::Elevation
+            {
+                return HrtfStore::Elevation{cur.azCount,
+                    static_cast<ALushort>(last.azCount + last.irOffset)};
+            });
 
         /* Reverse the order of each field's group of IRs. */
         auto coeffs_end = coeffs_.end();
         auto delays_end = delays_.end();
-        auto copy_irs = [&azCount,&coeffs,&delays,&coeffs_end,&delays_end](
-            const ptrdiff_t ebase, const ALubyte num_evs) -> ptrdiff_t
+        auto copy_irs = [&elevs,&coeffs,&delays,&coeffs_end,&delays_end](
+            const ptrdiff_t ebase, const HrtfStore::Field &field) -> ptrdiff_t
         {
-            const ALsizei abase{std::accumulate(azCount.cbegin(), azCount.cbegin()+ebase, 0)};
-            const ALsizei num_azs{std::accumulate(azCount.cbegin()+ebase,
-                azCount.cbegin() + (ebase+num_evs), 0)};
+            auto accum_az = [](ALsizei count, const HrtfStore::Elevation &elev) noexcept -> ALsizei
+            { return count + elev.azCount; };
+            const auto elevs_mid = elevs.cbegin() + ebase;
+            const auto elevs_end = elevs_mid + field.evCount;
+            const ALsizei abase{std::accumulate(elevs.cbegin(), elevs_mid, 0, accum_az)};
+            const ALsizei num_azs{std::accumulate(elevs_mid, elevs_end, 0, accum_az)};
 
             coeffs_end = std::copy_backward(coeffs.cbegin() + abase,
                 coeffs.cbegin() + (abase+num_azs), coeffs_end);
             delays_end = std::copy_backward(delays.cbegin() + abase,
                 delays.cbegin() + (abase+num_azs), delays_end);
 
-            return ebase + num_evs;
+            return ebase + field.evCount;
         };
-        std::accumulate(evCount.cbegin(), evCount.cend(), ptrdiff_t{0}, copy_irs);
+        std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_irs);
         assert(coeffs_.begin() == coeffs_end);
         assert(delays_.begin() == delays_end);
 
-        distance = std::move(distance_);
-        evCount = std::move(evCount_);
-        azCount = std::move(azCount_);
-        evOffset = std::move(evOffset_);
+        fields = std::move(fields_);
+        elevs = std::move(elevs_);
         coeffs = std::move(coeffs_);
         delays = std::move(delays_);
     }
 
-    return CreateHrtfStore(rate, irSize, fdCount, evCount.data(), distance.data(), azCount.data(),
-        evOffset.data(), irTotal, coeffs.data(), delays.data(), filename);
+    return CreateHrtfStore(rate, irSize, {fields.data(), fields.size()},
+        {elevs.data(), elevs.size()}, coeffs.data(), delays.data(), filename);
 }
 
 

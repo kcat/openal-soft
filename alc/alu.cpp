@@ -1730,13 +1730,13 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
         const al::span<float,FrontStablizer::DelayLength> DelayBuf, BandSplitter &Filter,
         ALfloat (&splitbuf)[2][BUFFERSIZE]) -> void
     {
-        /* Combine the delayed samples and the input samples into the temp
-         * buffer, in reverse. Then copy the final samples back into the delay
-         * buffer for next time. Note that the delay buffer's samples are
-         * stored backwards here.
+        /* Combine the input and delayed samples into a temp buffer in reverse,
+         * then copy the final samples into the delay buffer for next time.
+         * Note that the delay buffer's samples are stored backwards here.
          */
-        std::copy_backward(DelayBuf.cbegin(), DelayBuf.cend(), tmpbuf.end());
-        std::reverse_copy(InBuf.begin(), InBuf.begin()+SamplesToDo, tmpbuf.begin());
+        auto tmp_iter = std::reverse_copy(InBuf.cbegin(), InBuf.cbegin()+SamplesToDo,
+            tmpbuf.begin());
+        std::copy(DelayBuf.cbegin(), DelayBuf.cend(), tmp_iter);
         std::copy_n(tmpbuf.cbegin(), DelayBuf.size(), DelayBuf.begin());
 
         /* Apply an all-pass on the reversed signal, then reverse the samples

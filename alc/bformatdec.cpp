@@ -21,24 +21,25 @@
 
 namespace {
 
-constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_ORDER+1] = {
+constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale{{
     1.00000000e+00f, 1.00000000e+00f
-};
-constexpr ALfloat Ambi3DDecoderHFScale2O[MAX_AMBI_ORDER+1] = {
-    7.45355990e-01f, 1.00000000e+00f
-};
-constexpr ALfloat Ambi3DDecoderHFScale3O[MAX_AMBI_ORDER+1] = {
-    5.89792205e-01f, 8.79693856e-01f
-};
+}};
+constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale2O{{
+    7.45355990e-01f, 1.00000000e+00f, 1.00000000e+00f
+}};
+constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale3O{{
+    5.89792205e-01f, 8.79693856e-01f, 1.00000000e+00f, 1.00000000e+00f
+}};
 
-inline auto GetDecoderHFScales(ALuint order) noexcept -> const ALfloat(&)[MAX_AMBI_ORDER+1]
+inline auto GetDecoderHFScales(ALuint order) noexcept -> const std::array<float,MAX_AMBI_ORDER+1>&
 {
     if(order >= 3) return Ambi3DDecoderHFScale3O;
     if(order == 2) return Ambi3DDecoderHFScale2O;
     return Ambi3DDecoderHFScale;
 }
 
-inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
+inline auto GetAmbiScales(AmbDecScale scaletype) noexcept
+    -> const std::array<float,MAX_AMBI_CHANNELS>&
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
@@ -175,16 +176,17 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
 }
 
 
-std::array<ALfloat,MAX_AMBI_ORDER+1> BFormatDec::GetHFOrderScales(const ALuint in_order, const ALuint out_order) noexcept
+auto BFormatDec::GetHFOrderScales(const ALuint in_order, const ALuint out_order) noexcept
+    -> std::array<float,MAX_AMBI_ORDER+1>
 {
-    std::array<ALfloat,MAX_AMBI_ORDER+1> ret{};
+    std::array<float,MAX_AMBI_ORDER+1> ret{};
 
     assert(out_order >= in_order);
 
-    const ALfloat (&target)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(out_order);
-    const ALfloat (&input)[MAX_AMBI_ORDER+1] = GetDecoderHFScales(in_order);
+    const auto &target = GetDecoderHFScales(out_order);
+    const auto &input = GetDecoderHFScales(in_order);
 
-    for(ALuint i{0};i < in_order+1;++i)
+    for(size_t i{0};i < in_order+1;++i)
         ret[i] = input[i] / target[i];
 
     return ret;

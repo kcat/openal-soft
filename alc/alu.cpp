@@ -484,7 +484,6 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
             AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
             evt->u.mEffectState = oldstate;
             ring->writeAdvance(1);
-            context->mEventSem.post();
         }
         else
         {
@@ -1638,48 +1637,55 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
     std::for_each(voices.begin(), voices.end(), mix_voice);
 
     /* Process effects. */
-    if(auxslots.empty()) return;
-    auto slots = auxslots.data();
-    auto slots_end = slots + auxslots.size();
-
-    /* First sort the slots into scratch storage, so that effects come before
-     * their effect target (or their targets' target).
-     */
-    auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
-    auto sorted_slots_end = sorted_slots;
-
-    *sorted_slots_end = *slots;
-    ++sorted_slots_end;
-    while(++slots != slots_end)
+    if(const size_t num_slots{auxslots.size()})
     {
-        auto in_chain = [](const ALeffectslot *slot1, const ALeffectslot *slot2) noexcept -> bool
-        {
-            while((slot1=slot1->Params.Target) != nullptr) {
-                if(slot1 == slot2) return true;
-            }
-            return false;
-        };
+        auto slots = auxslots.data();
+        auto slots_end = slots + num_slots;
 
-        /* If this effect slot targets an effect slot already in the list (i.e.
-         * slots outputs to something in sorted_slots), directly or indirectly,
-         * insert it prior to that element.
+        /* First sort the slots into scratch storage, so that effects come
+         * before their effect target (or their targets' target).
          */
-        auto checker = sorted_slots;
-        do {
-            if(in_chain(*slots, *checker)) break;
-        } while(++checker != sorted_slots_end);
+        auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
+        auto sorted_slots_end = sorted_slots;
 
-        checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
-        *--checker = *slots;
+        *sorted_slots_end = *slots;
         ++sorted_slots_end;
-    }
+        while(++slots != slots_end)
+        {
+            auto in_chain = [](const ALeffectslot *s1, const ALeffectslot *s2) noexcept -> bool
+            {
+                while((s1=s1->Params.Target) != nullptr) {
+                    if(s1 == s2) return true;
+                }
+                return false;
+            };
 
-    std::for_each(sorted_slots, sorted_slots_end,
-        [SamplesToDo](const ALeffectslot *slot) -> void
+            /* If this effect slot targets an effect slot already in the list
+             * (i.e. slots outputs to something in sorted_slots), directly or
+             * indirectly, insert it prior to that element.
+             */
+            auto checker = sorted_slots;
+            do {
+                if(in_chain(*slots, *checker)) break;
+            } while(++checker != sorted_slots_end);
+
+            checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
+            *--checker = *slots;
+            ++sorted_slots_end;
+        }
+
+        auto process_effect = [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};
             state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
-        });
+        };
+        std::for_each(sorted_slots, sorted_slots_end, process_effect);
+    }
+
+    /* Signal the event handler if there are any events to read. */
+    RingBuffer *ring{ctx->mAsyncEvents.get()};
+    if(ring->readSpace() > 0)
+        ctx->mEventSem.post();
 }
 
 

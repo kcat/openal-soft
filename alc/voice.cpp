@@ -280,7 +280,6 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     evt->u.srcstate.state = AL_STOPPED;
 
     ring->writeAdvance(1);
-    context->mEventSem.post();
 }
 
 
@@ -823,7 +822,6 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
             evt->u.bufcomp.id = SourceID;
             evt->u.bufcomp.count = buffers_done;
             ring->writeAdvance(1);
-            Context->mEventSem.post();
         }
     }
 

@@ -57,7 +57,13 @@ public:
      * Return the number of elements available for reading. This is the number
      * of elements in front of the read pointer and behind the write pointer.
      */
-    size_t readSpace() const noexcept;
+    size_t readSpace() const noexcept
+    {
+        const size_t w{mWritePtr.load(std::memory_order_acquire)};
+        const size_t r{mReadPtr.load(std::memory_order_acquire)};
+        return (w-r) & mSizeMask;
+    }
+
     /**
      * The copying data reader. Copy at most `cnt' elements into `dest'.
      * Returns the actual number of elements copied.
@@ -75,7 +81,13 @@ public:
      * Return the number of elements available for writing. This is the number
      * of elements in front of the write pointer and behind the read pointer.
      */
-    size_t writeSpace() const noexcept;
+    size_t writeSpace() const noexcept
+    {
+        const size_t w{mWritePtr.load(std::memory_order_acquire)};
+        const size_t r{mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask};
+        return (r-w-1) & mSizeMask;
+    }
+
     /**
      * The copying data writer. Copy at most `cnt' elements from `src'. Returns
      * the actual number of elements copied.

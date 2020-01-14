@@ -66,21 +66,6 @@ void RingBuffer::reset() noexcept
 }
 
 
-size_t RingBuffer::readSpace() const noexcept
-{
-    size_t w = mWritePtr.load(std::memory_order_acquire);
-    size_t r = mReadPtr.load(std::memory_order_acquire);
-    return (w-r) & mSizeMask;
-}
-
-size_t RingBuffer::writeSpace() const noexcept
-{
-    size_t w = mWritePtr.load(std::memory_order_acquire);
-    size_t r = mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask;
-    return (r-w-1) & mSizeMask;
-}
-
-
 size_t RingBuffer::read(void *dest, size_t cnt) noexcept
 {
     const size_t free_cnt{readSpace()};

@@ -430,12 +430,12 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
     auto &AccumSamples = Device->HrtfAccumData;
 
     /* Copy the HRTF history and new input samples into a temp buffer. */
-    auto src_iter = std::copy(parms.Hrtf.State.History.begin(), parms.Hrtf.State.History.end(),
+    auto src_iter = std::copy(parms.Hrtf.History.begin(), parms.Hrtf.History.end(),
         std::begin(HrtfSamples));
     std::copy_n(samples, DstBufferSize, src_iter);
     /* Copy the last used samples back into the history buffer for later. */
-    std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.State.History.size(),
-        parms.Hrtf.State.History.begin());
+    std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.History.size(),
+        parms.Hrtf.History.begin());
 
     /* If fading, the old gain is not silence, and this is the first mixing
      * pass, fade between the IRs.

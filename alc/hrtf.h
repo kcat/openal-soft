@@ -61,10 +61,6 @@ struct HrtfStore {
 };
 
 
-struct HrtfState {
-    alignas(16) std::array<float,HRTF_HISTORY_LENGTH> History;
-};
-
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
     ALuint Delay[2];

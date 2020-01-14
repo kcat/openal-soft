@@ -580,20 +580,17 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
         return nullptr;
     }
 
-    ALboolean failed{AL_FALSE};
     if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
     {
         ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
-        failed = AL_TRUE;
+        return nullptr;
     }
     if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
     {
         ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
             evCount, MIN_EV_COUNT, MAX_EV_COUNT);
-        failed = AL_TRUE;
-    }
-    if(failed)
         return nullptr;
+    }
 
     auto elevs = al::vector<HrtfStore::Elevation>(evCount);
     for(auto &elev : elevs)
@@ -609,17 +606,15 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
         {
             ERR("Invalid evOffset: evOffset[%zu]=%d (last=%d)\n", i, elevs[i].irOffset,
                 elevs[i-1].irOffset);
-            failed = AL_TRUE;
+            return nullptr;
         }
     }
     if(irCount <= elevs.back().irOffset)
     {
         ERR("Invalid evOffset: evOffset[%zu]=%d (irCount=%d)\n",
             elevs.size()-1, elevs.back().irOffset, irCount);
-        failed = AL_TRUE;
-    }
-    if(failed)
         return nullptr;
+    }
 
     for(size_t i{1};i < evCount;i++)
     {
@@ -628,7 +623,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
         {
             ERR("Unsupported azimuth count: azCount[%zd]=%d (%d to %d)\n",
                 i-1, elevs[i-1].azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
-            failed = AL_TRUE;
+            return nullptr;
         }
     }
     elevs.back().azCount = static_cast<ALushort>(irCount - elevs.back().irOffset);
@@ -636,10 +631,8 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     {
         ERR("Unsupported azimuth count: azCount[%zu]=%d (%d to %d)\n",
             elevs.size()-1, elevs.back().azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
-        failed = AL_TRUE;
-    }
-    if(failed)
         return nullptr;
+    }
 
     auto coeffs = al::vector<HrirArray>(irCount, HrirArray{});
     auto delays = al::vector<ubyte2>(irCount);
@@ -660,12 +653,10 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
         if(delays[i][0] > MAX_HRIR_DELAY)
         {
             ERR("Invalid delays[%zd]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-            failed = AL_TRUE;
+            return nullptr;
         }
         delays[i][0] <<= HRIR_DELAY_FRACBITS;
     }
-    if(failed)
-        return nullptr;
 
     /* Mirror the left ear responses to the right ear. */
     MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
@@ -686,20 +677,17 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         return nullptr;
     }
 
-    ALboolean failed{AL_FALSE};
     if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
     {
         ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
-        failed = AL_TRUE;
+        return nullptr;
     }
     if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
     {
         ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
             evCount, MIN_EV_COUNT, MAX_EV_COUNT);
-        failed = AL_TRUE;
-    }
-    if(failed)
         return nullptr;
+    }
 
     auto elevs = al::vector<HrtfStore::Elevation>(evCount);
     for (auto &elev : elevs) elev.azCount = GetLE_ALubyte(data);
@@ -714,11 +702,9 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         {
             ERR("Unsupported azimuth count: azCount[%zd]=%d (%d to %d)\n", i, elevs[i].azCount,
                 MIN_AZ_COUNT, MAX_AZ_COUNT);
-            failed = AL_TRUE;
+            return nullptr;
         }
     }
-    if(failed)
-        return nullptr;
 
     elevs[0].irOffset = 0;
     for(size_t i{1};i < evCount;i++)
@@ -744,12 +730,10 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
         if(delays[i][0] > MAX_HRIR_DELAY)
         {
             ERR("Invalid delays[%zd]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-            failed = AL_TRUE;
+            return nullptr;
         }
         delays[i][0] <<= HRIR_DELAY_FRACBITS;
     }
-    if(failed)
-        return nullptr;
 
     /* Mirror the left ear responses to the right ear. */
     MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
@@ -777,31 +761,28 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         return nullptr;
     }
 
-    ALboolean failed{AL_FALSE};
     if(sampleType > SampleType_S24)
     {
         ERR("Unsupported sample type: %d\n", sampleType);
-        failed = AL_TRUE;
+        return nullptr;
     }
     if(channelType > ChanType_LeftRight)
     {
         ERR("Unsupported channel type: %d\n", channelType);
-        failed = AL_TRUE;
+        return nullptr;
     }
 
     if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
     {
         ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
-        failed = AL_TRUE;
+        return nullptr;
     }
     if(fdCount < 1 || fdCount > MAX_FD_COUNT)
     {
-        ERR("Multiple field-depths not supported: fdCount=%d (%d to %d)\n",
-            fdCount, MIN_FD_COUNT, MAX_FD_COUNT);
-        failed = AL_TRUE;
-    }
-    if(failed)
+        ERR("Unsupported number of field-depths: fdCount=%d (%d to %d)\n", fdCount, MIN_FD_COUNT,
+            MAX_FD_COUNT);
         return nullptr;
+    }
 
     auto fields = al::vector<HrtfStore::Field>(fdCount);
     auto elevs = al::vector<HrtfStore::Elevation>{};
@@ -819,16 +800,14 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         {
             ERR("Unsupported field distance[%zu]=%d (%d to %d millimeters)\n", f, distance,
                 MIN_FD_DISTANCE, MAX_FD_DISTANCE);
-            failed = AL_TRUE;
+            return nullptr;
         }
         if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
         {
             ERR("Unsupported elevation count: evCount[%zu]=%d (%d to %d)\n", f, evCount,
                 MIN_EV_COUNT, MAX_EV_COUNT);
-            failed = AL_TRUE;
-        }
-        if(failed)
             return nullptr;
+        }
 
         fields[f].distance = distance / 1000.0f;
         fields[f].evCount = evCount;
@@ -855,11 +834,9 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             {
                 ERR("Unsupported azimuth count: azCount[%zu][%zu]=%d (%d to %d)\n", f, e,
                     elevs[ebase+e].azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
-                failed = AL_TRUE;
+                return nullptr;
             }
         }
-        if(failed)
-            return nullptr;
     }
 
     elevs[0].irOffset = 0;
@@ -904,7 +881,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             if(delays[i][0] > MAX_HRIR_DELAY)
             {
                 ERR("Invalid delays[%zu][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-                failed = AL_TRUE;
+                return nullptr;
             }
             delays[i][0] <<= HRIR_DELAY_FRACBITS;
         }
@@ -952,19 +929,17 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             if(delays[i][0] > MAX_HRIR_DELAY)
             {
                 ERR("Invalid delays[%zu][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-                failed = AL_TRUE;
+                return nullptr;
             }
             if(delays[i][1] > MAX_HRIR_DELAY)
             {
                 ERR("Invalid delays[%zu][1]: %d (%d)\n", i, delays[i][1], MAX_HRIR_DELAY);
-                failed = AL_TRUE;
+                return nullptr;
             }
             delays[i][0] <<= HRIR_DELAY_FRACBITS;
             delays[i][1] <<= HRIR_DELAY_FRACBITS;
         }
     }
-    if(failed)
-        return nullptr;
 
     if(fdCount > 1)
     {

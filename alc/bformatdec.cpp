@@ -50,67 +50,66 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept
 
 
 BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
-    const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS])
+    const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS]) : mChannelDec{inchans}
 {
     mDualBand = allow_2band && (conf->FreqBands == 2);
-    mNumChannels = inchans;
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     const std::array<float,MAX_AMBI_CHANNELS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
 
     if(!mDualBand)
     {
-        for(size_t i{0u};i < conf->Speakers.size();i++)
+        for(size_t j{0},k{0};j < mChannelDec.size();++j)
         {
-            const size_t chanidx{chanmap[i]};
-            for(size_t j{0},k{0};j < mNumChannels;j++)
+            const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
+            if(!(conf->ChanMask&(1u<<acn))) continue;
+            const size_t order{AmbiIndex::OrderFromChannel[acn]};
+            const float gain{conf->HFOrderGain[order] / coeff_scale[acn]};
+            for(size_t i{0u};i < conf->Speakers.size();++i)
             {
-                const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
-                if(!(conf->ChanMask&(1u<<acn))) continue;
-                mMatrix.Single[j][chanidx] = conf->HFMatrix[i][k] / coeff_scale[acn] *
-                    conf->HFOrderGain[AmbiIndex::OrderFromChannel[acn]];
-                ++k;
+                const size_t chanidx{chanmap[i]};
+                mChannelDec[j].mGains.Single[chanidx] = conf->HFMatrix[i][k] * gain;
             }
+            ++k;
         }
     }
     else
     {
-        mXOver[0].init(conf->XOverFreq / static_cast<float>(srate));
-        std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
+        mChannelDec[0].mXOver.init(conf->XOverFreq / static_cast<float>(srate));
+        for(size_t j{1};j < mChannelDec.size();++j)
+            mChannelDec[j].mXOver = mChannelDec[0].mXOver;
 
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
-        for(size_t i{0u};i < conf->Speakers.size();i++)
+        for(size_t j{0},k{0};j < mChannelDec.size();++j)
         {
-            const size_t chanidx{chanmap[i]};
-            for(size_t j{0},k{0};j < mNumChannels;j++)
+            const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
+            if(!(conf->ChanMask&(1u<<acn))) continue;
+            const size_t order{AmbiIndex::OrderFromChannel[acn]};
+            const float hfGain{conf->HFOrderGain[order] * ratio / coeff_scale[acn]};
+            const float lfGain{conf->LFOrderGain[order] / ratio / coeff_scale[acn]};
+            for(size_t i{0u};i < conf->Speakers.size();++i)
             {
-                const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
-                if(!(conf->ChanMask&(1u<<acn))) continue;
-                mMatrix.Dual[j][sHFBand][chanidx] = conf->HFMatrix[i][k] / coeff_scale[acn] *
-                    conf->HFOrderGain[AmbiIndex::OrderFromChannel[acn]] * ratio;
-                mMatrix.Dual[j][sLFBand][chanidx] = conf->LFMatrix[i][k] / coeff_scale[acn] *
-                    conf->LFOrderGain[AmbiIndex::OrderFromChannel[acn]] / ratio;
-                ++k;
+                const size_t chanidx{chanmap[i]};
+                mChannelDec[j].mGains.Dual[sHFBand][chanidx] = conf->HFMatrix[i][k] * hfGain;
+                mChannelDec[j].mGains.Dual[sLFBand][chanidx] = conf->LFMatrix[i][k] * lfGain;
             }
+            ++k;
         }
     }
 }
 
 BFormatDec::BFormatDec(const ALuint inchans, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
-    const al::span<const ALuint> chanmap)
+    const al::span<const ALuint> chanmap) : mChannelDec{inchans}
 {
-    mNumChannels = inchans;
-
-    const ChannelDec *incoeffs{chancoeffs};
-    auto set_coeffs = [this,inchans,&incoeffs](const ALuint chanidx) noexcept -> void
+    for(size_t j{0};j < mChannelDec.size();++j)
     {
-        const float (&coeffs)[MAX_AMBI_CHANNELS] = *(incoeffs++);
-
-        ASSUME(inchans > 0);
-        for(size_t j{0};j < inchans;++j)
-            mMatrix.Single[j][chanidx] = coeffs[j];
-    };
-    std::for_each(chanmap.begin(), chanmap.end(), set_coeffs);
+        const ChannelDec *incoeffs{chancoeffs};
+        for(const ALuint chanidx : chanmap)
+        {
+            mChannelDec[j].mGains.Single[chanidx] = (*incoeffs)[j];
+            ++incoeffs;
+        }
+    }
 }
 
 
@@ -123,23 +122,25 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     {
         const al::span<const float> hfSamples{mSamples[sHFBand].data(), SamplesToDo};
         const al::span<const float> lfSamples{mSamples[sLFBand].data(), SamplesToDo};
-        const size_t numchans{mNumChannels};
-        for(size_t i{0};i < numchans;i++)
+        for(auto &chandec : mChannelDec)
         {
-            mXOver[i].process({InSamples[i].data(), SamplesToDo}, mSamples[sHFBand].data(),
+            chandec.mXOver.process({InSamples->data(), SamplesToDo}, mSamples[sHFBand].data(),
                 mSamples[sLFBand].data());
-            MixSamples(hfSamples, OutBuffer, mMatrix.Dual[i][sHFBand], mMatrix.Dual[i][sHFBand],
-                0, 0);
-            MixSamples(lfSamples, OutBuffer, mMatrix.Dual[i][sLFBand], mMatrix.Dual[i][sLFBand],
-                0, 0);
+            MixSamples(hfSamples, OutBuffer, chandec.mGains.Dual[sHFBand],
+                chandec.mGains.Dual[sHFBand], 0, 0);
+            MixSamples(hfSamples, OutBuffer, chandec.mGains.Dual[sLFBand],
+                chandec.mGains.Dual[sLFBand], 0, 0);
+            ++InSamples;
         }
     }
     else
     {
-        const size_t numchans{mNumChannels};
-        for(size_t i{0};i < numchans;i++)
-            MixSamples({InSamples[i].data(), SamplesToDo}, OutBuffer, mMatrix.Single[i],
-                mMatrix.Single[i], 0, 0);
+        for(auto &chandec : mChannelDec)
+        {
+            MixSamples({InSamples->data(), SamplesToDo}, OutBuffer, chandec.mGains.Single,
+                chandec.mGains.Single, 0, 0);
+            ++InSamples;
+        }
     }
 }
 

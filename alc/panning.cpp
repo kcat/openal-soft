@@ -464,8 +464,8 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 5) ? "third" :
             (coeffcount > 3) ? "second" : "first",
             "");
-        device->AmbiDecoder = al::make_unique<BFormatDec>(coeffcount, chancoeffs,
-            al::span<const ALuint>{idxmap, chanmap.size()});
+        device->AmbiDecoder.reset(new(FamCount{coeffcount}) BFormatDec{coeffcount, chancoeffs,
+            al::span<const ALuint>{idxmap, chanmap.size()}});
     }
 }
 
@@ -505,8 +505,8 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder = al::make_unique<BFormatDec>(conf, hqdec, count, device->Frequency,
-        speakermap);
+    device->AmbiDecoder.reset(new(FamCount{count}) BFormatDec{conf, hqdec, count,
+        device->Frequency, speakermap});
 
     auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));

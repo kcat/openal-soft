@@ -24,20 +24,21 @@ class BFormatDec {
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
-    bool mDualBand{false};
+    struct ChannelDecoder {
+        union MatrixU {
+            float Dual[sNumBands][MAX_OUTPUT_CHANNELS];
+            float Single[MAX_OUTPUT_CHANNELS];
+        } mGains{};
 
-    ALuint mNumChannels{0u};
-    union MatrixU {
-        float Dual[MAX_AMBI_CHANNELS][sNumBands][MAX_OUTPUT_CHANNELS];
-        float Single[MAX_AMBI_CHANNELS][MAX_OUTPUT_CHANNELS];
-    } mMatrix{};
-
-    /* NOTE: BandSplitter filters and temp samples are unused with single-band
-     * decoding.
-     */
-    BandSplitter mXOver[MAX_AMBI_CHANNELS];
+        /* NOTE: BandSplitter filter is unused with single-band decoding. */
+        BandSplitter mXOver;
+    };
 
     alignas(16) std::array<FloatBufferLine,2> mSamples;
+
+    bool mDualBand{false};
+
+    al::FlexArray<ChannelDecoder> mChannelDec;
 
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
@@ -53,7 +54,7 @@ public:
     static std::array<float,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALuint in_order,
         const ALuint out_order) noexcept;
 
-    DEF_NEWDEL(BFormatDec)
+    DEF_FAM_NEWDEL(BFormatDec, mChannelDec)
 };
 
 #endif /* BFORMATDEC_H */

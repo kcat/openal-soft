@@ -464,8 +464,8 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 5) ? "third" :
             (coeffcount > 3) ? "second" : "first",
             "");
-        device->AmbiDecoder.reset(new(FamCount{coeffcount}) BFormatDec{coeffcount, chancoeffs,
-            al::span<const ALuint>{idxmap, chanmap.size()}});
+        device->AmbiDecoder = BFormatDec::Create(coeffcount, chancoeffs,
+            al::span<const ALuint>{idxmap, chanmap.size()});
     }
 }
 
@@ -505,14 +505,13 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder.reset(new(FamCount{count}) BFormatDec{conf, hqdec, count,
-        device->Frequency, speakermap});
+    device->AmbiDecoder = BFormatDec::Create(conf, hqdec, count, device->Frequency, speakermap);
 
     auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
-    const ALfloat avg_dist{
+    const float avg_dist{
         std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), 0.0f, accum_spkr_dist) /
-        static_cast<ALfloat>(conf->Speakers.size())};
+        static_cast<float>(conf->Speakers.size())};
     InitNearFieldCtrl(device, avg_dist, order, !!(conf->ChanMask&AMBI_PERIPHONIC_MASK));
 
     InitDistanceComp(device, conf, speakermap);

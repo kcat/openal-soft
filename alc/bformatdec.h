@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <memory>
 
 #include "AL/al.h"
 
@@ -12,7 +13,6 @@
 #include "ambidefs.h"
 #include "devformat.h"
 #include "filters/splitter.h"
-#include "vector.h"
 
 struct AmbDecConf;
 
@@ -53,6 +53,19 @@ public:
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<float,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALuint in_order,
         const ALuint out_order) noexcept;
+
+    static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,
+        const ALuint inchans, const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS])
+    {
+        return std::unique_ptr<BFormatDec>{new(FamCount{inchans})
+            BFormatDec{conf, allow_2band, inchans, srate, chanmap}};
+    }
+    static std::unique_ptr<BFormatDec> Create(const ALuint inchans,
+        const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS], const al::span<const ALuint> chanmap)
+    {
+        return std::unique_ptr<BFormatDec>{new(FamCount{inchans})
+            BFormatDec{inchans, chancoeffs, chanmap}};
+    }
 
     DEF_FAM_NEWDEL(BFormatDec, mChannelDec)
 };

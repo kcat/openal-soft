@@ -434,7 +434,7 @@ void InitPanning(ALCdevice *device)
     else
     {
         ChannelDec chancoeffs[MAX_OUTPUT_CHANNELS]{};
-        ALuint idxmap[MAX_OUTPUT_CHANNELS]{};
+        ALuint maxchan{0};
         for(size_t i{0u};i < chanmap.size();++i)
         {
             const ALuint idx{GetChannelIdxByName(device->RealOut, chanmap[i].ChanName)};
@@ -444,8 +444,8 @@ void InitPanning(ALCdevice *device)
                     GetLabelFromChannel(chanmap[i].ChanName));
                 continue;
             }
-            idxmap[i] = idx;
-            std::copy_n(chanmap[i].Config, coeffcount, chancoeffs[i]);
+            maxchan = maxu(maxchan, idx);
+            std::copy_n(chanmap[i].Config, coeffcount, chancoeffs[idx]);
         }
 
         /* For non-DevFmtAmbi3D, set the ambisonic order given the mixing
@@ -464,8 +464,8 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 5) ? "third" :
             (coeffcount > 3) ? "second" : "first",
             "");
-        device->AmbiDecoder = BFormatDec::Create(coeffcount, chancoeffs,
-            al::span<const ALuint>{idxmap, chanmap.size()});
+        device->AmbiDecoder = BFormatDec::Create(coeffcount,
+            al::span<const ChannelDec>{chancoeffs, maxchan});
     }
 }
 

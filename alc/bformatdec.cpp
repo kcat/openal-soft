@@ -98,17 +98,14 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
     }
 }
 
-BFormatDec::BFormatDec(const ALuint inchans, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
-    const al::span<const ALuint> chanmap) : mChannelDec{inchans}
+BFormatDec::BFormatDec(const ALuint inchans, const al::span<const ChannelDec> chancoeffs)
+    : mChannelDec{inchans}
 {
     for(size_t j{0};j < mChannelDec.size();++j)
     {
-        const ChannelDec *incoeffs{chancoeffs};
-        for(const ALuint chanidx : chanmap)
-        {
-            mChannelDec[j].mGains.Single[chanidx] = (*incoeffs)[j];
-            ++incoeffs;
-        }
+        float *outcoeffs{mChannelDec[j].mGains.Single};
+        for(const ChannelDec &incoeffs : chancoeffs)
+            *(outcoeffs++) = incoeffs[j];
     }
 }
 

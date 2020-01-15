@@ -17,7 +17,7 @@
 struct AmbDecConf;
 
 
-using ChannelDec = ALfloat[MAX_AMBI_CHANNELS];
+using ChannelDec = float[MAX_AMBI_CHANNELS];
 
 class BFormatDec {
     static constexpr size_t sHFBand{0};
@@ -25,21 +25,19 @@ class BFormatDec {
     static constexpr size_t sNumBands{2};
 
     bool mDualBand{false};
-    ALuint mEnabled{0u}; /* Bitfield of enabled channels. */
 
     ALuint mNumChannels{0u};
     union MatrixU {
-        ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_CHANNELS];
-        ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_CHANNELS];
+        float Dual[MAX_AMBI_CHANNELS][sNumBands][MAX_OUTPUT_CHANNELS];
+        float Single[MAX_AMBI_CHANNELS][MAX_OUTPUT_CHANNELS];
     } mMatrix{};
 
-    /* NOTE: BandSplitter filters are unused with single-band decoding */
+    /* NOTE: BandSplitter filters and temp samples are unused with single-band
+     * decoding.
+     */
     BandSplitter mXOver[MAX_AMBI_CHANNELS];
 
-    al::vector<FloatBufferLine, 16> mSamples;
-    /* These two alias into Samples */
-    FloatBufferLine *mSamplesHF{nullptr};
-    FloatBufferLine *mSamplesLF{nullptr};
+    alignas(16) std::array<FloatBufferLine,2> mSamples;
 
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,

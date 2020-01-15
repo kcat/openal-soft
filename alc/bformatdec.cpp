@@ -53,35 +53,21 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
     const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     mDualBand = allow_2band && (conf->FreqBands == 2);
-    if(!mDualBand)
-        mSamples.resize(2);
-    else
-    {
-        ASSUME(inchans > 0);
-        mSamples.resize(inchans * 2);
-        mSamplesHF = mSamples.data();
-        mSamplesLF = mSamplesHF + inchans;
-    }
     mNumChannels = inchans;
-
-    mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->Speakers.size(), 0u,
-        [](ALuint mask, const ALuint &chan) noexcept -> ALuint
-        { return mask | (1 << chan); });
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     const std::array<float,MAX_AMBI_CHANNELS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
-    const size_t coeff_count{periphonic ? MAX_AMBI_CHANNELS : MAX_AMBI2D_CHANNELS};
 
     if(!mDualBand)
     {
         for(size_t i{0u};i < conf->Speakers.size();i++)
         {
-            ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanmap[i]];
-            for(size_t j{0},k{0};j < coeff_count;j++)
+            const size_t chanidx{chanmap[i]};
+            for(size_t j{0},k{0};j < mNumChannels;j++)
             {
                 const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
                 if(!(conf->ChanMask&(1u<<acn))) continue;
-                mtx[j] = conf->HFMatrix[i][k] / coeff_scale[acn] *
+                mMatrix.Single[j][chanidx] = conf->HFMatrix[i][k] / coeff_scale[acn] *
                     conf->HFOrderGain[AmbiIndex::OrderFromChannel[acn]];
                 ++k;
             }
@@ -95,14 +81,14 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(size_t i{0u};i < conf->Speakers.size();i++)
         {
-            ALfloat (&mtx)[sNumBands][MAX_AMBI_CHANNELS] = mMatrix.Dual[chanmap[i]];
-            for(size_t j{0},k{0};j < coeff_count;j++)
+            const size_t chanidx{chanmap[i]};
+            for(size_t j{0},k{0};j < mNumChannels;j++)
             {
                 const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
                 if(!(conf->ChanMask&(1u<<acn))) continue;
-                mtx[sHFBand][j] = conf->HFMatrix[i][k] / coeff_scale[acn] *
+                mMatrix.Dual[j][sHFBand][chanidx] = conf->HFMatrix[i][k] / coeff_scale[acn] *
                     conf->HFOrderGain[AmbiIndex::OrderFromChannel[acn]] * ratio;
-                mtx[sLFBand][j] = conf->LFMatrix[i][k] / coeff_scale[acn] *
+                mMatrix.Dual[j][sLFBand][chanidx] = conf->LFMatrix[i][k] / coeff_scale[acn] *
                     conf->LFOrderGain[AmbiIndex::OrderFromChannel[acn]] / ratio;
                 ++k;
             }
@@ -113,21 +99,16 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
 BFormatDec::BFormatDec(const ALuint inchans, const ChannelDec (&chancoeffs)[MAX_OUTPUT_CHANNELS],
     const al::span<const ALuint> chanmap)
 {
-    mSamples.resize(2);
     mNumChannels = inchans;
-
-    mEnabled = std::accumulate(chanmap.begin(), chanmap.end(), 0u,
-        [](ALuint mask, const ALuint &chan) noexcept -> ALuint
-        { return mask | (1 << chan); });
 
     const ChannelDec *incoeffs{chancoeffs};
     auto set_coeffs = [this,inchans,&incoeffs](const ALuint chanidx) noexcept -> void
     {
-        ALfloat (&mtx)[MAX_AMBI_CHANNELS] = mMatrix.Single[chanidx];
-        const ALfloat (&coeffs)[MAX_AMBI_CHANNELS] = *(incoeffs++);
+        const float (&coeffs)[MAX_AMBI_CHANNELS] = *(incoeffs++);
 
         ASSUME(inchans > 0);
-        std::copy_n(std::begin(coeffs), inchans, std::begin(mtx));
+        for(size_t j{0};j < inchans;++j)
+            mMatrix.Single[j][chanidx] = coeffs[j];
     };
     std::for_each(chanmap.begin(), chanmap.end(), set_coeffs);
 }
@@ -140,38 +121,25 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
 
     if(mDualBand)
     {
-        for(ALuint i{0};i < mNumChannels;i++)
-            mXOver[i].process({InSamples[i].data(), SamplesToDo}, mSamplesHF[i].data(),
-                mSamplesLF[i].data());
-
-        ALfloat (*mixmtx)[sNumBands][MAX_AMBI_CHANNELS]{mMatrix.Dual};
-        ALuint enabled{mEnabled};
-        for(FloatBufferLine &outbuf : OutBuffer)
+        const al::span<const float> hfSamples{mSamples[sHFBand].data(), SamplesToDo};
+        const al::span<const float> lfSamples{mSamples[sLFBand].data(), SamplesToDo};
+        const size_t numchans{mNumChannels};
+        for(size_t i{0};i < numchans;i++)
         {
-            if LIKELY(enabled&1)
-            {
-                const al::span<float> outspan{outbuf.data(), SamplesToDo};
-                MixRowSamples(outspan, {(*mixmtx)[sHFBand], mNumChannels}, mSamplesHF->data(),
-                    mSamplesHF->size());
-                MixRowSamples(outspan, {(*mixmtx)[sLFBand], mNumChannels}, mSamplesLF->data(),
-                    mSamplesLF->size());
-            }
-            ++mixmtx;
-            enabled >>= 1;
+            mXOver[i].process({InSamples[i].data(), SamplesToDo}, mSamples[sHFBand].data(),
+                mSamples[sLFBand].data());
+            MixSamples(hfSamples, OutBuffer, mMatrix.Dual[i][sHFBand], mMatrix.Dual[i][sHFBand],
+                0, 0);
+            MixSamples(lfSamples, OutBuffer, mMatrix.Dual[i][sLFBand], mMatrix.Dual[i][sLFBand],
+                0, 0);
         }
     }
     else
     {
-        ALfloat (*mixmtx)[MAX_AMBI_CHANNELS]{mMatrix.Single};
-        ALuint enabled{mEnabled};
-        for(FloatBufferLine &outbuf : OutBuffer)
-        {
-            if LIKELY(enabled&1)
-                MixRowSamples({outbuf.data(), SamplesToDo}, {*mixmtx, mNumChannels},
-                    InSamples->data(), InSamples->size());
-            ++mixmtx;
-            enabled >>= 1;
-        }
+        const size_t numchans{mNumChannels};
+        for(size_t i{0};i < numchans;i++)
+            MixSamples({InSamples[i].data(), SamplesToDo}, OutBuffer, mMatrix.Single[i],
+                mMatrix.Single[i], 0, 0);
     }
 }
 

@@ -911,8 +911,8 @@ START_API_FUNC
         context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
     else
     {
-        ALuint num_chans{ChannelsFromFmt(albuf->mFmtChannels)};
-        ALuint frame_size{num_chans * BytesFromFmt(albuf->mFmtType)};
+        ALuint num_chans{albuf->channelsFromFmt()};
+        ALuint frame_size{num_chans * albuf->bytesFromFmt()};
         ALuint byte_align{
             (albuf->OriginalType == UserFmtIMA4) ? ((align-1)/2 + 4) * num_chans :
             (albuf->OriginalType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
@@ -1279,16 +1279,15 @@ START_API_FUNC
         break;
 
     case AL_BITS:
-        *value = static_cast<ALint>(BytesFromFmt(albuf->mFmtType) * 8);
+        *value = static_cast<ALint>(albuf->bytesFromFmt() * 8);
         break;
 
     case AL_CHANNELS:
-        *value = static_cast<ALint>(ChannelsFromFmt(albuf->mFmtChannels));
+        *value = static_cast<ALint>(albuf->channelsFromFmt());
         break;
 
     case AL_SIZE:
-        *value = static_cast<ALint>(albuf->SampleLen *
-            FrameSizeFromFmt(albuf->mFmtChannels, albuf->mFmtType));
+        *value = static_cast<ALint>(albuf->SampleLen * albuf->frameSizeFromFmt());
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
@@ -1377,7 +1376,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALuint BytesFromFmt(FmtType type)
+ALuint BytesFromFmt(FmtType type) noexcept
 {
     switch(type)
     {
@@ -1390,7 +1389,7 @@ ALuint BytesFromFmt(FmtType type)
     }
     return 0;
 }
-ALuint ChannelsFromFmt(FmtChannels chans)
+ALuint ChannelsFromFmt(FmtChannels chans) noexcept
 {
     switch(chans)
     {

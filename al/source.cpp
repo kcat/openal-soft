@@ -348,7 +348,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         {
             ALuint FrameBlockSize{BufferFmt->OriginalAlign};
             ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
-            ALuint BlockSize{align * ChannelsFromFmt(BufferFmt->mFmtChannels)};
+            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
             offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
@@ -357,14 +357,14 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         {
             ALuint FrameBlockSize{BufferFmt->OriginalAlign};
             ALuint align{(FrameBlockSize-2)/2 + 7};
-            ALuint BlockSize{align * ChannelsFromFmt(BufferFmt->mFmtChannels)};
+            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
             offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
         }
         else
         {
-            const ALuint FrameSize{FrameSizeFromFmt(BufferFmt->mFmtChannels, BufferFmt->mFmtType)};
+            const ALuint FrameSize{BufferFmt->frameSizeFromFmt()};
             offset = static_cast<ALdouble>(readPos * FrameSize);
         }
         break;
@@ -416,17 +416,17 @@ al::optional<VoicePos> GetSampleOffset(ALsource *Source)
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
-            offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
+            offset /= align * BufferFmt->channelsFromFmt();
             offset *= BufferFmt->OriginalAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
             const ALuint align{(BufferFmt->OriginalAlign-2)/2 + 7};
-            offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
+            offset /= align * BufferFmt->channelsFromFmt();
             offset *= BufferFmt->OriginalAlign;
         }
         else
-            offset /= FrameSizeFromFmt(BufferFmt->mFmtChannels, BufferFmt->mFmtType);
+            offset /= BufferFmt->frameSizeFromFmt();
         frac = 0;
         break;
 
@@ -2789,8 +2789,8 @@ START_API_FUNC
         ALbuffer *buffer{BufferList->mBuffer};
         voice->mFrequency = buffer->Frequency;
         voice->mFmtChannels = buffer->mFmtChannels;
-        voice->mNumChannels = ChannelsFromFmt(buffer->mFmtChannels);
-        voice->mSampleSize  = BytesFromFmt(buffer->mFmtType);
+        voice->mNumChannels = buffer->channelsFromFmt();
+        voice->mSampleSize  = buffer->bytesFromFmt();
         voice->mAmbiLayout = static_cast<AmbiLayout>(buffer->AmbiLayout);
         voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
         voice->mAmbiOrder = 1;

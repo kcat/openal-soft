@@ -59,10 +59,8 @@ enum FmtChannels : unsigned char {
 #define MAX_INPUT_CHANNELS  (8)
 
 
-ALuint BytesFromFmt(FmtType type);
-ALuint ChannelsFromFmt(FmtChannels chans);
-inline ALuint FrameSizeFromFmt(FmtChannels chans, FmtType type)
-{ return ChannelsFromFmt(chans) * BytesFromFmt(type); }
+ALuint BytesFromFmt(FmtType type) noexcept;
+ALuint ChannelsFromFmt(FmtChannels chans) noexcept;
 
 
 struct ALbuffer {
@@ -97,6 +95,10 @@ struct ALbuffer {
 
     /* Self ID */
     ALuint id{0};
+
+    inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mFmtType); }
+    inline ALuint channelsFromFmt() const noexcept { return ChannelsFromFmt(mFmtChannels); }
+    inline ALuint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
 };
 
 #endif

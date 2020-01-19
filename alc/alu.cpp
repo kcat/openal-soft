@@ -437,11 +437,16 @@ bool CalcListenerParams(ALCcontext *Context)
     return true;
 }
 
-bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
+bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCcontext *context)
 {
     ALeffectslotProps *props{slot->Params.Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
+    /* If the effect slot target changed, clear the first sorted entry to force
+     * a re-sort.
+     */
+    if(slot->Params.Target != props->Target)
+        *sorted_slots = nullptr;
     slot->Params.Gain = props->Gain;
     slot->Params.AuxSendAuto = props->AuxSendAuto;
     slot->Params.Target = props->Target;
@@ -1599,9 +1604,9 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     {
         bool force{CalcContextParams(ctx)};
         force |= CalcListenerParams(ctx);
-        force = std::accumulate(slots.begin(), slots.end(), force,
-            [ctx](const bool f, ALeffectslot *slot) -> bool
-            { return CalcEffectSlotParams(slot, ctx) | f; });
+        auto sorted_slots = const_cast<ALeffectslot**>(slots.data() + slots.size());
+        for(ALeffectslot *slot : slots)
+            force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
         auto calc_params = [ctx,force](ALvoice &voice) -> void
         { CalcSourceParams(&voice, ctx, force); };
@@ -1642,11 +1647,17 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
         auto slots = auxslots.data();
         auto slots_end = slots + num_slots;
 
-        /* First sort the slots into scratch storage, so that effects come
-         * before their effect target (or their targets' target).
+        /* First sort the slots into extra storage, so that effects come before
+         * their effect target (or their targets' target).
          */
         auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
         auto sorted_slots_end = sorted_slots;
+        if(*sorted_slots)
+        {
+            /* Skip sorting if it has already been done. */
+            sorted_slots_end += num_slots;
+            goto skip_sorting;
+        }
 
         *sorted_slots_end = *slots;
         ++sorted_slots_end;
@@ -1674,6 +1685,7 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
             ++sorted_slots_end;
         }
 
+    skip_sorting:
         auto process_effect = [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};

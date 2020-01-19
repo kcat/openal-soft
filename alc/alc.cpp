@@ -2169,6 +2169,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         std::unique_lock<std::mutex> proplock{context->mPropLock};
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
+        if(ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
+            std::fill_n(curarray->end(), curarray->size(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
         {
             uint64_t usemask = ~sublist.FreeMask;
@@ -2461,7 +2463,11 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    delete mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed);
+    if(ALeffectslotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
+    {
+        al::destroy_n(curarray->end(), curarray->size());
+        delete curarray;
+    }
     mDefaultSlot = nullptr;
 
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},

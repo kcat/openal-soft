@@ -434,7 +434,7 @@ void InitPanning(ALCdevice *device)
     else
     {
         ChannelDec chancoeffs[MAX_OUTPUT_CHANNELS]{};
-        ALuint maxchan{0};
+        ALuint outcount{0};
         for(size_t i{0u};i < chanmap.size();++i)
         {
             const ALuint idx{GetChannelIdxByName(device->RealOut, chanmap[i].ChanName)};
@@ -444,7 +444,7 @@ void InitPanning(ALCdevice *device)
                     GetLabelFromChannel(chanmap[i].ChanName));
                 continue;
             }
-            maxchan = maxu(maxchan, idx);
+            outcount = maxu(outcount, idx+1u);
             std::copy_n(chanmap[i].Config, coeffcount, chancoeffs[idx]);
         }
 
@@ -465,7 +465,7 @@ void InitPanning(ALCdevice *device)
             (coeffcount > 3) ? "second" : "first",
             "");
         device->AmbiDecoder = BFormatDec::Create(coeffcount,
-            al::span<const ChannelDec>{chancoeffs, maxchan});
+            al::span<const ChannelDec>{chancoeffs, outcount});
     }
 }
 

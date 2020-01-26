@@ -223,7 +223,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
         ++field;
     }
 
-    /* Claculate the elevation indinces. */
+    /* Calculate the elevation indices. */
     const auto elev0 = CalcEvIndex(field->evCount, elevation);
     const size_t elev1_idx{minu(elev0.idx+1, field->evCount-1)};
     const size_t ir0offset{Hrtf->elev[ebase + elev0.idx].irOffset};
@@ -301,24 +301,31 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     al::vector<ImpulseResponse> impres; impres.reserve(AmbiPoints.size());
     auto calc_res = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
     {
-        auto CalcClosestEvIndex = [](ALuint evcount, float ev) -> ALuint
-        {
-            ev = (al::MathDefs<float>::Pi()*0.5f + ev) * static_cast<float>(evcount-1) /
-                al::MathDefs<float>::Pi();
-            return minu(float2uint(ev+0.5f), evcount-1);
-        };
-        auto CalcClosestAzIndex = [](ALuint azcount, float az) -> ALuint
-        {
-            az = (al::MathDefs<float>::Tau()+az) * static_cast<float>(azcount) /
-                al::MathDefs<float>::Tau();
-            return float2uint(az+0.5f) % azcount;
-        };
-
         auto &field = Hrtf->field[0];
-        const size_t elevIdx{CalcClosestEvIndex(field.evCount, pt.Elev.value)};
-        const size_t azIdx{CalcClosestAzIndex(Hrtf->elev[elevIdx].azCount, pt.Azim.value)};
-        const size_t irOffset{Hrtf->elev[elevIdx].irOffset + azIdx};
+        const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
+        const size_t elev1_idx{minu(elev0.idx+1, field.evCount-1)};
+        const size_t ir0offset{Hrtf->elev[elev0.idx].irOffset};
+        const size_t ir1offset{Hrtf->elev[elev1_idx].irOffset};
 
+        const auto az0 = CalcAzIndex(Hrtf->elev[elev0.idx].azCount, pt.Azim.value);
+        const auto az1 = CalcAzIndex(Hrtf->elev[elev1_idx].azCount, pt.Azim.value);
+
+        const size_t idx[4]{
+            ir0offset + az0.idx,
+            ir0offset + ((az0.idx+1) % Hrtf->elev[elev0.idx].azCount),
+            ir1offset + az1.idx,
+            ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount)
+        };
+
+        const std::array<double,4> blend{{
+            (1.0-elev0.blend) * (1.0-az0.blend),
+            (1.0-elev0.blend) * (    az0.blend),
+            (    elev0.blend) * (1.0-az1.blend),
+            (    elev0.blend) * (    az1.blend)
+        }};
+
+        /* The largest blend factor serves as the closest HRIR. */
+        const size_t irOffset{idx[std::max_element(blend.begin(), blend.end()) - blend.begin()]};
         ImpulseResponse res{Hrtf->coeffs[irOffset],
             Hrtf->delays[irOffset][0], Hrtf->delays[irOffset][1]};
 

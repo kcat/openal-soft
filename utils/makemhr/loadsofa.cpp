@@ -239,13 +239,9 @@ static double CalcHrirOnset(const uint rate, const uint n, std::vector<double> &
         rs.process(n, hrir, 10 * n, upsampled.data());
     }
 
-    double mag{std::accumulate(upsampled.cbegin(), upsampled.cend(), double{0.0},
-        [](const double magnitude, const double sample) -> double
-        { return std::max(magnitude, std::abs(sample)); })};
-
-    mag *= 0.15;
-    auto iter = std::find_if(upsampled.cbegin(), upsampled.cend(),
-        [mag](const double sample) -> bool { return (std::abs(sample) >= mag); });
+    auto abs_lt = [](const double &lhs, const double &rhs) -> bool
+    { return std::abs(lhs) < std::abs(rhs); };
+    auto iter = std::max_element(upsampled.cbegin(), upsampled.cend(), abs_lt);
     return static_cast<double>(std::distance(upsampled.cbegin(), iter)) / (10.0*rate);
 }
 

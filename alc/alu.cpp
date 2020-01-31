@@ -527,6 +527,15 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
     return azimuth;
 }
 
+/* Wraps the given value in radians to stay between [-pi,+pi] */
+inline float WrapRadians(float r)
+{
+    constexpr float Pi{al::MathDefs<float>::Pi()};
+    constexpr float Pi2{al::MathDefs<float>::Tau()};
+    if(r >  Pi) return std::fmod(Pi+r, Pi2) - Pi;
+    if(r < -Pi) return Pi - std::fmod(Pi-r, Pi2);
+    return r;
+}
 
 /* Begin ambisonic rotation helpers.
  *
@@ -750,9 +759,11 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     case FmtStereo:
         if(DirectChannels == DirectMode::Off)
         {
-            /* Convert counter-clockwise to clockwise. */
-            StereoMap[0].angle = -props->StereoPan[0];
-            StereoMap[1].angle = -props->StereoPan[1];
+            /* Convert counter-clockwise to clock-wise, and wrap between
+             * [-pi,+pi].
+             */
+            StereoMap[0].angle = WrapRadians(-props->StereoPan[0]);
+            StereoMap[1].angle = WrapRadians(-props->StereoPan[1]);
         }
 
         chans = StereoMap;

@@ -63,7 +63,7 @@ struct HrtfStore {
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
-    ALuint Delay[2];
+    std::array<ALuint,2> Delay;
     float Gain;
 };
 
@@ -91,7 +91,7 @@ al::vector<std::string> EnumerateHrtf(const char *devname);
 HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
-    float spread, HrirArray &coeffs, ALuint (&delays)[2]);
+    float spread, HrirArray &coeffs, const al::span<ALuint,2> delays);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

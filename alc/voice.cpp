@@ -458,8 +458,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
         }
         MixHrtfFilter hrtfparams;
         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
-        hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
-        hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
+        hrtfparams.Delay = parms.Hrtf.Target.Delay;
         hrtfparams.Gain = 0.0f;
         hrtfparams.GainStep = gain / static_cast<float>(fademix);
 
@@ -487,8 +486,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
 
         MixHrtfFilter hrtfparams;
         hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
-        hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
-        hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
+        hrtfparams.Delay = parms.Hrtf.Target.Delay;
         hrtfparams.Gain = parms.Hrtf.Old.Gain;
         hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo);
         MixHrtfSamples(HrtfSamples+fademix, AccumSamples+OutPos, IrSize, &hrtfparams, todo);

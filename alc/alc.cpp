@@ -2876,7 +2876,6 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
 
         default:
             alcSetError(nullptr, ALC_INVALID_ENUM);
-            return 0;
         }
         return 0;
     }

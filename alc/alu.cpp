@@ -744,8 +744,19 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     const auto Frequency = static_cast<ALfloat>(Device->Frequency);
     const ALuint NumSends{Device->NumAuxSends};
 
-    DirectMode DirectChannels{props->DirectChannels};
     const ALuint num_channels{voice->mNumChannels};
+    ASSUME(num_channels > 0);
+
+    auto clear_target = [NumSends](ALvoice::ChannelData &chandata) -> void
+    {
+        chandata.mDryParams.Hrtf.Target = HrtfFilter{};
+        chandata.mDryParams.Gains.Target.fill(0.0f);
+        std::for_each(chandata.mWetParams.begin(), chandata.mWetParams.begin()+NumSends,
+            [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
+    };
+    std::for_each(voice->mChans.begin(), voice->mChans.begin()+num_channels, clear_target);
+
+    DirectMode DirectChannels{props->DirectChannels};
     const ChanMap *chans{nullptr};
     ALfloat downmix_gain{1.0f};
     switch(voice->mFmtChannels)
@@ -803,16 +814,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         DirectChannels = DirectMode::Off;
         break;
     }
-    ASSUME(num_channels > 0);
-
-    std::for_each(voice->mChans.begin(), voice->mChans.begin()+num_channels,
-        [NumSends](ALvoice::ChannelData &chandata) -> void
-        {
-            chandata.mDryParams.Hrtf.Target = HrtfFilter{};
-            chandata.mDryParams.Gains.Target.fill(0.0f);
-            std::for_each(chandata.mWetParams.begin(), chandata.mWetParams.begin()+NumSends,
-                [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
-        });
 
     voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)

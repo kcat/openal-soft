@@ -1279,9 +1279,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     voice->mDirect.Buffer = Device->Dry.Buffer;
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
-    ALfloat DecayDistance[MAX_SENDS];
-    ALfloat DecayLFDistance[MAX_SENDS];
-    ALfloat DecayHFDistance[MAX_SENDS];
+    GainTriplet DecayDistance[MAX_SENDS];
     for(ALuint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
@@ -1291,9 +1289,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         {
             SendSlots[i] = nullptr;
             RoomRolloff[i] = 0.0f;
-            DecayDistance[i] = 0.0f;
-            DecayLFDistance[i] = 0.0f;
-            DecayHFDistance[i] = 0.0f;
+            DecayDistance[i].Base = 0.0f;
+            DecayDistance[i].LF = 0.0f;
+            DecayDistance[i].HF = 0.0f;
         }
         else if(SendSlots[i]->Params.AuxSendAuto)
         {
@@ -1301,12 +1299,12 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             /* Calculate the distances to where this effect's decay reaches
              * -60dB.
              */
-            DecayDistance[i] = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
-            DecayLFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayLFRatio;
-            DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
+            DecayDistance[i].Base = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
+            DecayDistance[i].LF = DecayDistance[i].Base * SendSlots[i]->Params.DecayLFRatio;
+            DecayDistance[i].HF = DecayDistance[i].Base * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
             {
-                ALfloat airAbsorption{SendSlots[i]->Params.AirAbsorptionGainHF};
+                const float airAbsorption{SendSlots[i]->Params.AirAbsorptionGainHF};
                 if(airAbsorption < 1.0f)
                 {
                     /* Calculate the distance to where this effect's air
@@ -1314,8 +1312,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                      * decay distance (so it doesn't take any longer to decay
                      * than the air would allow).
                      */
-                    ALfloat absorb_dist{std::log10(REVERB_DECAY_GAIN) / std::log10(airAbsorption)};
-                    DecayHFDistance[i] = minf(absorb_dist, DecayHFDistance[i]);
+                    const float absorb_dist{std::log10(REVERB_DECAY_GAIN) /
+                        std::log10(airAbsorption)};
+                    DecayDistance[i].HF = minf(absorb_dist, DecayDistance[i].HF);
                 }
             }
         }
@@ -1324,9 +1323,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             /* If the slot's auxiliary send auto is off, the data sent to the
              * effect slot is the same as the dry path, sans filter effects */
             RoomRolloff[i] = props->RolloffFactor;
-            DecayDistance[i] = 0.0f;
-            DecayLFDistance[i] = 0.0f;
-            DecayHFDistance[i] = 0.0f;
+            DecayDistance[i].Base = 0.0f;
+            DecayDistance[i].LF = 0.0f;
+            DecayDistance[i].HF = 0.0f;
         }
 
         if(!SendSlots[i])
@@ -1402,7 +1401,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     attn = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
-                           (props->MaxDistance-props->RefDistance);
+                        (props->MaxDistance-props->RefDistance);
                     WetGain[i].Base *= maxf(1.0f - attn, 0.0f);
                 }
             }
@@ -1417,9 +1416,10 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 ClampedDist = props->RefDistance;
             else
             {
-                DryGain.Base *= std::pow(ClampedDist/props->RefDistance, -props->RolloffFactor);
+                const float dist_ratio{ClampedDist/props->RefDistance};
+                DryGain.Base *= std::pow(dist_ratio, -props->RolloffFactor);
                 for(ALuint i{0};i < NumSends;i++)
-                    WetGain[i].Base *= std::pow(ClampedDist/props->RefDistance, -RoomRolloff[i]);
+                    WetGain[i].Base *= std::pow(dist_ratio, -RoomRolloff[i]);
             }
             break;
 
@@ -1497,19 +1497,19 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
              */
             for(ALuint i{0};i < NumSends;i++)
             {
-                if(!(DecayDistance[i] > 0.0f))
+                if(!(DecayDistance[i].Base > 0.0f))
                     continue;
 
-                const ALfloat gain{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i])};
+                const float gain{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].Base)};
                 WetGain[i].Base *= gain;
                 /* Yes, the wet path's air absorption is applied with
                  * WetGainAuto on, rather than WetGainHFAuto.
                  */
                 if(gain > 0.0f)
                 {
-                    ALfloat gainhf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i])};
+                    float gainhf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].HF)};
                     WetGain[i].HF *= minf(gainhf / gain, 1.0f);
-                    ALfloat gainlf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i])};
+                    float gainlf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].LF)};
                     WetGain[i].LF *= minf(gainlf / gain, 1.0f);
                 }
             }

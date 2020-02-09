@@ -1138,13 +1138,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         {
             if(Device->AvgSpeakerDist > 0.0f)
             {
-                /* If the source distance is 0, set w0 to w1 to act as a pass-
-                 * through. We still want to pass the signal through the
-                 * filters so they keep an appropriate history, in case the
-                 * source moves away from the listener.
+                /* If the source distance is 0, simulate a plane-wave by using
+                 * infinite distance, which results in a w0 of 0.
                  */
-                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (Device->AvgSpeakerDist * Frequency)};
-
+                constexpr float w0{0.0f};
                 for(ALuint c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 

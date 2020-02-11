@@ -435,11 +435,11 @@ static int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *
 // Store the OpenAL Soft HRTF data set.
 static int StoreMhr(const HrirDataT *hData, const char *filename)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    uint n = hData->mIrPoints;
-    FILE *fp;
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    const uint n{hData->mIrPoints};
+    uint dither_seed{22222};
     uint fi, ei, ai, i;
-    uint dither_seed = 22222;
+    FILE *fp;
 
     if((fp=fopen(filename, "wb")) == nullptr)
     {
@@ -474,10 +474,10 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
-        const double scale = (hData->mSampleType == ST_S16) ? 32767.0 :
-                             ((hData->mSampleType == ST_S24) ? 8388607.0 : 0.0);
-        const uint bps = (hData->mSampleType == ST_S16) ? 2 :
-                         ((hData->mSampleType == ST_S24) ? 3 : 0);
+        const double scale{(hData->mSampleType == ST_S16) ? 32767.0 :
+            ((hData->mSampleType == ST_S24) ? 8388607.0 : 0.0)};
+        const uint bps{(hData->mSampleType == ST_S16) ? 2u :
+            ((hData->mSampleType == ST_S24) ? 3u : 0u)};
 
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -491,7 +491,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
                     TpdfDither(out+1, azd->mIrs[1], scale, n, channels, &dither_seed);
                 for(i = 0;i < (channels * n);i++)
                 {
-                    int v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
+                    const auto v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
                     if(!WriteBin4(bps, static_cast<uint32_t>(v), fp, filename))
                         return 0;
                 }
@@ -505,15 +505,14 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
                 const HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
-                int v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[0]), MAX_HRTD));
 
-                if(!WriteBin4(1, static_cast<uint32_t>(v), fp, filename))
+                auto v = static_cast<uint>(std::min(std::round(azd.mDelays[0]), MAX_HRTD));
+                if(!WriteBin4(1, v, fp, filename))
                     return 0;
                 if(hData->mChannelType == CT_STEREO)
                 {
-                    v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[1]), MAX_HRTD));
-
-                    if(!WriteBin4(1, static_cast<uint32_t>(v), fp, filename))
+                    v = static_cast<uint>(std::min(std::round(azd.mDelays[1]), MAX_HRTD));
+                    if(!WriteBin4(1, v, fp, filename))
                         return 0;
                 }
             }
@@ -1210,6 +1209,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
         }
     }
 
+    double maxHrtd{0.0};
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
         double minHrtd{std::numeric_limits<double>::infinity()};
@@ -1231,7 +1231,27 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
                 for(ti = 0;ti < channels;ti++)
-                    azd->mDelays[ti] -= minHrtd;
+                {
+                    azd->mDelays[ti] = (azd->mDelays[ti]-minHrtd) * hData->mIrRate;
+                    maxHrtd = std::max(maxHrtd, azd->mDelays[ti]);
+                }
+            }
+        }
+    }
+    if(maxHrtd > MAX_HRTD)
+    {
+        fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MAX_HRTD);
+        const double scale{MAX_HRTD / maxHrtd};
+        for(fi = 0;fi < hData->mFdCount;fi++)
+        {
+            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            {
+                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                {
+                    HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                    for(ti = 0;ti < channels;ti++)
+                        azd->mDelays[ti] *= scale;
+                }
             }
         }
     }

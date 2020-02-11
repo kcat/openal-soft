@@ -96,6 +96,7 @@ static_assert(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE < 256, "MAX_HRIR_DELAY or DELAY_
 constexpr ALchar magicMarker00[8]{'M','i','n','P','H','R','0','0'};
 constexpr ALchar magicMarker01[8]{'M','i','n','P','H','R','0','1'};
 constexpr ALchar magicMarker02[8]{'M','i','n','P','H','R','0','2'};
+constexpr ALchar magicMarker03[8]{'M','i','n','P','H','R','0','3'};
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
@@ -1019,6 +1020,175 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         {elevs.data(), elevs.size()}, coeffs.data(), delays.data(), filename);
 }
 
+std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
+{
+    constexpr ALubyte ChanType_LeftOnly{0};
+    constexpr ALubyte ChanType_LeftRight{1};
+
+    ALuint rate{GetLE_ALuint(data)};
+    ALubyte channelType{GetLE_ALubyte(data)};
+    ALushort irSize{GetLE_ALubyte(data)};
+    ALubyte fdCount{GetLE_ALubyte(data)};
+    if(!data || data.eof())
+    {
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
+    }
+
+    if(channelType > ChanType_LeftRight)
+    {
+        ERR("Unsupported channel type: %d\n", channelType);
+        return nullptr;
+    }
+
+    if(irSize < MIN_IR_LENGTH || irSize > HRIR_LENGTH)
+    {
+        ERR("Unsupported HRIR size, irSize=%d (%d to %d)\n", irSize, MIN_IR_LENGTH, HRIR_LENGTH);
+        return nullptr;
+    }
+    if(fdCount < 1 || fdCount > MAX_FD_COUNT)
+    {
+        ERR("Unsupported number of field-depths: fdCount=%d (%d to %d)\n", fdCount, MIN_FD_COUNT,
+            MAX_FD_COUNT);
+        return nullptr;
+    }
+
+    auto fields = al::vector<HrtfStore::Field>(fdCount);
+    auto elevs = al::vector<HrtfStore::Elevation>{};
+    for(size_t f{0};f < fdCount;f++)
+    {
+        const ALushort distance{GetLE_ALushort(data)};
+        const ALubyte evCount{GetLE_ALubyte(data)};
+        if(!data || data.eof())
+        {
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
+        }
+
+        if(distance < MIN_FD_DISTANCE || distance > MAX_FD_DISTANCE)
+        {
+            ERR("Unsupported field distance[%zu]=%d (%d to %d millimeters)\n", f, distance,
+                MIN_FD_DISTANCE, MAX_FD_DISTANCE);
+            return nullptr;
+        }
+        if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+        {
+            ERR("Unsupported elevation count: evCount[%zu]=%d (%d to %d)\n", f, evCount,
+                MIN_EV_COUNT, MAX_EV_COUNT);
+            return nullptr;
+        }
+
+        fields[f].distance = distance / 1000.0f;
+        fields[f].evCount = evCount;
+        if(f > 0 && fields[f].distance > fields[f-1].distance)
+        {
+            ERR("Field distance[%zu] is not before previous (%f <= %f)\n", f, fields[f].distance,
+                fields[f-1].distance);
+            return nullptr;
+        }
+
+        const size_t ebase{elevs.size()};
+        elevs.resize(ebase + evCount);
+        for(auto &elev : al::span<HrtfStore::Elevation>(elevs.data()+ebase, evCount))
+            elev.azCount = GetLE_ALubyte(data);
+        if(!data || data.eof())
+        {
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
+        }
+
+        for(size_t e{0};e < evCount;e++)
+        {
+            if(elevs[ebase+e].azCount < MIN_AZ_COUNT || elevs[ebase+e].azCount > MAX_AZ_COUNT)
+            {
+                ERR("Unsupported azimuth count: azCount[%zu][%zu]=%d (%d to %d)\n", f, e,
+                    elevs[ebase+e].azCount, MIN_AZ_COUNT, MAX_AZ_COUNT);
+                return nullptr;
+            }
+        }
+    }
+
+    elevs[0].irOffset = 0;
+    std::partial_sum(elevs.cbegin(), elevs.cend(), elevs.begin(),
+        [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)
+            -> HrtfStore::Elevation
+        {
+            return HrtfStore::Elevation{cur.azCount,
+                static_cast<ALushort>(last.azCount + last.irOffset)};
+        });
+    const auto irTotal = static_cast<ALushort>(elevs.back().azCount + elevs.back().irOffset);
+
+    auto coeffs = al::vector<HrirArray>(irTotal, HrirArray{});
+    auto delays = al::vector<ubyte2>(irTotal);
+    if(channelType == ChanType_LeftOnly)
+    {
+        for(auto &hrir : coeffs)
+        {
+            for(auto &val : al::span<float2>{hrir.data(), irSize})
+                val[0] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
+        }
+        for(auto &val : delays)
+            val[0] = GetLE_ALubyte(data);
+        if(!data || data.eof())
+        {
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
+        }
+        for(size_t i{0};i < irTotal;++i)
+        {
+            if(delays[i][0] > MAX_HRIR_DELAY<<HRIR_DELAY_FRACBITS)
+            {
+                ERR("Invalid delays[%zu][0]: %f (%d)\n", i,
+                    delays[i][0] / float{HRIR_DELAY_FRACONE}, MAX_HRIR_DELAY);
+                return nullptr;
+            }
+        }
+
+        /* Mirror the left ear responses to the right ear. */
+        MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
+    }
+    else if(channelType == ChanType_LeftRight)
+    {
+        for(auto &hrir : coeffs)
+        {
+            for(auto &val : al::span<float2>{hrir.data(), irSize})
+            {
+                val[0] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
+                val[1] = static_cast<float>(GetLE_ALint24(data)) / 8388608.0f;
+            }
+        }
+        for(auto &val : delays)
+        {
+            val[0] = GetLE_ALubyte(data);
+            val[1] = GetLE_ALubyte(data);
+        }
+        if(!data || data.eof())
+        {
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
+        }
+
+        for(size_t i{0};i < irTotal;++i)
+        {
+            if(delays[i][0] > MAX_HRIR_DELAY<<HRIR_DELAY_FRACBITS)
+            {
+                ERR("Invalid delays[%zu][0]: %f (%d)\n", i,
+                    delays[i][0] / float{HRIR_DELAY_FRACONE}, MAX_HRIR_DELAY);
+                return nullptr;
+            }
+            if(delays[i][1] > MAX_HRIR_DELAY<<HRIR_DELAY_FRACBITS)
+            {
+                ERR("Invalid delays[%zu][1]: %f (%d)\n", i,
+                    delays[i][1] / float{HRIR_DELAY_FRACONE}, MAX_HRIR_DELAY);
+                return nullptr;
+            }
+        }
+    }
+
+    return CreateHrtfStore(rate, irSize, {fields.data(), fields.size()},
+        {elevs.data(), elevs.size()}, coeffs.data(), delays.data(), filename);
+}
+
 
 bool checkName(const std::string &name)
 {
@@ -1237,10 +1407,15 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
     }
 
     std::unique_ptr<HrtfStore> hrtf;
-    char magic[sizeof(magicMarker02)];
+    char magic[sizeof(magicMarker03)];
     stream->read(magic, sizeof(magic));
-    if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
+    if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker03)))
         ERR("%s data is too short (%zu bytes)\n", name.c_str(), stream->gcount());
+    else if(memcmp(magic, magicMarker03, sizeof(magicMarker03)) == 0)
+    {
+        TRACE("Detected data set format v3\n");
+        hrtf = LoadHrtf03(*stream, name.c_str());
+    }
     else if(memcmp(magic, magicMarker02, sizeof(magicMarker02)) == 0)
     {
         TRACE("Detected data set format v2\n");

@@ -147,8 +147,8 @@ enum HeadModelT {
 #define MAX_HRTD                     (63.0)
 
 // The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
-// response protocol 02.
-#define MHR_FORMAT                   ("MinPHR02")
+// response protocol 03.
+#define MHR_FORMAT                   ("MinPHR03")
 
 /* Channel index enums. Mono uses LeftChannel only. */
 enum ChannelIndex : uint {
@@ -450,15 +450,13 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         return 0;
     if(!WriteBin4(4, hData->mIrRate, fp, filename))
         return 0;
-    if(!WriteBin4(1, static_cast<uint32_t>(hData->mSampleType), fp, filename))
-        return 0;
     if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
         return 0;
     if(!WriteBin4(1, hData->mIrPoints, fp, filename))
         return 0;
     if(!WriteBin4(1, hData->mFdCount, fp, filename))
         return 0;
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
         if(!WriteBin4(2, fdist, fp, filename))
@@ -472,12 +470,10 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         }
     }
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
     {
-        const double scale{(hData->mSampleType == ST_S16) ? 32767.0 :
-            ((hData->mSampleType == ST_S24) ? 8388607.0 : 0.0)};
-        const uint bps{(hData->mSampleType == ST_S16) ? 2u :
-            ((hData->mSampleType == ST_S24) ? 3u : 0u)};
+        constexpr double scale{8388607.0};
+        constexpr uint bps{3u};
 
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -498,22 +494,22 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             }
         }
     }
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
     {
+        /* Delay storage has 2 bits of extra precision. */
+        constexpr double DelayPrecScale{4.0};
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
                 const HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
 
-                auto v = static_cast<uint>(std::min(std::round(azd.mDelays[0]), MAX_HRTD));
-                if(!WriteBin4(1, v, fp, filename))
-                    return 0;
+                auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
+                if(!WriteBin4(1, v, fp, filename)) return 0;
                 if(hData->mChannelType == CT_STEREO)
                 {
-                    v = static_cast<uint>(std::min(std::round(azd.mDelays[1]), MAX_HRTD));
-                    if(!WriteBin4(1, v, fp, filename))
-                        return 0;
+                    v = static_cast<uint>(std::round(azd.mDelays[1]*DelayPrecScale));
+                    if(!WriteBin4(1, v, fp, filename)) return 0;
                 }
             }
         }

@@ -34,6 +34,7 @@
 #include <algorithm>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "alu.h"
 #include "threads.h"
 
@@ -174,9 +175,9 @@ struct PlaybackWrapper final : public BackendBase {
     PlaybackWrapper(ALCdevice *device) noexcept : BackendBase{device} { }
     ~PlaybackWrapper() override;
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     std::unique_ptr<qsa_data> mExtraData;
@@ -206,7 +207,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 
     const ALint frame_size = device->frameSizeFromFmt();
 
-    self->lock();
+    std::unique_lock<PlaybackWrapper> dlock{*self};
     while(!data->mKillNow.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
@@ -214,9 +215,9 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         pollitem.events = POLLOUT;
 
         /* Select also works like time slice to OS */
-        self->unlock();
+        dlock.unlock();
         sret = poll(&pollitem, 1, 2000);
-        self->lock();
+        dlock.lock();
         if(sret == -1)
         {
             if(errno == EINTR || errno == EAGAIN)
@@ -265,7 +266,6 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
             }
         }
     }
-    self->unlock();
 
     return 0;
 }
@@ -613,13 +613,20 @@ PlaybackWrapper::~PlaybackWrapper()
         qsa_close_playback(this);
 }
 
-ALCenum PlaybackWrapper::open(const ALCchar *name)
-{ return qsa_open_playback(this, name); }
+void PlaybackWrapper::open(const ALCchar *name)
+{
+    if(auto err = qsa_open_playback(this, name))
+        throw al::backend_exception{ALC_INVALID_VALUE, "%d", err};
+}
 
-ALCboolean PlaybackWrapper::reset()
-{ return qsa_reset_playback(this); }
+bool PlaybackWrapper::reset()
+{
+    if(!qsa_reset_playback(this))
+        throw al::backend_exception{ALC_INVALID_VALUE, ""};
+    return true;
+}
 
-ALCboolean PlaybackWrapper::start()
+bool PlaybackWrapper::start()
 { return qsa_start_playback(this); }
 
 void PlaybackWrapper::stop()
@@ -634,10 +641,10 @@ struct CaptureWrapper final : public BackendBase {
     CaptureWrapper(ALCdevice *device) noexcept : BackendBase{device} { }
     ~CaptureWrapper() override;
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(void *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     std::unique_ptr<qsa_data> mExtraData;
@@ -891,16 +898,19 @@ CaptureWrapper::~CaptureWrapper()
         qsa_close_capture(this);
 }
 
-ALCenum CaptureWrapper::open(const ALCchar *name)
-{ return qsa_open_capture(this, name); }
+void CaptureWrapper::open(const ALCchar *name)
+{
+    if(auto err = qsa_open_capture(this, name))
+        throw al::backend_exception{ALC_INVALID_VALUE, "%d", err};
+}
 
-ALCboolean CaptureWrapper::start()
-{ qsa_start_capture(this); return ALC_TRUE; }
+bool CaptureWrapper::start()
+{ qsa_start_capture(this); return true; }
 
 void CaptureWrapper::stop()
 { qsa_stop_capture(this); }
 
-ALCenum CaptureWrapper::captureSamples(void *buffer, ALCuint samples)
+ALCenum CaptureWrapper::captureSamples(al::byte *buffer, ALCuint samples)
 { return qsa_capture_samples(this, buffer, samples); }
 
 ALCuint CaptureWrapper::availableSamples()

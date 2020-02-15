@@ -7,22 +7,70 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "alcmain.h"
-#include "alu.h"
 
+#include "alu.h"
 #include "defs.h"
 #include "hrtfbase.h"
 
 
+namespace {
+
+inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
+{
+    const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
+
+    ASSUME(IrSize >= MIN_IR_LENGTH);
+    /* This isn't technically correct to test alignment, but it's true for
+     * systems that support SSE, which is the only one that needs to know the
+     * alignment of Values (which alternates between 8- and 16-byte aligned).
+     */
+    if(reinterpret_cast<intptr_t>(Values)&0x8)
+    {
+        __m128 imp0, imp1;
+        __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
+        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
+        imp0 = _mm_mul_ps(lrlr, coeffs);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
+        ALuint td{(IrSize>>1) - 1};
+        size_t i{1};
+        do {
+            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
+            vals = _mm_load_ps(&Values[i][0]);
+            imp1 = _mm_mul_ps(lrlr, coeffs);
+            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
+            vals = _mm_add_ps(imp0, vals);
+            _mm_store_ps(&Values[i][0], vals);
+            imp0 = imp1;
+            i += 2;
+        } while(--td);
+        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
+        imp0 = _mm_movehl_ps(imp0, imp0);
+        vals = _mm_add_ps(imp0, vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
+    }
+    else
+    {
+        for(size_t i{0};i < IrSize;i += 2)
+        {
+            const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
+            __m128 vals{_mm_load_ps(&Values[i][0])};
+            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
+            _mm_store_ps(&Values[i][0], vals);
+        }
+    }
+}
+
+} // namespace
+
 template<>
 const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
-    ALuint frac, ALint increment, const al::span<float> dst)
+    ALuint frac, ALuint increment, const al::span<float> dst)
 {
-    const ALfloat *const filter{state->bsinc.filter};
+    const float *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
-    const ptrdiff_t m{state->bsinc.m};
-
-    ASSUME(m > 0);
-    ASSUME(increment > 0);
+    const size_t m{state->bsinc.m};
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
@@ -30,7 +78,8 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         // Calculate the phase index and factor.
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const ALfloat pf{(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
 #undef FRAC_PHASE_BITDIFF
 
         // Apply the scale and phase interpolated filter.
@@ -38,10 +87,10 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         {
             const __m128 pf4{_mm_set1_ps(pf)};
             const float *fil{filter + m*pi*4};
-            const float *scd{fil + m};
-            const float *phd{scd + m};
-            const float *spd{phd + m};
-            ptrdiff_t td{m >> 2};
+            const float *phd{fil + m};
+            const float *scd{phd + m};
+            const float *spd{scd + m};
+            size_t td{m >> 2};
             size_t j{0u};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
@@ -68,75 +117,72 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
     return dst.begin();
 }
 
-
-static inline void ApplyCoeffs(size_t Offset, float2 *RESTRICT Values, const ALsizei IrSize,
-    const HrirArray &Coeffs, const ALfloat left, const ALfloat right)
+template<>
+const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
+    const ALfloat *RESTRICT src, ALuint frac, ALuint increment, const al::span<float> dst)
 {
-    const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
+    const float *const filter{state->bsinc.filter};
+    const size_t m{state->bsinc.m};
 
-    ASSUME(IrSize >= 2);
+    src -= state->bsinc.l;
+    for(float &out_sample : dst)
+    {
+        // Calculate the phase index and factor.
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
+        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
+        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
+            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
+#undef FRAC_PHASE_BITDIFF
 
-    if((Offset&1))
-    {
-        __m128 imp0, imp1;
-        __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
-        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
-        imp0 = _mm_mul_ps(lrlr, coeffs);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
-        ALsizei i{1};
-        for(;i < IrSize-1;i += 2)
+        // Apply the phase interpolated filter.
+        __m128 r4{_mm_setzero_ps()};
         {
-            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-            vals = _mm_load_ps(&Values[i][0]);
-            imp1 = _mm_mul_ps(lrlr, coeffs);
-            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
-            vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(&Values[i][0], vals);
-            imp0 = imp1;
+            const __m128 pf4{_mm_set1_ps(pf)};
+            const float *fil{filter + m*pi*4};
+            const float *phd{fil + m};
+            size_t td{m >> 2};
+            size_t j{0u};
+
+#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+            do {
+                /* f = fil + pf*phd */
+                const __m128 f4 = MLA4(_mm_load_ps(fil), pf4, _mm_load_ps(phd));
+                /* r += f*src */
+                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
+                fil += 4; phd += 4; j += 4;
+            } while(--td);
+#undef MLA4
         }
-        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
-        imp0 = _mm_movehl_ps(imp0, imp0);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
+        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
+        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+        out_sample = _mm_cvtss_f32(r4);
+
+        frac += increment;
+        src  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
     }
-    else
-    {
-        for(ALsizei i{0};i < IrSize;i += 2)
-        {
-            __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
-            __m128 vals{_mm_load_ps(&Values[i][0])};
-            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
-            _mm_store_ps(&Values[i][0], vals);
-        }
-    }
+    return dst.begin();
 }
 
-template<>
-void MixHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
-    MixHrtfFilter *hrtfparams, const size_t BufferSize)
-{
-    MixHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
-        hrtfparams, BufferSize);
-}
 
 template<>
-void MixHrtfBlend_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const ALfloat *InSamples, float2 *AccumSamples, const size_t OutPos, const ALsizei IrSize,
-    const HrtfFilter *oldparams, MixHrtfFilter *newparams, const size_t BufferSize)
+void MixHrtf_<SSETag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+    const MixHrtfFilter *hrtfparams, const size_t BufferSize)
+{ MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, BufferSize); }
+
+template<>
+void MixHrtfBlend_<SSETag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+    const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize)
 {
-    MixHrtfBlendBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, OutPos, IrSize,
-        oldparams, newparams, BufferSize);
+    MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
+        BufferSize);
 }
 
 template<>
 void MixDirectHrtf_<SSETag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const size_t BufferSize)
-{
-    MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize);
-}
+{ MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, State, BufferSize); }
 
 
 template<>
@@ -146,8 +192,8 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
     const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
     const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
-    const auto aligned_end = minz(InSamples.size(), (min_end-InSamples.begin()+3) & ~3) +
-        InSamples.begin();
+    const auto aligned_end = minz(static_cast<uintptr_t>(min_end-InSamples.begin()+3) & ~3u,
+        InSamples.size()) + InSamples.begin();
     for(FloatBufferLine &output : OutBuffer)
     {
         ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
@@ -226,7 +272,7 @@ void MixRow_<SSETag>(const al::span<float> OutBuffer, const al::span<const float
 {
     for(const float gain : Gains)
     {
-        const float *RESTRICT src{InSamples};
+        const float *RESTRICT input{InSamples};
         InSamples += InStride;
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
@@ -237,14 +283,16 @@ void MixRow_<SSETag>(const al::span<float> OutBuffer, const al::span<const float
         {
             const __m128 gain4 = _mm_set1_ps(gain);
             do {
-                const __m128 val4{_mm_load_ps(src)};
+                const __m128 val4{_mm_load_ps(input)};
                 __m128 dry4{_mm_load_ps(out_iter)};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
                 _mm_store_ps(out_iter, dry4);
-                out_iter += 4; src += 4;
+                out_iter += 4; input += 4;
             } while(--todo);
         }
-        std::transform(out_iter, OutBuffer.end(), src, out_iter,
-            [gain](const ALfloat cur, const ALfloat src) -> ALfloat { return cur + src*gain; });
+
+        auto do_mix = [gain](const float cur, const float src) noexcept -> float
+        { return cur + src*gain; };
+        std::transform(out_iter, OutBuffer.end(), input, out_iter, do_mix);
     }
 }

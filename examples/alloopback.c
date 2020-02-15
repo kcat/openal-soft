@@ -149,10 +149,10 @@ int main(int argc, char *argv[])
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(x)  ((x) = alcGetProcAddress(NULL, #x))
-    LOAD_PROC(alcLoopbackOpenDeviceSOFT);
-    LOAD_PROC(alcIsRenderFormatSupportedSOFT);
-    LOAD_PROC(alcRenderSamplesSOFT);
+#define LOAD_PROC(T, x)  ((x) = (T)alcGetProcAddress(NULL, #x))
+    LOAD_PROC(LPALCLOOPBACKOPENDEVICESOFT, alcLoopbackOpenDeviceSOFT);
+    LOAD_PROC(LPALCISRENDERFORMATSUPPORTEDSOFT, alcIsRenderFormatSupportedSOFT);
+    LOAD_PROC(LPALCRENDERSAMPLESSOFT, alcRenderSamplesSOFT);
 #undef LOAD_PROC
 
     if(SDL_Init(SDL_INIT_AUDIO) == -1)
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
     /* Create the source to play the sound with. */
     source = 0;
     alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound until it finishes. */

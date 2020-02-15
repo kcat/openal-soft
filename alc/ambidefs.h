@@ -2,6 +2,7 @@
 #define AMBIDEFS_H
 
 #include <array>
+#include <cstdint>
 
 /* The maximum number of Ambisonics channels. For a given order (o), the size
  * needed will be (o+1)**2, thus zero-order has 1, first-order has 4, second-
@@ -84,7 +85,7 @@ struct AmbiScale {
 };
 
 struct AmbiIndex {
-    static constexpr std::array<int,MAX_AMBI_CHANNELS> FromFuMa{{
+    static constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> FromFuMa{{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -102,17 +103,29 @@ struct AmbiIndex {
         15, /* P */
         9,  /* Q */
     }};
-    static constexpr std::array<int,MAX_AMBI_CHANNELS> FromACN{{
-        0,  1,  2,  3,  4,  5,  6,  7,
-        8,  9, 10, 11, 12, 13, 14, 15
+    static constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> FromFuMa2D{{
+        0,  /* W */
+        3,  /* X */
+        1,  /* Y */
+        8,  /* U */
+        4,  /* V */
+        15, /* P */
+        9,  /* Q */
     }};
 
-    static constexpr std::array<int,MAX_AMBI2D_CHANNELS> From2D{{
-        0, 1,3, 4,8, 9,15
-    }};
-    static constexpr std::array<int,MAX_AMBI_CHANNELS> From3D{{
+    static constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> FromACN{{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
+    }};
+    static constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> From2D{{
+        0, 1,3, 4,8, 9,15
+    }};
+
+    static constexpr std::array<uint8_t,MAX_AMBI_CHANNELS> OrderFromChannel{{
+        0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
+    }};
+    static constexpr std::array<uint8_t,MAX_AMBI2D_CHANNELS> OrderFrom2DChannel{{
+        0, 1,1, 2,2, 3,3,
     }};
 };
 

@@ -159,12 +159,12 @@ int altime_get(void)
     struct timespec ts;
     int ret = clock_gettime(CLOCK_REALTIME, &ts);
     if(ret != 0) return 0;
-    cur_time = ts.tv_sec*1000 + ts.tv_nsec/1000000;
+    cur_time = (int)(ts.tv_sec*1000 + ts.tv_nsec/1000000);
 #else /* _POSIX_TIMERS > 0 */
     struct timeval tv;
     int ret = gettimeofday(&tv, NULL);
     if(ret != 0) return 0;
-    cur_time = tv.tv_sec*1000 + tv.tv_usec/1000;
+    cur_time = (int)(tv.tv_sec*1000 + tv.tv_usec/1000);
 #endif
 
     if(!start_time)
@@ -175,8 +175,8 @@ int altime_get(void)
 void al_nssleep(unsigned long nsec)
 {
     struct timespec ts, rem;
-    ts.tv_sec = nsec / 1000000000ul;
-    ts.tv_nsec = nsec % 1000000000ul;
+    ts.tv_sec = (time_t)(nsec / 1000000000ul);
+    ts.tv_nsec = (long)(nsec % 1000000000ul);
     while(nanosleep(&ts, &rem) == -1 && errno == EINTR)
         ts = rem;
 }

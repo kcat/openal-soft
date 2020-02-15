@@ -13,7 +13,7 @@ namespace al {
  */
 enum class byte : unsigned char { };
 
-#define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),int>::type = 0
+#define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),bool>::type = true
 
 template<typename T, REQUIRES(std::is_integral<T>::value)>
 inline constexpr T to_integer(al::byte b) noexcept { return T(b); }
@@ -38,7 +38,7 @@ inline al::byte& operator>>=(al::byte &lhs, T rhs) noexcept
 #define AL_DECL_OP(op)                                                        \
 template<typename T, REQUIRES(std::is_integral<T>::value)>                    \
 inline constexpr al::byte operator op (al::byte lhs, T rhs) noexcept          \
-{ return al::byte(to_integer<unsigned int>(lhs) op rhs); }                    \
+{ return al::byte(to_integer<unsigned int>(lhs) op static_cast<unsigned int>(rhs)); } \
 template<typename T, REQUIRES(std::is_integral<T>::value)>                    \
 inline al::byte& operator op##= (al::byte &lhs, T rhs) noexcept               \
 { lhs = lhs op rhs; return lhs; }                                             \

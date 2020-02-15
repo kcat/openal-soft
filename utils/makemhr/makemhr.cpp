@@ -74,6 +74,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -87,6 +88,8 @@
 #include "../getopt.h"
 #endif
 
+#include "alfstream.h"
+#include "alstring.h"
 #include "loaddef.h"
 #include "loadsofa.h"
 
@@ -125,15 +128,11 @@ enum HeadModelT {
 
 // The limits to the truncation window size on the command line.
 #define MIN_TRUNCSIZE                (16)
-#define MAX_TRUNCSIZE                (512)
+#define MAX_TRUNCSIZE                (128)
 
 // The limits to the custom head radius on the command line.
 #define MIN_CUSTOM_RADIUS            (0.05)
 #define MAX_CUSTOM_RADIUS            (0.15)
-
-// The truncation window size must be a multiple of the below value to allow
-// for vectorized convolution.
-#define MOD_TRUNCSIZE                (8)
 
 // The defaults for the command line options.
 #define DEFAULT_FFTSIZE              (65536)
@@ -148,8 +147,8 @@ enum HeadModelT {
 #define MAX_HRTD                     (63.0)
 
 // The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
-// response protocol 02.
-#define MHR_FORMAT                   ("MinPHR02")
+// response protocol 03.
+#define MHR_FORMAT                   ("MinPHR03")
 
 /* Channel index enums. Mono uses LeftChannel only. */
 enum ChannelIndex : uint {
@@ -178,7 +177,7 @@ static int StrSubst(const char *in, const char *pat, const char *rep, const size
     {
         if(patLen <= inLen-si)
         {
-            if(strncasecmp(&in[si], pat, patLen) == 0)
+            if(al::strncasecmp(&in[si], pat, patLen) == 0)
             {
                 if(repLen > maxLen-di)
                 {
@@ -220,15 +219,16 @@ static inline uint dither_rng(uint *seed)
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
 static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
-                       const int count, const int step, uint *seed)
+                       const uint count, const uint step, uint *seed)
 {
     static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
 
-    for(int i{0};i < count;i++)
+    for(uint i{0};i < count;i++)
     {
         uint prn0{dither_rng(seed)};
         uint prn1{dither_rng(seed)};
-        out[i*step] = std::round(in[i]*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
+        *out = std::round(*(in++)*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
+        out += step;
     }
 }
 
@@ -254,18 +254,18 @@ static void FftArrange(const uint n, complex_d *inout)
 }
 
 // Performs the summation.
-static void FftSummation(const int n, const double s, complex_d *cplx)
+static void FftSummation(const uint n, const double s, complex_d *cplx)
 {
     double pi;
-    int m, m2;
-    int i, k, mk;
+    uint m, m2;
+    uint i, k, mk;
 
     pi = s * M_PI;
     for(m = 1, m2 = 2;m < n; m <<= 1, m2 <<= 1)
     {
         // v = Complex (-2.0 * sin (0.5 * pi / m) * sin (0.5 * pi / m), -sin (pi / m))
-        double sm = sin(0.5 * pi / m);
-        auto v = complex_d{-2.0*sm*sm, -sin(pi / m)};
+        double sm = std::sin(0.5 * pi / m);
+        auto v = complex_d{-2.0*sm*sm, -std::sin(pi / m)};
         auto w = complex_d{1.0, 0.0};
         for(i = 0;i < m;i++)
         {
@@ -396,239 +396,6 @@ static void MinimumPhase(const uint n, const double *in, complex_d *out)
 
 
 /***************************
- *** Resampler functions ***
- ***************************/
-
-/* This is the normalized cardinal sine (sinc) function.
- *
- *   sinc(x) = { 1,                   x = 0
- *             { sin(pi x) / (pi x),  otherwise.
- */
-static double Sinc(const double x)
-{
-    if(std::abs(x) < EPSILON)
-        return 1.0;
-    return std::sin(M_PI * x) / (M_PI * x);
-}
-
-/* The zero-order modified Bessel function of the first kind, used for the
- * Kaiser window.
- *
- *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
- *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
- */
-static double BesselI_0(const double x)
-{
-    double term, sum, x2, y, last_sum;
-    int k;
-
-    // Start at k=1 since k=0 is trivial.
-    term = 1.0;
-    sum = 1.0;
-    x2 = x/2.0;
-    k = 1;
-
-    // Let the integration converge until the term of the sum is no longer
-    // significant.
-    do {
-        y = x2 / k;
-        k++;
-        last_sum = sum;
-        term *= y * y;
-        sum += term;
-    } while(sum != last_sum);
-    return sum;
-}
-
-/* Calculate a Kaiser window from the given beta value and a normalized k
- * [-1, 1].
- *
- *   w(k) = { I_0(B sqrt(1 - k^2)) / I_0(B),  -1 <= k <= 1
- *          { 0,                              elsewhere.
- *
- * Where k can be calculated as:
- *
- *   k = i / l,         where -l <= i <= l.
- *
- * or:
- *
- *   k = 2 i / M - 1,   where 0 <= i <= M.
- */
-static double Kaiser(const double b, const double k)
-{
-    if(!(k >= -1.0 && k <= 1.0))
-        return 0.0;
-    return BesselI_0(b * std::sqrt(1.0 - k*k)) / BesselI_0(b);
-}
-
-// Calculates the greatest common divisor of a and b.
-static uint Gcd(uint x, uint y)
-{
-    while(y > 0)
-    {
-        uint z{y};
-        y = x % y;
-        x = z;
-    }
-    return x;
-}
-
-/* Calculates the size (order) of the Kaiser window.  Rejection is in dB and
- * the transition width is normalized frequency (0.5 is nyquist).
- *
- *   M = { ceil((r - 7.95) / (2.285 2 pi f_t)),  r > 21
- *       { ceil(5.79 / 2 pi f_t),                r <= 21.
- *
- */
-static uint CalcKaiserOrder(const double rejection, const double transition)
-{
-    double w_t = 2.0 * M_PI * transition;
-    if(rejection > 21.0)
-        return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
-    return static_cast<uint>(std::ceil(5.79 / w_t));
-}
-
-// Calculates the beta value of the Kaiser window.  Rejection is in dB.
-static double CalcKaiserBeta(const double rejection)
-{
-    if(rejection > 50.0)
-        return 0.1102 * (rejection - 8.7);
-    if(rejection >= 21.0)
-        return (0.5842 * std::pow(rejection - 21.0, 0.4)) +
-               (0.07886 * (rejection - 21.0));
-    return 0.0;
-}
-
-/* Calculates a point on the Kaiser-windowed sinc filter for the given half-
- * width, beta, gain, and cutoff.  The point is specified in non-normalized
- * samples, from 0 to M, where M = (2 l + 1).
- *
- *   w(k) 2 p f_t sinc(2 f_t x)
- *
- *   x    -- centered sample index (i - l)
- *   k    -- normalized and centered window index (x / l)
- *   w(k) -- window function (Kaiser)
- *   p    -- gain compensation factor when sampling
- *   f_t  -- normalized center frequency (or cutoff; 0.5 is nyquist)
- */
-static double SincFilter(const int l, const double b, const double gain, const double cutoff, const int i)
-{
-    return Kaiser(b, static_cast<double>(i - l) / l) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * (i - l));
-}
-
-/* This is a polyphase sinc-filtered resampler.
- *
- *              Upsample                      Downsample
- *
- *              p/q = 3/2                     p/q = 3/5
- *
- *          M-+-+-+->                     M-+-+-+->
- *         -------------------+          ---------------------+
- *   p  s * f f f f|f|        |    p  s * f f f f f           |
- *   |  0 *   0 0 0|0|0       |    |  0 *   0 0 0 0|0|        |
- *   v  0 *     0 0|0|0 0     |    v  0 *     0 0 0|0|0       |
- *      s *       f|f|f f f   |       s *       f f|f|f f     |
- *      0 *        |0|0 0 0 0 |       0 *         0|0|0 0 0   |
- *         --------+=+--------+       0 *          |0|0 0 0 0 |
- *          d . d .|d|. d . d            ----------+=+--------+
- *                                        d . . . .|d|. . . .
- *          q->
- *                                        q-+-+-+->
- *
- *   P_f(i,j) = q i mod p + pj
- *   P_s(i,j) = floor(q i / p) - j
- *   d[i=0..N-1] = sum_{j=0}^{floor((M - 1) / p)} {
- *                   { f[P_f(i,j)] s[P_s(i,j)],  P_f(i,j) < M
- *                   { 0,                        P_f(i,j) >= M. }
- */
-
-// Calculate the resampling metrics and build the Kaiser-windowed sinc filter
-// that's used to cut frequencies above the destination nyquist.
-void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRate)
-{
-    double cutoff, width, beta;
-    uint gcd, l;
-    int i;
-
-    gcd = Gcd(srcRate, dstRate);
-    rs->mP = dstRate / gcd;
-    rs->mQ = srcRate / gcd;
-    /* The cutoff is adjusted by half the transition width, so the transition
-     * ends before the nyquist (0.5).  Both are scaled by the downsampling
-     * factor.
-     */
-    if(rs->mP > rs->mQ)
-    {
-        cutoff = 0.475 / rs->mP;
-        width = 0.05 / rs->mP;
-    }
-    else
-    {
-        cutoff = 0.475 / rs->mQ;
-        width = 0.05 / rs->mQ;
-    }
-    // A rejection of -180 dB is used for the stop band. Round up when
-    // calculating the left offset to avoid increasing the transition width.
-    l = (CalcKaiserOrder(180.0, width)+1) / 2;
-    beta = CalcKaiserBeta(180.0);
-    rs->mM = l*2 + 1;
-    rs->mL = l;
-    rs->mF.resize(rs->mM);
-    for(i = 0;i < (static_cast<int>(rs->mM));i++)
-        rs->mF[i] = SincFilter(static_cast<int>(l), beta, rs->mP, cutoff, i);
-}
-
-// Perform the upsample-filter-downsample resampling operation using a
-// polyphase filter implementation.
-void ResamplerRun(ResamplerT *rs, const uint inN, const double *in, const uint outN, double *out)
-{
-    const uint p = rs->mP, q = rs->mQ, m = rs->mM, l = rs->mL;
-    std::vector<double> workspace;
-    const double *f = rs->mF.data();
-    uint j_f, j_s;
-    double *work;
-    uint i;
-
-    if(outN == 0)
-        return;
-
-    // Handle in-place operation.
-    if(in == out)
-    {
-        workspace.resize(outN);
-        work = workspace.data();
-    }
-    else
-        work = out;
-    // Resample the input.
-    for(i = 0;i < outN;i++)
-    {
-        double r = 0.0;
-        // Input starts at l to compensate for the filter delay.  This will
-        // drop any build-up from the first half of the filter.
-        j_f = (l + (q * i)) % p;
-        j_s = (l + (q * i)) / p;
-        while(j_f < m)
-        {
-            // Only take input when 0 <= j_s < inN.  This single unsigned
-            // comparison catches both cases.
-            if(j_s < inN)
-                r += f[j_f] * in[j_s];
-            j_f += p;
-            j_s--;
-        }
-        work[i] = r;
-    }
-    // Clean up after in-place operation.
-    if(work != out)
-    {
-        for(i = 0;i < outN;i++)
-            out[i] = work[i];
-    }
-}
-
-
-/***************************
  *** File storage output ***
  ***************************/
 
@@ -668,11 +435,11 @@ static int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *
 // Store the OpenAL Soft HRTF data set.
 static int StoreMhr(const HrirDataT *hData, const char *filename)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    uint n = hData->mIrPoints;
-    FILE *fp;
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    const uint n{hData->mIrPoints};
+    uint dither_seed{22222};
     uint fi, ei, ai, i;
-    uint dither_seed = 22222;
+    FILE *fp;
 
     if((fp=fopen(filename, "wb")) == nullptr)
     {
@@ -683,15 +450,13 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         return 0;
     if(!WriteBin4(4, hData->mIrRate, fp, filename))
         return 0;
-    if(!WriteBin4(1, static_cast<uint32_t>(hData->mSampleType), fp, filename))
-        return 0;
     if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
         return 0;
     if(!WriteBin4(1, hData->mIrPoints, fp, filename))
         return 0;
     if(!WriteBin4(1, hData->mFdCount, fp, filename))
         return 0;
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
         if(!WriteBin4(2, fdist, fp, filename))
@@ -705,12 +470,10 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         }
     }
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
     {
-        const double scale = (hData->mSampleType == ST_S16) ? 32767.0 :
-                             ((hData->mSampleType == ST_S24) ? 8388607.0 : 0.0);
-        const int bps = (hData->mSampleType == ST_S16) ? 2 :
-                        ((hData->mSampleType == ST_S24) ? 3 : 0);
+        constexpr double scale{8388607.0};
+        constexpr uint bps{3u};
 
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -724,30 +487,29 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
                     TpdfDither(out+1, azd->mIrs[1], scale, n, channels, &dither_seed);
                 for(i = 0;i < (channels * n);i++)
                 {
-                    int v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
+                    const auto v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
                     if(!WriteBin4(bps, static_cast<uint32_t>(v), fp, filename))
                         return 0;
                 }
             }
         }
     }
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
     {
+        /* Delay storage has 2 bits of extra precision. */
+        constexpr double DelayPrecScale{4.0};
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
                 const HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
-                int v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[0]), MAX_HRTD));
 
-                if(!WriteBin4(1, static_cast<uint32_t>(v), fp, filename))
-                    return 0;
+                auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
+                if(!WriteBin4(1, v, fp, filename)) return 0;
                 if(hData->mChannelType == CT_STEREO)
                 {
-                    v = static_cast<int>(std::min(std::round(hData->mIrRate * azd.mDelays[1]), MAX_HRTD));
-
-                    if(!WriteBin4(1, static_cast<uint32_t>(v), fp, filename))
-                        return 0;
+                    v = static_cast<uint>(std::round(azd.mDelays[1]*DelayPrecScale));
+                    if(!WriteBin4(1, v, fp, filename)) return 0;
                 }
             }
         }
@@ -960,8 +722,8 @@ struct HrirReconstructor {
     std::vector<double*> mIrs;
     std::atomic<size_t> mCurrent;
     std::atomic<size_t> mDone;
-    size_t mFftSize;
-    size_t mIrPoints;
+    uint mFftSize;
+    uint mIrPoints;
 
     void Worker()
     {
@@ -987,7 +749,7 @@ struct HrirReconstructor {
              */
             MinimumPhase(mFftSize, mIrs[idx], h.data());
             FftInverse(mFftSize, h.data());
-            for(size_t i{0u};i < mIrPoints;++i)
+            for(uint i{0u};i < mIrPoints;++i)
                 mIrs[idx][i] = h[i].real();
 
             /* Increment the number of IRs done. */
@@ -1041,17 +803,16 @@ static void ReconstructHrirs(const HrirDataT *hData)
 
     /* Keep track of the number of IRs done, periodically reporting it. */
     size_t count;
-    while((count=reconstructor.mDone.load()) != total)
-    {
+    do {
+        std::this_thread::sleep_for(std::chrono::milliseconds{50});
+
+        count = reconstructor.mDone.load();
         size_t pcdone{count * 100 / total};
 
         printf("\r%3zu%% done (%zu of %zu)", pcdone, count, total);
         fflush(stdout);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds{50});
-    }
-    size_t pcdone{count * 100 / total};
-    printf("\r%3zu%% done (%zu of %zu)\n", pcdone, count, total);
+    } while(count != total);
+    fputc('\n', stdout);
 
     if(thrd2.joinable()) thrd2.join();
     if(thrd1.joinable()) thrd1.join();
@@ -1063,9 +824,9 @@ static void ResampleHrirs(const uint rate, HrirDataT *hData)
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     uint n = hData->mIrPoints;
     uint ti, fi, ei, ai;
-    ResamplerT rs;
+    PPhaseResampler rs;
 
-    ResamplerSetup(&rs, hData->mIrRate, rate);
+    rs.init(hData->mIrRate, rate);
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
         for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
@@ -1074,7 +835,7 @@ static void ResampleHrirs(const uint rate, HrirDataT *hData)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(ti = 0;ti < channels;ti++)
-                    ResamplerRun(&rs, n, azd->mIrs[ti], n, azd->mIrs[ti]);
+                    rs.process(n, azd->mIrs[ti], n, azd->mIrs[ti]);
             }
         }
     }
@@ -1321,32 +1082,32 @@ static void NormalizeHrirs(HrirDataT *hData)
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
-    auto proc0_field = [channels,irSize](const LevelPair levels, const HrirFdT &field) -> LevelPair
+    auto proc0_field = [channels,irSize](const LevelPair levels0, const HrirFdT &field) -> LevelPair
     {
-        auto proc_elev = [channels,irSize](const LevelPair levels, const HrirEvT &elev) -> LevelPair
+        auto proc_elev = [channels,irSize](const LevelPair levels1, const HrirEvT &elev) -> LevelPair
         {
-            auto proc_azi = [channels,irSize](const LevelPair levels, const HrirAzT &azi) -> LevelPair
+            auto proc_azi = [channels,irSize](const LevelPair levels2, const HrirAzT &azi) -> LevelPair
             {
-                auto proc_channel = [irSize](const LevelPair levels, const double *ir) -> LevelPair
+                auto proc_channel = [irSize](const LevelPair levels3, const double *ir) -> LevelPair
                 {
                     /* Calculate the peak amplitude and RMS of this IR. */
                     auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
-                        [](const LevelPair current, const double impulse) -> LevelPair
+                        [](const LevelPair cur, const double impulse) -> LevelPair
                         {
-                            return LevelPair{std::max(std::abs(impulse), current.amp),
-                                current.rms + impulse*impulse};
+                            return {std::max(std::abs(impulse), cur.amp),
+                                cur.rms + impulse*impulse};
                         });
                     current.rms = std::sqrt(current.rms / irSize);
 
                     /* Accumulate levels by taking the maximum amplitude and RMS. */
-                    return LevelPair{std::max(current.amp, levels.amp),
-                        std::max(current.rms, levels.rms)};
+                    return LevelPair{std::max(current.amp, levels3.amp),
+                        std::max(current.rms, levels3.rms)};
                 };
-                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels, proc_channel);
+                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels2, proc_channel);
             };
-            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels, proc_azi);
+            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels1, proc_azi);
         };
-        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels, proc_elev);
+        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels0, proc_elev);
     };
     const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount,
         LevelPair{0.0, 0.0}, proc0_field);
@@ -1444,6 +1205,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
         }
     }
 
+    double maxHrtd{0.0};
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
         double minHrtd{std::numeric_limits<double>::infinity()};
@@ -1460,10 +1222,32 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
-            for(ti = 0;ti < channels;ti++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            {
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+
+                for(ti = 0;ti < channels;ti++)
+                {
+                    azd->mDelays[ti] = (azd->mDelays[ti]-minHrtd) * hData->mIrRate;
+                    maxHrtd = std::max(maxHrtd, azd->mDelays[ti]);
+                }
+            }
+        }
+    }
+    if(maxHrtd > MAX_HRTD)
+    {
+        fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MAX_HRTD);
+        const double scale{MAX_HRTD / maxHrtd};
+        for(fi = 0;fi < hData->mFdCount;fi++)
+        {
+            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
             {
                 for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
-                    hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[ti] -= minHrtd;
+                {
+                    HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                    for(ti = 0;ti < channels;ti++)
+                        azd->mDelays[ti] *= scale;
+                }
             }
         }
     }
@@ -1528,64 +1312,59 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const char *outName)
+static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
+    const uint fftSize, const int equalize, const int surface, const double limit,
+    const uint truncSize, const HeadModelT model, const double radius, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
-    char startbytes[4]{};
-    size_t startbytecount{0u};
     HrirDataT hData;
-    FILE *fp;
-    int ret;
 
     if(!inName)
     {
         inName = "stdin";
-        fp = stdin;
+        fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
+        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, chanMode, &hData))
+            return 0;
     }
     else
     {
-        fp = fopen(inName, "r");
-        if(fp == nullptr)
+        std::unique_ptr<al::ifstream> input{new al::ifstream{inName}};
+        if(!input->is_open())
         {
             fprintf(stderr, "Error: Could not open input file '%s'\n", inName);
             return 0;
         }
 
-        startbytecount = fread(startbytes, 1, sizeof(startbytes), fp);
-        if(startbytecount != sizeof(startbytes))
+        char startbytes[4]{};
+        input->read(startbytes, sizeof(startbytes));
+        std::streamsize startbytecount{input->gcount()};
+        if(startbytecount != sizeof(startbytes) || !input->good())
         {
-            fclose(fp);
             fprintf(stderr, "Error: Could not read input file '%s'\n", inName);
             return 0;
         }
 
-        if(startbytes[0] == '\x89' && startbytes[1] == 'H' && startbytes[2] == 'D' &&
-           startbytes[3] == 'F')
+        if(startbytes[0] == '\x89' && startbytes[1] == 'H' && startbytes[2] == 'D'
+            && startbytes[3] == 'F')
         {
-            fclose(fp);
-            fp = nullptr;
-
+            input = nullptr;
             fprintf(stdout, "Reading HRTF data from %s...\n", inName);
             if(!LoadSofaFile(inName, fftSize, truncSize, chanMode, &hData))
                 return 0;
         }
-    }
-    if(fp != nullptr)
-    {
-        fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-        const bool success{LoadDefInput(fp, startbytes, startbytecount, inName, fftSize, truncSize,
-            chanMode, &hData)};
-        if(fp != stdin)
-            fclose(fp);
-        if(!success)
-            return 0;
+        else
+        {
+            fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
+            if(!LoadDefInput(*input, startbytes, startbytecount, inName, fftSize, truncSize, chanMode, &hData))
+                return 0;
+        }
     }
 
     if(equalize)
     {
-        uint c = (hData.mChannelType == CT_STEREO) ? 2 : 1;
-        uint m = 1 + hData.mFftSize / 2;
-        std::vector<double> dfa(c * m);
+        uint c{(hData.mChannelType == CT_STEREO) ? 2u : 1u};
+        uint m{hData.mFftSize/2u + 1u};
+        auto dfa = std::vector<double>(c * m);
 
         if(hData.mFdCount > 1)
         {
@@ -1614,12 +1393,10 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     NormalizeHrirs(&hData);
     fprintf(stdout, "Calculating impulse delays...\n");
     CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
-    snprintf(rateStr, 8, "%u", hData.mIrRate);
-    StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
+    snprintf(rateStr, sizeof(rateStr), "%u", hData.mIrRate);
+    StrSubst(outName, "%r", rateStr, sizeof(expName), expName);
     fprintf(stdout, "Creating MHR data set %s...\n", expName);
-    ret = StoreMhr(&hData, expName);
-
-    return ret;
+    return StoreMhr(&hData, expName);
 }
 
 static void PrintHelp(const char *argv0, FILE *ofile)
@@ -1684,7 +1461,7 @@ int main(int argc, char *argv[])
         switch(opt)
         {
         case 'r':
-            outRate = strtoul(optarg, &end, 10);
+            outRate = static_cast<uint>(strtoul(optarg, &end, 10));
             if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
@@ -1697,7 +1474,7 @@ int main(int argc, char *argv[])
             break;
 
         case 'f':
-            fftSize = strtoul(optarg, &end, 10);
+            fftSize = static_cast<uint>(strtoul(optarg, &end, 10));
             if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MIN_FFTSIZE || fftSize > MAX_FFTSIZE)
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MIN_FFTSIZE, MAX_FFTSIZE);
@@ -1744,10 +1521,10 @@ int main(int argc, char *argv[])
             break;
 
         case 'w':
-            truncSize = strtoul(optarg, &end, 10);
-            if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE || (truncSize%MOD_TRUNCSIZE))
+            truncSize = static_cast<uint>(strtoul(optarg, &end, 10));
+            if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected multiple of %u between %u to %u.\n", optarg, opt, MOD_TRUNCSIZE, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
                 exit(EXIT_FAILURE);
             }
             break;

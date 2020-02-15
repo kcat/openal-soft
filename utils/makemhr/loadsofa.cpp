@@ -21,135 +21,28 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+#include "loadsofa.h"
+
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <future>
+#include <iterator>
 #include <memory>
 #include <numeric>
-#include <algorithm>
+#include <string>
+#include <vector>
+
+#include "makemhr.h"
+#include "polyphase_resampler.h"
+#include "sofa-support.h"
 
 #include "mysofa.h"
 
-#include "loadsofa.h"
 
-
-static const char *SofaErrorStr(int err)
-{
-    switch(err)
-    {
-    case MYSOFA_OK: return "OK";
-    case MYSOFA_INVALID_FORMAT: return "Invalid format";
-    case MYSOFA_UNSUPPORTED_FORMAT: return "Unsupported format";
-    case MYSOFA_INTERNAL_ERROR: return "Internal error";
-    case MYSOFA_NO_MEMORY: return "Out of memory";
-    case MYSOFA_READ_ERROR: return "Read error";
-    }
-    return "Unknown";
-}
-
-
-/* Produces a sorted array of unique elements from a particular axis of the
- * triplets array.  The filters are used to focus on particular coordinates
- * of other axes as necessary.  The epsilons are used to constrain the
- * equality of unique elements.
- */
-static uint GetUniquelySortedElems(const uint m, const float *triplets, const int axis,
-    const double *const (&filters)[3], const double (&epsilons)[3], float *elems)
-{
-    uint count{0u};
-    for(uint i{0u};i < 3*m;i += 3)
-    {
-        const float elem{triplets[i + axis]};
-
-        uint j;
-        for(j = 0;j < 3;j++)
-        {
-            if(filters[j] && std::fabs(triplets[i + j] - *filters[j]) > epsilons[j])
-                break;
-        }
-        if(j < 3)
-            continue;
-
-        for(j = 0;j < count;j++)
-        {
-            const float delta{elem - elems[j]};
-
-            if(delta > epsilons[axis])
-                continue;
-
-            if(delta >= -epsilons[axis])
-                break;
-
-            for(uint k{count};k > j;k--)
-                elems[k] = elems[k - 1];
-
-            elems[j] = elem;
-            count++;
-            break;
-        }
-
-        if(j >= count)
-            elems[count++] = elem;
-    }
-
-    return count;
-}
-
-/* Given a list of elements, this will produce the smallest step size that
- * can uniformly cover a fair portion of the list.  Ideally this will be over
- * half, but in degenerate cases this can fall to a minimum of 5 (the lower
- * limit on elevations necessary to build a layout).
- */
-static float GetUniformStepSize(const double epsilon, const uint m, const float *elems)
-{
-    auto steps = std::vector<float>(m, 0.0f);
-    auto counts = std::vector<uint>(m, 0u);
-    float step{0.0f};
-    uint count{0u};
-
-    for(uint stride{1u};stride < m/2;stride++)
-    {
-        for(uint i{0u};i < m-stride;i++)
-        {
-            const float step{elems[i + stride] - elems[i]};
-
-            uint j;
-            for(j = 0;j < count;j++)
-            {
-                if(std::fabs(step - steps[j]) < epsilon)
-                {
-                    counts[j]++;
-                    break;
-                }
-            }
-
-            if(j >= count)
-            {
-                steps[j] = step;
-                counts[j] = 1;
-                count++;
-            }
-        }
-
-        for(uint i{1u};i < count;i++)
-        {
-            if(counts[i] > counts[0])
-            {
-                steps[0] = steps[i];
-                counts[0] = counts[i];
-            }
-        }
-
-        count = 1;
-
-        if(counts[0] > m/2)
-        {
-            step = steps[0];
-            return step;
-        }
-    }
-
-    if(counts[0] > 5)
-        step = steps[0];
-    return step;
-}
+using uint = unsigned int;
 
 /* Attempts to produce a compatible layout.  Most data sets tend to be
  * uniform and have the same major axis as used by OpenAL Soft's HRTF model.
@@ -159,20 +52,10 @@ static float GetUniformStepSize(const double epsilon, const uint m, const float 
  */
 static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 {
-    std::vector<float> aers(3*m, 0.0f);
-    std::vector<float> elems(m, 0.0f);
+    fprintf(stdout, "Detecting compatible layout...\n");
 
-    for(uint i{0u};i < 3*m;i += 3)
-    {
-        aers[i] = xyzs[i];
-        aers[i + 1] = xyzs[i + 1];
-        aers[i + 2] = xyzs[i + 2];
-        mysofa_c2s(&aers[i]);
-    }
-
-    const uint fdCount{GetUniquelySortedElems(m, aers.data(), 2, { nullptr, nullptr, nullptr },
-        { 0.1, 0.1, 0.001 }, elems.data())};
-    if(fdCount > MAX_FD_COUNT)
+    auto fds = GetCompatibleLayout(m, xyzs);
+    if(fds.size() > MAX_FD_COUNT)
     {
         fprintf(stdout, "Incompatible layout (inumerable radii).\n");
         return false;
@@ -180,101 +63,26 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 
     double distances[MAX_FD_COUNT]{};
     uint evCounts[MAX_FD_COUNT]{};
-    auto azCounts = std::vector<uint>(MAX_FD_COUNT * MAX_EV_COUNT);
-    for(uint fi{0u};fi < fdCount;fi++)
+    auto azCounts = std::vector<uint>(MAX_FD_COUNT*MAX_EV_COUNT, 0u);
+
+    uint fi{0u}, ir_total{0u};
+    for(const auto &field : fds)
     {
-        distances[fi] = elems[fi];
-        if(fi > 0 && distances[fi] <= distances[fi-1])
+        distances[fi] = field.mDistance;
+        evCounts[fi] = field.mEvCount;
+
+        for(uint ei{0u};ei < field.mEvStart;ei++)
+            azCounts[fi*MAX_EV_COUNT + ei] = field.mAzCounts[field.mEvCount-ei-1];
+        for(uint ei{field.mEvStart};ei < field.mEvCount;ei++)
         {
-            fprintf(stderr, "Distances must increase.\n");
-            return 0;
+            azCounts[fi*MAX_EV_COUNT + ei] = field.mAzCounts[ei];
+            ir_total += field.mAzCounts[ei];
         }
+
+        ++fi;
     }
-    if(distances[0] < hData->mRadius)
-    {
-        fprintf(stderr, "Distance cannot start below head radius.\n");
-        return 0;
-    }
-
-    for(uint fi{0u};fi < fdCount;fi++)
-    {
-        const double dist{distances[fi]};
-        uint evCount{GetUniquelySortedElems(m, aers.data(), 1, { nullptr, nullptr, &dist },
-            { 0.1, 0.1, 0.001 }, elems.data())};
-
-        if(evCount > MAX_EV_COUNT)
-        {
-            fprintf(stderr, "Incompatible layout (innumerable elevations).\n");
-            return false;
-        }
-
-        float step{GetUniformStepSize(0.1, evCount, elems.data())};
-        if(step <= 0.0f)
-        {
-            fprintf(stderr, "Incompatible layout (non-uniform elevations).\n");
-            return false;
-        }
-
-        uint evStart{0u};
-        for(uint ei{0u};ei < evCount;ei++)
-        {
-            float ev{90.0f + elems[ei]};
-            float eif{std::round(ev / step)};
-
-            if(std::fabs(eif - (uint)eif) < (0.1f / step))
-            {
-                evStart = static_cast<uint>(eif);
-                break;
-            }
-        }
-
-        evCount = static_cast<uint>(std::round(180.0f / step)) + 1;
-        if(evCount < 5)
-        {
-            fprintf(stderr, "Incompatible layout (too few uniform elevations).\n");
-            return false;
-        }
-
-        evCounts[fi] = evCount;
-
-        for(uint ei{evStart};ei < evCount;ei++)
-        {
-            const double ev{-90.0 + ei*180.0/(evCount - 1)};
-            const uint azCount{GetUniquelySortedElems(m, aers.data(), 0, { nullptr, &ev, &dist },
-                { 0.1, 0.1, 0.001 }, elems.data())};
-
-            if(azCount > MAX_AZ_COUNT)
-            {
-                fprintf(stderr, "Incompatible layout (innumerable azimuths).\n");
-                return false;
-            }
-
-            if(ei > 0 && ei < (evCount - 1))
-            {
-                step = GetUniformStepSize(0.1, azCount, elems.data());
-                if(step <= 0.0f)
-                {
-                    fprintf(stderr, "Incompatible layout (non-uniform azimuths).\n");
-                    return false;
-                }
-
-                azCounts[fi*MAX_EV_COUNT + ei] = static_cast<uint>(std::round(360.0f / step));
-            }
-            else if(azCount != 1)
-            {
-                fprintf(stderr, "Incompatible layout (non-singular poles).\n");
-                return false;
-            }
-            else
-            {
-                azCounts[fi*MAX_EV_COUNT + ei] = 1;
-            }
-        }
-
-        for(uint ei{0u};ei < evStart;ei++)
-            azCounts[fi*MAX_EV_COUNT + ei] = azCounts[fi*MAX_EV_COUNT + evCount - ei - 1];
-    }
-    return PrepareHrirData(fdCount, distances, evCounts, azCounts.data(), hData) != 0;
+    fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
+    return PrepareHrirData(fi, distances, evCounts, azCounts.data(), hData) != 0;
 }
 
 
@@ -426,18 +234,14 @@ static double CalcHrirOnset(const uint rate, const uint n, std::vector<double> &
     const double *hrir)
 {
     {
-        ResamplerT rs;
-        ResamplerSetup(&rs, rate, 10 * rate);
-        ResamplerRun(&rs, n, hrir, 10 * n, upsampled.data());
+        PPhaseResampler rs;
+        rs.init(rate, 10 * rate);
+        rs.process(n, hrir, 10 * n, upsampled.data());
     }
 
-    double mag{std::accumulate(upsampled.cbegin(), upsampled.cend(), double{0.0},
-        [](const double mag, const double sample) -> double
-        { return std::max(mag, std::abs(sample)); })};
-
-    mag *= 0.15;
-    auto iter = std::find_if(upsampled.cbegin(), upsampled.cend(),
-        [mag](const double sample) -> bool { return (std::abs(sample) >= mag); });
+    auto abs_lt = [](const double &lhs, const double &rhs) -> bool
+    { return std::abs(lhs) < std::abs(rhs); };
+    auto iter = std::max_element(upsampled.cbegin(), upsampled.cend(), abs_lt);
     return static_cast<double>(std::distance(upsampled.cbegin(), iter)) / (10.0*rate);
 }
 
@@ -454,85 +258,95 @@ static void CalcHrirMagnitude(const uint points, const uint n, std::vector<compl
 
 static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
 {
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
-    double *hrirs = hData->mHrirsBase.data();
+    std::atomic<uint> loaded_count{0u};
 
-    /* Temporary buffers used to calculate the IR's onset and frequency
-     * magnitudes.
-     */
-    auto upsampled = std::vector<double>(10 * hData->mIrPoints);
-    auto htemp = std::vector<complex_d>(hData->mFftSize);
-    auto hrir = std::vector<double>(hData->mFftSize);
-
-    for(uint si{0u};si < sofaHrtf->M;si++)
+    auto load_proc = [sofaHrtf,hData,&loaded_count]() -> bool
     {
-        printf("\rLoading HRIRs... %d of %d", si+1, sofaHrtf->M);
-        fflush(stdout);
+        const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+        hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
+        double *hrirs = hData->mHrirsBase.data();
 
-        float aer[3]{
-            sofaHrtf->SourcePosition.values[3*si],
-            sofaHrtf->SourcePosition.values[3*si + 1],
-            sofaHrtf->SourcePosition.values[3*si + 2]
-        };
-        mysofa_c2s(aer);
+        /* Temporary buffers used to calculate the IR's onset and frequency
+         * magnitudes.
+         */
+        auto upsampled = std::vector<double>(10 * hData->mIrPoints);
+        auto htemp = std::vector<complex_d>(hData->mFftSize);
+        auto hrir = std::vector<double>(hData->mFftSize);
 
-        if(std::abs(aer[1]) >= 89.999f)
-            aer[0] = 0.0f;
-        else
-            aer[0] = std::fmod(360.0f - aer[0], 360.0f);
+        for(uint si{0u};si < sofaHrtf->M;++si)
+        {
+            loaded_count.fetch_add(1u);
 
-        auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
-            [&aer](const HrirFdT &fld) -> bool
+            float aer[3]{
+                sofaHrtf->SourcePosition.values[3*si],
+                sofaHrtf->SourcePosition.values[3*si + 1],
+                sofaHrtf->SourcePosition.values[3*si + 2]
+            };
+            mysofa_c2s(aer);
+
+            if(std::abs(aer[1]) >= 89.999f)
+                aer[0] = 0.0f;
+            else
+                aer[0] = std::fmod(360.0f - aer[0], 360.0f);
+
+            auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
+                [&aer](const HrirFdT &fld) -> bool
+                {
+                    double delta = aer[2] - fld.mDistance;
+                    return (std::abs(delta) < 0.001);
+                });
+            if(field == hData->mFds.cend())
+                continue;
+
+            double ef{(90.0+aer[1]) / 180.0 * (field->mEvCount-1)};
+            auto ei = static_cast<int>(std::round(ef));
+            ef = (ef-ei) * 180.0 / (field->mEvCount-1);
+            if(std::abs(ef) >= 0.1) continue;
+
+            double af{aer[0] / 360.0 * field->mEvs[ei].mAzCount};
+            auto ai = static_cast<int>(std::round(af));
+            af = (af-ai) * 360.0 / field->mEvs[ei].mAzCount;
+            ai %= field->mEvs[ei].mAzCount;
+            if(std::abs(af) >= 0.1) continue;
+
+            HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
+            if(azd->mIrs[0] != nullptr)
             {
-                double delta = aer[2] - fld.mDistance;
-                return (std::abs(delta) < 0.001);
-            });
-        if(field == hData->mFds.cend())
-            continue;
+                fprintf(stderr, "\nMultiple measurements near [ a=%f, e=%f, r=%f ].\n",
+                    aer[0], aer[1], aer[2]);
+                return false;
+            }
 
-        double ef{(90.0+aer[1]) * (field->mEvCount-1) / 180.0};
-        auto ei = static_cast<int>(std::round(ef));
-        ef = (ef-ei) * 180.0f / (field->mEvCount-1);
-        if(std::abs(ef) >= 0.1) continue;
+            for(uint ti{0u};ti < channels;++ti)
+            {
+                std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                    hData->mIrPoints, hrir.begin());
+                azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
+                azd->mDelays[ti] = CalcHrirOnset(hData->mIrRate, hData->mIrPoints, upsampled,
+                    hrir.data());
+                CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, hrir.data(),
+                    azd->mIrs[ti]);
+            }
 
-        double af{aer[0] * field->mEvs[ei].mAzCount / 360.0f};
-        auto ai = static_cast<int>(std::round(af));
-        af = (af-ai) * 360.0f / field->mEvs[ei].mAzCount;
-        ai %= field->mEvs[ei].mAzCount;
-        if(std::abs(af) >= 0.1) continue;
-
-        HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
-        if(azd->mIrs[0] != nullptr)
-        {
-            fprintf(stderr, "Multiple measurements near [ a=%f, e=%f, r=%f ].\n",
-                aer[0], aer[1], aer[2]);
-            return false;
+            /* TODO: Since some SOFA files contain minimum phase HRIRs,
+             * it would be beneficial to check for per-measurement delays
+             * (when available) to reconstruct the HRTDs.
+             */
         }
+        return true;
+    };
 
-        for(uint ti{0u};ti < channels;++ti)
-        {
-            std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
-                hData->mIrPoints, hrir.begin());
-            azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
-            azd->mDelays[ti] = CalcHrirOnset(hData->mIrRate, hData->mIrPoints, upsampled,
-                hrir.data());
-            CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, hrir.data(),
-                azd->mIrs[ti]);
-        }
-
-        // TODO: Since some SOFA files contain minimum phase HRIRs,
-        // it would be beneficial to check for per-measurement delays
-        // (when available) to reconstruct the HRTDs.
-    }
-    printf("\n");
-    return true;
+    std::future_status load_status{};
+    auto load_future = std::async(std::launch::async, load_proc);
+    do {
+        load_status = load_future.wait_for(std::chrono::milliseconds{50});
+        printf("\rLoading HRIRs... %u of %u", loaded_count.load(), sofaHrtf->M);
+        fflush(stdout);
+    } while(load_status != std::future_status::ready);
+    fputc('\n', stdout);
+    return load_future.get();
 }
 
-struct MySofaHrtfDeleter {
-    void operator()(MYSOFA_HRTF *ptr) { mysofa_free(ptr); }
-};
-using MySofaHrtfPtr = std::unique_ptr<MYSOFA_HRTF,MySofaHrtfDeleter>;
 
 bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize,
     const ChannelModeT chanMode, HrirDataT *hData)
@@ -545,14 +359,9 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
         return false;
     }
 
+    /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofaHrtf.get());
     if(err != MYSOFA_OK)
-/* NOTE: Some valid SOFA files are failing this check.
-    {
-        fprintf(stdout, "Error: Malformed source file '%s' (%s).\n", filename, SofaErrorStr(err));
-        return false;
-    }
-*/
         fprintf(stderr, "Warning: Supposedly malformed source file '%s' (%s).\n", filename,
             SofaErrorStr(err));
 
@@ -593,8 +402,8 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
     /* Assume a default head radius of 9cm. */
     hData->mRadius = 0.09;
 
-    if(!PrepareSampleRate(sofaHrtf.get(), hData) || !PrepareDelay(sofaHrtf.get(), hData) ||
-       !CheckIrData(sofaHrtf.get()))
+    if(!PrepareSampleRate(sofaHrtf.get(), hData) || !PrepareDelay(sofaHrtf.get(), hData)
+        || !CheckIrData(sofaHrtf.get()))
         return false;
     if(!PrepareLayout(sofaHrtf->M, sofaHrtf->SourcePosition.values, hData))
         return false;

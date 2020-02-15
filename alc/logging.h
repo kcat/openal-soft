@@ -17,9 +17,9 @@ extern FILE *gLogFile;
 
 void al_print(FILE *logfile, const char *fmt, ...) DECL_FORMAT(printf, 2,3);
 #if !defined(_WIN32)
-#define AL_PRINT(T, ...) fprintf(gLogFile, "AL lib: " T " " __VA_ARGS__)
+#define AL_PRINT fprintf
 #else
-#define AL_PRINT(T, ...) al_print(gLogFile, "AL lib: " T " " __VA_ARGS__)
+#define AL_PRINT al_print
 #endif
 
 #ifdef __ANDROID__
@@ -38,26 +38,21 @@ enum LogLevel {
 };
 extern LogLevel gLogLevel;
 
-#define TRACEREF(...) do {                                                    \
-    if UNLIKELY(gLogLevel >= LogRef)                                          \
-        AL_PRINT("(--)", __VA_ARGS__);                                        \
-} while(0)
-
 #define TRACE(...) do {                                                       \
     if UNLIKELY(gLogLevel >= LogTrace)                                        \
-        AL_PRINT("(II)", __VA_ARGS__);                                        \
+        AL_PRINT(gLogFile, "AL lib: (II) " __VA_ARGS__);                      \
     LOG_ANDROID(ANDROID_LOG_DEBUG, __VA_ARGS__);                              \
 } while(0)
 
 #define WARN(...) do {                                                        \
     if UNLIKELY(gLogLevel >= LogWarning)                                      \
-        AL_PRINT("(WW)", __VA_ARGS__);                                        \
+        AL_PRINT(gLogFile, "AL lib: (WW) " __VA_ARGS__);                      \
     LOG_ANDROID(ANDROID_LOG_WARN, __VA_ARGS__);                               \
 } while(0)
 
 #define ERR(...) do {                                                         \
     if UNLIKELY(gLogLevel >= LogError)                                        \
-        AL_PRINT("(EE)", __VA_ARGS__);                                        \
+        AL_PRINT(gLogFile, "AL lib: (EE) " __VA_ARGS__);                      \
     LOG_ANDROID(ANDROID_LOG_ERROR, __VA_ARGS__);                              \
 } while(0)
 

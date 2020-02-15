@@ -70,6 +70,9 @@
 
 #include "alcmain.h"
 #include "almalloc.h"
+#include "alfstream.h"
+#include "alspan.h"
+#include "alstring.h"
 #include "compat.h"
 #include "cpu_caps.h"
 #include "fpu_modes.h"
@@ -81,13 +84,13 @@
 #if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
                                     defined(_M_IX86) || defined(_M_X64))
 using reg_type = unsigned int;
-static inline void get_cpuid(int f, reg_type *regs)
+static inline void get_cpuid(unsigned int f, reg_type *regs)
 { __get_cpuid(f, &regs[0], &regs[1], &regs[2], &regs[3]); }
 #define CAN_GET_CPUID
 #elif defined(HAVE_CPUID_INTRINSIC) && (defined(__i386__) || defined(__x86_64__) || \
                                         defined(_M_IX86) || defined(_M_X64))
 using reg_type = int;
-static inline void get_cpuid(int f, reg_type *regs)
+static inline void get_cpuid(unsigned int f, reg_type *regs)
 { (__cpuid)(regs, f); }
 #define CAN_GET_CPUID
 #endif
@@ -104,7 +107,7 @@ void FillCPUCaps(int capfilter)
     union {
         reg_type regs[4];
         char str[sizeof(reg_type[4])];
-    } cpuinf[3] = {{ { 0, 0, 0, 0 } }};
+    } cpuinf[3]{};
 
     get_cpuid(0, cpuinf[0].regs);
     if(cpuinf[0].regs[0] == 0)
@@ -247,143 +250,6 @@ void FPUCtl::leave()
 
 #ifdef _WIN32
 
-namespace al {
-
-auto filebuf::underflow() -> int_type
-{
-    if(mFile != INVALID_HANDLE_VALUE && gptr() == egptr())
-    {
-        // Read in the next chunk of data, and set the pointers on success
-        DWORD got{};
-        if(ReadFile(mFile, mBuffer.data(), (DWORD)mBuffer.size(), &got, nullptr))
-            setg(mBuffer.data(), mBuffer.data(), mBuffer.data()+got);
-    }
-    if(gptr() == egptr())
-        return traits_type::eof();
-    return traits_type::to_int_type(*gptr());
-}
-
-auto filebuf::seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode) -> pos_type
-{
-    if(mFile == INVALID_HANDLE_VALUE || (mode&std::ios_base::out) || !(mode&std::ios_base::in))
-        return traits_type::eof();
-
-    LARGE_INTEGER fpos{};
-    switch(whence)
-    {
-        case std::ios_base::beg:
-            fpos.QuadPart = offset;
-            if(!SetFilePointerEx(mFile, fpos, &fpos, FILE_BEGIN))
-                return traits_type::eof();
-            break;
-
-        case std::ios_base::cur:
-            // If the offset remains in the current buffer range, just
-            // update the pointer.
-            if((offset >= 0 && offset < off_type(egptr()-gptr())) ||
-                (offset < 0 && -offset <= off_type(gptr()-eback())))
-            {
-                // Get the current file offset to report the correct read
-                // offset.
-                fpos.QuadPart = 0;
-                if(!SetFilePointerEx(mFile, fpos, &fpos, FILE_CURRENT))
-                    return traits_type::eof();
-                setg(eback(), gptr()+offset, egptr());
-                return fpos.QuadPart - off_type(egptr()-gptr());
-            }
-            // Need to offset for the file offset being at egptr() while
-            // the requested offset is relative to gptr().
-            offset -= off_type(egptr()-gptr());
-            fpos.QuadPart = offset;
-            if(!SetFilePointerEx(mFile, fpos, &fpos, FILE_CURRENT))
-                return traits_type::eof();
-            break;
-
-        case std::ios_base::end:
-            fpos.QuadPart = offset;
-            if(!SetFilePointerEx(mFile, fpos, &fpos, FILE_END))
-                return traits_type::eof();
-            break;
-
-        default:
-            return traits_type::eof();
-    }
-    setg(nullptr, nullptr, nullptr);
-    return fpos.QuadPart;
-}
-
-auto filebuf::seekpos(pos_type pos, std::ios_base::openmode mode) -> pos_type
-{
-    // Simplified version of seekoff
-    if(mFile == INVALID_HANDLE_VALUE || (mode&std::ios_base::out) || !(mode&std::ios_base::in))
-        return traits_type::eof();
-
-    LARGE_INTEGER fpos{};
-    fpos.QuadPart = pos;
-    if(!SetFilePointerEx(mFile, fpos, &fpos, FILE_BEGIN))
-        return traits_type::eof();
-
-    setg(nullptr, nullptr, nullptr);
-    return fpos.QuadPart;
-}
-
-filebuf::~filebuf()
-{
-    if(mFile != INVALID_HANDLE_VALUE)
-        CloseHandle(mFile);
-    mFile = INVALID_HANDLE_VALUE;
-}
-
-bool filebuf::open(const wchar_t *filename, std::ios_base::openmode mode)
-{
-    if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
-        return false;
-    HANDLE f{CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL, nullptr)};
-    if(f == INVALID_HANDLE_VALUE) return false;
-
-    if(mFile != INVALID_HANDLE_VALUE)
-        CloseHandle(mFile);
-    mFile = f;
-
-    setg(nullptr, nullptr, nullptr);
-    return true;
-}
-bool filebuf::open(const char *filename, std::ios_base::openmode mode)
-{
-    std::wstring wname{utf8_to_wstr(filename)};
-    return open(wname.c_str(), mode);
-}
-
-
-ifstream::ifstream(const wchar_t *filename, std::ios_base::openmode mode)
-  : std::istream{nullptr}
-{
-    init(&mStreamBuf);
-
-    // Set the failbit if the file failed to open.
-    if((mode&std::ios_base::out) || !mStreamBuf.open(filename, mode|std::ios_base::in))
-        clear(failbit);
-}
-
-ifstream::ifstream(const char *filename, std::ios_base::openmode mode)
-  : std::istream{nullptr}
-{
-    init(&mStreamBuf);
-
-    // Set the failbit if the file failed to open.
-    if((mode&std::ios_base::out) || !mStreamBuf.open(filename, mode|std::ios_base::in))
-        clear(failbit);
-}
-
-/* This is only here to ensure the compiler doesn't define an implicit
- * destructor, which it tries to automatically inline and subsequently complain
- * it can't inline without excessive code growth.
- */
-ifstream::~ifstream() { }
-
-} // namespace al
-
 const PathNamePair &GetProcBinary()
 {
     static PathNamePair ret;
@@ -440,7 +306,7 @@ void al_print(FILE *logfile, const char *fmt, ...)
     va_end(args);
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fprintf(logfile, "%ls", wstr.c_str());
+    fputws(wstr.c_str(), logfile);
     fflush(logfile);
 }
 
@@ -458,21 +324,23 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     std::wstring wpath{utf8_to_wstr(pathstr.c_str())};
     WIN32_FIND_DATAW fdata;
     HANDLE hdl{FindFirstFileW(wpath.c_str(), &fdata)};
-    if(hdl != INVALID_HANDLE_VALUE)
-    {
-        size_t base = results->size();
-        do {
-            results->emplace_back();
-            std::string &str = results->back();
-            str = path;
-            str += '\\';
-            str += wstr_to_utf8(fdata.cFileName);
-            TRACE(" got %s\n", str.c_str());
-        } while(FindNextFileW(hdl, &fdata));
-        FindClose(hdl);
+    if(hdl == INVALID_HANDLE_VALUE) return;
 
-        std::sort(results->begin()+base, results->end());
-    }
+    const auto base = results->size();
+
+    do {
+        results->emplace_back();
+        std::string &str = results->back();
+        str = path;
+        str += '\\';
+        str += wstr_to_utf8(fdata.cFileName);
+    } while(FindNextFileW(hdl, &fdata));
+    FindClose(hdl);
+
+    const al::span<std::string> newlist{results->data()+base, results->size()-base};
+    std::sort(newlist.begin(), newlist.end());
+    for(const auto &name : newlist)
+        TRACE(" got %s\n", name.c_str());
 }
 
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
@@ -517,7 +385,7 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     DirectorySearch(path.c_str(), ext, &results);
 
     /* Search the local and global data dirs. */
-    static constexpr int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+    static const int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
     for(int id : ids)
     {
         WCHAR buffer[MAX_PATH];
@@ -614,7 +482,7 @@ const PathNamePair &GetProcBinary()
             return ret;
         }
 
-        pathname.resize(len);
+        pathname.resize(static_cast<size_t>(len));
     }
     while(!pathname.empty() && pathname.back() == 0)
         pathname.pop_back();
@@ -649,34 +517,35 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
 {
     TRACE("Searching %s for *%s\n", path, ext);
     DIR *dir{opendir(path)};
-    if(dir != nullptr)
+    if(!dir) return;
+
+    const auto base = results->size();
+    const size_t extlen{strlen(ext)};
+
+    struct dirent *dirent;
+    while((dirent=readdir(dir)) != nullptr)
     {
-        const size_t extlen = strlen(ext);
-        size_t base = results->size();
+        if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
+            continue;
 
-        struct dirent *dirent;
-        while((dirent=readdir(dir)) != nullptr)
-        {
-            if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
-                continue;
+        const size_t len{strlen(dirent->d_name)};
+        if(len <= extlen) continue;
+        if(al::strcasecmp(dirent->d_name+len-extlen, ext) != 0)
+            continue;
 
-            size_t len{strlen(dirent->d_name)};
-            if(len <= extlen) continue;
-            if(strcasecmp(dirent->d_name+len-extlen, ext) != 0)
-                continue;
-
-            results->emplace_back();
-            std::string &str = results->back();
-            str = path;
-            if(str.back() != '/')
-                str.push_back('/');
-            str += dirent->d_name;
-            TRACE(" got %s\n", str.c_str());
-        }
-        closedir(dir);
-
-        std::sort(results->begin()+base, results->end());
+        results->emplace_back();
+        std::string &str = results->back();
+        str = path;
+        if(str.back() != '/')
+            str.push_back('/');
+        str += dirent->d_name;
     }
+    closedir(dir);
+
+    const al::span<std::string> newlist{results->data()+base, results->size()-base};
+    std::sort(newlist.begin(), newlist.end());
+    for(const auto &name : newlist)
+        TRACE(" got %s\n", name.c_str());
 }
 
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)

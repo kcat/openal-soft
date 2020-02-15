@@ -35,7 +35,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {
         const size_t step2{step >> 1};
-        double arg{al::MathDefs<double>::Pi() / step2};
+        double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
 
         std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};
@@ -55,8 +55,6 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 
 void complex_hilbert(const al::span<std::complex<double>> buffer)
 {
-    std::for_each(buffer.begin(), buffer.end(), [](std::complex<double> &c) { c.imag(0.0); });
-
     complex_fft(buffer, 1.0);
 
     const double inverse_size = 1.0/static_cast<double>(buffer.size());

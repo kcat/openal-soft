@@ -11,6 +11,7 @@
 #include <array>
 
 #include "AL/alc.h"
+#include "alstring.h"
 #include "router.h"
 
 
@@ -539,7 +540,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     ptr = alcExtensionList;
     while(ptr && *ptr)
     {
-        if(strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
+        if(al::strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
             return ALC_TRUE;
         if((ptr=strchr(ptr, ' ')) != nullptr)
         {
@@ -564,11 +565,11 @@ ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *f
         return DriverList[idx].alcGetProcAddress(device, funcname);
     }
 
-    auto entry = std::find_if(alcFunctions.cbegin(), alcFunctions.cend(),
+    auto iter = std::find_if(alcFunctions.cbegin(), alcFunctions.cend(),
         [funcname](const FuncExportEntry &entry) -> bool
         { return strcmp(funcname, entry.funcName) == 0; }
     );
-    return (entry != alcFunctions.cend()) ? entry->address : nullptr;
+    return (iter != alcFunctions.cend()) ? iter->address : nullptr;
 }
 
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumname)
@@ -584,11 +585,11 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         return DriverList[idx].alcGetEnumValue(device, enumname);
     }
 
-    auto entry = std::find_if(alcEnumerations.cbegin(), alcEnumerations.cend(),
+    auto iter = std::find_if(alcEnumerations.cbegin(), alcEnumerations.cend(),
         [enumname](const EnumExportEntry &entry) -> bool
         { return strcmp(enumname, entry.enumName) == 0; }
     );
-    return (entry != alcEnumerations.cend()) ? entry->value : 0;
+    return (iter != alcEnumerations.cend()) ? iter->value : 0;
 }
 
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param)
@@ -637,8 +638,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         }
         /* Ensure the list is double-null termianted. */
         if(DevicesList.Names.empty())
-            DevicesList.Names.emplace_back(0);
-        DevicesList.Names.emplace_back(0);
+            DevicesList.Names.emplace_back('\0');
+        DevicesList.Names.emplace_back('\0');
         return DevicesList.Names.data();
     }
 
@@ -664,8 +665,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         }
         /* Ensure the list is double-null termianted. */
         if(AllDevicesList.Names.empty())
-            AllDevicesList.Names.emplace_back(0);
-        AllDevicesList.Names.emplace_back(0);
+            AllDevicesList.Names.emplace_back('\0');
+        AllDevicesList.Names.emplace_back('\0');
         return AllDevicesList.Names.data();
     }
 
@@ -684,47 +685,47 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         }
         /* Ensure the list is double-null termianted. */
         if(CaptureDevicesList.Names.empty())
-            CaptureDevicesList.Names.emplace_back(0);
-        CaptureDevicesList.Names.emplace_back(0);
+            CaptureDevicesList.Names.emplace_back('\0');
+        CaptureDevicesList.Names.emplace_back('\0');
         return CaptureDevicesList.Names.data();
     }
 
     case ALC_DEFAULT_DEVICE_SPECIFIER:
     {
-        auto drv = std::find_if(DriverList.cbegin(), DriverList.cend(),
+        auto iter = std::find_if(DriverList.cbegin(), DriverList.cend(),
             [](const DriverIface &drv) -> bool
             {
                 return drv.ALCVer >= MAKE_ALC_VER(1, 1) ||
                        drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
             }
         );
-        if(drv != DriverList.cend())
-            return drv->alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
+        if(iter != DriverList.cend())
+            return iter->alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
         return "";
     }
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
     {
-        auto drv = std::find_if(DriverList.cbegin(), DriverList.cend(),
+        auto iter = std::find_if(DriverList.cbegin(), DriverList.cend(),
             [](const DriverIface &drv) -> bool
             { return drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT") != ALC_FALSE; }
         );
-        if(drv != DriverList.cend())
-            return drv->alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
+        if(iter != DriverList.cend())
+            return iter->alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
         return "";
     }
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
     {
-        auto drv = std::find_if(DriverList.cbegin(), DriverList.cend(),
+        auto iter = std::find_if(DriverList.cbegin(), DriverList.cend(),
             [](const DriverIface &drv) -> bool
             {
                 return drv.ALCVer >= MAKE_ALC_VER(1, 1) ||
                        drv.alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE");
             }
         );
-        if(drv != DriverList.cend())
-            return drv->alcGetString(nullptr, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
+        if(iter != DriverList.cend())
+            return iter->alcGetString(nullptr, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
         return "";
     }
 

@@ -55,9 +55,10 @@ std::array<ALdouble,STFT_SIZE> InitHannWindow()
 {
     std::array<ALdouble,STFT_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
-    for(ALsizei i{0};i < STFT_SIZE>>1;i++)
+    for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
-        ALdouble val = std::sin(al::MathDefs<double>::Pi() * i / ALdouble{STFT_SIZE-1});
+        constexpr double scale{al::MathDefs<double>::Pi() / double{STFT_SIZE-1}};
+        const double val{std::sin(static_cast<double>(i) * scale)};
         ret[i] = ret[STFT_SIZE-1-i] = val * val;
     }
     return ret;
@@ -93,7 +94,7 @@ inline complex_d polar2rect(const ALphasor &number)
 struct PshifterState final : public EffectState {
     /* Effect parameters */
     size_t  mCount;
-    ALsizei mPitchShiftI;
+    ALuint  mPitchShiftI;
     ALfloat mPitchShift;
     ALfloat mFreqPerBin;
 
@@ -129,7 +130,7 @@ ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
     mCount       = FIFO_LATENCY;
     mPitchShiftI = FRACTIONONE;
     mPitchShift  = 1.0f;
-    mFreqPerBin  = device->Frequency / static_cast<ALfloat>(STFT_SIZE);
+    mFreqPerBin  = static_cast<float>(device->Frequency) / float{STFT_SIZE};
 
     std::fill(std::begin(mInFIFO),          std::end(mInFIFO),          0.0f);
     std::fill(std::begin(mOutFIFO),         std::end(mOutFIFO),         0.0f);
@@ -151,8 +152,8 @@ void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const Ef
     const float pitch{std::pow(2.0f,
         static_cast<ALfloat>(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
     )};
-    mPitchShiftI = fastf2i(pitch*FRACTIONONE);
-    mPitchShift  = mPitchShiftI * (1.0f/FRACTIONONE);
+    mPitchShiftI = fastf2u(pitch*FRACTIONONE);
+    mPitchShift  = static_cast<float>(mPitchShiftI) * (1.0f/FRACTIONONE);
 
     ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
@@ -187,7 +188,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         count = FIFO_LATENCY;
 
         /* Real signal windowing and store in FFTbuffer */
-        for(size_t k{0u};k < STFT_SIZE;k++)
+        for(ALuint k{0u};k < STFT_SIZE;k++)
         {
             mFFTbuffer[k].real(mInFIFO[k] * HannWindow[k]);
             mFFTbuffer[k].imag(0.0);
@@ -200,7 +201,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_HALF_SIZE+1 samples are needed.
          */
-        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
+        for(ALuint k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             /* Compute amplitude and phase */
             ALphasor component{rect2polar(mFFTbuffer[k])};
@@ -228,7 +229,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
         /* PROCESSING */
         /* pitch shifting */
-        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
+        for(ALuint k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             mSyntesis_buffer[k].Amplitude = 0.0;
             mSyntesis_buffer[k].Frequency = 0.0;
@@ -245,7 +246,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
         /* SYNTHESIS */
         /* Synthesis the processing data */
-        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
+        for(ALuint k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             ALphasor component;
             ALdouble tmp;
@@ -263,14 +264,14 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             mFFTbuffer[k] = polar2rect(component);
         }
         /* zero negative frequencies for recontruct a real signal */
-        for(size_t k{STFT_HALF_SIZE+1};k < STFT_SIZE;k++)
+        for(ALuint k{STFT_HALF_SIZE+1};k < STFT_SIZE;k++)
             mFFTbuffer[k] = complex_d{};
 
         /* Apply iFFT to buffer data */
         complex_fft(mFFTbuffer, 1.0);
 
         /* Windowing and add to output */
-        for(size_t k{0u};k < STFT_SIZE;k++)
+        for(ALuint k{0u};k < STFT_SIZE;k++)
             mOutputAccum[k] += HannWindow[k] * mFFTbuffer[k].real() /
                                (0.5 * STFT_HALF_SIZE * OVERSAMP);
 

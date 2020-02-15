@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "version.h"
+#include "mainwindow.h"
 
 #include <iostream>
 #include <cmath>
@@ -11,8 +11,13 @@
 #include <QCloseEvent>
 #include <QSettings>
 #include <QtGlobal>
-#include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "verstr.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#endif
 
 namespace {
 
@@ -101,7 +106,9 @@ static const struct NameValuePair {
     { "Linear", "linear" },
     { "Default (Linear)", "" },
     { "Cubic Spline", "cubic" },
+    { "11th order Sinc (fast)", "fast_bsinc12" },
     { "11th order Sinc", "bsinc12" },
+    { "23rd order Sinc (fast)", "fast_bsinc24" },
     { "23rd order Sinc", "bsinc24" },
 
     { "", "" }
@@ -127,7 +134,6 @@ static const struct NameValuePair {
 }, hrtfModeList[] = {
     { "1st Order Ambisonic", "ambi1" },
     { "2nd Order Ambisonic", "ambi2" },
-    { "3rd Order Ambisonic", "ambi3" },
     { "Default (Full)", "" },
     { "Full", "full" },
 
@@ -138,7 +144,14 @@ static QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
     static const char fname[] = "alsoft.ini";
-    QByteArray base = qgetenv("AppData");
+    auto get_appdata_path = []() noexcept -> QString
+    {
+        WCHAR buffer[MAX_PATH];
+        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+            return QString::fromWCharArray(buffer);
+        return QString();
+    };
+    QString base = get_appdata_path();
 #else
     static const char fname[] = "alsoft.conf";
     QByteArray base = qgetenv("XDG_CONFIG_HOME");
@@ -157,7 +170,14 @@ static QString getDefaultConfigName()
 static QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
-    QByteArray base = qgetenv("AppData");
+    auto get_appdata_path = []() noexcept -> QString
+    {
+        WCHAR buffer[MAX_PATH];
+        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+            return QString::fromWCharArray(buffer);
+        return QString();
+    };
+    QString base = get_appdata_path();
 #else
     QByteArray base = qgetenv("XDG_DATA_HOME");
     if(base.isEmpty())
@@ -503,8 +523,8 @@ void MainWindow::cancelCloseAction()
 void MainWindow::showAboutPage()
 {
     QMessageBox::information(this, tr("About"),
-        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ")+
-        (ALSOFT_VERSION "-" ALSOFT_GIT_COMMIT_HASH " (" ALSOFT_GIT_BRANCH " branch)."));
+        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ") +
+        GetVersionString());
 }
 
 
@@ -581,8 +601,7 @@ QStringList MainWindow::collectHrtfs()
         }
 
 #ifdef ALSOFT_EMBED_HRTF_DATA
-        ret.push_back("Built-In 44100hz");
-        ret.push_back("Built-In 48000hz");
+        ret.push_back("Built-In HRTF");
 #endif
     }
     return ret;
@@ -716,7 +735,7 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    bool hqmode{settings.value("decoder/hq-mode", false).toBool()};
+    bool hqmode{settings.value("decoder/hq-mode", true).toBool()};
     ui->decoderHQModeCheckBox->setChecked(hqmode);
     ui->decoderDistCompCheckBox->setCheckState(getCheckState(settings.value("decoder/distance-comp")));
     ui->decoderNFEffectsCheckBox->setCheckState(getCheckState(settings.value("decoder/nfc")));
@@ -740,10 +759,13 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     QString hrtfmode{settings.value("hrtf-mode").toString().trimmed()};
-    ui->hrtfmodeSlider->setValue(3);
-    ui->hrtfmodeLabel->setText(hrtfModeList[3].name);
-    /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
-    if(hrtfmode == "basic") hrtfmode = "ambi2";
+    ui->hrtfmodeSlider->setValue(2);
+    ui->hrtfmodeLabel->setText(hrtfModeList[2].name);
+    /* The "basic" mode name is no longer supported, and "ambi3" is temporarily
+     * disabled. Use "ambi2" instead.
+     */
+    if(hrtfmode == "basic" || hrtfmode == "ambi3")
+        hrtfmode = "ambi2";
     for(int i = 0;hrtfModeList[i].name[0];i++)
     {
         if(hrtfmode == hrtfModeList[i].value)
@@ -976,7 +998,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("dither", getCheckValue(ui->outputDitherCheckBox));
 
     settings.setValue("decoder/hq-mode",
-        ui->decoderHQModeCheckBox->isChecked() ? QString{"true"} : QString{/*"false"*/}
+        ui->decoderHQModeCheckBox->isChecked() ? QString{/*"true"*/} : QString{"false"}
     );
     settings.setValue("decoder/distance-comp", getCheckValue(ui->decoderDistCompCheckBox));
     settings.setValue("decoder/nfc", getCheckValue(ui->decoderNFEffectsCheckBox));

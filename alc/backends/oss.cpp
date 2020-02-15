@@ -45,6 +45,7 @@
 
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -230,10 +231,10 @@ done:
 
 #endif
 
-int log2i(ALCuint x)
+ALCuint log2i(ALCuint x)
 {
-    int y = 0;
-    while (x > 1)
+    ALCuint y{0};
+    while(x > 1)
     {
         x >>= 1;
         y++;
@@ -248,9 +249,9 @@ struct OSSPlayback final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     int mFd{-1};
@@ -276,9 +277,10 @@ int OSSPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const int frame_size{mDevice->frameSizeFromFmt()};
+    const size_t frame_step{mDevice->channelsFromFmt()};
+    const ALuint frame_size{mDevice->frameSizeFromFmt()};
 
-    lock();
+    std::unique_lock<OSSPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -286,9 +288,9 @@ int OSSPlayback::mixerProc()
         pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        unlock();
+        dlock.unlock();
         int pret{poll(&pollitem, 1, 1000)};
-        lock();
+        dlock.lock();
         if(pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
@@ -305,7 +307,7 @@ int OSSPlayback::mixerProc()
 
         ALubyte *write_ptr{mMixData.data()};
         size_t to_write{mMixData.size()};
-        aluMixData(mDevice, write_ptr, to_write/frame_size);
+        aluMixData(mDevice, write_ptr, static_cast<ALuint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(mFd, write_ptr, to_write)};
@@ -319,17 +321,16 @@ int OSSPlayback::mixerProc()
                 break;
             }
 
-            to_write -= wrote;
+            to_write -= static_cast<size_t>(wrote);
             write_ptr += wrote;
         }
     }
-    unlock();
 
     return 0;
 }
 
 
-ALCenum OSSPlayback::open(const ALCchar *name)
+void OSSPlayback::open(const ALCchar *name)
 {
     const char *devname{DefaultPlayback.c_str()};
     if(!name)
@@ -344,33 +345,21 @@ ALCenum OSSPlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         devname = iter->device_name.c_str();
     }
 
     mFd = ::open(devname, O_WRONLY);
     if(mFd == -1)
-    {
-        ERR("Could not open %s: %s\n", devname, strerror(errno));
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
+            strerror(errno)};
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
-ALCboolean OSSPlayback::reset()
+bool OSSPlayback::reset()
 {
-    int numFragmentsLogSize;
-    int log2FragmentSize;
-    unsigned int periods;
-    audio_buf_info info;
-    ALuint frameSize;
-    int numChannels;
-    int ossFormat;
-    int ossSpeed;
-    const char *err;
-
+    int ossFormat{};
     switch(mDevice->FmtType)
     {
         case DevFmtByte:
@@ -390,14 +379,16 @@ ALCboolean OSSPlayback::reset()
             break;
     }
 
-    periods = mDevice->BufferSize / mDevice->UpdateSize;
-    numChannels = mDevice->channelsFromFmt();
-    ossSpeed = mDevice->Frequency;
-    frameSize = numChannels * mDevice->bytesFromFmt();
+    ALuint periods{mDevice->BufferSize / mDevice->UpdateSize};
+    ALuint numChannels{mDevice->channelsFromFmt()};
+    ALuint ossSpeed{mDevice->Frequency};
+    ALuint frameSize{numChannels * mDevice->bytesFromFmt()};
     /* According to the OSS spec, 16 bytes (log2(16)) is the minimum. */
-    log2FragmentSize = maxi(log2i(mDevice->UpdateSize*frameSize), 4);
-    numFragmentsLogSize = (periods << 16) | log2FragmentSize;
+    ALuint log2FragmentSize{maxu(log2i(mDevice->UpdateSize*frameSize), 4)};
+    ALuint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
+    audio_buf_info info{};
+    const char *err;
 #define CHECKERR(func) if((func) < 0) {                                       \
     err = #func;                                                              \
     goto err;                                                                 \
@@ -413,7 +404,7 @@ ALCboolean OSSPlayback::reset()
     {
     err:
         ERR("%s failed: %s\n", err, strerror(errno));
-        return ALC_FALSE;
+        return false;
     }
 #undef CHECKERR
 
@@ -421,7 +412,7 @@ ALCboolean OSSPlayback::reset()
     {
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
             numChannels);
-        return ALC_FALSE;
+        return false;
     }
 
     if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte) ||
@@ -430,33 +421,33 @@ ALCboolean OSSPlayback::reset()
     {
         ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(mDevice->FmtType),
             ossFormat);
-        return ALC_FALSE;
+        return false;
     }
 
     mDevice->Frequency = ossSpeed;
-    mDevice->UpdateSize = info.fragsize / frameSize;
-    mDevice->BufferSize = info.fragments * mDevice->UpdateSize;
+    mDevice->UpdateSize = static_cast<ALuint>(info.fragsize) / frameSize;
+    mDevice->BufferSize = static_cast<ALuint>(info.fragments) * mDevice->UpdateSize;
 
     SetDefaultChannelOrder(mDevice);
 
     mMixData.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean OSSPlayback::start()
+bool OSSPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSSPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void OSSPlayback::stop()
@@ -476,10 +467,10 @@ struct OSScapture final : public BackendBase {
 
     int recordProc();
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool start() override;
     void stop() override;
-    ALCenum captureSamples(ALCvoid *buffer, ALCuint samples) override;
+    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
 
     int mFd{-1};
@@ -505,7 +496,7 @@ int OSScapture::recordProc()
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    const int frame_size{mDevice->frameSizeFromFmt()};
+    const ALuint frame_size{mDevice->frameSizeFromFmt()};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
@@ -538,7 +529,7 @@ int OSScapture::recordProc()
                     strerror(errno));
                 break;
             }
-            mRing->writeAdvance(amt/frame_size);
+            mRing->writeAdvance(static_cast<ALuint>(amt)/frame_size);
         }
     }
 
@@ -546,7 +537,7 @@ int OSScapture::recordProc()
 }
 
 
-ALCenum OSScapture::open(const ALCchar *name)
+void OSScapture::open(const ALCchar *name)
 {
     const char *devname{DefaultCapture.c_str()};
     if(!name)
@@ -561,113 +552,84 @@ ALCenum OSScapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            return ALC_INVALID_VALUE;
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         devname = iter->device_name.c_str();
     }
 
     mFd = ::open(devname, O_RDONLY);
     if(mFd == -1)
-    {
-        ERR("Could not open %s: %s\n", devname, strerror(errno));
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
+            strerror(errno)};
 
     int ossFormat{};
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            ossFormat = AFMT_S8;
-            break;
-        case DevFmtUByte:
-            ossFormat = AFMT_U8;
-            break;
-        case DevFmtShort:
-            ossFormat = AFMT_S16_NE;
-            break;
-        case DevFmtUShort:
-        case DevFmtInt:
-        case DevFmtUInt:
-        case DevFmtFloat:
-            ERR("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
-            return ALC_INVALID_VALUE;
+    case DevFmtByte:
+        ossFormat = AFMT_S8;
+        break;
+    case DevFmtUByte:
+        ossFormat = AFMT_U8;
+        break;
+    case DevFmtShort:
+        ossFormat = AFMT_S16_NE;
+        break;
+    case DevFmtUShort:
+    case DevFmtInt:
+    case DevFmtUInt:
+    case DevFmtFloat:
+        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
+            DevFmtTypeString(mDevice->FmtType)};
     }
 
-    int periods{4};
-    int numChannels{mDevice->channelsFromFmt()};
-    int frameSize{numChannels * mDevice->bytesFromFmt()};
-    int ossSpeed{static_cast<int>(mDevice->Frequency)};
-    int log2FragmentSize{log2i(mDevice->BufferSize * frameSize / periods)};
-
+    ALuint periods{4};
+    ALuint numChannels{mDevice->channelsFromFmt()};
+    ALuint frameSize{numChannels * mDevice->bytesFromFmt()};
+    ALuint ossSpeed{mDevice->Frequency};
     /* according to the OSS spec, 16 bytes are the minimum */
-    log2FragmentSize = std::max(log2FragmentSize, 4);
-    int numFragmentsLogSize{(periods << 16) | log2FragmentSize};
+    ALuint log2FragmentSize{maxu(log2i(mDevice->BufferSize * frameSize / periods), 4)};
+    ALuint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
-    audio_buf_info info;
-    const char *err;
+    audio_buf_info info{};
 #define CHECKERR(func) if((func) < 0) {                                       \
-    err = #func;                                                              \
-    goto err;                                                                 \
+    throw al::backend_exception{ALC_INVALID_VALUE, #func " failed: %s", strerror(errno)}; \
 }
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_GETISPACE, &info));
-    if(0)
-    {
-    err:
-        ERR("%s failed: %s\n", err, strerror(errno));
-        close(mFd);
-        mFd = -1;
-        return ALC_INVALID_VALUE;
-    }
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
-    {
-        ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
-            numChannels);
-        close(mFd);
-        mFd = -1;
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to set %s, got %d channels instead", DevFmtChannelsString(mDevice->FmtChans),
+            numChannels};
 
-    if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte) ||
-         (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte) ||
-         (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
-    {
-        ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(mDevice->FmtType), ossFormat);
-        close(mFd);
-        mFd = -1;
-        return ALC_INVALID_VALUE;
-    }
+    if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte)
+        || (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte)
+        || (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
+        throw al::backend_exception{ALC_INVALID_VALUE,
+            "Failed to set %s samples, got OSS format %#x", DevFmtTypeString(mDevice->FmtType),
+            ossFormat};
 
-    mRing = CreateRingBuffer(mDevice->BufferSize, frameSize, false);
-    if(!mRing)
-    {
-        ERR("Ring buffer create failed\n");
-        close(mFd);
-        mFd = -1;
-        return ALC_OUT_OF_MEMORY;
-    }
+    mRing = RingBuffer::Create(mDevice->BufferSize, frameSize, false);
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
-ALCboolean OSScapture::start()
+bool OSScapture::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSScapture::recordProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create record thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void OSScapture::stop()
@@ -680,14 +642,14 @@ void OSScapture::stop()
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 
-ALCenum OSScapture::captureSamples(ALCvoid *buffer, ALCuint samples)
+ALCenum OSScapture::captureSamples(al::byte *buffer, ALCuint samples)
 {
     mRing->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint OSScapture::availableSamples()
-{ return mRing->readSpace(); }
+{ return static_cast<ALCuint>(mRing->readSpace()); }
 
 } // namespace
 

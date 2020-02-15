@@ -49,9 +49,10 @@ std::array<ALdouble,HIL_SIZE> InitHannWindow()
 {
     std::array<ALdouble,HIL_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
-    for(ALsizei i{0};i < HIL_SIZE>>1;i++)
+    for(size_t i{0};i < HIL_SIZE>>1;i++)
     {
-        ALdouble val = std::sin(al::MathDefs<double>::Pi() * i / ALdouble{HIL_SIZE-1});
+        constexpr double scale{al::MathDefs<double>::Pi() / double{HIL_SIZE-1}};
+        const double val{std::sin(static_cast<double>(i) * scale)};
         ret[i] = ret[HIL_SIZE-1-i] = val * val;
     }
     return ret;

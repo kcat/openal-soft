@@ -60,6 +60,14 @@ enum RenderMode {
 };
 
 
+struct InputRemixMap {
+    struct TargetMix { Channel channel; float mix; };
+
+    Channel channel;
+    std::array<TargetMix,2> targets;
+};
+
+
 struct BufferSubList {
     uint64_t FreeMask{~0_u64};
     ALbuffer *Buffers{nullptr}; /* 64 */
@@ -142,7 +150,7 @@ public:
 
 struct BFChannelConfig {
     ALfloat Scale;
-    ALsizei Index;
+    ALuint Index;
 };
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
@@ -154,10 +162,11 @@ struct BFChannelConfig {
 
 using FloatBufferLine = std::array<float,BUFFERSIZE>;
 
-/* Maximum number of samples to pad on either end of a buffer for resampling.
- * Note that both the beginning and end need padding!
+/* Maximum number of samples to pad on the ends of a buffer for resampling.
+ * Note that the padding is symmetric (half at the beginning and half at the
+ * end)!
  */
-#define MAX_RESAMPLE_PADDING 24
+#define MAX_RESAMPLER_PADDING 48
 
 
 struct FrontStablizer {
@@ -183,7 +192,8 @@ struct MixParams {
 };
 
 struct RealMixParams {
-    std::array<ALint,MaxChannels> ChannelIndex{};
+    al::span<const InputRemixMap> RemixMap;
+    std::array<ALuint,MaxChannels> ChannelIndex{};
 
     al::span<FloatBufferLine> Buffer;
 };
@@ -213,9 +223,9 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALuint BufferSize{};
 
     DevFmtChannels FmtChans{};
-    DevFmtType     FmtType{};
+    DevFmtType FmtType{};
     ALboolean IsHeadphones{AL_FALSE};
-    ALsizei mAmbiOrder{0};
+    ALuint mAmbiOrder{0};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
@@ -230,7 +240,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     al::bitfield<DeviceFlagsCount> Flags{};
 
     std::string HrtfName;
-    al::vector<EnumeratedHrtf> HrtfList;
+    al::vector<std::string> HrtfList;
     ALCenum HrtfStatus{ALC_FALSE};
 
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};
@@ -242,7 +252,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     ALCuint NumMonoSources{};
     ALCuint NumStereoSources{};
-    ALsizei NumAuxSends{};
+    ALCuint NumAuxSends{};
 
     // Map of Buffers for this device
     std::mutex BufferLock;
@@ -269,13 +279,15 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
-    alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLE_PADDING*2];
+    alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLER_PADDING];
     alignas(16) ALfloat ResampledData[BUFFERSIZE];
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
     union {
         alignas(16) ALfloat HrtfSourceData[BUFFERSIZE + HRTF_HISTORY_LENGTH];
         alignas(16) ALfloat NfcSampleData[BUFFERSIZE];
     };
+
+    /* Persistent storage for HRTF mixing. */
     alignas(16) float2 HrtfAccumData[BUFFERSIZE + HRIR_LENGTH];
 
     /* Mixing buffer used by the Dry mix and Real output. */
@@ -292,7 +304,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     /* HRTF state and info */
     std::unique_ptr<DirectHrtfState> mHrtfState;
-    HrtfEntry *mHrtf{nullptr};
+    HrtfStore *mHrtf{nullptr};
 
     /* Ambisonic-to-UHJ encoder */
     std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
@@ -340,9 +352,9 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALCdevice& operator=(const ALCdevice&) = delete;
     ~ALCdevice();
 
-    ALsizei bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
-    ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
-    ALsizei frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
+    ALuint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
+    ALuint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
+    ALuint frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
 
     void ProcessHrtf(const size_t SamplesToDo);
     void ProcessAmbiDec(const size_t SamplesToDo);
@@ -374,11 +386,12 @@ const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept;
 /**
  * GetChannelIdxByName
  *
- * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
- * doesn't exist.
+ * Returns the index for the given channel name (e.g. FrontCenter), or
+ * INVALID_CHANNEL_INDEX if it doesn't exist.
  */
-inline ALint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
+inline ALuint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
 { return real.ChannelIndex[chan]; }
+#define INVALID_CHANNEL_INDEX ~0u
 
 
 al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);

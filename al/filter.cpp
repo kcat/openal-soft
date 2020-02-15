@@ -28,6 +28,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <numeric>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -278,49 +279,43 @@ void InitFilterParams(ALfilter *filter, ALenum type)
     filter->type = type;
 }
 
-ALfilter *AllocFilter(ALCcontext *context)
+bool EnsureFilters(ALCdevice *device, size_t needed)
 {
-    ALCdevice *device{context->mDevice.get()};
-    std::lock_guard<std::mutex> _{device->FilterLock};
+    size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), size_t{0},
+        [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
+        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
+    )};
+
+    while(needed > count)
+    {
+        if UNLIKELY(device->FilterList.size() >= 1<<25)
+            return false;
+
+        device->FilterList.emplace_back();
+        auto sublist = device->FilterList.end() - 1;
+        sublist->FreeMask = ~0_u64;
+        sublist->Filters = static_cast<ALfilter*>(al_calloc(alignof(ALfilter), sizeof(ALfilter)*64));
+        if UNLIKELY(!sublist->Filters)
+        {
+            device->FilterList.pop_back();
+            return false;
+        }
+        count += 64;
+    }
+    return true;
+}
+
+
+ALfilter *AllocFilter(ALCdevice *device)
+{
     auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
         [](const FilterSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
+    auto lidx = static_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
+    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
-    auto lidx = static_cast<ALsizei>(std::distance(device->FilterList.begin(), sublist));
-    ALfilter *filter{nullptr};
-    ALsizei slidx{0};
-    if LIKELY(sublist != device->FilterList.end())
-    {
-        slidx = CTZ64(sublist->FreeMask);
-        filter = sublist->Filters + slidx;
-    }
-    else
-    {
-        /* Don't allocate so many list entries that the 32-bit ID could
-         * overflow...
-         */
-        if UNLIKELY(device->FilterList.size() >= 1<<25)
-        {
-            context->setError(AL_OUT_OF_MEMORY, "Too many filters allocated");
-            return nullptr;
-        }
-        device->FilterList.emplace_back();
-        sublist = device->FilterList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Filters = static_cast<ALfilter*>(al_calloc(16, sizeof(ALfilter)*64));
-        if UNLIKELY(!sublist->Filters)
-        {
-            device->FilterList.pop_back();
-            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate filter batch");
-            return nullptr;
-        }
-
-        slidx = 0;
-        filter = sublist->Filters + slidx;
-    }
-
-    filter = new (filter) ALfilter{};
+    ALfilter *filter{::new (sublist->Filters + slidx) ALfilter{}};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -333,9 +328,9 @@ ALfilter *AllocFilter(ALCcontext *context)
 
 void FreeFilter(ALCdevice *device, ALfilter *filter)
 {
-    ALuint id = filter->id - 1;
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
+    const ALuint id{filter->id - 1};
+    const size_t lidx{id >> 6};
+    const ALuint slidx{id & 0x3f};
 
     al::destroy_at(filter);
 
@@ -345,8 +340,8 @@ void FreeFilter(ALCdevice *device, ALfilter *filter)
 
 inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 {
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
 
     if UNLIKELY(lidx >= device->FilterList.size())
         return nullptr;
@@ -368,10 +363,18 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d filters", n);
     if UNLIKELY(n <= 0) return;
 
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->EffectLock};
+    if(!EnsureFilters(device, static_cast<ALuint>(n)))
+    {
+        context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d filter%s", n, (n==1)?"":"s");
+        return;
+    }
+
     if LIKELY(n == 1)
     {
         /* Special handling for the easy and normal case. */
-        ALfilter *filter = AllocFilter(context.get());
+        ALfilter *filter{AllocFilter(device)};
         if(filter) filters[0] = filter->id;
     }
     else
@@ -380,15 +383,9 @@ START_API_FUNC
          * modifying the user storage in case of failure.
          */
         al::vector<ALuint> ids;
-        ids.reserve(n);
+        ids.reserve(static_cast<ALuint>(n));
         do {
-            ALfilter *filter = AllocFilter(context.get());
-            if(!filter)
-            {
-                alDeleteFilters(static_cast<ALsizei>(ids.size()), ids.data());
-                return;
-            }
-
+            ALfilter *filter{AllocFilter(device)};
             ids.emplace_back(filter->id);
         } while(--n);
         std::copy(ids.begin(), ids.end(), filters);
@@ -410,31 +407,24 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
+    auto validate_filter = [device](const ALuint fid) -> bool
+    { return !fid || LookupFilter(device, fid) != nullptr; };
+
     const ALuint *filters_end = filters + n;
-    auto invflt = std::find_if(filters, filters_end,
-        [device, &context](ALuint fid) -> bool
-        {
-            if(!fid) return false;
-            ALfilter *filter{LookupFilter(device, fid)};
-            if UNLIKELY(!filter)
-            {
-                context->setError(AL_INVALID_NAME, "Invalid filter ID %u", fid);
-                return true;
-            }
-            return false;
-        }
-    );
-    if LIKELY(invflt == filters_end)
+    auto invflt = std::find_if_not(filters, filters_end, validate_filter);
+    if UNLIKELY(invflt != filters_end)
     {
-        /* All good. Delete non-0 filter IDs. */
-        std::for_each(filters, filters_end,
-            [device](ALuint fid) -> void
-            {
-                ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr};
-                if(filter) FreeFilter(device, filter);
-            }
-        );
+        context->setError(AL_INVALID_NAME, "Invalid filter ID %u", *invflt);
+        return;
     }
+
+    /* All good. Delete non-0 filter IDs. */
+    auto delete_filter = [device](const ALuint fid) -> void
+    {
+        ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr};
+        if(filter) FreeFilter(device, filter);
+    };
+    std::for_each(filters, filters_end, delete_filter);
 }
 END_API_FUNC
 

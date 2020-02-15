@@ -1,8 +1,9 @@
 #ifndef ALC_DEVFORMAT_H
 #define ALC_DEVFORMAT_H
 
+#include <cstdint>
+
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "inprogext.h"
@@ -82,24 +83,24 @@ template<DevFmtType T>
 struct DevFmtTypeTraits { };
 
 template<>
-struct DevFmtTypeTraits<DevFmtByte> { using Type = ALbyte; };
+struct DevFmtTypeTraits<DevFmtByte> { using Type = int8_t; };
 template<>
-struct DevFmtTypeTraits<DevFmtUByte> { using Type = ALubyte; };
+struct DevFmtTypeTraits<DevFmtUByte> { using Type = uint8_t; };
 template<>
-struct DevFmtTypeTraits<DevFmtShort> { using Type = ALshort; };
+struct DevFmtTypeTraits<DevFmtShort> { using Type = int16_t; };
 template<>
-struct DevFmtTypeTraits<DevFmtUShort> { using Type = ALushort; };
+struct DevFmtTypeTraits<DevFmtUShort> { using Type = uint16_t; };
 template<>
-struct DevFmtTypeTraits<DevFmtInt> { using Type = ALint; };
+struct DevFmtTypeTraits<DevFmtInt> { using Type = int32_t; };
 template<>
-struct DevFmtTypeTraits<DevFmtUInt> { using Type = ALuint; };
+struct DevFmtTypeTraits<DevFmtUInt> { using Type = uint32_t; };
 template<>
-struct DevFmtTypeTraits<DevFmtFloat> { using Type = ALfloat; };
+struct DevFmtTypeTraits<DevFmtFloat> { using Type = float; };
 
 
-ALsizei BytesFromDevFmt(DevFmtType type) noexcept;
-ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept;
-inline ALsizei FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, ALsizei ambiorder) noexcept
+ALuint BytesFromDevFmt(DevFmtType type) noexcept;
+ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALuint ambiorder) noexcept;
+inline ALuint FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, ALuint ambiorder) noexcept
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
 enum class AmbiLayout {

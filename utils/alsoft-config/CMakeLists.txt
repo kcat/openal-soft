@@ -8,6 +8,8 @@ set(alsoft-config_SRCS
     main.cpp
     mainwindow.cpp
     mainwindow.h
+    verstr.cpp
+    verstr.h
 )
 set(alsoft-config_UIS  mainwindow.ui)
 set(alsoft-config_MOCS  mainwindow.h)

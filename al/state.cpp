@@ -60,11 +60,39 @@ constexpr ALchar alErrInvalidOp[] = "Invalid Operation";
 constexpr ALchar alErrOutOfMemory[] = "Out of Memory";
 
 /* Resampler strings */
-constexpr ALchar alPointResampler[] = "Nearest";
-constexpr ALchar alLinearResampler[] = "Linear";
-constexpr ALchar alCubicResampler[] = "Cubic";
-constexpr ALchar alBSinc12Resampler[] = "11th order Sinc";
-constexpr ALchar alBSinc24Resampler[] = "23rd order Sinc";
+template<Resampler rtype> struct ResamplerName { };
+template<> struct ResamplerName<Resampler::Point>
+{ static constexpr const ALchar *Get() noexcept { return "Nearest"; } };
+template<> struct ResamplerName<Resampler::Linear>
+{ static constexpr const ALchar *Get() noexcept { return "Linear"; } };
+template<> struct ResamplerName<Resampler::Cubic>
+{ static constexpr const ALchar *Get() noexcept { return "Cubic"; } };
+template<> struct ResamplerName<Resampler::FastBSinc12>
+{ static constexpr const ALchar *Get() noexcept { return "11th order Sinc (fast)"; } };
+template<> struct ResamplerName<Resampler::BSinc12>
+{ static constexpr const ALchar *Get() noexcept { return "11th order Sinc"; } };
+template<> struct ResamplerName<Resampler::FastBSinc24>
+{ static constexpr const ALchar *Get() noexcept { return "23rd order Sinc (fast)"; } };
+template<> struct ResamplerName<Resampler::BSinc24>
+{ static constexpr const ALchar *Get() noexcept { return "23rd order Sinc"; } };
+
+const ALchar *GetResamplerName(const Resampler rtype)
+{
+#define HANDLE_RESAMPLER(r) case r: return ResamplerName<r>::Get()
+    switch(rtype)
+    {
+    HANDLE_RESAMPLER(Resampler::Point);
+    HANDLE_RESAMPLER(Resampler::Linear);
+    HANDLE_RESAMPLER(Resampler::Cubic);
+    HANDLE_RESAMPLER(Resampler::FastBSinc12);
+    HANDLE_RESAMPLER(Resampler::BSinc12);
+    HANDLE_RESAMPLER(Resampler::FastBSinc24);
+    HANDLE_RESAMPLER(Resampler::BSinc24);
+    }
+#undef HANDLE_RESAMPLER
+    /* Should never get here. */
+    throw std::runtime_error{"Unexpected resampler index"};
+}
 
 } // namespace
 
@@ -196,7 +224,7 @@ START_API_FUNC
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = ResamplerDefault ? AL_TRUE : AL_FALSE;
+        value = static_cast<int>(ResamplerDefault) ? AL_TRUE : AL_FALSE;
         break;
 
     default:
@@ -218,11 +246,11 @@ START_API_FUNC
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = static_cast<ALdouble>(context->mDopplerFactor);
+        value = context->mDopplerFactor;
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = static_cast<ALdouble>(context->mDopplerVelocity);
+        value = context->mDopplerVelocity;
         break;
 
     case AL_DISTANCE_MODEL:
@@ -230,7 +258,7 @@ START_API_FUNC
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = static_cast<ALdouble>(context->mSpeedOfSound);
+        value = context->mSpeedOfSound;
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
@@ -239,11 +267,11 @@ START_API_FUNC
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = static_cast<ALdouble>GAIN_MIX_MAX/context->mGainBoost;
+        value = ALdouble{GAIN_MIX_MAX}/context->mGainBoost;
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = static_cast<ALdouble>(ResamplerMax + 1);
+        value = static_cast<ALdouble>(Resampler::Max) + 1.0;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
@@ -294,7 +322,7 @@ START_API_FUNC
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = static_cast<ALfloat>(ResamplerMax + 1);
+        value = static_cast<ALfloat>(Resampler::Max) + 1.0f;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
@@ -337,7 +365,7 @@ START_API_FUNC
 
     case AL_DEFERRED_UPDATES_SOFT:
         if(context->mDeferUpdates.load(std::memory_order_acquire))
-            value = static_cast<ALint>(AL_TRUE);
+            value = AL_TRUE;
         break;
 
     case AL_GAIN_LIMIT_SOFT:
@@ -345,11 +373,11 @@ START_API_FUNC
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = ResamplerMax + 1;
+        value = static_cast<int>(Resampler::Max) + 1;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = ResamplerDefault;
+        value = static_cast<int>(ResamplerDefault);
         break;
 
     default:
@@ -371,36 +399,36 @@ START_API_FUNC
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
-        value = (ALint64SOFT)context->mDopplerFactor;
+        value = static_cast<ALint64SOFT>(context->mDopplerFactor);
         break;
 
     case AL_DOPPLER_VELOCITY:
-        value = (ALint64SOFT)context->mDopplerVelocity;
+        value = static_cast<ALint64SOFT>(context->mDopplerVelocity);
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALint64SOFT)context->mDistanceModel;
+        value = static_cast<ALint64SOFT>(context->mDistanceModel);
         break;
 
     case AL_SPEED_OF_SOUND:
-        value = (ALint64SOFT)context->mSpeedOfSound;
+        value = static_cast<ALint64SOFT>(context->mSpeedOfSound);
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
         if(context->mDeferUpdates.load(std::memory_order_acquire))
-            value = (ALint64SOFT)AL_TRUE;
+            value = AL_TRUE;
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = (ALint64SOFT)(GAIN_MIX_MAX/context->mGainBoost);
+        value = static_cast<ALint64SOFT>(GAIN_MIX_MAX/context->mGainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
-        value = (ALint64SOFT)(ResamplerMax + 1);
+        value = static_cast<ALint64SOFT>(Resampler::Max) + 1;
         break;
 
     case AL_DEFAULT_RESAMPLER_SOFT:
-        value = (ALint64SOFT)ResamplerDefault;
+        value = static_cast<ALint64SOFT>(ResamplerDefault);
         break;
 
     default:
@@ -710,14 +738,16 @@ START_API_FUNC
 
     if((context->mEnabledEvts.load(std::memory_order_relaxed)&EventType_Deprecated))
     {
-        static constexpr ALCchar msg[] =
-            "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
-        const ALsizei msglen = static_cast<ALsizei>(strlen(msg));
         std::lock_guard<std::mutex> _{context->mEventCbLock};
         ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Deprecated) && context->mEventCb)
+        {
+            static const char msg[] =
+                "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
+            const ALsizei msglen{sizeof(msg)-1};
             (*context->mEventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
-                                context->mEventParam);
+                context->mEventParam);
+        }
     }
 
     if(!(value >= 0.0f && std::isfinite(value)))
@@ -794,13 +824,6 @@ END_API_FUNC
 AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
 START_API_FUNC
 {
-    const char *ResamplerNames[] = {
-        alPointResampler, alLinearResampler,
-        alCubicResampler, alBSinc12Resampler,
-        alBSinc24Resampler,
-    };
-    static_assert(al::size(ResamplerNames) == ResamplerMax+1, "Incorrect ResamplerNames list");
-
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return nullptr;
 
@@ -808,10 +831,10 @@ START_API_FUNC
     switch(pname)
     {
     case AL_RESAMPLER_NAME_SOFT:
-        if(index < 0 || static_cast<size_t>(index) >= al::size(ResamplerNames))
+        if(index < 0 || index > static_cast<ALint>(Resampler::Max))
             context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
         else
-            value = ResamplerNames[index];
+            value = GetResamplerName(static_cast<Resampler>(index));
         break;
 
     default:

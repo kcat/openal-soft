@@ -29,6 +29,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <numeric>
 #include <utility>
 
 #include "AL/al.h"
@@ -42,6 +43,7 @@
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "effects/base.h"
 #include "logging.h"
 #include "opthelpers.h"
@@ -130,55 +132,48 @@ void InitEffectParams(ALeffect *effect, ALenum type)
     }
     else
     {
-        effect->Props = EffectProps {};
+        effect->Props = EffectProps{};
         effect->vtab = nullptr;
     }
     effect->type = type;
 }
 
-ALeffect *AllocEffect(ALCcontext *context)
+bool EnsureEffects(ALCdevice *device, size_t needed)
 {
-    ALCdevice *device{context->mDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), size_t{0},
+        [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
+        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
+    )};
+
+    while(needed > count)
+    {
+        if UNLIKELY(device->EffectList.size() >= 1<<25)
+            return false;
+
+        device->EffectList.emplace_back();
+        auto sublist = device->EffectList.end() - 1;
+        sublist->FreeMask = ~0_u64;
+        sublist->Effects = static_cast<ALeffect*>(al_calloc(alignof(ALeffect), sizeof(ALeffect)*64));
+        if UNLIKELY(!sublist->Effects)
+        {
+            device->EffectList.pop_back();
+            return false;
+        }
+        count += 64;
+    }
+    return true;
+}
+
+ALeffect *AllocEffect(ALCdevice *device)
+{
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
         [](const EffectSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
+    auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
+    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
-    auto lidx = static_cast<ALsizei>(std::distance(device->EffectList.begin(), sublist));
-    ALeffect *effect{nullptr};
-    ALsizei slidx{0};
-    if LIKELY(sublist != device->EffectList.end())
-    {
-        slidx = CTZ64(sublist->FreeMask);
-        effect = sublist->Effects + slidx;
-    }
-    else
-    {
-        /* Don't allocate so many list entries that the 32-bit ID could
-         * overflow...
-         */
-        if UNLIKELY(device->EffectList.size() >= 1<<25)
-        {
-            context->setError(AL_OUT_OF_MEMORY, "Too many effects allocated");
-            return nullptr;
-        }
-        device->EffectList.emplace_back();
-        sublist = device->EffectList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
-        if UNLIKELY(!sublist->Effects)
-        {
-            device->EffectList.pop_back();
-            context->setError(AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
-            return nullptr;
-        }
-
-        slidx = 0;
-        effect = sublist->Effects + slidx;
-    }
-
-    effect = new (effect) ALeffect{};
+    ALeffect *effect{::new (sublist->Effects + slidx) ALeffect{}};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -191,9 +186,9 @@ ALeffect *AllocEffect(ALCcontext *context)
 
 void FreeEffect(ALCdevice *device, ALeffect *effect)
 {
-    ALuint id = effect->id - 1;
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
+    const ALuint id{effect->id - 1};
+    const size_t lidx{id >> 6};
+    const ALuint slidx{id & 0x3f};
 
     al::destroy_at(effect);
 
@@ -202,8 +197,8 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
 
 inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 {
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
 
     if UNLIKELY(lidx >= device->EffectList.size())
         return nullptr;
@@ -225,11 +220,19 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d effects", n);
     if UNLIKELY(n <= 0) return;
 
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->EffectLock};
+    if(!EnsureEffects(device, static_cast<ALuint>(n)))
+    {
+        context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d effect%s", n, (n==1)?"":"s");
+        return;
+    }
+
     if LIKELY(n == 1)
     {
         /* Special handling for the easy and normal case. */
-        ALeffect *effect = AllocEffect(context.get());
-        if(effect) effects[0] = effect->id;
+        ALeffect *effect{AllocEffect(device)};
+        effects[0] = effect->id;
     }
     else
     {
@@ -237,18 +240,12 @@ START_API_FUNC
          * modifying the user storage in case of failure.
          */
         al::vector<ALuint> ids;
-        ids.reserve(n);
+        ids.reserve(static_cast<ALuint>(n));
         do {
-            ALeffect *effect = AllocEffect(context.get());
-            if(!effect)
-            {
-                alDeleteEffects(static_cast<ALsizei>(ids.size()), ids.data());
-                return;
-            }
-
+            ALeffect *effect{AllocEffect(device)};
             ids.emplace_back(effect->id);
         } while(--n);
-        std::copy(ids.begin(), ids.end(), effects);
+        std::copy(ids.cbegin(), ids.cend(), effects);
     }
 }
 END_API_FUNC
@@ -267,31 +264,24 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
+    auto validate_effect = [device](const ALuint eid) -> bool
+    { return !eid || LookupEffect(device, eid) != nullptr; };
+
     const ALuint *effects_end = effects + n;
-    auto inveffect = std::find_if(effects, effects_end,
-        [device, &context](ALuint eid) -> bool
-        {
-            if(!eid) return false;
-            ALeffect *effect{LookupEffect(device, eid)};
-            if UNLIKELY(!effect)
-            {
-                context->setError(AL_INVALID_NAME, "Invalid effect ID %u", eid);
-                return true;
-            }
-            return false;
-        }
-    );
-    if LIKELY(inveffect == effects_end)
+    auto inveffect = std::find_if_not(effects, effects_end, validate_effect);
+    if UNLIKELY(inveffect != effects_end)
     {
-        /* All good. Delete non-0 effect IDs. */
-        std::for_each(effects, effects_end,
-            [device](ALuint eid) -> void
-            {
-                ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
-                if(effect) FreeEffect(device, effect);
-            }
-        );
+        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", *inveffect);
+        return;
     }
+
+    /* All good. Delete non-0 effect IDs. */
+    auto delete_effect = [device](ALuint eid) -> void
+    {
+        ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
+        if(effect) FreeEffect(device, effect);
+    };
+    std::for_each(effects, effects_end, delete_effect);
 }
 END_API_FUNC
 
@@ -679,7 +669,7 @@ static const struct {
 
 void LoadReverbPreset(const char *name, ALeffect *effect)
 {
-    if(strcasecmp(name, "NONE") == 0)
+    if(al::strcasecmp(name, "NONE") == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
         TRACE("Loading reverb '%s'\n", "NONE");
@@ -696,7 +686,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
     {
         const EFXEAXREVERBPROPERTIES *props;
 
-        if(strcasecmp(name, reverbitem.name) != 0)
+        if(al::strcasecmp(name, reverbitem.name) != 0)
             continue;
 
         TRACE("Loading reverb '%s'\n", reverbitem.name);
@@ -727,7 +717,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         effect->Props.Reverb.HFReference = props->flHFReference;
         effect->Props.Reverb.LFReference = props->flLFReference;
         effect->Props.Reverb.RoomRolloffFactor = props->flRoomRolloffFactor;
-        effect->Props.Reverb.DecayHFLimit = props->iDecayHFLimit;
+        effect->Props.Reverb.DecayHFLimit = props->iDecayHFLimit ? AL_TRUE : AL_FALSE;
         return;
     }
 

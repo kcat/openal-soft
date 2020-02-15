@@ -32,6 +32,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "dynload.h"
 #include "ringbuffer.h"
 #include "threads.h"
@@ -153,23 +154,22 @@ struct JackPlayback final : public BackendBase {
     JackPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
-    static int bufferSizeNotifyC(jack_nframes_t numframes, void *arg);
-    int bufferSizeNotify(jack_nframes_t numframes);
-
-    static int processC(jack_nframes_t numframes, void *arg);
-    int process(jack_nframes_t numframes);
+    int process(jack_nframes_t numframes) noexcept;
+    static int processC(jack_nframes_t numframes, void *arg) noexcept
+    { return static_cast<JackPlayback*>(arg)->process(numframes); }
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
 
     jack_client_t *mClient{nullptr};
     jack_port_t *mPort[MAX_OUTPUT_CHANNELS]{};
 
+    std::atomic<bool> mPlaying{false};
     RingBufferPtr mRing;
     al::semaphore mSem;
 
@@ -194,101 +194,66 @@ JackPlayback::~JackPlayback()
 }
 
 
-int JackPlayback::bufferSizeNotifyC(jack_nframes_t numframes, void *arg)
-{ return static_cast<JackPlayback*>(arg)->bufferSizeNotify(numframes); }
-
-int JackPlayback::bufferSizeNotify(jack_nframes_t numframes)
-{
-    std::lock_guard<std::mutex> _{mDevice->StateLock};
-    mDevice->UpdateSize = numframes;
-    mDevice->BufferSize = numframes*2;
-
-    const char *devname{mDevice->DeviceName.c_str()};
-    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
-    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
-
-    TRACE("%u / %u buffer\n", mDevice->UpdateSize, mDevice->BufferSize);
-
-    mRing = nullptr;
-    mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
-    if(!mRing)
-    {
-        ERR("Failed to reallocate ringbuffer\n");
-        aluHandleDisconnect(mDevice, "Failed to reallocate %u-sample buffer", bufsize);
-    }
-    return 0;
-}
-
-
-int JackPlayback::processC(jack_nframes_t numframes, void *arg)
-{ return static_cast<JackPlayback*>(arg)->process(numframes); }
-
-int JackPlayback::process(jack_nframes_t numframes)
+int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
     jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
-    ALsizei numchans{0};
+    size_t numchans{0};
     for(auto port : mPort)
     {
         if(!port) break;
         out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
     }
 
-    auto data = mRing->getReadVector();
-    jack_nframes_t todo{minu(numframes, data.first.len)};
-    std::transform(out, out+numchans, out,
-        [&data,numchans,todo](ALfloat *outbuf) -> ALfloat*
+    jack_nframes_t total{0};
+    if LIKELY(mPlaying.load(std::memory_order_acquire))
+    {
+        auto data = mRing->getReadVector();
+        jack_nframes_t todo{minu(numframes, static_cast<ALuint>(data.first.len))};
+        auto write_first = [&data,numchans,todo](float *outbuf) -> float*
         {
-            const ALfloat *RESTRICT in = reinterpret_cast<ALfloat*>(data.first.buf);
-            std::generate_n(outbuf, todo,
-                [&in,numchans]() noexcept -> ALfloat
+            const float *RESTRICT in = reinterpret_cast<float*>(data.first.buf);
+            auto deinterlace_input = [&in,numchans]() noexcept -> float
+            {
+                float ret{*in};
+                in += numchans;
+                return ret;
+            };
+            std::generate_n(outbuf, todo, deinterlace_input);
+            data.first.buf += sizeof(float);
+            return outbuf + todo;
+        };
+        std::transform(out, out+numchans, out, write_first);
+        total += todo;
+
+        todo = minu(numframes-total, static_cast<ALuint>(data.second.len));
+        if(todo > 0)
+        {
+            auto write_second = [&data,numchans,todo](float *outbuf) -> float*
+            {
+                const float *RESTRICT in = reinterpret_cast<float*>(data.second.buf);
+                auto deinterlace_input = [&in,numchans]() noexcept -> float
                 {
-                    ALfloat ret{*in};
+                    float ret{*in};
                     in += numchans;
                     return ret;
-                }
-            );
-            data.first.buf += sizeof(ALfloat);
-            return outbuf + todo;
-        }
-    );
-    jack_nframes_t total{todo};
-
-    todo = minu(numframes-total, data.second.len);
-    if(todo > 0)
-    {
-        std::transform(out, out+numchans, out,
-            [&data,numchans,todo](ALfloat *outbuf) -> ALfloat*
-            {
-                const ALfloat *RESTRICT in = reinterpret_cast<ALfloat*>(data.second.buf);
-                std::generate_n(outbuf, todo,
-                    [&in,numchans]() noexcept -> ALfloat
-                    {
-                        ALfloat ret{*in};
-                        in += numchans;
-                        return ret;
-                    }
-                );
-                data.second.buf += sizeof(ALfloat);
+                };
+                std::generate_n(outbuf, todo, deinterlace_input);
+                data.second.buf += sizeof(float);
                 return outbuf + todo;
-            }
-        );
-        total += todo;
-    }
+            };
+            std::transform(out, out+numchans, out, write_second);
+            total += todo;
+        }
 
-    mRing->readAdvance(total);
-    mSem.post();
+        mRing->readAdvance(total);
+        mSem.post();
+    }
 
     if(numframes > total)
     {
-        todo = numframes-total;
-        std::transform(out, out+numchans, out,
-            [todo](ALfloat *outbuf) -> ALfloat*
-            {
-                std::fill_n(outbuf, todo, 0.0f);
-                return outbuf + todo;
-            }
-        );
+        jack_nframes_t todo{numframes - total};
+        auto clear_buf = [todo](ALfloat *outbuf) -> void { std::fill_n(outbuf, todo, 0.0f); };
+        std::for_each(out, out+numchans, clear_buf);
     }
 
     return 0;
@@ -299,15 +264,17 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    lock();
+    const size_t frame_step{mDevice->channelsFromFmt()};
+
+    std::unique_lock<JackPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         if(mRing->writeSpace() < mDevice->UpdateSize)
         {
-            unlock();
+            dlock.unlock();
             mSem.wait();
-            lock();
+            dlock.lock();
             continue;
         }
 
@@ -315,51 +282,47 @@ int JackPlayback::mixerProc()
         auto todo = static_cast<ALuint>(data.first.len + data.second.len);
         todo -= todo%mDevice->UpdateSize;
 
-        ALuint len1{minu(data.first.len, todo)};
-        ALuint len2{minu(data.second.len, todo-len1)};
+        ALuint len1{minu(static_cast<ALuint>(data.first.len), todo)};
+        ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
 
-        aluMixData(mDevice, data.first.buf, len1);
+        aluMixData(mDevice, data.first.buf, len1, frame_step);
         if(len2 > 0)
-            aluMixData(mDevice, data.second.buf, len2);
+            aluMixData(mDevice, data.second.buf, len2, frame_step);
         mRing->writeAdvance(todo);
     }
-    unlock();
 
     return 0;
 }
 
 
-ALCenum JackPlayback::open(const ALCchar *name)
+void JackPlayback::open(const ALCchar *name)
 {
     if(!name)
         name = jackDevice;
     else if(strcmp(name, jackDevice) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     const char *client_name{"alsoft"};
     jack_status_t status;
     mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
     if(mClient == nullptr)
-    {
-        ERR("jack_client_open() failed, status = 0x%02x\n", status);
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open client connection: 0x%02x",
+            status};
+
     if((status&JackServerStarted))
         TRACE("JACK server started\n");
     if((status&JackNameNotUnique))
     {
         client_name = jack_get_client_name(mClient);
-        TRACE("Client name not unique, got `%s' instead\n", client_name);
+        TRACE("Client name not unique, got '%s' instead\n", client_name);
     }
 
     jack_set_process_callback(mClient, &JackPlayback::processC, this);
-    jack_set_buffer_size_callback(mClient, &JackPlayback::bufferSizeNotifyC, this);
 
     mDevice->DeviceName = name;
-    return ALC_NO_ERROR;
 }
 
-ALCboolean JackPlayback::reset()
+bool JackPlayback::reset()
 {
     std::for_each(std::begin(mPort), std::end(mPort),
         [this](jack_port_t *port) -> void
@@ -382,8 +345,7 @@ ALCboolean JackPlayback::reset()
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;
 
-    ALsizei numchans{mDevice->channelsFromFmt()};
-    auto ports_end = std::begin(mPort) + numchans;
+    auto ports_end = std::begin(mPort) + mDevice->channelsFromFmt();
     auto bad_port = std::find_if_not(std::begin(mPort), ports_end,
         [this](jack_port_t *&port) -> bool
         {
@@ -396,7 +358,7 @@ ALCboolean JackPlayback::reset()
     if(bad_port != ports_end)
     {
         ERR("Not enough JACK ports available for %s output\n", DevFmtChannelsString(mDevice->FmtChans));
-        if(bad_port == std::begin(mPort)) return ALC_FALSE;
+        if(bad_port == std::begin(mPort)) return false;
 
         if(bad_port == std::begin(mPort)+1)
             mDevice->FmtChans = DevFmtMono;
@@ -410,28 +372,19 @@ ALCboolean JackPlayback::reset()
             }
             mDevice->FmtChans = DevFmtStereo;
         }
-        numchans = std::distance(std::begin(mPort), bad_port);
-    }
-
-    mRing = nullptr;
-    mRing = CreateRingBuffer(bufsize, mDevice->frameSizeFromFmt(), true);
-    if(!mRing)
-    {
-        ERR("Failed to allocate ringbuffer\n");
-        return ALC_FALSE;
     }
 
     SetDefaultChannelOrder(mDevice);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean JackPlayback::start()
+bool JackPlayback::start()
 {
     if(jack_activate(mClient))
     {
         ERR("Failed to activate client\n");
-        return ALC_FALSE;
+        return false;
     }
 
     const char **ports{jack_get_ports(mClient, nullptr, nullptr,
@@ -440,7 +393,7 @@ ALCboolean JackPlayback::start()
     {
         ERR("No physical playback ports found\n");
         jack_deactivate(mClient);
-        return ALC_FALSE;
+        return false;
     }
     std::mismatch(std::begin(mPort), std::end(mPort), ports,
         [this](const jack_port_t *port, const char *pname) -> bool
@@ -455,14 +408,30 @@ ALCboolean JackPlayback::start()
                 ERR("Failed to connect output port \"%s\" to \"%s\"\n", jack_port_name(port),
                     pname);
             return true;
-        }
-    );
+        });
     jack_free(ports);
 
+    /* Reconfigure buffer metrics in case the server changed it since the reset
+     * (it won't change again after jack_activate), then allocate the ring
+     * buffer with the appropriate size.
+     */
+    mDevice->Frequency = jack_get_sample_rate(mClient);
+    mDevice->UpdateSize = jack_get_buffer_size(mClient);
+    mDevice->BufferSize = mDevice->UpdateSize * 2;
+
+    const char *devname{mDevice->DeviceName.c_str()};
+    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+
+    mRing = nullptr;
+    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
+
     try {
+        mPlaying.store(true, std::memory_order_release);
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Could not create playback thread: %s\n", e.what());
@@ -470,7 +439,8 @@ ALCboolean JackPlayback::start()
     catch(...) {
     }
     jack_deactivate(mClient);
-    return ALC_FALSE;
+    mPlaying.store(false, std::memory_order_release);
+    return false;
 }
 
 void JackPlayback::stop()
@@ -482,6 +452,7 @@ void JackPlayback::stop()
     mThread.join();
 
     jack_deactivate(mClient);
+    mPlaying.store(false, std::memory_order_release);
 }
 
 
@@ -489,11 +460,10 @@ ClockLatency JackPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    lock();
+    std::lock_guard<JackPlayback> _{*this};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace()};
     ret.Latency /= mDevice->Frequency;
-    unlock();
 
     return ret;
 }

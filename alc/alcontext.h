@@ -22,6 +22,7 @@
 #include "logging.h"
 #include "threads.h"
 #include "vector.h"
+#include "voice.h"
 
 struct ALeffectslot;
 struct ALeffectslotProps;
@@ -127,8 +128,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::atomic<ALvoiceProps*> mFreeVoiceProps{nullptr};
     std::atomic<ALeffectslotProps*> mFreeEffectslotProps{nullptr};
 
-    std::unique_ptr<al::FlexArray<ALvoice>> mVoices{nullptr};
-    std::atomic<ALuint> mVoiceCount{0u};
+    al::vector<ALvoice> mVoices;
 
     using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> mActiveAuxSlots{nullptr};
@@ -162,8 +162,6 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
      * exist on the device.
      */
     bool deinit();
-
-    void allocVoices(size_t num_voices);
 
     /**
      * Defers/suspends updates for the given context's listener and sources.

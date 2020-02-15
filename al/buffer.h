@@ -35,11 +35,6 @@ enum UserFmtChannels : unsigned char {
     UserFmtBFormat3D, /* WXYZ */
 };
 
-ALsizei BytesFromUserFmt(UserFmtType type);
-ALsizei ChannelsFromUserFmt(UserFmtChannels chans);
-inline ALsizei FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type)
-{ return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type); }
-
 
 /* Storable formats */
 enum FmtType : unsigned char {
@@ -64,15 +59,13 @@ enum FmtChannels : unsigned char {
 #define MAX_INPUT_CHANNELS  (8)
 
 
-ALsizei BytesFromFmt(FmtType type);
-ALsizei ChannelsFromFmt(FmtChannels chans);
-inline ALsizei FrameSizeFromFmt(FmtChannels chans, FmtType type)
-{ return ChannelsFromFmt(chans) * BytesFromFmt(type); }
+ALuint BytesFromFmt(FmtType type) noexcept;
+ALuint ChannelsFromFmt(FmtChannels chans) noexcept;
 
 struct ALbuffer {
     al::vector<al::byte,16> mData;
 
-    ALsizei Frequency{0};
+    ALuint Frequency{0u};
     ALbitfieldSOFT Access{0u};
     ALuint SampleLen{0u};
 
@@ -80,14 +73,17 @@ struct ALbuffer {
     FmtType     mFmtType{};
 
     UserFmtType OriginalType{};
-    ALsizei OriginalSize{0};
-    ALsizei OriginalAlign{0};
+    ALuint OriginalSize{0};
+    ALuint OriginalAlign{0};
+
+    ALenum AmbiLayout{AL_FUMA_SOFT};
+    ALenum AmbiScaling{AL_FUMA_SOFT};
 
     ALuint LoopStart{0u};
     ALuint LoopEnd{0u};
 
-    std::atomic<ALsizei> UnpackAlign{0};
-    std::atomic<ALsizei> PackAlign{0};
+    ALuint UnpackAlign{0};
+    ALuint PackAlign{0};
 
     ALbitfieldSOFT MappedAccess{0u};
     ALsizei MappedOffset{0};
@@ -99,9 +95,13 @@ struct ALbuffer {
     /* Self ID */
     ALuint id{0};
 
-	//for callback
-	LPALBUFFERCALLBACKFUNC callback{ nullptr };
-	void* usr_ptr{ nullptr };
+    inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mFmtType); }
+    inline ALuint channelsFromFmt() const noexcept { return ChannelsFromFmt(mFmtChannels); }
+    inline ALuint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
+
+    /* for callback */
+    LPALBUFFERCALLBACKFUNC callback{nullptr};
+    void* usr_ptr{nullptr};
 };
 
 #endif

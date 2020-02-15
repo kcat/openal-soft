@@ -41,14 +41,17 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <cstdio>
+#include <string>
+#include <utility>
 
-#include "alcmain.h"
+#include "alfstream.h"
+#include "alstring.h"
+#include "compat.h"
 #include "logging.h"
 #include "strutils.h"
-#include "compat.h"
+#include "vector.h"
 
 
 namespace {
@@ -169,7 +172,7 @@ void LoadConfigFromFile(std::istream &f)
             *endsection = 0;
 
             curSection.clear();
-            if(strcasecmp(section, "general") != 0)
+            if(al::strcasecmp(section, "general") != 0)
             {
                 do {
                     char *nextp = std::strchr(section, '%');
@@ -189,7 +192,7 @@ void LoadConfigFromFile(std::istream &f)
                         (section[2] >= 'a' && section[2] <= 'f') ||
                         (section[2] >= 'A' && section[2] <= 'F')))
                     {
-                        unsigned char b = 0;
+                        int b{0};
                         if(section[1] >= '0' && section[1] <= '9')
                             b = (section[1]-'0') << 4;
                         else if(section[1] >= 'a' && section[1] <= 'f')
@@ -221,35 +224,28 @@ void LoadConfigFromFile(std::istream &f)
             continue;
         }
 
-        auto cmtpos = buffer.find('#');
-        if(cmtpos != std::string::npos)
-            buffer.resize(cmtpos);
-        while(!buffer.empty() && std::isspace(buffer.back()))
-            buffer.pop_back();
-        if(buffer.empty()) continue;
+        auto cmtpos = std::min(buffer.find('#'), buffer.size());
+        while(cmtpos > 0 && std::isspace(buffer[cmtpos-1]))
+            --cmtpos;
+        if(!cmtpos) continue;
+        buffer.erase(cmtpos);
 
-        const char *line{&buffer[0]};
-        char key[256]{};
-        char value[256]{};
-        if(std::sscanf(line, "%255[^=] = \"%255[^\"]\"", key, value) == 2 ||
-           std::sscanf(line, "%255[^=] = '%255[^\']'", key, value) == 2 ||
-           std::sscanf(line, "%255[^=] = %255[^\n]", key, value) == 2)
+        auto sep = buffer.find('=');
+        if(sep == std::string::npos)
         {
-            /* sscanf doesn't handle '' or "" as empty values, so clip it
-             * manually. */
-            if(std::strcmp(value, "\"\"") == 0 || std::strcmp(value, "''") == 0)
-                value[0] = 0;
-        }
-        else if(std::sscanf(line, "%255[^=] %255[=]", key, value) == 2)
-        {
-            /* Special case for 'key =' */
-            value[0] = 0;
-        }
-        else
-        {
-            ERR(" config parse error: malformed option line: \"%s\"\n\n", line);
+            ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
             continue;
         }
+        auto keyend = sep++;
+        while(keyend > 0 && std::isspace(buffer[keyend-1]))
+            --keyend;
+        if(!keyend)
+        {
+            ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
+            continue;
+        }
+        while(sep < buffer.size() && std::isspace(buffer[sep]))
+            sep++;
 
         std::string fullKey;
         if(!curSection.empty())
@@ -257,26 +253,34 @@ void LoadConfigFromFile(std::istream &f)
             fullKey += curSection;
             fullKey += '/';
         }
-        fullKey += key;
-        while(!fullKey.empty() && std::isspace(fullKey.back()))
-            fullKey.pop_back();
+        fullKey += buffer.substr(0u, keyend);
 
-        TRACE(" found '%s' = '%s'\n", fullKey.c_str(), value);
+        std::string value{(sep < buffer.size()) ? buffer.substr(sep) : std::string{}};
+        if(value.size() > 1)
+        {
+            if((value.front() == '"' && value.back() == '"')
+                || (value.front() == '\'' && value.back() == '\''))
+            {
+                value.pop_back();
+                value.erase(value.begin());
+            }
+        }
+
+        TRACE(" found '%s' = '%s'\n", fullKey.c_str(), value.c_str());
 
         /* Check if we already have this option set */
-        auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(),
-            [&fullKey](const ConfigEntry &entry) -> bool
-            { return entry.key == fullKey; }
-        );
+        auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
+        { return entry.key == fullKey; };
+        auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
         if(ent != ConfOpts.end())
         {
-            if(value[0])
-                ent->value = expdup(value);
+            if(!value.empty())
+                ent->value = expdup(value.c_str());
             else
                 ConfOpts.erase(ent);
         }
-        else if(value[0])
-            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value)});
+        else if(!value.empty())
+            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value.c_str())});
     }
     ConfOpts.shrink_to_fit();
 }
@@ -359,7 +363,7 @@ void ReadALConfig()
             else fname += "alsoft.conf";
 
             TRACE("Loading config %s...\n", fname.c_str());
-            al::ifstream f{fname};
+            f = al::ifstream{fname};
             if(f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -376,7 +380,7 @@ void ReadALConfig()
         if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
            CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
         {
-            al::ifstream f{reinterpret_cast<char*>(fileName)};
+            f = al::ifstream{reinterpret_cast<char*>(fileName)};
             if(f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -390,7 +394,7 @@ void ReadALConfig()
         else fname += ".alsoftrc";
 
         TRACE("Loading config %s...\n", fname.c_str());
-        al::ifstream f{fname};
+        f = al::ifstream{fname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -414,7 +418,7 @@ void ReadALConfig()
     if(!fname.empty())
     {
         TRACE("Loading config %s...\n", fname.c_str());
-        al::ifstream f{fname};
+        f = al::ifstream{fname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -426,7 +430,7 @@ void ReadALConfig()
         else ppath += "alsoft.conf";
 
         TRACE("Loading config %s...\n", ppath.c_str());
-        al::ifstream f{ppath};
+        f = al::ifstream{ppath};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -434,7 +438,7 @@ void ReadALConfig()
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
         TRACE("Loading config %s...\n", confname->c_str());
-        al::ifstream f{*confname};
+        f = al::ifstream{*confname};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -447,7 +451,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
         return def;
 
     std::string key;
-    if(blockName && strcasecmp(blockName, "general") != 0)
+    if(blockName && al::strcasecmp(blockName, "general") != 0)
     {
         key = blockName;
         if(devName)
@@ -532,8 +536,8 @@ al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, c
     if(!val[0]) return al::nullopt;
 
     return al::make_optional(
-        strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
-        strcasecmp(val, "on") == 0 || atoi(val) != 0);
+        al::strcasecmp(val, "true") == 0 || al::strcasecmp(val, "yes") == 0 ||
+        al::strcasecmp(val, "on") == 0 || atoi(val) != 0);
 }
 
 int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)
@@ -541,6 +545,6 @@ int GetConfigValueBool(const char *devName, const char *blockName, const char *k
     const char *val = GetConfigValue(devName, blockName, keyName, "");
 
     if(!val[0]) return def != 0;
-    return (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
-            strcasecmp(val, "on") == 0 || atoi(val) != 0);
+    return (al::strcasecmp(val, "true") == 0 || al::strcasecmp(val, "yes") == 0 ||
+            al::strcasecmp(val, "on") == 0 || atoi(val) != 0);
 }

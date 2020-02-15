@@ -11,9 +11,6 @@ Specifies the amount of logging OpenAL Soft will write out:
 1 - Prints out errors only
 2 - Prints out warnings and errors
 3 - Prints out additional information, as well as warnings and errors
-4 - Same as 3, but also device and context reference count changes. This will
-    print out *a lot* of info, and is generally not useful unless you're trying
-    to track a reference leak within the library.
 
 ALSOFT_LOGFILE
 Specifies a filename that logged output will be written to. Note that the file
@@ -79,13 +76,3 @@ which some applications make use of to protect against partial updates. In an
 attempt to standardize on that behavior, OpenAL Soft has changed those methods
 accordingly. Setting this to "ignore" restores the previous no-op behavior for
 applications that interact poorly with the new behavior.
-
-__ALSOFT_REVERB_IGNORES_SOUND_SPEED
-Older versions of OpenAL Soft ignored the app-specified speed of sound when
-calculating distance-related reverb decays and always assumed the default
-343.3m/s. Now, both of the AL_SPEED_OF_SOUND and AL_METERS_PER_UNIT properties
-are taken into account for speed of sound adjustments to have an appropriate
-affect on the reverb decay. Consequently, applications that use reverb but
-don't set these properties properly may find the reverb decay too strong.
-Setting this to "true" or "1" will revert to the old behavior for those apps
-and assume the default speed of sound for reverb.

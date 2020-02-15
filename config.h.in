@@ -80,9 +80,6 @@
 /* Define to the size of a long int type */
 #cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
 
-/* Define to the size of a long long int type */
-#cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
-
 /* Define if we have GCC's format attribute */
 #cmakedefine HAVE_GCC_FORMAT
 

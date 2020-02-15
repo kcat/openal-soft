@@ -1,3 +1,92 @@
+openal-soft-1.20.1:
+
+    Implemented the AL_SOFT_direct_channels_remix extension. This extends
+    AL_DIRECT_CHANNELS_SOFT to optionally remix input channels that don't have
+    a matching output channel.
+
+    Implemented the AL_SOFT_bformat_ex extension. This extends B-Format buffer
+    support for N3D or SN3D scaling, or ACN channel ordering.
+
+    Fixed a potential voice leak when a source is started and stopped or
+    restarted in quick succession.
+
+    Fixed a potential device reset failure with JACK.
+
+    Improved handling of unsupported channel configurations with WASAPI. Such
+    setups will now try to output at least a stereo mix.
+
+    Improved clarity a bit for the HRTF second-order ambisonic decoder.
+
+    Improved detection of compatible layouts for SOFA files in makemhr and
+    sofa-info.
+
+    Added the ability to resample HRTFs on load. MHR files no longer need to
+    match the device sample rate to be usable.
+
+    Added an option to limit the HRTF's filter length.
+
+openal-soft-1.20.0:
+
+    Converted the library codebase to C++11. A lot of hacks and custom
+    structures have been replaced with standard or cleaner implementations.
+
+    Partially implemented the Vocal Morpher effect.
+
+    Fixed the bsinc SSE resamplers on non-GCC compilers.
+
+    Fixed OpenSL capture.
+
+    Fixed support for extended capture formats with OpenSL.
+
+    Fixed handling of WASAPI not reporting a default device.
+
+    Fixed performance problems relating to semaphores on macOS.
+
+    Modified the bsinc12 resampler's transition band to better avoid aliasing
+    noise.
+
+    Modified alcResetDeviceSOFT to attempt recovery of disconnected devices.
+
+    Modified the virtual speaker layout for HRTF B-Format decoding.
+
+    Modified the PulseAudio backend to use a custom processing loop.
+
+    Renamed the makehrtf utility to makemhr.
+
+    Improved the efficiency of the bsinc resamplers when up-sampling.
+
+    Improved the quality of the bsinc resamplers slightly.
+
+    Improved the efficiency of the HRTF filters.
+
+    Improved the HRTF B-Format decoder coefficient generation.
+
+    Improved reverb feedback fading to be more consistent with pan fading.
+
+    Improved handling of sources that end prematurely, avoiding loud clicks.
+
+    Improved the performance of some reverb processing loops.
+
+    Added fast_bsinc12 and 24 resamplers that improve efficiency at the cost of
+    some quality. Notably, down-sampling has less smooth pitch ramping.
+
+    Added support for SOFA input files with makemhr.
+
+    Added a build option to use pre-built native tools. For cross-compiling,
+    use with caution and ensure the native tools' binaries are kept up-to-date.
+
+    Added an adjust-latency config option for the PulseAudio backend.
+
+    Added basic support for multi-field HRTFs.
+
+    Added an option for mixing first- or second-order B-Format with HRTF
+    output. This can improve HRTF performance given a number of sources.
+
+    Added an RC file for proper DLL version information.
+
+    Disabled some old KDE workarounds by default. Specifically, PulseAudio
+    streams can now be moved (KDE may try to move them after opening).
+
 openal-soft-1.19.1:
 
     Implemented capture support for the SoundIO backend.

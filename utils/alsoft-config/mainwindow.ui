@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>564</width>
-    <height>460</height>
+    <height>469</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -21,8 +21,7 @@
   </property>
   <property name="windowIcon">
    <iconset theme="preferences-desktop-sound">
-    <normaloff/>
-   </iconset>
+    <normaloff>.</normaloff>.</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="applyButton">
@@ -31,7 +30,7 @@
       <x>470</x>
       <y>405</y>
       <width>81</width>
-      <height>21</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -39,8 +38,7 @@
     </property>
     <property name="icon">
      <iconset theme="dialog-ok-apply">
-      <normaloff/>
-     </iconset>
+      <normaloff>.</normaloff>.</iconset>
     </property>
    </widget>
    <widget class="QTabWidget" name="tabWidget">
@@ -64,8 +62,8 @@
        <rect>
         <x>110</x>
         <y>50</y>
-        <width>78</width>
-        <height>21</height>
+        <width>76</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -82,7 +80,7 @@ float and converted to the output sample type as needed.</string>
         <x>0</x>
         <y>50</y>
         <width>101</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -98,7 +96,7 @@ float and converted to the output sample type as needed.</string>
         <x>0</x>
         <y>20</y>
         <width>101</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -113,8 +111,8 @@ float and converted to the output sample type as needed.</string>
        <rect>
         <x>110</x>
         <y>20</y>
-        <width>78</width>
-        <height>21</height>
+        <width>76</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -131,7 +129,7 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>95</width>
+        <width>96</width>
         <height>31</height>
        </rect>
       </property>
@@ -194,7 +192,7 @@ to stereo output.</string>
         <x>290</x>
         <y>20</y>
         <width>81</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -210,7 +208,7 @@ to stereo output.</string>
         <x>290</x>
         <y>50</y>
         <width>81</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -225,8 +223,8 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>50</y>
-        <width>78</width>
-        <height>21</height>
+        <width>101</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -256,7 +254,7 @@ otherwise be suitable for speakers.</string>
          <x>20</x>
          <y>30</y>
          <width>511</width>
-         <height>91</height>
+         <height>81</height>
         </rect>
        </property>
        <property name="title">
@@ -432,9 +430,9 @@ frames needed for each mixing update.</string>
        <property name="geometry">
         <rect>
          <x>130</x>
-         <y>130</y>
-         <width>131</width>
-         <height>21</height>
+         <y>120</y>
+         <width>111</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="toolTip">
@@ -451,9 +449,9 @@ receiver.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>130</y>
+         <y>120</y>
          <width>101</width>
-         <height>21</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
@@ -466,23 +464,26 @@ receiver.</string>
       <widget class="QLabel" name="label_30">
        <property name="geometry">
         <rect>
-         <x>270</x>
-         <y>130</y>
-         <width>111</width>
-         <height>21</height>
+         <x>260</x>
+         <y>120</y>
+         <width>121</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
         <string>Ambisonic Format:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QComboBox" name="ambiFormatComboBox">
        <property name="geometry">
         <rect>
          <x>390</x>
-         <y>130</y>
+         <y>120</y>
          <width>131</width>
-         <height>21</height>
+         <height>31</height>
         </rect>
        </property>
       </widget>
@@ -533,7 +534,7 @@ quantization with low-level whitenoise.</string>
       <property name="geometry">
        <rect>
         <x>60</x>
-        <y>80</y>
+        <y>90</y>
         <width>421</width>
         <height>81</height>
        </rect>
@@ -611,7 +612,7 @@ quantization with low-level whitenoise.</string>
      <widget class="QCheckBox" name="decoderHQModeCheckBox">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>30</x>
         <y>20</y>
         <width>181</width>
         <height>21</height>
@@ -635,7 +636,7 @@ appropriate speaker configuration you intend to use.</string>
      <widget class="QCheckBox" name="decoderDistCompCheckBox">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>30</x>
         <y>50</y>
         <width>181</width>
         <height>21</height>
@@ -834,7 +835,7 @@ configuration file.</string>
      <widget class="QCheckBox" name="decoderNFEffectsCheckBox">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>30</x>
         <y>80</y>
         <width>181</width>
         <height>21</height>
@@ -884,7 +885,7 @@ normal output is created with no near-field simulation.</string>
         <rect>
          <x>20</x>
          <y>0</y>
-         <width>151</width>
+         <width>171</width>
          <height>21</height>
         </rect>
        </property>
@@ -898,9 +899,9 @@ normal output is created with no near-field simulation.</string>
       <widget class="QDoubleSpinBox" name="decoderNFRefDelaySpinBox">
        <property name="geometry">
         <rect>
-         <x>180</x>
+         <x>200</x>
          <y>0</y>
-         <width>91</width>
+         <width>81</width>
          <height>21</height>
         </rect>
        </property>
@@ -998,8 +999,7 @@ normal output is created with no near-field simulation.</string>
         </property>
         <property name="icon">
          <iconset theme="list-add">
-          <normaloff/>
-         </iconset>
+          <normaloff>.</normaloff>.</iconset>
         </property>
         <property name="flat">
          <bool>false</bool>
@@ -1039,8 +1039,7 @@ listed above.</string>
         </property>
         <property name="icon">
          <iconset theme="list-remove">
-          <normaloff/>
-         </iconset>
+          <normaloff>.</normaloff>.</iconset>
         </property>
        </widget>
       </widget>
@@ -1048,10 +1047,10 @@ listed above.</string>
      <widget class="QLabel" name="label_16">
       <property name="geometry">
        <rect>
-        <x>40</x>
-        <y>50</y>
+        <x>50</x>
+        <y>60</y>
         <width>71</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -1065,9 +1064,9 @@ listed above.</string>
       <property name="geometry">
        <rect>
         <x>130</x>
-        <y>50</y>
+        <y>60</y>
         <width>161</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1096,10 +1095,10 @@ application or system to determine if it should be used.</string>
      <widget class="QLabel" name="label_12">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>30</x>
         <y>20</y>
         <width>91</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -1115,7 +1114,7 @@ application or system to determine if it should be used.</string>
         <x>130</x>
         <y>20</y>
         <width>161</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1126,7 +1125,7 @@ application or system to determine if it should be used.</string>
       <property name="geometry">
        <rect>
         <x>50</x>
-        <y>90</y>
+        <y>100</y>
         <width>441</width>
         <height>81</height>
        </rect>
@@ -2287,7 +2286,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
         <x>10</x>
         <y>20</y>
         <width>141</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -2302,7 +2301,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>129</width>
+        <width>131</width>
         <height>31</height>
        </rect>
       </property>
@@ -2453,7 +2452,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
       <x>370</x>
       <y>405</y>
       <width>91</width>
-      <height>21</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -2461,8 +2460,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
     </property>
     <property name="icon">
      <iconset theme="window-close">
-      <normaloff/>
-     </iconset>
+      <normaloff>.</normaloff>.</iconset>
     </property>
    </widget>
   </widget>
@@ -2496,8 +2494,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
   <action name="actionQuit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -2506,8 +2503,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
   <action name="actionSave_As">
    <property name="icon">
     <iconset theme="document-save-as">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Save &amp;As...</string>
@@ -2519,8 +2515,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
   <action name="actionLoad">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Load...</string>
@@ -2538,22 +2533,6 @@ added by the ALC_EXT_DEDICATED extension.</string>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
  <connections>
-  <connection>
-   <sender>actionQuit</sender>
-   <signal>activated()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>267</x>
-     <y>181</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>backendListWidget</sender>
    <signal>currentRowChanged(int)</signal>

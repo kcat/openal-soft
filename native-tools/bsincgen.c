@@ -43,26 +43,22 @@
 
 
 #ifndef M_PI
-#define M_PI                         (3.14159265358979323846)
+#define M_PI                         3.14159265358979323846
 #endif
 
 #if !(defined(_ISOC99_SOURCE) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L))
 #define log2(x)  (log(x) / log(2.0))
 #endif
 
-/* Same as in alu.h! */
-#define FRACTIONBITS (12)
-#define FRACTIONONE  (1<<FRACTIONBITS)
-
 // The number of distinct scale and phase intervals within the filter table.
 // Must be the same as in alu.h!
-#define BSINC_SCALE_COUNT (16)
-#define BSINC_PHASE_COUNT (16)
+#define BSINC_SCALE_COUNT 16
+#define BSINC_PHASE_COUNT 32
 
 /* 48 points includes the doubling for downsampling, so the maximum number of
  * base sample points is 24, which is 23rd order.
  */
-#define BSINC_POINTS_MAX (48)
+#define BSINC_POINTS_MAX 48
 
 static double MinDouble(double a, double b)
 { return (a <= b) ? a : b; }
@@ -141,8 +137,8 @@ static double CalcKaiserBeta(const double rejection)
 static void BsiGenerateTables(FILE *output, const char *tabname, const double rejection, const int order)
 {
     static double   filter[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
-    static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static double phDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
+    static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static double spDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static int mt[BSINC_SCALE_COUNT];
     static double at[BSINC_SCALE_COUNT];
@@ -151,8 +147,8 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     int si, pi, i;
 
     memset(filter, 0, sizeof(filter));
-    memset(scDeltas, 0, sizeof(scDeltas));
     memset(phDeltas, 0, sizeof(phDeltas));
+    memset(scDeltas, 0, sizeof(scDeltas));
     memset(spDeltas, 0, sizeof(spDeltas));
 
     /* Calculate windowing parameters.  The width describes the transition
@@ -176,8 +172,8 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     }
 
     /* Calculate the Kaiser-windowed Sinc filter coefficients for each scale
-       and phase.
-    */
+     * and phase.
+     */
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
@@ -199,25 +195,9 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
         }
     }
 
-    /* Linear interpolation between scales is simplified by pre-calculating
-       the delta (b - a) in: x = a + f (b - a)
-
-       Given a difference in points between scales, the destination points
-       will be 0, thus: x = a + f (-a)
-    */
-    for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
-    {
-        const int m = mt[si];
-        const int o = num_points_min - (m / 2);
-
-        for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
-        {
-            for(i = 0; i < m; i++)
-                scDeltas[si][pi][o + i] = filter[si + 1][pi][o + i] - filter[si][pi][o + i];
-        }
-    }
-
-    // Linear interpolation between phases is also simplified.
+    /* Linear interpolation between phases is simplified by pre-calculating the
+     * delta (b - a) in: x = a + f (b - a)
+     */
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
@@ -230,9 +210,26 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
         }
     }
 
+    /* Linear interpolation between scales is also simplified.
+     *
+     * Given a difference in points between scales, the destination points will
+     * be 0, thus: x = a + f (-a)
+     */
+    for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
+    {
+        const int m = mt[si];
+        const int o = num_points_min - (m / 2);
+
+        for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
+        {
+            for(i = 0; i < m; i++)
+                scDeltas[si][pi][o + i] = filter[si + 1][pi][o + i] - filter[si][pi][o + i];
+        }
+    }
+
     /* This last simplification is done to complete the bilinear equation for
-       the combination of scale and phase.
-    */
+     * the combination of phase and scale.
+     */
     for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
     {
         const int m = mt[si];
@@ -245,11 +242,11 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
         }
     }
 
-    // Make sure the number of points is a multiple of 4 (for SIMD).
+    /* Make sure the number of points is a multiple of 4 (for SIMD). */
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         mt[si] = (mt[si]+3) & ~3;
 
-    // Calculate the table size.
+    /* Calculate the table size. */
     i = 0;
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         i += 4 * BSINC_PHASE_COUNT * mt[si];
@@ -261,7 +258,7 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
 " * width) suffers to reduce the CPU cost. The bandlimiting will cut all sound\n"
 " * after downsampling by ~%.2f octaves.\n"
 " */\n"
-"alignas(16) static constexpr float %s_tab[%d] = {\n",
+"alignas(16) constexpr float %s_tab[%d] = {\n",
             order, (((order%100)/10) == 1) ? "th" :
                    ((order%10) == 1) ? "st" :
                    ((order%10) == 2) ? "nd" :
@@ -278,19 +275,19 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
             fprintf(output, "\n   ");
             for(i = 0; i < m; i++)
                 fprintf(output, " %+14.9ef,", filter[si][pi][o + i]);
-            fprintf(output, "\n       ");
-            for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
-            fprintf(output, "\n       ");
+            fprintf(output, "\n   ");
             for(i = 0; i < m; i++)
                 fprintf(output, " %+14.9ef,", phDeltas[si][pi][o + i]);
-            fprintf(output, "\n       ");
+            fprintf(output, "\n   ");
+            for(i = 0; i < m; i++)
+                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
+            fprintf(output, "\n   ");
             for(i = 0; i < m; i++)
                 fprintf(output, " %+14.9ef,", spDeltas[si][pi][o + i]);
             fprintf(output, "\n");
         }
     }
-    fprintf(output, "};\nconst BSincTable %s = {\n", tabname);
+    fprintf(output, "};\nconstexpr BSincTable %s = {\n", tabname);
 
     /* The scaleBase is calculated from the Kaiser window transition width.
        It represents the absolute limit to the filter before it fully cuts
@@ -300,17 +297,17 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     fprintf(output, "    /* scaleBase */ %.9ef, /* scaleRange */ %.9ef,\n", scaleBase, 1.0 / scaleRange);
 
     fprintf(output, "    /* m */ {");
-    fprintf(output, " %d", mt[0]);
+    fprintf(output, " %du", mt[0]);
     for(si = 1; si < BSINC_SCALE_COUNT; si++)
-        fprintf(output, ", %d", mt[si]);
+        fprintf(output, ", %du", mt[si]);
     fprintf(output, " },\n");
 
     fprintf(output, "    /* filterOffset */ {");
-    fprintf(output, " %d", 0);
+    fprintf(output, " %du", 0);
     i = mt[0]*4*BSINC_PHASE_COUNT;
     for(si = 1; si < BSINC_SCALE_COUNT; si++)
     {
-        fprintf(output, ", %d", i);
+        fprintf(output, ", %du", i);
         i += mt[si]*4*BSINC_PHASE_COUNT;
     }
 
@@ -344,21 +341,23 @@ int main(int argc, char *argv[])
     else
         output = stdout;
 
-    fprintf(output, "/* Generated by bsincgen, do not edit! */\n\n"
+    fprintf(output, "/* Generated by bsincgen, do not edit! */\n"
+"#pragma once\n\n"
 "static_assert(BSINC_SCALE_COUNT == %d, \"Unexpected BSINC_SCALE_COUNT value!\");\n"
-"static_assert(BSINC_PHASE_COUNT == %d, \"Unexpected BSINC_PHASE_COUNT value!\");\n"
-"static_assert(FRACTIONONE == %d, \"Unexpected FRACTIONONE value!\");\n\n"
+"static_assert(BSINC_PHASE_COUNT == %d, \"Unexpected BSINC_PHASE_COUNT value!\");\n\n"
+"namespace {\n\n"
 "struct BSincTable {\n"
 "    const float scaleBase, scaleRange;\n"
-"    const int m[BSINC_SCALE_COUNT];\n"
-"    const int filterOffset[BSINC_SCALE_COUNT];\n"
+"    const unsigned int m[BSINC_SCALE_COUNT];\n"
+"    const unsigned int filterOffset[BSINC_SCALE_COUNT];\n"
 "    const float *Tab;\n"
-"};\n\n", BSINC_SCALE_COUNT, BSINC_PHASE_COUNT, FRACTIONONE);
+"};\n\n", BSINC_SCALE_COUNT, BSINC_PHASE_COUNT);
     /* A 23rd order filter with a -60dB drop at nyquist. */
     BsiGenerateTables(output, "bsinc24", 60.0, 23);
-    /* An 11th order filter with a -40dB drop at nyquist. */
-    BsiGenerateTables(output, "bsinc12", 40.0, 11);
+    /* An 11th order filter with a -60dB drop at nyquist. */
+    BsiGenerateTables(output, "bsinc12", 60.0, 11);
 
+    fprintf(output, "} // namespace\n");
     if(output != stdout)
         fclose(output);
     output = NULL;

@@ -128,6 +128,13 @@
 #  usage (still less than "full", given some number of active sources).
 #hrtf-mode = full
 
+## hrtf-size:
+#  Specifies the impulse response size, in samples, for the HRTF filter. Larger
+#  values increase the filter quality, while smaller values reduce processing
+#  cost. A value of 0 (default) uses the full filter size in the dataset, and
+#  the default dataset has a filter size of 32 samples at 44.1khz.
+#hrtf-size = 0
+
 ## default-hrtf:
 #  Specifies the default HRTF to use. When multiple HRTFs are available, this
 #  determines the preferred one to use if none are specifically requested. Note
@@ -161,14 +168,18 @@
 #cf_level = 0
 
 ## resampler: (global)
-#  Selects the resampler used when mixing sources. Valid values are:
+#  Selects the default resampler used when mixing sources. Valid values are:
 #  point - nearest sample, no interpolation
 #  linear - extrapolates samples using a linear slope between samples
 #  cubic - extrapolates samples using a Catmull-Rom spline
 #  bsinc12 - extrapolates samples using a band-limited Sinc filter (varying
 #            between 12 and 24 points, with anti-aliasing)
+#  fast_bsinc12 - same as bsinc12, except without interpolation between down-
+#                 sampling scales
 #  bsinc24 - extrapolates samples using a band-limited Sinc filter (varying
 #            between 24 and 48 points, with anti-aliasing)
+#  fast_bsinc24 - same as bsinc24, except without interpolation between down-
+#                 sampling scales
 #resampler = linear
 
 ## rt-prio: (global)
@@ -272,7 +283,7 @@
 #  configuration files for the appropriate speaker configuration you intend to
 #  use (see the quad, surround51, etc options below). Currently, up to third-
 #  order decoding is supported.
-#hq-mode = false
+#hq-mode = true
 
 ## distance-comp:
 #  Enables compensation for the speakers' relative distances to the listener.

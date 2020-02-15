@@ -1,10 +1,12 @@
 #ifndef FILTERS_BIQUAD_H
 #define FILTERS_BIQUAD_H
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <utility>
 
+#include "alspan.h"
 #include "math_defs.h"
 
 
@@ -38,55 +40,13 @@ enum class BiquadType {
 template<typename Real>
 class BiquadFilterR {
     /* Last two delayed components for direct form II. */
-    Real z1{0.0f}, z2{0.0f};
+    Real mZ1{0.0f}, mZ2{0.0f};
     /* Transfer function coefficients "b" (numerator) */
-    Real b0{1.0f}, b1{0.0f}, b2{0.0f};
+    Real mB0{1.0f}, mB1{0.0f}, mB2{0.0f};
     /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
-    Real a1{0.0f}, a2{0.0f};
+    Real mA1{0.0f}, mA2{0.0f};
 
-public:
-    void clear() noexcept { z1 = z2 = 0.0f; }
-
-    /**
-     * Sets the filter state for the specified filter type and its parameters.
-     *
-     * \param type The type of filter to apply.
-     * \param gain The gain for the reference frequency response. Only used by
-     *             the Shelf and Peaking filter types.
-     * \param f0norm The reference frequency normal (ref_freq / sample_rate).
-     *               This is the center point for the Shelf, Peaking, and
-     *               BandPass filter types, or the cutoff frequency for the
-     *               LowPass and HighPass filter types.
-     * \param rcpQ The reciprocal of the Q coefficient for the filter's
-     *             transition band. Can be generated from rcpQFromSlope or
-     *             rcpQFromBandwidth as needed.
-     */
-    void setParams(BiquadType type, Real gain, Real f0norm, Real rcpQ);
-
-    void copyParamsFrom(const BiquadFilterR &other)
-    {
-        b0 = other.b0;
-        b1 = other.b1;
-        b2 = other.b2;
-        a1 = other.a1;
-        a2 = other.a2;
-    }
-
-
-    void process(Real *dst, const Real *src, const size_t numsamples);
-
-    /* Rather hacky. It's just here to support "manual" processing. */
-    std::pair<Real,Real> getComponents() const noexcept
-    { return {z1, z2}; }
-    void setComponents(Real z1_, Real z2_) noexcept
-    { z1 = z1_; z2 = z2_; }
-    Real processOne(const Real in, Real &z1_, Real &z2_) const noexcept
-    {
-        Real out{in*b0 + z1_};
-        z1_ = in*b1 - out*a1 + z2_;
-        z2_ = in*b2 - out*a2;
-        return out;
-    }
+    void setParams(BiquadType type, Real f0norm, Real gain, Real rcpQ);
 
     /**
      * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using
@@ -107,6 +67,65 @@ public:
     {
         const Real w0{al::MathDefs<Real>::Tau() * f0norm};
         return 2.0f*std::sinh(std::log(Real{2.0f})/2.0f*bandwidth*w0/std::sin(w0));
+    }
+
+public:
+    void clear() noexcept { mZ1 = mZ2 = 0.0f; }
+
+    /**
+     * Sets the filter state for the specified filter type and its parameters.
+     *
+     * \param type The type of filter to apply.
+     * \param f0norm The normalized reference frequency (ref / sample_rate).
+     * This is the center point for the Shelf, Peaking, and BandPass filter
+     * types, or the cutoff frequency for the LowPass and HighPass filter
+     * types.
+     * \param gain The gain for the reference frequency response. Only used by
+     * the Shelf and Peaking filter types.
+     * \param slope Slope steepness of the transition band.
+     */
+    void setParamsFromSlope(BiquadType type, Real f0norm, Real gain, Real slope)
+    {
+        gain = std::max<Real>(gain, 0.001f); /* Limit -60dB */
+        setParams(type, f0norm, gain, rcpQFromSlope(gain, slope));
+    }
+
+    /**
+     * Sets the filter state for the specified filter type and its parameters.
+     *
+     * \param type The type of filter to apply.
+     * \param f0norm The normalized reference frequency (ref / sample_rate).
+     * This is the center point for the Shelf, Peaking, and BandPass filter
+     * types, or the cutoff frequency for the LowPass and HighPass filter
+     * types.
+     * \param gain The gain for the reference frequency response. Only used by
+     * the Shelf and Peaking filter types.
+     * \param bandwidth Normalized bandwidth of the transition band.
+     */
+    void setParamsFromBandwidth(BiquadType type, Real f0norm, Real gain, Real bandwidth)
+    { setParams(type, f0norm, gain, rcpQFromBandwidth(f0norm, bandwidth)); }
+
+    void copyParamsFrom(const BiquadFilterR &other)
+    {
+        mB0 = other.mB0;
+        mB1 = other.mB1;
+        mB2 = other.mB2;
+        mA1 = other.mA1;
+        mA2 = other.mA2;
+    }
+
+
+    void process(const al::span<const Real> src, Real *dst);
+
+    /* Rather hacky. It's just here to support "manual" processing. */
+    std::pair<Real,Real> getComponents() const noexcept { return {mZ1, mZ2}; }
+    void setComponents(Real z1, Real z2) noexcept { mZ1 = z1; mZ2 = z2; }
+    Real processOne(const Real in, Real &z1, Real &z2) const noexcept
+    {
+        const Real out{in*mB0 + z1};
+        z1 = in*mB1 - out*mA1 + z2;
+        z2 = in*mB2 - out*mA2;
+        return out;
     }
 };
 

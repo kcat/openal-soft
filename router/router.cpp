@@ -3,17 +3,19 @@
 
 #include "router.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "AL/alc.h"
 #include "AL/al.h"
+
 #include "almalloc.h"
+#include "strutils.h"
 
 #include "version.h"
+
 
 std::vector<DriverIface> DriverList;
 
@@ -27,51 +29,47 @@ static void LoadDriverList(void);
 
 BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
 {
-    const char *str;
-
     switch(reason)
     {
-        case DLL_PROCESS_ATTACH:
-            LogFile = stderr;
-            str = getenv("ALROUTER_LOGFILE");
-            if(str && *str != '\0')
-            {
-                FILE *f = fopen(str, "w");
-                if(f == nullptr)
-                    ERR("Could not open log file: %s\n", str);
-                else
-                    LogFile = f;
-            }
-            str = getenv("ALROUTER_LOGLEVEL");
-            if(str && *str != '\0')
-            {
-                char *end = nullptr;
-                long l = strtol(str, &end, 0);
-                if(!end || *end != '\0')
-                    ERR("Invalid log level value: %s\n", str);
-                else if(l < LogLevel_None || l > LogLevel_Trace)
-                    ERR("Log level out of range: %s\n", str);
-                else
-                    LogLevel = static_cast<enum LogLevel>(l);
-            }
-            TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
-            LoadDriverList();
+    case DLL_PROCESS_ATTACH:
+        LogFile = stderr;
+        if(auto logfname = al::getenv("ALROUTER_LOGFILE"))
+        {
+            FILE *f = fopen(logfname->c_str(), "w");
+            if(f == nullptr)
+                ERR("Could not open log file: %s\n", logfname->c_str());
+            else
+                LogFile = f;
+        }
+        if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
+        {
+            char *end = nullptr;
+            long l = strtol(loglev->c_str(), &end, 0);
+            if(!end || *end != '\0')
+                ERR("Invalid log level value: %s\n", loglev->c_str());
+            else if(l < LogLevel_None || l > LogLevel_Trace)
+                ERR("Log level out of range: %s\n", loglev->c_str());
+            else
+                LogLevel = static_cast<enum LogLevel>(l);
+        }
+        TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
+        LoadDriverList();
 
-            break;
+        break;
 
-        case DLL_THREAD_ATTACH:
-            break;
-        case DLL_THREAD_DETACH:
-            break;
+    case DLL_THREAD_ATTACH:
+        break;
+    case DLL_THREAD_DETACH:
+        break;
 
-        case DLL_PROCESS_DETACH:
-            DriverList.clear();
+    case DLL_PROCESS_DETACH:
+        DriverList.clear();
 
-            if(LogFile && LogFile != stderr)
-                fclose(LogFile);
-            LogFile = nullptr;
+        if(LogFile && LogFile != stderr)
+            fclose(LogFile);
+        LogFile = nullptr;
 
-            break;
+        break;
     }
     return TRUE;
 }
@@ -83,7 +81,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
     {
         if(drv.Module == module)
         {
-            TRACE("Skipping already-loaded module %p\n", module);
+            TRACE("Skipping already-loaded module %p\n", decltype(std::declval<void*>()){module});
             FreeLibrary(module);
             return;
         }
@@ -101,8 +99,8 @@ static void AddModule(HMODULE module, const WCHAR *name)
     /* Load required functions. */
     int err = 0;
 #define LOAD_PROC(x) do {                                                     \
-    newdrv.x = reinterpret_cast<decltype(newdrv.x)>(                          \
-        GetProcAddress(module, #x));                                          \
+    newdrv.x = reinterpret_cast<decltype(newdrv.x)>(reinterpret_cast<void*>(  \
+        GetProcAddress(module, #x)));                                         \
     if(!newdrv.x)                                                             \
     {                                                                         \
         ERR("Failed to find entry point for %s in %ls\n", #x, name);          \
@@ -235,7 +233,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
         DriverList.pop_back();
         return;
     }
-    TRACE("Loaded module %p, %ls, ALC %d.%d\n", module, name,
+    TRACE("Loaded module %p, %ls, ALC %d.%d\n", decltype(std::declval<void*>()){module}, name,
           newdrv.ALCVer>>8, newdrv.ALCVer&255);
 #undef LOAD_PROC
 }

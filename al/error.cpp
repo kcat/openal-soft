@@ -67,7 +67,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     else msg = "<internal error constructing message>";
     msglen = static_cast<int>(strlen(msg));
 
-    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n", this, errorCode, msg);
+    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
+        decltype(std::declval<void*>()){this}, errorCode, msg);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -86,7 +87,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
         std::lock_guard<std::mutex> _{mEventCbLock};
         ALbitfieldSOFT enabledevts{mEnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Error) && mEventCb)
-            (*mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg, mEventParam);
+            (*mEventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, static_cast<ALuint>(errorCode), msglen, msg,
+                mEventParam);
     }
 }
 

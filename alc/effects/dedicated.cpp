@@ -58,8 +58,9 @@ void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const E
 
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
-        const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, LFE)};
-        if(idx != -1)
+        const ALuint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
+            GetChannelIdxByName(*target.RealOut, LFE)};
+        if(idx != INVALID_CHANNEL_INDEX)
         {
             mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;
@@ -69,8 +70,9 @@ void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const E
     {
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, FrontCenter)};
-        if(idx != -1)
+        const ALuint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
+            GetChannelIdxByName(*target.RealOut, FrontCenter)};
+        if(idx != INVALID_CHANNEL_INDEX)
         {
             mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;

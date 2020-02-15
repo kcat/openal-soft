@@ -38,6 +38,7 @@
 #include "albyte.h"
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
@@ -96,9 +97,9 @@ struct WaveBackend final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     FILE *mFile{nullptr};
@@ -125,7 +126,8 @@ int WaveBackend::mixerProc()
 
     althrd_setname(MIXER_THREAD_NAME);
 
-    const ALsizei frameSize{mDevice->frameSizeFromFmt()};
+    const size_t frameStep{mDevice->channelsFromFmt()};
+    const ALuint frameSize{mDevice->frameSizeFromFmt()};
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
@@ -144,14 +146,15 @@ int WaveBackend::mixerProc()
         }
         while(avail-done >= mDevice->UpdateSize)
         {
-            lock();
-            aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize);
-            unlock();
+            {
+                std::lock_guard<WaveBackend> _{*this};
+                aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize, frameStep);
+            }
             done += mDevice->UpdateSize;
 
             if(!IS_LITTLE_ENDIAN)
             {
-                const ALsizei bytesize{mDevice->bytesFromFmt()};
+                const ALuint bytesize{mDevice->bytesFromFmt()};
 
                 if(bytesize == 2)
                 {
@@ -159,8 +162,8 @@ int WaveBackend::mixerProc()
                     const size_t len{mBuffer.size() / 2};
                     for(size_t i{0};i < len;i++)
                     {
-                        ALushort samp = samples[i];
-                        samples[i] = (samp>>8) | (samp<<8);
+                        const ALushort samp{samples[i]};
+                        samples[i] = static_cast<ALushort>((samp>>8) | (samp<<8));
                     }
                 }
                 else if(bytesize == 4)
@@ -169,7 +172,7 @@ int WaveBackend::mixerProc()
                     const size_t len{mBuffer.size() / 4};
                     for(size_t i{0};i < len;i++)
                     {
-                        ALuint samp = samples[i];
+                        const ALuint samp{samples[i]};
                         samples[i] = (samp>>24) | ((samp>>8)&0x0000ff00) |
                                      ((samp<<8)&0x00ff0000) | (samp<<24);
                     }
@@ -202,15 +205,15 @@ int WaveBackend::mixerProc()
     return 0;
 }
 
-ALCenum WaveBackend::open(const ALCchar *name)
+void WaveBackend::open(const ALCchar *name)
 {
     const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
-    if(!fname[0]) return ALC_INVALID_VALUE;
+    if(!fname[0]) throw al::backend_exception{ALC_INVALID_VALUE, "No wave output filename"};
 
     if(!name)
         name = waveDevice;
     else if(strcmp(name, waveDevice) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
 #ifdef _WIN32
     {
@@ -221,17 +224,13 @@ ALCenum WaveBackend::open(const ALCchar *name)
     mFile = fopen(fname, "wb");
 #endif
     if(!mFile)
-    {
-        ERR("Could not open file '%s': %s\n", fname, strerror(errno));
-        return ALC_INVALID_VALUE;
-    }
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open file '%s': %s", fname,
+            strerror(errno)};
 
     mDevice->DeviceName = name;
-
-    return ALC_NO_ERROR;
 }
 
-ALCboolean WaveBackend::reset()
+bool WaveBackend::reset()
 {
     ALuint channels=0, bytes=0, chanmask=0;
     int isbformat = 0;
@@ -274,7 +273,7 @@ ALCboolean WaveBackend::reset()
         case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
         case DevFmtAmbi3D:
             /* .amb output requires FuMa */
-            mDevice->mAmbiOrder = mini(mDevice->mAmbiOrder, 3);
+            mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);
             mDevice->mAmbiLayout = AmbiLayout::FuMa;
             mDevice->mAmbiScale = AmbiNorm::FuMa;
             isbformat = 1;
@@ -297,25 +296,25 @@ ALCboolean WaveBackend::reset()
     // 16-bit val, format type id (extensible: 0xFFFE)
     fwrite16le(0xFFFE, mFile);
     // 16-bit val, channel count
-    fwrite16le(channels, mFile);
+    fwrite16le(static_cast<ALushort>(channels), mFile);
     // 32-bit val, frequency
     fwrite32le(mDevice->Frequency, mFile);
     // 32-bit val, bytes per second
     fwrite32le(mDevice->Frequency * channels * bytes, mFile);
     // 16-bit val, frame size
-    fwrite16le(channels * bytes, mFile);
+    fwrite16le(static_cast<ALushort>(channels * bytes), mFile);
     // 16-bit val, bits per sample
-    fwrite16le(bytes * 8, mFile);
+    fwrite16le(static_cast<ALushort>(bytes * 8), mFile);
     // 16-bit val, extra byte count
     fwrite16le(22, mFile);
     // 16-bit val, valid bits per sample
-    fwrite16le(bytes * 8, mFile);
+    fwrite16le(static_cast<ALushort>(bytes * 8), mFile);
     // 32-bit val, channel mask
     fwrite32le(chanmask, mFile);
     // 16 byte GUID, sub-type format
     val = fwrite((mDevice->FmtType == DevFmtFloat) ?
-                 (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
-                 (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM), 1, 16, mFile);
+        (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
+        (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM), 1, 16, mFile);
     (void)val;
 
     fputs("data", mFile);
@@ -324,7 +323,7 @@ ALCboolean WaveBackend::reset()
     if(ferror(mFile))
     {
         ERR("Error writing header: %s\n", strerror(errno));
-        return ALC_FALSE;
+        return false;
     }
     mDataStart = ftell(mFile);
 
@@ -333,22 +332,22 @@ ALCboolean WaveBackend::reset()
     const ALuint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
     mBuffer.resize(bufsize);
 
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean WaveBackend::start()
+bool WaveBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void WaveBackend::stop()
@@ -362,9 +361,9 @@ void WaveBackend::stop()
     {
         long dataLen{size - mDataStart};
         if(fseek(mFile, mDataStart-4, SEEK_SET) == 0)
-            fwrite32le(dataLen, mFile); // 'data' header len
+            fwrite32le(static_cast<ALuint>(dataLen), mFile); // 'data' header len
         if(fseek(mFile, 4, SEEK_SET) == 0)
-            fwrite32le(size-8, mFile); // 'WAVE' header len
+            fwrite32le(static_cast<ALuint>(size-8), mFile); // 'WAVE' header len
     }
 }
 

@@ -27,7 +27,7 @@ union EffectProps {
         ALfloat LateReverbDelay;
         ALfloat AirAbsorptionGainHF;
         ALfloat RoomRolloffFactor;
-        ALboolean DecayHFLimit;
+        bool DecayHFLimit;
 
         // Additional EAX Reverb Properties
         ALfloat GainLF;
@@ -59,7 +59,7 @@ union EffectProps {
     } Chorus; /* Also Flanger */
 
     struct {
-        ALboolean OnOff;
+        bool OnOff;
     } Compressor;
 
     struct {

@@ -216,6 +216,8 @@ inline int fastf2i(float f) noexcept
     return static_cast<int>(f);
 #endif
 }
+inline unsigned int fastf2u(float f) noexcept
+{ return static_cast<unsigned int>(fastf2i(f)); }
 
 /** Converts float-to-int using standard behavior (truncation). */
 inline int float2int(float f) noexcept
@@ -249,39 +251,41 @@ inline int float2int(float f) noexcept
     return static_cast<int>(f);
 #endif
 }
+inline unsigned int float2uint(float f) noexcept
+{ return static_cast<unsigned int>(float2int(f)); }
 
 /** Converts double-to-int using standard behavior (truncation). */
 inline int double2int(double d) noexcept
 {
 #if defined(HAVE_SSE_INTRINSICS)
-	return _mm_cvttsd_si32(_mm_set_sd(d));
+    return _mm_cvttsd_si32(_mm_set_sd(d));
 
 #elif ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
        !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
 
-	int sign, shift;
-	int64_t mant;
-	union {
-		double d;
-		int64_t i64;
-	} conv;
+    int sign, shift;
+    int64_t mant;
+    union {
+        double d;
+        int64_t i64;
+    } conv;
 
-	conv.d = d;
-	sign = (conv.i64 >> 63) | 1;
-	shift = ((conv.i64 >> 52) & 0x7ff) - (1023 + 52);
+    conv.d = d;
+    sign = (conv.i64 >> 63) | 1;
+    shift = ((conv.i64 >> 52) & 0x7ff) - (1023 + 52);
 
-	/* Over/underflow */
-	if UNLIKELY(shift >= 63 || shift < -52)
-		return 0;
+    /* Over/underflow */
+    if UNLIKELY(shift >= 63 || shift < -52)
+        return 0;
 
-	mant = (conv.i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
-	if LIKELY(shift < 0)
-		return (int)(mant >> -shift) * sign;
-	return (int)(mant << shift) * sign;
+    mant = (conv.i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
+    if LIKELY(shift < 0)
+        return (int)(mant >> -shift) * sign;
+    return (int)(mant << shift) * sign;
 
 #else
 
-	return static_cast<int>(d);
+    return static_cast<int>(d);
 #endif
 }
 
@@ -304,7 +308,7 @@ inline float fast_roundf(float f) noexcept
     /* Integral limit, where sub-integral precision is not available for
      * floats.
      */
-    static constexpr float ilim[2] = {
+    static const float ilim[2]{
          8388608.0f /*  0x1.0p+23 */,
         -8388608.0f /* -0x1.0p+23 */
     };

@@ -44,21 +44,13 @@ static int EventThread(ALCcontext *context)
 
         std::lock_guard<std::mutex> _{context->mEventCbLock};
         do {
-            auto &evt = *reinterpret_cast<AsyncEvent*>(evt_data.buf);
+            auto *evt_ptr = reinterpret_cast<AsyncEvent*>(evt_data.buf);
             evt_data.buf += sizeof(AsyncEvent);
             evt_data.len -= 1;
-            /* This automatically destructs the event object and advances the
-             * ringbuffer's read offset at the end of scope.
-             */
-            const struct EventAutoDestructor {
-                AsyncEvent &evt_;
-                RingBuffer *ring_;
-                ~EventAutoDestructor()
-                {
-                    al::destroy_at(std::addressof(evt_));
-                    ring_->readAdvance(1);
-                }
-            } _{evt, ring};
+
+            AsyncEvent evt{*evt_ptr};
+            al::destroy_at(evt_ptr);
+            ring->readAdvance(1);
 
             quitnow = evt.EnumType == EventType_KillThread;
             if UNLIKELY(quitnow) break;
@@ -83,8 +75,8 @@ static int EventThread(ALCcontext *context)
                     (evt.u.srcstate.state==AL_PAUSED) ? "AL_PAUSED" :
                     (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>";
                 context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
-                    evt.u.srcstate.state, static_cast<ALsizei>(msg.length()), msg.c_str(),
-                    context->mEventParam);
+                    static_cast<ALuint>(evt.u.srcstate.state), static_cast<ALsizei>(msg.length()),
+                    msg.c_str(), context->mEventParam);
             }
             else if(evt.EnumType == EventType_BufferCompleted)
             {

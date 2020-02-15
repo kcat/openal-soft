@@ -1,10 +1,18 @@
-version: 1.19.1.{build}
+version: 1.20.1.{build}
 
 environment:
     matrix:
-      - GEN: "Visual Studio 14 2015"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+        GEN: "Visual Studio 14 2015"
+        ARCH: Win32
         CFG: Release
-      - GEN: "Visual Studio 14 2015 Win64"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+        GEN: "Visual Studio 14 2015"
+        ARCH: x64
+        CFG: Release
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        GEN: "Visual Studio 15 2017"
+        ARCH: x64
         CFG: Release
 
 install:
@@ -14,6 +22,6 @@ install:
 
 build_script:
     - cd build
-    - cmake -G"%GEN%" -DALSOFT_BUILD_ROUTER=ON -DALSOFT_REQUIRE_WINMM=ON -DALSOFT_REQUIRE_DSOUND=ON -DALSOFT_REQUIRE_WASAPI=ON -DALSOFT_EMBED_HRTF_DATA=YES ..
+    - cmake -G "%GEN%" -A %ARCH% -DALSOFT_BUILD_ROUTER=ON -DALSOFT_REQUIRE_WINMM=ON -DALSOFT_REQUIRE_DSOUND=ON -DALSOFT_REQUIRE_WASAPI=ON -DALSOFT_EMBED_HRTF_DATA=YES ..
     - cmake --build . --config %CFG% --clean-first
 

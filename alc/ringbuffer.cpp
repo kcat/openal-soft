@@ -25,11 +25,12 @@
 #include <algorithm>
 #include <climits>
 #include <cstdint>
+#include <stdexcept>
 
 #include "almalloc.h"
 
 
-RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
+RingBufferPtr RingBuffer::Create(size_t sz, size_t elem_sz, int limit_writes)
 {
     size_t power_of_two{0u};
     if(sz > 0)
@@ -45,10 +46,11 @@ RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
 #endif
     }
     ++power_of_two;
-    if(power_of_two < sz) return nullptr;
+    if(power_of_two <= sz || power_of_two > std::numeric_limits<size_t>::max()/elem_sz)
+        throw std::overflow_error{"Ring buffer size overflow"};
 
     const size_t bufbytes{power_of_two * elem_sz};
-    RingBufferPtr rb{new (al_calloc(16, sizeof(*rb) + bufbytes)) RingBuffer{bufbytes}};
+    RingBufferPtr rb{new (FamCount{bufbytes}) RingBuffer{bufbytes}};
     rb->mWriteSize = limit_writes ? sz : (power_of_two-1);
     rb->mSizeMask = power_of_two - 1;
     rb->mElemSize = elem_sz;
@@ -61,21 +63,6 @@ void RingBuffer::reset() noexcept
     mWritePtr.store(0, std::memory_order_relaxed);
     mReadPtr.store(0, std::memory_order_relaxed);
     std::fill_n(mBuffer.begin(), (mSizeMask+1)*mElemSize, al::byte{});
-}
-
-
-size_t RingBuffer::readSpace() const noexcept
-{
-    size_t w = mWritePtr.load(std::memory_order_acquire);
-    size_t r = mReadPtr.load(std::memory_order_acquire);
-    return (w-r) & mSizeMask;
-}
-
-size_t RingBuffer::writeSpace() const noexcept
-{
-    size_t w = mWritePtr.load(std::memory_order_acquire);
-    size_t r = mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask;
-    return (r-w-1) & mSizeMask;
 }
 
 

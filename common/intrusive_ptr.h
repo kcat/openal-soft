@@ -56,7 +56,7 @@ public:
     { rhs.mPtr = nullptr; }
     intrusive_ptr(std::nullptr_t) noexcept { }
     explicit intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
-    ~intrusive_ptr() { reset(); }
+    ~intrusive_ptr() { if(mPtr) mPtr->release(); }
 
     intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
     {
@@ -66,7 +66,13 @@ public:
         return *this;
     }
     intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
-    { std::swap(mPtr, rhs.mPtr); return *this; }
+    {
+        if(mPtr)
+            mPtr->release();
+        mPtr = rhs.mPtr;
+        rhs.mPtr = nullptr;
+        return *this;
+    }
 
     operator bool() const noexcept { return mPtr != nullptr; }
 

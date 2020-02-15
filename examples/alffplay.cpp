@@ -115,7 +115,7 @@ using seconds_d64 = std::chrono::duration<double>;
 
 const std::string AppName{"alffplay"};
 
-bool EnableDirectOut{false};
+ALenum DirectOutMode{AL_FALSE};
 bool EnableWideStereo{false};
 bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
@@ -213,7 +213,7 @@ class PacketQueue {
     void pop()
     {
         AVPacket *pkt = &mPackets.front();
-        mTotalSize -= pkt->size;
+        mTotalSize -= static_cast<unsigned int>(pkt->size);
         av_packet_unref(pkt);
         mPackets.pop_front();
     }
@@ -267,7 +267,7 @@ public:
                 return true;
             }
 
-            mTotalSize += mPackets.back().size;
+            mTotalSize += static_cast<unsigned int>(mPackets.back().size);
         }
         mCondVar.notify_one();
         return true;
@@ -299,7 +299,7 @@ struct AudioState {
     SwrContextPtr mSwresCtx;
 
     /* Conversion format, for what gets fed to OpenAL */
-    int            mDstChanLayout{0};
+    uint64_t       mDstChanLayout{0};
     AVSampleFormat mDstSampleFmt{AV_SAMPLE_FMT_NONE};
 
     /* Storage of converted samples */
@@ -310,14 +310,14 @@ struct AudioState {
 
     /* OpenAL format */
     ALenum mFormat{AL_NONE};
-    ALsizei mFrameSize{0};
+    ALuint mFrameSize{0};
 
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
     std::atomic_flag mConnected;
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
-    ALsizei mBufferIdx{0};
+    ALuint mBufferIdx{0};
 
     AudioState(MovieState &movie) : mMovie(movie)
     { mConnected.test_and_set(std::memory_order_relaxed); }
@@ -326,7 +326,7 @@ struct AudioState {
         if(mSource)
             alDeleteSources(1, &mSource);
         if(!mBuffers.empty())
-            alDeleteBuffers(mBuffers.size(), mBuffers.data());
+            alDeleteBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
 
         av_freep(&mSamples);
     }
@@ -348,7 +348,7 @@ struct AudioState {
 
     int getSync();
     int decodeFrame();
-    bool readAudio(uint8_t *samples, int length);
+    bool readAudio(uint8_t *samples, unsigned int length, int *sample_skip);
 
     int handler();
 };
@@ -441,7 +441,7 @@ struct MovieState {
 
     nanoseconds getDuration();
 
-    int streamComponentOpen(int stream_index);
+    int streamComponentOpen(unsigned int stream_index);
     int parse_handler();
 };
 
@@ -618,17 +618,17 @@ int AudioState::decodeFrame()
  * multiple of the template type size.
  */
 template<typename T>
-static void sample_dup(uint8_t *out, const uint8_t *in, int count, int frame_size)
+static void sample_dup(uint8_t *out, const uint8_t *in, unsigned int count, size_t frame_size)
 {
-    const T *sample = reinterpret_cast<const T*>(in);
-    T *dst = reinterpret_cast<T*>(out);
+    auto *sample = reinterpret_cast<const T*>(in);
+    auto *dst = reinterpret_cast<T*>(out);
     if(frame_size == sizeof(T))
         std::fill_n(dst, count, *sample);
     else
     {
         /* NOTE: frame_size is a multiple of sizeof(T). */
-        int type_mult = frame_size / sizeof(T);
-        int i = 0;
+        size_t type_mult{frame_size / sizeof(T)};
+        size_t i{0};
         std::generate_n(dst, count*type_mult,
             [sample,type_mult,&i]() -> T
             {
@@ -641,10 +641,9 @@ static void sample_dup(uint8_t *out, const uint8_t *in, int count, int frame_siz
 }
 
 
-bool AudioState::readAudio(uint8_t *samples, int length)
+bool AudioState::readAudio(uint8_t *samples, unsigned int length, int *sample_skip)
 {
-    int sample_skip = getSync();
-    int audio_size = 0;
+    unsigned int audio_size{0};
 
     /* Read the next chunk of data, refill the buffer, and queue it
      * on the source */
@@ -657,8 +656,8 @@ bool AudioState::readAudio(uint8_t *samples, int length)
             if(frame_len <= 0) break;
 
             mSamplesLen = frame_len;
-            mSamplesPos = std::min(mSamplesLen, sample_skip);
-            sample_skip -= mSamplesPos;
+            mSamplesPos = std::min(mSamplesLen, *sample_skip);
+            *sample_skip -= mSamplesPos;
 
             // Adjust the device start time and current pts by the amount we're
             // skipping/duplicating, so that the clock remains correct for the
@@ -669,16 +668,17 @@ bool AudioState::readAudio(uint8_t *samples, int length)
             continue;
         }
 
-        int rem = length - audio_size;
+        unsigned int rem{length - audio_size};
         if(mSamplesPos >= 0)
         {
-            int len = mSamplesLen - mSamplesPos;
+            const auto len = static_cast<unsigned int>(mSamplesLen - mSamplesPos);
             if(rem > len) rem = len;
-            memcpy(samples, mSamples + mSamplesPos*mFrameSize, rem*mFrameSize);
+            std::copy_n(mSamples + static_cast<unsigned int>(mSamplesPos)*mFrameSize,
+                rem*mFrameSize, samples);
         }
         else
         {
-            rem = std::min(rem, -mSamplesPos);
+            rem = std::min(rem, static_cast<unsigned int>(-mSamplesPos));
 
             /* Add samples by copying the first sample */
             if((mFrameSize&7) == 0)
@@ -692,7 +692,7 @@ bool AudioState::readAudio(uint8_t *samples, int length)
         }
 
         mSamplesPos += rem;
-        mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
+        mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
         samples += rem*mFrameSize;
         audio_size += rem;
     }
@@ -701,10 +701,10 @@ bool AudioState::readAudio(uint8_t *samples, int length)
 
     if(audio_size < length)
     {
-        int rem = length - audio_size;
+        const unsigned int rem{length - audio_size};
         std::fill_n(samples, rem*mFrameSize,
                     (mDstSampleFmt == AV_SAMPLE_FMT_U8) ? 0x80 : 0x00);
-        mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
+        mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
         audio_size += rem;
     }
     return true;
@@ -713,8 +713,7 @@ bool AudioState::readAudio(uint8_t *samples, int length)
 
 #ifdef AL_SOFT_events
 void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALuint param,
-                                           ALsizei length, const ALchar *message,
-                                           void *userParam)
+    ALsizei length, const ALchar *message, void *userParam)
 {
     auto self = static_cast<AudioState*>(userParam);
 
@@ -731,14 +730,15 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
     std::cout<< "\n---- AL Event on AudioState "<<self<<" ----\nEvent: ";
     switch(eventType)
     {
-        case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
-        case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: std::cout<< "Source state changed"; break;
-        case AL_EVENT_TYPE_ERROR_SOFT: std::cout<< "API error"; break;
-        case AL_EVENT_TYPE_PERFORMANCE_SOFT: std::cout<< "Performance"; break;
-        case AL_EVENT_TYPE_DEPRECATED_SOFT: std::cout<< "Deprecated"; break;
-        case AL_EVENT_TYPE_DISCONNECTED_SOFT: std::cout<< "Disconnected"; break;
-        default: std::cout<< "0x"<<std::hex<<std::setw(4)<<std::setfill('0')<<eventType<<
-                             std::dec<<std::setw(0)<<std::setfill(' '); break;
+    case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
+    case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: std::cout<< "Source state changed"; break;
+    case AL_EVENT_TYPE_ERROR_SOFT: std::cout<< "API error"; break;
+    case AL_EVENT_TYPE_PERFORMANCE_SOFT: std::cout<< "Performance"; break;
+    case AL_EVENT_TYPE_DEPRECATED_SOFT: std::cout<< "Deprecated"; break;
+    case AL_EVENT_TYPE_DISCONNECTED_SOFT: std::cout<< "Disconnected"; break;
+    default:
+        std::cout<< "0x"<<std::hex<<std::setw(4)<<std::setfill('0')<<eventType<<std::dec<<
+            std::setw(0)<<std::setfill(' '); break;
     }
     std::cout<< "\n"
         "Object ID: "<<object<<"\n"
@@ -767,14 +767,18 @@ int AudioState::handler()
     const std::array<ALenum,6> evt_types{{
         AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
         AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT,
-        AL_EVENT_TYPE_DISCONNECTED_SOFT
-    }};
+        AL_EVENT_TYPE_DISCONNECTED_SOFT}};
     if(alEventControlSOFT)
     {
         alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
         alEventCallbackSOFT(EventCallback, this);
         sleep_time = AudioBufferTotalTime;
     }
+#endif
+#ifdef AL_SOFT_bformat_ex
+    const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
+    ALenum ambi_layout{AL_FUMA_SOFT};
+    ALenum ambi_scale{AL_FUMA_SOFT};
 #endif
 
     /* Find a suitable format for OpenAL. */
@@ -928,8 +932,8 @@ int AudioState::handler()
         }
     }
     void *samples{nullptr};
-    ALsizei buffer_len = std::chrono::duration_cast<std::chrono::duration<int>>(
-        mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize;
+    ALsizei buffer_len = static_cast<int>(std::chrono::duration_cast<seconds>(
+        mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize);
 
     mSamples = nullptr;
     mSamplesMax = 0;
@@ -946,9 +950,7 @@ int AudioState::handler()
     if(!mDstChanLayout)
     {
         /* OpenAL only supports first-order ambisonics with AL_EXT_BFORMAT, so
-         * we have to drop any extra channels. It also only supports FuMa
-         * channel ordering and normalization, so a custom matrix is needed to
-         * scale and reorder the source from AmbiX.
+         * we have to drop any extra channels.
          */
         mSwresCtx.reset(swr_alloc_set_opts(nullptr,
             (1_i64<<4)-1, mDstSampleFmt, mCodecCtx->sample_rate,
@@ -960,17 +962,38 @@ int AudioState::handler()
          * defacto-standard. This is not true for .amb files, which use FuMa.
          */
         std::vector<double> mtx(64*64, 0.0);
-        mtx[0 + 0*64] = std::sqrt(0.5);
-        mtx[3 + 1*64] = 1.0;
-        mtx[1 + 2*64] = 1.0;
-        mtx[2 + 3*64] = 1.0;
+#ifdef AL_SOFT_bformat_ex
+        ambi_layout = AL_ACN_SOFT;
+        ambi_scale = AL_SN3D_SOFT;
+        if(has_bfmt_ex)
+        {
+            /* An identity matrix that doesn't remix any channels. */
+            std::cout<< "Found AL_SOFT_bformat_ex" <<std::endl;
+            mtx[0 + 0*64] = 1.0;
+            mtx[1 + 1*64] = 1.0;
+            mtx[2 + 2*64] = 1.0;
+            mtx[3 + 3*64] = 1.0;
+        }
+        else
+#endif
+        {
+            std::cout<< "Found AL_EXT_BFORMAT" <<std::endl;
+            /* Without AL_SOFT_bformat_ex, OpenAL only supports FuMa channel
+             * ordering and normalization, so a custom matrix is needed to
+             * scale and reorder the source from AmbiX.
+             */
+            mtx[0 + 0*64] = std::sqrt(0.5);
+            mtx[3 + 1*64] = 1.0;
+            mtx[1 + 2*64] = 1.0;
+            mtx[2 + 3*64] = 1.0;
+        }
         swr_set_matrix(mSwresCtx.get(), mtx.data(), 64);
     }
     else
         mSwresCtx.reset(swr_alloc_set_opts(nullptr,
-            mDstChanLayout, mDstSampleFmt, mCodecCtx->sample_rate,
-            mCodecCtx->channel_layout ? mCodecCtx->channel_layout :
-                static_cast<uint64_t>(av_get_default_channel_layout(mCodecCtx->channels)),
+            static_cast<int64_t>(mDstChanLayout), mDstSampleFmt, mCodecCtx->sample_rate,
+            mCodecCtx->channel_layout ? static_cast<int64_t>(mCodecCtx->channel_layout) :
+                av_get_default_channel_layout(mCodecCtx->channels),
             mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
             0, nullptr));
     if(!mSwresCtx || swr_init(mSwresCtx.get()) != 0)
@@ -980,20 +1003,30 @@ int AudioState::handler()
     }
 
     mBuffers.assign(AudioBufferTotalTime / AudioBufferTime, 0);
-    alGenBuffers(mBuffers.size(), mBuffers.data());
+    alGenBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
     alGenSources(1, &mSource);
 
-    if(EnableDirectOut)
-        alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
-    if (EnableWideStereo) {
-        ALfloat angles[2] = {static_cast<ALfloat>(M_PI / 3.0),
-                             static_cast<ALfloat>(-M_PI / 3.0)};
+    if(DirectOutMode)
+        alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, DirectOutMode);
+    if(EnableWideStereo)
+    {
+        const float angles[2]{static_cast<float>(M_PI / 3.0), static_cast<float>(-M_PI / 3.0)};
         alSourcefv(mSource, AL_STEREO_ANGLES, angles);
     }
 
     if(alGetError() != AL_NO_ERROR)
         goto finish;
 
+#ifdef AL_SOFT_bformat_ex
+    if(has_bfmt_ex)
+    {
+        for(ALuint bufid : mBuffers)
+        {
+            alBufferi(bufid, AL_AMBISONIC_LAYOUT_SOFT, ambi_layout);
+            alBufferi(bufid, AL_AMBISONIC_SCALING_SOFT, ambi_scale);
+        }
+    }
+#endif
 #ifdef AL_SOFT_map_buffer
     if(alBufferStorageSOFT)
     {
@@ -1003,12 +1036,12 @@ int AudioState::handler()
         if(alGetError() != AL_NO_ERROR)
         {
             fprintf(stderr, "Failed to use mapped buffers\n");
-            samples = av_malloc(buffer_len);
+            samples = av_malloc(static_cast<ALuint>(buffer_len));
         }
     }
     else
 #endif
-        samples = av_malloc(buffer_len);
+        samples = av_malloc(static_cast<ALuint>(buffer_len));
 
     /* Prefill the codec buffer. */
     do {
@@ -1028,8 +1061,9 @@ int AudioState::handler()
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
           mConnected.test_and_set(std::memory_order_relaxed))
     {
+        ALint processed, queued, state;
+
         /* First remove any processed buffers. */
-        ALint processed;
         alGetSourcei(mSource, AL_BUFFERS_PROCESSED, &processed);
         while(processed > 0)
         {
@@ -1040,7 +1074,7 @@ int AudioState::handler()
         }
 
         /* Refill the buffer queue. */
-        ALint queued;
+        int sync_skip{getSync()};
         alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
         while(static_cast<ALuint>(queued) < mBuffers.size())
         {
@@ -1053,14 +1087,15 @@ int AudioState::handler()
             {
                 auto ptr = static_cast<uint8_t*>(alMapBufferSOFT(bufid, 0, buffer_len,
                     AL_MAP_WRITE_BIT_SOFT));
-                bool got_audio{readAudio(ptr, buffer_len)};
+                bool got_audio{readAudio(ptr, static_cast<unsigned int>(buffer_len), &sync_skip)};
                 alUnmapBufferSOFT(bufid);
                 if(!got_audio) break;
             }
             else
 #endif
             {
-                if(!readAudio(static_cast<uint8_t*>(samples), buffer_len))
+                auto ptr = static_cast<uint8_t*>(samples);
+                if(!readAudio(ptr, static_cast<unsigned int>(buffer_len), &sync_skip))
                     break;
                 alBufferData(bufid, mFormat, samples, buffer_len, mCodecCtx->sample_rate);
             }
@@ -1073,7 +1108,6 @@ int AudioState::handler()
             break;
 
         /* Check that the source is playing. */
-        ALint state;
         alGetSourcei(mSource, AL_SOURCE_STATE, &state);
         if(state == AL_STOPPED)
         {
@@ -1138,27 +1172,27 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer)
     if(!mImage)
         return;
 
-    float aspect_ratio;
+    double aspect_ratio;
     int win_w, win_h;
     int w, h, x, y;
 
     if(mCodecCtx->sample_aspect_ratio.num == 0)
-        aspect_ratio = 0.0f;
+        aspect_ratio = 0.0;
     else
     {
         aspect_ratio = av_q2d(mCodecCtx->sample_aspect_ratio) * mCodecCtx->width /
                        mCodecCtx->height;
     }
-    if(aspect_ratio <= 0.0f)
-        aspect_ratio = static_cast<float>(mCodecCtx->width) / static_cast<float>(mCodecCtx->height);
+    if(aspect_ratio <= 0.0)
+        aspect_ratio = static_cast<double>(mCodecCtx->width) / mCodecCtx->height;
 
     SDL_GetWindowSize(screen, &win_w, &win_h);
     h = win_h;
-    w = (static_cast<int>(rint(h * aspect_ratio)) + 3) & ~3;
+    w = (static_cast<int>(std::rint(h * aspect_ratio)) + 3) & ~3;
     if(w > win_w)
     {
         w = win_w;
-        h = (static_cast<int>(rint(w / aspect_ratio)) + 3) & ~3;
+        h = (static_cast<int>(std::rint(w / aspect_ratio)) + 3) & ~3;
     }
     x = (win_w - w) / 2;
     y = (win_h - h) / 2;
@@ -1460,9 +1494,9 @@ nanoseconds MovieState::getMasterClock()
 nanoseconds MovieState::getDuration()
 { return std::chrono::duration<int64_t,std::ratio<1,AV_TIME_BASE>>(mFormatCtx->duration); }
 
-int MovieState::streamComponentOpen(int stream_index)
+int MovieState::streamComponentOpen(unsigned int stream_index)
 {
-    if(stream_index < 0 || static_cast<unsigned int>(stream_index) >= mFormatCtx->nb_streams)
+    if(stream_index >= mFormatCtx->nb_streams)
         return -1;
 
     /* Get a pointer to the codec context for the stream, and open the
@@ -1499,7 +1533,7 @@ int MovieState::streamComponentOpen(int stream_index)
             return -1;
     }
 
-    return stream_index;
+    return static_cast<int>(stream_index);
 }
 
 int MovieState::parse_handler()
@@ -1732,13 +1766,18 @@ int main(int argc, char *argv[])
     {
         if(strcmp(argv[fileidx], "-direct") == 0)
         {
-            if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
-                std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
-            else
+            if(alIsExtensionPresent("AL_SOFT_direct_channels_remix"))
+            {
+                std::cout<< "Found AL_SOFT_direct_channels_remix" <<std::endl;
+                DirectOutMode = AL_REMIX_UNMATCHED_SOFT;
+            }
+            else if(alIsExtensionPresent("AL_SOFT_direct_channels"))
             {
                 std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
-                EnableDirectOut = true;
+                DirectOutMode = AL_DROP_UNMATCHED_SOFT;
             }
+            else
+                std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
         }
         else if(strcmp(argv[fileidx], "-wide") == 0)
         {

@@ -209,7 +209,7 @@ static ALuint LoadSound(const char *filename)
      * close the file. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, sample->buffer, slen, sample->actual.rate);
+    alBufferData(buffer, format, sample->buffer, (ALsizei)slen, (ALsizei)sample->actual.rate);
     Sound_FreeSample(sample);
 
     /* Check if an error occured, and clean up if so. */
@@ -252,30 +252,30 @@ int main(int argc, char **argv)
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(x)  ((x) = alGetProcAddress(#x))
-    LOAD_PROC(alGenEffects);
-    LOAD_PROC(alDeleteEffects);
-    LOAD_PROC(alIsEffect);
-    LOAD_PROC(alEffecti);
-    LOAD_PROC(alEffectiv);
-    LOAD_PROC(alEffectf);
-    LOAD_PROC(alEffectfv);
-    LOAD_PROC(alGetEffecti);
-    LOAD_PROC(alGetEffectiv);
-    LOAD_PROC(alGetEffectf);
-    LOAD_PROC(alGetEffectfv);
+#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+    LOAD_PROC(LPALGENEFFECTS, alGenEffects);
+    LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
+    LOAD_PROC(LPALISEFFECT, alIsEffect);
+    LOAD_PROC(LPALEFFECTI, alEffecti);
+    LOAD_PROC(LPALEFFECTIV, alEffectiv);
+    LOAD_PROC(LPALEFFECTF, alEffectf);
+    LOAD_PROC(LPALEFFECTFV, alEffectfv);
+    LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
+    LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
+    LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
+    LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
 
-    LOAD_PROC(alGenAuxiliaryEffectSlots);
-    LOAD_PROC(alDeleteAuxiliaryEffectSlots);
-    LOAD_PROC(alIsAuxiliaryEffectSlot);
-    LOAD_PROC(alAuxiliaryEffectSloti);
-    LOAD_PROC(alAuxiliaryEffectSlotiv);
-    LOAD_PROC(alAuxiliaryEffectSlotf);
-    LOAD_PROC(alAuxiliaryEffectSlotfv);
-    LOAD_PROC(alGetAuxiliaryEffectSloti);
-    LOAD_PROC(alGetAuxiliaryEffectSlotiv);
-    LOAD_PROC(alGetAuxiliaryEffectSlotf);
-    LOAD_PROC(alGetAuxiliaryEffectSlotfv);
+    LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
+    LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
+    LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 
     /* Initialize SDL_sound. */
@@ -309,18 +309,18 @@ int main(int argc, char **argv)
      * effectively copies the effect properties. You can modify or delete the
      * effect object afterward without affecting the effect slot.
      */
-    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, effect);
+    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
     assert(alGetError()==AL_NO_ERROR && "Failed to set effect slot");
 
     /* Create the source to play the sound with. */
     source = 0;
     alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
 
     /* Connect the source to the effect slot. This tells the source to use the
      * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
      */
-    alSource3i(source, AL_AUXILIARY_SEND_FILTER, slot, 0, AL_FILTER_NULL);
+    alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound until it finishes. */

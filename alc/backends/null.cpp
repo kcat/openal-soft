@@ -31,6 +31,7 @@
 #include <thread>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alu.h"
 #include "logging.h"
@@ -51,9 +52,9 @@ struct NullBackend final : public BackendBase {
 
     int mixerProc();
 
-    ALCenum open(const ALCchar *name) override;
-    ALCboolean reset() override;
-    ALCboolean start() override;
+    void open(const ALCchar *name) override;
+    bool reset() override;
+    bool start() override;
     void stop() override;
 
     std::atomic<bool> mKillNow{true};
@@ -85,9 +86,8 @@ int NullBackend::mixerProc()
         }
         while(avail-done >= mDevice->UpdateSize)
         {
-            lock();
-            aluMixData(mDevice, nullptr, mDevice->UpdateSize);
-            unlock();
+            std::lock_guard<NullBackend> _{*this};
+            aluMixData(mDevice, nullptr, mDevice->UpdateSize, 0u);
             done += mDevice->UpdateSize;
         }
 
@@ -108,37 +108,35 @@ int NullBackend::mixerProc()
 }
 
 
-ALCenum NullBackend::open(const ALCchar *name)
+void NullBackend::open(const ALCchar *name)
 {
     if(!name)
         name = nullDevice;
     else if(strcmp(name, nullDevice) != 0)
-        return ALC_INVALID_VALUE;
+        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     mDevice->DeviceName = name;
-
-    return ALC_NO_ERROR;
 }
 
-ALCboolean NullBackend::reset()
+bool NullBackend::reset()
 {
     SetDefaultWFXChannelOrder(mDevice);
-    return ALC_TRUE;
+    return true;
 }
 
-ALCboolean NullBackend::start()
+bool NullBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&NullBackend::mixerProc), this};
-        return ALC_TRUE;
+        return true;
     }
     catch(std::exception& e) {
         ERR("Failed to start mixing thread: %s\n", e.what());
     }
     catch(...) {
     }
-    return ALC_FALSE;
+    return false;
 }
 
 void NullBackend::stop()

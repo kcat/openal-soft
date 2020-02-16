@@ -2774,7 +2774,7 @@ START_API_FUNC
             voice->mLoopBuffer.store(source->queue, std::memory_order_relaxed);
         else
             voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-        voice->mCurrentBuffer.store(BufferList, std::memory_order_relaxed);
+        voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         bool start_fading{false};

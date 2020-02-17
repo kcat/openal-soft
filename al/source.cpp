@@ -1159,13 +1159,15 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
                 static_cast<ALuint>(values[0]));
 
-        if(buffer && buffer->MappedAccess != 0 &&
-            !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+        if(buffer && buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
             SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                 "Setting non-persistently mapped buffer %u", buffer->id);
+        else if(buffer && buffer->Callback && ReadRef(buffer->ref) != 0)
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                "Setting already-set callback buffer %u", buffer->id);
         else
         {
-            ALenum state = GetSourceState(Source, GetSourceVoice(Source, Context));
+            const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting buffer on playing or paused source %u", Source->id);
@@ -3096,6 +3098,11 @@ START_API_FUNC
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
         {
             context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
+            goto buffer_error;
+        }
+        if(buffer && buffer->Callback)
+        {
+            context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u", buffers[i]);
             goto buffer_error;
         }
 

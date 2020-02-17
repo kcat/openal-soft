@@ -80,6 +80,9 @@ struct ALbuffer {
     ALenum AmbiLayout{AL_FUMA_SOFT};
     ALenum AmbiScaling{AL_FUMA_SOFT};
 
+    LPALBUFFERCALLBACKTYPESOFT Callback{nullptr};
+    void *UserData{nullptr};
+
     ALuint LoopStart{0u};
     ALuint LoopEnd{0u};
 

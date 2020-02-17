@@ -1376,6 +1376,47 @@ START_API_FUNC
 END_API_FUNC
 
 
+AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint /*buffer*/, ALenum /*format*/, ALsizei /*freq*/, LPALBUFFERCALLBACKTYPESOFT /*callback*/, ALvoid* /*userptr*/, ALbitfieldSOFT /*flags*/)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    context->setError(AL_INVALID_OPERATION, "alBufferCallbackSOFT not functional");
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint /*buffer*/, ALenum /*param*/, ALvoid** /*value*/)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    context->setError(AL_INVALID_OPERATION, "alGetBufferPtrSOFT not functional");
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint /*buffer*/, ALenum /*param*/, ALvoid** /*value1*/, ALvoid** /*value2*/, ALvoid** /*value3*/)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    context->setError(AL_INVALID_OPERATION, "alGetBuffer3PtrSOFT not functional");
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint /*buffer*/, ALenum /*param*/, ALvoid** /*values*/)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    context->setError(AL_INVALID_OPERATION, "alGetBufferPtrvSOFT not functional");
+}
+END_API_FUNC
+
+
 ALuint BytesFromFmt(FmtType type) noexcept
 {
     switch(type)

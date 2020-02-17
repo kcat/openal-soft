@@ -531,7 +531,7 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     ASSUME(SamplesToDo > 0);
 
     /* Get voice info */
-    const bool isstatic{(mFlags&VOICE_IS_STATIC) != 0};
+    const ALuint vtype{mFlags&VOICE_TYPE_MASK};
     ALuint DataPosInt{mPosition.load(std::memory_order_relaxed)};
     ALuint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
@@ -649,9 +649,13 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
             if UNLIKELY(!BufferListItem)
                 srciter = std::copy(chandata.mPrevSamples.begin()+(MAX_RESAMPLER_PADDING>>1),
                     chandata.mPrevSamples.end(), srciter);
-            else if(isstatic)
+            else if(vtype == VOICE_IS_STATIC)
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
+            else if(vtype == VOICE_IS_CALLBACK)
+            {
+                /* Not Yet Implemented. */
+            }
             else
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
@@ -745,7 +749,7 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         {
             /* Do nothing extra when there's no buffers. */
         }
-        else if(isstatic)
+        else if(vtype == VOICE_IS_STATIC)
         {
             if(BufferLoopItem)
             {
@@ -768,6 +772,10 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                     break;
                 }
             }
+        }
+        else if(vtype == VOICE_IS_CALLBACK)
+        {
+            /* Do nothing extra for callback buffers. */
         }
         else
         {

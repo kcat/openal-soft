@@ -181,10 +181,13 @@ struct ALvoiceProps : public ALvoicePropsBase {
 };
 
 #define VOICE_IS_STATIC    (1u<<0)
-#define VOICE_IS_FADING    (1u<<1) /* Fading sources use gain stepping for smooth transitions. */
+#define VOICE_IS_CALLBACK  (1u<<1)
 #define VOICE_IS_AMBISONIC (1u<<2) /* Voice needs HF scaling for ambisonic upsampling. */
-#define VOICE_HAS_HRTF     (1u<<3)
-#define VOICE_HAS_NFC      (1u<<4)
+#define VOICE_IS_FADING    (1u<<3) /* Fading sources use gain stepping for smooth transitions. */
+#define VOICE_HAS_HRTF     (1u<<4)
+#define VOICE_HAS_NFC      (1u<<5)
+
+#define VOICE_TYPE_MASK (VOICE_IS_STATIC | VOICE_IS_CALLBACK)
 
 struct ALvoice {
     enum State {

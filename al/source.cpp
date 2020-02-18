@@ -999,6 +999,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
                 auto vpos = GetSampleOffset(Source);
+                if((voice->mFlags&VOICE_IS_CALLBACK))
+                    SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                        "Source offset for callback is invalid");
                 if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
@@ -1220,6 +1223,9 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
                 auto vpos = GetSampleOffset(Source);
+                if((voice->mFlags&VOICE_IS_CALLBACK))
+                    SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                        "Source offset for callback is invalid");
                 if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
 
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);

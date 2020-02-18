@@ -309,29 +309,21 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const ALbufferlistitem *BufferList{Source->queue};
     const ALbuffer *BufferFmt{nullptr};
-    ALuint totalBufferLen{0u};
-    bool readFin{false};
-
     while(BufferList)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
+        if(BufferList == Current) break;
 
-        readFin |= (BufferList == Current);
-        totalBufferLen += BufferList->mSampleLen;
-        if(!readFin) readPos += BufferList->mSampleLen;
+        readPos += BufferList->mSampleLen;
 
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
-    assert(BufferFmt != nullptr);
-
-    if(Source->Looping)
-        readPos %= totalBufferLen;
-    else
+    while(BufferList && !BufferFmt)
     {
-        /* Wrap back to 0 */
-        if(readPos >= totalBufferLen)
-            readPos = readPosFrac = 0;
+        BufferFmt = BufferList->mBuffer;
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
+    assert(BufferFmt != nullptr);
 
     switch(name)
     {

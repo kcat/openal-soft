@@ -2702,7 +2702,12 @@ START_API_FUNC
          */
         ALbufferlistitem *BufferList{source->queue};
         while(BufferList && BufferList->mSampleLen == 0)
+        {
+            ALbuffer *buffer{BufferList->mBuffer};
+            if(buffer && buffer->Callback) break;
+
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        }
 
         /* If there's nothing to play, go right to stopped. */
         if UNLIKELY(!BufferList)
@@ -2800,7 +2805,8 @@ START_API_FUNC
         voice->mStep = 0;
 
         voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
-        if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+        if(buffer->Callback) voice->mFlags |= VOICE_IS_CALLBACK;
+        else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
         voice->mNumCallbackSamples = 0;
 
         /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not

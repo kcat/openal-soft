@@ -387,6 +387,23 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
     return SrcBuffer.begin();
 }
 
+ALfloat *LoadBufferCallback(ALbufferlistitem *BufferListItem, const size_t NumChannels,
+    const size_t SampleSize, const size_t chan, size_t NumCallbackSamples,
+    al::span<ALfloat> SrcBuffer)
+{
+    const ALbuffer *Buffer{BufferListItem->mBuffer};
+
+    /* Load what's left to play from the buffer */
+    const size_t DataRem{minz(SrcBuffer.size(), NumCallbackSamples)};
+
+    const al::byte *Data{Buffer->mData.data() + chan*SampleSize};
+
+    LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mFmtType, DataRem);
+    SrcBuffer = SrcBuffer.subspan(DataRem);
+
+    return SrcBuffer.begin();
+}
+
 ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
     const size_t NumChannels, const size_t SampleSize, const size_t chan, size_t DataPosInt,
     al::span<ALfloat> SrcBuffer)
@@ -531,7 +548,6 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     ASSUME(SamplesToDo > 0);
 
     /* Get voice info */
-    const ALuint vtype{mFlags&VOICE_TYPE_MASK};
     ALuint DataPosInt{mPosition.load(std::memory_order_relaxed)};
     ALuint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
@@ -552,6 +568,7 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     ASSUME(NumChannels > 0);
     ASSUME(SampleSize > 0);
     ASSUME(increment > 0);
+    const auto FrameSize = size_t{NumChannels} * SampleSize;
 
     ALCdevice *Device{Context->mDevice.get()};
     const ALuint NumSends{Device->NumAuxSends};
@@ -634,6 +651,32 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 DstBufferSize &= ~3u;
         }
 
+        if((mFlags&(VOICE_IS_CALLBACK|VOICE_CALLBACK_STOPPED)) == VOICE_IS_CALLBACK
+            && BufferListItem)
+        {
+            ALbuffer *buffer{BufferListItem->mBuffer};
+
+            /* Exclude resampler pre-padding from the needed size. */
+            const ALuint toLoad{SrcBufferSize - (MAX_RESAMPLER_PADDING>>1)};
+            if(toLoad > mNumCallbackSamples)
+            {
+                const size_t byteOffset{mNumCallbackSamples*FrameSize};
+                const size_t needBytes{toLoad*FrameSize - byteOffset};
+
+                const ALsizei gotBytes{buffer->Callback(buffer->UserData,
+                    &buffer->mData[byteOffset], static_cast<ALsizei>(needBytes))};
+                if(gotBytes < 1)
+                    mFlags |= VOICE_CALLBACK_STOPPED;
+                else if(static_cast<ALuint>(gotBytes) < needBytes)
+                {
+                    mFlags |= VOICE_CALLBACK_STOPPED;
+                    mNumCallbackSamples += static_cast<ALuint>(gotBytes) / FrameSize;
+                }
+                else
+                    mNumCallbackSamples = toLoad;
+            }
+        }
+
         ASSUME(DstBufferSize > 0);
         for(ALuint chan{0};chan < NumChannels;chan++)
         {
@@ -649,13 +692,12 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
             if UNLIKELY(!BufferListItem)
                 srciter = std::copy(chandata.mPrevSamples.begin()+(MAX_RESAMPLER_PADDING>>1),
                     chandata.mPrevSamples.end(), srciter);
-            else if(vtype == VOICE_IS_STATIC)
+            else if((mFlags&VOICE_IS_STATIC))
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
-            else if(vtype == VOICE_IS_CALLBACK)
-            {
-                /* Not Yet Implemented. */
-            }
+            else if((mFlags&VOICE_IS_CALLBACK))
+                srciter = LoadBufferCallback(BufferListItem, NumChannels, SampleSize, chan,
+                    mNumCallbackSamples, {srciter, SrcData.end()});
             else
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
@@ -739,7 +781,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;
-        DataPosInt  += DataPosFrac>>FRACTIONBITS;
+        const ALuint SrcSamplesDone{DataPosFrac>>FRACTIONBITS};
+        DataPosInt  += SrcSamplesDone;
         DataPosFrac &= FRACTIONMASK;
 
         OutPos += DstBufferSize;
@@ -749,7 +792,7 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         {
             /* Do nothing extra when there's no buffers. */
         }
-        else if(vtype == VOICE_IS_STATIC)
+        else if((mFlags&VOICE_IS_STATIC))
         {
             if(BufferLoopItem)
             {
@@ -773,9 +816,22 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 }
             }
         }
-        else if(vtype == VOICE_IS_CALLBACK)
+        else if((mFlags&VOICE_IS_CALLBACK))
         {
-            /* Do nothing extra for callback buffers. */
+            ALbuffer *buffer{BufferListItem->mBuffer};
+            if(SrcSamplesDone < mNumCallbackSamples)
+            {
+                const size_t byteOffset{SrcSamplesDone*FrameSize};
+                const size_t byteEnd{mNumCallbackSamples*FrameSize};
+                std::copy(buffer->mData.data()+byteOffset, buffer->mData.data()+byteEnd,
+                    buffer->mData.data());
+                mNumCallbackSamples -= SrcSamplesDone;
+            }
+            else
+            {
+                BufferListItem = nullptr;
+                mNumCallbackSamples = 0;
+            }
         }
         else
         {

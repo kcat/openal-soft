@@ -2764,9 +2764,8 @@ START_API_FUNC
         assert(voice != voices_end);
 
         auto vidx = static_cast<ALuint>(std::distance(context->mVoices.data(), voice));
-        voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
 
-        source->PropsClean.test_and_set(std::memory_order_acquire);
+        source->PropsClean.test_and_set(std::memory_order_acq_rel);
         UpdateSourceProps(source, voice, context.get());
 
         /* A source that's not playing or paused has any offset applied when it
@@ -2804,6 +2803,7 @@ START_API_FUNC
 
         voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
         if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+        voice->mNumCallbackSamples = 0;
 
         /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
          * higher order than the voice. No HF scaling is necessary to mix it.

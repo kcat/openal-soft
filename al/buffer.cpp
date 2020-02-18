@@ -594,11 +594,8 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
-    if(!ALBuf->mData.empty())
-    {
-        ALBuf->mData.clear();
-        ALBuf->mData.shrink_to_fit();
-    }
+    ALBuf->mData = al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType) *
+        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)});
 
     ALBuf->Callback = callback;
     ALBuf->UserData = userptr;

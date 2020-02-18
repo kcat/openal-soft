@@ -61,6 +61,8 @@ enum FmtChannels : unsigned char {
 
 ALuint BytesFromFmt(FmtType type) noexcept;
 ALuint ChannelsFromFmt(FmtChannels chans) noexcept;
+inline ALuint FrameSizeFromFmt(FmtChannels chans, FmtType type) noexcept
+{ return ChannelsFromFmt(chans) * BytesFromFmt(type); }
 
 
 struct ALbuffer {

@@ -1643,6 +1643,19 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             }
             success |= (cur->mState == AL_INITIAL);
         }
+        else if(cur->mState == AL_PAUSED)
+        {
+            ALvoice *voice{cur->mVoice};
+            ALvoice::State oldvstate{ALvoice::Playing};
+            success = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                std::memory_order_release, std::memory_order_acquire);
+        }
+        else if(cur->mState == AL_PLAYING)
+        {
+            ALvoice *voice{cur->mVoice};
+            voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
+            success = true;
+        }
         if(success && (enabledevt&EventType_SourceStateChange) && cur->mSourceID != 0)
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
     } while((next=cur->mNext.load(std::memory_order_acquire)));

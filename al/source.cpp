@@ -712,28 +712,6 @@ enum SourceProp : ALenum {
 };
 
 
-/** Can only be called while the mixer is locked! */
-void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
-{
-    ALbitfieldSOFT enabledevt{context->mEnabledEvts.load(std::memory_order_acquire)};
-    if(!(enabledevt&EventType_SourceStateChange)) return;
-
-    /* The mixer may have queued a state change that's not yet been processed,
-     * and we don't want state change messages to occur out of order, so send
-     * it through the async queue to ensure proper ordering.
-     */
-    RingBuffer *ring{context->mAsyncEvents.get()};
-    auto evt_vec = ring->getWriteVector();
-    if(evt_vec.first.len < 1) return;
-
-    AsyncEvent *evt{::new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
-    evt->u.srcstate.id = id;
-    evt->u.srcstate.state = state;
-    ring->writeAdvance(1);
-    context->mEventSem.post();
-}
-
-
 constexpr size_t MaxValues{6u};
 
 ALuint FloatValsByProp(ALenum prop)
@@ -2687,19 +2665,16 @@ START_API_FUNC
     }
 
     ALCdevice *device{context->mDevice.get()};
-    BackendLockGuard __{*device->Backend};
     /* If the device is disconnected, go right to stopped. */
     if UNLIKELY(!device->Connected.load(std::memory_order_acquire))
     {
         /* TODO: Send state change event? */
-        std::for_each(srchandles.begin(), srchandles.end(),
-            [](ALsource *source) -> void
-            {
-                source->OffsetType = AL_NONE;
-                source->Offset = 0.0;
-                source->state = AL_STOPPED;
-            }
-        );
+        for(ALsource *source : srchandles)
+        {
+            source->Offset = 0.0;
+            source->OffsetType = AL_NONE;
+            source->state = AL_STOPPED;
+        }
         return;
     }
 
@@ -2715,12 +2690,14 @@ START_API_FUNC
     }
     if UNLIKELY(srchandles.size() != free_voices)
     {
+        BackendLockGuard __{*device->Backend};
         /* Increase the number of voices to handle the request. */
         const size_t need_voices{srchandles.size() - free_voices};
         context->mVoices.resize(context->mVoices.size() + need_voices);
     }
 
-    auto start_source = [&context,device](ALsource *source) -> void
+    VoiceChange *tail{}, *cur{};
+    for(ALsource *source : srchandles)
     {
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
@@ -2741,27 +2718,30 @@ START_API_FUNC
              * ALvoice since it shouldn't be in a playing or paused state. So
              * there's no need to look up its voice and clear the source.
              */
-            ALenum oldstate{GetSourceState(source, nullptr)};
-            source->OffsetType = AL_NONE;
             source->Offset = 0.0;
-            if(oldstate != AL_STOPPED)
-            {
-                source->state = AL_STOPPED;
-                SendStateChangeEvent(context.get(), source->id, AL_STOPPED);
-            }
-            return;
+            source->OffsetType = AL_NONE;
+            source->state = AL_STOPPED;
+            continue;
         }
 
+        if(!cur)
+            cur = tail = GetVoiceChanger(context.get());
+        else
+        {
+            cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
+            cur = cur->mNext.load(std::memory_order_relaxed);
+        }
         ALvoice *voice{GetSourceVoice(source, context.get())};
         switch(GetSourceState(source, voice))
         {
         case AL_PAUSED:
             assert(voice != nullptr);
             /* A source that's paused simply resumes. */
-            voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = AL_PLAYING;
             source->state = AL_PLAYING;
-            SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
-            return;
+            continue;
 
         case AL_PLAYING:
             assert(voice != nullptr);
@@ -2769,11 +2749,14 @@ START_API_FUNC
              * Stop the current voice and start a new one so it properly cross-
              * fades back to the beginning.
              */
-            voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mSourceID.store(0u, std::memory_order_release);
-            voice->mPlayState.store(ALvoice::Stopping, std::memory_order_release);
+            voice->mPendingStop.store(true, std::memory_order_relaxed);
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = AL_STOPPED;
             voice = nullptr;
+
+            cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
+            cur = cur->mNext.load(std::memory_order_relaxed);
             break;
 
         default:
@@ -2885,17 +2868,16 @@ START_API_FUNC
                 init_nfc);
         }
 
-        voice->mSourceID.store(source->id, std::memory_order_relaxed);
-        voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
+        voice->mSourceID.store(source->id, std::memory_order_release);
         source->VoiceIdx = vidx;
+        source->state = AL_PLAYING;
 
-        if(source->state != AL_PLAYING)
-        {
-            source->state = AL_PLAYING;
-            SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
-        }
-    };
-    std::for_each(srchandles.begin(), srchandles.end(), start_source);
+        cur->mVoice = voice;
+        cur->mSourceID = source->id;
+        cur->mState = AL_PLAYING;
+    }
+    if LIKELY(tail)
+        SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
 
@@ -2935,25 +2917,43 @@ START_API_FUNC
         ++sources;
     }
 
-    ALCdevice *device{context->mDevice.get()};
-    BackendLockGuard __{*device->Backend};
-    auto pause_source = [&context](ALsource *source) -> void
+    /* Pausing has to be done in two steps. First, for each source that's
+     * detected to be playing, chamge the voice (asynchronously) to
+     * stopping/paused.
+     */
+    VoiceChange *tail{}, *cur{};
+    for(ALsource *source : srchandles)
     {
         ALvoice *voice{GetSourceVoice(source, context.get())};
-        if(voice)
-        {
-            std::atomic_thread_fence(std::memory_order_release);
-            ALvoice::State oldvstate{ALvoice::Playing};
-            voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
-                std::memory_order_acq_rel, std::memory_order_acquire);
-        }
         if(GetSourceState(source, voice) == AL_PLAYING)
         {
-            source->state = AL_PAUSED;
-            SendStateChangeEvent(context.get(), source->id, AL_PAUSED);
+            if(!cur)
+                cur = tail = GetVoiceChanger(context.get());
+            else
+            {
+                cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
+                cur = cur->mNext.load(std::memory_order_relaxed);
+            }
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = AL_PAUSED;
         }
-    };
-    std::for_each(srchandles.begin(), srchandles.end(), pause_source);
+    }
+    if LIKELY(tail)
+    {
+        SendVoiceChanges(context.get(), tail);
+        /* Second, now that the voice changes have been sent, because it's
+         * possible that the voice stopped after it was detected playing and
+         * before the voice got paused, recheck that the source is still
+         * considered playing and set it to paused if so.
+         */
+        for(ALsource *source : srchandles)
+        {
+            ALvoice *voice{GetSourceVoice(source, context.get())};
+            if(GetSourceState(source, voice) == AL_PLAYING)
+                source->state = AL_PAUSED;
+        }
+    }
 }
 END_API_FUNC
 
@@ -3015,7 +3015,7 @@ START_API_FUNC
         source->OffsetType = AL_NONE;
         source->VoiceIdx = INVALID_VOICE_IDX;
     }
-    if(tail)
+    if LIKELY(tail)
         SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
@@ -3080,7 +3080,7 @@ START_API_FUNC
         source->OffsetType = AL_NONE;
         source->VoiceIdx = INVALID_VOICE_IDX;
     }
-    if(tail)
+    if LIKELY(tail)
         SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC

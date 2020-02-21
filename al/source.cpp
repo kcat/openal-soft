@@ -2725,17 +2725,16 @@ START_API_FUNC
     }
 
     /* Count the number of reusable voices. */
-    auto count_free_voices = [](const ALuint count, const ALvoice &voice) noexcept -> ALuint
+    size_t free_voices{0};
+    for(const ALvoice &voice : context->mVoices)
     {
-        if(voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+        free_voices += (voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
             && voice.mSourceID.load(std::memory_order_relaxed) == 0u
-            && voice.mPendingStop.load(std::memory_order_relaxed) == false)
-            return count + 1;
-        return count;
-    };
-    auto free_voices = std::accumulate(context->mVoices.begin(), context->mVoices.end(),
-        ALuint{0}, count_free_voices);
-    if UNLIKELY(srchandles.size() > free_voices)
+            && voice.mPendingStop.load(std::memory_order_relaxed) == false);
+        if(free_voices == srchandles.size())
+            break;
+    }
+    if UNLIKELY(srchandles.size() != free_voices)
     {
         /* Increase the number of voices to handle the request. */
         const size_t need_voices{srchandles.size() - free_voices};

@@ -309,29 +309,21 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const ALbufferlistitem *BufferList{Source->queue};
     const ALbuffer *BufferFmt{nullptr};
-    ALuint totalBufferLen{0u};
-    bool readFin{false};
-
     while(BufferList)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
+        if(BufferList == Current) break;
 
-        readFin |= (BufferList == Current);
-        totalBufferLen += BufferList->mSampleLen;
-        if(!readFin) readPos += BufferList->mSampleLen;
+        readPos += BufferList->mSampleLen;
 
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
-    assert(BufferFmt != nullptr);
-
-    if(Source->Looping)
-        readPos %= totalBufferLen;
-    else
+    while(BufferList && !BufferFmt)
     {
-        /* Wrap back to 0 */
-        if(readPos >= totalBufferLen)
-            readPos = readPosFrac = 0;
+        BufferFmt = BufferList->mBuffer;
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
+    assert(BufferFmt != nullptr);
 
     switch(name)
     {
@@ -999,6 +991,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
                 auto vpos = GetSampleOffset(Source);
+                if((voice->mFlags&VOICE_IS_CALLBACK))
+                    SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                        "Source offset for callback is invalid");
                 if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
@@ -1159,13 +1154,15 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
                 static_cast<ALuint>(values[0]));
 
-        if(buffer && buffer->MappedAccess != 0 &&
-            !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+        if(buffer && buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
             SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                 "Setting non-persistently mapped buffer %u", buffer->id);
+        else if(buffer && buffer->Callback && ReadRef(buffer->ref) != 0)
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                "Setting already-set callback buffer %u", buffer->id);
         else
         {
-            ALenum state = GetSourceState(Source, GetSourceVoice(Source, Context));
+            const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting buffer on playing or paused source %u", Source->id);
@@ -1218,6 +1215,9 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
                 auto vpos = GetSampleOffset(Source);
+                if((voice->mFlags&VOICE_IS_CALLBACK))
+                    SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                        "Source offset for callback is invalid");
                 if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
 
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
@@ -2701,11 +2701,13 @@ START_API_FUNC
          * length buffer.
          */
         ALbufferlistitem *BufferList{source->queue};
-		/* TODO: Make the other functions queuing buffers and reading aware
-		* of the callback, and correctly zero out buffers.
-		*/
-        while(BufferList && (BufferList->mSampleLen == 0 && !BufferList->mBuffer->callback))
+        while(BufferList && BufferList->mSampleLen == 0)
+        {
+            ALbuffer *buffer{BufferList->mBuffer};
+            if(buffer && buffer->Callback) break;
+
             BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        }
 
         /* If there's nothing to play, go right to stopped. */
         if UNLIKELY(!BufferList)
@@ -2765,9 +2767,8 @@ START_API_FUNC
         assert(voice != voices_end);
 
         auto vidx = static_cast<ALuint>(std::distance(context->mVoices.data(), voice));
-        voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
 
-        source->PropsClean.test_and_set(std::memory_order_acquire);
+        source->PropsClean.test_and_set(std::memory_order_acq_rel);
         UpdateSourceProps(source, voice, context.get());
 
         /* A source that's not playing or paused has any offset applied when it
@@ -2777,7 +2778,7 @@ START_API_FUNC
             voice->mLoopBuffer.store(source->queue, std::memory_order_relaxed);
         else
             voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-        voice->mCurrentBuffer.store(BufferList, std::memory_order_relaxed);
+        voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         bool start_fading{false};
@@ -2804,7 +2805,9 @@ START_API_FUNC
         voice->mStep = 0;
 
         voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
-        if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+        if(buffer->Callback) voice->mFlags |= VOICE_IS_CALLBACK;
+        else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+        voice->mNumCallbackSamples = 0;
 
         /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
          * higher order than the voice. No HF scaling is necessary to mix it.
@@ -3101,6 +3104,11 @@ START_API_FUNC
             context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
             goto buffer_error;
         }
+        if(buffer && buffer->Callback)
+        {
+            context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u", buffers[i]);
+            goto buffer_error;
+        }
 
         if(!BufferListStart)
         {
@@ -3304,12 +3312,8 @@ ALsource::~ALsource()
     while(BufferList != nullptr)
     {
         std::unique_ptr<ALbufferlistitem> head{BufferList};
-		/* If (BufferList->next==nullptr), the following will segfault, 
-		* thus the loading of next is moved to the next line, hopefully
-		* this won't break anything.
-		*/
-        if(ALbuffer *buffer{BufferList->mBuffer}) DecrementRef(buffer->ref);
-		BufferList = head->mNext.load(std::memory_order_relaxed);
+        BufferList = head->mNext.load(std::memory_order_relaxed);
+        if (ALbuffer * buffer{head->mBuffer}) DecrementRef(buffer->ref);
     }
     queue = nullptr;
 

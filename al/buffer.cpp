@@ -544,94 +544,76 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mFmtType = DstType;
     ALBuf->Access = access;
 
+    ALBuf->Callback = nullptr;
+    ALBuf->UserData = nullptr;
+
     ALBuf->SampleLen = frames;
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = ALBuf->SampleLen;
 }
 
-void SetUpCallback(ALCcontext *context, ALbuffer *ALBuf,
-	ALuint freq, UserFmtChannels SrcChannels, UserFmtType SrcType,
-	ALbitfieldSOFT access, LPALBUFFERCALLBACKFUNC callback, ALvoid* usr_ptr) {
-	if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
-		SETERR_RETURN(context, AL_INVALID_OPERATION, , "Setting callback for in-use buffer!%u",
-			ALBuf->id);
+/** Prepares the buffer to use the specified callback, using the specified format. */
+void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
+    UserFmtChannels SrcChannels, UserFmtType SrcType, LPALBUFFERCALLBACKTYPESOFT callback,
+    void *userptr)
+{
+    if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying callback for in-use buffer %u",
+            ALBuf->id);
 
-	/* Currently no channel configurations need to be converted. */
-	/* TODO: Copied from LoadData, reusing may be better */
-	FmtChannels DstChannels{ FmtMono };
-	switch (SrcChannels)
-	{
-	case UserFmtMono: DstChannels = FmtMono; break;
-	case UserFmtStereo: DstChannels = FmtStereo; break;
-	case UserFmtRear: DstChannels = FmtRear; break;
-	case UserFmtQuad: DstChannels = FmtQuad; break;
-	case UserFmtX51: DstChannels = FmtX51; break;
-	case UserFmtX61: DstChannels = FmtX61; break;
-	case UserFmtX71: DstChannels = FmtX71; break;
-	case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
-	case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
-	}
-	if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
-		SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
+    /* Currently no channel configurations need to be converted. */
+    FmtChannels DstChannels{FmtMono};
+    switch(SrcChannels)
+    {
+    case UserFmtMono: DstChannels = FmtMono; break;
+    case UserFmtStereo: DstChannels = FmtStereo; break;
+    case UserFmtRear: DstChannels = FmtRear; break;
+    case UserFmtQuad: DstChannels = FmtQuad; break;
+    case UserFmtX51: DstChannels = FmtX51; break;
+    case UserFmtX61: DstChannels = FmtX61; break;
+    case UserFmtX71: DstChannels = FmtX71; break;
+    case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
+    case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
+    }
+    if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
+        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
 
-	/* IMA4 and MSADPCM needs to be managed via another buffer, which is not currently implemented. */
-	if UNLIKELY(SrcType == UserFmtMSADPCM)
-		SETERR_RETURN(context, AL_INVALID_ENUM, , "MSADPCM currently cannot be managed via callback.");
-	else if UNLIKELY(SrcType == UserFmtIMA4)
-		SETERR_RETURN(context, AL_INVALID_ENUM, , "IMA4 currently cannot be managed via callback.");
-	FmtType DstType{ FmtUByte };
-	switch (SrcType)
-	{
-	case UserFmtUByte: DstType = FmtUByte; break;
-	case UserFmtShort: DstType = FmtShort; break;
-	case UserFmtFloat: DstType = FmtFloat; break;
-	case UserFmtDouble: DstType = FmtDouble; break;
-	case UserFmtAlaw: DstType = FmtAlaw; break;
-	case UserFmtMulaw: DstType = FmtMulaw; break;
-	}
+    /* IMA4 and MSADPCM convert to 16-bit short. Not supported with callbacks. */
+    FmtType DstType{FmtUByte};
+    switch(SrcType)
+    {
+    case UserFmtUByte: DstType = FmtUByte; break;
+    case UserFmtShort: DstType = FmtShort; break;
+    case UserFmtFloat: DstType = FmtFloat; break;
+    case UserFmtDouble: DstType = FmtDouble; break;
+    case UserFmtAlaw: DstType = FmtAlaw; break;
+    case UserFmtMulaw: DstType = FmtMulaw; break;
+    case UserFmtIMA4: DstType = FmtShort; break;
+    case UserFmtMSADPCM: DstType = FmtShort; break;
+    }
+    if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
+        SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
-	if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
-		SETERR_RETURN(context, AL_INVALID_VALUE, , "%s samples cannot be mapped",
-			NameFromUserFmtType(SrcType));
+    ALBuf->mData = al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType) *
+        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)});
 
-	/* TODO: Alignment is copied from LoadData here. May break the alBufferi functions, etc. */
-    const ALuint unpackalign{ALBuf->UnpackAlign};
-    const ALuint align{SanitizeAlignment(SrcType, unpackalign)};
-	if UNLIKELY(align < 1)
-		SETERR_RETURN(context, AL_INVALID_VALUE, , "Invalid unpack alignment %d for %s samples",
-			unpackalign, NameFromUserFmtType(SrcType));
+    ALBuf->Callback = callback;
+    ALBuf->UserData = userptr;
 
-	/* Cannot preserve a callback source */
-	if UNLIKELY(access&AL_PRESERVE_DATA_BIT_SOFT)
-		SETERR_RETURN(context, AL_INVALID_ENUM, , "Cannot preserve data for callback source.");
+    ALBuf->OriginalType = SrcType;
+    ALBuf->OriginalSize = 0;
+    ALBuf->OriginalAlign = 1;
 
-	const ALuint SrcByteAlign{ align * FrameSizeFromUserFmt(SrcChannels, SrcType) };
-	/* Convert the sample frames to the number of bytes needed for internal
-	* storage.
-	*/
-	ALuint NumChannels{ ChannelsFromFmt(DstChannels) };
-    ALuint FrameSize{ NumChannels * BytesFromFmt(DstType) };
-	
-	/* Buffer for a callback can be used for on the fly format conversion,
-	* but currently this will be a empty one.
-	*/
-	ALBuf->mData = al::vector<al::byte, 16>{};
-	ALBuf->callback = callback;
-	ALBuf->usr_ptr = usr_ptr;
+    ALBuf->Frequency = static_cast<ALuint>(freq);
+    ALBuf->mFmtChannels = DstChannels;
+    ALBuf->mFmtType = DstType;
+    ALBuf->Access = 0;
 
-	//trivial set up of other values.
-	ALBuf->OriginalSize = 0;
-	ALBuf->OriginalType = SrcType;
-
-	ALBuf->Frequency = freq;
-	ALBuf->mFmtChannels = DstChannels;
-	ALBuf->mFmtType = DstType;
-	ALBuf->Access = access;
-
-	ALBuf->SampleLen = 0;
-	ALBuf->LoopStart = 0;
-	ALBuf->LoopEnd = 0;
+    ALBuf->SampleLen = 0;
+    ALBuf->LoopStart = 0;
+    ALBuf->LoopEnd = ALBuf->SampleLen;
 }
+
 
 struct DecompResult { UserFmtChannels channels; UserFmtType type; };
 al::optional<DecompResult> DecomposeUserFormat(ALenum format)
@@ -837,7 +819,7 @@ START_API_FUNC
     else if UNLIKELY((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
         context->setError(AL_INVALID_VALUE,
             "Declaring persistently mapped storage without read or write access");
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Declaring storage for callback buffer");
     else
@@ -849,39 +831,6 @@ START_API_FUNC
             LoadData(context.get(), albuf, freq, static_cast<ALuint>(size), usrfmt->channels,
                 usrfmt->type, static_cast<const al::byte*>(data), flags);
     }
-}
-END_API_FUNC
-
-AL_API ALvoid AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALbitfieldSOFT flags, LPALBUFFERCALLBACKFUNC callback, ALvoid* usr_ptr)
-START_API_FUNC
-{
-	ContextRef context{ GetContextRef() };
-	if UNLIKELY(!context) return;
-
-	ALCdevice *device{ context->mDevice.get() };
-	std::lock_guard<std::mutex> _{ device->BufferLock };
-
-	ALbuffer *albuf = LookupBuffer(device, buffer);
-	if UNLIKELY(!albuf)
-		context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-	else if UNLIKELY(freq < 1)
-		context->setError(AL_INVALID_VALUE, "Invalid sample rate %d", freq);
-	else if UNLIKELY(flags)
-		context->setError(AL_INVALID_OPERATION, "Seting flags on callback currently not supported.");
-	else if UNLIKELY(!callback)
-		context->setError(AL_INVALID_VALUE, "Callback function cannot currently default to filling in stable wave data.");
-	else {
-		auto usrfmt = DecomposeUserFormat(format);
-		if UNLIKELY(!usrfmt)
-			context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
-		else if UNLIKELY(usrfmt->type != UserFmtFloat)
-			context->setError(AL_INVALID_OPERATION, "alBufferCallbackSOFT currently only supports floating point format.");
-		else if UNLIKELY(usrfmt->channels != UserFmtMono)
-			context->setError(AL_INVALID_OPERATION, "alBufferCallbackSOFT currently only supports mono format.");
-		else {
-			SetUpCallback(context.get(), albuf, freq, usrfmt->channels, usrfmt->type, flags, callback, usr_ptr);
-		}
-	}
 }
 END_API_FUNC
 
@@ -902,7 +851,7 @@ START_API_FUNC
     else if UNLIKELY(!(access&MAP_READ_WRITE_FLAGS))
         context->setError(AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
             buffer);
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Mapping storage for callback buffer");
     else
@@ -1011,7 +960,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
         return;
     }
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Callingg SubData on callback buffer");
 
@@ -1138,7 +1087,7 @@ START_API_FUNC
 	ALbuffer* albuf = LookupBuffer(device, buffer);
     if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Changing parameter for callback buffer not supported");
     else switch(param)
@@ -1162,7 +1111,7 @@ START_API_FUNC
 	ALbuffer* albuf = LookupBuffer(device, buffer);
 	if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Changing parameter for callback buffer not supported");
     else switch(param)
@@ -1187,7 +1136,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Changing parameter for callback buffer not supported");
     else switch(param)
@@ -1211,7 +1160,7 @@ START_API_FUNC
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if UNLIKELY(!albuf)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Changing parameter for callback buffer not supported");
     else switch(param)
@@ -1269,7 +1218,7 @@ START_API_FUNC
 	ALbuffer* albuf = LookupBuffer(device, buffer);
     if UNLIKELY(albuf == nullptr)
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Changing parameter for callback buffer not supported");
     else switch(param)
@@ -1307,7 +1256,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if UNLIKELY(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-	else if UNLIKELY(albuf->callback)
+	else if UNLIKELY(albuf->Callback)
 		context->setError(AL_INVALID_OPERATION,
 			"Changing parameter for callback buffer not supported");
     else switch(param)
@@ -1518,6 +1467,114 @@ START_API_FUNC
 
     default:
         context->setError(AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x", param);
+    }
+}
+END_API_FUNC
+
+
+AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq,
+    LPALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr, ALbitfieldSOFT flags)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->BufferLock};
+
+    ALbuffer *albuf = LookupBuffer(device, buffer);
+    if UNLIKELY(!albuf)
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    else if UNLIKELY(freq < 1)
+        context->setError(AL_INVALID_VALUE, "Invalid sample rate %d", freq);
+    else if UNLIKELY(callback == nullptr)
+        context->setError(AL_INVALID_VALUE, "NULL callback");
+    else if UNLIKELY(flags != 0)
+        context->setError(AL_INVALID_VALUE, "Invalid callback flags 0x%x", flags);
+    else
+    {
+        auto usrfmt = DecomposeUserFormat(format);
+        if UNLIKELY(!usrfmt)
+            context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+        else
+            PrepareCallback(context.get(), albuf, freq, usrfmt->channels, usrfmt->type, callback,
+                userptr);
+    }
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid **value)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->BufferLock};
+    ALbuffer *albuf = LookupBuffer(device, buffer);
+    if UNLIKELY(!albuf)
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    else if UNLIKELY(!value)
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
+    else switch(param)
+    {
+    case AL_BUFFER_CALLBACK_FUNCTION_SOFT:
+        *value = reinterpret_cast<void*>(albuf->Callback);
+        break;
+    case AL_BUFFER_CALLBACK_USER_PARAM_SOFT:
+        *value = albuf->UserData;
+        break;
+
+    default:
+        context->setError(AL_INVALID_ENUM, "Invalid buffer pointer property 0x%04x", param);
+    }
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->BufferLock};
+    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    else if UNLIKELY(!value1 || !value2 || !value3)
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
+    else switch(param)
+    {
+    default:
+        context->setError(AL_INVALID_ENUM, "Invalid buffer 3-pointer property 0x%04x", param);
+    }
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid **values)
+START_API_FUNC
+{
+    switch(param)
+    {
+    case AL_BUFFER_CALLBACK_FUNCTION_SOFT:
+    case AL_BUFFER_CALLBACK_USER_PARAM_SOFT:
+        alGetBufferPtrSOFT(buffer, param, values);
+        return;
+    }
+
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    ALCdevice *device{context->mDevice.get()};
+    std::lock_guard<std::mutex> _{device->BufferLock};
+    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    else if UNLIKELY(!values)
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
+    else switch(param)
+    {
+    default:
+        context->setError(AL_INVALID_ENUM, "Invalid buffer pointer-vector property 0x%04x", param);
     }
 }
 END_API_FUNC

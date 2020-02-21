@@ -77,12 +77,21 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #define AL_EFFECTSLOT_TARGET_SOFT                0xf000
 #endif
 
-/* Location in file may be inappropriate */
-/* Callback buffer */
 #ifndef AL_SOFT_callback_buffer
 #define AL_SOFT_callback_buffer
-typedef ALsizei(*LPALBUFFERCALLBACKFUNC)(ALuint abo, ALbyte* to_fill, ALsizei stride, ptrdiff_t samples, ALvoid* usr_ptr /*, ALuint alignment, Alenum format, ...*/);
-AL_API ALvoid AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALbitfieldSOFT flags, LPALBUFFERCALLBACKFUNC callback, ALvoid* usr_ptr);
+#define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
+#define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
+typedef ALsizei (AL_APIENTRY*LPALBUFFERCALLBACKTYPESOFT)(ALvoid *userptr, ALvoid *sampledata, ALsizei numsamples);
+typedef void (AL_APIENTRY*LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, LPALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr, ALbitfieldSOFT flags);
+typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **value);
+typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3);
+typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, LPALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr, ALbitfieldSOFT flags);
+AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr);
+AL_API void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2);
+AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid **ptr);
+#endif
 #endif
 
 #ifdef __cplusplus

@@ -61,6 +61,9 @@ enum FmtChannels : unsigned char {
 
 ALuint BytesFromFmt(FmtType type) noexcept;
 ALuint ChannelsFromFmt(FmtChannels chans) noexcept;
+inline ALuint FrameSizeFromFmt(FmtChannels chans, FmtType type) noexcept
+{ return ChannelsFromFmt(chans) * BytesFromFmt(type); }
+
 
 struct ALbuffer {
     al::vector<al::byte,16> mData;
@@ -78,6 +81,9 @@ struct ALbuffer {
 
     ALenum AmbiLayout{AL_FUMA_SOFT};
     ALenum AmbiScaling{AL_FUMA_SOFT};
+
+    LPALBUFFERCALLBACKTYPESOFT Callback{nullptr};
+    void *UserData{nullptr};
 
     ALuint LoopStart{0u};
     ALuint LoopEnd{0u};
@@ -98,10 +104,6 @@ struct ALbuffer {
     inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mFmtType); }
     inline ALuint channelsFromFmt() const noexcept { return ChannelsFromFmt(mFmtChannels); }
     inline ALuint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
-
-    /* for callback */
-    LPALBUFFERCALLBACKFUNC callback{nullptr};
-    void* usr_ptr{nullptr};
 };
 
 #endif

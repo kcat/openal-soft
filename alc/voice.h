@@ -180,11 +180,15 @@ struct ALvoiceProps : public ALvoicePropsBase {
     DEF_NEWDEL(ALvoiceProps)
 };
 
-#define VOICE_IS_STATIC    (1u<<0)
-#define VOICE_IS_FADING    (1u<<1) /* Fading sources use gain stepping for smooth transitions. */
-#define VOICE_IS_AMBISONIC (1u<<2) /* Voice needs HF scaling for ambisonic upsampling. */
-#define VOICE_HAS_HRTF     (1u<<3)
-#define VOICE_HAS_NFC      (1u<<4)
+#define VOICE_IS_STATIC        (1u<<0)
+#define VOICE_IS_CALLBACK      (1u<<1)
+#define VOICE_IS_AMBISONIC     (1u<<2) /* Voice needs HF scaling for ambisonic upsampling. */
+#define VOICE_CALLBACK_STOPPED (1u<<3)
+#define VOICE_IS_FADING        (1u<<4) /* Fading sources use gain stepping for smooth transitions. */
+#define VOICE_HAS_HRTF         (1u<<5)
+#define VOICE_HAS_NFC          (1u<<6)
+
+#define VOICE_TYPE_MASK (VOICE_IS_STATIC | VOICE_IS_CALLBACK)
 
 struct ALvoice {
     enum State {
@@ -226,13 +230,14 @@ struct ALvoice {
     ALuint mAmbiOrder;
 
     /** Current target parameters used for mixing. */
-    ALuint mStep;
+    ALuint mStep{0};
 
     ResamplerFunc mResampler;
 
     InterpState mResampleState;
 
-    ALuint mFlags;
+    ALuint mFlags{};
+    ALuint mNumCallbackSamples{0};
 
     struct TargetData {
         int FilterType;
@@ -292,6 +297,7 @@ struct ALvoice {
         mResampleState = rhs.mResampleState;
 
         mFlags = rhs.mFlags;
+        mNumCallbackSamples = rhs.mNumCallbackSamples;
 
         mDirect = rhs.mDirect;
         mSend = rhs.mSend;

@@ -486,42 +486,21 @@ inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 }
 
 
-VoiceChange *GetVoiceChangers(ALCcontext *ctx, size_t count)
+VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 {
-    VoiceChange *tail{ctx->mVoiceChangeTail};
-    if UNLIKELY(!count) return tail;
-
-    if(tail == ctx->mCurrentVoiceChange.load(std::memory_order_acquire))
+    VoiceChange *vchg{ctx->mVoiceChangeTail};
+    if UNLIKELY(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire))
     {
-        ctx->allocVoiceChanges(count);
-        tail = ctx->mVoiceChangeTail;
-    }
-    else if(count > 1)
-    {
-        VoiceChange *head{tail->mNext.load(std::memory_order_acquire)};
-        size_t avail{1};
-        for(;avail < count;++avail)
-        {
-            if(head == ctx->mCurrentVoiceChange.load(std::memory_order_acquire))
-                break;
-            head = head->mNext.load(std::memory_order_acquire);
-        }
-        if(avail < count)
-        {
-            ctx->allocVoiceChanges(count - avail);
-            tail = ctx->mVoiceChangeTail;
-        }
+        ctx->allocVoiceChanges(1);
+        vchg = ctx->mVoiceChangeTail;
     }
 
-    VoiceChange *head{tail};
-    for(size_t avail{1};avail < count;++avail)
-        head = head->mNext.load(std::memory_order_relaxed);
-    ctx->mVoiceChangeTail = head->mNext.exchange(nullptr, std::memory_order_relaxed);
+    ctx->mVoiceChangeTail = vchg->mNext.exchange(nullptr, std::memory_order_relaxed);
 
-    return tail;
+    return vchg;
 }
 
-void SendVoiceChangers(ALCcontext *ctx, VoiceChange *tail)
+void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 {
     ALCdevice *device{ctx->mDevice.get()};
 
@@ -593,14 +572,14 @@ void FreeSource(ALCcontext *context, ALsource *source)
     {
         if(ALvoice *voice{GetSourceVoice(source, context)})
         {
-            VoiceChange *vchg{GetVoiceChangers(context, 1)};
+            VoiceChange *vchg{GetVoiceChanger(context)};
 
             voice->mPendingStop.store(true, std::memory_order_relaxed);
             vchg->mVoice = voice;
             vchg->mSourceID = id;
             vchg->mState = AL_STOPPED;
 
-            SendVoiceChangers(context, vchg);
+            SendVoiceChanges(context, vchg);
         }
     }
 
@@ -3014,33 +2993,30 @@ START_API_FUNC
         ++sources;
     }
 
-    VoiceChange *tail{GetVoiceChangers(context.get(), srchandles.size())};
-    VoiceChange *cur{tail};
-    auto stop_source = [&context,&cur](ALsource *source) -> void
+    VoiceChange *tail{}, *cur{};
+    for(ALsource *source : srchandles)
     {
         if(ALvoice *voice{GetSourceVoice(source, context.get())})
         {
+            if(!cur)
+                cur = tail = GetVoiceChanger(context.get());
+            else
+            {
+                cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
+                cur = cur->mNext.load(std::memory_order_relaxed);
+            }
             voice->mPendingStop.store(true, std::memory_order_relaxed);
             cur->mVoice = voice;
             cur->mSourceID = source->id;
             cur->mState = AL_STOPPED;
-            cur = cur->mNext.load(std::memory_order_relaxed);
             source->state = AL_STOPPED;
         }
-        source->OffsetType = AL_NONE;
         source->Offset = 0.0;
+        source->OffsetType = AL_NONE;
         source->VoiceIdx = INVALID_VOICE_IDX;
-    };
-    std::for_each(srchandles.begin(), srchandles.end(), stop_source);
-
-    while(cur)
-    {
-        cur->mVoice = nullptr;
-        cur->mSourceID = 0;
-        cur->mState = AL_NONE;
-        cur = cur->mNext.load(std::memory_order_relaxed);
     }
-    SendVoiceChangers(context.get(), tail);
+    if(tail)
+        SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
 
@@ -3080,35 +3056,32 @@ START_API_FUNC
         ++sources;
     }
 
-    VoiceChange *tail{GetVoiceChangers(context.get(), srchandles.size())};
-    VoiceChange *cur{tail};
-    auto rewind_source = [&context,&cur](ALsource *source) -> void
+    VoiceChange *tail{}, *cur{};
+    for(ALsource *source : srchandles)
     {
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(source->state != AL_INITIAL)
         {
-            if(voice != nullptr)
+            if(!cur)
+                cur = tail = GetVoiceChanger(context.get());
+            else
+            {
+                cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
+                cur = cur->mNext.load(std::memory_order_relaxed);
+            }
+            if(voice)
                 voice->mPendingStop.store(true, std::memory_order_relaxed);
             cur->mVoice = voice;
             cur->mSourceID = source->id;
             cur->mState = AL_INITIAL;
-            cur = cur->mNext.load(std::memory_order_relaxed);
             source->state = AL_INITIAL;
         }
-        source->OffsetType = AL_NONE;
         source->Offset = 0.0;
+        source->OffsetType = AL_NONE;
         source->VoiceIdx = INVALID_VOICE_IDX;
-    };
-    std::for_each(srchandles.begin(), srchandles.end(), rewind_source);
-
-    while(cur)
-    {
-        cur->mVoice = nullptr;
-        cur->mSourceID = 0;
-        cur->mState = AL_NONE;
-        cur = cur->mNext.load(std::memory_order_relaxed);
     }
-    SendVoiceChangers(context.get(), tail);
+    if(tail)
+        SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
 

@@ -2777,9 +2777,6 @@ START_API_FUNC
 
         auto vidx = static_cast<ALuint>(std::distance(context->mVoices.data(), voice));
 
-        source->PropsClean.test_and_set(std::memory_order_acq_rel);
-        UpdateSourceProps(source, voice, context.get());
-
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.
          */
@@ -2869,6 +2866,9 @@ START_API_FUNC
         }
 
         voice->mSourceID.store(source->id, std::memory_order_release);
+        source->PropsClean.test_and_set(std::memory_order_acq_rel);
+        UpdateSourceProps(source, voice, context.get());
+
         source->VoiceIdx = vidx;
         source->state = AL_PLAYING;
 

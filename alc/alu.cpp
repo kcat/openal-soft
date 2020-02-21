@@ -1605,9 +1605,56 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 }
 
 
+void SendSourceStateEvent(ALCcontext *context, ALuint id, ALenum state)
+{
+    RingBuffer *ring{context->mAsyncEvents.get()};
+    auto evt_vec = ring->getWriteVector();
+    if(evt_vec.first.len < 1) return;
+
+    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
+    evt->u.srcstate.id = id;
+    evt->u.srcstate.state = state;
+
+    ring->writeAdvance(1);
+}
+
+void ProcessVoiceChanges(ALCcontext *ctx)
+{
+    VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
+    VoiceChange *next{cur->mNext.load(std::memory_order_acquire)};
+    if(!next) return;
+
+    const ALbitfieldSOFT enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
+    do {
+        cur = next;
+
+        bool success{false};
+        ALvoice *voice{cur->mVoice};
+        if(cur->mState == AL_INITIAL || cur->mState == AL_STOPPED)
+        {
+            if(voice)
+            {
+                voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+                voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+                voice->mSourceID.exchange(0u, std::memory_order_relaxed);
+                ALvoice::State oldvstate{ALvoice::Playing};
+                success = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                    std::memory_order_relaxed, std::memory_order_acquire);
+                voice->mPendingStop.store(false, std::memory_order_release);
+            }
+            success |= (cur->mState == AL_INITIAL);
+        }
+        if(success && (enabledevt&EventType_SourceStateChange))
+            SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
+    } while((next=cur->mNext.load(std::memory_order_acquire)));
+    ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
+}
+
 void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     const al::span<ALvoice> voices)
 {
+    ProcessVoiceChanges(ctx);
+
     IncrementRef(ctx->mUpdateCount);
     if LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire))
     {

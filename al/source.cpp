@@ -486,6 +486,50 @@ inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 }
 
 
+VoiceChange *GetVoiceChangers(ALCcontext *ctx, size_t count)
+{
+    VoiceChange *tail{ctx->mVoiceChangeTail};
+    if UNLIKELY(!count) return tail;
+
+    if(tail == ctx->mCurrentVoiceChange.load(std::memory_order_acquire))
+    {
+        ctx->allocVoiceChanges(count);
+        tail = ctx->mVoiceChangeTail;
+    }
+    else if(count > 1)
+    {
+        VoiceChange *head{tail->mNext.load(std::memory_order_acquire)};
+        size_t avail{1};
+        for(;avail < count;++avail)
+        {
+            if(head == ctx->mCurrentVoiceChange.load(std::memory_order_acquire))
+                break;
+            head = head->mNext.load(std::memory_order_acquire);
+        }
+        if(avail < count)
+        {
+            ctx->allocVoiceChanges(count - avail);
+            tail = ctx->mVoiceChangeTail;
+        }
+    }
+
+    VoiceChange *head{tail};
+    for(size_t avail{1};avail < count;++avail)
+        head = head->mNext.load(std::memory_order_relaxed);
+    ctx->mVoiceChangeTail = head->mNext.exchange(nullptr, std::memory_order_relaxed);
+
+    return tail;
+}
+
+void SendVoiceChangers(ALCcontext *ctx, VoiceChange *tail)
+{
+    VoiceChange *oldhead{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
+    while(VoiceChange *next{oldhead->mNext.load(std::memory_order_relaxed)})
+        oldhead = next;
+    oldhead->mNext.store(tail, std::memory_order_release);
+}
+
+
 bool EnsureSources(ALCcontext *context, size_t needed)
 {
     size_t count{std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(),
@@ -541,20 +585,16 @@ void FreeSource(ALCcontext *context, ALsource *source)
 
     if(IsPlayingOrPaused(source))
     {
-        ALCdevice *device{context->mDevice.get()};
-        BackendLockGuard _{*device->Backend};
         if(ALvoice *voice{GetSourceVoice(source, context)})
         {
-            voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mSourceID.store(0u, std::memory_order_relaxed);
-            std::atomic_thread_fence(std::memory_order_release);
-            /* Don't set the voice to stopping if it was already stopped or
-             * stopping.
-             */
-            ALvoice::State oldvstate{ALvoice::Playing};
-            voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
-                std::memory_order_acq_rel, std::memory_order_acquire);
+            VoiceChange *vchg{GetVoiceChangers(context, 1)};
+
+            voice->mPendingStop.store(true, std::memory_order_relaxed);
+            vchg->mVoice = voice;
+            vchg->mSourceID = id;
+            vchg->mState = AL_STOPPED;
+
+            SendVoiceChangers(context, vchg);
         }
     }
 

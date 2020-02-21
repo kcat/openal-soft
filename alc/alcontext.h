@@ -56,6 +56,17 @@ struct ALcontextProps {
 };
 
 
+struct VoiceChange {
+    ALvoice *mVoice{nullptr};
+    ALuint mSourceID{0};
+    ALenum mState{0};
+
+    std::atomic<VoiceChange*> mNext{nullptr};
+
+    DEF_NEWDEL(VoiceChange)
+};
+
+
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};
     ALsource *Sources{nullptr}; /* 64 */
@@ -127,6 +138,24 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::atomic<ALlistenerProps*> mFreeListenerProps{nullptr};
     std::atomic<ALvoiceProps*> mFreeVoiceProps{nullptr};
     std::atomic<ALeffectslotProps*> mFreeEffectslotProps{nullptr};
+
+    /* Asynchronous voice change actions are processed as a linked list of
+     * VoiceChange objects by the mixer, which is atomically appended to.
+     * However, to avoid allocating each object individually, they're allocated
+     * in clusters that are stored in a vector for easy automatic cleanup.
+     */
+    using VoiceChangeCluster = std::unique_ptr<VoiceChange[]>;
+    al::vector<VoiceChangeCluster> mVoiceChangeCluster;
+
+    /* The voice change tail is the beginning of the "free" elements, up to and
+     * *excluding* the current. If tail==current, there's no free elements and
+     * new ones need to be allocated. The current voice change is the element
+     * last processed, and any after are pending.
+     */
+    VoiceChange *mVoiceChangeTail{};
+    std::atomic<VoiceChange*> mCurrentVoiceChange{};
+
+    void allocVoiceChanges(size_t addcount);
 
     al::vector<ALvoice> mVoices;
 

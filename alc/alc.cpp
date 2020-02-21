@@ -1642,6 +1642,24 @@ void ALCcontext::processUpdates()
 }
 
 
+void ALCcontext::allocVoiceChanges(size_t addcount)
+{
+    constexpr size_t clustersize{128};
+    /* Convert element count to cluster count. */
+    addcount = (addcount+(clustersize-1)) / clustersize;
+    while(addcount)
+    {
+        VoiceChangeCluster cluster{new VoiceChange[clustersize]};
+        for(size_t i{1};i < clustersize;++i)
+            cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
+        cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
+        mVoiceChangeCluster.emplace_back(std::move(cluster));
+        mVoiceChangeTail = mVoiceChangeCluster.back().get();
+        --addcount;
+    }
+}
+
+
 /* alcSetError
  *
  * Stores the latest ALC device error
@@ -2567,6 +2585,14 @@ void ALCcontext::init()
         (*auxslots)[0] = mDefaultSlot.get();
     }
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
+
+    allocVoiceChanges(1);
+    {
+        VoiceChange *cur{mVoiceChangeTail};
+        while(VoiceChange *next{cur->mNext.load(std::memory_order_relaxed)})
+            cur = next;
+        mCurrentVoiceChange.store(cur, std::memory_order_relaxed);
+    }
 
     mExtensionList = alExtList;
 

@@ -2682,7 +2682,8 @@ START_API_FUNC
     auto count_free_voices = [](const ALuint count, const ALvoice &voice) noexcept -> ALuint
     {
         if(voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
-            && voice.mSourceID.load(std::memory_order_relaxed) == 0u)
+            && voice.mSourceID.load(std::memory_order_relaxed) == 0u
+            && voice.mPendingStop.load(std::memory_order_relaxed) == false)
             return count + 1;
         return count;
     };
@@ -2760,7 +2761,8 @@ START_API_FUNC
         auto find_voice = [](const ALvoice &v) noexcept -> bool
         {
             return v.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
-                && v.mSourceID.load(std::memory_order_relaxed) == 0u;
+                && v.mSourceID.load(std::memory_order_relaxed) == 0u
+                && v.mPendingStop.load(std::memory_order_relaxed) == false;
         };
         auto voices_end = context->mVoices.data() + context->mVoices.size();
         voice = std::find_if(context->mVoices.data(), voices_end, find_voice);

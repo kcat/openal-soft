@@ -199,10 +199,11 @@ struct ALvoice {
 
     std::atomic<ALvoiceProps*> mUpdate{nullptr};
 
+    ALvoicePropsBase mProps;
+
     std::atomic<ALuint> mSourceID{0u};
     std::atomic<State> mPlayState{Stopped};
-
-    ALvoicePropsBase mProps;
+    std::atomic<bool> mPendingStop{false};
 
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
@@ -268,11 +269,13 @@ struct ALvoice {
         mUpdate.store(rhs.mUpdate.exchange(old_update, std::memory_order_relaxed),
             std::memory_order_relaxed);
 
+        mProps = rhs.mProps;
+
         mSourceID.store(rhs.mSourceID.load(std::memory_order_relaxed), std::memory_order_relaxed);
         mPlayState.store(rhs.mPlayState.load(std::memory_order_relaxed),
             std::memory_order_relaxed);
-
-        mProps = rhs.mProps;
+        mPendingStop.store(rhs.mPendingStop.load(std::memory_order_relaxed),
+            std::memory_order_relaxed);
 
         mPosition.store(rhs.mPosition.load(std::memory_order_relaxed), std::memory_order_relaxed);
         mPositionFrac.store(rhs.mPositionFrac.load(std::memory_order_relaxed),

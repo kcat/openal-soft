@@ -1492,6 +1492,12 @@ IF(ALSOFT_EXAMPLES)
             TARGET_LINK_LIBRARIES(alstream
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
 
+            ADD_EXECUTABLE(alstreamcb examples/alstreamcb.cpp)
+            TARGET_INCLUDE_DIRECTORIES(alstreamcb
+                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
+            TARGET_LINK_LIBRARIES(alstreamcb
+                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
+
             ADD_EXECUTABLE(alreverb examples/alreverb.c)
             TARGET_INCLUDE_DIRECTORIES(alreverb
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})

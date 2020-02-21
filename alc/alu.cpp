@@ -1629,10 +1629,9 @@ void ProcessVoiceChanges(ALCcontext *ctx)
         cur = next;
 
         bool success{false};
-        ALvoice *voice{cur->mVoice};
         if(cur->mState == AL_INITIAL || cur->mState == AL_STOPPED)
         {
-            if(voice)
+            if(ALvoice *voice{cur->mVoice})
             {
                 voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
@@ -1644,7 +1643,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             }
             success |= (cur->mState == AL_INITIAL);
         }
-        if(success && (enabledevt&EventType_SourceStateChange))
+        if(success && (enabledevt&EventType_SourceStateChange) && cur->mSourceID != 0)
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
     } while((next=cur->mNext.load(std::memory_order_acquire)));
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);

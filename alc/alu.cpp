@@ -1683,89 +1683,90 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     IncrementRef(ctx->mUpdateCount);
 }
 
-void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
+void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
-    const al::span<ALvoice*> voices{ctx->getVoicesSpanAcquired()};
+    for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
+    {
+        const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
+        const al::span<ALvoice*> voices{ctx->getVoicesSpanAcquired()};
 
-    /* Process pending propery updates for objects on the context. */
-    ProcessParamUpdates(ctx, auxslots, voices);
+        /* Process pending propery updates for objects on the context. */
+        ProcessParamUpdates(ctx, auxslots, voices);
 
-    /* Clear auxiliary effect slot mixing buffers. */
-    std::for_each(auxslots.begin(), auxslots.end(),
-        [SamplesToDo](ALeffectslot *slot) -> void
+        /* Clear auxiliary effect slot mixing buffers. */
+        for(ALeffectslot *slot : auxslots)
         {
             for(auto &buffer : slot->MixBuffer)
                 std::fill_n(buffer.begin(), SamplesToDo, 0.0f);
-        });
-
-    /* Process voices that have a playing source. */
-    auto mix_voice = [SamplesToDo,ctx](ALvoice *voice) -> void
-    {
-        const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
-        if(vstate != ALvoice::Stopped) voice->mix(vstate, ctx, SamplesToDo);
-    };
-    std::for_each(voices.begin(), voices.end(), mix_voice);
-
-    /* Process effects. */
-    if(const size_t num_slots{auxslots.size()})
-    {
-        auto slots = auxslots.data();
-        auto slots_end = slots + num_slots;
-
-        /* First sort the slots into extra storage, so that effects come before
-         * their effect target (or their targets' target).
-         */
-        auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
-        auto sorted_slots_end = sorted_slots;
-        if(*sorted_slots)
-        {
-            /* Skip sorting if it has already been done. */
-            sorted_slots_end += num_slots;
-            goto skip_sorting;
         }
 
-        *sorted_slots_end = *slots;
-        ++sorted_slots_end;
-        while(++slots != slots_end)
+        /* Process voices that have a playing source. */
+        for(ALvoice *voice : voices)
         {
-            auto in_chain = [](const ALeffectslot *s1, const ALeffectslot *s2) noexcept -> bool
-            {
-                while((s1=s1->Params.Target) != nullptr) {
-                    if(s1 == s2) return true;
-                }
-                return false;
-            };
+            const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
+            if(vstate != ALvoice::Stopped) voice->mix(vstate, ctx, SamplesToDo);
+        }
 
-            /* If this effect slot targets an effect slot already in the list
-             * (i.e. slots outputs to something in sorted_slots), directly or
-             * indirectly, insert it prior to that element.
+        /* Process effects. */
+        if(const size_t num_slots{auxslots.size()})
+        {
+            auto slots = auxslots.data();
+            auto slots_end = slots + num_slots;
+
+            /* First sort the slots into extra storage, so that effects come
+             * before their effect target (or their targets' target).
              */
-            auto checker = sorted_slots;
-            do {
-                if(in_chain(*slots, *checker)) break;
-            } while(++checker != sorted_slots_end);
+            auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
+            auto sorted_slots_end = sorted_slots;
+            if(*sorted_slots)
+            {
+                /* Skip sorting if it has already been done. */
+                sorted_slots_end += num_slots;
+                goto skip_sorting;
+            }
 
-            checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
-            *--checker = *slots;
+            *sorted_slots_end = *slots;
             ++sorted_slots_end;
+            while(++slots != slots_end)
+            {
+                auto in_chain = [](const ALeffectslot *s1, const ALeffectslot *s2) noexcept -> bool
+                {
+                    while((s1=s1->Params.Target) != nullptr) {
+                        if(s1 == s2) return true;
+                    }
+                    return false;
+                };
+
+                /* If this effect slot targets an effect slot already in the
+                 * list (i.e. slots outputs to something in sorted_slots),
+                 * directly or indirectly, insert it prior to that element.
+                 */
+                auto checker = sorted_slots;
+                do {
+                    if(in_chain(*slots, *checker)) break;
+                } while(++checker != sorted_slots_end);
+
+                checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
+                *--checker = *slots;
+                ++sorted_slots_end;
+            }
+
+        skip_sorting:
+            auto process_effect = [SamplesToDo](const ALeffectslot *slot) -> void
+            {
+                EffectState *state{slot->Params.mEffectState};
+                state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
+            };
+            std::for_each(sorted_slots, sorted_slots_end, process_effect);
         }
 
-    skip_sorting:
-        auto process_effect = [SamplesToDo](const ALeffectslot *slot) -> void
-        {
-            EffectState *state{slot->Params.mEffectState};
-            state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
-        };
-        std::for_each(sorted_slots, sorted_slots_end, process_effect);
+        /* Signal the event handler if there are any events to read. */
+        RingBuffer *ring{ctx->mAsyncEvents.get()};
+        if(ring->readSpace() > 0)
+            ctx->mEventSem.post();
     }
-
-    /* Signal the event handler if there are any events to read. */
-    RingBuffer *ring{ctx->mAsyncEvents.get()};
-    if(ring->readSpace() > 0)
-        ctx->mEventSem.post();
 }
 
 
@@ -1990,11 +1991,8 @@ void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
         /* Increment the mix count at the start (lsb should now be 1). */
         IncrementRef(device->MixCount);
 
-        /* For each context on this device, process and mix its sources and
-         * effects.
-         */
-        for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
-            ProcessContext(ctx, SamplesToDo);
+        /* Process and mix each context's sources and effects. */
+        ProcessContexts(device, SamplesToDo);
 
         /* Increment the clock time. Every second's worth of samples is
          * converted and added to clock base so that large sample counts don't

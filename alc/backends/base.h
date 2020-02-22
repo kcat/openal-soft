@@ -54,8 +54,6 @@ struct BackendBase {
     virtual ~BackendBase();
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
-using BackendUniqueLock = std::unique_lock<BackendBase>;
-using BackendLockGuard = std::lock_guard<BackendBase>;
 
 enum class BackendType {
     Playback,

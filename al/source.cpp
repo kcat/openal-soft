@@ -988,7 +988,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         if(IsPlayingOrPaused(Source))
         {
             ALCdevice *device{Context->mDevice.get()};
-            BackendLockGuard _{*device->Backend};
+            std::lock_guard<BackendBase> _{*device->Backend};
             /* Double-check that the source is still playing while we have the
              * lock.
              */
@@ -1215,7 +1215,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
         if(IsPlayingOrPaused(Source))
         {
-            BackendLockGuard _{*device->Backend};
+            std::lock_guard<BackendBase> _{*device->Backend};
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
                 auto vpos = GetSampleOffset(Source);

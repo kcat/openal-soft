@@ -4240,7 +4240,7 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
     {
-        BackendLockGuard _{*dev->Backend};
+        std::lock_guard<BackendBase> _{*dev->Backend};
         aluMixData(dev.get(), buffer, static_cast<ALuint>(samples), dev->channelsFromFmt());
     }
 }

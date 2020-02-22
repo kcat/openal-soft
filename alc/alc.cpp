@@ -1653,9 +1653,41 @@ void ALCcontext::allocVoiceChanges(size_t addcount)
         for(size_t i{1};i < clustersize;++i)
             cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
         cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
-        mVoiceChangeCluster.emplace_back(std::move(cluster));
-        mVoiceChangeTail = mVoiceChangeCluster.back().get();
+        mVoiceChangeClusters.emplace_back(std::move(cluster));
+        mVoiceChangeTail = mVoiceChangeClusters.back().get();
         --addcount;
+    }
+}
+
+void ALCcontext::allocVoices(size_t addcount)
+{
+    constexpr size_t clustersize{4};
+    /* Convert element count to cluster count. */
+    addcount = (addcount+(clustersize-1)) / clustersize;
+
+    if(addcount >= std::numeric_limits<int>::max()/clustersize - mVoiceClusters.size())
+        throw std::runtime_error{"Allocating too many voices"};
+
+    auto newarray = ALvoiceArray::Create((mVoiceClusters.size()+addcount) * clustersize);
+    while(addcount)
+    {
+        mVoiceClusters.emplace_back(VoiceCluster{new ALvoice[clustersize]});
+        --addcount;
+    }
+
+    auto voice_iter = newarray->begin();
+    for(VoiceCluster &cluster : mVoiceClusters)
+    {
+        for(size_t i{0};i < clustersize;++i)
+            *(voice_iter++) = &cluster[i];
+    }
+
+    if(auto *oldvoices = mVoices.exchange(newarray.release(), std::memory_order_acq_rel))
+    {
+        ALuint refcount;
+        while((refcount=mDevice->MixCount.load(std::memory_order_acquire))&1)
+            std::this_thread::yield();
+        delete oldvoices;
     }
 }
 
@@ -2277,45 +2309,47 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             const ALuint num_sends{device->NumAuxSends};
             /* Clear extraneous property set sends. */
-            auto clear_sends = [num_sends](ALvoice &voice) -> void
+            auto clear_sends = [num_sends](ALvoice *voice) -> void
             {
-                std::fill(std::begin(voice.mProps.Send)+num_sends, std::end(voice.mProps.Send),
+                std::fill(std::begin(voice->mProps.Send)+num_sends, std::end(voice->mProps.Send),
                     ALvoiceProps::SendData{});
 
-                std::fill(voice.mSend.begin()+num_sends, voice.mSend.end(), ALvoice::TargetData{});
+                std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(),
+                    ALvoice::TargetData{});
                 auto clear_chan_sends = [num_sends](ALvoice::ChannelData &chandata) -> void
                 {
                     std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
                         SendParams{});
                 };
-                std::for_each(voice.mChans.begin(), voice.mChans.end(), clear_chan_sends);
+                std::for_each(voice->mChans.begin(), voice->mChans.end(), clear_chan_sends);
             };
-            std::for_each(context->mVoices.begin(), context->mVoices.end(), clear_sends);
+            auto voicelist = context->getVoicesSpan();
+            std::for_each(voicelist.begin(), voicelist.end(), clear_sends);
         }
-        auto reset_voice = [device](ALvoice &voice) -> void
+        auto reset_voice = [device](ALvoice *voice) -> void
         {
-            delete voice.mUpdate.exchange(nullptr, std::memory_order_acq_rel);
+            delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
 
             /* Force the voice to stopped if it was stopping. */
             ALvoice::State vstate{ALvoice::Stopping};
-            voice.mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
+            voice->mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
                 std::memory_order_acquire, std::memory_order_acquire);
-            if(voice.mSourceID.load(std::memory_order_relaxed) == 0u)
+            if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
                 return;
 
-            voice.mStep = 0;
-            voice.mFlags |= VOICE_IS_FADING;
+            voice->mStep = 0;
+            voice->mFlags |= VOICE_IS_FADING;
 
-            if((voice.mFmtChannels == FmtBFormat2D || voice.mFmtChannels == FmtBFormat3D)
-                && device->mAmbiOrder > voice.mAmbiOrder)
+            if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
+                && device->mAmbiOrder > voice->mAmbiOrder)
             {
-                const uint8_t *OrderFromChan{(voice.mFmtChannels == FmtBFormat2D) ?
+                const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
                     AmbiIndex::OrderFrom2DChannel.data() :
                     AmbiIndex::OrderFromChannel.data()};
 
                 const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
 
-                const auto scales = BFormatDec::GetHFOrderScales(voice.mAmbiOrder,
+                const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder,
                     device->mAmbiOrder);
                 auto init_ambi = [device,&scales,&OrderFromChan,splitter](ALvoice::ChannelData &chandata) -> void
                 {
@@ -2325,10 +2359,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     chandata.mDryParams = DirectParams{};
                     std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
                 };
-                std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
+                std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
                     init_ambi);
 
-                voice.mFlags |= VOICE_IS_AMBISONIC;
+                voice->mFlags |= VOICE_IS_AMBISONIC;
             }
             else
             {
@@ -2339,10 +2373,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     chandata.mDryParams = DirectParams{};
                     std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
                 };
-                std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
+                std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
                     clear_prevs);
 
-                voice.mFlags &= ~VOICE_IS_AMBISONIC;
+                voice->mFlags &= ~VOICE_IS_AMBISONIC;
             }
 
             if(device->AvgSpeakerDist > 0.0f)
@@ -2352,11 +2386,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
                 auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
                 { chandata.mDryParams.NFCtrlFilter.init(w1); };
-                std::for_each(voice.mChans.begin(), voice.mChans.begin()+voice.mNumChannels,
+                std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
                     init_nfc);
             }
         };
-        std::for_each(context->mVoices.begin(), context->mVoices.end(), reset_voice);
+        auto voicelist = context->getVoicesSpan();
+        std::for_each(voicelist.begin(), voicelist.end(), reset_voice);
         srclock.unlock();
 
         context->mPropsClean.test_and_set(std::memory_order_release);
@@ -2523,7 +2558,7 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
 
-    mVoices.clear();
+    delete mVoices.exchange(nullptr, std::memory_order_relaxed);
 
     count = 0;
     ALlistenerProps *lprops{mListener.Params.Update.exchange(nullptr, std::memory_order_relaxed)};
@@ -2611,8 +2646,8 @@ void ALCcontext::init()
     StartEventThrd(this);
 
 
-    mVoices.reserve(256);
-    mVoices.resize(64);
+    allocVoices(256);
+    mActiveVoiceCount.store(64, std::memory_order_relaxed);
 }
 
 bool ALCcontext::deinit()

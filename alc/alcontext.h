@@ -145,7 +145,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
      * in clusters that are stored in a vector for easy automatic cleanup.
      */
     using VoiceChangeCluster = std::unique_ptr<VoiceChange[]>;
-    al::vector<VoiceChangeCluster> mVoiceChangeCluster;
+    al::vector<VoiceChangeCluster> mVoiceChangeClusters;
 
     /* The voice change tail is the beginning of the "free" elements, up to and
      * *excluding* the current. If tail==current, there's no free elements and
@@ -157,7 +157,26 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
 
     void allocVoiceChanges(size_t addcount);
 
-    al::vector<ALvoice> mVoices;
+
+    using VoiceCluster = std::unique_ptr<ALvoice[]>;
+    al::vector<VoiceCluster> mVoiceClusters;
+
+    using ALvoiceArray = al::FlexArray<ALvoice*>;
+    std::atomic<ALvoiceArray*> mVoices{};
+    std::atomic<size_t> mActiveVoiceCount{};
+
+    void allocVoices(size_t addcount);
+    al::span<ALvoice*> getVoicesSpan() const noexcept
+    {
+        return {mVoices.load(std::memory_order_relaxed)->data(),
+            mActiveVoiceCount.load(std::memory_order_relaxed)};
+    }
+    al::span<ALvoice*> getVoicesSpanAcquired() const noexcept
+    {
+        return {mVoices.load(std::memory_order_acquire)->data(),
+            mActiveVoiceCount.load(std::memory_order_acquire)};
+    }
+
 
     using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> mActiveAuxSlots{nullptr};

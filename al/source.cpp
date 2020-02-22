@@ -78,13 +78,14 @@ using std::chrono::nanoseconds;
 
 ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
+    auto voicelist = context->getVoicesSpan();
     ALuint idx{source->VoiceIdx};
-    if(idx < context->mVoices.size())
+    if(idx < voicelist.size())
     {
         ALuint sid{source->id};
-        ALvoice &voice = context->mVoices[idx];
-        if(voice.mSourceID.load(std::memory_order_acquire) == sid)
-            return &voice;
+        ALvoice *voice = voicelist[idx];
+        if(voice->mSourceID.load(std::memory_order_acquire) == sid)
+            return voice;
     }
     source->VoiceIdx = INVALID_VOICE_IDX;
     return nullptr;
@@ -2679,21 +2680,27 @@ START_API_FUNC
     }
 
     /* Count the number of reusable voices. */
+    auto voicelist = context->getVoicesSpan();
     size_t free_voices{0};
-    for(const ALvoice &voice : context->mVoices)
+    for(const ALvoice *voice : voicelist)
     {
-        free_voices += (voice.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
-            && voice.mSourceID.load(std::memory_order_relaxed) == 0u
-            && voice.mPendingStop.load(std::memory_order_relaxed) == false);
+        free_voices += (voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
+            && voice->mPendingStop.load(std::memory_order_relaxed) == false);
         if(free_voices == srchandles.size())
             break;
     }
     if UNLIKELY(srchandles.size() != free_voices)
     {
-        BackendLockGuard __{*device->Backend};
-        /* Increase the number of voices to handle the request. */
-        const size_t need_voices{srchandles.size() - free_voices};
-        context->mVoices.resize(context->mVoices.size() + need_voices);
+        const size_t inc_amount{srchandles.size() - free_voices};
+        auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
+        if(inc_amount > allvoices.size() - voicelist.size())
+        {
+            /* Increase the number of voices to handle the request. */
+            context->allocVoices(inc_amount > (allvoices.size() - voicelist.size()));
+        }
+        context->mActiveVoiceCount.fetch_add(inc_amount, std::memory_order_release);
+        voicelist = context->getVoicesSpan();
     }
 
     VoiceChange *tail{}, *cur{};
@@ -2765,17 +2772,18 @@ START_API_FUNC
         }
 
         /* Look for an unused voice to play this source with. */
-        auto find_voice = [](const ALvoice &v) noexcept -> bool
+        ALuint vidx{0};
+        for(ALvoice *v : voicelist)
         {
-            return v.mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
-                && v.mSourceID.load(std::memory_order_relaxed) == 0u
-                && v.mPendingStop.load(std::memory_order_relaxed) == false;
+            if(v->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+                && v->mSourceID.load(std::memory_order_relaxed) == 0u
+                && v->mPendingStop.load(std::memory_order_relaxed) == false)
+            {
+                voice = v;
+                break;
+            }
+            ++vidx;
         };
-        auto voices_end = context->mVoices.data() + context->mVoices.size();
-        voice = std::find_if(context->mVoices.data(), voices_end, find_voice);
-        assert(voice != voices_end);
-
-        auto vidx = static_cast<ALuint>(std::distance(context->mVoices.data(), voice));
 
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.
@@ -3352,13 +3360,14 @@ ALsource::~ALsource()
 void UpdateAllSourceProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
-    std::for_each(context->mVoices.begin(), context->mVoices.end(),
-        [context](ALvoice &voice) -> void
+    auto voicelist = context->getVoicesSpan();
+    std::for_each(voicelist.begin(), voicelist.end(),
+        [context](ALvoice *voice) -> void
         {
-            ALuint sid{voice.mSourceID.load(std::memory_order_acquire)};
+            ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
             ALsource *source = sid ? LookupSource(context, sid) : nullptr;
             if(source && !source->PropsClean.test_and_set(std::memory_order_acq_rel))
-                UpdateSourceProps(source, &voice, context);
+                UpdateSourceProps(source, voice, context);
         }
     );
 }

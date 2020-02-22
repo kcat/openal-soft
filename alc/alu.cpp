@@ -1663,7 +1663,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
 }
 
 void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
-    const al::span<ALvoice> voices)
+    const al::span<ALvoice*> voices)
 {
     ProcessVoiceChanges(ctx);
 
@@ -1676,8 +1676,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
         for(ALeffectslot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
-        auto calc_params = [ctx,force](ALvoice &voice) -> void
-        { CalcSourceParams(&voice, ctx, force); };
+        auto calc_params = [ctx,force](ALvoice *voice) -> void
+        { CalcSourceParams(voice, ctx, force); };
         std::for_each(voices.begin(), voices.end(), calc_params);
     }
     IncrementRef(ctx->mUpdateCount);
@@ -1688,7 +1688,7 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
     ASSUME(SamplesToDo > 0);
 
     const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
-    const al::span<ALvoice> voices{ctx->mVoices.data(), ctx->mVoices.size()};
+    const al::span<ALvoice*> voices{ctx->getVoicesSpanAcquired()};
 
     /* Process pending propery updates for objects on the context. */
     ProcessParamUpdates(ctx, auxslots, voices);
@@ -1702,10 +1702,10 @@ void ProcessContext(ALCcontext *ctx, const ALuint SamplesToDo)
         });
 
     /* Process voices that have a playing source. */
-    auto mix_voice = [SamplesToDo,ctx](ALvoice &voice) -> void
+    auto mix_voice = [SamplesToDo,ctx](ALvoice *voice) -> void
     {
-        const ALvoice::State vstate{voice.mPlayState.load(std::memory_order_acquire)};
-        if(vstate != ALvoice::Stopped) voice.mix(vstate, ctx, SamplesToDo);
+        const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
+        if(vstate != ALvoice::Stopped) voice->mix(vstate, ctx, SamplesToDo);
     };
     std::for_each(voices.begin(), voices.end(), mix_voice);
 
@@ -2097,14 +2097,15 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             }
         }
 
-        auto stop_voice = [](ALvoice &voice) -> void
+        auto voicelist = ctx->getVoicesSpanAcquired();
+        auto stop_voice = [](ALvoice *voice) -> void
         {
-            voice.mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
-            voice.mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-            voice.mSourceID.store(0u, std::memory_order_relaxed);
-            voice.mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+            voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+            voice->mSourceID.store(0u, std::memory_order_relaxed);
+            voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
         };
-        std::for_each(ctx->mVoices.begin(), ctx->mVoices.end(), stop_voice);
+        std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
     }
     IncrementRef(device->MixCount);
 }

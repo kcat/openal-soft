@@ -260,54 +260,8 @@ struct ALvoice {
 
     ALvoice() = default;
     ALvoice(const ALvoice&) = delete;
-    ALvoice(ALvoice&& rhs) noexcept { *this = std::move(rhs); }
     ~ALvoice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
     ALvoice& operator=(const ALvoice&) = delete;
-    ALvoice& operator=(ALvoice&& rhs) noexcept
-    {
-        ALvoiceProps *old_update{mUpdate.load(std::memory_order_relaxed)};
-        mUpdate.store(rhs.mUpdate.exchange(old_update, std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mProps = rhs.mProps;
-
-        mSourceID.store(rhs.mSourceID.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        mPlayState.store(rhs.mPlayState.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-        mPendingStop.store(rhs.mPendingStop.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mPosition.store(rhs.mPosition.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        mPositionFrac.store(rhs.mPositionFrac.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mCurrentBuffer.store(rhs.mCurrentBuffer.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-        mLoopBuffer.store(rhs.mLoopBuffer.load(std::memory_order_relaxed),
-            std::memory_order_relaxed);
-
-        mFmtChannels = rhs.mFmtChannels;
-        mFrequency = rhs.mFrequency;
-        mNumChannels = rhs.mNumChannels;
-        mSampleSize = rhs.mSampleSize;
-        mAmbiLayout = rhs.mAmbiLayout;
-        mAmbiScaling = rhs.mAmbiScaling;
-        mAmbiOrder = rhs.mAmbiOrder;
-
-        mStep = rhs.mStep;
-        mResampler = rhs.mResampler;
-
-        mResampleState = rhs.mResampleState;
-
-        mFlags = rhs.mFlags;
-        mNumCallbackSamples = rhs.mNumCallbackSamples;
-
-        mDirect = rhs.mDirect;
-        mSend = rhs.mSend;
-        mChans = rhs.mChans;
-
-        return *this;
-    }
 
     void mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo);
 };

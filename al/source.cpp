@@ -2697,7 +2697,7 @@ START_API_FUNC
         if(inc_amount > allvoices.size() - voicelist.size())
         {
             /* Increase the number of voices to handle the request. */
-            context->allocVoices(inc_amount > (allvoices.size() - voicelist.size()));
+            context->allocVoices(inc_amount - (allvoices.size() - voicelist.size()));
         }
         context->mActiveVoiceCount.fetch_add(inc_amount, std::memory_order_release);
         voicelist = context->getVoicesSpan();

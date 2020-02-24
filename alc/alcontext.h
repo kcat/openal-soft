@@ -57,6 +57,7 @@ struct ALcontextProps {
 
 
 struct VoiceChange {
+    ALvoice *mOldVoice{nullptr};
     ALvoice *mVoice{nullptr};
     ALuint mSourceID{0};
     ALenum mState{0};

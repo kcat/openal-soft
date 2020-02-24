@@ -2744,6 +2744,7 @@ START_API_FUNC
         case AL_PAUSED:
             assert(voice != nullptr);
             /* A source that's paused simply resumes. */
+            cur->mOldVoice = nullptr;
             cur->mVoice = voice;
             cur->mSourceID = source->id;
             cur->mState = AL_PLAYING;
@@ -2757,17 +2758,13 @@ START_API_FUNC
              * fades back to the beginning.
              */
             voice->mPendingStop.store(true, std::memory_order_relaxed);
-            cur->mVoice = voice;
-            cur->mSourceID = source->id;
-            cur->mState = AL_STOPPED;
+            cur->mOldVoice = voice;
             voice = nullptr;
-
-            cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
-            cur = cur->mNext.load(std::memory_order_relaxed);
             break;
 
         default:
             assert(voice == nullptr);
+            cur->mOldVoice = nullptr;
             break;
         }
 

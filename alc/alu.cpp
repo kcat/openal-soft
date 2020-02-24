@@ -1628,35 +1628,56 @@ void ProcessVoiceChanges(ALCcontext *ctx)
     do {
         cur = next;
 
-        bool success{false};
+        bool sendevt{false};
         if(cur->mState == AL_INITIAL || cur->mState == AL_STOPPED)
         {
             if(ALvoice *voice{cur->mVoice})
             {
                 voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-                voice->mSourceID.exchange(0u, std::memory_order_relaxed);
+                voice->mSourceID.store(0u, std::memory_order_relaxed);
                 ALvoice::State oldvstate{ALvoice::Playing};
-                success = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
                     std::memory_order_relaxed, std::memory_order_acquire);
                 voice->mPendingStop.store(false, std::memory_order_release);
             }
-            success |= (cur->mState == AL_INITIAL);
+            /* AL_INITIAL state change events are always sent, even if the
+             * voice is already stopped or even if there is no voice.
+             */
+            sendevt |= (cur->mState == AL_INITIAL);
         }
         else if(cur->mState == AL_PAUSED)
         {
             ALvoice *voice{cur->mVoice};
             ALvoice::State oldvstate{ALvoice::Playing};
-            success = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+            sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
                 std::memory_order_release, std::memory_order_acquire);
         }
         else if(cur->mState == AL_PLAYING)
         {
+            /* NOTE: When playing a voice, sending a source state change event
+             * depends if there's an old voice to stop and if that stop is
+             * successful. If there is no old voice, a playing event is always
+             * sent. If there is an old voice, an event is sent only if the
+             * voice is already stopped.
+             */
+            if(ALvoice *oldvoice{cur->mOldVoice})
+            {
+                oldvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+                oldvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+                oldvoice->mSourceID.store(0u, std::memory_order_relaxed);
+                ALvoice::State oldvstate{ALvoice::Playing};
+                sendevt = !oldvoice->mPlayState.compare_exchange_strong(oldvstate,
+                    ALvoice::Stopping, std::memory_order_relaxed, std::memory_order_acquire);
+                oldvoice->mPendingStop.store(false, std::memory_order_release);
+            }
+            else
+                sendevt = true;
+
             ALvoice *voice{cur->mVoice};
             voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
-            success = true;
         }
-        if(success && (enabledevt&EventType_SourceStateChange) && cur->mSourceID != 0)
+        if(sendevt && (enabledevt&EventType_SourceStateChange))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
     } while((next=cur->mNext.load(std::memory_order_acquire)));
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);

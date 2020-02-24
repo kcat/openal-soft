@@ -510,9 +510,18 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
         oldhead = next;
     oldhead->mNext.store(tail, std::memory_order_release);
 
+    const bool connected{device->Connected.load(std::memory_order_acquire)};
     ALuint refcount;
     while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
         std::this_thread::yield();
+    if UNLIKELY(!connected)
+    {
+        /* If the device is disconnected, just ignore all pending changes. */
+        VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
+        while(VoiceChange *next{cur->mNext.load(std::memory_order_acquire)})
+            cur = next;
+        ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
+    }
 }
 
 

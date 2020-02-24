@@ -4362,7 +4362,31 @@ START_API_FUNC
     if(dev->Flags.get<DeviceRunning>())
         dev->Backend->stop();
     dev->Flags.unset<DeviceRunning>();
-    device->Connected.store(true);
+    if(!dev->Connected.load(std::memory_order_relaxed))
+    {
+        /* Make sure disconnection is finished before continuing on. */
+        ALuint refcount;
+        while(((refcount=dev->MixCount.load(std::memory_order_acquire))&1))
+            std::this_thread::yield();
+
+        for(ALCcontext *ctx : *dev->mContexts.load(std::memory_order_acquire))
+        {
+            /* Clear any pending voice changes and reallocate voices to get a
+             * clean restart.
+             */
+            std::lock_guard<std::mutex> __{ctx->mSourceLock};
+            auto *vchg = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
+            while(auto *next = vchg->mNext.load(std::memory_order_acquire))
+                vchg = next;
+            ctx->mCurrentVoiceChange.store(vchg, std::memory_order_release);
+
+            ctx->mVoiceClusters.clear();
+            ctx->allocVoices(std::max<size_t>(256,
+                ctx->mActiveVoiceCount.load(std::memory_order_relaxed)));
+        }
+
+        dev->Connected.store(true);
+    }
 
     ALCenum err{UpdateDeviceParams(dev.get(), attribs)};
     if LIKELY(err == ALC_NO_ERROR) return ALC_TRUE;

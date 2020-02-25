@@ -2712,6 +2712,8 @@ START_API_FUNC
         voicelist = context->getVoicesSpan();
     }
 
+    auto voiceiter = voicelist.begin();
+    ALuint vidx{0};
     VoiceChange *tail{}, *cur{};
     for(ALsource *source : srchandles)
     {
@@ -2777,10 +2779,10 @@ START_API_FUNC
             break;
         }
 
-        /* Look for an unused voice to play this source with. */
-        ALuint vidx{0};
-        for(ALvoice *v : voicelist)
+        /* Find the next unused voice to play this source with. */
+        for(;voiceiter != voicelist.end();++voiceiter,++vidx)
         {
+            ALvoice *v{*voiceiter};
             if(v->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
                 && v->mSourceID.load(std::memory_order_relaxed) == 0u
                 && v->mPendingStop.load(std::memory_order_relaxed) == false)
@@ -2788,7 +2790,6 @@ START_API_FUNC
                 voice = v;
                 break;
             }
-            ++vidx;
         };
 
         /* A source that's not playing or paused has any offset applied when it

@@ -206,7 +206,7 @@
 ## sends:
 #  Limits the number of auxiliary sends allowed per source. Setting this higher
 #  than the default has no effect.
-#sends = 16
+#sends = 6
 
 ## front-stablizer:
 #  Applies filters to "stablize" front sound imaging. A psychoacoustic method

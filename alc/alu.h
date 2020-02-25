@@ -16,7 +16,7 @@ struct ALeffectslot;
 
 
 #define MAX_PITCH  255
-#define MAX_SENDS  16
+#define MAX_SENDS  6
 
 
 using MixerFunc = void(*)(const al::span<const float> InSamples,

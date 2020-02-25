@@ -519,7 +519,11 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
         /* If the device is disconnected, just ignore all pending changes. */
         VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
         while(VoiceChange *next{cur->mNext.load(std::memory_order_acquire)})
+        {
             cur = next;
+            if(ALvoice *voice{cur->mVoice})
+                voice->mSourceID.store(0, std::memory_order_relaxed);
+        }
         ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
     }
 }
@@ -2753,9 +2757,11 @@ START_API_FUNC
         switch(GetSourceState(source, voice))
         {
         case AL_PAUSED:
-            assert(voice != nullptr);
-            /* A source that's paused simply resumes. */
+            /* A source that's paused simply resumes. If there's no voice, it
+             * was lost from a disconnect, so just start over with a new one.
+             */
             cur->mOldVoice = nullptr;
+            if(!voice) break;
             cur->mVoice = voice;
             cur->mSourceID = source->id;
             cur->mState = AL_PLAYING;
@@ -2763,12 +2769,12 @@ START_API_FUNC
             continue;
 
         case AL_PLAYING:
-            assert(voice != nullptr);
             /* A source that's already playing is restarted from the beginning.
              * Stop the current voice and start a new one so it properly cross-
              * fades back to the beginning.
              */
-            voice->mPendingStop.store(true, std::memory_order_relaxed);
+            if(voice)
+                voice->mPendingStop.store(true, std::memory_order_relaxed);
             cur->mOldVoice = voice;
             voice = nullptr;
             break;
@@ -2790,7 +2796,7 @@ START_API_FUNC
                 voice = v;
                 break;
             }
-        };
+        }
 
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.

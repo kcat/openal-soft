@@ -556,7 +556,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     return true;
 }
 
-ALsource *AllocSource(ALCcontext *context, ALuint num_sends)
+ALsource *AllocSource(ALCcontext *context)
 {
     auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
         [](const SourceSubList &entry) noexcept -> bool
@@ -565,7 +565,7 @@ ALsource *AllocSource(ALCcontext *context, ALuint num_sends)
     auto lidx = static_cast<ALuint>(std::distance(context->mSourceList.begin(), sublist));
     auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
-    ALsource *source{::new (sublist->Sources + slidx) ALsource{num_sends}};
+    ALsource *source{::new(sublist->Sources + slidx) ALsource{}};
 
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;
@@ -2100,16 +2100,15 @@ START_API_FUNC
 
     if(n == 1)
     {
-        ALsource *source{AllocSource(context.get(), device->NumAuxSends)};
+        ALsource *source{AllocSource(context.get())};
         sources[0] = source->id;
     }
     else
     {
-        const ALuint num_sends{device->NumAuxSends};
         al::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
-            ALsource *source{AllocSource(context.get(), num_sends)};
+            ALsource *source{AllocSource(context.get())};
             ids.emplace_back(source->id);
         } while(--n);
         std::copy(ids.cbegin(), ids.cend(), sources);
@@ -3283,7 +3282,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALsource::ALsource(ALuint num_sends)
+ALsource::ALsource()
 {
     InnerAngle = 360.0f;
     OuterAngle = 360.0f;
@@ -3335,7 +3334,6 @@ ALsource::ALsource(ALuint num_sends)
     Direct.HFReference = LOWPASSFREQREF;
     Direct.GainLF = 1.0f;
     Direct.LFReference = HIGHPASSFREQREF;
-    Send.resize(num_sends);
     for(auto &send : Send)
     {
         send.Slot = nullptr;
@@ -3360,14 +3358,9 @@ ALsource::~ALsource()
     }
     queue = nullptr;
 
-    std::for_each(Send.begin(), Send.end(),
-        [](ALsource::SendData &send) -> void
-        {
-            if(send.Slot)
-                DecrementRef(send.Slot->ref);
-            send.Slot = nullptr;
-        }
-    );
+    auto clear_send = [](ALsource::SendData &send) -> void
+    { if(send.Slot) DecrementRef(send.Slot->ref); };
+    std::for_each(Send.begin(), Send.end(), clear_send);
 }
 
 void UpdateAllSourceProps(ALCcontext *context)

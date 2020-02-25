@@ -88,7 +88,7 @@ struct ALsource {
         ALfloat GainLF;
         ALfloat LFReference;
     };
-    al::vector<SendData> Send;
+    std::array<SendData,MAX_SENDS> Send;
 
     /**
      * Last user-specified offset, and the offset type (bytes, samples, or
@@ -117,7 +117,7 @@ struct ALsource {
     ALuint id{0};
 
 
-    ALsource(ALuint num_sends);
+    ALsource();
     ~ALsource();
 
     ALsource(const ALsource&) = delete;

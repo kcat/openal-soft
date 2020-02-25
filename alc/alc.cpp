@@ -2269,25 +2269,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
                 usemask &= ~(1_u64 << idx);
 
-                if(old_sends != device->NumAuxSends)
+                auto clear_send = [](ALsource::SendData &send) -> void
                 {
-                    if(source->Send.size() > device->NumAuxSends)
-                    {
-                        auto clear_send = [](ALsource::SendData &send) -> void
-                        {
-                            if(send.Slot)
-                                DecrementRef(send.Slot->ref);
-                            send.Slot = nullptr;
-                        };
-                        auto send_begin = source->Send.begin() +
-                            static_cast<ptrdiff_t>(device->NumAuxSends);
-                        std::for_each(send_begin, source->Send.end(), clear_send);
-                    }
-
-                    source->Send.resize(device->NumAuxSends,
-                        {nullptr, 1.0f, 1.0f, LOWPASSFREQREF, 1.0f, HIGHPASSFREQREF});
-                    source->Send.shrink_to_fit();
-                }
+                    if(send.Slot)
+                        DecrementRef(send.Slot->ref);
+                    send.Slot = nullptr;
+                    send.Gain = 1.0f;
+                    send.GainHF = 1.0f;
+                    send.HFReference = LOWPASSFREQREF;
+                    send.GainLF = 1.0f;
+                    send.LFReference = HIGHPASSFREQREF;
+                };
+                auto send_begin = source->Send.begin()+static_cast<ptrdiff_t>(device->NumAuxSends);
+                std::for_each(send_begin, source->Send.end(), clear_send);
 
                 source->PropsClean.clear(std::memory_order_release);
             }

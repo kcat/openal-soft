@@ -107,8 +107,7 @@
 
 ## hrtf:
 #  Controls HRTF processing. These filters provide better spatialization of
-#  sounds while using headphones, but do require a bit more CPU power. The
-#  default filters will only work with 44100hz or 48000hz stereo output. While
+#  sounds while using headphones, but do require a bit more CPU power. While
 #  HRTF is used, the cf_level option is ignored. Setting this to auto (default)
 #  will allow HRTF to be used when headphones are detected or the app requests
 #  it, while setting true or false will forcefully enable or disable HRTF

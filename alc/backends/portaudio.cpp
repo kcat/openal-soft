@@ -109,7 +109,6 @@ PortPlayback::~PortPlayback()
 int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long framesPerBuffer,
     const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
 {
-    std::lock_guard<PortPlayback> _{*this};
     aluMixData(mDevice, outputBuffer, static_cast<ALuint>(framesPerBuffer),
         mDevice->channelsFromFmt());
     return 0;

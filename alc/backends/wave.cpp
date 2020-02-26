@@ -146,10 +146,7 @@ int WaveBackend::mixerProc()
         }
         while(avail-done >= mDevice->UpdateSize)
         {
-            {
-                std::lock_guard<WaveBackend> _{*this};
-                aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize, frameStep);
-            }
+            aluMixData(mDevice, mBuffer.data(), mDevice->UpdateSize, frameStep);
             done += mDevice->UpdateSize;
 
             if(!IS_LITTLE_ENDIAN)

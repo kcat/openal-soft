@@ -266,15 +266,12 @@ int JackPlayback::mixerProc()
 
     const size_t frame_step{mDevice->channelsFromFmt()};
 
-    std::unique_lock<JackPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         if(mRing->writeSpace() < mDevice->UpdateSize)
         {
-            dlock.unlock();
             mSem.wait();
-            dlock.lock();
             continue;
         }
 
@@ -285,6 +282,7 @@ int JackPlayback::mixerProc()
         ALuint len1{minu(static_cast<ALuint>(data.first.len), todo)};
         ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
 
+        std::lock_guard<std::recursive_mutex> _{mMutex};
         aluMixData(mDevice, data.first.buf, len1, frame_step);
         if(len2 > 0)
             aluMixData(mDevice, data.second.buf, len2, frame_step);
@@ -460,7 +458,7 @@ ClockLatency JackPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<JackPlayback> _{*this};
+    std::lock_guard<std::recursive_mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace()};
     ret.Latency /= mDevice->Frequency;

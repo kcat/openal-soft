@@ -710,8 +710,6 @@ struct PulsePlayback final : public BackendBase {
     bool start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
-    void lock() override { mMainloop.doLock(); }
-    void unlock() override { mMainloop.doUnlock(); }
 
     PulseMainloop mMainloop;
 
@@ -1107,8 +1105,6 @@ struct PulseCapture final : public BackendBase {
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
     ClockLatency getClockLatency() override;
-    void lock() override { mMainloop.doLock(); }
-    void unlock() override { mMainloop.doUnlock(); }
 
     PulseMainloop mMainloop;
 

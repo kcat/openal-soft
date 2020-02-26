@@ -280,7 +280,6 @@ int OSSPlayback::mixerProc()
     const size_t frame_step{mDevice->channelsFromFmt()};
     const ALuint frame_size{mDevice->frameSizeFromFmt()};
 
-    std::unique_lock<OSSPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -288,9 +287,7 @@ int OSSPlayback::mixerProc()
         pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        dlock.unlock();
         int pret{poll(&pollitem, 1, 1000)};
-        dlock.lock();
         if(pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)

@@ -86,10 +86,7 @@ int SndioPlayback::mixerProc()
         ALubyte *WritePtr{mBuffer.data()};
         size_t len{mBuffer.size()};
 
-        {
-            std::lock_guard<SndioPlayback> _{*this};
-            aluMixData(mDevice, WritePtr, static_cast<ALuint>(len/frameSize), frameStep);
-        }
+        aluMixData(mDevice, WritePtr, static_cast<ALuint>(len/frameSize), frameStep);
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             size_t wrote{sio_write(mSndHandle, WritePtr, len)};

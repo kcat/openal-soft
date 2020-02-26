@@ -60,8 +60,6 @@ struct Sdl2Backend final : public BackendBase {
     bool reset() override;
     bool start() override;
     void stop() override;
-    void lock() override;
-    void unlock() override;
 
     SDL_AudioDeviceID mDeviceID{0u};
     ALuint mFrameSize{0};
@@ -180,12 +178,6 @@ bool Sdl2Backend::start()
 
 void Sdl2Backend::stop()
 { SDL_PauseAudioDevice(mDeviceID, 1); }
-
-void Sdl2Backend::lock()
-{ SDL_LockAudioDevice(mDeviceID); }
-
-void Sdl2Backend::unlock()
-{ SDL_UnlockAudioDevice(mDeviceID); }
 
 } // namespace
 

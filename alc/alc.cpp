@@ -4233,10 +4233,7 @@ START_API_FUNC
     else if(samples < 0 || (samples > 0 && buffer == nullptr))
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
-    {
-        std::lock_guard<BackendBase> _{*dev->Backend};
         aluMixData(dev.get(), buffer, static_cast<ALuint>(samples), dev->channelsFromFmt());
-    }
 }
 END_API_FUNC
 

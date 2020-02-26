@@ -43,9 +43,6 @@ struct BackendBase {
 
     virtual ClockLatency getClockLatency();
 
-    virtual void lock() { mMutex.lock(); }
-    virtual void unlock() { mMutex.unlock(); }
-
     ALCdevice *mDevice;
 
     std::recursive_mutex mMutex;

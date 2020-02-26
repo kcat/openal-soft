@@ -230,7 +230,6 @@ int OpenSLPlayback::mixerProc()
 
     const size_t frame_step{mDevice->channelsFromFmt()};
 
-    std::unique_lock<OpenSLPlayback> dlock{*this};
     if(SL_RESULT_SUCCESS != result)
         aluHandleDisconnect(mDevice, "Failed to get playback buffer: 0x%08x", result);
 
@@ -256,13 +255,12 @@ int OpenSLPlayback::mixerProc()
 
             if(mRing->writeSpace() == 0)
             {
-                dlock.unlock();
                 mSem.wait();
-                dlock.lock();
                 continue;
             }
         }
 
+        std::unique_lock<std::recursive_mutex> dlock{mMutex};
         auto data = mRing->getWriteVector();
         aluMixData(mDevice, data.first.buf,
             static_cast<ALuint>(data.first.len*mDevice->UpdateSize), frame_step);
@@ -272,6 +270,7 @@ int OpenSLPlayback::mixerProc()
 
         size_t todo{data.first.len + data.second.len};
         mRing->writeAdvance(todo);
+        dlock.unlock();
 
         for(size_t i{0};i < todo;i++)
         {
@@ -611,7 +610,7 @@ ClockLatency OpenSLPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<OpenSLPlayback> _{*this};
+    std::lock_guard<std::recursive_mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace() * mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;

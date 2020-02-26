@@ -207,7 +207,6 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 
     const ALint frame_size = device->frameSizeFromFmt();
 
-    std::unique_lock<PlaybackWrapper> dlock{*self};
     while(!data->mKillNow.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
@@ -215,9 +214,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         pollitem.events = POLLOUT;
 
         /* Select also works like time slice to OS */
-        dlock.unlock();
         sret = poll(&pollitem, 1, 2000);
-        dlock.lock();
         if(sret == -1)
         {
             if(errno == EINTR || errno == EAGAIN)

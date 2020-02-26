@@ -182,16 +182,13 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
 
     const size_t frame_step{mDevice->channelsFromFmt()};
 
-    std::unique_lock<WinMMPlayback> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         ALsizei todo = mWritable.load(std::memory_order_acquire);
         if(todo < 1)
         {
-            dlock.unlock();
             mSem.wait();
-            dlock.lock();
             continue;
         }
 
@@ -422,16 +419,13 @@ int WinMMCapture::captureProc()
 {
     althrd_setname(RECORD_THREAD_NAME);
 
-    std::unique_lock<WinMMCapture> dlock{*this};
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
     {
         ALuint todo{mReadable.load(std::memory_order_acquire)};
         if(todo < 1)
         {
-            dlock.unlock();
             mSem.wait();
-            dlock.lock();
             continue;
         }
 

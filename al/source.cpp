@@ -684,7 +684,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
         {
             VoiceChange *vchg{GetVoiceChanger(context)};
 
-            voice->mPendingStop.store(true, std::memory_order_relaxed);
+            voice->mPendingChange.store(true, std::memory_order_relaxed);
             vchg->mVoice = voice;
             vchg->mSourceID = id;
             vchg->mState = AL_STOPPED;
@@ -2794,7 +2794,7 @@ START_API_FUNC
     {
         free_voices += (voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
             && voice->mSourceID.load(std::memory_order_relaxed) == 0u
-            && voice->mPendingStop.load(std::memory_order_relaxed) == false);
+            && voice->mPendingChange.load(std::memory_order_relaxed) == false);
         if(free_voices == srchandles.size())
             break;
     }
@@ -2869,7 +2869,7 @@ START_API_FUNC
              * fades back to the beginning.
              */
             if(voice)
-                voice->mPendingStop.store(true, std::memory_order_relaxed);
+                voice->mPendingChange.store(true, std::memory_order_relaxed);
             cur->mOldVoice = voice;
             voice = nullptr;
             break;
@@ -2886,7 +2886,7 @@ START_API_FUNC
             ALvoice *v{*voiceiter};
             if(v->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
                 && v->mSourceID.load(std::memory_order_relaxed) == 0u
-                && v->mPendingStop.load(std::memory_order_relaxed) == false)
+                && v->mPendingChange.load(std::memory_order_relaxed) == false)
             {
                 voice = v;
                 break;
@@ -3031,7 +3031,7 @@ START_API_FUNC
                 cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
                 cur = cur->mNext.load(std::memory_order_relaxed);
             }
-            voice->mPendingStop.store(true, std::memory_order_relaxed);
+            voice->mPendingChange.store(true, std::memory_order_relaxed);
             cur->mVoice = voice;
             cur->mSourceID = source->id;
             cur->mState = AL_STOPPED;
@@ -3096,7 +3096,7 @@ START_API_FUNC
                 cur = cur->mNext.load(std::memory_order_relaxed);
             }
             if(voice)
-                voice->mPendingStop.store(true, std::memory_order_relaxed);
+                voice->mPendingChange.store(true, std::memory_order_relaxed);
             cur->mVoice = voice;
             cur->mSourceID = source->id;
             cur->mState = AL_INITIAL;

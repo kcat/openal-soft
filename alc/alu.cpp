@@ -1639,7 +1639,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
                 ALvoice::State oldvstate{ALvoice::Playing};
                 sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
                     std::memory_order_relaxed, std::memory_order_acquire);
-                voice->mPendingStop.store(false, std::memory_order_release);
+                voice->mPendingChange.store(false, std::memory_order_release);
             }
             /* AL_INITIAL state change events are always sent, even if the
              * voice is already stopped or even if there is no voice.
@@ -1669,7 +1669,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
                 ALvoice::State oldvstate{ALvoice::Playing};
                 sendevt = !oldvoice->mPlayState.compare_exchange_strong(oldvstate,
                     ALvoice::Stopping, std::memory_order_relaxed, std::memory_order_acquire);
-                oldvoice->mPendingStop.store(false, std::memory_order_release);
+                oldvoice->mPendingChange.store(false, std::memory_order_release);
             }
             else
                 sendevt = true;

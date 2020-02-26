@@ -203,7 +203,7 @@ struct ALvoice {
 
     std::atomic<ALuint> mSourceID{0u};
     std::atomic<State> mPlayState{Stopped};
-    std::atomic<bool> mPendingStop{false};
+    std::atomic<bool> mPendingChange{false};
 
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT

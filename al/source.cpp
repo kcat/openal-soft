@@ -452,6 +452,108 @@ al::optional<VoicePos> GetSampleOffset(ALbufferlistitem *BufferList, ALenum Offs
 }
 
 
+void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, ALCcontext *context,
+    ALCdevice *device)
+{
+    /* A source that's not playing or paused has any offset applied when it
+     * starts playing.
+     */
+    if(source->Looping)
+        voice->mLoopBuffer.store(source->queue, std::memory_order_relaxed);
+    else
+        voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+    voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
+    voice->mPosition.store(0u, std::memory_order_relaxed);
+    voice->mPositionFrac.store(0, std::memory_order_relaxed);
+    bool start_fading{false};
+    if(const ALenum offsettype{source->OffsetType})
+    {
+        const double offset{source->Offset};
+        source->OffsetType = AL_NONE;
+        source->Offset = 0.0;
+        if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
+        {
+            start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
+            voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+            voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+            voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+        }
+    }
+
+    ALbuffer *buffer{BufferList->mBuffer};
+    voice->mFrequency = buffer->Frequency;
+    voice->mFmtChannels = buffer->mFmtChannels;
+    voice->mNumChannels = buffer->channelsFromFmt();
+    voice->mSampleSize  = buffer->bytesFromFmt();
+    voice->mAmbiLayout = static_cast<AmbiLayout>(buffer->AmbiLayout);
+    voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
+    voice->mAmbiOrder = 1;
+
+    /* Clear the stepping value so the mixer knows not to mix this until the
+     * update gets applied.
+     */
+    voice->mStep = 0;
+
+    voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
+    if(buffer->Callback) voice->mFlags |= VOICE_IS_CALLBACK;
+    else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+    voice->mNumCallbackSamples = 0;
+
+    /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
+     * higher order than the voice. No HF scaling is necessary to mix it.
+     */
+    if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
+        && device->mAmbiOrder > voice->mAmbiOrder)
+    {
+        const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
+            AmbiIndex::OrderFrom2DChannel.data() :
+            AmbiIndex::OrderFromChannel.data()};
+
+        const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
+
+        const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder, device->mAmbiOrder);
+        auto init_ambi = [device,&scales,&OrderFromChan,splitter](ALvoice::ChannelData &chandata) -> void
+        {
+            chandata.mPrevSamples.fill(0.0f);
+            chandata.mAmbiScale = scales[*(OrderFromChan++)];
+            chandata.mAmbiSplitter = splitter;
+            chandata.mDryParams = DirectParams{};
+            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+        };
+        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+            init_ambi);
+
+        voice->mFlags |= VOICE_IS_AMBISONIC;
+    }
+    else
+    {
+        /* Clear previous samples. */
+        auto clear_prevs = [device](ALvoice::ChannelData &chandata) -> void
+        {
+            chandata.mPrevSamples.fill(0.0f);
+            chandata.mDryParams = DirectParams{};
+            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+        };
+        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
+            clear_prevs);
+    }
+
+    if(device->AvgSpeakerDist > 0.0f)
+    {
+        const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+            (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
+        auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
+        { chandata.mDryParams.NFCtrlFilter.init(w1); };
+        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels, init_nfc);
+    }
+
+    voice->mSourceID.store(source->id, std::memory_order_release);
+
+    source->PropsClean.test_and_set(std::memory_order_acq_rel);
+    UpdateSourceProps(source, voice, context);
+}
+
+
 /**
  * Returns if the last known state for the source was playing or paused. Does
  * not sync with the mixer voice.
@@ -2791,103 +2893,7 @@ START_API_FUNC
             }
         }
 
-        /* A source that's not playing or paused has any offset applied when it
-         * starts playing.
-         */
-        if(source->Looping)
-            voice->mLoopBuffer.store(source->queue, std::memory_order_relaxed);
-        else
-            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-        voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
-        voice->mPosition.store(0u, std::memory_order_relaxed);
-        voice->mPositionFrac.store(0, std::memory_order_relaxed);
-        bool start_fading{false};
-        if(const ALenum offsettype{source->OffsetType})
-        {
-            const double offset{source->Offset};
-            source->OffsetType = AL_NONE;
-            source->Offset = 0.0;
-            if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
-            {
-                start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
-                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
-                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
-            }
-        }
-
-        ALbuffer *buffer{BufferList->mBuffer};
-        voice->mFrequency = buffer->Frequency;
-        voice->mFmtChannels = buffer->mFmtChannels;
-        voice->mNumChannels = buffer->channelsFromFmt();
-        voice->mSampleSize  = buffer->bytesFromFmt();
-        voice->mAmbiLayout = static_cast<AmbiLayout>(buffer->AmbiLayout);
-        voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
-        voice->mAmbiOrder = 1;
-
-        /* Clear the stepping value so the mixer knows not to mix this until
-         * the update gets applied.
-         */
-        voice->mStep = 0;
-
-        voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
-        if(buffer->Callback) voice->mFlags |= VOICE_IS_CALLBACK;
-        else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
-        voice->mNumCallbackSamples = 0;
-
-        /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
-         * higher order than the voice. No HF scaling is necessary to mix it.
-         */
-        if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
-            && device->mAmbiOrder > voice->mAmbiOrder)
-        {
-            const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
-                AmbiIndex::OrderFrom2DChannel.data() :
-                AmbiIndex::OrderFromChannel.data()};
-
-            const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
-
-            const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder,
-                device->mAmbiOrder);
-            auto init_ambi = [device,&scales,&OrderFromChan,splitter](ALvoice::ChannelData &chandata) -> void
-            {
-                chandata.mPrevSamples.fill(0.0f);
-                chandata.mAmbiScale = scales[*(OrderFromChan++)];
-                chandata.mAmbiSplitter = splitter;
-                chandata.mDryParams = DirectParams{};
-                std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
-            };
-            std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
-                init_ambi);
-
-            voice->mFlags |= VOICE_IS_AMBISONIC;
-        }
-        else
-        {
-            /* Clear previous samples. */
-            auto clear_prevs = [device](ALvoice::ChannelData &chandata) -> void
-            {
-                chandata.mPrevSamples.fill(0.0f);
-                chandata.mDryParams = DirectParams{};
-                std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
-            };
-            std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
-                clear_prevs);
-        }
-
-        if(device->AvgSpeakerDist > 0.0f)
-        {
-            const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
-                (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
-            auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
-            { chandata.mDryParams.NFCtrlFilter.init(w1); };
-            std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
-                init_nfc);
-        }
-
-        voice->mSourceID.store(source->id, std::memory_order_release);
-        source->PropsClean.test_and_set(std::memory_order_acq_rel);
-        UpdateSourceProps(source, voice, context.get());
+        InitVoice(voice, source, BufferList, context.get(), device);
 
         source->VoiceIdx = vidx;
         source->state = AL_PLAYING;

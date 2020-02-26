@@ -1062,13 +1062,8 @@ void alc_initconfig(void)
     }
     FillCPUCaps(capfilter);
 
-#ifdef _WIN32
-#define DEF_MIXER_PRIO 1
-#else
-#define DEF_MIXER_PRIO 0
-#endif
-    RTPrioLevel = ConfigValueInt(nullptr, nullptr, "rt-prio").value_or(DEF_MIXER_PRIO);
-#undef DEF_MIXER_PRIO
+    if(auto priopt = ConfigValueInt(nullptr, nullptr, "rt-prio"))
+        RTPrioLevel = *priopt;
 
     aluInit();
     aluInitMixer();
@@ -1244,7 +1239,7 @@ void ProbeCaptureDeviceList()
 } // namespace
 
 /* Mixing thread piority level */
-ALint RTPrioLevel;
+ALint RTPrioLevel{1};
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG

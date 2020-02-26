@@ -186,9 +186,9 @@
 #  (eg. PortAudio) as they already control the priority of the mixing thread.
 #  0 and negative values will disable it. Note that this may constitute a
 #  security risk since a real-time priority thread can indefinitely block
-#  normal-priority threads if it fails to wait. As such, the default is
-#  disabled.
-#rt-prio = 0
+#  normal-priority threads if it fails to wait. Disable this if it turns out to
+#  be a problem.
+#rt-prio = 1
 
 ## sources:
 #  Sets the maximum number of allocatable sources. Lower values may help for

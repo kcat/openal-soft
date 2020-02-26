@@ -554,35 +554,6 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
 }
 
 
-/**
- * Returns if the last known state for the source was playing or paused. Does
- * not sync with the mixer voice.
- */
-inline bool IsPlayingOrPaused(ALsource *source)
-{ return source->state == AL_PLAYING || source->state == AL_PAUSED; }
-
-/**
- * Returns an updated source state using the matching voice's status (or lack
- * thereof).
- */
-inline ALenum GetSourceState(ALsource *source, ALvoice *voice)
-{
-    if(!voice && source->state == AL_PLAYING)
-        source->state = AL_STOPPED;
-    return source->state;
-}
-
-/**
- * Returns if the source should specify an update, given the context's
- * deferring state and the source's last known state.
- */
-inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
-{
-    return !context->mDeferUpdates.load(std::memory_order_acquire) &&
-           IsPlayingOrPaused(source);
-}
-
-
 VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 {
     VoiceChange *vchg{ctx->mVoiceChangeTail};
@@ -622,6 +593,128 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
         }
         ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
     }
+}
+
+
+bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, ALCcontext *context,
+    ALCdevice *device)
+{
+    /* First, get a free voice to start at the new offset. */
+    auto voicelist = context->getVoicesSpan();
+    bool free_voices{false};
+    for(const ALvoice *voice : voicelist)
+    {
+        free_voices |= (voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
+            && voice->mPendingChange.load(std::memory_order_relaxed) == false);
+        if(free_voices) break;
+    }
+    if UNLIKELY(!free_voices)
+    {
+        auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
+        if(allvoices.size() == voicelist.size())
+            context->allocVoices(1);
+        context->mActiveVoiceCount.fetch_add(1, std::memory_order_release);
+        voicelist = context->getVoicesSpan();
+    }
+
+    ALvoice *newvoice{};
+    ALuint vidx{0};
+    for(ALvoice *voice : voicelist)
+    {
+        if(voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
+            && voice->mPendingChange.load(std::memory_order_relaxed) == false)
+        {
+            newvoice = voice;
+            break;
+        }
+        ++vidx;
+    }
+
+    /* Initialize the new voice and set its starting offset.
+     * TODO: It might be better to have the VoiceChange processing copy the old
+     * voice's mixing parameters (and pending update) insead of initializing it
+     * all here. This would just need to set the minimum properties to link the
+     * voice to the source and its position-dependent properties (including the
+     * fading flag).
+     */
+    InitVoice(newvoice, source, source->queue, context, device);
+    if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue)
+        newvoice->mFlags |= VOICE_IS_FADING;
+    newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
+    newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
+    newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
+    source->VoiceIdx = vidx;
+
+    /* Set the old and new voices as having a pending change, and send them off
+     * with a new offset voice change.
+     */
+    oldvoice->mPendingChange.store(true, std::memory_order_relaxed);
+    newvoice->mPendingChange.store(true, std::memory_order_relaxed);
+
+    VoiceChange *vchg{GetVoiceChanger(context)};
+    vchg->mOldVoice = oldvoice;
+    vchg->mVoice = newvoice;
+    vchg->mSourceID = source->id;
+    vchg->mState = AL_SAMPLE_OFFSET;
+    SendVoiceChanges(context, vchg);
+
+    /* If the old voice still has a sourceID, it's still active and the change-
+     * over will work on the next update.
+     */
+    if LIKELY(oldvoice->mSourceID.load(std::memory_order_acquire) != 0u)
+        return true;
+
+    /* Otherwise, if the new voice's pending change cleared, the change-over
+     * already happened.
+     */
+    if(!newvoice->mPendingChange.load(std::memory_order_acquire))
+        return true;
+
+    /* Otherwise, wait for any current mix to finish and check one last time. */
+    ALuint refcount;
+    while((refcount=device->MixCount.load(std::memory_order_acquire))&1)
+        std::this_thread::yield();
+    if(!newvoice->mPendingChange.exchange(false, std::memory_order_acq_rel))
+        return true;
+    /* The change-over failed because the old voice stopped before the new
+     * voice could start at the new offset. Let go of the new voice and have
+     * the caller store the source offset since it's stopped.
+     */
+    newvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+    newvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+    newvoice->mSourceID.store(0u, std::memory_order_relaxed);
+    return false;
+}
+
+
+/**
+ * Returns if the last known state for the source was playing or paused. Does
+ * not sync with the mixer voice.
+ */
+inline bool IsPlayingOrPaused(ALsource *source)
+{ return source->state == AL_PLAYING || source->state == AL_PAUSED; }
+
+/**
+ * Returns an updated source state using the matching voice's status (or lack
+ * thereof).
+ */
+inline ALenum GetSourceState(ALsource *source, ALvoice *voice)
+{
+    if(!voice && source->state == AL_PLAYING)
+        source->state = AL_STOPPED;
+    return source->state;
+}
+
+/**
+ * Returns if the source should specify an update, given the context's
+ * deferring state and the source's last known state.
+ */
+inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
+{
+    return !context->mDeferUpdates.load(std::memory_order_acquire) &&
+           IsPlayingOrPaused(source);
 }
 
 
@@ -1091,26 +1184,16 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0.0f);
 
-        if(IsPlayingOrPaused(Source))
+        if(ALvoice *voice{GetSourceVoice(Source, Context)})
         {
-            ALCdevice *device{Context->mDevice.get()};
-            std::lock_guard<BackendBase> _{*device->Backend};
-            /* Double-check that the source is still playing while we have the
-             * lock.
-             */
-            if(ALvoice *voice{GetSourceVoice(Source, Context)})
-            {
-                if((voice->mFlags&VOICE_IS_CALLBACK))
-                    SETERR_RETURN(Context, AL_INVALID_VALUE, false,
-                        "Source offset for callback is invalid");
-                auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
-                if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
+            if((voice->mFlags&VOICE_IS_CALLBACK))
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                    "Source offset for callback is invalid");
+            auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
+            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
-                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
-                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_release);
+            if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mDevice.get()))
                 return true;
-            }
         }
         Source->OffsetType = prop;
         Source->Offset = values[0];
@@ -1319,22 +1402,16 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0);
 
-        if(IsPlayingOrPaused(Source))
+        if(ALvoice *voice{GetSourceVoice(Source, Context)})
         {
-            std::lock_guard<BackendBase> _{*device->Backend};
-            if(ALvoice *voice{GetSourceVoice(Source, Context)})
-            {
-                if((voice->mFlags&VOICE_IS_CALLBACK))
-                    SETERR_RETURN(Context, AL_INVALID_VALUE, false,
-                        "Source offset for callback is invalid");
-                auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
-                if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
+            if((voice->mFlags&VOICE_IS_CALLBACK))
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                    "Source offset for callback is invalid");
+            auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
+            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
 
-                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
-                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_release);
+            if(SetVoiceOffset(voice, *vpos, Source, Context, device))
                 return true;
-            }
         }
         Source->OffsetType = prop;
         Source->Offset = values[0];

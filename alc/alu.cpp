@@ -1677,6 +1677,32 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             ALvoice *voice{cur->mVoice};
             voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
         }
+        else if(cur->mState == AL_SAMPLE_OFFSET)
+        {
+            /* Changing a voice offset never sends a source change event. */
+            ALvoice *oldvoice{cur->mOldVoice};
+            oldvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+            oldvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+            /* If there's no sourceID, the old voice finished so don't start
+             * the new one at its new offset.
+             */
+            if(oldvoice->mSourceID.exchange(0u, std::memory_order_relaxed) != 0u)
+            {
+                /* Otherwise, set the voice to stopping if it's not already (it
+                 * would already be if paused), and play the new voice as
+                 * appropriate.
+                 */
+                ALvoice::State oldvstate{ALvoice::Playing};
+                oldvoice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                    std::memory_order_relaxed, std::memory_order_acquire);
+
+                ALvoice *voice{cur->mVoice};
+                if(oldvstate == ALvoice::Playing)
+                    voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
+                voice->mPendingChange.store(false, std::memory_order_release);
+            }
+            oldvoice->mPendingChange.store(false, std::memory_order_release);
+        }
         if(sendevt && (enabledevt&EventType_SourceStateChange))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
     } while((next=cur->mNext.load(std::memory_order_acquire)));

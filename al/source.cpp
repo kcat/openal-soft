@@ -376,36 +376,32 @@ struct VoicePos {
  * GetSampleOffset
  *
  * Retrieves the voice position, fixed-point fraction, and bufferlist item
- * using the source's stored offset and offset type. If the source has no
- * stored offset, or the offset is out of range, returns an empty optional.
+ * using the givem offset type and offset. If the offset is out of range,
+ * returns an empty optional.
  */
-al::optional<VoicePos> GetSampleOffset(ALsource *Source)
+al::optional<VoicePos> GetSampleOffset(ALbufferlistitem *BufferList, ALenum OffsetType,
+    double Offset)
 {
     al::optional<VoicePos> ret;
 
     /* Find the first valid Buffer in the Queue */
     const ALbuffer *BufferFmt{nullptr};
-    ALbufferlistitem *BufferList{Source->queue};
     while(BufferList)
     {
         if((BufferFmt=BufferList->mBuffer) != nullptr) break;
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
     if(!BufferList)
-    {
-        Source->OffsetType = AL_NONE;
-        Source->Offset = 0.0;
         return ret;
-    }
 
     /* Get sample frame offset */
     ALuint offset{0u}, frac{0u};
     ALdouble dbloff, dblfrac;
-    switch(Source->OffsetType)
+    switch(OffsetType)
     {
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
-        offset = static_cast<ALuint>(Source->Offset);
+        offset = static_cast<ALuint>(Offset);
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
@@ -424,19 +420,17 @@ al::optional<VoicePos> GetSampleOffset(ALsource *Source)
         break;
 
     case AL_SAMPLE_OFFSET:
-        dblfrac = std::modf(Source->Offset, &dbloff);
+        dblfrac = std::modf(Offset, &dbloff);
         offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
         frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
         break;
 
     case AL_SEC_OFFSET:
-        dblfrac = std::modf(Source->Offset*BufferFmt->Frequency, &dbloff);
+        dblfrac = std::modf(Offset*BufferFmt->Frequency, &dbloff);
         offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
         frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
         break;
     }
-    Source->OffsetType = AL_NONE;
-    Source->Offset = 0.0;
 
     /* Find the bufferlist item this offset belongs to. */
     ALuint totalBufferLen{0u};
@@ -995,9 +989,6 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0.0f);
 
-        Source->OffsetType = prop;
-        Source->Offset = values[0];
-
         if(IsPlayingOrPaused(Source))
         {
             ALCdevice *device{Context->mDevice.get()};
@@ -1007,17 +998,20 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
              */
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
-                auto vpos = GetSampleOffset(Source);
                 if((voice->mFlags&VOICE_IS_CALLBACK))
                     SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                         "Source offset for callback is invalid");
+                auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
                 if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
                 voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_release);
+                return true;
             }
         }
+        Source->OffsetType = prop;
+        Source->Offset = values[0];
         return true;
 
     case AL_SOURCE_RADIUS:
@@ -1223,25 +1217,25 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0);
 
-        Source->OffsetType = prop;
-        Source->Offset = values[0];
-
         if(IsPlayingOrPaused(Source))
         {
             std::lock_guard<BackendBase> _{*device->Backend};
             if(ALvoice *voice{GetSourceVoice(Source, Context)})
             {
-                auto vpos = GetSampleOffset(Source);
                 if((voice->mFlags&VOICE_IS_CALLBACK))
                     SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                         "Source offset for callback is invalid");
+                auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
                 if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
 
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
                 voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_release);
+                return true;
             }
         }
+        Source->OffsetType = prop;
+        Source->Offset = values[0];
         return true;
 
     case AL_DIRECT_FILTER:
@@ -2808,12 +2802,18 @@ START_API_FUNC
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         bool start_fading{false};
-        if(auto vpos = GetSampleOffset(source))
+        if(const ALenum offsettype{source->OffsetType})
         {
-            start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
-            voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-            voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
-            voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+            const double offset{source->Offset};
+            source->OffsetType = AL_NONE;
+            source->Offset = 0.0;
+            if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
+            {
+                start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
+                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+            }
         }
 
         ALbuffer *buffer{BufferList->mBuffer};

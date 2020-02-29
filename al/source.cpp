@@ -601,23 +601,6 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
 {
     /* First, get a free voice to start at the new offset. */
     auto voicelist = context->getVoicesSpan();
-    bool free_voices{false};
-    for(const ALvoice *voice : voicelist)
-    {
-        free_voices |= (voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
-            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
-            && voice->mPendingChange.load(std::memory_order_relaxed) == false);
-        if(free_voices) break;
-    }
-    if UNLIKELY(!free_voices)
-    {
-        auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
-        if(allvoices.size() == voicelist.size())
-            context->allocVoices(1);
-        context->mActiveVoiceCount.fetch_add(1, std::memory_order_release);
-        voicelist = context->getVoicesSpan();
-    }
-
     ALvoice *newvoice{};
     ALuint vidx{0};
     for(ALvoice *voice : voicelist)
@@ -630,6 +613,27 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
             break;
         }
         ++vidx;
+    }
+    if UNLIKELY(!newvoice)
+    {
+        auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
+        if(allvoices.size() == voicelist.size())
+            context->allocVoices(1);
+        context->mActiveVoiceCount.fetch_add(1, std::memory_order_release);
+        voicelist = context->getVoicesSpan();
+
+        vidx = 0;
+        for(ALvoice *voice : voicelist)
+        {
+            if(voice->mPlayState.load(std::memory_order_acquire) == ALvoice::Stopped
+                && voice->mSourceID.load(std::memory_order_relaxed) == 0u
+                && voice->mPendingChange.load(std::memory_order_relaxed) == false)
+            {
+                newvoice = voice;
+                break;
+            }
+            ++vidx;
+        }
     }
 
     /* Initialize the new voice and set its starting offset.

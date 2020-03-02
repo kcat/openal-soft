@@ -2447,8 +2447,6 @@ ALCdevice::~ALCdevice()
     if(count > 0)
         WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
 
-    if(mHrtf)
-        mHrtf->DecRef();
     mHrtf = nullptr;
 
     auto *oldarray = mContexts.exchange(nullptr, std::memory_order_relaxed);

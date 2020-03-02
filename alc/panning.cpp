@@ -659,10 +659,9 @@ void InitHrtfPanning(ALCdevice *device)
     );
     AllocChannels(device, static_cast<ALuint>(count), device->channelsFromFmt());
 
-    BuildBFormatHrtf(device->mHrtf, device->mHrtfState.get(), AmbiPoints, AmbiMatrix,
-        AmbiOrderHFGain);
+    HrtfStore *Hrtf{device->mHrtf.get()};
+    BuildBFormatHrtf(Hrtf, device->mHrtfState.get(), AmbiPoints, AmbiMatrix, AmbiOrderHFGain);
 
-    HrtfStore *Hrtf{device->mHrtf};
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, true);
 }
 
@@ -686,7 +685,7 @@ void InitUhjPanning(ALCdevice *device)
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
-    HrtfStore *old_hrtf{device->mHrtf};
+    HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
 
     device->mHrtfState = nullptr;
     device->mHrtf = nullptr;
@@ -695,8 +694,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     if(device->FmtChans != DevFmtStereo)
     {
-        if(old_hrtf)
-            old_hrtf->DecRef();
         old_hrtf = nullptr;
         if(hrtf_appreq == Hrtf_Enable)
             device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
@@ -792,9 +789,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     {
         const char *devname{device->DeviceName.c_str()};
         const std::string &hrtfname = device->HrtfList[static_cast<ALuint>(hrtf_id)];
-        if(HrtfStore *hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
+        if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
         {
-            device->mHrtf = hrtf;
+            device->mHrtf = std::move(hrtf);
             device->HrtfName = hrtfname;
         }
     }
@@ -804,9 +801,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         const char *devname{device->DeviceName.c_str()};
         auto find_hrtf = [device,devname](const std::string &hrtfname) -> bool
         {
-            HrtfStore *hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)};
+            HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)};
             if(!hrtf) return false;
-            device->mHrtf = hrtf;
+            device->mHrtf = std::move(hrtf);
             device->HrtfName = hrtfname;
             return true;
         };
@@ -815,8 +812,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
 
     if(device->mHrtf)
     {
-        if(old_hrtf)
-            old_hrtf->DecRef();
         old_hrtf = nullptr;
 
         InitHrtfPanning(device);
@@ -826,8 +821,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
 no_hrtf:
-    if(old_hrtf)
-        old_hrtf->DecRef();
     old_hrtf = nullptr;
 
     device->mRenderMode = StereoPair;

@@ -12,6 +12,7 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
+#include "intrusive_ptr.h"
 #include "vector.h"
 
 
@@ -54,11 +55,12 @@ struct HrtfStore {
     const HrirArray *coeffs;
     const ubyte2 *delays;
 
-    void IncRef();
-    void DecRef();
+    void add_ref();
+    void release();
 
     DEF_PLACE_NEWDEL()
 };
+using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 
 
 struct HrtfFilter {
@@ -88,7 +90,7 @@ struct AngularPoint {
 
 
 al::vector<std::string> EnumerateHrtf(const char *devname);
-HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate);
+HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
     float spread, HrirArray &coeffs, const al::span<ALuint,2> delays);

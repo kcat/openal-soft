@@ -1007,7 +1007,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
-            GetHrtfCoeffs(Device->mHrtf, ev, az, Distance, Spread,
+            GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance, Spread,
                 voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
                 voice->mChans[0].mDryParams.Hrtf.Target.Delay);
             voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base * downmix_gain;
@@ -1054,7 +1054,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
                  */
-                GetHrtfCoeffs(Device->mHrtf, chans[c].elevation, chans[c].angle,
+                GetHrtfCoeffs(Device->mHrtf.get(), chans[c].elevation, chans[c].angle,
                     std::numeric_limits<float>::infinity(), Spread,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
                     voice->mChans[c].mDryParams.Hrtf.Target.Delay);

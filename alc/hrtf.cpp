@@ -1355,7 +1355,7 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
     return list;
 }
 
-HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate)
+HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
@@ -1374,8 +1374,8 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
         HrtfStore *hrtf{handle->mEntry.get()};
         if(hrtf && hrtf->sampleRate == devrate)
         {
-            hrtf->IncRef();
-            return hrtf;
+            hrtf->add_ref();
+            return HrtfStorePtr{hrtf};
         }
         ++handle;
     }
@@ -1519,20 +1519,20 @@ HrtfStore *GetLoadedHrtf(const std::string &name, const char *devname, const ALu
         hrtf->sampleRate, hrtf->irSize);
     handle = LoadedHrtfs.emplace(handle, LoadedHrtf{fname, std::move(hrtf)});
 
-    return handle->mEntry.get();
+    return HrtfStorePtr{handle->mEntry.get()};
 }
 
 
-void HrtfStore::IncRef()
+void HrtfStore::add_ref()
 {
     auto ref = IncrementRef(mRef);
-    TRACE("HrtfEntry %p increasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
+    TRACE("HrtfStore %p increasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
 }
 
-void HrtfStore::DecRef()
+void HrtfStore::release()
 {
     auto ref = DecrementRef(mRef);
-    TRACE("HrtfEntry %p decreasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
+    TRACE("HrtfStore %p decreasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
     if(ref == 0)
     {
         std::lock_guard<std::mutex> _{LoadedHrtfLock};

@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "AL/al.h"
@@ -355,6 +356,14 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALuint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
     ALuint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
     ALuint frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
+
+    ALuint waitForMix() const noexcept
+    {
+        ALuint refcount;
+        while((refcount=MixCount.load(std::memory_order_acquire))&1)
+            std::this_thread::yield();
+        return refcount;
+    }
 
     void ProcessHrtf(const size_t SamplesToDo);
     void ProcessAmbiDec(const size_t SamplesToDo);

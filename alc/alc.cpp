@@ -1679,9 +1679,7 @@ void ALCcontext::allocVoices(size_t addcount)
 
     if(auto *oldvoices = mVoices.exchange(newarray.release(), std::memory_order_acq_rel))
     {
-        ALuint refcount;
-        while((refcount=mDevice->MixCount.load(std::memory_order_acquire))&1)
-            std::this_thread::yield();
+        mDevice->waitForMix();
         delete oldvoices;
     }
 }
@@ -2675,8 +2673,7 @@ bool ALCcontext::deinit()
         mDevice->mContexts.store(newarray);
         if(oldarray != &EmptyContextArray)
         {
-            while((mDevice->MixCount.load(std::memory_order_acquire)&1))
-                std::this_thread::yield();
+            mDevice->waitForMix();
             delete oldarray;
         }
 
@@ -3321,8 +3318,7 @@ START_API_FUNC
             ALuint samplecount;
             ALuint refcount;
             do {
-                while(((refcount=ReadRef(dev->MixCount))&1) != 0)
-                    std::this_thread::yield();
+                refcount = dev->waitForMix();
                 basecount = dev->ClockBase;
                 samplecount = dev->SamplesDone;
             } while(refcount != ReadRef(dev->MixCount));
@@ -3516,8 +3512,7 @@ START_API_FUNC
         dev->mContexts.store(newarray.release());
         if(oldarray != &EmptyContextArray)
         {
-            while((dev->MixCount.load(std::memory_order_acquire)&1))
-                std::this_thread::yield();
+            dev->waitForMix();
             delete oldarray;
         }
     }
@@ -4349,9 +4344,7 @@ START_API_FUNC
     if(!dev->Connected.load(std::memory_order_relaxed))
     {
         /* Make sure disconnection is finished before continuing on. */
-        ALuint refcount;
-        while(((refcount=dev->MixCount.load(std::memory_order_acquire))&1))
-            std::this_thread::yield();
+        dev->waitForMix();
 
         for(ALCcontext *ctx : *dev->mContexts.load(std::memory_order_acquire))
         {

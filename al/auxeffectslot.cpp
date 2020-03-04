@@ -117,9 +117,8 @@ void AddActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *conte
     std::uninitialized_fill_n(newarray->end(), newcount, nullptr);
 
     curarray = context->mActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
-    ALCdevice *device{context->mDevice.get()};
-    while((device->MixCount.load(std::memory_order_acquire)&1))
-        std::this_thread::yield();
+    context->mDevice->waitForMix();
+
     al::destroy_n(curarray->end(), curarray->size());
     delete curarray;
 }
@@ -155,9 +154,8 @@ void RemoveActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *co
     std::uninitialized_fill_n(newarray->end(), newsize, nullptr);
 
     curarray = context->mActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
-    ALCdevice *device{context->mDevice.get()};
-    while((device->MixCount.load(std::memory_order_acquire)&1))
-        std::this_thread::yield();
+    context->mDevice->waitForMix();
+
     al::destroy_n(curarray->end(), curarray->size());
     delete curarray;
 }

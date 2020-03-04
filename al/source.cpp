@@ -188,10 +188,9 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
     do {
         Current = nullptr;
         readPos = 0;
-        while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            std::this_thread::yield();
-        *clocktime = GetDeviceClockTime(device);
+        refcount = device->waitForMix();
 
+        *clocktime = GetDeviceClockTime(device);
         voice = GetSourceVoice(Source, context);
         if(voice)
         {
@@ -234,10 +233,9 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *
     do {
         Current = nullptr;
         readPos = 0;
-        while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            std::this_thread::yield();
-        *clocktime = GetDeviceClockTime(device);
+        refcount = device->waitForMix();
 
+        *clocktime = GetDeviceClockTime(device);
         voice = GetSourceVoice(Source, context);
         if(voice)
         {
@@ -292,8 +290,8 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     do {
         Current = nullptr;
         readPos = readPosFrac = 0;
-        while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            std::this_thread::yield();
+        refcount = device->waitForMix();
+
         voice = GetSourceVoice(Source, context);
         if(voice)
         {
@@ -578,9 +576,7 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
     oldhead->mNext.store(tail, std::memory_order_release);
 
     const bool connected{device->Connected.load(std::memory_order_acquire)};
-    ALuint refcount;
-    while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-        std::this_thread::yield();
+    device->waitForMix();
     if UNLIKELY(!connected)
     {
         /* If the device is disconnected, just ignore all pending changes. */
@@ -677,9 +673,7 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
         return true;
 
     /* Otherwise, wait for any current mix to finish and check one last time. */
-    ALuint refcount;
-    while((refcount=device->MixCount.load(std::memory_order_acquire))&1)
-        std::this_thread::yield();
+    device->waitForMix();
     if(!newvoice->mPendingChange.exchange(false, std::memory_order_acq_rel))
         return true;
     /* The change-over failed because the old voice stopped before the new
@@ -1341,8 +1335,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                  * to ensure it isn't currently looping back or reaching the
                  * end.
                  */
-                while((device->MixCount.load(std::memory_order_acquire)&1))
-                    std::this_thread::yield();
+                device->waitForMix();
             }
         }
         return true;

@@ -1689,7 +1689,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             if(oldvoice->mSourceID.exchange(0u, std::memory_order_relaxed) != 0u)
             {
                 /* Otherwise, set the voice to stopping if it's not already (it
-                 * would already be if paused), and play the new voice as
+                 * might already be, if paused), and play the new voice as
                  * appropriate.
                  */
                 ALvoice::State oldvstate{ALvoice::Playing};
@@ -1697,9 +1697,9 @@ void ProcessVoiceChanges(ALCcontext *ctx)
                     std::memory_order_relaxed, std::memory_order_acquire);
 
                 ALvoice *voice{cur->mVoice};
-                if(oldvstate == ALvoice::Playing)
-                    voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
-                voice->mPendingChange.store(false, std::memory_order_release);
+                voice->mPlayState.store(
+                    (oldvstate == ALvoice::Playing) ? ALvoice::Playing : ALvoice::Stopped,
+                    std::memory_order_release);
             }
             oldvoice->mPendingChange.store(false, std::memory_order_release);
         }
@@ -1753,7 +1753,8 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
         for(ALvoice *voice : voices)
         {
             const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
-            if(vstate != ALvoice::Stopped) voice->mix(vstate, ctx, SamplesToDo);
+            if(vstate != ALvoice::Stopped && vstate != ALvoice::Pending)
+                voice->mix(vstate, ctx, SamplesToDo);
         }
 
         /* Process effects. */

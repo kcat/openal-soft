@@ -192,9 +192,10 @@ struct ALvoiceProps : public ALvoicePropsBase {
 
 struct ALvoice {
     enum State {
-        Stopped = 0,
-        Playing = 1,
-        Stopping = 2
+        Stopped,
+        Playing,
+        Stopping,
+        Pending
     };
 
     std::atomic<ALvoiceProps*> mUpdate{nullptr};

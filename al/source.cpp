@@ -624,6 +624,7 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
      * voice to the source and its position-dependent properties (including the
      * fading flag).
      */
+    newvoice->mPlayState.store(ALvoice::Pending, std::memory_order_relaxed);
     InitVoice(newvoice, source, source->queue, context, device);
     if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue)
         newvoice->mFlags |= VOICE_IS_FADING;
@@ -632,11 +633,10 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
     source->VoiceIdx = vidx;
 
-    /* Set the old and new voices as having a pending change, and send them off
-     * with a new offset voice change.
+    /* Set the old voice as having a pending change, and send it off with the
+     * new one with a new offset voice change.
      */
     oldvoice->mPendingChange.store(true, std::memory_order_relaxed);
-    newvoice->mPendingChange.store(true, std::memory_order_relaxed);
 
     VoiceChange *vchg{GetVoiceChanger(context)};
     vchg->mOldVoice = oldvoice;
@@ -651,15 +651,15 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
     if LIKELY(oldvoice->mSourceID.load(std::memory_order_acquire) != 0u)
         return true;
 
-    /* Otherwise, if the new voice's pending change cleared, the change-over
+    /* Otherwise, if the new voice's state is not pending, the change-over
      * already happened.
      */
-    if(!newvoice->mPendingChange.load(std::memory_order_acquire))
+    if(newvoice->mPlayState.load(std::memory_order_acquire) != ALvoice::Pending)
         return true;
 
     /* Otherwise, wait for any current mix to finish and check one last time. */
     device->waitForMix();
-    if(!newvoice->mPendingChange.exchange(false, std::memory_order_acq_rel))
+    if(newvoice->mPlayState.load(std::memory_order_acquire) != ALvoice::Pending)
         return true;
     /* The change-over failed because the old voice stopped before the new
      * voice could start at the new offset. Let go of the new voice and have
@@ -668,6 +668,7 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
     newvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
     newvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
     newvoice->mSourceID.store(0u, std::memory_order_relaxed);
+    newvoice->mPlayState.store(ALvoice::Stopped, std::memory_order_relaxed);
     return false;
 }
 

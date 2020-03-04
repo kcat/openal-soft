@@ -180,16 +180,13 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
 int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
 {
     ALCdevice *device{context->mDevice.get()};
-    const ALbufferlistitem *Current;
-    uint64_t readPos;
+    const ALbufferlistitem *Current{};
+    uint64_t readPos{};
     ALuint refcount;
     ALvoice *voice;
 
     do {
-        Current = nullptr;
-        readPos = 0;
         refcount = device->waitForMix();
-
         *clocktime = GetDeviceClockTime(device);
         voice = GetSourceVoice(Source, context);
         if(voice)
@@ -203,18 +200,16 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
 
-    if(voice)
-    {
-        const ALbufferlistitem *BufferList{Source->queue};
-        while(BufferList && BufferList != Current)
-        {
-            readPos += uint64_t{BufferList->mSampleLen} << 32;
-            BufferList = BufferList->mNext.load(std::memory_order_relaxed);
-        }
-        readPos = minu64(readPos, 0x7fffffffffffffff_u64);
-    }
+    if(!voice)
+        return 0;
 
-    return static_cast<int64_t>(readPos);
+    const ALbufferlistitem *BufferList{Source->queue};
+    while(BufferList && BufferList != Current)
+    {
+        readPos += uint64_t{BufferList->mSampleLen} << 32;
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+    }
+    return static_cast<int64_t>(minu64(readPos, 0x7fffffffffffffff_u64));
 }
 
 /* GetSourceSecOffset
@@ -222,19 +217,16 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
+double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
 {
     ALCdevice *device{context->mDevice.get()};
-    const ALbufferlistitem *Current;
-    uint64_t readPos;
+    const ALbufferlistitem *Current{};
+    uint64_t readPos{};
     ALuint refcount;
     ALvoice *voice;
 
     do {
-        Current = nullptr;
-        readPos = 0;
         refcount = device->waitForMix();
-
         *clocktime = GetDeviceClockTime(device);
         voice = GetSourceVoice(Source, context);
         if(voice)
@@ -247,29 +239,25 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
 
-    ALdouble offset{0.0};
-    if(voice)
+    if(!voice)
+        return 0.0f;
+
+    const ALbufferlistitem *BufferList{Source->queue};
+    const ALbuffer *BufferFmt{nullptr};
+    while(BufferList && BufferList != Current)
     {
-        const ALbufferlistitem *BufferList{Source->queue};
-        const ALbuffer *BufferFmt{nullptr};
-        while(BufferList && BufferList != Current)
-        {
-            if(!BufferFmt) BufferFmt = BufferList->mBuffer;
-            readPos += uint64_t{BufferList->mSampleLen} << FRACTIONBITS;
-            BufferList = BufferList->mNext.load(std::memory_order_relaxed);
-        }
-
-        while(BufferList && !BufferFmt)
-        {
-            BufferFmt = BufferList->mBuffer;
-            BufferList = BufferList->mNext.load(std::memory_order_relaxed);
-        }
-        assert(BufferFmt != nullptr);
-
-        offset = static_cast<ALdouble>(readPos) / ALdouble{FRACTIONONE} / BufferFmt->Frequency;
+        if(!BufferFmt) BufferFmt = BufferList->mBuffer;
+        readPos += uint64_t{BufferList->mSampleLen} << FRACTIONBITS;
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
+    while(BufferList && !BufferFmt)
+    {
+        BufferFmt = BufferList->mBuffer;
+        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+    }
+    assert(BufferFmt != nullptr);
 
-    return offset;
+    return static_cast<double>(readPos) / double{FRACTIONONE} / BufferFmt->Frequency;
 }
 
 /* GetSourceOffset
@@ -278,20 +266,17 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *
  * (Bytes, Samples or Seconds). The offset is relative to the start of the
  * queue (not the start of the current buffer).
  */
-ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
+double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
     ALCdevice *device{context->mDevice.get()};
-    const ALbufferlistitem *Current;
-    ALuint readPos;
-    ALuint readPosFrac;
+    const ALbufferlistitem *Current{};
+    ALuint readPos{};
+    ALuint readPosFrac{};
     ALuint refcount;
     ALvoice *voice;
 
     do {
-        Current = nullptr;
-        readPos = readPosFrac = 0;
         refcount = device->waitForMix();
-
         voice = GetSourceVoice(Source, context);
         if(voice)
         {
@@ -303,8 +288,8 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
 
-    ALdouble offset{0.0};
-    if(!voice) return offset;
+    if(!voice)
+        return 0.0;
 
     const ALbufferlistitem *BufferList{Source->queue};
     const ALbuffer *BufferFmt{nullptr};
@@ -324,6 +309,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     }
     assert(BufferFmt != nullptr);
 
+    double offset{};
     switch(name)
     {
     case AL_SEC_OFFSET:
@@ -360,7 +346,6 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         }
         break;
     }
-
     return offset;
 }
 

@@ -437,29 +437,7 @@ al::optional<VoicePos> GetSampleOffset(ALbufferlistitem *BufferList, ALenum Offs
 void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, ALCcontext *context,
     ALCdevice *device)
 {
-    /* A source that's not playing or paused has any offset applied when it
-     * starts playing.
-     */
-    if(source->Looping)
-        voice->mLoopBuffer.store(source->queue, std::memory_order_relaxed);
-    else
-        voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-    voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
-    voice->mPosition.store(0u, std::memory_order_relaxed);
-    voice->mPositionFrac.store(0, std::memory_order_relaxed);
-    if(const ALenum offsettype{source->OffsetType})
-    {
-        const double offset{source->Offset};
-        source->OffsetType = AL_NONE;
-        source->Offset = 0.0;
-        if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
-        {
-            voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-            voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
-            voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
-            voice->mFlags |= VOICE_IS_FADING;
-        }
-    }
+    voice->mLoopBuffer.store(source->Looping ? source->queue : nullptr, std::memory_order_relaxed);
 
     ALbuffer *buffer{BufferList->mBuffer};
     voice->mFrequency = buffer->Frequency;
@@ -622,12 +600,12 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
      * fading flag).
      */
     newvoice->mPlayState.store(ALvoice::Pending, std::memory_order_relaxed);
-    newvoice->mFlags = (vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue) ?
-        VOICE_IS_FADING : 0;
-    InitVoice(newvoice, source, source->queue, context, device);
     newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
+    newvoice->mFlags = (vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue) ?
+        VOICE_IS_FADING : 0;
+    InitVoice(newvoice, source, source->queue, context, device);
     source->VoiceIdx = vidx;
 
     /* Set the old voice as having a pending change, and send it off with the
@@ -2950,7 +2928,27 @@ START_API_FUNC
             }
         }
 
+        voice->mPosition.store(0u, std::memory_order_relaxed);
+        voice->mPositionFrac.store(0, std::memory_order_relaxed);
+        voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
         voice->mFlags = 0;
+        /* A source that's not playing or paused has any offset applied when it
+         * starts playing.
+         */
+        if(const ALenum offsettype{source->OffsetType})
+        {
+            const double offset{source->Offset};
+            source->OffsetType = AL_NONE;
+            source->Offset = 0.0;
+            if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
+            {
+                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+                if(vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != source->queue)
+                    voice->mFlags |= VOICE_IS_FADING;
+            }
+        }
         InitVoice(voice, source, BufferList, context.get(), device);
 
         source->VoiceIdx = vidx;

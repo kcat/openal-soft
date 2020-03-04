@@ -106,7 +106,6 @@ void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *conte
                 std::memory_order_acq_rel, std::memory_order_acquire) == 0);
     }
 
-    /* Copy in current property values. */
     props->Pitch = source->Pitch;
     props->Gain = source->Gain;
     props->OuterGain = source->OuterGain;
@@ -448,7 +447,6 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
     voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
     voice->mPosition.store(0u, std::memory_order_relaxed);
     voice->mPositionFrac.store(0, std::memory_order_relaxed);
-    bool start_fading{false};
     if(const ALenum offsettype{source->OffsetType})
     {
         const double offset{source->Offset};
@@ -456,10 +454,10 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
         source->Offset = 0.0;
         if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
         {
-            start_fading = vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != BufferList;
             voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
             voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
             voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+            voice->mFlags |= VOICE_IS_FADING;
         }
     }
 
@@ -472,15 +470,14 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
     voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
     voice->mAmbiOrder = 1;
 
-    /* Clear the stepping value so the mixer knows not to mix this until the
-     * update gets applied.
-     */
-    voice->mStep = 0;
-
-    voice->mFlags = start_fading ? VOICE_IS_FADING : 0;
     if(buffer->Callback) voice->mFlags |= VOICE_IS_CALLBACK;
     else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
     voice->mNumCallbackSamples = 0;
+
+    /* Clear the stepping value explicitly so the mixer knows not to mix this
+     * until the update gets applied.
+     */
+    voice->mStep = 0;
 
     /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
      * higher order than the voice. No HF scaling is necessary to mix it.
@@ -625,9 +622,9 @@ bool SetVoiceOffset(ALvoice *oldvoice, const VoicePos &vpos, ALsource *source, A
      * fading flag).
      */
     newvoice->mPlayState.store(ALvoice::Pending, std::memory_order_relaxed);
+    newvoice->mFlags = (vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue) ?
+        VOICE_IS_FADING : 0;
     InitVoice(newvoice, source, source->queue, context, device);
-    if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue)
-        newvoice->mFlags |= VOICE_IS_FADING;
     newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
@@ -2953,6 +2950,7 @@ START_API_FUNC
             }
         }
 
+        voice->mFlags = 0;
         InitVoice(voice, source, BufferList, context.get(), device);
 
         source->VoiceIdx = vidx;

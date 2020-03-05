@@ -91,6 +91,7 @@ ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
     return nullptr;
 }
 
+
 void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
@@ -505,10 +506,10 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
         std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels, init_nfc);
     }
 
-    voice->mSourceID.store(source->id, std::memory_order_release);
-
     source->PropsClean.test_and_set(std::memory_order_acq_rel);
     UpdateSourceProps(source, voice, context);
+
+    voice->mSourceID.store(source->id, std::memory_order_release);
 }
 
 

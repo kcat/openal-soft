@@ -1576,17 +1576,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 {
     ALvoiceProps *props{voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
-    if(voice->mSourceID.load(std::memory_order_relaxed) == 0)
-    {
-        /* Don't update voices that no longer have a source. But make sure any
-         * update struct it has is returned to the free list.
-         */
-        if UNLIKELY(props)
-            AtomicReplaceHead(context->mFreeVoiceProps, props);
-        return;
-    }
-    if(!props && !force)
-        return;
+    if(!props && !force) return;
 
     if(props)
     {
@@ -1723,9 +1713,12 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
         for(ALeffectslot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
-        auto calc_params = [ctx,force](ALvoice *voice) -> void
-        { CalcSourceParams(voice, ctx, force); };
-        std::for_each(voices.begin(), voices.end(), calc_params);
+        for(ALvoice *voice : voices)
+        {
+            /* Only update voices that have a source. */
+            if(voice->mSourceID.load(std::memory_order_relaxed) != 0)
+                CalcSourceParams(voice, ctx, force);
+        }
     }
     IncrementRef(ctx->mUpdateCount);
 }

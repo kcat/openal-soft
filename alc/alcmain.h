@@ -360,8 +360,8 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALuint waitForMix() const noexcept
     {
         ALuint refcount;
-        while((refcount=MixCount.load(std::memory_order_acquire))&1)
-            std::this_thread::yield();
+        while((refcount=MixCount.load(std::memory_order_acquire))&1) {
+        }
         return refcount;
     }
 

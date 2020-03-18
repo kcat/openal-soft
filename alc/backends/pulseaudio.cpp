@@ -308,6 +308,21 @@ inline pa_context_flags_t& operator|=(pa_context_flags_t &lhs, pa_context_flags_
 }
 
 
+struct DevMap {
+    std::string name;
+    std::string device_name;
+};
+
+bool checkName(const al::vector<DevMap> &list, const std::string &name)
+{
+    auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
+    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
+}
+
+al::vector<DevMap> PlaybackDevices;
+al::vector<DevMap> CaptureDevices;
+
+
 /* Global flags and properties */
 pa_context_flags_t pulse_ctx_flags;
 
@@ -398,6 +413,76 @@ public:
         pa_channel_map *chanmap, BackendType type);
 
     void close(pa_context *context, pa_stream *stream);
+
+
+    void deviceSinkCallback(pa_context*, const pa_sink_info *info, int eol) noexcept
+    {
+        if(eol)
+        {
+            mCondVar.notify_all();
+            return;
+        }
+
+        /* Skip this device is if it's already in the list. */
+        auto match_devname = [info](const DevMap &entry) -> bool
+        { return entry.device_name == info->name; };
+        if(std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(), match_devname) != PlaybackDevices.cend())
+            return;
+
+        /* Make sure the display name (description) is unique. Append a number
+         * counter as needed.
+         */
+        int count{1};
+        std::string newname{info->description};
+        while(checkName(PlaybackDevices, newname))
+        {
+            newname = info->description;
+            newname += " #";
+            newname += std::to_string(++count);
+        }
+        PlaybackDevices.emplace_back(DevMap{std::move(newname), info->name});
+        DevMap &newentry = PlaybackDevices.back();
+
+        TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
+    }
+    static void deviceSinkCallbackC(pa_context *context, const pa_sink_info *info, int eol, void *pdata) noexcept
+    { static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(context, info, eol); }
+
+    void deviceSourceCallback(pa_context*, const pa_source_info *info, int eol) noexcept
+    {
+        if(eol)
+        {
+            mCondVar.notify_all();
+            return;
+        }
+
+        /* Skip this device is if it's already in the list. */
+        auto match_devname = [info](const DevMap &entry) -> bool
+        { return entry.device_name == info->name; };
+        if(std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(), match_devname) != CaptureDevices.cend())
+            return;
+
+        /* Make sure the display name (description) is unique. Append a number
+         * counter as needed.
+         */
+        int count{1};
+        std::string newname{info->description};
+        while(checkName(CaptureDevices, newname))
+        {
+            newname = info->description;
+            newname += " #";
+            newname += std::to_string(++count);
+        }
+        CaptureDevices.emplace_back(DevMap{std::move(newname), info->name});
+        DevMap &newentry = CaptureDevices.back();
+
+        TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
+    }
+    static void deviceSourceCallbackC(pa_context *context, const pa_source_info *info, int eol, void *pdata) noexcept
+    { static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(context, info, eol); }
+
+    void probePlaybackDevices();
+    void probeCaptureDevices();
 };
 
 
@@ -506,67 +591,16 @@ void PulseMainloop::close(pa_context *context, pa_stream *stream)
 }
 
 
-/* Used for initial connection test and enumeration. */
-PulseMainloop gGlobalMainloop;
-
-
-struct DevMap {
-    std::string name;
-    std::string device_name;
-};
-
-bool checkName(const al::vector<DevMap> &list, const std::string &name)
-{
-    auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
-    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
-}
-
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
-
-
-void device_sink_callback(pa_context*, const pa_sink_info *info, int eol, void *pdata) noexcept
-{
-    if(eol)
-    {
-        static_cast<PulseMainloop*>(pdata)->getCondVar().notify_all();
-        return;
-    }
-
-    /* Skip this device is if it's already in the list. */
-    if(std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-        [info](const DevMap &entry) -> bool
-        { return entry.device_name == info->name; }
-    ) != PlaybackDevices.cend())
-        return;
-
-    /* Make sure the display name (description) is unique. Append a number
-     * counter as needed.
-     */
-    int count{1};
-    std::string newname{info->description};
-    while(checkName(PlaybackDevices, newname))
-    {
-        newname = info->description;
-        newname += " #";
-        newname += std::to_string(++count);
-    }
-    PlaybackDevices.emplace_back(DevMap{std::move(newname), info->name});
-    DevMap &newentry = PlaybackDevices.back();
-
-    TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
-}
-
-void probePlaybackDevices(PulseMainloop &mainloop)
+void PulseMainloop::probePlaybackDevices()
 {
     pa_context *context{};
     pa_stream *stream{};
 
     PlaybackDevices.clear();
     try {
-        auto plock = mainloop.getLock();
+        std::unique_lock<std::mutex> plock{mMutex};
 
-        context = mainloop.connectContext(plock);
+        context = connectContext(plock);
 
         constexpr pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
             PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE | PA_STREAM_START_CORKED};
@@ -576,18 +610,18 @@ void probePlaybackDevices(PulseMainloop &mainloop)
         spec.rate = 44100;
         spec.channels = 2;
 
-        stream = mainloop.connectStream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
+        stream = connectStream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
             BackendType::Playback);
         pa_operation *op{pa_context_get_sink_info_by_name(context,
-            pa_stream_get_device_name(stream), device_sink_callback, &mainloop)};
-        mainloop.waitForOperation(op, plock);
+            pa_stream_get_device_name(stream), &deviceSinkCallbackC, this)};
+        waitForOperation(op, plock);
 
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
         stream = nullptr;
 
-        op = pa_context_get_sink_info_list(context, device_sink_callback, &mainloop);
-        mainloop.waitForOperation(op, plock);
+        op = pa_context_get_sink_info_list(context, &deviceSinkCallbackC, this);
+        waitForOperation(op, plock);
 
         pa_context_disconnect(context);
         pa_context_unref(context);
@@ -595,53 +629,20 @@ void probePlaybackDevices(PulseMainloop &mainloop)
     }
     catch(std::exception &e) {
         ERR("Error enumerating devices: %s\n", e.what());
-        if(context) mainloop.close(context, stream);
+        if(context) close(context, stream);
     }
 }
 
-
-void device_source_callback(pa_context*, const pa_source_info *info, int eol, void *pdata) noexcept
-{
-    if(eol)
-    {
-        static_cast<PulseMainloop*>(pdata)->getCondVar().notify_all();
-        return;
-    }
-
-    /* Skip this device is if it's already in the list. */
-    if(std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-        [info](const DevMap &entry) -> bool
-        { return entry.device_name == info->name; }
-    ) != CaptureDevices.cend())
-        return;
-
-    /* Make sure the display name (description) is unique. Append a number
-     * counter as needed.
-     */
-    int count{1};
-    std::string newname{info->description};
-    while(checkName(CaptureDevices, newname))
-    {
-        newname = info->description;
-        newname += " #";
-        newname += std::to_string(++count);
-    }
-    CaptureDevices.emplace_back(DevMap{std::move(newname), info->name});
-    DevMap &newentry = CaptureDevices.back();
-
-    TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
-}
-
-void probeCaptureDevices(PulseMainloop &mainloop)
+void PulseMainloop::probeCaptureDevices()
 {
     pa_context *context{};
     pa_stream *stream{};
 
     CaptureDevices.clear();
     try {
-        auto plock = mainloop.getLock();
+        std::unique_lock<std::mutex> plock{mMutex};
 
-        context = mainloop.connectContext(plock);
+        context = connectContext(plock);
 
         constexpr pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
             PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE | PA_STREAM_START_CORKED};
@@ -651,18 +652,18 @@ void probeCaptureDevices(PulseMainloop &mainloop)
         spec.rate = 44100;
         spec.channels = 1;
 
-        stream = mainloop.connectStream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
+        stream = connectStream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
             BackendType::Capture);
         pa_operation *op{pa_context_get_source_info_by_name(context,
-            pa_stream_get_device_name(stream), device_source_callback, &mainloop)};
-        mainloop.waitForOperation(op, plock);
+            pa_stream_get_device_name(stream), &deviceSourceCallbackC, this)};
+        waitForOperation(op, plock);
 
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
         stream = nullptr;
 
-        op = pa_context_get_source_info_list(context, device_source_callback, &mainloop);
-        mainloop.waitForOperation(op, plock);
+        op = pa_context_get_source_info_list(context, &deviceSourceCallbackC, this);
+        waitForOperation(op, plock);
 
         pa_context_disconnect(context);
         pa_context_unref(context);
@@ -670,9 +671,13 @@ void probeCaptureDevices(PulseMainloop &mainloop)
     }
     catch(std::exception &e) {
         ERR("Error enumerating devices: %s\n", e.what());
-        if(context) mainloop.close(context, stream);
+        if(context) close(context, stream);
     }
 }
+
+
+/* Used for initial connection test and enumeration. */
+PulseMainloop gGlobalMainloop;
 
 
 struct PulsePlayback final : public BackendBase {
@@ -835,12 +840,10 @@ void PulsePlayback::open(const ALCchar *name)
     if(name)
     {
         if(PlaybackDevices.empty())
-            probePlaybackDevices(mMainloop);
+            mMainloop.probePlaybackDevices();
 
         auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
+            [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         pulse_name = iter->device_name.c_str();
@@ -1167,12 +1170,10 @@ void PulseCapture::open(const ALCchar *name)
     if(name)
     {
         if(CaptureDevices.empty())
-            probeCaptureDevices(mMainloop);
+            mMainloop.probeCaptureDevices();
 
         auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
+            [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
         pulse_name = iter->device_name.c_str();
@@ -1474,12 +1475,12 @@ void PulseBackendFactory::probe(DevProbe type, std::string *outnames)
     switch(type)
     {
     case DevProbe::Playback:
-        probePlaybackDevices(gGlobalMainloop);
+        gGlobalMainloop.probePlaybackDevices();
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
     case DevProbe::Capture:
-        probeCaptureDevices(gGlobalMainloop);
+        gGlobalMainloop.probeCaptureDevices();
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;
     }

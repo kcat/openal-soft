@@ -355,8 +355,6 @@ public:
         return ret;
     }
 
-    void doLock() { mMutex.lock(); }
-    void doUnlock() { mMutex.unlock(); }
     std::unique_lock<std::mutex> getLock() { return std::unique_lock<std::mutex>{mMutex}; }
     std::condition_variable &getCondVar() noexcept { return mCondVar; }
 

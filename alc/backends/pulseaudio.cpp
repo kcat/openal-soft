@@ -370,7 +370,7 @@ public:
         return ret;
     }
 
-    std::unique_lock<std::mutex> getLock() { return std::unique_lock<std::mutex>{mMutex}; }
+    std::unique_lock<std::mutex> getUniqueLock() { return std::unique_lock<std::mutex>{mMutex}; }
     std::condition_variable &getCondVar() noexcept { return mCondVar; }
 
     void contextStateCallback(pa_context *context) noexcept
@@ -850,8 +850,7 @@ void PulsePlayback::open(const ALCchar *name)
         dev_name = iter->name.c_str();
     }
 
-    auto plock = mMainloop.getLock();
-
+    auto plock = mMainloop.getUniqueLock();
     mContext = mMainloop.connectContext(plock);
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
@@ -889,7 +888,7 @@ void PulsePlayback::open(const ALCchar *name)
 
 bool PulsePlayback::reset()
 {
-    auto plock = mMainloop.getLock();
+    auto plock = mMainloop.getUniqueLock();
 
     if(mStream)
     {
@@ -1032,7 +1031,7 @@ bool PulsePlayback::reset()
 
 bool PulsePlayback::start()
 {
-    auto plock = mMainloop.getLock();
+    auto plock = mMainloop.getUniqueLock();
 
     pa_stream_set_write_callback(mStream, &PulsePlayback::streamWriteCallbackC, this);
     pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
@@ -1044,7 +1043,7 @@ bool PulsePlayback::start()
 
 void PulsePlayback::stop()
 {
-    auto plock = mMainloop.getLock();
+    auto plock = mMainloop.getUniqueLock();
 
     pa_operation *op{pa_stream_cork(mStream, 1, &PulseMainloop::streamSuccessCallbackC,
         &mMainloop)};
@@ -1060,7 +1059,7 @@ ClockLatency PulsePlayback::getClockLatency()
     int neg, err;
 
     {
-        auto _ = mMainloop.getLock();
+        auto plock = mMainloop.getUniqueLock();
         ret.ClockTime = GetDeviceClockTime(mDevice);
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
@@ -1180,8 +1179,7 @@ void PulseCapture::open(const ALCchar *name)
         mDevice->DeviceName = iter->name;
     }
 
-    auto plock = mMainloop.getLock();
-
+    auto plock = mMainloop.getUniqueLock();
     mContext = mMainloop.connectContext(plock);
 
     pa_channel_map chanmap{};
@@ -1270,7 +1268,7 @@ void PulseCapture::open(const ALCchar *name)
 
 bool PulseCapture::start()
 {
-    auto plock = mMainloop.getLock();
+    auto plock = mMainloop.getUniqueLock();
     pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
         &mMainloop)};
     mMainloop.waitForOperation(op, plock);
@@ -1279,7 +1277,7 @@ bool PulseCapture::start()
 
 void PulseCapture::stop()
 {
-    auto plock = mMainloop.getLock();
+    auto plock = mMainloop.getUniqueLock();
     pa_operation *op{pa_stream_cork(mStream, 1, &PulseMainloop::streamSuccessCallbackC,
         &mMainloop)};
     mMainloop.waitForOperation(op, plock);
@@ -1310,7 +1308,7 @@ ALCenum PulseCapture::captureSamples(al::byte *buffer, ALCuint samples)
         if UNLIKELY(!mDevice->Connected.load(std::memory_order_acquire))
             break;
 
-        auto plock = mMainloop.getLock();
+        auto plock = mMainloop.getUniqueLock();
         if(mCapLen != 0)
         {
             pa_stream_drop(mStream);
@@ -1352,7 +1350,7 @@ ALCuint PulseCapture::availableSamples()
 
     if(mDevice->Connected.load(std::memory_order_acquire))
     {
-        auto _ = mMainloop.getLock();
+        auto plock = mMainloop.getUniqueLock();
         size_t got{pa_stream_readable_size(mStream)};
         if UNLIKELY(static_cast<ssize_t>(got) < 0)
         {
@@ -1380,7 +1378,7 @@ ClockLatency PulseCapture::getClockLatency()
     int neg, err;
 
     {
-        auto _ = mMainloop.getLock();
+        auto plock = mMainloop.getUniqueLock();
         ret.ClockTime = GetDeviceClockTime(mDevice);
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
@@ -1448,7 +1446,7 @@ bool PulseBackendFactory::init()
         pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
     try {
-        auto plock = gGlobalMainloop.getLock();
+        auto plock = gGlobalMainloop.getUniqueLock();
         pa_context *context{gGlobalMainloop.connectContext(plock)};
         pa_context_disconnect(context);
         pa_context_unref(context);

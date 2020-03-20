@@ -46,9 +46,6 @@
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
 #endif
-#ifdef HAVE_SSE_INTRINSICS
-#include <xmmintrin.h>
-#endif
 #ifdef HAVE_SYS_SYSCONF_H
 #include <sys/sysconf.h>
 #endif
@@ -75,7 +72,6 @@
 #include "alstring.h"
 #include "compat.h"
 #include "cpu_caps.h"
-#include "fpu_modes.h"
 #include "logging.h"
 #include "strutils.h"
 #include "vector.h"
@@ -204,47 +200,6 @@ void FillCPUCaps(int capfilter)
         ((!capfilter) ? " -none-" : "")
     );
     CPUCapFlags = caps & capfilter;
-}
-
-
-FPUCtl::FPUCtl()
-{
-#if defined(HAVE_SSE_INTRINSICS)
-    this->sse_state = _mm_getcsr();
-    unsigned int sseState = this->sse_state;
-    sseState |= 0x8000; /* set flush-to-zero */
-    sseState |= 0x0040; /* set denormals-are-zero */
-    _mm_setcsr(sseState);
-
-#elif defined(__GNUC__) && defined(HAVE_SSE)
-
-    if((CPUCapFlags&CPU_CAP_SSE))
-    {
-        __asm__ __volatile__("stmxcsr %0" : "=m" (*&this->sse_state));
-        unsigned int sseState = this->sse_state;
-        sseState |= 0x8000; /* set flush-to-zero */
-        if((CPUCapFlags&CPU_CAP_SSE2))
-            sseState |= 0x0040; /* set denormals-are-zero */
-        __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
-    }
-#endif
-
-    this->in_mode = true;
-}
-
-void FPUCtl::leave()
-{
-    if(!this->in_mode) return;
-
-#if defined(HAVE_SSE_INTRINSICS)
-    _mm_setcsr(this->sse_state);
-
-#elif defined(__GNUC__) && defined(HAVE_SSE)
-
-    if((CPUCapFlags&CPU_CAP_SSE))
-        __asm__ __volatile__("ldmxcsr %0" : : "m" (*&this->sse_state));
-#endif
-    this->in_mode = false;
 }
 
 

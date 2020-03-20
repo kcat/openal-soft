@@ -1,5 +1,5 @@
-#ifndef FPU_MODES_H
-#define FPU_MODES_H
+#ifndef FPU_CTRL_H
+#define FPU_CTRL_H
 
 class FPUCtl {
 #if defined(HAVE_SSE_INTRINSICS) || (defined(__GNUC__) && defined(HAVE_SSE))
@@ -22,4 +22,4 @@ public:
     void leave();
 };
 
-#endif /* FPU_MODES_H */
+#endif /* FPU_CTRL_H */

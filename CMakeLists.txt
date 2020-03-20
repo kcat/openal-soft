@@ -622,7 +622,8 @@ SET(ALC_OBJS
     alc/filters/nfc.h
     alc/filters/splitter.cpp
     alc/filters/splitter.h
-    alc/fpu_modes.h
+    alc/fpu_ctrl.cpp
+    alc/fpu_ctrl.h
     alc/helpers.cpp
     alc/hrtf.cpp
     alc/hrtf.h

@@ -11,7 +11,7 @@
 
 #include "albyte.h"
 #include "alu.h"
-#include "fpu_modes.h"
+#include "fpu_ctrl.h"
 #include "mixer/defs.h"
 
 

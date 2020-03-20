@@ -78,7 +78,7 @@ const PathNamePair &GetProcBinary()
     if(!ret.fname.empty() || !ret.path.empty())
         return ret;
 
-    al::vector<WCHAR> fullpath(256);
+    auto fullpath = al::vector<WCHAR>(256);
     DWORD len;
     while((len=GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))) == fullpath.size())
         fullpath.resize(fullpath.size() << 1);
@@ -133,10 +133,9 @@ void al_print(FILE *logfile, const char *fmt, ...)
 }
 
 
-static inline int is_slash(int c)
-{ return (c == '\\' || c == '/'); }
+namespace {
 
-static void DirectorySearch(const char *path, const char *ext, al::vector<std::string> *const results)
+void DirectorySearch(const char *path, const char *ext, al::vector<std::string> *const results)
 {
     std::string pathstr{path};
     pathstr += "\\*";
@@ -165,8 +164,12 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
         TRACE(" got %s\n", name.c_str());
 }
 
+} // namespace
+
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
+    auto is_slash = [](int c) noexcept -> int { return (c == '\\' || c == '/'); }
+
     static std::mutex search_lock;
     std::lock_guard<std::mutex> _{search_lock};
 
@@ -228,10 +231,11 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
 void SetRTPriority(void)
 {
-    bool failed = false;
     if(RTPrioLevel > 0)
-        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-    if(failed) ERR("Failed to set priority level for thread\n");
+    {
+        if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+            ERR("Failed to set priority level for thread\n");
+    }
 }
 
 #else
@@ -273,24 +277,22 @@ const PathNamePair &GetProcBinary()
 #endif
     if(pathname.empty())
     {
+        static const char SelfLinkNames[][32]{
+            "/proc/self/exe",
+            "/proc/self/file",
+            "/proc/curproc/exe",
+            "/proc/curproc/file"
+        };
+
         pathname.resize(256);
 
-        const char *selfname{"/proc/self/exe"};
-        ssize_t len{readlink(selfname, pathname.data(), pathname.size())};
-        if(len == -1 && errno == ENOENT)
+        const char *selfname{};
+        ssize_t len{};
+        for(const char *name : SelfLinkNames)
         {
-            selfname = "/proc/self/file";
+            selfname = name;
             len = readlink(selfname, pathname.data(), pathname.size());
-        }
-        if(len == -1 && errno == ENOENT)
-        {
-            selfname = "/proc/curproc/exe";
-            len = readlink(selfname, pathname.data(), pathname.size());
-        }
-        if(len == -1 && errno == ENOENT)
-        {
-            selfname = "/proc/curproc/file";
-            len = readlink(selfname, pathname.data(), pathname.size());
+            if(len >= 0 || errno != ENOENT) break;
         }
 
         while(len > 0 && static_cast<size_t>(len) == pathname.size())
@@ -335,7 +337,9 @@ void al_print(FILE *logfile, const char *fmt, ...)
 }
 
 
-static void DirectorySearch(const char *path, const char *ext, al::vector<std::string> *const results)
+namespace {
+
+void DirectorySearch(const char *path, const char *ext, al::vector<std::string> *const results)
 {
     TRACE("Searching %s for *%s\n", path, ext);
     DIR *dir{opendir(path)};
@@ -344,8 +348,7 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     const auto base = results->size();
     const size_t extlen{strlen(ext)};
 
-    struct dirent *dirent;
-    while((dirent=readdir(dir)) != nullptr)
+    while(struct dirent *dirent{readdir(dir)})
     {
         if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
             continue;
@@ -369,6 +372,8 @@ static void DirectorySearch(const char *path, const char *ext, al::vector<std::s
     for(const auto &name : newlist)
         TRACE(" got %s\n", name.c_str());
 }
+
+} // namespace
 
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
@@ -450,22 +455,22 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
 void SetRTPriority()
 {
-    bool failed = false;
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
     if(RTPrioLevel > 0)
     {
-        struct sched_param param;
+        struct sched_param param{};
         /* Use the minimum real-time priority possible for now (on Linux this
-         * should be 1 for SCHED_RR) */
+         * should be 1 for SCHED_RR).
+         */
         param.sched_priority = sched_get_priority_min(SCHED_RR);
-        failed = !!pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+        if(pthread_setschedparam(pthread_self(), SCHED_RR, &param))
+            ERR("Failed to set priority level for thread\n");
     }
 #else
     /* Real-time priority not available */
-    failed = (RTPrioLevel>0);
+    if(RTPrioLevel > 0)
+        ERR("Cannot set priority level for thread\n");
 #endif
-    if(failed)
-        ERR("Failed to set priority level for thread\n");
 }
 
 #endif

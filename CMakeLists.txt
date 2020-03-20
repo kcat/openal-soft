@@ -600,6 +600,7 @@ SET(ALC_OBJS
     alc/compat.h
     alc/converter.cpp
     alc/converter.h
+    alc/cpu_caps.cpp
     alc/cpu_caps.h
     alc/devformat.h
     alc/effects/base.h

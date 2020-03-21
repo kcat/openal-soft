@@ -276,10 +276,8 @@ void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
     {
         case DevProbe::Playback:
         {
-#ifdef HAVE_STAT
             struct stat buf;
             if(stat(solaris_driver.c_str(), &buf) == 0)
-#endif
                 outnames->append(solaris_device, sizeof(solaris_device));
         }
         break;

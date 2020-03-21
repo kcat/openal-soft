@@ -74,9 +74,6 @@
 /* Define if we have the SDL2 backend */
 #cmakedefine HAVE_SDL2
 
-/* Define if we have the stat function */
-#cmakedefine HAVE_STAT
-
 /* Define to the size of a long int type */
 #cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
 

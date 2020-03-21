@@ -674,10 +674,8 @@ void OSSBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
-#ifdef HAVE_STAT
         struct stat buf;
         if(stat(entry.device_name.c_str(), &buf) == 0)
-#endif
         {
             /* Includes null char. */
             outnames->append(entry.name.c_str(), entry.name.length()+1);

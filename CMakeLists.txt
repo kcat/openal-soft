@@ -447,8 +447,6 @@ CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 CHECK_SYMBOL_EXISTS(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)
 
-CHECK_FUNCTION_EXISTS(stat HAVE_STAT)
-
 IF(NOT WIN32)
     # We need pthreads outside of Windows, for semaphores. It's also used to
     # set the priority and name of threads, when possible.

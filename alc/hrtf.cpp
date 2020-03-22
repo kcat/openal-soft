@@ -1392,12 +1392,12 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const A
             ERR("Could not get resource %u, %s\n", residx, name.c_str());
             return nullptr;
         }
-        stream = al::make_unique<idstream>(res.begin(), res.end());
+        stream = std::make_unique<idstream>(res.begin(), res.end());
     }
     else
     {
         TRACE("Loading %s...\n", fname.c_str());
-        auto fstr = al::make_unique<al::ifstream>(fname.c_str(), std::ios::binary);
+        auto fstr = std::make_unique<al::ifstream>(fname.c_str(), std::ios::binary);
         if(!fstr->is_open())
         {
             ERR("Could not open %s\n", fname.c_str());

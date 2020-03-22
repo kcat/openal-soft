@@ -216,14 +216,6 @@ inline T1 uninitialized_move_n(T0 first, N count, const T1 output)
 }
 
 
-/* std::make_unique was added with C++14, so until we rely on that, make our
- * own version.
- */
-template<typename T, typename ...ArgsT>
-std::unique_ptr<T> make_unique(ArgsT&&...args)
-{ return std::unique_ptr<T>{new T{std::forward<ArgsT>(args)...}}; }
-
-
 /* A flexible array type. Used either standalone or at the end of a parent
  * struct, with placement new, to have a run-time-sized array that's embedded
  * with its size.

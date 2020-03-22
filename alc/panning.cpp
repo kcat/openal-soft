@@ -831,7 +831,7 @@ no_hrtf:
         {
             if(*cflevopt > 0 && *cflevopt <= 6)
             {
-                device->Bs2b = al::make_unique<bs2b>();
+                device->Bs2b = std::make_unique<bs2b>();
                 bs2b_set_params(device->Bs2b.get(), *cflevopt,
                     static_cast<int>(device->Frequency));
                 TRACE("BS2B enabled\n");
@@ -852,7 +852,7 @@ no_hrtf:
     }
     if(device->mRenderMode == NormalRender)
     {
-        device->Uhj_Encoder = al::make_unique<Uhj2Encoder>();
+        device->Uhj_Encoder = std::make_unique<Uhj2Encoder>();
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
         device->PostProcess = &ALCdevice::ProcessUhj;

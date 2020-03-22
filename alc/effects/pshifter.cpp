@@ -50,10 +50,9 @@ using complex_d = std::complex<double>;
 #define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
 /* Define a Hann window, used to filter the STFT input and output. */
-/* Making this constexpr seems to require C++14. */
-std::array<ALdouble,STFT_SIZE> InitHannWindow()
+std::array<double,STFT_SIZE> InitHannWindow()
 {
-    std::array<ALdouble,STFT_SIZE> ret;
+    std::array<double,STFT_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
     for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
@@ -63,7 +62,7 @@ std::array<ALdouble,STFT_SIZE> InitHannWindow()
     }
     return ret;
 }
-alignas(16) const std::array<ALdouble,STFT_SIZE> HannWindow = InitHannWindow();
+alignas(16) const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
 
 
 struct ALphasor {

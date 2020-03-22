@@ -101,8 +101,7 @@ inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) no
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
-/* TODO: This can't be constexpr in C++11. */
-inline uint32_t MaskFromTopBits(uint32_t b) noexcept
+constexpr inline uint32_t MaskFromTopBits(uint32_t b) noexcept
 {
     b |= b>>1;
     b |= b>>2;
@@ -111,14 +110,14 @@ inline uint32_t MaskFromTopBits(uint32_t b) noexcept
     b |= b>>16;
     return b;
 }
-const uint32_t MonoMask{MaskFromTopBits(MONO)};
-const uint32_t StereoMask{MaskFromTopBits(STEREO)};
-const uint32_t QuadMask{MaskFromTopBits(QUAD)};
-const uint32_t X51Mask{MaskFromTopBits(X5DOT1)};
-const uint32_t X51RearMask{MaskFromTopBits(X5DOT1REAR)};
-const uint32_t X61Mask{MaskFromTopBits(X6DOT1)};
-const uint32_t X71Mask{MaskFromTopBits(X7DOT1)};
-const uint32_t X71WideMask{MaskFromTopBits(X7DOT1_WIDE)};
+constexpr uint32_t MonoMask{MaskFromTopBits(MONO)};
+constexpr uint32_t StereoMask{MaskFromTopBits(STEREO)};
+constexpr uint32_t QuadMask{MaskFromTopBits(QUAD)};
+constexpr uint32_t X51Mask{MaskFromTopBits(X5DOT1)};
+constexpr uint32_t X51RearMask{MaskFromTopBits(X5DOT1REAR)};
+constexpr uint32_t X61Mask{MaskFromTopBits(X6DOT1)};
+constexpr uint32_t X71Mask{MaskFromTopBits(X7DOT1)};
+constexpr uint32_t X71WideMask{MaskFromTopBits(X7DOT1_WIDE)};
 
 #define DEVNAME_HEAD "OpenAL Soft on "
 

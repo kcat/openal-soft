@@ -25,12 +25,17 @@ void al_free(void *ptr) noexcept;
         if(!ret) throw std::bad_alloc();                                      \
         return ret;                                                           \
     }                                                                         \
-    void operator delete(void *block) noexcept { al_free(block); }
+    void *operator new[](size_t size) { return operator new(size); }          \
+    void operator delete(void *block) noexcept { al_free(block); }            \
+    void operator delete[](void *block) noexcept { operator delete(block); }
 
 #define DEF_PLACE_NEWDEL()                                                    \
     void *operator new(size_t /*size*/, void *ptr) noexcept { return ptr; }   \
+    void *operator new[](size_t /*size*/, void *ptr) noexcept { return ptr; } \
     void operator delete(void *block, void*) noexcept { al_free(block); }     \
-    void operator delete(void *block) noexcept { al_free(block); }
+    void operator delete(void *block) noexcept { al_free(block); }            \
+    void operator delete[](void *block, void*) noexcept { al_free(block); }   \
+    void operator delete[](void *block) noexcept { al_free(block); }
 
 struct FamCount { size_t mCount; };
 
@@ -44,8 +49,10 @@ struct FamCount { size_t mCount; };
             return ret;                                                       \
         throw std::bad_alloc();                                               \
     }                                                                         \
+    void *operator new[](size_t /*size*/) = delete;                           \
     void operator delete(void *block, FamCount) { al_free(block); }           \
-    void operator delete(void *block) noexcept { al_free(block); }
+    void operator delete(void *block) noexcept { al_free(block); }            \
+    void operator delete[](void* /*block*/) = delete;
 
 
 namespace al {

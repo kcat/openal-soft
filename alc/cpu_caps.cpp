@@ -11,9 +11,9 @@
 #endif
 
 #include <cctype>
-#include <fstream>
 #include <string>
 
+#include "alfstream.h"
 #include "logging.h"
 
 

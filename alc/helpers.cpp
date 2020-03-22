@@ -168,7 +168,7 @@ void DirectorySearch(const char *path, const char *ext, al::vector<std::string> 
 
 al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    auto is_slash = [](int c) noexcept -> int { return (c == '\\' || c == '/'); }
+    auto is_slash = [](int c) noexcept -> int { return (c == '\\' || c == '/'); };
 
     static std::mutex search_lock;
     std::lock_guard<std::mutex> _{search_lock};

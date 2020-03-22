@@ -61,20 +61,19 @@ alignas(16) const std::array<double,HIL_SIZE> HannWindow = InitHannWindow();
 
 struct FshifterState final : public EffectState {
     /* Effect parameters */
-    size_t   mCount{};
-    ALsizei  mPhaseStep[2]{};
-    ALsizei  mPhase[2]{};
-    ALdouble mSign[2]{};
+    size_t mCount{};
+    ALuint mPhaseStep[2]{};
+    ALuint mPhase[2]{};
+    double mSign[2]{};
 
-
-    /*Effects buffers*/ 
+    /* Effects buffers */
     double mInFIFO[HIL_SIZE]{};
     complex_d mOutFIFO[HIL_STEP]{};
     complex_d mOutputAccum[HIL_SIZE]{};
     complex_d mAnalytic[HIL_SIZE]{};
     complex_d mOutdata[BUFFERSIZE]{};
 
-    alignas(16) ALfloat mBufferOut[BUFFERSIZE]{};
+    alignas(16) float mBufferOut[BUFFERSIZE]{};
 
     /* Effect gains for each output channel */
     struct {
@@ -95,8 +94,8 @@ ALboolean FshifterState::deviceUpdate(const ALCdevice*)
     /* (Re-)initializing parameters and clear the buffers. */
     mCount = FIFO_LATENCY;
 
-    std::fill(std::begin(mPhaseStep),   std::end(mPhaseStep),   0);
-    std::fill(std::begin(mPhase),       std::end(mPhase),       0);
+    std::fill(std::begin(mPhaseStep),   std::end(mPhaseStep),   0u);
+    std::fill(std::begin(mPhase),       std::end(mPhase),       0u);
     std::fill(std::begin(mSign),        std::end(mSign),        1.0);
     std::fill(std::begin(mInFIFO),      std::end(mInFIFO),      0.0);
     std::fill(std::begin(mOutFIFO),     std::end(mOutFIFO),     complex_d{});
@@ -116,8 +115,8 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
 {
     const ALCdevice *device{context->mDevice.get()};
 
-    ALfloat step{props->Fshifter.Frequency / static_cast<ALfloat>(device->Frequency)};
-    mPhaseStep[0] = mPhaseStep[1] = fastf2i(minf(step, 0.5f) * FRACTIONONE);
+    const float step{props->Fshifter.Frequency / static_cast<float>(device->Frequency)};
+    mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * FRACTIONONE);
 
     switch(props->Fshifter.LeftDirection)
     {
@@ -135,7 +134,7 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
         break;
     }
 
-    switch (props->Fshifter.RightDirection)
+    switch(props->Fshifter.RightDirection)
     {
     case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
         mSign[1] = -1.0;
@@ -202,8 +201,8 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
     ALfloat *RESTRICT BufferOut{mBufferOut};
     for(ALsizei c{0};c < 2;++c)
     {
-        const int phase_step{mPhaseStep[c]};
-        int phase_idx{mPhase[c]};
+        const ALuint phase_step{mPhaseStep[c]};
+        ALuint phase_idx{mPhase[c]};
         for(size_t k{0};k < samplesToDo;++k)
         {
             const double phase{phase_idx * ((1.0 / FRACTIONONE) * al::MathDefs<double>::Tau())};

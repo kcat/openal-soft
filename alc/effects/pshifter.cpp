@@ -66,13 +66,13 @@ alignas(16) const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
 
 
 struct ALphasor {
-    ALdouble Amplitude;
-    ALdouble Phase;
+    double Amplitude;
+    double Phase;
 };
 
 struct ALfrequencyDomain {
-    ALdouble Amplitude;
-    ALdouble Frequency;
+    double Amplitude;
+    double Frequency;
 };
 
 
@@ -92,24 +92,24 @@ inline complex_d polar2rect(const ALphasor &number)
 
 struct PshifterState final : public EffectState {
     /* Effect parameters */
-    size_t  mCount;
-    ALuint  mPitchShiftI;
-    ALfloat mPitchShift;
-    ALfloat mFreqPerBin;
+    size_t mCount;
+    ALuint mPitchShiftI;
+    double mPitchShift;
+    double mFreqPerBin;
 
     /* Effects buffers */
     double mInFIFO[STFT_SIZE];
     double mOutFIFO[STFT_STEP];
-    ALdouble mLastPhase[STFT_HALF_SIZE+1];
-    ALdouble mSumPhase[STFT_HALF_SIZE+1];
-    ALdouble mOutputAccum[STFT_SIZE];
+    double mLastPhase[STFT_HALF_SIZE+1];
+    double mSumPhase[STFT_HALF_SIZE+1];
+    double mOutputAccum[STFT_SIZE];
 
     complex_d mFFTbuffer[STFT_SIZE];
 
     ALfrequencyDomain mAnalysis_buffer[STFT_HALF_SIZE+1];
     ALfrequencyDomain mSyntesis_buffer[STFT_HALF_SIZE+1];
 
-    alignas(16) ALfloat mBufferOut[BUFFERSIZE];
+    alignas(16) float mBufferOut[BUFFERSIZE];
 
     /* Effect gains for each output channel */
     ALfloat mCurrentGains[MAX_OUTPUT_CHANNELS];
@@ -128,11 +128,11 @@ ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
     /* (Re-)initializing parameters and clear the buffers. */
     mCount       = FIFO_LATENCY;
     mPitchShiftI = FRACTIONONE;
-    mPitchShift  = 1.0f;
-    mFreqPerBin  = static_cast<float>(device->Frequency) / float{STFT_SIZE};
+    mPitchShift  = 1.0;
+    mFreqPerBin  = device->Frequency / double{STFT_SIZE};
 
-    std::fill(std::begin(mInFIFO),          std::end(mInFIFO),          0.0f);
-    std::fill(std::begin(mOutFIFO),         std::end(mOutFIFO),         0.0f);
+    std::fill(std::begin(mInFIFO),          std::end(mInFIFO),          0.0);
+    std::fill(std::begin(mOutFIFO),         std::end(mOutFIFO),         0.0);
     std::fill(std::begin(mLastPhase),       std::end(mLastPhase),       0.0);
     std::fill(std::begin(mSumPhase),        std::end(mSumPhase),        0.0);
     std::fill(std::begin(mOutputAccum),     std::end(mOutputAccum),     0.0);
@@ -148,11 +148,10 @@ ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
 
 void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
-    const float pitch{std::pow(2.0f,
-        static_cast<ALfloat>(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
-    )};
+    const int tune{props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune};
+    const float pitch{std::pow(2.0f, static_cast<float>(tune) / 1200.0f)};
     mPitchShiftI = fastf2u(pitch*FRACTIONONE);
-    mPitchShift  = static_cast<float>(mPitchShiftI) * (1.0f/FRACTIONONE);
+    mPitchShift  = mPitchShiftI * double{1.0/FRACTIONONE};
 
     ALfloat coeffs[MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
@@ -167,8 +166,8 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
      */
 
-    static constexpr ALdouble expected{al::MathDefs<double>::Tau() / OVERSAMP};
-    const ALdouble freq_per_bin{mFreqPerBin};
+    static constexpr double expected{al::MathDefs<double>::Tau() / OVERSAMP};
+    const double freq_per_bin{mFreqPerBin};
 
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -207,7 +206,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             ALphasor component{rect2polar(mFFTbuffer[k])};
 
             /* Compute phase difference and subtract expected phase difference */
-            double tmp{(component.Phase - mLastPhase[k]) - k*expected};
+            double tmp{(component.Phase - mLastPhase[k]) - static_cast<double>(k)*expected};
 
             /* Map delta phase into +/- Pi interval */
             int qpd{double2int(tmp / al::MathDefs<double>::Pi())};
@@ -221,7 +220,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
              * amplitude and true frequency in analysis buffer.
              */
             mAnalysis_buffer[k].Amplitude = 2.0 * component.Amplitude;
-            mAnalysis_buffer[k].Frequency = (k + tmp) * freq_per_bin;
+            mAnalysis_buffer[k].Frequency = (static_cast<double>(k) + tmp) * freq_per_bin;
 
             /* Store actual phase[k] for the calculations in the next frame*/
             mLastPhase[k] = component.Phase;
@@ -249,10 +248,10 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             /* Compute bin deviation from scaled freq */
-            const double tmp{mSyntesis_buffer[k].Frequency/freq_per_bin - k};
+            const double tmp{mSyntesis_buffer[k].Frequency / freq_per_bin};
 
             /* Calculate actual delta phase and accumulate it to get bin phase */
-            mSumPhase[k] += (k + tmp) * expected;
+            mSumPhase[k] += tmp * expected;
 
             ALphasor component;
             component.Amplitude = mSyntesis_buffer[k].Amplitude;
@@ -270,8 +269,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
         /* Windowing and add to output */
         for(size_t k{0u};k < STFT_SIZE;k++)
-            mOutputAccum[k] += HannWindow[k] * mFFTbuffer[k].real() /
-                               (0.5 * STFT_HALF_SIZE * OVERSAMP);
+            mOutputAccum[k] += HannWindow[k]*mFFTbuffer[k].real() * (2.0/STFT_HALF_SIZE/OVERSAMP);
 
         /* Shift accumulator, input & output FIFO */
         std::copy_n(mOutputAccum, STFT_STEP, mOutFIFO);

@@ -1695,7 +1695,9 @@ void ProcessVoiceChanges(ALCcontext *ctx)
         }
         if(sendevt && (enabledevt&EventType_SourceStateChange))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
-    } while((next=cur->mNext.load(std::memory_order_acquire)));
+
+        next = cur->mNext.load(std::memory_order_acquire);
+    } while(next);
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 

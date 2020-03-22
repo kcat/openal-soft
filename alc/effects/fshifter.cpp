@@ -68,8 +68,8 @@ struct FshifterState final : public EffectState {
 
 
     /*Effects buffers*/ 
-    ALfloat   mInFIFO[HIL_SIZE]{};
-    complex_d mOutFIFO[HIL_SIZE]{};
+    double mInFIFO[HIL_SIZE]{};
+    complex_d mOutFIFO[HIL_STEP]{};
     complex_d mOutputAccum[HIL_SIZE]{};
     complex_d mAnalytic[HIL_SIZE]{};
     complex_d mOutdata[BUFFERSIZE]{};
@@ -98,7 +98,7 @@ ALboolean FshifterState::deviceUpdate(const ALCdevice*)
     std::fill(std::begin(mPhaseStep),   std::end(mPhaseStep),   0);
     std::fill(std::begin(mPhase),       std::end(mPhase),       0);
     std::fill(std::begin(mSign),        std::end(mSign),        1.0);
-    std::fill(std::begin(mInFIFO),      std::end(mInFIFO),      0.0f);
+    std::fill(std::begin(mInFIFO),      std::end(mInFIFO),      0.0);
     std::fill(std::begin(mOutFIFO),     std::end(mOutFIFO),     complex_d{});
     std::fill(std::begin(mOutputAccum), std::end(mOutputAccum), complex_d{});
     std::fill(std::begin(mAnalytic),    std::end(mAnalytic),    complex_d{});
@@ -162,64 +162,58 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
 
 void FshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    static constexpr complex_d complex_zero{0.0, 0.0};
-    ALfloat *RESTRICT BufferOut = mBufferOut;
-    size_t j, k;
-
     for(size_t base{0u};base < samplesToDo;)
     {
-        const size_t todo{minz(HIL_SIZE-mCount, samplesToDo-base)};
-
-        ASSUME(todo > 0);
+        size_t todo{minz(HIL_SIZE-mCount, samplesToDo-base)};
 
         /* Fill FIFO buffer with samples data */
-        k = mCount;
-        for(j = 0;j < todo;j++,k++)
-        {
-            mInFIFO[k] = samplesIn[0][base+j];
-            mOutdata[base+j] = mOutFIFO[k-FIFO_LATENCY];
-        }
-        mCount += todo;
-        base += todo;
+        size_t count{mCount};
+        do {
+            mInFIFO[count] = samplesIn[0][base];
+            mOutdata[base] = mOutFIFO[count-FIFO_LATENCY];
+            ++base; ++count;
+        } while(--todo);
+        mCount = count;
 
         /* Check whether FIFO buffer is filled */
-        if(mCount < HIL_SIZE) continue;
+        if(mCount < HIL_SIZE) break;
         mCount = FIFO_LATENCY;
 
         /* Real signal windowing and store in Analytic buffer */
-        for(k = 0;k < HIL_SIZE;k++)
-        {
-            mAnalytic[k].real(mInFIFO[k] * HannWindow[k]);
-            mAnalytic[k].imag(0.0);
-        }
+        for(size_t k{0};k < HIL_SIZE;k++)
+            mAnalytic[k] = mInFIFO[k]*HannWindow[k];
 
         /* Processing signal by Discrete Hilbert Transform (analytical signal). */
         complex_hilbert(mAnalytic);
 
         /* Windowing and add to output accumulator */
-        for(k = 0;k < HIL_SIZE;k++)
+        for(size_t k{0};k < HIL_SIZE;k++)
             mOutputAccum[k] += 2.0/OVERSAMP*HannWindow[k]*mAnalytic[k];
 
         /* Shift accumulator, input & output FIFO */
-        for(k = 0;k < HIL_STEP;k++) mOutFIFO[k] = mOutputAccum[k];
-        for(j = 0;k < HIL_SIZE;k++,j++) mOutputAccum[j] = mOutputAccum[k];
-        for(;j < HIL_SIZE;j++) mOutputAccum[j] = complex_zero;
-        for(k = 0;k < FIFO_LATENCY;k++)
-            mInFIFO[k] = mInFIFO[k+HIL_STEP];
+        std::copy_n(mOutputAccum, HIL_STEP, mOutFIFO);
+        auto accum_iter = std::copy(std::begin(mOutputAccum)+HIL_STEP, std::end(mOutputAccum),
+            std::begin(mOutputAccum));
+        std::fill(accum_iter, std::end(mOutputAccum), complex_d{});
+        std::copy(std::begin(mInFIFO)+HIL_STEP, std::end(mInFIFO), std::begin(mInFIFO));
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
+    ALfloat *RESTRICT BufferOut{mBufferOut};
     for(ALsizei c{0};c < 2;++c)
     {
-        for(k = 0;k < samplesToDo;++k)
+        const int phase_step{mPhaseStep[c]};
+        int phase_idx{mPhase[c]};
+        for(size_t k{0};k < samplesToDo;++k)
         {
-            double phase = mPhase[c] * ((1.0 / FRACTIONONE) * al::MathDefs<double>::Tau());
+            const double phase{phase_idx * ((1.0 / FRACTIONONE) * al::MathDefs<double>::Tau())};
             BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
                 mOutdata[k].imag()*std::sin(phase)*mSign[c]);
 
-            mPhase[c] += mPhaseStep[c];
-            mPhase[c] &= FRACTIONMASK;
+            phase_idx += phase_step;
+            phase_idx &= FRACTIONMASK;
         }
+        mPhase[c] = phase_idx;
 
         /* Now, mix the processed sound data to the output. */
         MixSamples({BufferOut, samplesToDo}, samplesOut, mGains[c].Current, mGains[c].Target,

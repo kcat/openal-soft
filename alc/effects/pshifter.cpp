@@ -98,8 +98,8 @@ struct PshifterState final : public EffectState {
     ALfloat mFreqPerBin;
 
     /* Effects buffers */
-    ALfloat mInFIFO[STFT_SIZE];
-    ALfloat mOutFIFO[STFT_STEP];
+    double mInFIFO[STFT_SIZE];
+    double mOutFIFO[STFT_STEP];
     ALdouble mLastPhase[STFT_HALF_SIZE+1];
     ALdouble mSumPhase[STFT_HALF_SIZE+1];
     ALdouble mOutputAccum[STFT_SIZE];
@@ -169,25 +169,26 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
     static constexpr ALdouble expected{al::MathDefs<double>::Tau() / OVERSAMP};
     const ALdouble freq_per_bin{mFreqPerBin};
-    ALfloat *RESTRICT bufferOut{mBufferOut};
-    size_t count{mCount};
 
-    for(size_t i{0u};i < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
-        do {
-            /* Fill FIFO buffer with samples data */
-            mInFIFO[count] = samplesIn[0][i];
-            bufferOut[i] = mOutFIFO[count - FIFO_LATENCY];
+        size_t todo{minz(STFT_SIZE-mCount, samplesToDo-base)};
 
-            count++;
-        } while(++i < samplesToDo && count < STFT_SIZE);
+        /* Fill FIFO buffer with samples data */
+        size_t count{mCount};
+        do {
+            mInFIFO[count] = samplesIn[0][base];
+            mBufferOut[base] = static_cast<float>(mOutFIFO[count-FIFO_LATENCY]);
+            ++base; ++count;
+        } while(--todo);
+        mCount = count;
 
         /* Check whether FIFO buffer is filled */
-        if(count < STFT_SIZE) break;
-        count = FIFO_LATENCY;
+        if(mCount < STFT_SIZE) break;
+        mCount = FIFO_LATENCY;
 
         /* Real signal windowing and store in FFTbuffer */
-        for(ALuint k{0u};k < STFT_SIZE;k++)
+        for(size_t k{0u};k < STFT_SIZE;k++)
         {
             mFFTbuffer[k].real(mInFIFO[k] * HannWindow[k]);
             mFFTbuffer[k].imag(0.0);
@@ -200,7 +201,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_HALF_SIZE+1 samples are needed.
          */
-        for(ALuint k{0u};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             /* Compute amplitude and phase */
             ALphasor component{rect2polar(mFFTbuffer[k])};
@@ -228,7 +229,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
         /* PROCESSING */
         /* pitch shifting */
-        for(ALuint k{0u};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             mSyntesis_buffer[k].Amplitude = 0.0;
             mSyntesis_buffer[k].Frequency = 0.0;
@@ -245,17 +246,15 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
         /* SYNTHESIS */
         /* Synthesis the processing data */
-        for(ALuint k{0u};k < STFT_HALF_SIZE+1;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
-            ALphasor component;
-            ALdouble tmp;
-
             /* Compute bin deviation from scaled freq */
-            tmp = mSyntesis_buffer[k].Frequency/freq_per_bin - k;
+            const double tmp{mSyntesis_buffer[k].Frequency/freq_per_bin - k};
 
             /* Calculate actual delta phase and accumulate it to get bin phase */
             mSumPhase[k] += (k + tmp) * expected;
 
+            ALphasor component;
             component.Amplitude = mSyntesis_buffer[k].Amplitude;
             component.Phase     = mSumPhase[k];
 
@@ -263,29 +262,27 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             mFFTbuffer[k] = polar2rect(component);
         }
         /* zero negative frequencies for recontruct a real signal */
-        for(ALuint k{STFT_HALF_SIZE+1};k < STFT_SIZE;k++)
+        for(size_t k{STFT_HALF_SIZE+1};k < STFT_SIZE;k++)
             mFFTbuffer[k] = complex_d{};
 
         /* Apply iFFT to buffer data */
         complex_fft(mFFTbuffer, 1.0);
 
         /* Windowing and add to output */
-        for(ALuint k{0u};k < STFT_SIZE;k++)
+        for(size_t k{0u};k < STFT_SIZE;k++)
             mOutputAccum[k] += HannWindow[k] * mFFTbuffer[k].real() /
                                (0.5 * STFT_HALF_SIZE * OVERSAMP);
 
         /* Shift accumulator, input & output FIFO */
-        size_t j, k;
-        for(k = 0;k < STFT_STEP;k++) mOutFIFO[k] = static_cast<ALfloat>(mOutputAccum[k]);
-        for(j = 0;k < STFT_SIZE;k++,j++) mOutputAccum[j] = mOutputAccum[k];
-        for(;j < STFT_SIZE;j++) mOutputAccum[j] = 0.0;
-        for(k = 0;k < FIFO_LATENCY;k++)
-            mInFIFO[k] = mInFIFO[k+STFT_STEP];
+        std::copy_n(mOutputAccum, STFT_STEP, mOutFIFO);
+        auto accum_iter = std::copy(std::begin(mOutputAccum)+STFT_STEP, std::end(mOutputAccum),
+            std::begin(mOutputAccum));
+        std::fill(accum_iter, std::end(mOutputAccum), 0.0);
+        std::copy(std::begin(mInFIFO)+STFT_STEP, std::end(mInFIFO), std::begin(mInFIFO));
     }
-    mCount = count;
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples({bufferOut, samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
+    MixSamples({mBufferOut, samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
         maxz(samplesToDo, 512), 0);
 }
 

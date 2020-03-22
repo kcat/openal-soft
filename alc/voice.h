@@ -7,6 +7,7 @@
 #include "AL/alext.h"
 
 #include "al/buffer.h"
+#include "almalloc.h"
 #include "alspan.h"
 #include "alu.h"
 #include "devformat.h"
@@ -265,6 +266,8 @@ struct ALvoice {
     ALvoice& operator=(const ALvoice&) = delete;
 
     void mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo);
+
+    DEF_NEWDEL(ALvoice)
 };
 
 #endif /* VOICE_H */

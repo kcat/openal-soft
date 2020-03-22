@@ -670,7 +670,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 else if(static_cast<ALuint>(gotBytes) < needBytes)
                 {
                     mFlags |= VOICE_CALLBACK_STOPPED;
-                    mNumCallbackSamples += static_cast<ALuint>(gotBytes) / FrameSize;
+                    mNumCallbackSamples += static_cast<ALuint>(static_cast<ALuint>(gotBytes) /
+                        FrameSize);
                 }
                 else
                     mNumCallbackSamples = toLoad;

@@ -1,7 +1,7 @@
 /*
  * An example showing how to play a stream sync'd to video, using ffmpeg.
  *
- * Requires C++11.
+ * Requires C++14.
  */
 
 #include <condition_variable>

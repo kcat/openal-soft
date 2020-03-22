@@ -152,8 +152,8 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     }
 
     ALfloat coeffs[2][MAX_AMBI_CHANNELS];
-    CalcDirectionCoeffs({-1.0f, 0.0f, -1.0f}, 0.0f, coeffs[0]);
-    CalcDirectionCoeffs({ 1.0f, 0.0f, -1.0f}, 0.0f, coeffs[1]);
+    CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f, coeffs[0]);
+    CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f, coeffs[1]);
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs[0], slot->Params.Gain, mGains[0].Target);

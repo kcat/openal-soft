@@ -3347,51 +3347,6 @@ END_API_FUNC
 
 ALsource::ALsource()
 {
-    InnerAngle = 360.0f;
-    OuterAngle = 360.0f;
-    Pitch = 1.0f;
-    Position[0] = 0.0f;
-    Position[1] = 0.0f;
-    Position[2] = 0.0f;
-    Velocity[0] = 0.0f;
-    Velocity[1] = 0.0f;
-    Velocity[2] = 0.0f;
-    Direction[0] = 0.0f;
-    Direction[1] = 0.0f;
-    Direction[2] = 0.0f;
-    OrientAt[0] =  0.0f;
-    OrientAt[1] =  0.0f;
-    OrientAt[2] = -1.0f;
-    OrientUp[0] =  0.0f;
-    OrientUp[1] =  1.0f;
-    OrientUp[2] =  0.0f;
-    RefDistance = 1.0f;
-    MaxDistance = std::numeric_limits<float>::max();
-    RolloffFactor = 1.0f;
-    Gain = 1.0f;
-    MinGain = 0.0f;
-    MaxGain = 1.0f;
-    OuterGain = 0.0f;
-    OuterGainHF = 1.0f;
-
-    DryGainHFAuto = AL_TRUE;
-    WetGainAuto = AL_TRUE;
-    WetGainHFAuto = AL_TRUE;
-    AirAbsorptionFactor = 0.0f;
-    RoomRolloffFactor = 0.0f;
-    DopplerFactor = 1.0f;
-    HeadRelative = AL_FALSE;
-    Looping = AL_FALSE;
-    mDistanceModel = DistanceModel::Default;
-    mResampler = ResamplerDefault;
-    DirectChannels = DirectMode::Off;
-    mSpatialize = SpatializeAuto;
-
-    StereoPan[0] = Deg2Rad( 30.0f);
-    StereoPan[1] = Deg2Rad(-30.0f);
-
-    Radius = 0.0f;
-
     Direct.Gain = 1.0f;
     Direct.GainHF = 1.0f;
     Direct.HFReference = LOWPASSFREQREF;

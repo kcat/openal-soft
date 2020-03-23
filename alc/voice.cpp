@@ -64,8 +64,9 @@
 #include "vector.h"
 
 
+static_assert((BUFFERSIZE-1)/MAX_PITCH > 0, "MAX_PITCH is too large for BUFFERSIZE!");
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
-              "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
+    "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
 
 
 Resampler ResamplerDefault{Resampler::Linear};
@@ -642,13 +643,13 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
              */
             DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
             DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
-            DstBufferSize = static_cast<ALuint>(minu64(DataSize64, DstBufferSize));
-
-            /* Some mixers like having a multiple of 4, so try to give that
-             * unless this is the last update.
-             */
-            if(DstBufferSize < SamplesToDo-OutPos)
-                DstBufferSize &= ~3u;
+            if(DataSize64 < DstBufferSize)
+            {
+                /* Some mixers require being 16-byte aligned, so also limit to
+                 * a multiple of 4 samples to maintain alignment.
+                 */
+                DstBufferSize = static_cast<ALuint>(DataSize64) & ~3u;
+            }
         }
 
         if((mFlags&(VOICE_IS_CALLBACK|VOICE_CALLBACK_STOPPED)) == VOICE_IS_CALLBACK

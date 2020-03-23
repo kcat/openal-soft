@@ -13,7 +13,7 @@ namespace al {
  */
 enum class byte : unsigned char { };
 
-#define REQUIRES(...) typename std::enable_if<(__VA_ARGS__),bool>::type = true
+#define REQUIRES(...) std::enable_if_t<(__VA_ARGS__),bool> = true
 
 template<typename T, REQUIRES(std::is_integral<T>::value)>
 inline constexpr T to_integer(al::byte b) noexcept { return T(b); }

@@ -9,7 +9,7 @@
 
 namespace al {
 
-#define REQUIRES(...) bool rt_=true, typename std::enable_if<rt_ && (__VA_ARGS__),bool>::type = true
+#define REQUIRES(...) bool rt_=true, std::enable_if_t<rt_ && (__VA_ARGS__),bool> = true
 
 struct nullopt_t { };
 struct in_place_t { };
@@ -131,8 +131,8 @@ public:
 };
 
 template<typename T>
-inline optional<typename std::decay<T>::type> make_optional(T&& arg)
-{ return optional<typename std::decay<T>::type>{in_place, std::forward<T>(arg)}; }
+inline optional<std::decay_t<T>> make_optional(T&& arg)
+{ return optional<std::decay_t<T>>{in_place, std::forward<T>(arg)}; }
 
 template<typename T, typename... Args>
 inline optional<T> make_optional(Args&& ...args)

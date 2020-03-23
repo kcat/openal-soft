@@ -57,14 +57,14 @@ namespace detail_ {
     template<typename T, size_t E>
     struct is_span_<span<T,E>> : std::true_type { };
     template<typename T>
-    using is_span = is_span_<typename std::remove_cv<T>::type>;
+    using is_span = is_span_<std::remove_cv_t<T>>;
 
     template<typename T>
     struct is_std_array_ : std::false_type { };
     template<typename T, size_t N>
     struct is_std_array_<std::array<T,N>> : std::true_type { };
     template<typename T>
-    using is_std_array = is_std_array_<typename std::remove_cv<T>::type>;
+    using is_std_array = is_std_array_<std::remove_cv_t<T>>;
 
     template<typename T, typename = void>
     struct has_size_and_data : std::false_type { };
@@ -72,16 +72,13 @@ namespace detail_ {
     struct has_size_and_data<T,
         void_t<decltype(al::size(std::declval<T>())), decltype(al::data(std::declval<T>()))>>
         : std::true_type { };
-
-    template<typename T>
-    using remove_pointer_t = typename std::remove_pointer<T>::type;
 } // namespace detail_
 
-#define REQUIRES(...) bool rt_=true, typename std::enable_if<rt_ && (__VA_ARGS__),bool>::type = true
+#define REQUIRES(...) bool rt_=true, std::enable_if_t<rt_ && (__VA_ARGS__),bool> = true
 #define IS_VALID_CONTAINER(C)                                                 \
     !detail_::is_span<C>::value && !detail_::is_std_array<C>::value &&        \
     !std::is_array<C>::value && detail_::has_size_and_data<C>::value &&       \
-    std::is_convertible<detail_::remove_pointer_t<decltype(al::data(std::declval<C&>()))>(*)[],element_type(*)[]>::value
+    std::is_convertible<std::remove_pointer_t<decltype(al::data(std::declval<C&>()))>(*)[],element_type(*)[]>::value
 
 template<typename T, size_t E>
 class span {
@@ -89,7 +86,7 @@ class span {
 
 public:
     using element_type = T;
-    using value_type = typename std::remove_cv<T>::type;
+    using value_type = std::remove_cv_t<T>;
     using index_type = size_t;
     using difference_type = ptrdiff_t;
 
@@ -182,7 +179,7 @@ class span<T,static_cast<size_t>(-1)> {
 
 public:
     using element_type = T;
-    using value_type = typename std::remove_cv<T>::type;
+    using value_type = std::remove_cv_t<T>;
     using index_type = size_t;
     using difference_type = ptrdiff_t;
 

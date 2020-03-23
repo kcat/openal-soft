@@ -59,29 +59,35 @@ inline constexpr al::byte operator~(al::byte b) noexcept
 
 template<size_t N>
 class bitfield {
+    template<size_t> struct ElemT { };
+    template<> struct ElemT<1> { using type = uint8_t; };
+    template<> struct ElemT<2> { using type = uint16_t; };
+    template<> struct ElemT<3> { using type = uint32_t; };
+    template<> struct ElemT<4> { using type = uint32_t; };
+
     static constexpr size_t bits_per_byte{std::numeric_limits<unsigned char>::digits};
     static constexpr size_t NumElems{(N+bits_per_byte-1) / bits_per_byte};
 
-    byte vals[NumElems]{};
+    typename ElemT<NumElems>::type vals{};
 
 public:
     template<size_t b>
     inline void set() noexcept
     {
         static_assert(b < N, "Bit index out of range");
-        vals[b/bits_per_byte] |= 1 << (b%bits_per_byte);
+        vals |= 1 << b;
     }
     template<size_t b>
     inline void unset() noexcept
     {
         static_assert(b < N, "Bit index out of range");
-        vals[b/bits_per_byte] &= ~(1 << (b%bits_per_byte));
+        vals &= ~(1 << b);
     }
     template<size_t b>
     inline bool get() const noexcept
     {
         static_assert(b < N, "Bit index out of range");
-        return (vals[b/bits_per_byte] & (1 << (b%bits_per_byte))) != byte{};
+        return (vals & (1 << b)) != 0;
     }
 
     template<size_t b, size_t ...args, REQUIRES(sizeof...(args) > 0)>

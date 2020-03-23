@@ -3,26 +3,27 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "almalloc.h"
 
 
-#define LOWPASSFREQREF  (5000.0f)
-#define HIGHPASSFREQREF  (250.0f)
+#define LOWPASSFREQREF  5000.0f
+#define HIGHPASSFREQREF  250.0f
 
 
 struct ALfilter;
 
 struct ALfilterVtable {
-    void (*const setParami)(ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
-    void (*const setParamiv)(ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const setParamf)(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const setParamfv)(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals);
+    void (*const setParami )(ALfilter *filter, ALCcontext *ctx, ALenum param, int val);
+    void (*const setParamiv)(ALfilter *filter, ALCcontext *ctx, ALenum param, const int *vals);
+    void (*const setParamf )(ALfilter *filter, ALCcontext *ctx, ALenum param, float val);
+    void (*const setParamfv)(ALfilter *filter, ALCcontext *ctx, ALenum param, const float *vals);
 
-    void (*const getParami)(ALfilter *filter, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const getParami )(const ALfilter *filter, ALCcontext *ctx, ALenum param, int *val);
+    void (*const getParamiv)(const ALfilter *filter, ALCcontext *ctx, ALenum param, int *vals);
+    void (*const getParamf )(const ALfilter *filter, ALCcontext *ctx, ALenum param, float *val);
+    void (*const getParamfv)(const ALfilter *filter, ALCcontext *ctx, ALenum param, float *vals);
 };
 
 #define DEFINE_ALFILTER_VTABLE(T)                                  \
@@ -32,29 +33,37 @@ const ALfilterVtable T##_vtable = {                                \
 }
 
 struct ALfilter {
-    // Filter type (AL_FILTER_NULL, ...)
-    ALenum type;
+    ALenum type{AL_FILTER_NULL};
 
-    ALfloat Gain;
-    ALfloat GainHF;
-    ALfloat HFReference;
-    ALfloat GainLF;
-    ALfloat LFReference;
+    float Gain{1.0f};
+    float GainHF{1.0f};
+    float HFReference{LOWPASSFREQREF};
+    float GainLF{1.0f};
+    float LFReference{HIGHPASSFREQREF};
 
-    const ALfilterVtable *vtab;
+    const ALfilterVtable *vtab{nullptr};
 
     /* Self ID */
-    ALuint id;
+    ALuint id{0};
+
+    inline void setParami(ALCcontext *ctx, ALenum param, int value)
+    { vtab->setParami(this, ctx, param, value); }
+    inline void setParamiv(ALCcontext *ctx, ALenum param, const int *values)
+    { vtab->setParamiv(this, ctx, param, values); }
+    inline void setParamf(ALCcontext *ctx, ALenum param, float value)
+    { vtab->setParamf(this, ctx, param, value); }
+    inline void setParamfv(ALCcontext *ctx, ALenum param, const float *values)
+    { vtab->setParamfv(this, ctx, param, values); }
+    inline void getParami(ALCcontext *ctx, ALenum param, int *value) const
+    { vtab->getParami(this, ctx, param, value); }
+    inline void getParamiv(ALCcontext *ctx, ALenum param, int *values) const
+    { vtab->getParamiv(this, ctx, param, values); }
+    inline void getParamf(ALCcontext *ctx, ALenum param, float *value) const
+    { vtab->getParamf(this, ctx, param, value); }
+    inline void getParamfv(ALCcontext *ctx, ALenum param, float *values) const
+    { vtab->getParamfv(this, ctx, param, values); }
 
     DISABLE_ALLOC()
 };
-#define ALfilter_setParami(o, c, p, v)   ((o)->vtab->setParami(o, c, p, v))
-#define ALfilter_setParamf(o, c, p, v)   ((o)->vtab->setParamf(o, c, p, v))
-#define ALfilter_setParamiv(o, c, p, v)  ((o)->vtab->setParamiv(o, c, p, v))
-#define ALfilter_setParamfv(o, c, p, v)  ((o)->vtab->setParamfv(o, c, p, v))
-#define ALfilter_getParami(o, c, p, v)   ((o)->vtab->getParami(o, c, p, v))
-#define ALfilter_getParamf(o, c, p, v)   ((o)->vtab->getParamf(o, c, p, v))
-#define ALfilter_getParamiv(o, c, p, v)  ((o)->vtab->getParamiv(o, c, p, v))
-#define ALfilter_getParamfv(o, c, p, v)  ((o)->vtab->getParamfv(o, c, p, v))
 
 #endif

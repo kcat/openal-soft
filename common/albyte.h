@@ -35,21 +35,21 @@ template<typename T, REQUIRES(std::is_integral<T>::value)>
 inline al::byte& operator>>=(al::byte &lhs, T rhs) noexcept
 { lhs = lhs >> rhs; return lhs; }
 
-#define AL_DECL_OP(op)                                                        \
+#define AL_DECL_OP(op, opeq)                                                  \
 template<typename T, REQUIRES(std::is_integral<T>::value)>                    \
 inline constexpr al::byte operator op (al::byte lhs, T rhs) noexcept          \
 { return al::byte(to_integer<unsigned int>(lhs) op static_cast<unsigned int>(rhs)); } \
 template<typename T, REQUIRES(std::is_integral<T>::value)>                    \
-inline al::byte& operator op##= (al::byte &lhs, T rhs) noexcept               \
+inline al::byte& operator opeq (al::byte &lhs, T rhs) noexcept                \
 { lhs = lhs op rhs; return lhs; }                                             \
 inline constexpr al::byte operator op (al::byte lhs, al::byte rhs) noexcept   \
 { return al::byte(lhs op to_integer<unsigned int>(rhs)); }                    \
-inline al::byte& operator op##= (al::byte &lhs, al::byte rhs) noexcept        \
+inline al::byte& operator opeq (al::byte &lhs, al::byte rhs) noexcept         \
 { lhs = lhs op rhs; return lhs; }
 
-AL_DECL_OP(|)
-AL_DECL_OP(&)
-AL_DECL_OP(^)
+AL_DECL_OP(|, |=)
+AL_DECL_OP(&, &=)
+AL_DECL_OP(^, ^=)
 
 #undef AL_DECL_OP
 

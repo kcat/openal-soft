@@ -1644,7 +1644,7 @@ void ALCcontext::allocVoiceChanges(size_t addcount)
     addcount = (addcount+(clustersize-1)) / clustersize;
     while(addcount)
     {
-        VoiceChangeCluster cluster{new VoiceChange[clustersize]};
+        VoiceChangeCluster cluster{std::make_unique<VoiceChange[]>(clustersize)};
         for(size_t i{1};i < clustersize;++i)
             cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
         cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
@@ -1666,7 +1666,7 @@ void ALCcontext::allocVoices(size_t addcount)
     auto newarray = ALvoiceArray::Create((mVoiceClusters.size()+addcount) * clustersize);
     while(addcount)
     {
-        mVoiceClusters.emplace_back(VoiceCluster{new ALvoice[clustersize]});
+        mVoiceClusters.emplace_back(std::make_unique<ALvoice[]>(clustersize));
         --addcount;
     }
 

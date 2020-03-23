@@ -18,6 +18,12 @@ void *al_calloc(size_t alignment, size_t size);
 void al_free(void *ptr) noexcept;
 
 
+#define DISABLE_ALLOC()                                                       \
+    void *operator new(size_t) = delete;                                      \
+    void *operator new[](size_t) = delete;                                    \
+    void operator delete(void*) noexcept = delete;                            \
+    void operator delete[](void*) noexcept = delete;
+
 #define DEF_NEWDEL(T)                                                         \
     void *operator new(size_t size)                                           \
     {                                                                         \

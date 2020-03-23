@@ -57,6 +57,8 @@ struct ALlistener {
     } Params;
 
     ALlistener() { PropsClean.test_and_set(std::memory_order_relaxed); }
+
+    DISABLE_ALLOC()
 };
 
 void UpdateListenerProps(ALCcontext *context);

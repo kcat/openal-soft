@@ -124,6 +124,8 @@ struct ALsource {
 
     ALsource(const ALsource&) = delete;
     ALsource& operator=(const ALsource&) = delete;
+
+    DISABLE_ALLOC()
 };
 
 void UpdateAllSourceProps(ALCcontext *context);

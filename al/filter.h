@@ -4,6 +4,8 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "almalloc.h"
+
 
 #define LOWPASSFREQREF  (5000.0f)
 #define HIGHPASSFREQREF  (250.0f)
@@ -43,6 +45,8 @@ struct ALfilter {
 
     /* Self ID */
     ALuint id;
+
+    DISABLE_ALLOC()
 };
 #define ALfilter_setParami(o, c, p, v)   ((o)->vtab->setParami(o, c, p, v))
 #define ALfilter_setParamf(o, c, p, v)   ((o)->vtab->setParamf(o, c, p, v))

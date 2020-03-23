@@ -47,6 +47,8 @@ struct ALeffect {
 
     /* Self ID */
     ALuint id{0u};
+
+    DISABLE_ALLOC()
 };
 
 inline ALboolean IsReverbEffect(ALenum type)

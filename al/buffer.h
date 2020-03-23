@@ -104,6 +104,8 @@ struct ALbuffer {
     inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mFmtType); }
     inline ALuint channelsFromFmt() const noexcept { return ChannelsFromFmt(mFmtChannels); }
     inline ALuint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
+
+    DISABLE_ALLOC()
 };
 
 #endif

@@ -92,6 +92,7 @@ struct ALeffectslot {
 
     static ALeffectslotArray *CreatePtrArray(size_t count) noexcept;
 
+    /* This can be new'd for the context's default effect slot. */
     DEF_NEWDEL(ALeffectslot)
 };
 

@@ -1137,6 +1137,7 @@ IF(ALSOFT_EXAMPLES)
     ENDIF()
     IF(SDL2_FOUND)
         FIND_PACKAGE(SDL_sound)
+        FIND_PACKAGE(SndFile)
         FIND_PACKAGE(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
     ENDIF()
 ENDIF()
@@ -1478,14 +1479,23 @@ IF(ALSOFT_EXAMPLES)
 
     MESSAGE(STATUS "Building example programs")
 
+    IF(SNDFILE_FOUND)
+        ADD_EXECUTABLE(alplay examples/alplay.c)
+        TARGET_INCLUDE_DIRECTORIES(alplay PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(alplay PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+
+        IF(ALSOFT_INSTALL)
+            INSTALL(TARGETS alplay
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        ENDIF()
+
+        MESSAGE(STATUS "Building SndFile example programs")
+    ENDIF()
+
     IF(SDL2_FOUND)
         IF(SDL_SOUND_FOUND)
-            ADD_EXECUTABLE(alplay examples/alplay.c)
-            TARGET_INCLUDE_DIRECTORIES(alplay
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(alplay
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
-
             ADD_EXECUTABLE(alstream examples/alstream.c)
             TARGET_INCLUDE_DIRECTORIES(alstream
                 PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
@@ -1530,7 +1540,7 @@ IF(ALSOFT_EXAMPLES)
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
 
             IF(ALSOFT_INSTALL)
-                INSTALL(TARGETS alplay alstream alreverb almultireverb allatency alloopback alhrtf
+                INSTALL(TARGETS alstream alreverb almultireverb allatency alloopback alhrtf
                     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})

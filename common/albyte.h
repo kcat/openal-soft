@@ -57,18 +57,22 @@ inline constexpr al::byte operator~(al::byte b) noexcept
 { return al::byte(~to_integer<unsigned int>(b)); }
 
 
+namespace detail_ {
+    template<size_t> struct Elem { };
+    template<> struct Elem<1> { using type = uint8_t; };
+    template<> struct Elem<2> { using type = uint16_t; };
+    template<> struct Elem<3> { using type = uint32_t; };
+    template<> struct Elem<4> { using type = uint32_t; };
+
+    template<size_t N> using ElemT = typename Elem<N>::type;
+} // namespace detail_
+
 template<size_t N>
 class bitfield {
-    template<size_t> struct ElemT { };
-    template<> struct ElemT<1> { using type = uint8_t; };
-    template<> struct ElemT<2> { using type = uint16_t; };
-    template<> struct ElemT<3> { using type = uint32_t; };
-    template<> struct ElemT<4> { using type = uint32_t; };
-
     static constexpr size_t bits_per_byte{std::numeric_limits<unsigned char>::digits};
     static constexpr size_t NumElems{(N+bits_per_byte-1) / bits_per_byte};
 
-    typename ElemT<NumElems>::type vals{};
+    typename detail_::ElemT<NumElems> vals{};
 
 public:
     template<size_t b>

@@ -650,6 +650,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     std::wstring mDevId;
 
+    HRESULT mOpenStatus{E_FAIL};
     IMMDevice *mMMDev{nullptr};
     IAudioClient *mClient{nullptr};
     IAudioRenderClient *mRender{nullptr};
@@ -666,7 +667,9 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
 WasapiPlayback::~WasapiPlayback()
 {
-    pushMessage(MsgType::CloseDevice).wait();
+    if(SUCCEEDED(mOpenStatus))
+        pushMessage(MsgType::CloseDevice).wait();
+    mOpenStatus = E_FAIL;
 
     if(mNotifyEvent != nullptr)
         CloseHandle(mNotifyEvent);
@@ -779,6 +782,7 @@ void WasapiPlayback::open(const ALCchar *name)
 
     if(SUCCEEDED(hr))
         hr = pushMessage(MsgType::OpenDevice).get();
+    mOpenStatus = hr;
 
     if(FAILED(hr))
     {
@@ -1194,6 +1198,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 
     std::wstring mDevId;
 
+    HRESULT mOpenStatus{E_FAIL};
     IMMDevice *mMMDev{nullptr};
     IAudioClient *mClient{nullptr};
     IAudioCaptureClient *mCapture{nullptr};
@@ -1211,7 +1216,9 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 
 WasapiCapture::~WasapiCapture()
 {
-    pushMessage(MsgType::CloseDevice).wait();
+    if(SUCCEEDED(mOpenStatus))
+        pushMessage(MsgType::CloseDevice).wait();
+    mOpenStatus = E_FAIL;
 
     if(mNotifyEvent != nullptr)
         CloseHandle(mNotifyEvent);
@@ -1355,6 +1362,7 @@ void WasapiCapture::open(const ALCchar *name)
 
     if(SUCCEEDED(hr))
         hr = pushMessage(MsgType::OpenDevice).get();
+    mOpenStatus = hr;
 
     if(FAILED(hr))
     {

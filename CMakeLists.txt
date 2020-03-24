@@ -1132,12 +1132,9 @@ IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
     add_subdirectory(utils/alsoft-config)
 ENDIF()
 IF(ALSOFT_EXAMPLES)
-    IF(NOT SDL2_FOUND)
-        FIND_PACKAGE(SDL2)
-    ENDIF()
+    FIND_PACKAGE(SndFile)
+    FIND_PACKAGE(SDL2)
     IF(SDL2_FOUND)
-        FIND_PACKAGE(SDL_sound)
-        FIND_PACKAGE(SndFile)
         FIND_PACKAGE(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
     ENDIF()
 ENDIF()
@@ -1484,8 +1481,34 @@ IF(ALSOFT_EXAMPLES)
         TARGET_INCLUDE_DIRECTORIES(alplay PRIVATE ${SNDFILE_INCLUDE_DIRS})
         TARGET_LINK_LIBRARIES(alplay PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
 
+        ADD_EXECUTABLE(alstream examples/alstream.c)
+        TARGET_INCLUDE_DIRECTORIES(alstream PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(alstream PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+
+        ADD_EXECUTABLE(alreverb examples/alreverb.c)
+        TARGET_INCLUDE_DIRECTORIES(alreverb PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(alreverb PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+
+        ADD_EXECUTABLE(almultireverb examples/almultireverb.c)
+        TARGET_INCLUDE_DIRECTORIES(almultireverb PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(almultireverb
+            PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common ${MATH_LIB})
+
+        ADD_EXECUTABLE(allatency examples/allatency.c)
+        TARGET_INCLUDE_DIRECTORIES(allatency PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(allatency PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+
+        ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
+        TARGET_INCLUDE_DIRECTORIES(alhrtf PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(alhrtf
+            PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common ${MATH_LIB})
+
+        ADD_EXECUTABLE(alstreamcb examples/alstreamcb.cpp)
+        TARGET_INCLUDE_DIRECTORIES(alstreamcb PRIVATE ${SNDFILE_INCLUDE_DIRS})
+        TARGET_LINK_LIBRARIES(alstreamcb PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+
         IF(ALSOFT_INSTALL)
-            INSTALL(TARGETS alplay
+            INSTALL(TARGETS alplay alstream alreverb almultireverb allatency alhrtf
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
@@ -1495,59 +1518,19 @@ IF(ALSOFT_EXAMPLES)
     ENDIF()
 
     IF(SDL2_FOUND)
-        IF(SDL_SOUND_FOUND)
-            ADD_EXECUTABLE(alstream examples/alstream.c)
-            TARGET_INCLUDE_DIRECTORIES(alstream
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(alstream
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
+        ADD_EXECUTABLE(alloopback examples/alloopback.c)
+        TARGET_INCLUDE_DIRECTORIES(alloopback PRIVATE ${SDL2_INCLUDE_DIR})
+        TARGET_LINK_LIBRARIES(alloopback
+            PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
 
-            ADD_EXECUTABLE(alstreamcb examples/alstreamcb.cpp)
-            TARGET_INCLUDE_DIRECTORIES(alstreamcb
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(alstreamcb
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
-
-            ADD_EXECUTABLE(alreverb examples/alreverb.c)
-            TARGET_INCLUDE_DIRECTORIES(alreverb
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(alreverb
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
-
-            ADD_EXECUTABLE(almultireverb examples/almultireverb.c)
-            TARGET_INCLUDE_DIRECTORIES(almultireverb
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(almultireverb
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common
-                ${MATH_LIB})
-
-            ADD_EXECUTABLE(allatency examples/allatency.c)
-            TARGET_INCLUDE_DIRECTORIES(allatency
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(allatency
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common)
-
-            ADD_EXECUTABLE(alloopback examples/alloopback.c)
-            TARGET_INCLUDE_DIRECTORIES(alloopback
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(alloopback
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
-
-            ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
-            TARGET_INCLUDE_DIRECTORIES(alhrtf
-                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-            TARGET_LINK_LIBRARIES(alhrtf
-                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
-
-            IF(ALSOFT_INSTALL)
-                INSTALL(TARGETS alstream alreverb almultireverb allatency alloopback alhrtf
-                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-                    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-            ENDIF()
-
-            MESSAGE(STATUS "Building SDL_sound example programs")
+        IF(ALSOFT_INSTALL)
+            INSTALL(TARGETS alloopback
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
         ENDIF()
+
+        MESSAGE(STATUS "Building SDL example programs")
 
         SET(FFVER_OK FALSE)
         IF(FFMPEG_FOUND)

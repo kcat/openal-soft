@@ -36,22 +36,12 @@
 #include <thread>
 #include <vector>
 
-#include "SDL_sound.h"
-#include "SDL_audio.h"
-#include "SDL_stdinc.h"
+#include "sndfile.h"
 
 #include "AL/al.h"
 #include "AL/alc.h"
 
 #include "common/alhelpers.h"
-
-
-#ifndef SDL_AUDIO_MASK_BITSIZE
-#define SDL_AUDIO_MASK_BITSIZE (0xFF)
-#endif
-#ifndef SDL_AUDIO_BITSIZE
-#define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
-#endif
 
 
 #ifndef AL_SOFT_callback_buffer
@@ -87,13 +77,12 @@ struct StreamPlayer {
     size_t mStartOffset{0};
 
     /* Handle for the audio file to decode. */
-    Sound_Sample *mSample{nullptr};
-    Uint32 mAvailableData{0};
+    SNDFILE *mSndfile{nullptr};
+    SF_INFO mSfInfo{};
     size_t mDecoderOffset{0};
 
     /* The format of the callback samples. */
     ALenum mFormat;
-    ALsizei mSampleRate;
 
     StreamPlayer()
     {
@@ -111,18 +100,18 @@ struct StreamPlayer {
     {
         alDeleteSources(1, &mSource);
         alDeleteBuffers(1, &mBuffer);
-        if(mSample)
-            Sound_FreeSample(mSample);
+        if(mSndfile)
+            sf_close(mSndfile);
     }
 
     void close()
     {
-        if(mSample)
+        if(mSndfile)
         {
             alSourceRewind(mSource);
             alSourcei(mSource, AL_BUFFER, 0);
-            Sound_FreeSample(mSample);
-            mSample = nullptr;
+            sf_close(mSndfile);
+            mSndfile = nullptr;
         }
     }
 
@@ -130,50 +119,30 @@ struct StreamPlayer {
     {
         close();
 
-        /* Open the file in its normal format. */
-        mSample = Sound_NewSampleFromFile(filename, nullptr, 0);
-        if(!mSample)
+        /* Open the file and figure out the OpenAL format. */
+        mSndfile = sf_open(filename, SFM_READ, &mSfInfo);
+        if(!mSndfile)
         {
-            fprintf(stderr, "Could not open audio in %s\n", filename);
+            fprintf(stderr, "Could not open audio in %s: %s\n", filename, sf_strerror(mSndfile));
             return false;
         }
 
-        /* Figure out the OpenAL format from the sample's format. */
         mFormat = AL_NONE;
-        if(mSample->actual.channels == 1)
+        if(mSfInfo.channels == 1)
+            mFormat = AL_FORMAT_MONO16;
+        else if(mSfInfo.channels == 2)
+            mFormat = AL_FORMAT_STEREO16;
+        else
         {
-            if(mSample->actual.format == AUDIO_U8)
-                mFormat = AL_FORMAT_MONO8;
-            else if(mSample->actual.format == AUDIO_S16SYS)
-                mFormat = AL_FORMAT_MONO16;
-        }
-        else if(mSample->actual.channels == 2)
-        {
-            if(mSample->actual.format == AUDIO_U8)
-                mFormat = AL_FORMAT_STEREO8;
-            else if(mSample->actual.format == AUDIO_S16SYS)
-                mFormat = AL_FORMAT_STEREO16;
-        }
-        if(!mFormat)
-        {
-            fprintf(stderr, "Unsupported sample format: 0x%04x, %d channels\n",
-                mSample->actual.format, mSample->actual.channels);
-            Sound_FreeSample(mSample);
-            mSample = nullptr;
+            fprintf(stderr, "Unsupported channel count: %d\n", mSfInfo.channels);
+            sf_close(mSndfile);
+            mSndfile = nullptr;
 
             return false;
         }
-        mSampleRate = static_cast<ALsizei>(mSample->actual.rate);
-
-        const auto frame_size = Uint32{mSample->actual.channels} *
-            SDL_AUDIO_BITSIZE(mSample->actual.format) / 8;
-
-        /* Set a 50ms decode buffer size. */
-        Sound_SetBufferSize(mSample, static_cast<Uint32>(mSampleRate)*50/1000 * frame_size);
-        mAvailableData = 0;
 
         /* Set a 1s ring buffer size. */
-        mBufferDataSize = static_cast<Uint32>(mSampleRate) * size_t{frame_size};
+        mBufferDataSize = static_cast<ALuint>(mSfInfo.samplerate*mSfInfo.channels) * sizeof(short);
         mBufferData.reset(new ALbyte[mBufferDataSize]);
         mReadPos.store(0, std::memory_order_relaxed);
         mWritePos.store(0, std::memory_order_relaxed);
@@ -239,34 +208,27 @@ struct StreamPlayer {
 
     bool prepare()
     {
-        alBufferCallbackSOFT(mBuffer, mFormat, mSampleRate, bufferCallbackC, this, 0);
+        alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, bufferCallbackC, this, 0);
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
         if(ALenum err{alGetError()})
         {
             fprintf(stderr, "Failed to set callback: %s (0x%04x)\n", alGetString(err), err);
             return false;
         }
-
-        mAvailableData = Sound_Decode(mSample);
-        if(!mAvailableData)
-            fprintf(stderr, "Failed to decode any samples: %s\n", Sound_GetError());
-        return mAvailableData != 0;
+        return true;
     }
 
     bool update()
     {
-        constexpr int BadFlags{SOUND_SAMPLEFLAG_EOF | SOUND_SAMPLEFLAG_ERROR};
-
         ALenum state;
         ALint pos;
         alGetSourcei(mSource, AL_SAMPLE_OFFSET, &pos);
         alGetSourcei(mSource, AL_SOURCE_STATE, &state);
 
+        const size_t frame_size{static_cast<ALuint>(mSfInfo.channels) * sizeof(short)};
         size_t woffset{mWritePos.load(std::memory_order_acquire)};
         if(state != AL_INITIAL)
         {
-            const auto frame_size = Uint32{mSample->actual.channels} *
-                SDL_AUDIO_BITSIZE(mSample->actual.format) / 8;
             const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
             const size_t readable{((woffset >= roffset) ? woffset : (mBufferDataSize+woffset)) -
                 roffset};
@@ -276,15 +238,17 @@ struct StreamPlayer {
              * the playback offset the source was started with.
              */
             const size_t curtime{((state==AL_STOPPED) ? (mDecoderOffset-readable) / frame_size
-                : (static_cast<ALuint>(pos) + mStartOffset/frame_size)) / mSample->actual.rate};
+                : (static_cast<ALuint>(pos) + mStartOffset/frame_size))
+                / static_cast<ALuint>(mSfInfo.samplerate)};
             printf("\r%3zus (%3zu%% full)", curtime, readable * 100 / mBufferDataSize);
         }
         else
             fputs("Starting...", stdout);
         fflush(stdout);
 
-        while(mAvailableData > 0)
+        while(!sf_error(mSndfile))
         {
+            size_t read_bytes;
             const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
             if(roffset > woffset)
             {
@@ -294,45 +258,39 @@ struct StreamPlayer {
                  * instead of full.
                  */
                 const size_t writable{roffset-woffset-1};
-                /* Don't copy the sample data if it can't all fit. */
-                if(writable < mAvailableData) break;
+                if(writable < frame_size) break;
 
-                memcpy(&mBufferData[woffset], mSample->buffer, mAvailableData);
-                woffset += mAvailableData;
+                sf_count_t num_frames{sf_readf_short(mSndfile,
+                    reinterpret_cast<short*>(&mBufferData[woffset]),
+                    static_cast<sf_count_t>(writable/frame_size))};
+                if(num_frames < 1) break;
+
+                read_bytes = static_cast<size_t>(num_frames) * frame_size;
+                woffset += read_bytes;
             }
             else
             {
                 /* If the read offset is at or behind the write offset, the
                  * writeable area (might) wrap around. Make sure the sample
-                 * data can fit, and calculate how much goes in front and in
-                 * back.
+                 * data can fit, and calculate how much can go in front before
+                 * wrapping.
                  */
-                const size_t writable{mBufferDataSize+roffset-woffset-1};
-                if(writable < mAvailableData) break;
+                const size_t writable{!roffset ? mBufferDataSize-woffset-1 :
+                    (mBufferDataSize-woffset)};
+                if(writable < frame_size) break;
 
-                const size_t todo1{std::min<size_t>(mAvailableData, mBufferDataSize-woffset)};
-                const size_t todo2{mAvailableData - todo1};
+                sf_count_t num_frames{sf_readf_short(mSndfile,
+                    reinterpret_cast<short*>(&mBufferData[woffset]),
+                    static_cast<sf_count_t>(writable/frame_size))};
+                if(num_frames < 1) break;
 
-                memcpy(&mBufferData[woffset], mSample->buffer, todo1);
-                woffset += todo1;
+                read_bytes = static_cast<size_t>(num_frames) * frame_size;
+                woffset += read_bytes;
                 if(woffset == mBufferDataSize)
-                {
                     woffset = 0;
-                    if(todo2 > 0)
-                    {
-                        memcpy(&mBufferData[woffset], static_cast<ALbyte*>(mSample->buffer)+todo1,
-                            todo2);
-                        woffset += todo2;
-                    }
-                }
             }
             mWritePos.store(woffset, std::memory_order_release);
-            mDecoderOffset += mAvailableData;
-
-            if(!(mSample->flags&BadFlags))
-                mAvailableData = Sound_Decode(mSample);
-            else
-                mAvailableData = 0;
+            mDecoderOffset += read_bytes;
         }
 
         if(state != AL_PLAYING && state != AL_PAUSED)
@@ -364,15 +322,14 @@ struct StreamPlayer {
 
 int main(int argc, char **argv)
 {
-    /* A simple RAII container for OpenAL and SDL_sound startup and shutdown. */
+    /* A simple RAII container for OpenAL startup and shutdown. */
     struct AudioManager {
         AudioManager(char ***argv_, int *argc_)
         {
             if(InitAL(argv_, argc_) != 0)
                 throw std::runtime_error{"Failed to initialize OpenAL"};
-            Sound_Init();
         }
-        ~AudioManager() { Sound_Quit(); CloseAL(); }
+        ~AudioManager() { CloseAL(); }
     };
 
     /* Print out usage if no arguments were specified */
@@ -413,7 +370,7 @@ int main(int argc, char **argv)
             namepart = argv[i];
 
         printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->mFormat),
-            player->mSampleRate);
+            player->mSfInfo.samplerate);
         fflush(stdout);
 
         if(!player->prepare())

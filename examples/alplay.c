@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
     printf("\n");
 
-    /* All done. Delete resources, and close down SDL_sound and OpenAL. */
+    /* All done. Delete resources, and close down OpenAL. */
     alDeleteSources(1, &source);
     alDeleteBuffers(1, &buffer);
 

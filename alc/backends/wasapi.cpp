@@ -294,14 +294,16 @@ WCHAR *get_device_id(IMMDevice *device)
     return devid;
 }
 
-HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<DevMap> &list)
+void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<DevMap> &list)
 {
+    al::vector<DevMap>{}.swap(list);
+
     IMMDeviceCollection *coll;
     HRESULT hr{devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, &coll)};
     if(FAILED(hr))
     {
         ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
-        return hr;
+        return;
     }
 
     IMMDevice *defdev{nullptr};
@@ -310,7 +312,6 @@ HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vecto
     hr = coll->GetCount(&count);
     if(SUCCEEDED(hr) && count > 0)
     {
-        list.clear();
         list.reserve(count);
 
         hr = devenum->GetDefaultAudioEndpoint(flowdir, eMultimedia, &defdev);
@@ -341,8 +342,6 @@ HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vecto
     if(defdev) defdev->Release();
     if(defdevid) CoTaskMemFree(defdevid);
     coll->Release();
-
-    return S_OK;
 }
 
 
@@ -604,10 +603,10 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
                 Enumerator = static_cast<IMMDeviceEnumerator*>(ptr);
 
                 if(msg.mType == MsgType::EnumeratePlayback)
-                    hr = probe_devices(Enumerator, eRender, PlaybackDevices);
+                    probe_devices(Enumerator, eRender, PlaybackDevices);
                 else if(msg.mType == MsgType::EnumerateCapture)
-                    hr = probe_devices(Enumerator, eCapture, CaptureDevices);
-                msg.mPromise.set_value(hr);
+                    probe_devices(Enumerator, eCapture, CaptureDevices);
+                msg.mPromise.set_value(S_OK);
 
                 Enumerator->Release();
                 Enumerator = nullptr;
@@ -1752,19 +1751,17 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
          */
         outnames->append(entry.name.c_str(), entry.name.length()+1);
     };
-    HRESULT hr{};
+
     switch(type)
     {
     case DevProbe::Playback:
-        hr = WasapiProxy::pushMessageStatic(MsgType::EnumeratePlayback).get();
-        if(SUCCEEDED(hr))
-            std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        WasapiProxy::pushMessageStatic(MsgType::EnumeratePlayback).wait();
+        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
     case DevProbe::Capture:
-        hr = WasapiProxy::pushMessageStatic(MsgType::EnumerateCapture).get();
-        if(SUCCEEDED(hr))
-            std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        WasapiProxy::pushMessageStatic(MsgType::EnumerateCapture).wait();
+        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;
     }
 }

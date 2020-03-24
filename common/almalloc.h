@@ -146,24 +146,6 @@ inline T destroy_n(T first, N count)
 }
 
 
-template<typename T>
-inline void uninitialized_default_construct(T first, const T last)
-{
-    using ValueT = typename std::iterator_traits<T>::value_type;
-    T current{first};
-    try {
-        while(current != last)
-        {
-            ::new (static_cast<void*>(std::addressof(*current))) ValueT;
-            ++current;
-        }
-    }
-    catch(...) {
-        al::destroy(first, current);
-        throw;
-    }
-}
-
 template<typename T, typename N, REQUIRES(std::is_integral<N>::value)>
 inline T uninitialized_default_construct_n(T first, N count)
 {
@@ -173,55 +155,12 @@ inline T uninitialized_default_construct_n(T first, N count)
     {
         try {
             do {
-                ::new (static_cast<void*>(std::addressof(*current))) ValueT;
+                ::new(static_cast<void*>(std::addressof(*current))) ValueT;
                 ++current;
             } while(--count);
         }
         catch(...) {
             al::destroy(first, current);
-            throw;
-        }
-    }
-    return current;
-}
-
-
-template<typename T0, typename T1>
-inline T1 uninitialized_move(T0 first, const T0 last, const T1 output)
-{
-    using ValueT = typename std::iterator_traits<T1>::value_type;
-    T1 current{output};
-    try {
-        while(first != last)
-        {
-            ::new (static_cast<void*>(std::addressof(*current))) ValueT{std::move(*first)};
-            ++current;
-            ++first;
-        }
-    }
-    catch(...) {
-        al::destroy(output, current);
-        throw;
-    }
-    return current;
-}
-
-template<typename T0, typename N, typename T1, REQUIRES(std::is_integral<N>::value)>
-inline T1 uninitialized_move_n(T0 first, N count, const T1 output)
-{
-    using ValueT = typename std::iterator_traits<T1>::value_type;
-    T1 current{output};
-    if(count != 0)
-    {
-        try {
-            do {
-                ::new (static_cast<void*>(std::addressof(*current))) ValueT{std::move(*first)};
-                ++current;
-                ++first;
-            } while(--count);
-        }
-        catch(...) {
-            al::destroy(output, current);
             throw;
         }
     }
@@ -236,7 +175,7 @@ inline T1 uninitialized_move_n(T0 first, N count, const T1 output)
 template<typename T, size_t alignment=alignof(T)>
 struct FlexArray {
     using element_type = T;
-    using value_type = typename std::remove_cv<T>::type;
+    using value_type = std::remove_cv_t<T>;
     using index_type = size_t;
     using difference_type = ptrdiff_t;
 
@@ -261,7 +200,7 @@ DIAGNOSTIC_POP
     static std::unique_ptr<FlexArray> Create(index_type count)
     {
         void *ptr{al_calloc(alignof(FlexArray), Sizeof(count))};
-        return std::unique_ptr<FlexArray>{new (ptr) FlexArray{count}};
+        return std::unique_ptr<FlexArray>{new(ptr) FlexArray{count}};
     }
     static constexpr index_type Sizeof(index_type count, index_type base=0u) noexcept
     {

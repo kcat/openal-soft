@@ -122,9 +122,6 @@ const ALfloat ConeScale{InitConeScale()};
 /* Localized Z scalar for mono sources */
 const ALfloat ZScale{InitZScale()};
 
-MixerFunc MixSamples{Mix_<CTag>};
-RowMixerFunc MixRowSamples{MixRow_<CTag>};
-
 namespace {
 
 struct ChanMap {
@@ -133,33 +130,7 @@ struct ChanMap {
     ALfloat elevation;
 };
 
-HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_<CTag>;
-
-inline MixerFunc SelectMixer()
-{
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_<NEONTag>;
-#endif
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_<SSETag>;
-#endif
-    return Mix_<CTag>;
-}
-
-inline RowMixerFunc SelectRowMixer()
-{
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixRow_<NEONTag>;
-#endif
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixRow_<SSETag>;
-#endif
-    return MixRow_<CTag>;
-}
+HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 
 inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
@@ -256,8 +227,6 @@ inline ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
 
 void aluInit(void)
 {
-    MixSamples = SelectMixer();
-    MixRowSamples = SelectRowMixer();
     MixDirectHrtf = SelectHrtfMixer();
 }
 

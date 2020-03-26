@@ -71,6 +71,9 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 
 Resampler ResamplerDefault{Resampler::Linear};
 
+MixerFunc MixSamples{Mix_<CTag>};
+RowMixerFunc MixRowSamples{MixRow_<CTag>};
+
 namespace {
 
 using HrtfMixerFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples, const ALuint IrSize,
@@ -79,8 +82,34 @@ using HrtfMixerBlendFunc = void(*)(const ALfloat *InSamples, float2 *AccumSample
     const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize);
 
-HrtfMixerFunc MixHrtfSamples = MixHrtf_<CTag>;
-HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_<CTag>;
+HrtfMixerFunc MixHrtfSamples{MixHrtf_<CTag>};
+HrtfMixerBlendFunc MixHrtfBlendSamples{MixHrtfBlend_<CTag>};
+
+inline MixerFunc SelectMixer()
+{
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return Mix_<NEONTag>;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return Mix_<SSETag>;
+#endif
+    return Mix_<CTag>;
+}
+
+inline RowMixerFunc SelectRowMixer()
+{
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixRow_<NEONTag>;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixRow_<SSETag>;
+#endif
+    return MixRow_<CTag>;
+}
 
 inline HrtfMixerFunc SelectHrtfMixer()
 {
@@ -150,6 +179,8 @@ void aluInitMixer()
             ResamplerDefault = iter->resampler;
     }
 
+    MixSamples = SelectMixer();
+    MixRowSamples = SelectRowMixer();
     MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
 }

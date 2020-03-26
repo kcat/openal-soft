@@ -441,9 +441,9 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
     voice->mLoopBuffer.store(source->Looping ? source->queue : nullptr, std::memory_order_relaxed);
 
     ALbuffer *buffer{BufferList->mBuffer};
+    ALuint num_channels{buffer->channelsFromFmt()};
     voice->mFrequency = buffer->Frequency;
     voice->mFmtChannels = buffer->mFmtChannels;
-    voice->mNumChannels = buffer->channelsFromFmt();
     voice->mSampleSize  = buffer->bytesFromFmt();
     voice->mAmbiLayout = static_cast<AmbiLayout>(buffer->AmbiLayout);
     voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
@@ -458,6 +458,11 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
      */
     voice->mStep = 0;
 
+    if(voice->mChans.capacity() > 2 && num_channels < voice->mChans.capacity())
+        al::vector<ALvoice::ChannelData>{}.swap(voice->mChans);
+    voice->mChans.reserve(maxu(2, num_channels));
+    voice->mChans.resize(num_channels);
+
     /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
      * higher order than the voice. No HF scaling is necessary to mix it.
      */
@@ -467,43 +472,38 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
         const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
             AmbiIndex::OrderFrom2DChannel.data() :
             AmbiIndex::OrderFromChannel.data()};
+        const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder, device->mAmbiOrder);
 
         const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
 
-        const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder, device->mAmbiOrder);
-        auto init_ambi = [device,&scales,&OrderFromChan,splitter](ALvoice::ChannelData &chandata) -> void
+        for(auto &chandata : voice->mChans)
         {
             chandata.mPrevSamples.fill(0.0f);
             chandata.mAmbiScale = scales[*(OrderFromChan++)];
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
-        };
-        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
-            init_ambi);
+        }
 
         voice->mFlags |= VOICE_IS_AMBISONIC;
     }
     else
     {
         /* Clear previous samples. */
-        auto clear_prevs = [device](ALvoice::ChannelData &chandata) -> void
+        for(auto &chandata : voice->mChans)
         {
             chandata.mPrevSamples.fill(0.0f);
             chandata.mDryParams = DirectParams{};
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
-        };
-        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels,
-            clear_prevs);
+        }
     }
 
     if(device->AvgSpeakerDist > 0.0f)
     {
         const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
             (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
-        auto init_nfc = [w1](ALvoice::ChannelData &chandata) -> void
-        { chandata.mDryParams.NFCtrlFilter.init(w1); };
-        std::for_each(voice->mChans.begin(), voice->mChans.begin()+voice->mNumChannels, init_nfc);
+        for(auto &chandata : voice->mChans)
+            chandata.mDryParams.NFCtrlFilter.init(w1);
     }
 
     source->PropsClean.test_and_set(std::memory_order_acq_rel);

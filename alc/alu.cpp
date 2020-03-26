@@ -744,17 +744,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     const auto Frequency = static_cast<ALfloat>(Device->Frequency);
     const ALuint NumSends{Device->NumAuxSends};
 
-    const ALuint num_channels{voice->mNumChannels};
+    const size_t num_channels{voice->mChans.size()};
     ASSUME(num_channels > 0);
 
-    auto clear_target = [NumSends](ALvoice::ChannelData &chandata) -> void
+    for(auto &chandata : voice->mChans)
     {
         chandata.mDryParams.Hrtf.Target = HrtfFilter{};
         chandata.mDryParams.Gains.Target.fill(0.0f);
         std::for_each(chandata.mWetParams.begin(), chandata.mWetParams.begin()+NumSends,
             [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
-    };
-    std::for_each(voice->mChans.begin(), voice->mChans.begin()+num_channels, clear_target);
+    }
 
     DirectMode DirectChannels{props->DirectChannels};
     const ChanMap *chans{nullptr};
@@ -922,7 +921,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
 
             static const uint8_t ChansPerOrder[MAX_AMBI_ORDER+1]{1, 3, 5, 7,};
             static const uint8_t OrderOffset[MAX_AMBI_ORDER+1]{0, 1, 4, 9,};
-            for(ALuint c{0};c < num_channels;c++)
+            for(size_t c{0};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
                 const size_t order{AmbiIndex::OrderFromChannel[acn]};
@@ -954,7 +953,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
          */
         voice->mDirect.Buffer = Device->RealOut.Buffer;
 
-        for(ALuint c{0};c < num_channels;c++)
+        for(size_t c{0};c < num_channels;c++)
         {
             ALuint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
             if(idx != INVALID_CHANNEL_INDEX)
@@ -979,7 +978,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         /* Auxiliary sends still use normal channel panning since they mix to
          * B-Format, which can't channel-match.
          */
-        for(ALuint c{0};c < num_channels;c++)
+        for(size_t c{0};c < num_channels;c++)
         {
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
@@ -1013,7 +1012,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
-            for(ALuint c{1};c < num_channels;c++)
+            for(size_t c{1};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
@@ -1026,7 +1025,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
             ALfloat coeffs[MAX_AMBI_CHANNELS];
             CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
 
-            for(ALuint c{0};c < num_channels;c++)
+            for(size_t c{0};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
@@ -1045,7 +1044,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
              * relative location around the listener, providing "virtual
              * speaker" responses.
              */
-            for(ALuint c{0};c < num_channels;c++)
+            for(size_t c{0};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
@@ -1091,7 +1090,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
-                for(ALuint c{0};c < num_channels;c++)
+                for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags |= VOICE_HAS_NFC;
@@ -1110,7 +1109,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                 CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
             }
 
-            for(ALuint c{0};c < num_channels;c++)
+            for(size_t c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -1142,13 +1141,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
                  * infinite distance, which results in a w0 of 0.
                  */
                 constexpr float w0{0.0f};
-                for(ALuint c{0};c < num_channels;c++)
+                for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 
-            for(ALuint c{0};c < num_channels;c++)
+            for(size_t c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -1193,7 +1192,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         auto &highpass = voice->mChans[0].mDryParams.HighPass;
         lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, DryGain.HF, 1.0f);
         highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, DryGain.LF, 1.0f);
-        for(ALuint c{1};c < num_channels;c++)
+        for(size_t c{1};c < num_channels;c++)
         {
             voice->mChans[c].mDryParams.LowPass.copyParamsFrom(lowpass);
             voice->mChans[c].mDryParams.HighPass.copyParamsFrom(highpass);
@@ -1212,7 +1211,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
         auto &highpass = voice->mChans[0].mWetParams[i].HighPass;
         lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, WetGain[i].HF, 1.0f);
         highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, WetGain[i].LF, 1.0f);
-        for(ALuint c{1};c < num_channels;c++)
+        for(size_t c{1};c < num_channels;c++)
         {
             voice->mChans[c].mWetParams[i].LowPass.copyParamsFrom(lowpass);
             voice->mChans[c].mWetParams[i].HighPass.copyParamsFrom(highpass);

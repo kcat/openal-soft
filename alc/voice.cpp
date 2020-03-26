@@ -553,7 +553,6 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     ALuint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     ALbufferlistitem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
-    const ALuint NumChannels{mNumChannels};
     const ALuint SampleSize{mSampleSize};
     const ALuint increment{mStep};
     if UNLIKELY(increment < 1)
@@ -566,10 +565,10 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         return;
     }
 
-    ASSUME(NumChannels > 0);
     ASSUME(SampleSize > 0);
-    ASSUME(increment > 0);
-    const auto FrameSize = size_t{NumChannels} * SampleSize;
+
+    const size_t FrameSize{mChans.size() * SampleSize};
+    ASSUME(FrameSize > 0);
 
     ALCdevice *Device{Context->mDevice.get()};
     const ALuint NumSends{Device->NumAuxSends};
@@ -582,9 +581,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
-        for(ALuint chan{0};chan < NumChannels;chan++)
+        for(auto &chandata : mChans)
         {
-            ChannelData &chandata = mChans[chan];
             {
                 DirectParams &parms = chandata.mDryParams;
                 if(!(mFlags&VOICE_HAS_HRTF))
@@ -604,9 +602,9 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     }
     else if((mFlags&VOICE_HAS_HRTF))
     {
-        for(ALuint chan{0};chan < NumChannels;chan++)
+        for(auto &chandata : mChans)
         {
-            DirectParams &parms = mChans[chan].mDryParams;
+            DirectParams &parms = chandata.mDryParams;
             if(!(parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
             {
                 /* The old HRTF params are silent, so overwrite the old
@@ -680,10 +678,12 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         }
 
         ASSUME(DstBufferSize > 0);
-        for(ALuint chan{0};chan < NumChannels;chan++)
+        for(auto &chandata : mChans)
         {
-            ChannelData &chandata = mChans[chan];
-            const al::span<ALfloat> SrcData{Device->SourceData, SrcBufferSize};
+            const size_t num_chans{mChans.size()};
+            const auto chan = static_cast<size_t>(std::distance(mChans.data(),
+                std::addressof(chandata)));
+            const al::span<float> SrcData{Device->SourceData, SrcBufferSize};
 
             /* Load the previous samples into the source data first, then load
              * what we can from the buffer queue.
@@ -695,13 +695,13 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 srciter = std::copy(chandata.mPrevSamples.begin()+(MAX_RESAMPLER_PADDING>>1),
                     chandata.mPrevSamples.end(), srciter);
             else if((mFlags&VOICE_IS_STATIC))
-                srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, NumChannels,
+                srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, num_chans,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
             else if((mFlags&VOICE_IS_CALLBACK))
-                srciter = LoadBufferCallback(BufferListItem, NumChannels, SampleSize, chan,
+                srciter = LoadBufferCallback(BufferListItem, num_chans, SampleSize, chan,
                     mNumCallbackSamples, {srciter, SrcData.end()});
             else
-                srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, NumChannels,
+                srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, num_chans,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
 
             if UNLIKELY(srciter != SrcData.end())

@@ -226,7 +226,6 @@ struct ALvoice {
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
     ALuint mFrequency;
-    ALuint mNumChannels;
     ALuint mSampleSize;
     AmbiLayout mAmbiLayout;
     AmbiNorm mAmbiScaling;
@@ -258,7 +257,7 @@ struct ALvoice {
         DirectParams mDryParams;
         std::array<SendParams,MAX_SENDS> mWetParams;
     };
-    std::array<ChannelData,MAX_INPUT_CHANNELS> mChans;
+    al::vector<ChannelData> mChans{2};
 
     ALvoice() = default;
     ALvoice(const ALvoice&) = delete;

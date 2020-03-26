@@ -313,11 +313,11 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     switch(name)
     {
     case AL_SEC_OFFSET:
-        offset = (readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE) / BufferFmt->Frequency;
+        offset = (readPos + static_cast<double>(readPosFrac)/FRACTIONONE) / BufferFmt->Frequency;
         break;
 
     case AL_SAMPLE_OFFSET:
-        offset = readPos + static_cast<ALdouble>(readPosFrac)/FRACTIONONE;
+        offset = readPos + static_cast<double>(readPosFrac)/FRACTIONONE;
         break;
 
     case AL_BYTE_OFFSET:
@@ -328,7 +328,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
             ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
-            offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
+            offset = static_cast<double>(readPos / FrameBlockSize * BlockSize);
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
@@ -337,12 +337,12 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
             ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
-            offset = static_cast<ALdouble>(readPos / FrameBlockSize * BlockSize);
+            offset = static_cast<double>(readPos / FrameBlockSize * BlockSize);
         }
         else
         {
             const ALuint FrameSize{BufferFmt->frameSizeFromFmt()};
-            offset = static_cast<ALdouble>(readPos * FrameSize);
+            offset = static_cast<double>(readPos * FrameSize);
         }
         break;
     }
@@ -379,7 +379,7 @@ al::optional<VoicePos> GetSampleOffset(ALbufferlistitem *BufferList, ALenum Offs
 
     /* Get sample frame offset */
     ALuint offset{0u}, frac{0u};
-    ALdouble dbloff, dblfrac;
+    double dbloff, dblfrac;
     switch(OffsetType)
     {
     case AL_BYTE_OFFSET:
@@ -500,7 +500,7 @@ void InitVoice(ALvoice *voice, ALsource *source, ALbufferlistitem *BufferList, A
 
     if(device->AvgSpeakerDist > 0.0f)
     {
-        const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+        const float w1{SPEEDOFSOUNDMETRESPERSEC /
             (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
         for(auto &chandata : voice->mChans)
             chandata.mDryParams.NFCtrlFilter.init(w1);
@@ -1001,9 +1001,9 @@ ALuint DoubleValsByProp(ALenum prop)
 }
 
 
-bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALfloat> values);
-bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint> values);
-bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint64SOFT> values);
+bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values);
+bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values);
+bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values);
 
 #define CHECKSIZE(v, s) do { \
     if LIKELY((v).size() == (s) || (v).size() == MaxValues) break;            \
@@ -1028,9 +1028,9 @@ bool UpdateSourceProps(ALsource *source, ALCcontext *context)
     return true;
 }
 
-bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALfloat> values)
+bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values)
 {
-    ALint ival;
+    int ival;
 
     switch(prop)
     {
@@ -1228,13 +1228,13 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
         CHECKSIZE(values, 1);
-        ival = static_cast<ALint>(values[0]);
+        ival = static_cast<int>(values[0]);
         return SetSourceiv(Source, Context, prop, {&ival, 1u});
 
     case AL_BUFFERS_QUEUED:
     case AL_BUFFERS_PROCESSED:
         CHECKSIZE(values, 1);
-        ival = static_cast<ALint>(static_cast<ALuint>(values[0]));
+        ival = static_cast<int>(static_cast<ALuint>(values[0]));
         return SetSourceiv(Source, Context, prop, {&ival, 1u});
 
     case AL_BUFFER:
@@ -1250,7 +1250,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     return false;
 }
 
-bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint> values)
+bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values)
 {
     ALCdevice *device{Context->mDevice.get()};
     ALbuffer *buffer{nullptr};
@@ -1260,7 +1260,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     std::unique_lock<std::mutex> slotlock;
     std::unique_lock<std::mutex> filtlock;
     std::unique_lock<std::mutex> buflock;
-    ALfloat fvals[6];
+    float fvals[6];
 
     switch(prop)
     {
@@ -1534,7 +1534,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_SOURCE_RADIUS:
         CHECKSIZE(values, 1);
-        fvals[0] = static_cast<ALfloat>(values[0]);
+        fvals[0] = static_cast<float>(values[0]);
         return SetSourcefv(Source, Context, prop, {fvals, 1u});
 
     /* 3x float */
@@ -1542,20 +1542,20 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_VELOCITY:
     case AL_DIRECTION:
         CHECKSIZE(values, 3);
-        fvals[0] = static_cast<ALfloat>(values[0]);
-        fvals[1] = static_cast<ALfloat>(values[1]);
-        fvals[2] = static_cast<ALfloat>(values[2]);
+        fvals[0] = static_cast<float>(values[0]);
+        fvals[1] = static_cast<float>(values[1]);
+        fvals[2] = static_cast<float>(values[2]);
         return SetSourcefv(Source, Context, prop, {fvals, 3u});
 
     /* 6x float */
     case AL_ORIENTATION:
         CHECKSIZE(values, 6);
-        fvals[0] = static_cast<ALfloat>(values[0]);
-        fvals[1] = static_cast<ALfloat>(values[1]);
-        fvals[2] = static_cast<ALfloat>(values[2]);
-        fvals[3] = static_cast<ALfloat>(values[3]);
-        fvals[4] = static_cast<ALfloat>(values[4]);
-        fvals[5] = static_cast<ALfloat>(values[5]);
+        fvals[0] = static_cast<float>(values[0]);
+        fvals[1] = static_cast<float>(values[1]);
+        fvals[2] = static_cast<float>(values[2]);
+        fvals[3] = static_cast<float>(values[3]);
+        fvals[4] = static_cast<float>(values[4]);
+        fvals[5] = static_cast<float>(values[5]);
         return SetSourcefv(Source, Context, prop, {fvals, 6u});
 
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
@@ -1571,10 +1571,10 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     return false;
 }
 
-bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const ALint64SOFT> values)
+bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values)
 {
-    ALfloat fvals[MaxValues];
-    ALint   ivals[MaxValues];
+    float fvals[MaxValues];
+    int   ivals[MaxValues];
 
     switch(prop)
     {
@@ -1604,7 +1604,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] <= INT_MAX && values[0] >= INT_MIN);
 
-        ivals[0] = static_cast<ALint>(values[0]);
+        ivals[0] = static_cast<int>(values[0]);
         return SetSourceiv(Source, Context, prop, {ivals, 1u});
 
     /* 1x uint */
@@ -1613,7 +1613,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] <= UINT_MAX && values[0] >= 0);
 
-        ivals[0] = static_cast<ALint>(values[0]);
+        ivals[0] = static_cast<int>(values[0]);
         return SetSourceiv(Source, Context, prop, {ivals, 1u});
 
     /* 3x uint */
@@ -1622,9 +1622,9 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
         CHECKVAL(values[0] <= UINT_MAX && values[0] >= 0 && values[1] <= UINT_MAX && values[1] >= 0
             && values[2] <= UINT_MAX && values[2] >= 0);
 
-        ivals[0] = static_cast<ALint>(values[0]);
-        ivals[1] = static_cast<ALint>(values[1]);
-        ivals[2] = static_cast<ALint>(values[2]);
+        ivals[0] = static_cast<int>(values[0]);
+        ivals[1] = static_cast<int>(values[1]);
+        ivals[2] = static_cast<int>(values[2]);
         return SetSourceiv(Source, Context, prop, {ivals, 3u});
 
     /* 1x float */
@@ -1644,7 +1644,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_SOURCE_RADIUS:
         CHECKSIZE(values, 1);
-        fvals[0] = static_cast<ALfloat>(values[0]);
+        fvals[0] = static_cast<float>(values[0]);
         return SetSourcefv(Source, Context, prop, {fvals, 1u});
 
     /* 3x float */
@@ -1652,20 +1652,20 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_VELOCITY:
     case AL_DIRECTION:
         CHECKSIZE(values, 3);
-        fvals[0] = static_cast<ALfloat>(values[0]);
-        fvals[1] = static_cast<ALfloat>(values[1]);
-        fvals[2] = static_cast<ALfloat>(values[2]);
+        fvals[0] = static_cast<float>(values[0]);
+        fvals[1] = static_cast<float>(values[1]);
+        fvals[2] = static_cast<float>(values[2]);
         return SetSourcefv(Source, Context, prop, {fvals, 3u});
 
     /* 6x float */
     case AL_ORIENTATION:
         CHECKSIZE(values, 6);
-        fvals[0] = static_cast<ALfloat>(values[0]);
-        fvals[1] = static_cast<ALfloat>(values[1]);
-        fvals[2] = static_cast<ALfloat>(values[2]);
-        fvals[3] = static_cast<ALfloat>(values[3]);
-        fvals[4] = static_cast<ALfloat>(values[4]);
-        fvals[5] = static_cast<ALfloat>(values[5]);
+        fvals[0] = static_cast<float>(values[0]);
+        fvals[1] = static_cast<float>(values[1]);
+        fvals[2] = static_cast<float>(values[2]);
+        fvals[3] = static_cast<float>(values[3]);
+        fvals[4] = static_cast<float>(values[4]);
+        fvals[5] = static_cast<float>(values[5]);
         return SetSourcefv(Source, Context, prop, {fvals, 6u});
 
     case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1682,16 +1682,16 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 #undef CHECKVAL
 
 
-bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALdouble> values);
-bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALint> values);
-bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALint64SOFT> values);
+bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<double> values);
+bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int> values);
+bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int64_t> values);
 
-bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALdouble> values)
+bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<double> values)
 {
     ALCdevice *device{Context->mDevice.get()};
     ClockLatency clocktime;
     nanoseconds srcclock;
-    ALint ivals[MaxValues];
+    int ivals[MaxValues];
     bool err;
 
     switch(prop)
@@ -1795,7 +1795,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             clocktime = GetClockLatency(device);
         }
         if(srcclock == clocktime.ClockTime)
-            values[1] = static_cast<ALdouble>(clocktime.Latency.count()) / 1000000000.0;
+            values[1] = static_cast<double>(clocktime.Latency.count()) / 1000000000.0;
         else
         {
             /* If the clock time incremented, reduce the latency by that much
@@ -1803,14 +1803,14 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
              */
             const nanoseconds diff{clocktime.ClockTime - srcclock};
             const nanoseconds latency{clocktime.Latency - std::min(clocktime.Latency, diff)};
-            values[1] = static_cast<ALdouble>(latency.count()) / 1000000000.0;
+            values[1] = static_cast<double>(latency.count()) / 1000000000.0;
         }
         return true;
 
     case AL_SEC_OFFSET_CLOCK_SOFT:
         CHECKSIZE(values, 2);
         values[0] = GetSourceSecOffset(Source, Context, &srcclock);
-        values[1] = static_cast<ALdouble>(srcclock.count()) / 1000000000.0;
+        values[1] = static_cast<double>(srcclock.count()) / 1000000000.0;
         return true;
 
     case AL_POSITION:
@@ -1860,7 +1860,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SOURCE_SPATIALIZE_SOFT:
         CHECKSIZE(values, 1);
         if((err=GetSourceiv(Source, Context, prop, {ivals, 1u})) != false)
-            values[0] = static_cast<ALdouble>(ivals[0]);
+            values[0] = static_cast<double>(ivals[0]);
         return err;
 
     case AL_BUFFER:
@@ -1876,9 +1876,9 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     return false;
 }
 
-bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALint> values)
+bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int> values)
 {
-    ALdouble dvals[MaxValues];
+    double dvals[MaxValues];
     bool err;
 
     switch(prop)
@@ -1900,7 +1900,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(Source->SourceType == AL_STATIC) BufferList = Source->queue;
             ALbuffer *buffer{nullptr};
             if(BufferList) buffer = BufferList->mBuffer;
-            values[0] = buffer ? static_cast<ALint>(buffer->id) : 0;
+            values[0] = buffer ? static_cast<int>(buffer->id) : 0;
         }
         return true;
 
@@ -2015,7 +2015,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SOURCE_RADIUS:
         CHECKSIZE(values, 1);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 1u})) != false)
-            values[0] = static_cast<ALint>(dvals[0]);
+            values[0] = static_cast<int>(dvals[0]);
         return err;
 
     /* 3x float/double */
@@ -2025,9 +2025,9 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 3);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 3u})) != false)
         {
-            values[0] = static_cast<ALint>(dvals[0]);
-            values[1] = static_cast<ALint>(dvals[1]);
-            values[2] = static_cast<ALint>(dvals[2]);
+            values[0] = static_cast<int>(dvals[0]);
+            values[1] = static_cast<int>(dvals[1]);
+            values[2] = static_cast<int>(dvals[2]);
         }
         return err;
 
@@ -2036,12 +2036,12 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKSIZE(values, 6);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 6u})) != false)
         {
-            values[0] = static_cast<ALint>(dvals[0]);
-            values[1] = static_cast<ALint>(dvals[1]);
-            values[2] = static_cast<ALint>(dvals[2]);
-            values[3] = static_cast<ALint>(dvals[3]);
-            values[4] = static_cast<ALint>(dvals[4]);
-            values[5] = static_cast<ALint>(dvals[5]);
+            values[0] = static_cast<int>(dvals[0]);
+            values[1] = static_cast<int>(dvals[1]);
+            values[2] = static_cast<int>(dvals[2]);
+            values[3] = static_cast<int>(dvals[3]);
+            values[4] = static_cast<int>(dvals[4]);
+            values[5] = static_cast<int>(dvals[5]);
         }
         return err;
 
@@ -2064,13 +2064,13 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     return false;
 }
 
-bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<ALint64SOFT> values)
+bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int64_t> values)
 {
     ALCdevice *device = Context->mDevice.get();
     ClockLatency clocktime;
     nanoseconds srcclock;
-    ALdouble dvals[MaxValues];
-    ALint ivals[MaxValues];
+    double dvals[MaxValues];
+    int ivals[MaxValues];
     bool err;
 
     switch(prop)
@@ -2325,7 +2325,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
-        const ALfloat fvals[3]{ value1, value2, value3 };
+        const float fvals[3]{ value1, value2, value3 };
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
@@ -2363,7 +2363,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
-        const ALfloat fval[1]{static_cast<ALfloat>(value)};
+        const float fval[1]{static_cast<float>(value)};
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fval);
     }
 }
@@ -2382,8 +2382,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
-        const ALfloat fvals[3]{static_cast<ALfloat>(value1), static_cast<ALfloat>(value2),
-            static_cast<ALfloat>(value3)};
+        const float fvals[3]{static_cast<float>(value1), static_cast<float>(value2),
+            static_cast<float>(value3)};
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
 }
@@ -2405,9 +2405,9 @@ START_API_FUNC
     else
     {
         const ALuint count{DoubleValsByProp(param)};
-        ALfloat fvals[MaxValues];
+        float fvals[MaxValues];
         for(ALuint i{0};i < count;i++)
-            fvals[i] = static_cast<ALfloat>(values[i]);
+            fvals[i] = static_cast<float>(values[i]);
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {fvals, count});
     }
 }
@@ -2443,7 +2443,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
-        const ALint ivals[3]{ value1, value2, value3 };
+        const int ivals[3]{ value1, value2, value3 };
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), ivals);
     }
 }
@@ -2497,7 +2497,7 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
-        const ALint64SOFT i64vals[3]{ value1, value2, value3 };
+        const int64_t i64vals[3]{ value1, value2, value3 };
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals);
     }
 }
@@ -2536,9 +2536,9 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALdouble dval[1];
+        double dval[1];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dval))
-            *value = static_cast<ALfloat>(dval[0]);
+            *value = static_cast<float>(dval[0]);
     }
 }
 END_API_FUNC
@@ -2557,12 +2557,12 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALdouble dvals[3];
+        double dvals[3];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
         {
-            *value1 = static_cast<ALfloat>(dvals[0]);
-            *value2 = static_cast<ALfloat>(dvals[1]);
-            *value3 = static_cast<ALfloat>(dvals[2]);
+            *value1 = static_cast<float>(dvals[0]);
+            *value2 = static_cast<float>(dvals[1]);
+            *value3 = static_cast<float>(dvals[2]);
         }
     }
 }
@@ -2583,11 +2583,11 @@ START_API_FUNC
     else
     {
         const ALuint count{FloatValsByProp(param)};
-        ALdouble dvals[MaxValues];
+        double dvals[MaxValues];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {dvals, count}))
         {
             for(ALuint i{0};i < count;i++)
-                values[i] = static_cast<ALfloat>(dvals[i]);
+                values[i] = static_cast<float>(dvals[i]);
         }
     }
 }
@@ -2625,7 +2625,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALdouble dvals[3];
+        double dvals[3];
         if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
         {
             *value1 = dvals[0];
@@ -2685,7 +2685,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALint ivals[3];
+        int ivals[3];
         if(GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), ivals))
         {
             *value1 = ivals[0];
@@ -2745,7 +2745,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALint64SOFT i64vals[3];
+        int64_t i64vals[3];
         if(GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals))
         {
             *value1 = i64vals[0];

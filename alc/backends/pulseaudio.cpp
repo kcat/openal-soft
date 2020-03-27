@@ -158,7 +158,7 @@ PULSE_FUNCS(MAKE_FUNC)
 #define pa_stream_get_device_name ppa_stream_get_device_name
 #define pa_stream_get_latency ppa_stream_get_latency
 #define pa_stream_set_buffer_attr_callback ppa_stream_set_buffer_attr_callback
-#define pa_stream_begin_write ppa_stream_begin_write*/
+#define pa_stream_begin_write ppa_stream_begin_write
 #define pa_channel_map_init_auto ppa_channel_map_init_auto
 #define pa_channel_map_parse ppa_channel_map_parse
 #define pa_channel_map_snprint ppa_channel_map_snprint
@@ -763,12 +763,26 @@ void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
 
 void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexcept
 {
-    void *buf{pa_xmalloc(nbytes)};
-    aluMixData(mDevice, buf, static_cast<ALuint>(nbytes/mFrameSize), mSpec.channels);
+    do {
+        pa_free_cb_t free_func{nullptr};
+        auto buflen = static_cast<size_t>(-1);
+        void *buf;
+        if UNLIKELY(pa_stream_begin_write(stream, &buf, &buflen) || !buf)
+        {
+            buflen = nbytes;
+            buf = pa_xmalloc(buflen);
+            free_func = pa_xfree;
+        }
+        else
+            buflen = minz(buflen, nbytes);
+        nbytes -= buflen;
 
-    int ret{pa_stream_write(stream, buf, nbytes, pa_xfree, 0, PA_SEEK_RELATIVE)};
-    if UNLIKELY(ret != PA_OK)
-        ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
+        aluMixData(mDevice, buf, static_cast<ALuint>(buflen/mFrameSize), mSpec.channels);
+
+        int ret{pa_stream_write(stream, buf, buflen, free_func, 0, PA_SEEK_RELATIVE)};
+        if UNLIKELY(ret != PA_OK)
+            ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
+    } while(nbytes > 0);
 }
 
 void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int eol) noexcept

@@ -1050,8 +1050,32 @@ bool PulsePlayback::start()
     pa_stream_set_write_callback(mStream, &PulsePlayback::streamWriteCallbackC, this);
     pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
         &mMainloop)};
-    mMainloop.waitForOperation(op, plock);
 
+    /* Write some (silent) samples to fill the prebuf amount if needed. */
+    if(size_t prebuf{mAttr.prebuf})
+    {
+        prebuf = minz(prebuf, pa_stream_writable_size(mStream));
+
+        void *buf{pa_xmalloc(prebuf)};
+        switch(mSpec.format)
+        {
+        case PA_SAMPLE_U8:
+            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x80);
+            break;
+        case PA_SAMPLE_ALAW:
+            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0xD5);
+            break;
+        case PA_SAMPLE_ULAW:
+            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x7f);
+            break;
+        default:
+            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x00);
+            break;
+        }
+        pa_stream_write(mStream, buf, prebuf, pa_xfree, 0, PA_SEEK_RELATIVE);
+    }
+
+    mMainloop.waitForOperation(op, plock);
     return true;
 }
 

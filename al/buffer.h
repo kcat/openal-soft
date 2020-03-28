@@ -56,8 +56,6 @@ enum FmtChannels : unsigned char {
     FmtBFormat2D = UserFmtBFormat2D,
     FmtBFormat3D = UserFmtBFormat3D,
 };
-#define MAX_INPUT_CHANNELS  (8)
-
 
 ALuint BytesFromFmt(FmtType type) noexcept;
 ALuint ChannelsFromFmt(FmtChannels chans) noexcept;

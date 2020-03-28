@@ -55,6 +55,8 @@
 
 namespace {
 
+constexpr int MaxAdpcmChannels{2};
+
 /* IMA ADPCM Stepsize table */
 constexpr int IMAStep_size[89] = {
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
@@ -101,9 +103,9 @@ constexpr int MSADPCMAdaptionCoeff[7][2] = {
 
 void DecodeIMA4Block(ALshort *dst, const al::byte *src, size_t numchans, size_t align)
 {
-    ALint sample[MAX_INPUT_CHANNELS]{};
-    ALint index[MAX_INPUT_CHANNELS]{};
-    ALuint code[MAX_INPUT_CHANNELS]{};
+    ALint sample[MaxAdpcmChannels]{};
+    ALint index[MaxAdpcmChannels]{};
+    ALuint code[MaxAdpcmChannels]{};
 
     for(size_t c{0};c < numchans;c++)
     {
@@ -147,9 +149,9 @@ void DecodeIMA4Block(ALshort *dst, const al::byte *src, size_t numchans, size_t 
 
 void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, size_t numchans, size_t align)
 {
-    ALubyte blockpred[MAX_INPUT_CHANNELS]{};
-    ALint delta[MAX_INPUT_CHANNELS]{};
-    ALshort samples[MAX_INPUT_CHANNELS][2]{};
+    ALubyte blockpred[MaxAdpcmChannels]{};
+    ALint delta[MaxAdpcmChannels]{};
+    ALshort samples[MaxAdpcmChannels][2]{};
 
     for(size_t c{0};c < numchans;c++)
     {
@@ -212,6 +214,7 @@ void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, size_t numchans, size
 void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, size_t numchans, size_t len,
     size_t align)
 {
+    assert(numchans <= MaxAdpcmChannels);
     const size_t byte_align{((align-1)/2 + 4) * numchans};
 
     len /= align;
@@ -226,6 +229,7 @@ void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, size_t numchans, 
 void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, size_t numchans, size_t len,
     size_t align)
 {
+    assert(numchans <= MaxAdpcmChannels);
     const size_t byte_align{((align-2)/2 + 7) * numchans};
 
     len /= align;

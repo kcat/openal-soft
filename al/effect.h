@@ -25,7 +25,7 @@ enum {
 
     MAX_EFFECTS
 };
-extern ALboolean DisabledEffects[MAX_EFFECTS];
+extern bool DisabledEffects[MAX_EFFECTS];
 
 extern ALfloat ReverbBoost;
 
@@ -51,7 +51,7 @@ struct ALeffect {
     DISABLE_ALLOC()
 };
 
-inline ALboolean IsReverbEffect(ALenum type)
+inline bool IsReverbEffect(const ALenum type) noexcept
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
 
 EffectStateFactory *getFactoryByType(ALenum type);

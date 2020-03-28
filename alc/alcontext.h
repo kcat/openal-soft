@@ -47,7 +47,7 @@ struct ALcontextProps {
     ALfloat DopplerFactor;
     ALfloat DopplerVelocity;
     ALfloat SpeedOfSound;
-    ALboolean SourceDistanceModel;
+    bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 
     std::atomic<ALcontextProps*> next;
@@ -111,7 +111,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::atomic<ALenum> mLastError{AL_NO_ERROR};
 
     DistanceModel mDistanceModel{DistanceModel::Default};
-    ALboolean mSourceDistanceModel{AL_FALSE};
+    bool mSourceDistanceModel{false};
 
     ALfloat mDopplerFactor{1.0f};
     ALfloat mDopplerVelocity{1.0f};

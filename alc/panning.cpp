@@ -746,7 +746,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
         return;
     }
 
-    bool headphones{device->IsHeadphones != AL_FALSE};
+    bool headphones{device->IsHeadphones};
     if(device->Type != Loopback)
     {
         if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode"))

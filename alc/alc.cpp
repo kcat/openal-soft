@@ -1201,7 +1201,7 @@ void alc_initconfig(void)
             {
                 if(len == strlen(effectitem.name) &&
                    strncmp(effectitem.name, str, len) == 0)
-                    DisabledEffects[effectitem.type] = AL_TRUE;
+                    DisabledEffects[effectitem.type] = true;
             }
         } while(next++);
     }
@@ -1749,7 +1749,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCuint new_sends{device->NumAuxSends};
     DevFmtChannels oldChans;
     DevFmtType oldType;
-    ALboolean update_failed;
     ALCsizei hrtf_id{-1};
     ALCuint oldFreq;
 
@@ -2210,19 +2209,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.
      */
-    update_failed = AL_FALSE;
+    bool update_failed{false};
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
         if(context->mDefaultSlot)
         {
-            ALeffectslot *slot = context->mDefaultSlot.get();
+            ALeffectslot *slot{context->mDefaultSlot.get()};
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
             state->mOutTarget = device->Dry.Buffer;
-            if(state->deviceUpdate(device) == AL_FALSE)
-                update_failed = AL_TRUE;
+            if(!state->deviceUpdate(device))
+                update_failed = true;
             else
                 UpdateEffectSlotProps(slot, context);
         }
@@ -2246,7 +2245,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 EffectState *state{slot->Effect.State};
                 state->mOutTarget = device->Dry.Buffer;
                 if(state->deviceUpdate(device) == AL_FALSE)
-                    update_failed = AL_TRUE;
+                    update_failed = true;
                 else
                     UpdateEffectSlotProps(slot, context);
             }

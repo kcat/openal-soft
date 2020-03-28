@@ -43,7 +43,7 @@ struct CompressorState final : public EffectState {
     ALfloat mGain[MAX_AMBI_CHANNELS][MAX_OUTPUT_CHANNELS]{};
 
     /* Effect parameters */
-    ALboolean mEnabled{AL_TRUE};
+    bool mEnabled{true};
     ALfloat mAttackMult{1.0f};
     ALfloat mReleaseMult{1.0f};
     ALfloat mEnvFollower{1.0f};

@@ -126,7 +126,7 @@ START_API_FUNC
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        context->mSourceDistanceModel = AL_TRUE;
+        context->mSourceDistanceModel = true;
         DO_UPDATEPROPS();
         break;
 
@@ -146,7 +146,7 @@ START_API_FUNC
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        context->mSourceDistanceModel = AL_FALSE;
+        context->mSourceDistanceModel = false;
         DO_UPDATEPROPS();
         break;
 
@@ -167,7 +167,7 @@ START_API_FUNC
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        value = context->mSourceDistanceModel;
+        value = context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
         break;
 
     default:

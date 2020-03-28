@@ -436,7 +436,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
         slot->Params.DecayTime = 0.0f;
         slot->Params.DecayLFRatio = 0.0f;
         slot->Params.DecayHFRatio = 0.0f;
-        slot->Params.DecayHFLimit = AL_FALSE;
+        slot->Params.DecayHFLimit = false;
         slot->Params.AirAbsorptionGainHF = 1.0f;
     }
 

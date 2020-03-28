@@ -101,9 +101,9 @@ decltype(jack_error_callback) * pjack_error_callback;
 
 jack_options_t ClientOptions = JackNullOption;
 
-ALCboolean jack_load()
+bool jack_load()
 {
-    ALCboolean error = ALC_FALSE;
+    bool error{false};
 
 #ifdef HAVE_DYNLOAD
     if(!jack_handle)
@@ -119,14 +119,14 @@ ALCboolean jack_load()
         if(!jack_handle)
         {
             WARN("Failed to load %s\n", JACKLIB);
-            return ALC_FALSE;
+            return false;
         }
 
-        error = ALC_FALSE;
+        error = false;
 #define LOAD_FUNC(f) do {                                                     \
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
     if(p##f == nullptr) {                                                     \
-        error = ALC_TRUE;                                                     \
+        error = true;                                                         \
         missing_funcs += "\n" #f;                                             \
     }                                                                         \
 } while(0)

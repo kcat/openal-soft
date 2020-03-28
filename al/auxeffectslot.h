@@ -22,8 +22,8 @@ using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
 
 
 struct ALeffectslotProps {
-    ALfloat   Gain;
-    ALboolean AuxSendAuto;
+    float Gain;
+    bool  AuxSendAuto;
     ALeffectslot *Target;
 
     ALenum Type;
@@ -38,8 +38,8 @@ struct ALeffectslotProps {
 
 
 struct ALeffectslot {
-    ALfloat   Gain{1.0f};
-    ALboolean AuxSendAuto{AL_TRUE};
+    float Gain{1.0f};
+    bool  AuxSendAuto{true};
     ALeffectslot *Target{nullptr};
 
     struct {
@@ -56,8 +56,8 @@ struct ALeffectslot {
     struct {
         std::atomic<ALeffectslotProps*> Update{nullptr};
 
-        ALfloat   Gain{1.0f};
-        ALboolean AuxSendAuto{AL_TRUE};
+        float Gain{1.0f};
+        bool  AuxSendAuto{true};
         ALeffectslot *Target{nullptr};
 
         ALenum EffectType{AL_EFFECT_NULL};
@@ -68,7 +68,7 @@ struct ALeffectslot {
         ALfloat DecayTime{0.0f};
         ALfloat DecayLFRatio{0.0f};
         ALfloat DecayHFRatio{0.0f};
-        ALboolean DecayHFLimit{AL_FALSE};
+        bool DecayHFLimit{false};
         ALfloat AirAbsorptionGainHF{1.0f};
     } Params;
 

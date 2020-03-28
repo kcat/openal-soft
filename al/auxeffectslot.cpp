@@ -394,7 +394,7 @@ START_API_FUNC
         if(!(value == AL_TRUE || value == AL_FALSE))
             SETERR_RETURN(context, AL_INVALID_VALUE,,
                 "Effect slot auxiliary send auto out of range");
-        slot->AuxSendAuto = static_cast<ALboolean>(value);
+        slot->AuxSendAuto = !!value;
         break;
 
     case AL_EFFECTSLOT_TARGET_SOFT:
@@ -535,7 +535,7 @@ START_API_FUNC
     switch(param)
     {
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
-        *value = slot->AuxSendAuto;
+        *value = slot->AuxSendAuto ? AL_TRUE : AL_FALSE;
         break;
 
     case AL_EFFECTSLOT_TARGET_SOFT:

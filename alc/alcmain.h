@@ -225,7 +225,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     DevFmtChannels FmtChans{};
     DevFmtType FmtType{};
-    ALboolean IsHeadphones{AL_FALSE};
+    bool IsHeadphones{false};
     ALuint mAmbiOrder{0};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.

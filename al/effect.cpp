@@ -68,7 +68,7 @@ const EffectList gEffectList[15]{
     { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_DIALOGUE },
 };
 
-ALboolean DisabledEffects[MAX_EFFECTS];
+bool DisabledEffects[MAX_EFFECTS];
 
 namespace {
 
@@ -316,14 +316,14 @@ START_API_FUNC
     {
         if(param == AL_EFFECT_TYPE)
         {
-            ALboolean isOk{value == AL_EFFECT_NULL};
+            bool isOk{value == AL_EFFECT_NULL};
             if(!isOk)
             {
                 for(const EffectList &effectitem : gEffectList)
                 {
                     if(value == effectitem.val && !DisabledEffects[effectitem.type])
                     {
-                        isOk = AL_TRUE;
+                        isOk = true;
                         break;
                     }
                 }

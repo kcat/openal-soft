@@ -52,7 +52,7 @@ struct ALlistener {
         ALfloat DopplerFactor;
         ALfloat SpeedOfSound; /* in units per sec! */
 
-        ALboolean SourceDistanceModel;
+        bool SourceDistanceModel;
         DistanceModel mDistanceModel;
     } Params;
 

@@ -53,7 +53,7 @@ using complex_d = std::complex<double>;
 std::array<double,STFT_SIZE> InitHannWindow()
 {
     std::array<double,STFT_SIZE> ret;
-    /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
+    /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
     for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
         constexpr double scale{al::MathDefs<double>::Pi() / double{STFT_SIZE-1}};
@@ -96,14 +96,14 @@ struct PshifterState final : public EffectState {
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(PshifterState)
 };
 
-ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
+bool PshifterState::deviceUpdate(const ALCdevice *device)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount       = FIFO_LATENCY;
@@ -122,7 +122,7 @@ ALboolean PshifterState::deviceUpdate(const ALCdevice *device)
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
     std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
 
-    return AL_TRUE;
+    return true;
 }
 
 void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

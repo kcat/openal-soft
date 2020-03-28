@@ -82,21 +82,21 @@ struct ModulatorState final : public EffectState {
     } mChans[MAX_AMBI_CHANNELS];
 
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ModulatorState)
 };
 
-ALboolean ModulatorState::deviceUpdate(const ALCdevice*)
+bool ModulatorState::deviceUpdate(const ALCdevice*)
 {
     for(auto &e : mChans)
     {
         e.Filter.clear();
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
-    return AL_TRUE;
+    return true;
 }
 
 void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

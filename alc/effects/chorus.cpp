@@ -108,14 +108,14 @@ struct ChorusState final : public EffectState {
     ALfloat mFeedback{0.0f};
 
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ChorusState)
 };
 
-ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
+bool ChorusState::deviceUpdate(const ALCdevice *Device)
 {
     constexpr ALfloat max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
 
@@ -134,7 +134,7 @@ ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
         std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
     }
 
-    return AL_TRUE;
+    return true;
 }
 
 void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)

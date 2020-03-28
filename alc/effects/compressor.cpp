@@ -49,14 +49,14 @@ struct CompressorState final : public EffectState {
     ALfloat mEnvFollower{1.0f};
 
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(CompressorState)
 };
 
-ALboolean CompressorState::deviceUpdate(const ALCdevice *device)
+bool CompressorState::deviceUpdate(const ALCdevice *device)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
@@ -70,7 +70,7 @@ ALboolean CompressorState::deviceUpdate(const ALCdevice *device)
     mAttackMult  = std::pow(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
     mReleaseMult = std::pow(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
 
-    return AL_TRUE;
+    return true;
 }
 
 void CompressorState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

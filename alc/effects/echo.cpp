@@ -57,14 +57,14 @@ struct EchoState final : public EffectState {
 
     alignas(16) ALfloat mTempBuffer[2][BUFFERSIZE];
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(EchoState)
 };
 
-ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
+bool EchoState::deviceUpdate(const ALCdevice *Device)
 {
     const auto frequency = static_cast<float>(Device->Frequency);
 
@@ -85,7 +85,7 @@ ALboolean EchoState::deviceUpdate(const ALCdevice *Device)
         std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
     }
 
-    return AL_TRUE;
+    return true;
 }
 
 void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

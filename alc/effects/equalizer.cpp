@@ -88,17 +88,17 @@ struct EqualizerState final : public EffectState {
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_AMBI_CHANNELS];
 
-    ALfloat mSampleBuffer[BUFFERSIZE]{};
+    FloatBufferLine mSampleBuffer{};
 
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(EqualizerState)
 };
 
-ALboolean EqualizerState::deviceUpdate(const ALCdevice*)
+bool EqualizerState::deviceUpdate(const ALCdevice*)
 {
     for(auto &e : mChans)
     {
@@ -106,7 +106,7 @@ ALboolean EqualizerState::deviceUpdate(const ALCdevice*)
                       std::mem_fn(&BiquadFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
-    return AL_TRUE;
+    return true;
 }
 
 void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
@@ -158,7 +158,7 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
 
 void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const al::span<float> buffer{mSampleBuffer, samplesToDo};
+    const al::span<float> buffer{mSampleBuffer.data(), samplesToDo};
     auto chandata = std::addressof(mChans[0]);
     for(const auto &input : samplesIn)
     {

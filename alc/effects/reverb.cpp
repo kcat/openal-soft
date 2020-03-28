@@ -482,7 +482,7 @@ struct ReverbState final : public EffectState {
     void lateFaded(const size_t offset, const size_t todo, const ALfloat fade,
         const ALfloat fadeStep);
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
@@ -559,13 +559,13 @@ bool ReverbState::allocLines(const ALfloat frequency)
     return true;
 }
 
-ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
+bool ReverbState::deviceUpdate(const ALCdevice *device)
 {
     const auto frequency = static_cast<ALfloat>(device->Frequency);
 
     /* Allocate the delay lines. */
     if(!allocLines(frequency))
-        return AL_FALSE;
+        return false;
 
     const ALfloat multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
@@ -625,7 +625,7 @@ ALboolean ReverbState::deviceUpdate(const ALCdevice *device)
     std::fill(mAmbiSplitter[0].begin()+1, mAmbiSplitter[0].end(), mAmbiSplitter[0][0]);
     std::fill(mAmbiSplitter[1].begin(), mAmbiSplitter[1].end(), mAmbiSplitter[0][0]);
 
-    return AL_TRUE;
+    return true;
 }
 
 /**************************************

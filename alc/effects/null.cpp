@@ -18,7 +18,7 @@ struct NullState final : public EffectState {
     NullState();
     ~NullState() override;
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
@@ -40,9 +40,9 @@ NullState::~NullState() = default;
  * format) have been changed. Will always be followed by a call to the update
  * method, if successful.
  */
-ALboolean NullState::deviceUpdate(const ALCdevice* /*device*/)
+bool NullState::deviceUpdate(const ALCdevice* /*device*/)
 {
-    return AL_TRUE;
+    return true;
 }
 
 /* This updates the effect state with new properties. This is called any time

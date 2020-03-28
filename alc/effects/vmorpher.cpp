@@ -135,7 +135,7 @@ struct VmorpherState final : public EffectState {
     ALfloat mSampleBufferA[MAX_UPDATE_SAMPLES]{};
     ALfloat mSampleBufferB[MAX_UPDATE_SAMPLES]{};
 
-    ALboolean deviceUpdate(const ALCdevice *device) override;
+    bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
@@ -193,7 +193,7 @@ std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(ALenum phoneme, A
 }
 
 
-ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
+bool VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 {
     for(auto &e : mChans)
     {
@@ -204,7 +204,7 @@ ALboolean VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
 
-    return AL_TRUE;
+    return true;
 }
 
 void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

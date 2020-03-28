@@ -157,7 +157,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 
     virtual ~EffectState() = default;
 
-    virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
+    virtual bool deviceUpdate(const ALCdevice *device) = 0;
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) = 0;
 };

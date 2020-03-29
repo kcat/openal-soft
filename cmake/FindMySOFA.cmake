@@ -56,7 +56,7 @@ find_library(MYSOFA_M_LIBRARY NAMES m
 # handle the QUIETLY and REQUIRED arguments and set MYSOFA_FOUND to TRUE if
 # all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(MYSOFA REQUIRED_VARS MYSOFA_LIBRARY MYSOFA_INCLUDE_DIR ZLIB_FOUND)
+find_package_handle_standard_args(MySOFA REQUIRED_VARS MYSOFA_LIBRARY MYSOFA_INCLUDE_DIR ZLIB_FOUND)
 
 if(MYSOFA_FOUND)
     set(MYSOFA_INCLUDE_DIRS ${MYSOFA_INCLUDE_DIR})

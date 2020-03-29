@@ -9,7 +9,7 @@
 #
 
 if (WIN32)
-  include(FindWindowsSDK)
+  FIND_PACKAGE(WindowsSDK)
   if (WINDOWSSDK_FOUND)
     get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
     get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)

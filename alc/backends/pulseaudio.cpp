@@ -326,39 +326,29 @@ al::vector<DevMap> CaptureDevices;
 /* Global flags and properties */
 pa_context_flags_t pulse_ctx_flags;
 
-int pulse_poll_func(struct pollfd *ufds, unsigned long nfds, int timeout, void *userdata) noexcept
-{
-    auto plock = static_cast<std::unique_lock<std::mutex>*>(userdata);
-    plock->unlock();
-    int r{poll(ufds, nfds, timeout)};
-    plock->lock();
-    return r;
-}
-
 class PulseMainloop {
     std::thread mThread;
     std::mutex mMutex;
     std::condition_variable mCondVar;
     pa_mainloop *mMainloop{nullptr};
 
-public:
-    ~PulseMainloop()
+    static int poll(struct pollfd *ufds, unsigned long nfds, int timeout, void *userdata) noexcept
     {
-        if(mThread.joinable())
-        {
-            pa_mainloop_quit(mMainloop, 0);
-            mThread.join();
-        }
+        auto plock = static_cast<std::unique_lock<std::mutex>*>(userdata);
+        plock->unlock();
+        int r{::poll(ufds, nfds, timeout)};
+        plock->lock();
+        return r;
     }
 
-    int mainloop_thread()
+    int mainloop_proc()
     {
         SetRTPriority();
 
         std::unique_lock<std::mutex> plock{mMutex};
         mMainloop = pa_mainloop_new();
 
-        pa_mainloop_set_poll_func(mMainloop, pulse_poll_func, &plock);
+        pa_mainloop_set_poll_func(mMainloop, poll, &plock);
         mCondVar.notify_all();
 
         int ret{};
@@ -368,6 +358,16 @@ public:
         mMainloop = nullptr;
 
         return ret;
+    }
+
+public:
+    ~PulseMainloop()
+    {
+        if(mThread.joinable())
+        {
+            pa_mainloop_quit(mMainloop, 0);
+            mThread.join();
+        }
     }
 
     std::unique_lock<std::mutex> getUniqueLock() { return std::unique_lock<std::mutex>{mMutex}; }
@@ -496,7 +496,7 @@ pa_context *PulseMainloop::connectContext(std::unique_lock<std::mutex> &plock)
 
     if(!mMainloop)
     {
-        mThread = std::thread{std::mem_fn(&PulseMainloop::mainloop_thread), this};
+        mThread = std::thread{std::mem_fn(&PulseMainloop::mainloop_proc), this};
         while(!mMainloop) mCondVar.wait(plock);
     }
 

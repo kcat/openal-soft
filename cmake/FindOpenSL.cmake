@@ -53,7 +53,7 @@ find_library(OPENSL_LIBRARY NAMES OpenSLES
 # handle the QUIETLY and REQUIRED arguments and set OPENSL_FOUND to TRUE if
 # all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(OPENSL REQUIRED_VARS OPENSL_LIBRARY OPENSL_INCLUDE_DIR
+find_package_handle_standard_args(OpenSL REQUIRED_VARS OPENSL_LIBRARY OPENSL_INCLUDE_DIR
     OPENSL_ANDROID_INCLUDE_DIR)
 
 if(OPENSL_FOUND)

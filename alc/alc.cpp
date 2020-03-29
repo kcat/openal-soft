@@ -2206,23 +2206,20 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 
-    /* Need to delay returning failure until replacement Send arrays have been
-     * allocated with the appropriate size.
-     */
+    /* Need to delay returning failure until the Send arrays have been cleared. */
     bool update_failed{false};
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
-        if(context->mDefaultSlot)
+        if(context->mDefaultSlot && !update_failed)
         {
             ALeffectslot *slot{context->mDefaultSlot.get()};
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
             state->mOutTarget = device->Dry.Buffer;
-            if(!state->deviceUpdate(device))
-                update_failed = true;
-            else
+            update_failed = !state->deviceUpdate(device);
+            if(!update_failed)
                 UpdateEffectSlotProps(slot, context);
         }
 
@@ -2232,22 +2229,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             std::fill_n(curarray->end(), curarray->size(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
         {
-            uint64_t usemask = ~sublist.FreeMask;
+            if(update_failed) break;
+            uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                ALsizei idx = CTZ64(usemask);
-                ALeffectslot *slot = sublist.EffectSlots + idx;
-
+                ALsizei idx{CTZ64(usemask)};
+                ALeffectslot *slot{sublist.EffectSlots + idx};
                 usemask &= ~(1_u64 << idx);
 
                 aluInitEffectPanning(slot, device);
 
                 EffectState *state{slot->Effect.State};
                 state->mOutTarget = device->Dry.Buffer;
-                if(state->deviceUpdate(device) == AL_FALSE)
-                    update_failed = true;
-                else
-                    UpdateEffectSlotProps(slot, context);
+                update_failed = !state->deviceUpdate(device);
+                if(update_failed) break;
+                UpdateEffectSlotProps(slot, context);
             }
         }
         slotlock.unlock();
@@ -2255,12 +2251,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         std::unique_lock<std::mutex> srclock{context->mSourceLock};
         for(auto &sublist : context->mSourceList)
         {
-            uint64_t usemask = ~sublist.FreeMask;
+            uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                ALsizei idx = CTZ64(usemask);
-                ALsource *source = sublist.Sources + idx;
-
+                ALsizei idx{CTZ64(usemask)};
+                ALsource *source{sublist.Sources + idx};
                 usemask &= ~(1_u64 << idx);
 
                 auto clear_send = [](ALsource::SendData &send) -> void

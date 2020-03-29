@@ -365,7 +365,10 @@ public:
     {
         if(mThread.joinable())
         {
-            pa_mainloop_quit(mMainloop, 0);
+            {
+                std::lock_guard<std::mutex> _{mMutex};
+                pa_mainloop_quit(mMainloop, 0);
+            }
             mThread.join();
         }
     }

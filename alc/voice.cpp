@@ -573,7 +573,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
 
 } // namespace
 
-void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo)
+void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo)
 {
     static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
 
@@ -591,8 +591,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         /* If the voice is supposed to be stopping but can't be mixed, just
          * stop it before bailing.
          */
-        if(vstate == ALvoice::Stopping)
-            mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+        if(vstate == Stopping)
+            mPlayState.store(Stopped, std::memory_order_release);
         return;
     }
 
@@ -776,22 +776,22 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
 
                 if((mFlags&VOICE_HAS_HRTF))
                 {
-                    const ALfloat TargetGain{UNLIKELY(vstate == ALvoice::Stopping) ? 0.0f :
+                    const ALfloat TargetGain{UNLIKELY(vstate == Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
                     DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos, IrSize,
                         Device);
                 }
                 else if((mFlags&VOICE_HAS_NFC))
                 {
-                    const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
-                        SilentTarget.data() : parms.Gains.Target.data()};
+                    const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
+                        : parms.Gains.Target.data()};
                     DoNfcMix({samples, DstBufferSize}, mDirect.Buffer.data(), parms, TargetGains,
                         Counter, OutPos, Device);
                 }
                 else
                 {
-                    const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
-                        SilentTarget.data() : parms.Gains.Target.data()};
+                    const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
+                        : parms.Gains.Target.data()};
                     MixSamples({samples, DstBufferSize}, mDirect.Buffer,
                         parms.Gains.Current.data(), TargetGains, Counter, OutPos);
                 }
@@ -806,8 +806,8 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
                 const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
                     {ResampledData, DstBufferSize}, mSend[send].FilterType)};
 
-                const float *TargetGains{UNLIKELY(vstate == ALvoice::Stopping) ?
-                    SilentTarget.data() : parms.Gains.Target.data()};
+                const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
+                    : parms.Gains.Target.data()};
                 MixSamples({samples, DstBufferSize}, mSend[send].Buffer,
                     parms.Gains.Current.data(), TargetGains, Counter, OutPos);
             }
@@ -885,9 +885,9 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
     mFlags |= VOICE_IS_FADING;
 
     /* Don't update positions and buffers if we were stopping. */
-    if UNLIKELY(vstate == ALvoice::Stopping)
+    if UNLIKELY(vstate == Stopping)
     {
-        mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+        mPlayState.store(Stopped, std::memory_order_release);
         return;
     }
 
@@ -925,7 +925,7 @@ void ALvoice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesT
         /* If the voice just ended, set it to Stopping so the next render
          * ensures any residual noise fades to 0 amplitude.
          */
-        mPlayState.store(ALvoice::Stopping, std::memory_order_release);
+        mPlayState.store(Stopping, std::memory_order_release);
         if((enabledevt&EventType_SourceStateChange))
             SendSourceStoppedEvent(Context, SourceID);
     }

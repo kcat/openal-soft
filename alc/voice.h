@@ -122,7 +122,7 @@ struct SendParams {
 };
 
 
-struct ALvoicePropsBase {
+struct VoiceProps {
     float Pitch;
     float Gain;
     float OuterGain;
@@ -175,10 +175,10 @@ struct ALvoicePropsBase {
     } Send[MAX_SENDS];
 };
 
-struct ALvoiceProps : public ALvoicePropsBase {
-    std::atomic<ALvoiceProps*> next{nullptr};
+struct VoicePropsItem : public VoiceProps {
+    std::atomic<VoicePropsItem*> next{nullptr};
 
-    DEF_NEWDEL(ALvoiceProps)
+    DEF_NEWDEL(VoicePropsItem)
 };
 
 #define VOICE_IS_STATIC        (1u<<0)
@@ -191,7 +191,7 @@ struct ALvoiceProps : public ALvoicePropsBase {
 
 #define VOICE_TYPE_MASK (VOICE_IS_STATIC | VOICE_IS_CALLBACK)
 
-struct ALvoice {
+struct Voice {
     enum State {
         Stopped,
         Playing,
@@ -199,9 +199,9 @@ struct ALvoice {
         Pending
     };
 
-    std::atomic<ALvoiceProps*> mUpdate{nullptr};
+    std::atomic<VoicePropsItem*> mUpdate{nullptr};
 
-    ALvoicePropsBase mProps;
+    VoiceProps mProps;
 
     std::atomic<ALuint> mSourceID{0u};
     std::atomic<State> mPlayState{Stopped};
@@ -259,14 +259,14 @@ struct ALvoice {
     };
     al::vector<ChannelData> mChans{2};
 
-    ALvoice() = default;
-    ALvoice(const ALvoice&) = delete;
-    ~ALvoice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
-    ALvoice& operator=(const ALvoice&) = delete;
+    Voice() = default;
+    Voice(const Voice&) = delete;
+    ~Voice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
+    Voice& operator=(const Voice&) = delete;
 
     void mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo);
 
-    DEF_NEWDEL(ALvoice)
+    DEF_NEWDEL(Voice)
 };
 
 #endif /* VOICE_H */

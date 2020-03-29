@@ -57,8 +57,8 @@ struct ALcontextProps {
 
 
 struct VoiceChange {
-    ALvoice *mOldVoice{nullptr};
-    ALvoice *mVoice{nullptr};
+    Voice *mOldVoice{nullptr};
+    Voice *mVoice{nullptr};
     ALuint mSourceID{0};
     ALenum mState{0};
 
@@ -137,7 +137,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
      */
     std::atomic<ALcontextProps*> mFreeContextProps{nullptr};
     std::atomic<ALlistenerProps*> mFreeListenerProps{nullptr};
-    std::atomic<ALvoiceProps*> mFreeVoiceProps{nullptr};
+    std::atomic<VoicePropsItem*> mFreeVoiceProps{nullptr};
     std::atomic<ALeffectslotProps*> mFreeEffectslotProps{nullptr};
 
     /* Asynchronous voice change actions are processed as a linked list of
@@ -159,20 +159,20 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     void allocVoiceChanges(size_t addcount);
 
 
-    using VoiceCluster = std::unique_ptr<ALvoice[]>;
+    using VoiceCluster = std::unique_ptr<Voice[]>;
     al::vector<VoiceCluster> mVoiceClusters;
 
-    using ALvoiceArray = al::FlexArray<ALvoice*>;
-    std::atomic<ALvoiceArray*> mVoices{};
+    using VoiceArray = al::FlexArray<Voice*>;
+    std::atomic<VoiceArray*> mVoices{};
     std::atomic<size_t> mActiveVoiceCount{};
 
     void allocVoices(size_t addcount);
-    al::span<ALvoice*> getVoicesSpan() const noexcept
+    al::span<Voice*> getVoicesSpan() const noexcept
     {
         return {mVoices.load(std::memory_order_relaxed)->data(),
             mActiveVoiceCount.load(std::memory_order_relaxed)};
     }
-    al::span<ALvoice*> getVoicesSpanAcquired() const noexcept
+    al::span<Voice*> getVoicesSpanAcquired() const noexcept
     {
         return {mVoices.load(std::memory_order_acquire)->data(),
             mActiveVoiceCount.load(std::memory_order_acquire)};

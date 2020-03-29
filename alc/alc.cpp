@@ -1665,10 +1665,10 @@ void ALCcontext::allocVoices(size_t addcount)
     const size_t totalcount{(mVoiceClusters.size()+addcount) * clustersize};
     TRACE("Increasing allocated voices to %zu\n", totalcount);
 
-    auto newarray = ALvoiceArray::Create(totalcount);
+    auto newarray = VoiceArray::Create(totalcount);
     while(addcount)
     {
-        mVoiceClusters.emplace_back(std::make_unique<ALvoice[]>(clustersize));
+        mVoiceClusters.emplace_back(std::make_unique<Voice[]>(clustersize));
         --addcount;
     }
 
@@ -2285,10 +2285,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
          * auxiliary sends is changing. Active sources will have updates
          * respecified in UpdateAllSourceProps.
          */
-        ALvoiceProps *vprops{context->mFreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel)};
+        VoicePropsItem *vprops{context->mFreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel)};
         while(vprops)
         {
-            ALvoiceProps *next = vprops->next.load(std::memory_order_relaxed);
+            VoicePropsItem *next = vprops->next.load(std::memory_order_relaxed);
             delete vprops;
             vprops = next;
         }
@@ -2298,13 +2298,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             const ALuint num_sends{device->NumAuxSends};
             /* Clear extraneous property set sends. */
-            for(ALvoice *voice : voicelist)
+            for(Voice *voice : voicelist)
             {
                 std::fill(std::begin(voice->mProps.Send)+num_sends, std::end(voice->mProps.Send),
-                    ALvoiceProps::SendData{});
+                    VoiceProps::SendData{});
 
-                std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(),
-                    ALvoice::TargetData{});
+                std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(), Voice::TargetData{});
                 for(auto &chandata : voice->mChans)
                 {
                     std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
@@ -2312,13 +2311,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 }
             }
         }
-        for(ALvoice *voice : voicelist)
+        for(Voice *voice : voicelist)
         {
             delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
 
             /* Force the voice to stopped if it was stopping. */
-            ALvoice::State vstate{ALvoice::Stopping};
-            voice->mPlayState.compare_exchange_strong(vstate, ALvoice::Stopped,
+            Voice::State vstate{Voice::Stopping};
+            voice->mPlayState.compare_exchange_strong(vstate, Voice::Stopped,
                 std::memory_order_acquire, std::memory_order_acquire);
             if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
                 continue;
@@ -2524,10 +2523,10 @@ ALCcontext::~ALCcontext()
     mNumEffectSlots = 0;
 
     count = 0;
-    ALvoiceProps *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
+    VoicePropsItem *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
     while(vprops)
     {
-        ALvoiceProps *next{vprops->next.load(std::memory_order_relaxed)};
+        VoicePropsItem *next{vprops->next.load(std::memory_order_relaxed)};
         delete vprops;
         vprops = next;
         ++count;

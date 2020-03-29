@@ -664,10 +664,10 @@ void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNEL
 
 struct GainTriplet { float Base, HF, LF; };
 
-void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypos,
+void CalcPanningAndFilters(Voice *voice, const ALfloat xpos, const ALfloat ypos,
     const ALfloat zpos, const ALfloat Distance, const ALfloat Spread, const GainTriplet &DryGain,
     const al::span<const GainTriplet,MAX_SENDS> WetGain, ALeffectslot *(&SendSlots)[MAX_SENDS],
-    const ALvoicePropsBase *props, const ALlistener &Listener, const ALCdevice *Device)
+    const VoiceProps *props, const ALlistener &Listener, const ALCdevice *Device)
 {
     static const ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
@@ -1188,7 +1188,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat xpos, const ALfloat ypo
     }
 }
 
-void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
+void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->mDevice.get()};
     ALeffectslot *SendSlots[MAX_SENDS];
@@ -1237,7 +1237,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         Listener, Device);
 }
 
-void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALCcontext *ALContext)
+void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->mDevice.get()};
     const ALuint NumSends{Device->NumAuxSends};
@@ -1541,9 +1541,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         Listener, Device);
 }
 
-void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
+void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
 {
-    ALvoiceProps *props{voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
+    VoicePropsItem *props{voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props && !force) return;
 
     if(props)
@@ -1589,13 +1589,13 @@ void ProcessVoiceChanges(ALCcontext *ctx)
         bool sendevt{false};
         if(cur->mState == AL_INITIAL || cur->mState == AL_STOPPED)
         {
-            if(ALvoice *voice{cur->mVoice})
+            if(Voice *voice{cur->mVoice})
             {
                 voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mSourceID.store(0u, std::memory_order_relaxed);
-                ALvoice::State oldvstate{ALvoice::Playing};
-                sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                Voice::State oldvstate{Voice::Playing};
+                sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
                     std::memory_order_relaxed, std::memory_order_acquire);
                 voice->mPendingChange.store(false, std::memory_order_release);
             }
@@ -1606,9 +1606,9 @@ void ProcessVoiceChanges(ALCcontext *ctx)
         }
         else if(cur->mState == AL_PAUSED)
         {
-            ALvoice *voice{cur->mVoice};
-            ALvoice::State oldvstate{ALvoice::Playing};
-            sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+            Voice *voice{cur->mVoice};
+            Voice::State oldvstate{Voice::Playing};
+            sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
                 std::memory_order_release, std::memory_order_acquire);
         }
         else if(cur->mState == AL_PLAYING)
@@ -1619,26 +1619,26 @@ void ProcessVoiceChanges(ALCcontext *ctx)
              * sent. If there is an old voice, an event is sent only if the
              * voice is already stopped.
              */
-            if(ALvoice *oldvoice{cur->mOldVoice})
+            if(Voice *oldvoice{cur->mOldVoice})
             {
                 oldvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
                 oldvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
                 oldvoice->mSourceID.store(0u, std::memory_order_relaxed);
-                ALvoice::State oldvstate{ALvoice::Playing};
-                sendevt = !oldvoice->mPlayState.compare_exchange_strong(oldvstate,
-                    ALvoice::Stopping, std::memory_order_relaxed, std::memory_order_acquire);
+                Voice::State oldvstate{Voice::Playing};
+                sendevt = !oldvoice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
+                    std::memory_order_relaxed, std::memory_order_acquire);
                 oldvoice->mPendingChange.store(false, std::memory_order_release);
             }
             else
                 sendevt = true;
 
-            ALvoice *voice{cur->mVoice};
-            voice->mPlayState.store(ALvoice::Playing, std::memory_order_release);
+            Voice *voice{cur->mVoice};
+            voice->mPlayState.store(Voice::Playing, std::memory_order_release);
         }
         else if(cur->mState == AL_SAMPLE_OFFSET)
         {
             /* Changing a voice offset never sends a source change event. */
-            ALvoice *oldvoice{cur->mOldVoice};
+            Voice *oldvoice{cur->mOldVoice};
             oldvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
             oldvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
             /* If there's no sourceID, the old voice finished so don't start
@@ -1650,14 +1650,13 @@ void ProcessVoiceChanges(ALCcontext *ctx)
                  * might already be, if paused), and play the new voice as
                  * appropriate.
                  */
-                ALvoice::State oldvstate{ALvoice::Playing};
-                oldvoice->mPlayState.compare_exchange_strong(oldvstate, ALvoice::Stopping,
+                Voice::State oldvstate{Voice::Playing};
+                oldvoice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
                     std::memory_order_relaxed, std::memory_order_acquire);
 
-                ALvoice *voice{cur->mVoice};
-                voice->mPlayState.store(
-                    (oldvstate == ALvoice::Playing) ? ALvoice::Playing : ALvoice::Stopped,
-                    std::memory_order_release);
+                Voice *voice{cur->mVoice};
+                voice->mPlayState.store((oldvstate == Voice::Playing) ? Voice::Playing
+                    : Voice::Stopped, std::memory_order_release);
             }
             oldvoice->mPendingChange.store(false, std::memory_order_release);
         }
@@ -1670,7 +1669,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
 }
 
 void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
-    const al::span<ALvoice*> voices)
+    const al::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
 
@@ -1683,7 +1682,7 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
         for(ALeffectslot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
-        for(ALvoice *voice : voices)
+        for(Voice *voice : voices)
         {
             /* Only update voices that have a source. */
             if(voice->mSourceID.load(std::memory_order_relaxed) != 0)
@@ -1700,7 +1699,7 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
     for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
     {
         const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
-        const al::span<ALvoice*> voices{ctx->getVoicesSpanAcquired()};
+        const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
 
         /* Process pending propery updates for objects on the context. */
         ProcessParamUpdates(ctx, auxslots, voices);
@@ -1713,10 +1712,10 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
         }
 
         /* Process voices that have a playing source. */
-        for(ALvoice *voice : voices)
+        for(Voice *voice : voices)
         {
-            const ALvoice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
-            if(vstate != ALvoice::Stopped && vstate != ALvoice::Pending)
+            const Voice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
+            if(vstate != Voice::Stopped && vstate != Voice::Pending)
                 voice->mix(vstate, ctx, SamplesToDo);
         }
 
@@ -2107,12 +2106,12 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         }
 
         auto voicelist = ctx->getVoicesSpanAcquired();
-        auto stop_voice = [](ALvoice *voice) -> void
+        auto stop_voice = [](Voice *voice) -> void
         {
             voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
             voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
             voice->mSourceID.store(0u, std::memory_order_relaxed);
-            voice->mPlayState.store(ALvoice::Stopped, std::memory_order_release);
+            voice->mPlayState.store(Voice::Stopped, std::memory_order_release);
         };
         std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
     }

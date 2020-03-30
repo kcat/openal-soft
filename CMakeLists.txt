@@ -623,6 +623,7 @@ SET(ALC_OBJS
     alc/filters/splitter.h
     alc/fpu_ctrl.cpp
     alc/fpu_ctrl.h
+    alc/front_stablizer.h
     alc/helpers.cpp
     alc/hrtf.cpp
     alc/hrtf.h

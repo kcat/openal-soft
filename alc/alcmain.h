@@ -37,6 +37,7 @@ struct ALfilter;
 struct BackendBase;
 struct Compressor;
 struct EffectState;
+struct FrontStablizer;
 struct Uhj2Encoder;
 struct bs2b;
 
@@ -168,21 +169,6 @@ using FloatBufferLine = std::array<float,BUFFERSIZE>;
  * end)!
  */
 #define MAX_RESAMPLER_PADDING 48
-
-
-struct FrontStablizer {
-    static constexpr size_t DelayLength{256u};
-
-    alignas(16) float DelayBuf[MAX_OUTPUT_CHANNELS][DelayLength];
-
-    BandSplitter LFilter, RFilter;
-    alignas(16) float LSplit[2][BUFFERSIZE];
-    alignas(16) float RSplit[2][BUFFERSIZE];
-
-    alignas(16) float TempBuf[BUFFERSIZE + DelayLength];
-
-    DEF_NEWDEL(FrontStablizer)
-};
 
 
 struct MixParams {

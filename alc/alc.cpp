@@ -80,6 +80,7 @@
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "fpu_ctrl.h"
+#include "front_stablizer.h"
 #include "hrtf.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"

@@ -43,10 +43,10 @@ struct BackendBase {
 
     virtual ClockLatency getClockLatency();
 
-    ALCdevice *mDevice;
+    ALCdevice *const mDevice;
 
-    BackendBase(ALCdevice *device) noexcept;
-    virtual ~BackendBase();
+    BackendBase(ALCdevice *device) noexcept : mDevice{device} { }
+    virtual ~BackendBase() = default;
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
 

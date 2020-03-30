@@ -24,11 +24,6 @@ ClockLatency GetClockLatency(ALCdevice *device)
 
 
 /* BackendBase method implementations. */
-BackendBase::BackendBase(ALCdevice *device) noexcept : mDevice{device}
-{ }
-
-BackendBase::~BackendBase() = default;
-
 bool BackendBase::reset()
 { throw al::backend_exception{ALC_INVALID_DEVICE, "Invalid BackendBase call"}; }
 

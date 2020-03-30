@@ -124,9 +124,6 @@
 #ifdef HAVE_OSS
 #include "backends/oss.h"
 #endif
-#ifdef HAVE_QSA
-#include "backends/qsa.h"
-#endif
 #ifdef HAVE_DSOUND
 #include "backends/dsound.h"
 #endif
@@ -186,9 +183,6 @@ BackendInfo BackendList[] = {
 #endif
 #ifdef HAVE_OSS
     { "oss", OSSBackendFactory::getFactory },
-#endif
-#ifdef HAVE_QSA
-    { "qsa", QSABackendFactory::getFactory },
 #endif
 #ifdef HAVE_DSOUND
     { "dsound", DSoundBackendFactory::getFactory },

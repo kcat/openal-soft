@@ -41,9 +41,6 @@
 /* Define if we have the SndIO backend */
 #cmakedefine HAVE_SNDIO
 
-/* Define if we have the QSA backend */
-#cmakedefine HAVE_QSA
-
 /* Define if we have the WASAPI backend */
 #cmakedefine HAVE_WASAPI
 

@@ -452,13 +452,13 @@ bool SndIOBackendFactory::init()
 bool SndIOBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-std::string SndIOBackendFactory::probe(DevProbe type)
+std::string SndIOBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     switch(type)
     {
-    case DevProbe::Playback:
-    case DevProbe::Capture:
+    case BackendType::Playback:
+    case BackendType::Capture:
         /* Includes null char. */
         outnames.append(sndio_device, sizeof(sndio_device));
         break;

@@ -869,7 +869,7 @@ bool DSoundBackendFactory::init()
 bool DSoundBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-std::string DSoundBackendFactory::probe(DevProbe type)
+std::string DSoundBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     auto add_device = [&outnames](const DevMap &entry) -> void
@@ -885,7 +885,7 @@ std::string DSoundBackendFactory::probe(DevProbe type)
     HRESULT hrcom{CoInitialize(nullptr)};
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         PlaybackDevices.clear();
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
@@ -893,7 +893,7 @@ std::string DSoundBackendFactory::probe(DevProbe type)
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         CaptureDevices.clear();
         hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
         if(FAILED(hr))

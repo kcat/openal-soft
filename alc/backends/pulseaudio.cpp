@@ -1501,7 +1501,7 @@ bool PulseBackendFactory::init()
 bool PulseBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string PulseBackendFactory::probe(DevProbe type)
+std::string PulseBackendFactory::probe(BackendType type)
 {
     std::string outnames;
 
@@ -1515,12 +1515,12 @@ std::string PulseBackendFactory::probe(DevProbe type)
 
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         gGlobalMainloop.probePlaybackDevices();
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         gGlobalMainloop.probeCaptureDevices();
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;

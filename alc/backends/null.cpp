@@ -154,16 +154,16 @@ bool NullBackendFactory::init()
 bool NullBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback); }
 
-std::string NullBackendFactory::probe(DevProbe type)
+std::string NullBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         /* Includes null char. */
         outnames.append(nullDevice, sizeof(nullDevice));
         break;
-    case DevProbe::Capture:
+    case BackendType::Capture:
         break;
     }
     return outnames;

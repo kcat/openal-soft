@@ -590,7 +590,7 @@ bool WinMMBackendFactory::init()
 bool WinMMBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string WinMMBackendFactory::probe(DevProbe type)
+std::string WinMMBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     auto add_device = [&outnames](const std::string &dname) -> void
@@ -603,12 +603,12 @@ std::string WinMMBackendFactory::probe(DevProbe type)
     };
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         ProbePlaybackDevices();
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         ProbeCaptureDevices();
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;

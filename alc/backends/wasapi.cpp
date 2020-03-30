@@ -1744,7 +1744,7 @@ bool WasapiBackendFactory::init()
 bool WasapiBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string WasapiBackendFactory::probe(DevProbe type)
+std::string WasapiBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     auto add_device = [&outnames](const DevMap &entry) -> void
@@ -1757,12 +1757,12 @@ std::string WasapiBackendFactory::probe(DevProbe type)
 
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         WasapiProxy::pushMessageStatic(MsgType::EnumeratePlayback).wait();
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         WasapiProxy::pushMessageStatic(MsgType::EnumerateCapture).wait();
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;

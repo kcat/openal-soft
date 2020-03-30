@@ -55,18 +55,13 @@ enum class BackendType {
     Capture
 };
 
-enum class DevProbe {
-    Playback,
-    Capture
-};
-
 
 struct BackendFactory {
     virtual bool init() = 0;
 
     virtual bool querySupport(BackendType type) = 0;
 
-    virtual std::string probe(DevProbe type) = 0;
+    virtual std::string probe(BackendType type) = 0;
 
     virtual BackendPtr createBackend(ALCdevice *device, BackendType type) = 0;
 

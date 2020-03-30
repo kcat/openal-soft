@@ -193,11 +193,11 @@ bool SDL2BackendFactory::init()
 bool SDL2BackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-std::string SDL2BackendFactory::probe(DevProbe type)
+std::string SDL2BackendFactory::probe(BackendType type)
 {
     std::string outnames;
 
-    if(type != DevProbe::Playback)
+    if(type != BackendType::Playback)
         return outnames;
 
     int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};

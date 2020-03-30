@@ -670,7 +670,7 @@ bool OSSBackendFactory::init()
 bool OSSBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-std::string OSSBackendFactory::probe(DevProbe type)
+std::string OSSBackendFactory::probe(BackendType type)
 {
     std::string outnames;
 
@@ -686,13 +686,13 @@ std::string OSSBackendFactory::probe(DevProbe type)
 
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         PlaybackDevices.clear();
         ALCossListPopulate(&PlaybackDevices, DSP_CAP_OUTPUT);
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         CaptureDevices.clear();
         ALCossListPopulate(&CaptureDevices, DSP_CAP_INPUT);
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);

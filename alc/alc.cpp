@@ -1221,7 +1221,7 @@ void ProbeAllDevicesList()
         decltype(alcAllDevicesList){}.swap(alcAllDevicesList);
     else
     {
-        std::string names{PlaybackFactory->probe(DevProbe::Playback)};
+        std::string names{PlaybackFactory->probe(BackendType::Playback)};
         if(names.empty()) names += '\0';
         names.swap(alcAllDevicesList);
     }
@@ -1235,7 +1235,7 @@ void ProbeCaptureDeviceList()
         decltype(alcCaptureDeviceList){}.swap(alcCaptureDeviceList);
     else
     {
-        std::string names{CaptureFactory->probe(DevProbe::Capture)};
+        std::string names{CaptureFactory->probe(BackendType::Capture)};
         if(names.empty()) names += '\0';
         names.swap(alcCaptureDeviceList);
     }

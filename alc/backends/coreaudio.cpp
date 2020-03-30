@@ -637,13 +637,13 @@ bool CoreAudioBackendFactory::init() { return true; }
 bool CoreAudioBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string CoreAudioBackendFactory::probe(DevProbe type)
+std::string CoreAudioBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     switch(type)
     {
-    case DevProbe::Playback:
-    case DevProbe::Capture:
+    case BackendType::Playback:
+    case BackendType::Capture:
         /* Includes null char. */
         outnames.append(ca_device, sizeof(ca_device));
         break;

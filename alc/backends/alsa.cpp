@@ -1229,7 +1229,7 @@ bool AlsaBackendFactory::init()
 bool AlsaBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-std::string AlsaBackendFactory::probe(DevProbe type)
+std::string AlsaBackendFactory::probe(BackendType type)
 {
     std::string outnames;
 
@@ -1242,12 +1242,12 @@ std::string AlsaBackendFactory::probe(DevProbe type)
     };
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
         PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;

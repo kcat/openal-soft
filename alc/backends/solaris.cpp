@@ -270,12 +270,12 @@ bool SolarisBackendFactory::init()
 bool SolarisBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-std::string SolarisBackendFactory::probe(DevProbe type)
+std::string SolarisBackendFactory::probe(BackendType type)
 {
     std::string outnames;
     switch(type)
     {
-    case DevProbe::Playback:
+    case BackendType::Playback:
     {
         struct stat buf;
         if(stat(solaris_driver.c_str(), &buf) == 0)
@@ -283,7 +283,7 @@ std::string SolarisBackendFactory::probe(DevProbe type)
     }
     break;
 
-    case DevProbe::Capture:
+    case BackendType::Capture:
         break;
     }
     return outnames;

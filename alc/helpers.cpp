@@ -463,8 +463,13 @@ void SetRTPriority()
          * should be 1 for SCHED_RR).
          */
         param.sched_priority = sched_get_priority_min(SCHED_RR);
-        if(pthread_setschedparam(pthread_self(), SCHED_RR, &param))
-            ERR("Failed to set priority level for thread\n");
+#ifdef SCHED_RESET_ON_FORK
+        if(pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param))
+#endif
+        {
+            if(pthread_setschedparam(pthread_self(), SCHED_RR, &param))
+                ERR("Failed to set real-time priority for thread\n");
+        }
     }
 #else
     /* Real-time priority not available */

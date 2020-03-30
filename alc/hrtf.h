@@ -38,7 +38,7 @@ struct HrtfStore {
     ALuint irSize;
 
     struct Field {
-        ALfloat distance;
+        float distance;
         ALubyte evCount;
     };
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and

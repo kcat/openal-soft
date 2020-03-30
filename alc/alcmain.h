@@ -122,14 +122,14 @@ struct FilterSubList {
 class DistanceComp {
 public:
     struct DistData {
-        ALfloat Gain{1.0f};
+        float Gain{1.0f};
         ALuint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
-        ALfloat *Buffer{nullptr};
+        float *Buffer{nullptr};
     };
 
 private:
     std::array<DistData,MAX_OUTPUT_CHANNELS> mChannels;
-    al::vector<ALfloat,16> mSamples;
+    al::vector<float,16> mSamples;
 
 public:
     void setSampleCount(size_t new_size) { mSamples.resize(new_size); }
@@ -145,17 +145,17 @@ public:
         SampleVecT{}.swap(mSamples);
     }
 
-    ALfloat *getSamples() noexcept { return mSamples.data(); }
+    float *getSamples() noexcept { return mSamples.data(); }
 
     al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannels; }
 };
 
 struct BFChannelConfig {
-    ALfloat Scale;
+    float Scale;
     ALuint Index;
 };
 
-/* Size for temporary storage of buffer data, in ALfloats. Larger values need
+/* Size for temporary storage of buffer data, in floats. Larger values need
  * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
@@ -259,19 +259,19 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     /* The average speaker distance as determined by the ambdec configuration,
      * HRTF data set, or the NFC-HOA reference delay. Only used for NFC.
      */
-    ALfloat AvgSpeakerDist{0.0f};
+    float AvgSpeakerDist{0.0f};
 
     ALuint SamplesDone{0u};
     std::chrono::nanoseconds ClockBase{0};
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
-    alignas(16) ALfloat SourceData[BUFFERSIZE + MAX_RESAMPLER_PADDING];
-    alignas(16) ALfloat ResampledData[BUFFERSIZE];
-    alignas(16) ALfloat FilteredData[BUFFERSIZE];
+    alignas(16) float SourceData[BUFFERSIZE + MAX_RESAMPLER_PADDING];
+    alignas(16) float ResampledData[BUFFERSIZE];
+    alignas(16) float FilteredData[BUFFERSIZE];
     union {
-        alignas(16) ALfloat HrtfSourceData[BUFFERSIZE + HRTF_HISTORY_LENGTH];
-        alignas(16) ALfloat NfcSampleData[BUFFERSIZE];
+        alignas(16) float HrtfSourceData[BUFFERSIZE + HRTF_HISTORY_LENGTH];
+        alignas(16) float NfcSampleData[BUFFERSIZE];
     };
 
     /* Persistent storage for HRTF mixing. */
@@ -313,7 +313,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     DistanceComp ChannelDelay;
 
     /* Dithering control. */
-    ALfloat DitherDepth{0.0f};
+    float DitherDepth{0.0f};
     ALuint DitherSeed{0u};
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This

@@ -44,9 +44,9 @@ enum class DistanceModel {
 
 
 struct ALcontextProps {
-    ALfloat DopplerFactor;
-    ALfloat DopplerVelocity;
-    ALfloat SpeedOfSound;
+    float DopplerFactor;
+    float DopplerVelocity;
+    float SpeedOfSound;
     bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 
@@ -113,9 +113,9 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     DistanceModel mDistanceModel{DistanceModel::Default};
     bool mSourceDistanceModel{false};
 
-    ALfloat mDopplerFactor{1.0f};
-    ALfloat mDopplerVelocity{1.0f};
-    ALfloat mSpeedOfSound{SPEEDOFSOUNDMETRESPERSEC};
+    float mDopplerFactor{1.0f};
+    float mDopplerVelocity{1.0f};
+    float mSpeedOfSound{SPEEDOFSOUNDMETRESPERSEC};
 
     std::atomic_flag mPropsClean;
     std::atomic<bool> mDeferUpdates{false};
@@ -128,7 +128,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     RefCount mUpdateCount{0u};
     std::atomic<bool> mHoldUpdates{false};
 
-    ALfloat mGainBoost{1.0f};
+    float mGainBoost{1.0f};
 
     std::atomic<ALcontextProps*> mUpdate{nullptr};
 
@@ -194,7 +194,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::unique_ptr<ALeffectslot> mDefaultSlot;
 
     const al::intrusive_ptr<ALCdevice> mDevice;
-    const ALCchar *mExtensionList{nullptr};
+    const char *mExtensionList{nullptr};
 
     ALlistener mListener{};
 

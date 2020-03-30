@@ -3700,6 +3700,7 @@ START_API_FUNC
 
     try {
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
+        std::lock_guard<std::recursive_mutex> _{ListLock};
         backend->open(deviceName);
         device->Backend = std::move(backend);
     }
@@ -3960,6 +3961,7 @@ START_API_FUNC
             device->Frequency, device->UpdateSize, device->BufferSize);
 
         auto backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
+        std::lock_guard<std::recursive_mutex> _{ListLock};
         backend->open(deviceName);
         device->Backend = std::move(backend);
     }

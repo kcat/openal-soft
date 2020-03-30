@@ -171,6 +171,8 @@ struct OpenSLPlayback final : public BackendBase {
     RingBufferPtr mRing{nullptr};
     al::semaphore mSem;
 
+    std::mutex mMutex;
+
     ALuint mFrameSize{0};
 
     std::atomic<bool> mKillNow{true};
@@ -260,7 +262,7 @@ int OpenSLPlayback::mixerProc()
             }
         }
 
-        std::unique_lock<std::recursive_mutex> dlock{mMutex};
+        std::unique_lock<std::mutex> dlock{mMutex};
         auto data = mRing->getWriteVector();
         aluMixData(mDevice, data.first.buf,
             static_cast<ALuint>(data.first.len*mDevice->UpdateSize), frame_step);
@@ -610,7 +612,7 @@ ClockLatency OpenSLPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::recursive_mutex> _{mMutex};
+    std::lock_guard<std::mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace() * mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;

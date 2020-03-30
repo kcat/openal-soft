@@ -45,8 +45,6 @@ struct BackendBase {
 
     ALCdevice *mDevice;
 
-    std::recursive_mutex mMutex;
-
     BackendBase(ALCdevice *device) noexcept;
     virtual ~BackendBase();
 };

@@ -658,6 +658,8 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     UINT32 mFrameStep{0u};
     std::atomic<UINT32> mPadding{0u};
 
+    std::mutex mMutex;
+
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
@@ -717,7 +719,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(SUCCEEDED(hr))
         {
             {
-                std::lock_guard<std::recursive_mutex> _{mMutex};
+                std::lock_guard<std::mutex> _{mMutex};
                 aluMixData(mDevice, buffer, len, mFrameStep);
                 mPadding.store(written + len, std::memory_order_relaxed);
             }
@@ -1167,7 +1169,7 @@ ClockLatency WasapiPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::recursive_mutex> _{mMutex};
+    std::lock_guard<std::mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= mDevice->Frequency;

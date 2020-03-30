@@ -425,6 +425,8 @@ struct AlsaPlayback final : public BackendBase {
 
     snd_pcm_t *mPcmHandle{nullptr};
 
+    std::mutex mMutex;
+
     al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
@@ -493,7 +495,7 @@ int AlsaPlayback::mixerProc()
         avail -= avail%update_size;
 
         // it is possible that contiguous areas are smaller, thus we use a loop
-        std::lock_guard<std::recursive_mutex> _{mMutex};
+        std::lock_guard<std::mutex> _{mMutex};
         while(avail > 0)
         {
             snd_pcm_uframes_t frames{avail};
@@ -575,7 +577,7 @@ int AlsaPlayback::mixerNoMMapProc()
 
         al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
-        std::lock_guard<std::recursive_mutex> _{mMutex};
+        std::lock_guard<std::mutex> _{mMutex};
         aluMixData(mDevice, WritePtr, static_cast<ALuint>(avail), frame_step);
         while(avail > 0)
         {
@@ -848,7 +850,7 @@ ClockLatency AlsaPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::recursive_mutex> _{mMutex};
+    std::lock_guard<std::mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     snd_pcm_sframes_t delay{};
     int err{snd_pcm_delay(mPcmHandle, &delay)};
@@ -1168,7 +1170,6 @@ ClockLatency AlsaCapture::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::recursive_mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     snd_pcm_sframes_t delay{};
     int err{snd_pcm_delay(mPcmHandle, &delay)};

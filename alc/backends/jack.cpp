@@ -169,6 +169,8 @@ struct JackPlayback final : public BackendBase {
     jack_client_t *mClient{nullptr};
     jack_port_t *mPort[MAX_OUTPUT_CHANNELS]{};
 
+    std::mutex mMutex;
+
     std::atomic<bool> mPlaying{false};
     RingBufferPtr mRing;
     al::semaphore mSem;
@@ -282,7 +284,7 @@ int JackPlayback::mixerProc()
         ALuint len1{minu(static_cast<ALuint>(data.first.len), todo)};
         ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
 
-        std::lock_guard<std::recursive_mutex> _{mMutex};
+        std::lock_guard<std::mutex> _{mMutex};
         aluMixData(mDevice, data.first.buf, len1, frame_step);
         if(len2 > 0)
             aluMixData(mDevice, data.second.buf, len2, frame_step);
@@ -458,7 +460,7 @@ ClockLatency JackPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::recursive_mutex> _{mMutex};
+    std::lock_guard<std::mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
     ret.Latency  = std::chrono::seconds{mRing->readSpace()};
     ret.Latency /= mDevice->Frequency;

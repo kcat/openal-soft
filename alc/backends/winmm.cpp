@@ -590,28 +590,30 @@ bool WinMMBackendFactory::init()
 bool WinMMBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-void WinMMBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string WinMMBackendFactory::probe(DevProbe type)
 {
-    auto add_device = [outnames](const std::string &dname) -> void
+    std::string outnames;
+    auto add_device = [&outnames](const std::string &dname) -> void
     {
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
         if(!dname.empty())
-            outnames->append(dname.c_str(), dname.length()+1);
+            outnames.append(dname.c_str(), dname.length()+1);
     };
     switch(type)
     {
-        case DevProbe::Playback:
-            ProbePlaybackDevices();
-            std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
-            break;
+    case DevProbe::Playback:
+        ProbePlaybackDevices();
+        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        break;
 
-        case DevProbe::Capture:
-            ProbeCaptureDevices();
-            std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
-            break;
+    case DevProbe::Capture:
+        ProbeCaptureDevices();
+        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        break;
     }
+    return outnames;
 }
 
 BackendPtr WinMMBackendFactory::createBackend(ALCdevice *device, BackendType type)

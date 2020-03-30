@@ -373,17 +373,19 @@ bool WaveBackendFactory::init()
 bool WaveBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-void WaveBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string WaveBackendFactory::probe(DevProbe type)
 {
+    std::string outnames;
     switch(type)
     {
-        case DevProbe::Playback:
-            /* Includes null char. */
-            outnames->append(waveDevice, sizeof(waveDevice));
-            break;
-        case DevProbe::Capture:
-            break;
+    case DevProbe::Playback:
+        /* Includes null char. */
+        outnames.append(waveDevice, sizeof(waveDevice));
+        break;
+    case DevProbe::Capture:
+        break;
     }
+    return outnames;
 }
 
 BackendPtr WaveBackendFactory::createBackend(ALCdevice *device, BackendType type)

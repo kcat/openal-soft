@@ -1744,14 +1744,15 @@ bool WasapiBackendFactory::init()
 bool WasapiBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string WasapiBackendFactory::probe(DevProbe type)
 {
-    auto add_device = [outnames](const DevMap &entry) -> void
+    std::string outnames;
+    auto add_device = [&outnames](const DevMap &entry) -> void
     {
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
-        outnames->append(entry.name.c_str(), entry.name.length()+1);
+        outnames.append(entry.name.c_str(), entry.name.length()+1);
     };
 
     switch(type)
@@ -1766,6 +1767,8 @@ void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;
     }
+
+    return outnames;
 }
 
 BackendPtr WasapiBackendFactory::createBackend(ALCdevice *device, BackendType type)

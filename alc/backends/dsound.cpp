@@ -869,14 +869,15 @@ bool DSoundBackendFactory::init()
 bool DSoundBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string DSoundBackendFactory::probe(DevProbe type)
 {
-    auto add_device = [outnames](const DevMap &entry) -> void
+    std::string outnames;
+    auto add_device = [&outnames](const DevMap &entry) -> void
     {
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
-        outnames->append(entry.name.c_str(), entry.name.length()+1);
+        outnames.append(entry.name.c_str(), entry.name.length()+1);
     };
 
     /* Initialize COM to prevent name truncation */
@@ -884,24 +885,26 @@ void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
     HRESULT hrcom{CoInitialize(nullptr)};
     switch(type)
     {
-        case DevProbe::Playback:
-            PlaybackDevices.clear();
-            hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
-            if(FAILED(hr))
-                ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
-            std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
-            break;
+    case DevProbe::Playback:
+        PlaybackDevices.clear();
+        hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
+        if(FAILED(hr))
+            ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
+        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        break;
 
-        case DevProbe::Capture:
-            CaptureDevices.clear();
-            hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
-            if(FAILED(hr))
-                ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
-            std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
-            break;
+    case DevProbe::Capture:
+        CaptureDevices.clear();
+        hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
+        if(FAILED(hr))
+            ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
+        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        break;
     }
     if(SUCCEEDED(hrcom))
         CoUninitialize();
+
+    return outnames;
 }
 
 BackendPtr DSoundBackendFactory::createBackend(ALCdevice *device, BackendType type)

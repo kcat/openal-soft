@@ -154,17 +154,19 @@ bool NullBackendFactory::init()
 bool NullBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback); }
 
-void NullBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string NullBackendFactory::probe(DevProbe type)
 {
+    std::string outnames;
     switch(type)
     {
-        case DevProbe::Playback:
-            /* Includes null char. */
-            outnames->append(nullDevice, sizeof(nullDevice));
-            break;
-        case DevProbe::Capture:
-            break;
+    case DevProbe::Playback:
+        /* Includes null char. */
+        outnames.append(nullDevice, sizeof(nullDevice));
+        break;
+    case DevProbe::Capture:
+        break;
     }
+    return outnames;
 }
 
 BackendPtr NullBackendFactory::createBackend(ALCdevice *device, BackendType type)

@@ -1229,27 +1229,31 @@ bool AlsaBackendFactory::init()
 bool AlsaBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string AlsaBackendFactory::probe(DevProbe type)
 {
-    auto add_device = [outnames](const DevMap &entry) -> void
+    std::string outnames;
+
+    auto add_device = [&outnames](const DevMap &entry) -> void
     {
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
-        outnames->append(entry.name.c_str(), entry.name.length()+1);
+        outnames.append(entry.name.c_str(), entry.name.length()+1);
     };
     switch(type)
     {
-        case DevProbe::Playback:
-            PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
-            std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
-            break;
+    case DevProbe::Playback:
+        PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
+        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        break;
 
-        case DevProbe::Capture:
-            CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
-            std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
-            break;
+    case DevProbe::Capture:
+        CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
+        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        break;
     }
+
+    return outnames;
 }
 
 BackendPtr AlsaBackendFactory::createBackend(ALCdevice *device, BackendType type)

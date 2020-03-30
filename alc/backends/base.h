@@ -66,7 +66,7 @@ struct BackendFactory {
 
     virtual bool querySupport(BackendType type) = 0;
 
-    virtual void probe(DevProbe type, std::string *outnames) = 0;
+    virtual std::string probe(DevProbe type) = 0;
 
     virtual BackendPtr createBackend(ALCdevice *device, BackendType type) = 0;
 

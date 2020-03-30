@@ -66,8 +66,8 @@ bool LoopbackBackendFactory::init()
 bool LoopbackBackendFactory::querySupport(BackendType)
 { return true; }
 
-void LoopbackBackendFactory::probe(DevProbe, std::string*)
-{ }
+std::string LoopbackBackendFactory::probe(DevProbe)
+{ return std::string{}; }
 
 BackendPtr LoopbackBackendFactory::createBackend(ALCdevice *device, BackendType)
 { return BackendPtr{new LoopbackBackend{device}}; }

@@ -1217,18 +1217,28 @@ void ProbeAllDevicesList()
     DO_INITCONFIG();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    alcAllDevicesList.clear();
-    if(PlaybackFactory)
-        PlaybackFactory->probe(DevProbe::Playback, &alcAllDevicesList);
+    if(!PlaybackFactory)
+        decltype(alcAllDevicesList){}.swap(alcAllDevicesList);
+    else
+    {
+        std::string names{PlaybackFactory->probe(DevProbe::Playback)};
+        if(names.empty()) names += '\0';
+        names.swap(alcAllDevicesList);
+    }
 }
 void ProbeCaptureDeviceList()
 {
     DO_INITCONFIG();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    alcCaptureDeviceList.clear();
-    if(CaptureFactory)
-        CaptureFactory->probe(DevProbe::Capture, &alcCaptureDeviceList);
+    if(!CaptureFactory)
+        decltype(alcCaptureDeviceList){}.swap(alcCaptureDeviceList);
+    else
+    {
+        std::string names{CaptureFactory->probe(DevProbe::Capture)};
+        if(names.empty()) names += '\0';
+        names.swap(alcCaptureDeviceList);
+    }
 }
 
 } // namespace

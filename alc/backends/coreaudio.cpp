@@ -637,16 +637,18 @@ bool CoreAudioBackendFactory::init() { return true; }
 bool CoreAudioBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-void CoreAudioBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string CoreAudioBackendFactory::probe(DevProbe type)
 {
+    std::string outnames;
     switch(type)
     {
-        case DevProbe::Playback:
-        case DevProbe::Capture:
-            /* Includes null char. */
-            outnames->append(ca_device, sizeof(ca_device));
-            break;
+    case DevProbe::Playback:
+    case DevProbe::Capture:
+        /* Includes null char. */
+        outnames.append(ca_device, sizeof(ca_device));
+        break;
     }
+    return outnames;
 }
 
 BackendPtr CoreAudioBackendFactory::createBackend(ALCdevice *device, BackendType type)

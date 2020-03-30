@@ -939,16 +939,18 @@ bool OSLBackendFactory::init() { return true; }
 bool OSLBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-void OSLBackendFactory::probe(DevProbe type, std::string *outnames)
+std::string OSLBackendFactory::probe(DevProbe type)
 {
+    std::string outnames;
     switch(type)
     {
-        case DevProbe::Playback:
-        case DevProbe::Capture:
-            /* Includes null char. */
-            outnames->append(opensl_device, sizeof(opensl_device));
-            break;
+    case DevProbe::Playback:
+    case DevProbe::Capture:
+        /* Includes null char. */
+        outnames.append(opensl_device, sizeof(opensl_device));
+        break;
     }
+    return outnames;
 }
 
 BackendPtr OSLBackendFactory::createBackend(ALCdevice *device, BackendType type)

@@ -9,7 +9,7 @@ public:
 
     bool querySupport(BackendType type) override;
 
-    void probe(DevProbe type, std::string *outnames) override;
+    std::string probe(DevProbe type) override;
 
     BackendPtr createBackend(ALCdevice *device, BackendType type) override;
 

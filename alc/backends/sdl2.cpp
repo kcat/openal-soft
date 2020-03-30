@@ -193,22 +193,25 @@ bool SDL2BackendFactory::init()
 bool SDL2BackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-void SDL2BackendFactory::probe(DevProbe type, std::string *outnames)
+std::string SDL2BackendFactory::probe(DevProbe type)
 {
+    std::string outnames;
+
     if(type != DevProbe::Playback)
-        return;
+        return outnames;
 
     int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};
 
     /* Includes null char. */
-    outnames->append(defaultDeviceName, sizeof(defaultDeviceName));
+    outnames.append(defaultDeviceName, sizeof(defaultDeviceName));
     for(int i{0};i < num_devices;++i)
     {
         std::string name{DEVNAME_PREFIX};
         name += SDL_GetAudioDeviceName(i, SDL_FALSE);
         if(!name.empty())
-            outnames->append(name.c_str(), name.length()+1);
+            outnames.append(name.c_str(), name.length()+1);
     }
+    return outnames;
 }
 
 BackendPtr SDL2BackendFactory::createBackend(ALCdevice *device, BackendType type)

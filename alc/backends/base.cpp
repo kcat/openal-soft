@@ -14,16 +14,6 @@
 #include "atomic.h"
 
 
-ClockLatency GetClockLatency(ALCdevice *device)
-{
-    BackendBase *backend{device->Backend.get()};
-    ClockLatency ret{backend->getClockLatency()};
-    ret.Latency += device->FixedLatency;
-    return ret;
-}
-
-
-/* BackendBase method implementations. */
 bool BackendBase::reset()
 { throw al::backend_exception{ALC_INVALID_DEVICE, "Invalid BackendBase call"}; }
 

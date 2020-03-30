@@ -17,20 +17,6 @@ struct ClockLatency {
     std::chrono::nanoseconds Latency;
 };
 
-/* Helper to get the current clock time from the device's ClockBase, and
- * SamplesDone converted from the sample rate.
- */
-inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
-{
-    using std::chrono::seconds;
-    using std::chrono::nanoseconds;
-
-    auto ns = nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
-    return device->ClockBase + ns;
-}
-
-ClockLatency GetClockLatency(ALCdevice *device);
-
 struct BackendBase {
     virtual void open(const ALCchar *name) = 0;
 
@@ -54,6 +40,30 @@ enum class BackendType {
     Playback,
     Capture
 };
+
+
+/* Helper to get the current clock time from the device's ClockBase, and
+ * SamplesDone converted from the sample rate.
+ */
+inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
+{
+    using std::chrono::seconds;
+    using std::chrono::nanoseconds;
+
+    auto ns = nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
+    return device->ClockBase + ns;
+}
+
+/* Helper to get the device latency from the backend, including any fixed
+ * latency from post-processing.
+ */
+inline ClockLatency GetClockLatency(ALCdevice *device)
+{
+    BackendBase *backend{device->Backend.get()};
+    ClockLatency ret{backend->getClockLatency()};
+    ret.Latency += device->FixedLatency;
+    return ret;
+}
 
 
 struct BackendFactory {

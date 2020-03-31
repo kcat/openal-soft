@@ -1107,13 +1107,13 @@ ClockLatency PulsePlayback::getClockLatency()
 
     if UNLIKELY(err != 0)
     {
-        /* FIXME: if err = -PA_ERR_NODATA, it means we were called too soon
-         * after starting the stream and no timing info has been received from
-         * the server yet. Should we wait, possibly stalling the app, or give a
-         * dummy value? Either way, it shouldn't be 0. */
+        /* If err = -PA_ERR_NODATA, it means we were called too soon after
+         * starting the stream and no timing info has been received from the
+         * server yet. Give a generic value since nothing better is available.
+         */
         if(err != -PA_ERR_NODATA)
             ERR("Failed to get stream latency: 0x%x\n", err);
-        latency = 0;
+        latency = mDevice->BufferSize - mDevice->UpdateSize;
         neg = 0;
     }
     else if UNLIKELY(neg)

@@ -85,7 +85,7 @@ constexpr std::enable_if_t<std::is_floating_point<T>::value,T> sin(T x)
  */
 constexpr double Sinc(const double x)
 {
-    if(std::abs(x) < 1e-15)
+    if(!(x > 1e-15 || x < -1e-15))
         return 1.0;
     return sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
 }

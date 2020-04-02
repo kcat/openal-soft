@@ -4,14 +4,11 @@
 #include <algorithm>
 #include <cmath>
 
+#include "math_defs.h"
 #include "opthelpers.h"
 
 
 namespace {
-
-#ifndef M_PI
-#define M_PI                         3.14159265358979323846
-#endif
 
 #define EPSILON                      1e-9
 
@@ -26,7 +23,7 @@ double Sinc(const double x)
 {
     if UNLIKELY(std::abs(x) < EPSILON)
         return 1.0;
-    return std::sin(M_PI * x) / (M_PI * x);
+    return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
 }
 
 /* The zero-order modified Bessel function of the first kind, used for the
@@ -100,7 +97,7 @@ uint Gcd(uint x, uint y)
  */
 uint CalcKaiserOrder(const double rejection, const double transition)
 {
-    double w_t = 2.0 * M_PI * transition;
+    double w_t = 2.0 * al::MathDefs<double>::Pi() * transition;
     if LIKELY(rejection > 21.0)
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));

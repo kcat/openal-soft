@@ -316,8 +316,8 @@ constexpr auto GenerateBSincCoeffs(const BSincHeader hdr)
 }
 
 /* FIXME: These can't be constexpr due to reaching the step limit. */
-const auto bsinc12_table = GenerateBSincCoeffs<bsinc12_hdr.total_size>(bsinc12_hdr);
-const auto bsinc24_table = GenerateBSincCoeffs<bsinc24_hdr.total_size>(bsinc24_hdr);
+alignas(16) const auto bsinc12_table = GenerateBSincCoeffs<bsinc12_hdr.total_size>(bsinc12_hdr);
+alignas(16) const auto bsinc24_table = GenerateBSincCoeffs<bsinc24_hdr.total_size>(bsinc24_hdr);
 
 
 constexpr BSincTable GenerateBSincTable(const BSincHeader hdr, const float *tab)
@@ -329,7 +329,7 @@ constexpr BSincTable GenerateBSincTable(const BSincHeader hdr, const float *tab)
         ret.m[i] = static_cast<unsigned int>(((hdr.a[i]*2) + 3) & ~3);
     ret.filterOffset[0] = 0;
     for(int i{1};i < BSincScaleCount;++i)
-        ret.filterOffset[i] = ret.filterOffset[i-1] + ret.m[i-1];
+        ret.filterOffset[i] = ret.filterOffset[i-1] + ret.m[i-1]*4*BSincPhaseCount;
     ret.Tab = tab;
     return ret;
 }

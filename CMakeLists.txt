@@ -545,6 +545,9 @@ SET(COMMON_OBJS
     common/alstring.cpp
     common/alstring.h
     common/atomic.h
+    common/bsinc_defs.h
+    common/bsinc_tables.cpp
+    common/bsinc_tables.h
     common/dynload.cpp
     common/dynload.h
     common/endiantest.h

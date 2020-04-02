@@ -80,10 +80,10 @@
 #include "vecmat.h"
 #include "voice.h"
 
-#include "bsinc_inc.h"
+#include "bsinc_tables.h"
 
 
-static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= bsinc24.m[0],
+static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= BSINC_POINTS_MAX,
     "MAX_RESAMPLER_PADDING is not a multiple of two, or is too small");
 
 

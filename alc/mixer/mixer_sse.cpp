@@ -9,6 +9,7 @@
 #include "alcmain.h"
 
 #include "alu.h"
+#include "bsinc_defs.h"
 #include "defs.h"
 #include "hrtfbase.h"
 

@@ -10,6 +10,7 @@
 #include "alu.h"
 #include "hrtf.h"
 #include "defs.h"
+#include "bsinc_defs.h"
 #include "hrtfbase.h"
 
 

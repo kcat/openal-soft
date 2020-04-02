@@ -44,16 +44,9 @@ enum class Resampler {
 };
 extern Resampler ResamplerDefault;
 
-/* The number of distinct scale and phase intervals within the bsinc filter
- * table.
- */
-#define BSINC_SCALE_BITS  4
-#define BSINC_SCALE_COUNT (1<<BSINC_SCALE_BITS)
-#define BSINC_PHASE_BITS  5
-#define BSINC_PHASE_COUNT (1<<BSINC_PHASE_BITS)
 
-/* Interpolator state.  Kind of a misnomer since the interpolator itself is
- * stateless.  This just keeps it from having to recompute scale-related
+/* Interpolator state. Kind of a misnomer since the interpolator itself is
+ * stateless. This just keeps it from having to recompute scale-related
  * mappings for every sample.
  */
 struct BsincState {

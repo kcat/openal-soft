@@ -32,30 +32,30 @@ extern MixerFunc MixSamples;
 extern RowMixerFunc MixRowSamples;
 
 
-#define GAIN_MIX_MAX  (1000.0f) /* +60dB */
+#define GAIN_MIX_MAX  1000.0f /* +60dB */
 
-#define GAIN_SILENCE_THRESHOLD  (0.00001f) /* -100dB */
+#define GAIN_SILENCE_THRESHOLD  0.00001f /* -100dB */
 
-#define SPEEDOFSOUNDMETRESPERSEC  (343.3f)
-#define AIRABSORBGAINHF           (0.99426f) /* -0.05dB */
+#define SPEEDOFSOUNDMETRESPERSEC  343.3f
+#define AIRABSORBGAINHF           0.99426f /* -0.05dB */
 
 /* Target gain for the reverb decay feedback reaching the decay time. */
-#define REVERB_DECAY_GAIN  (0.001f) /* -60 dB */
+#define REVERB_DECAY_GAIN  0.001f /* -60 dB */
 
-#define FRACTIONBITS (12)
+#define FRACTIONBITS 12
 #define FRACTIONONE  (1<<FRACTIONBITS)
 #define FRACTIONMASK (FRACTIONONE-1)
 
 
-inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu) noexcept
+inline float lerp(float val1, float val2, float mu) noexcept
 { return val1 + (val2-val1)*mu; }
-inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu) noexcept
+inline float cubic(float val1, float val2, float val3, float val4, float mu) noexcept
 {
-    ALfloat mu2 = mu*mu, mu3 = mu2*mu;
-    ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;
-    ALfloat a1 =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
-    ALfloat a2 = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
-    ALfloat a3 =  0.5f*mu3 + -0.5f*mu2;
+    const float mu2{mu*mu}, mu3{mu2*mu};
+    const float a0{-0.5f*mu3 +       mu2 + -0.5f*mu};
+    const float a1{ 1.5f*mu3 + -2.5f*mu2            + 1.0f};
+    const float a2{-1.5f*mu3 +  2.0f*mu2 +  0.5f*mu};
+    const float a3{ 0.5f*mu3 + -0.5f*mu2};
     return val1*a0 + val2*a1 + val3*a2 + val4*a3;
 }
 
@@ -140,9 +140,9 @@ void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const fl
     const al::span<float,MAX_OUTPUT_CHANNELS> gains);
 
 
-inline std::array<ALfloat,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexcept
+inline std::array<float,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexcept
 {
-    std::array<ALfloat,MAX_AMBI_CHANNELS> ret{};
+    std::array<float,MAX_AMBI_CHANNELS> ret{};
     ret[i] = 1.0f;
     return ret;
 }
@@ -153,7 +153,7 @@ void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
 /* Caller must lock the device state, and the mixer must not be running. */
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...) DECL_FORMAT(printf, 2, 3);
 
-extern const ALfloat ConeScale;
-extern const ALfloat ZScale;
+extern const float ConeScale;
+extern const float ZScale;
 
 #endif

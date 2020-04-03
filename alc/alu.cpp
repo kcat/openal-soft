@@ -111,9 +111,9 @@ namespace {
 
 using namespace std::placeholders;
 
-ALfloat InitConeScale()
+float InitConeScale()
 {
-    ALfloat ret{1.0f};
+    float ret{1.0f};
     if(auto optval = al::getenv("__ALSOFT_HALF_ANGLE_CONES"))
     {
         if(al::strcasecmp(optval->c_str(), "true") == 0
@@ -123,9 +123,9 @@ ALfloat InitConeScale()
     return ret;
 }
 
-ALfloat InitZScale()
+float InitZScale()
 {
-    ALfloat ret{1.0f};
+    float ret{1.0f};
     if(auto optval = al::getenv("__ALSOFT_REVERSE_Z"))
     {
         if(al::strcasecmp(optval->c_str(), "true") == 0
@@ -138,17 +138,17 @@ ALfloat InitZScale()
 } // namespace
 
 /* Cone scalar */
-const ALfloat ConeScale{InitConeScale()};
+const float ConeScale{InitConeScale()};
 
 /* Localized Z scalar for mono sources */
-const ALfloat ZScale{InitZScale()};
+const float ZScale{InitZScale()};
 
 namespace {
 
 struct ChanMap {
     Channel channel;
-    ALfloat angle;
-    ALfloat elevation;
+    float angle;
+    float elevation;
 };
 
 HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};

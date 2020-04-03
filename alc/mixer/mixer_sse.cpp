@@ -198,7 +198,9 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
         const ALfloat diff{*TargetGains - gain};
 
         auto in_iter = InSamples.begin();
-        if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
+        if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
+            gain = *TargetGains;
+        else
         {
             const ALfloat step{diff * delta};
             ALfloat step_count{0.0f};
@@ -236,12 +238,12 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
                 gain = *TargetGains;
             else
                 gain += step*step_count;
-            *CurrentGains = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
             while(in_iter != aligned_end)
                 *(dst++) += *(in_iter++) * gain;
         }
+        *CurrentGains = gain;
         ++CurrentGains;
         ++TargetGains;
 

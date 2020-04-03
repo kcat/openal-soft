@@ -162,7 +162,9 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
         const ALfloat diff{*TargetGains - gain};
 
         auto in_iter = InSamples.begin();
-        if(std::fabs(diff) > std::numeric_limits<float>::epsilon())
+        if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
+            gain = *TargetGains;
+        else
         {
             const ALfloat step{diff * delta};
             ALfloat step_count{0.0f};
@@ -175,8 +177,8 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
                 gain = *TargetGains;
             else
                 gain += step*step_count;
-            *CurrentGains = gain;
         }
+        *CurrentGains = gain;
         ++CurrentGains;
         ++TargetGains;
 

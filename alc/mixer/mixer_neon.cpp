@@ -236,12 +236,11 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
                 const float32x4_t four4{vdupq_n_f32(4.0f)};
                 const float32x4_t step4{vdupq_n_f32(step)};
                 const float32x4_t gain4{vdupq_n_f32(gain)};
-                float32x4_t step_count4{vsetq_lane_f32(0.0f,
-                    vsetq_lane_f32(1.0f,
-                    vsetq_lane_f32(2.0f,
-                    vsetq_lane_f32(3.0f, vdupq_n_f32(0.0f), 3),
-                    2), 1), 0
-                )};
+                float32x4_t step_count4{vdupq_n_f32(0.0f)};
+                step_count4 = vsetq_lane_f32(1.0f, step_count4, 1);
+                step_count4 = vsetq_lane_f32(2.0f, step_count4, 2);
+                step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);
+
                 do {
                     const float32x4_t val4 = vld1q_f32(in_iter);
                     float32x4_t dry4 = vld1q_f32(dst);

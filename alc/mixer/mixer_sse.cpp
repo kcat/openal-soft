@@ -214,10 +214,10 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
                 do {
                     const __m128 val4{_mm_load_ps(in_iter)};
                     __m128 dry4{_mm_load_ps(dst)};
-#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+
                     /* dry += val * (gain + step*step_count) */
                     dry4 = MLA4(dry4, val4, MLA4(gain4, step4, step_count4));
-#undef MLA4
+
                     _mm_store_ps(dst, dry4);
                     step_count4 = _mm_add_ps(step_count4, four4);
                     in_iter += 4; dst += 4;

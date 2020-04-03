@@ -16,6 +16,9 @@
 
 namespace {
 
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
+#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+
 inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
     const float left, const float right)
 {
@@ -107,11 +110,9 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
-            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
-#undef FRAC_PHASE_BITDIFF
+        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
+            (1.0f/FRAC_PHASE_DIFFONE)};
 
         // Apply the scale and phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};
@@ -127,9 +128,8 @@ const ALfloat *Resample_<BSincTag,NEONTag>(const InterpState *state, const ALflo
             do {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const float32x4_t f4 = vmlaq_f32(
-                    vmlaq_f32(vld1q_f32(fil), sf4, vld1q_f32(scd)),
-                    pf4, vmlaq_f32(vld1q_f32(phd), sf4, vld1q_f32(spd)));
-                fil += 4; scd += 4; phd += 4; spd += 4;
+                    vmlaq_f32(vld1q_f32(&fil[j]), sf4, vld1q_f32(&scd[j])),
+                    pf4, vmlaq_f32(vld1q_f32(&phd[j]), sf4, vld1q_f32(&spd[j])));
                 /* r += f*src */
                 r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
                 j += 4;
@@ -156,11 +156,9 @@ const ALfloat *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
-            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
-#undef FRAC_PHASE_BITDIFF
+        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
+            (1.0f/FRAC_PHASE_DIFFONE)};
 
         // Apply the phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};
@@ -173,10 +171,10 @@ const ALfloat *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
 
             do {
                 /* f = fil + pf*phd */
-                const float32x4_t f4 = vmlaq_f32(vld1q_f32(fil), pf4, vld1q_f32(phd));
+                const float32x4_t f4 = vmlaq_f32(vld1q_f32(&fil[j]), pf4, vld1q_f32(&phd[j]));
                 /* r += f*src */
                 r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
-                fil += 4; phd += 4; j += 4;
+                j += 4;
             } while(--td);
         }
         r4 = vaddq_f32(r4, vrev64q_f32(r4));

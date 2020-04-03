@@ -13,6 +13,9 @@
 
 namespace {
 
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
+#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+
 inline float do_point(const InterpState&, const float *RESTRICT vals, const ALuint)
 { return vals[0]; }
 inline float do_lerp(const InterpState&, const float *RESTRICT vals, const ALuint frac)
@@ -24,11 +27,8 @@ inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, con
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
     const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
-        (1.0f/(1<<FRAC_PHASE_BITDIFF))};
-#undef FRAC_PHASE_BITDIFF
+    const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) * (1.0f/FRAC_PHASE_DIFFONE)};
 
     const float *fil{istate.bsinc.filter + m*pi*4};
     const float *phd{fil + m};
@@ -46,11 +46,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
     const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
-        (1.0f/(1<<FRAC_PHASE_BITDIFF))};
-#undef FRAC_PHASE_BITDIFF
+    const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) * (1.0f/FRAC_PHASE_DIFFONE)};
 
     const float *fil{istate.bsinc.filter + m*pi*4};
     const float *phd{fil + m};
@@ -68,19 +65,15 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
     ALuint increment, const al::span<float> dst)
 {
     const InterpState istate{*state};
-    auto proc_sample = [&src,&frac,istate,increment]() -> float
+    for(float &out : dst)
     {
-        const float ret{Sampler(istate, src, frac)};
+        out = Sampler(istate, src, frac);
 
         frac += increment;
         src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
-
-        return ret;
-    };
-    std::generate(dst.begin(), dst.end(), proc_sample);
-
-    return dst.begin();
+    }
+    return dst.data();
 }
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,

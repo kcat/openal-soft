@@ -16,6 +16,11 @@
 
 namespace {
 
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
+#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+
+#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+
 inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
     const float left, const float right)
 {
@@ -57,7 +62,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
         {
             const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
             __m128 vals{_mm_load_ps(&Values[i][0])};
-            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
+            vals = MLA4(vals, lrlr, coeffs);
             _mm_store_ps(&Values[i][0], vals);
         }
     }
@@ -77,11 +82,9 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
-            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
-#undef FRAC_PHASE_BITDIFF
+        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
+            (1.0f/FRAC_PHASE_DIFFONE)};
 
         // Apply the scale and phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
@@ -94,18 +97,15 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
             size_t td{m >> 2};
             size_t j{0u};
 
-#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
             do {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const __m128 f4 = MLA4(
-                    MLA4(_mm_load_ps(fil), sf4, _mm_load_ps(scd)),
-                    pf4, MLA4(_mm_load_ps(phd), sf4, _mm_load_ps(spd)));
-                fil += 4; scd += 4; phd += 4; spd += 4;
+                    MLA4(_mm_load_ps(&fil[j]), sf4, _mm_load_ps(&scd[j])),
+                    pf4, MLA4(_mm_load_ps(&phd[j]), sf4, _mm_load_ps(&spd[j])));
                 /* r += f*src */
                 r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
                 j += 4;
             } while(--td);
-#undef MLA4
         }
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
@@ -129,11 +129,9 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
         const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & ((1<<FRAC_PHASE_BITDIFF)-1)) *
-            (1.0f/(1<<FRAC_PHASE_BITDIFF))};
-#undef FRAC_PHASE_BITDIFF
+        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
+            (1.0f/FRAC_PHASE_DIFFONE)};
 
         // Apply the phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
@@ -144,15 +142,13 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
             size_t td{m >> 2};
             size_t j{0u};
 
-#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
             do {
                 /* f = fil + pf*phd */
-                const __m128 f4 = MLA4(_mm_load_ps(fil), pf4, _mm_load_ps(phd));
+                const __m128 f4 = MLA4(_mm_load_ps(&fil[j]), pf4, _mm_load_ps(&phd[j]));
                 /* r += f*src */
                 r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
-                fil += 4; phd += 4; j += 4;
+                j += 4;
             } while(--td);
-#undef MLA4
         }
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));

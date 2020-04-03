@@ -31,8 +31,8 @@ enum UserFmtChannels : unsigned char {
     UserFmtX51, /* (WFX order) */
     UserFmtX61, /* (WFX order) */
     UserFmtX71, /* (WFX order) */
-    UserFmtBFormat2D, /* WXY */
-    UserFmtBFormat3D, /* WXYZ */
+    UserFmtBFormat2D,
+    UserFmtBFormat3D,
 };
 
 

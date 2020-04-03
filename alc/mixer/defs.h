@@ -30,7 +30,7 @@ enum ResampleType {
 };
 
 template<ResampleType TypeTag, InstSetType InstTag>
-const ALfloat *Resample_(const InterpState *state, const ALfloat *RESTRICT src, ALuint frac,
+const float *Resample_(const InterpState *state, const float *RESTRICT src, ALuint frac,
     ALuint increment, const al::span<float> dst);
 
 template<InstSetType InstTag>

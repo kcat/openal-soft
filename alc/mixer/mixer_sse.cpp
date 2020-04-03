@@ -71,7 +71,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
 } // namespace
 
 template<>
-const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloat *RESTRICT src,
+const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
@@ -115,12 +115,12 @@ const ALfloat *Resample_<BSincTag,SSETag>(const InterpState *state, const ALfloa
         src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
-    return dst.begin();
+    return dst.data();
 }
 
 template<>
-const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
-    const ALfloat *RESTRICT src, ALuint frac, ALuint increment, const al::span<float> dst)
+const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const float *RESTRICT src,
+    ALuint frac, ALuint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
@@ -158,7 +158,7 @@ const ALfloat *Resample_<FastBSincTag,SSETag>(const InterpState *state,
         src  += frac>>FRACTIONBITS;
         frac &= FRACTIONMASK;
     }
-    return dst.begin();
+    return dst.data();
 }
 
 
@@ -186,24 +186,24 @@ template<>
 void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
-    const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
+    const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
     const auto aligned_end = minz(static_cast<uintptr_t>(min_end-InSamples.begin()+3) & ~3u,
         InSamples.size()) + InSamples.begin();
     for(FloatBufferLine &output : OutBuffer)
     {
-        ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
-        ALfloat gain{*CurrentGains};
-        const ALfloat diff{*TargetGains - gain};
+        float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
+        float gain{*CurrentGains};
+        const float diff{*TargetGains - gain};
 
         auto in_iter = InSamples.begin();
         if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
-            const ALfloat step{diff * delta};
-            ALfloat step_count{0.0f};
+            const float step{diff * delta};
+            float step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(ptrdiff_t todo{(min_end-in_iter) >> 2})
             {

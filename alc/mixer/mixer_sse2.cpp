@@ -28,8 +28,8 @@
 
 
 template<>
-const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst)
+const float *Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *RESTRICT src, ALuint frac,
+    ALuint increment, const al::span<float> dst)
 {
     const __m128i increment4{_mm_set1_epi32(static_cast<int>(increment*4))};
     const __m128 fracOne4{_mm_set1_ps(1.0f/FRACTIONONE)};
@@ -79,5 +79,5 @@ const ALfloat *Resample_<LerpTag,SSE2Tag>(const InterpState*, const ALfloat *RES
             frac &= FRACTIONMASK;
         } while(dst_iter != dst.end());
     }
-    return dst.begin();
+    return dst.data();
 }

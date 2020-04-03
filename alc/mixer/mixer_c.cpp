@@ -90,8 +90,8 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
 } // namespace
 
 template<>
-const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRICT src, ALuint,
-    ALuint, const al::span<float> dst)
+const float *Resample_<CopyTag,CTag>(const InterpState*, const float *RESTRICT src, ALuint, ALuint,
+    const al::span<float> dst)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
@@ -99,31 +99,31 @@ const ALfloat *Resample_<CopyTag,CTag>(const InterpState*, const ALfloat *RESTRI
         return src;
 #endif
     std::copy_n(src, dst.size(), dst.begin());
-    return dst.begin();
+    return dst.data();
 }
 
 template<>
-const ALfloat *Resample_<PointTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
+const float *Resample_<PointTag,CTag>(const InterpState *state, const float *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_point>(state, src, frac, increment, dst); }
 
 template<>
-const ALfloat *Resample_<LerpTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
+const float *Resample_<LerpTag,CTag>(const InterpState *state, const float *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_lerp>(state, src, frac, increment, dst); }
 
 template<>
-const ALfloat *Resample_<CubicTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
+const float *Resample_<CubicTag,CTag>(const InterpState *state, const float *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_cubic>(state, src-1, frac, increment, dst); }
 
 template<>
-const ALfloat *Resample_<BSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
+const float *Resample_<BSincTag,CTag>(const InterpState *state, const float *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 template<>
-const ALfloat *Resample_<FastBSincTag,CTag>(const InterpState *state, const ALfloat *RESTRICT src,
+const float *Resample_<FastBSincTag,CTag>(const InterpState *state, const float *RESTRICT src,
     ALuint frac, ALuint increment, const al::span<float> dst)
 { return DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
@@ -152,22 +152,22 @@ template<>
 void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
-    const ALfloat delta{(Counter > 0) ? 1.0f / static_cast<ALfloat>(Counter) : 0.0f};
+    const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const bool reached_target{InSamples.size() >= Counter};
     const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
     for(FloatBufferLine &output : OutBuffer)
     {
-        ALfloat *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
-        ALfloat gain{*CurrentGains};
-        const ALfloat diff{*TargetGains - gain};
+        float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
+        float gain{*CurrentGains};
+        const float diff{*TargetGains - gain};
 
         auto in_iter = InSamples.begin();
         if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
-            const ALfloat step{diff * delta};
-            ALfloat step_count{0.0f};
+            const float step{diff * delta};
+            float step_count{0.0f};
             while(in_iter != min_end)
             {
                 *(dst++) += *(in_iter++) * (gain + step*step_count);

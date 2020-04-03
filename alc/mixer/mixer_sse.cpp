@@ -13,6 +13,10 @@
 #include "defs.h"
 #include "hrtfbase.h"
 
+struct SSETag;
+struct BSincTag;
+struct FastBSincTag;
+
 
 namespace {
 

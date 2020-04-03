@@ -27,6 +27,9 @@
 #include "alu.h"
 #include "defs.h"
 
+struct SSE4Tag;
+struct LerpTag;
+
 
 template<>
 const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRICT src, ALuint frac,

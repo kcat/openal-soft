@@ -63,6 +63,15 @@
 #include "threads.h"
 #include "vector.h"
 
+struct CTag;
+#ifdef HAVE_SSE
+struct SSETag;
+#endif
+#ifdef HAVE_NEON
+struct NEONTag;
+#endif
+struct CopyTag;
+
 
 static_assert((BUFFERSIZE-1)/MAX_PITCH > 0, "MAX_PITCH is too large for BUFFERSIZE!");
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,

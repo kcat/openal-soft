@@ -82,6 +82,26 @@
 
 #include "bsinc_tables.h"
 
+struct CTag;
+#ifdef HAVE_SSE
+struct SSETag;
+#endif
+#ifdef HAVE_SSE2
+struct SSE2Tag;
+#endif
+#ifdef HAVE_SSE4_1
+struct SSE4Tag;
+#endif
+#ifdef HAVE_NEON
+struct NEONTag;
+#endif
+struct CopyTag;
+struct PointTag;
+struct LerpTag;
+struct CubicTag;
+struct BSincTag;
+struct FastBSincTag;
+
 
 static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= BSINC_POINTS_MAX,
     "MAX_RESAMPLER_PADDING is not a multiple of two, or is too small");

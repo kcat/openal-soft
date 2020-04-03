@@ -11,42 +11,24 @@ union InterpState;
 struct MixHrtfFilter;
 
 
-enum InstSetType {
-    CTag,
-    SSETag,
-    SSE2Tag,
-    SSE3Tag,
-    SSE4Tag,
-    NEONTag
-};
-
-enum ResampleType {
-    CopyTag,
-    PointTag,
-    LerpTag,
-    CubicTag,
-    BSincTag,
-    FastBSincTag
-};
-
-template<ResampleType TypeTag, InstSetType InstTag>
+template<typename TypeTag, typename InstTag>
 const float *Resample_(const InterpState *state, const float *RESTRICT src, ALuint frac,
     ALuint increment, const al::span<float> dst);
 
-template<InstSetType InstTag>
+template<typename InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos);
-template<InstSetType InstTag>
+template<typename InstTag>
 void MixRow_(const al::span<float> OutBuffer, const al::span<const float> Gains,
     const float *InSamples, const size_t InStride);
 
-template<InstSetType InstTag>
+template<typename InstTag>
 void MixHrtf_(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);
-template<InstSetType InstTag>
+template<typename InstTag>
 void MixHrtfBlend_(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
     const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize);
-template<InstSetType InstTag>
+template<typename InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const size_t BufferSize);

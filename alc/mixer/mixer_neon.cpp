@@ -13,6 +13,11 @@
 #include "bsinc_defs.h"
 #include "hrtfbase.h"
 
+struct NEONTag;
+struct LerpTag;
+struct BSincTag;
+struct FastBSincTag;
+
 
 namespace {
 

@@ -10,6 +10,14 @@
 #include "defs.h"
 #include "hrtfbase.h"
 
+struct CTag;
+struct CopyTag;
+struct PointTag;
+struct LerpTag;
+struct CubicTag;
+struct BSincTag;
+struct FastBSincTag;
+
 
 namespace {
 

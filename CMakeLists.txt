@@ -1049,39 +1049,6 @@ ELSE()
 ENDIF()
 
 
-SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/native-tools")
-
-SET(ALSOFT_NATIVE_TOOLS_PATH "" CACHE STRING "Path to prebuilt native tools (leave blank to auto-build)")
-IF(ALSOFT_NATIVE_TOOLS_PATH)
-    find_program(BIN2H_NATIVE_COMMAND NAMES bin2h
-        PATHS "${ALSOFT_NATIVE_TOOLS_PATH}"
-        NO_DEFAULT_PATH)
-    if(NOT BIN2H_NATIVE_COMMAND)
-        message(FATAL_ERROR "Failed to find native tools in ${ALSOFT_NATIVE_TOOLS_PATH}.
-bin2h: ${BIN2H_NATIVE_COMMAND}")
-    endif()
-    SET(BIN2H_COMMAND  ${BIN2H_NATIVE_COMMAND})
-ELSE()
-    SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools")
-    FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
-
-    SET(BIN2H_COMMAND  "${NATIVE_BIN_DIR}/bin2h")
-    ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}"
-        COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" "${NATIVE_SRC_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E remove "${BIN2H_COMMAND}"
-        COMMAND ${CMAKE_COMMAND} --build . --config "Release"
-        WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
-        DEPENDS "${NATIVE_SRC_DIR}/CMakeLists.txt"
-        IMPLICIT_DEPENDS
-            C "${NATIVE_SRC_DIR}/bin2h.c"
-        VERBATIM
-    )
-ENDIF()
-ADD_CUSTOM_TARGET(native-tools
-    DEPENDS "${BIN2H_COMMAND}"
-    VERBATIM
-)
-
 option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library footprint)" ON)
 if(ALSOFT_EMBED_HRTF_DATA)
     MACRO(make_hrtf_header FILENAME VARNAME)
@@ -1089,8 +1056,10 @@ if(ALSOFT_EMBED_HRTF_DATA)
         SET(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.h")
 
         ADD_CUSTOM_COMMAND(OUTPUT "${outfile}"
-            COMMAND "${BIN2H_COMMAND}" "${infile}" "${outfile}" ${VARNAME}
-            DEPENDS native-tools "${infile}"
+            COMMAND ${CMAKE_COMMAND} -D "INPUT_FILE=${infile}" -D "OUTPUT_FILE=${outfile}"
+                -D "VARIABLE_NAME=${VARNAME}" -P "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
+            WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
+            DEPENDS "${infile}" "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             VERBATIM
         )
         SET(ALC_OBJS  ${ALC_OBJS} "${outfile}")

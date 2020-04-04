@@ -2325,8 +2325,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             voice->mStep = 0;
             voice->mFlags |= VOICE_IS_FADING;
 
-            if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
-                && device->mAmbiOrder > voice->mAmbiOrder)
+            if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
             {
                 const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
                     AmbiIndex::OrderFrom2DChannel.data() :

@@ -79,6 +79,8 @@ struct ALbuffer {
 
     ALenum AmbiLayout{AL_FUMA_SOFT};
     ALenum AmbiScaling{AL_FUMA_SOFT};
+    /* AmbiOrder is only updated when loading new data. */
+    ALuint AmbiOrder{0};
 
     LPALBUFFERCALLBACKTYPESOFT Callback{nullptr};
     void *UserData{nullptr};
@@ -88,6 +90,7 @@ struct ALbuffer {
 
     ALuint UnpackAlign{0};
     ALuint PackAlign{0};
+    ALuint UnpackAmbiOrder{1};
 
     ALbitfieldSOFT MappedAccess{0u};
     ALsizei MappedOffset{0};
@@ -100,7 +103,8 @@ struct ALbuffer {
     ALuint id{0};
 
     inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mFmtType); }
-    inline ALuint channelsFromFmt() const noexcept { return ChannelsFromFmt(mFmtChannels, 1); }
+    inline ALuint channelsFromFmt() const noexcept
+    { return ChannelsFromFmt(mFmtChannels, AmbiOrder); }
     inline ALuint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
 
     DISABLE_ALLOC()

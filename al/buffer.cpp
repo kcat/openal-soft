@@ -273,8 +273,6 @@ ALuint ChannelsFromUserFmt(UserFmtChannels chans, ALuint ambiorder) noexcept
     }
     return 0;
 }
-inline ALuint FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type, ALuint ambiorder) noexcept
-{ return ChannelsFromUserFmt(chans, ambiorder) * BytesFromUserFmt(type); }
 
 
 constexpr ALbitfieldSOFT INVALID_STORAGE_MASK{~unsigned(AL_MAP_READ_BIT_SOFT |
@@ -462,6 +460,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %u for %s samples",
             unpackalign, NameFromUserFmtType(SrcType));
 
+    const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
+        ALBuf->UnpackAmbiOrder : 0};
+
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
@@ -469,15 +470,17 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
         if UNLIKELY(ALBuf->OriginalAlign != align)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
+        if(ALBuf->AmbiOrder != ambiorder)
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched order");
     }
 
     /* Convert the input/source size in bytes to sample frames using the unpack
      * block alignment.
      */
-    const ALuint SrcByteAlign{
-        (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels, 1) :
-        (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels, 1) :
-        (align * FrameSizeFromUserFmt(SrcChannels, SrcType, 1))};
+    const ALuint SrcByteAlign{ChannelsFromUserFmt(SrcChannels, ambiorder) *
+        ((SrcType == UserFmtIMA4) ? (align-1)/2 + 4 :
+        (SrcType == UserFmtMSADPCM) ? (align-2)/2 + 7 :
+        (align * BytesFromUserFmt(SrcType)))};
     if UNLIKELY((size%SrcByteAlign) != 0)
         SETERR_RETURN(context, AL_INVALID_VALUE,,
             "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
@@ -491,7 +494,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
      */
-    ALuint NumChannels{ChannelsFromFmt(DstChannels, 1)};
+    ALuint NumChannels{ChannelsFromFmt(DstChannels, ambiorder)};
     ALuint FrameSize{NumChannels * BytesFromFmt(DstType)};
     if UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
@@ -513,7 +516,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             const size_t tocopy{minz(newdata.size(), ALBuf->mData.size())};
             std::copy_n(ALBuf->mData.begin(), tocopy, newdata.begin());
         }
-        ALBuf->mData = std::move(newdata);
+        newdata.swap(ALBuf->mData);
     }
 
     if(SrcType == UserFmtIMA4)
@@ -546,6 +549,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mFmtChannels = DstChannels;
     ALBuf->mFmtType = DstType;
     ALBuf->Access = access;
+    ALBuf->AmbiOrder = ambiorder;
 
     ALBuf->Callback = nullptr;
     ALBuf->UserData = nullptr;
@@ -597,8 +601,11 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
-    ALBuf->mData = al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, 1) *
-        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)});
+    const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
+        ALBuf->UnpackAmbiOrder : 0};
+
+    al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, ambiorder) *
+        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)}).swap(ALBuf->mData);
 
     ALBuf->Callback = callback;
     ALBuf->UserData = userptr;
@@ -611,6 +618,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     ALBuf->mFmtChannels = DstChannels;
     ALBuf->mFmtType = DstType;
     ALBuf->Access = 0;
+    ALBuf->AmbiOrder = ambiorder;
 
     ALBuf->SampleLen = 0;
     ALBuf->LoopStart = 0;
@@ -976,6 +984,9 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE,
             "Unpacking data with alignment %u does not match original alignment %u", align,
             albuf->OriginalAlign);
+    else if UNLIKELY((albuf->mFmtChannels == FmtBFormat2D || albuf->mFmtChannels == FmtBFormat3D)
+        && albuf->UnpackAmbiOrder != albuf->AmbiOrder)
+        context->setError(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
     else if UNLIKELY(albuf->MappedAccess != 0)
         context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
     else

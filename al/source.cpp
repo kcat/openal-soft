@@ -447,7 +447,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
     voice->mSampleSize  = buffer->bytesFromFmt();
     voice->mAmbiLayout = static_cast<AmbiLayout>(buffer->AmbiLayout);
     voice->mAmbiScaling = static_cast<AmbiNorm>(buffer->AmbiScaling);
-    voice->mAmbiOrder = 1;
+    voice->mAmbiOrder = buffer->AmbiOrder;
 
     if(buffer->Callback) voice->mFlags |= VOICE_IS_CALLBACK;
     else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
@@ -466,8 +466,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
     /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
      * higher order than the voice. No HF scaling is necessary to mix it.
      */
-    if((voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
-        && device->mAmbiOrder > voice->mAmbiOrder)
+    if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
     {
         const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
             AmbiIndex::OrderFrom2DChannel.data() :
@@ -3203,6 +3202,7 @@ START_API_FUNC
     BufferList = nullptr;
     for(ALsizei i{0};i < nb;i++)
     {
+        bool fmt_mismatch{false};
         ALbuffer *buffer{nullptr};
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
         {
@@ -3242,13 +3242,19 @@ START_API_FUNC
 
         if(BufferFmt == nullptr)
             BufferFmt = buffer;
-        else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->mFmtChannels != buffer->mFmtChannels ||
-                ((BufferFmt->mFmtChannels == FmtBFormat2D ||
-                  BufferFmt->mFmtChannels == FmtBFormat3D) &&
-                 (BufferFmt->AmbiLayout != buffer->AmbiLayout ||
-                  BufferFmt->AmbiScaling != buffer->AmbiScaling)) ||
-                BufferFmt->OriginalType != buffer->OriginalType)
+        else
+        {
+            fmt_mismatch |= BufferFmt->Frequency != buffer->Frequency;
+            fmt_mismatch |= BufferFmt->mFmtChannels != buffer->mFmtChannels;
+            if(BufferFmt->mFmtChannels == FmtBFormat2D || BufferFmt->mFmtChannels == FmtBFormat3D)
+            {
+                fmt_mismatch |= BufferFmt->AmbiLayout != buffer->AmbiLayout;
+                fmt_mismatch |= BufferFmt->AmbiScaling != buffer->AmbiScaling;
+            }
+            fmt_mismatch |= BufferFmt->AmbiOrder != buffer->AmbiOrder;
+            fmt_mismatch |= BufferFmt->OriginalType != buffer->OriginalType;
+        }
+        if(fmt_mismatch)
         {
             context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
 

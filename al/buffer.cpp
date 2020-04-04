@@ -1190,6 +1190,13 @@ START_API_FUNC
             albuf->AmbiScaling = value;
         break;
 
+    case AL_UNPACK_AMBISONIC_ORDER_SOFT:
+        if UNLIKELY(value < 1 || value > 14)
+            context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic order %d", value);
+        else
+            albuf->UnpackAmbiOrder = static_cast<ALuint>(value);
+        break;
+
     default:
         context->setError(AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
@@ -1227,6 +1234,7 @@ START_API_FUNC
         case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         case AL_AMBISONIC_LAYOUT_SOFT:
         case AL_AMBISONIC_SCALING_SOFT:
+        case AL_UNPACK_AMBISONIC_ORDER_SOFT:
             alBufferi(buffer, param, values[0]);
             return;
         }
@@ -1386,6 +1394,10 @@ START_API_FUNC
         *value = albuf->AmbiScaling;
         break;
 
+    case AL_UNPACK_AMBISONIC_ORDER_SOFT:
+        *value = static_cast<int>(albuf->UnpackAmbiOrder);
+        break;
+
     default:
         context->setError(AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
@@ -1428,6 +1440,7 @@ START_API_FUNC
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
     case AL_AMBISONIC_LAYOUT_SOFT:
     case AL_AMBISONIC_SCALING_SOFT:
+    case AL_UNPACK_AMBISONIC_ORDER_SOFT:
         alGetBufferi(buffer, param, values);
         return;
     }

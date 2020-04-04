@@ -94,6 +94,11 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #endif
 #endif
 
+#ifndef AL_SOFT_bformat_hoa
+#define AL_SOFT_bformat_hoa
+#define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x200F
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

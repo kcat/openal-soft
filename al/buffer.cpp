@@ -242,7 +242,7 @@ void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, size_t numchan
 }
 
 
-ALuint BytesFromUserFmt(UserFmtType type)
+ALuint BytesFromUserFmt(UserFmtType type) noexcept
 {
     switch(type)
     {
@@ -257,7 +257,7 @@ ALuint BytesFromUserFmt(UserFmtType type)
     }
     return 0;
 }
-ALuint ChannelsFromUserFmt(UserFmtChannels chans)
+ALuint ChannelsFromUserFmt(UserFmtChannels chans, ALuint ambiorder) noexcept
 {
     switch(chans)
     {
@@ -268,13 +268,13 @@ ALuint ChannelsFromUserFmt(UserFmtChannels chans)
     case UserFmtX51: return 6;
     case UserFmtX61: return 7;
     case UserFmtX71: return 8;
-    case UserFmtBFormat2D: return 3;
-    case UserFmtBFormat3D: return 4;
+    case UserFmtBFormat2D: return (ambiorder*2) + 1;
+    case UserFmtBFormat3D: return (ambiorder+1) * (ambiorder+1);
     }
     return 0;
 }
-inline ALuint FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type)
-{ return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type); }
+inline ALuint FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type, ALuint ambiorder) noexcept
+{ return ChannelsFromUserFmt(chans, ambiorder) * BytesFromUserFmt(type); }
 
 
 constexpr ALbitfieldSOFT INVALID_STORAGE_MASK{~unsigned(AL_MAP_READ_BIT_SOFT |
@@ -475,10 +475,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      * block alignment.
      */
     const ALuint SrcByteAlign{
-        (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels) :
-        (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels) :
-        (align * FrameSizeFromUserFmt(SrcChannels, SrcType))
-    };
+        (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels, 1) :
+        (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels, 1) :
+        (align * FrameSizeFromUserFmt(SrcChannels, SrcType, 1))};
     if UNLIKELY((size%SrcByteAlign) != 0)
         SETERR_RETURN(context, AL_INVALID_VALUE,,
             "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
@@ -492,7 +491,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
      */
-    ALuint NumChannels{ChannelsFromFmt(DstChannels)};
+    ALuint NumChannels{ChannelsFromFmt(DstChannels, 1)};
     ALuint FrameSize{NumChannels * BytesFromFmt(DstType)};
     if UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
@@ -598,7 +597,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
-    ALBuf->mData = al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType) *
+    ALBuf->mData = al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, 1) *
         size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)});
 
     ALBuf->Callback = callback;
@@ -1567,7 +1566,7 @@ ALuint BytesFromFmt(FmtType type) noexcept
     }
     return 0;
 }
-ALuint ChannelsFromFmt(FmtChannels chans) noexcept
+ALuint ChannelsFromFmt(FmtChannels chans, ALuint ambiorder) noexcept
 {
     switch(chans)
     {
@@ -1578,8 +1577,8 @@ ALuint ChannelsFromFmt(FmtChannels chans) noexcept
     case FmtX51: return 6;
     case FmtX61: return 7;
     case FmtX71: return 8;
-    case FmtBFormat2D: return 3;
-    case FmtBFormat3D: return 4;
+    case FmtBFormat2D: return (ambiorder*2) + 1;
+    case FmtBFormat3D: return (ambiorder+1) * (ambiorder+1);
     }
     return 0;
 }

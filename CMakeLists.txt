@@ -63,6 +63,7 @@ OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
 OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ON)
 OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
+OPTION(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -1031,7 +1032,7 @@ SET(BACKENDS  "${BACKENDS} Null")
 
 
 FIND_PACKAGE(Git)
-IF(GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
+IF(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
     # Get the current working branch and its latest abbreviated commit hash
     ADD_CUSTOM_TARGET(build_version
         ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE} -D LIB_VERSION=${LIB_VERSION}

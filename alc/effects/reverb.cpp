@@ -46,6 +46,11 @@ ALfloat ReverbBoost = 1.0f;
 
 namespace {
 
+#define MOD_FRACBITS 24
+#define MOD_FRACONE  (1<<MOD_FRACBITS)
+#define MOD_FRACMASK (MOD_FRACONE-1)
+
+
 using namespace std::placeholders;
 
 /* Max samples per process iteration. Used to limit the size needed for
@@ -59,6 +64,15 @@ constexpr size_t MAX_UPDATE_SAMPLES{256};
  * assumed to have 4 elements.
  */
 constexpr size_t NUM_LINES{4u};
+
+
+/* This coefficient is used to define the maximum frequency range controlled by
+ * the modulation depth. The current value of 0.05 will allow it to swing from
+ * 0.95x to 1.05x. This value must be below 1. At 1 it will cause the sampler
+ * to stall on the downswing, and above 1 it will cause it to sample backwards.
+ * The value 0.05 seems be nearest to Creative hardware behavior.
+ */
+constexpr float MODULATION_DEPTH_COEFF{0.05f};
 
 
 /* The B-Format to A-Format conversion matrix. The arrangement of rows is
@@ -314,6 +328,28 @@ struct EarlyReflections {
         const ALfloat frequency);
 };
 
+
+struct Modulation {
+    /* Modulator delay line.*/
+    DelayLineI Delay;
+
+    /* The vibrato time is tracked with an index over a (MOD_FRACONE)
+     * normalized range.
+     */
+    ALuint Index[NUM_LINES];
+    ALuint Step;
+
+    /* The depth of frequency change, in samples. */
+    float Depth[2];
+
+    float ModDelays[MAX_UPDATE_SAMPLES];
+
+    void updateModulator(float modTime, float modDepth, float frequency);
+
+    void calcDelays(size_t c, size_t todo);
+    void calcFadedDelays(size_t c, size_t todo, float fadeCount, float fadeStep);
+};
+
 struct LateReverb {
     /* A recursive delay line is used fill in the reverb tail. */
     DelayLineI Delay;
@@ -326,6 +362,8 @@ struct LateReverb {
 
     /* T60 decay filters are used to simulate absorption. */
     T60Filter T60[NUM_LINES];
+
+    Modulation Mod;
 
     /* A Gerzon vector all-pass filter is used to simulate diffusion. */
     VecAllpass VecAp;
@@ -349,13 +387,15 @@ struct ReverbState final : public EffectState {
         /* Calculated parameters which indicate if cross-fading is needed after
          * an update.
          */
-        ALfloat Density{AL_EAXREVERB_DEFAULT_DENSITY};
-        ALfloat Diffusion{AL_EAXREVERB_DEFAULT_DIFFUSION};
-        ALfloat DecayTime{AL_EAXREVERB_DEFAULT_DECAY_TIME};
-        ALfloat HFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_HFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
-        ALfloat LFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_LFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
-        ALfloat HFReference{AL_EAXREVERB_DEFAULT_HFREFERENCE};
-        ALfloat LFReference{AL_EAXREVERB_DEFAULT_LFREFERENCE};
+        float Density{AL_EAXREVERB_DEFAULT_DENSITY};
+        float Diffusion{AL_EAXREVERB_DEFAULT_DIFFUSION};
+        float DecayTime{AL_EAXREVERB_DEFAULT_DECAY_TIME};
+        float HFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_HFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
+        float LFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_LFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
+        float ModulationTime{AL_EAXREVERB_DEFAULT_MODULATION_TIME};
+        float ModulationDepth{AL_EAXREVERB_DEFAULT_MODULATION_DEPTH};
+        float HFReference{AL_EAXREVERB_DEFAULT_HFREFERENCE};
+        float LFReference{AL_EAXREVERB_DEFAULT_LFREFERENCE};
     } mParams;
 
     /* Master effect filters */
@@ -534,6 +574,14 @@ bool ReverbState::allocLines(const ALfloat frequency)
     length = LATE_ALLPASS_LENGTHS.back() * multiplier;
     totalSamples += mLate.VecAp.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
+    /* The modulator's line length is calculated from the maximum modulation
+     * time and depth coefficient, and halfed for the low-to-high frequency
+     * swing.  An additional sample is added to keep it stable when there is no
+     * modulation.
+     */
+    length = (AL_EAXREVERB_MAX_MODULATION_TIME*MODULATION_DEPTH_COEFF / 2.0f);
+    totalSamples += mLate.Mod.Delay.calcLineLength(length, totalSamples, frequency, 1);
+
     /* The late delay lines are calculated from the largest maximum density
      * line length.
      */
@@ -541,10 +589,7 @@ bool ReverbState::allocLines(const ALfloat frequency)
     totalSamples += mLate.Delay.calcLineLength(length, totalSamples, frequency, 0);
 
     if(totalSamples != mSampleBuffer.size())
-    {
-        mSampleBuffer.resize(totalSamples);
-        mSampleBuffer.shrink_to_fit();
-    }
+        decltype(mSampleBuffer){totalSamples}.swap(mSampleBuffer);
 
     /* Clear the sample buffer. */
     std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), std::array<float,NUM_LINES>{});
@@ -554,6 +599,7 @@ bool ReverbState::allocLines(const ALfloat frequency)
     mEarly.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
     mEarly.Delay.realizeLineOffset(mSampleBuffer.data());
     mLate.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
+    mLate.Mod.Delay.realizeLineOffset(mSampleBuffer.data());
     mLate.Delay.realizeLineOffset(mSampleBuffer.data());
 
     return true;
@@ -596,6 +642,10 @@ bool ReverbState::deviceUpdate(const ALCdevice *device)
         t60.HFFilter.clear();
         t60.LFFilter.clear();
     }
+
+    std::fill(std::begin(mLate.Mod.Index), std::end(mLate.Mod.Index), 0);
+    mLate.Mod.Step = 1;
+    std::fill(std::begin(mLate.Mod.Depth), std::end(mLate.Mod.Depth), 0.0f);
 
     for(auto &gains : mEarly.CurrentGain)
         std::fill(std::begin(gains), std::end(gains), 0.0f);
@@ -838,6 +888,39 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
     }
 }
 
+/* Update the EAX modulation step and depth. Keep in mind that this kind of
+ * vibrato is additive and not multiplicative as one may expect. The downswing
+ * will sound stronger than the upswing.
+ */
+void Modulation::updateModulator(float modTime, float modDepth, float frequency)
+{
+    /* Modulation is calculated in two parts.
+     *
+     * The modulation time effects the sinus rate, altering the speed of
+     * frequency changes. An index is incremented for each sample with an
+     * appropriate step size to generate an LFO, which will vary the feedback
+     * delay over time.
+     */
+    Step = maxu(fastf2u(MOD_FRACONE / (frequency * modTime)), 1);
+
+    /* The modulation depth effects the amount of frequency change over the
+     * range of the sinus. It needs to be scaled by the modulation time so that
+     * a given depth produces a consistent change in frequency over all ranges
+     * of time. Since the depth is applied to a sinus value, it needs to be
+     * halved once for the sinus range and again for the sinus swing in time
+     * (half of it is spent decreasing the frequency, half is spent increasing
+     * it).
+     */
+    Depth[1] = modDepth * MODULATION_DEPTH_COEFF * modTime * frequency / 4.0f;
+
+    /* To cancel the effects of a long period modulation on the reverberation,
+     * the amount of pitch should be varied (decreased) according to the
+     * modulation time. The natural form is varying inversely, in fact
+     * resulting in an invariant over the previous expression.
+     */
+    Depth[1] *= minf(AL_EAXREVERB_DEFAULT_MODULATION_TIME / modTime, 1.0f);
+}
+
 /* Creates a transform matrix given a reverb vector. The vector pans the reverb
  * reflections toward the given direction, using its magnitude (up to 1) as a
  * focal strength. This function results in a B-Format transformation matrix
@@ -952,6 +1035,10 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     mLate.updateLines(props->Reverb.Density, props->Reverb.Diffusion, lfDecayTime,
         props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
 
+    /* Update the modulator line. */
+    mLate.Mod.updateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
+        frequency);
+
     /* Update early and late 3D panning. */
     const ALfloat gain{props->Reverb.Gain * Slot->Params.Gain * ReverbBoost};
     update3DPanning(props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
@@ -968,15 +1055,18 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         /* Diffusion and decay times influences the decay rate (gain) of the
          * late reverb T60 filter.
          */
-       mParams.Diffusion != props->Reverb.Diffusion ||
-       mParams.DecayTime != props->Reverb.DecayTime ||
-       mParams.HFDecayTime != hfDecayTime ||
-       mParams.LFDecayTime != lfDecayTime ||
-       /* HF/LF References control the weighting used to calculate the density
-        * gain.
-        */
-       mParams.HFReference != props->Reverb.HFReference ||
-       mParams.LFReference != props->Reverb.LFReference);
+        mParams.Diffusion != props->Reverb.Diffusion ||
+        mParams.DecayTime != props->Reverb.DecayTime ||
+        mParams.HFDecayTime != hfDecayTime ||
+        mParams.LFDecayTime != lfDecayTime ||
+        /* Modulation time and depth both require fading the modulation delay. */
+        mParams.ModulationTime != props->Reverb.ModulationTime ||
+        mParams.ModulationDepth != props->Reverb.ModulationDepth ||
+        /* HF/LF References control the weighting used to calculate the density
+         * gain.
+         */
+        mParams.HFReference != props->Reverb.HFReference ||
+        mParams.LFReference != props->Reverb.LFReference);
     if(mDoFading)
     {
         mParams.Density = props->Reverb.Density;
@@ -984,6 +1074,8 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         mParams.DecayTime = props->Reverb.DecayTime;
         mParams.HFDecayTime = hfDecayTime;
         mParams.LFDecayTime = lfDecayTime;
+        mParams.ModulationTime = props->Reverb.ModulationTime;
+        mParams.ModulationDepth = props->Reverb.ModulationDepth;
         mParams.HFReference = props->Reverb.HFReference;
         mParams.LFReference = props->Reverb.LFReference;
     }
@@ -1315,11 +1407,43 @@ void ReverbState::earlyFaded(const size_t offset, const size_t todo, const ALflo
     VectorScatterRevDelayIn(main_delay, late_feed_tap, mixX, mixY, mEarlySamples, todo);
 }
 
+
+void Modulation::calcDelays(size_t c, size_t todo)
+{
+    ALuint idx{Index[c]};
+    const ALuint step{Step};
+    const float depth{Depth[0]};
+    for(size_t i{0};i < todo;++i)
+    {
+        idx += step;
+        ModDelays[i] = (std::sin(static_cast<float>(idx & MOD_FRACMASK) /
+            (MOD_FRACONE / al::MathDefs<float>::Tau())) + 1.0f) * depth;
+    }
+    Index[c] = idx;
+}
+
+void Modulation::calcFadedDelays(size_t c, size_t todo, float fadeCount, float fadeStep)
+{
+    ALuint idx{Index[c]};
+    const ALuint step{Step};
+    const float depth{Depth[0]};
+    const float depthStep{(Depth[1]-depth) * fadeStep};
+    for(size_t i{0};i < todo;++i)
+    {
+        fadeCount += 1.0f;
+        idx += step;
+        ModDelays[i] = (std::sin(static_cast<float>(idx & MOD_FRACMASK) /
+            (MOD_FRACONE / al::MathDefs<float>::Tau())) + 1.0f) * (depth + depthStep*fadeCount);
+    }
+    Index[c] = idx;
+}
+
+
 /* This generates the reverb tail using a modified feed-back delay network
  * (FDN).
  *
- * Results from the early reflections are mixed with the output from the late
- * delay lines.
+ * Results from the early reflections are mixed with the output from the
+ * modulated late delay lines.
  *
  * The late response is then completed by T60 and all-pass filtering the mix.
  *
@@ -1343,10 +1467,14 @@ void ReverbState::lateUnfaded(const size_t offset, const size_t todo)
      */
     for(size_t j{0u};j < NUM_LINES;j++)
     {
+        mLate.Mod.calcDelays(j, todo);
+
+        const DelayLineI mod_delay{mLate.Mod.Delay};
         size_t late_delay_tap{offset - mLateDelayTap[j][0]};
         size_t late_feedb_tap{offset - mLate.Offset[j][0]};
         const ALfloat midGain{mLate.T60[j].MidGain[0]};
         const ALfloat densityGain{mLate.DensityGain[0] * midGain};
+        size_t modoffset{offset};
         for(size_t i{0u};i < todo;)
         {
             late_delay_tap &= main_delay.Mask;
@@ -1354,9 +1482,28 @@ void ReverbState::lateUnfaded(const size_t offset, const size_t todo)
             size_t td{minz(todo - i,
                 minz(main_delay.Mask+1 - late_delay_tap, late_delay.Mask+1 - late_feedb_tap))};
             do {
-                mTempSamples[j][i++] =
-                    main_delay.Line[late_delay_tap++][j]*densityGain +
-                    late_delay.Line[late_feedb_tap++][j]*midGain;
+                /* Calculate the read offset and fraction between it and the
+                 * next sample.
+                 */
+                const float fdelay{mLate.Mod.ModDelays[i]};
+                const size_t delay{float2uint(fdelay)};
+                const float frac{fdelay - static_cast<float>(delay)};
+
+                /* Feed the delay line with the late feedback sample, and get
+                 * the two samples crossed by the delayed offset.
+                 */
+                mod_delay.Line[modoffset&mod_delay.Mask][j] = late_delay.Line[late_feedb_tap++][j];
+                const float out0{mod_delay.Line[(modoffset-delay) & mod_delay.Mask][j]};
+                const float out1{mod_delay.Line[(modoffset-delay-1) & mod_delay.Mask][j]};
+                ++modoffset;
+
+                /* The output is obtained by linearly interpolating the two
+                 * samples that were acquired above, and combined with the main
+                 * delay tap.
+                 */
+                mTempSamples[j][i] = lerp(out0, out1, frac)*midGain +
+                    main_delay.Line[late_delay_tap++][j]*densityGain;
+                ++i;
             } while(--td);
         }
         mLate.T60[j].process({mTempSamples[j].data(), todo});
@@ -1384,10 +1531,12 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloa
 
     for(size_t j{0u};j < NUM_LINES;j++)
     {
+        mLate.Mod.calcFadedDelays(j, todo, fade, fadeStep);
+
+        const DelayLineI mod_delay{mLate.Mod.Delay};
         const ALfloat oldMidGain{mLate.T60[j].MidGain[0]};
         const ALfloat midGain{mLate.T60[j].MidGain[1]};
-        const ALfloat oldMidStep{-oldMidGain * fadeStep};
-        const ALfloat midStep{midGain * fadeStep};
+        const ALfloat oldMidStep{(midGain-oldMidGain) * fadeStep};
         const ALfloat oldDensityGain{mLate.DensityGain[0] * oldMidGain};
         const ALfloat densityGain{mLate.DensityGain[1] * midGain};
         const ALfloat oldDensityStep{-oldDensityGain * fadeStep};
@@ -1396,6 +1545,7 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloa
         size_t late_delay_tap1{offset - mLateDelayTap[j][1]};
         size_t late_feedb_tap0{offset - mLate.Offset[j][0]};
         size_t late_feedb_tap1{offset - mLate.Offset[j][1]};
+        size_t modoffset{offset};
         ALfloat fadeCount{fade};
 
         for(size_t i{0u};i < todo;)
@@ -1409,15 +1559,26 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloa
                     late_delay.Mask+1 - maxz(late_feedb_tap0, late_feedb_tap1)))};
             do {
                 fadeCount += 1.0f;
-                const ALfloat fade0{oldDensityGain + oldDensityStep*fadeCount};
-                const ALfloat fade1{densityStep*fadeCount};
-                const ALfloat gfade0{oldMidGain + oldMidStep*fadeCount};
-                const ALfloat gfade1{midStep*fadeCount};
-                mTempSamples[j][i++] =
+
+                const float fdelay{mLate.Mod.ModDelays[i]};
+                const size_t delay{float2uint(fdelay)};
+                const float frac{fdelay - static_cast<float>(delay)};
+
+                const float a{fadeStep * fadeCount};
+                mod_delay.Line[modoffset&mod_delay.Mask][j] =
+                    late_delay.Line[late_feedb_tap0++][j]*(1.0f-a) +
+                    late_delay.Line[late_feedb_tap1++][j]*a;
+                const float out0{mod_delay.Line[(modoffset-delay) & mod_delay.Mask][j]};
+                const float out1{mod_delay.Line[(modoffset-delay-1) & mod_delay.Mask][j]};
+                ++modoffset;
+
+                const float fade0{oldDensityGain + oldDensityStep*fadeCount};
+                const float fade1{densityStep*fadeCount};
+                const float gfade{oldMidGain + oldMidStep*fadeCount};
+                mTempSamples[j][i] = lerp(out0, out1, frac)*gfade +
                     main_delay.Line[late_delay_tap0++][j]*fade0 +
-                    main_delay.Line[late_delay_tap1++][j]*fade1 +
-                    late_delay.Line[late_feedb_tap0++][j]*gfade0 +
-                    late_delay.Line[late_feedb_tap1++][j]*gfade1;
+                    main_delay.Line[late_delay_tap1++][j]*fade1;
+                ++i;
             } while(--td);
         }
         mLate.T60[j].process({mTempSamples[j].data(), todo});
@@ -1499,15 +1660,16 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         {
             mEarlyDelayTap[c][0] = mEarlyDelayTap[c][1];
             mEarlyDelayCoeff[c][0] = mEarlyDelayCoeff[c][1];
+            mLateDelayTap[c][0] = mLateDelayTap[c][1];
             mEarly.VecAp.Offset[c][0] = mEarly.VecAp.Offset[c][1];
             mEarly.Offset[c][0] = mEarly.Offset[c][1];
             mEarly.Coeff[c][0] = mEarly.Coeff[c][1];
-            mLateDelayTap[c][0] = mLateDelayTap[c][1];
-            mLate.VecAp.Offset[c][0] = mLate.VecAp.Offset[c][1];
             mLate.Offset[c][0] = mLate.Offset[c][1];
             mLate.T60[c].MidGain[0] = mLate.T60[c].MidGain[1];
+            mLate.VecAp.Offset[c][0] = mLate.VecAp.Offset[c][1];
         }
         mLate.DensityGain[0] = mLate.DensityGain[1];
+        mLate.Mod.Depth[0] = mLate.Mod.Depth[1];
         mMaxUpdate[0] = mMaxUpdate[1];
         mDoFading = false;
     }

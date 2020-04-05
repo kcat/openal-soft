@@ -213,13 +213,10 @@ struct Array {
 template<size_t total_size>
 constexpr auto GenerateBSincCoeffs(const BSincHeader hdr)
 {
-    double   filter[BSincScaleCount][BSincPhaseCount+1][BSincPointsMax]{};
-    double phDeltas[BSincScaleCount][BSincPhaseCount  ][BSincPointsMax]{};
-    double scDeltas[BSincScaleCount][BSincPhaseCount  ][BSincPointsMax]{};
-    double spDeltas[BSincScaleCount][BSincPhaseCount  ][BSincPointsMax]{};
+    double filter[BSincScaleCount][BSincPhaseCount+1][BSincPointsMax]{};
 
     /* Calculate the Kaiser-windowed Sinc filter coefficients for each scale
-     * and phase.
+     * and phase index.
      */
     for(unsigned int si{0};si < BSincScaleCount;++si)
     {
@@ -230,6 +227,9 @@ constexpr auto GenerateBSincCoeffs(const BSincHeader hdr)
         const double scale{hdr.scaleBase + (hdr.scaleRange * si / (BSincScaleCount - 1))};
         const double cutoff{scale - (hdr.scaleBase * std::max(0.5, scale) * 2.0)};
 
+        /* Do one extra phase index so that the phase delta has a proper target
+         * for its last index.
+         */
         for(int pi{0};pi <= BSincPhaseCount;++pi)
         {
             const double phase{l + (pi/double{BSincPhaseCount})};
@@ -237,77 +237,78 @@ constexpr auto GenerateBSincCoeffs(const BSincHeader hdr)
             for(int i{0};i < m;++i)
             {
                 const double x{i - phase};
-                filter[si][pi][o + i] = Kaiser(hdr.beta, x/a, hdr.besseli_0_beta) * cutoff *
+                filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, hdr.besseli_0_beta) * cutoff *
                     Sinc(cutoff*x);
             }
-        }
-    }
-
-    /* Linear interpolation between phases is simplified by pre-calculating the
-     * delta (b - a) in: x = a + f (b - a)
-     */
-    for(unsigned int si{0};si < BSincScaleCount;++si)
-    {
-        const int m{hdr.a[si] * 2};
-        const int o{BSincPointsHalf - (m/2)};
-
-        for(int pi{0};pi < BSincPhaseCount;++pi)
-        {
-            for(int i{0};i < m;++i)
-                phDeltas[si][pi][o + i] = filter[si][pi + 1][o + i] - filter[si][pi][o + i];
-        }
-    }
-
-    /* Linear interpolation between scales is also simplified.
-     *
-     * Given a difference in points between scales, the destination points will
-     * be 0, thus: x = a + f (-a)
-     */
-    for(unsigned int si{0};si < (BSincScaleCount-1);++si)
-    {
-        const int m{hdr.a[si] * 2};
-        const int o{BSincPointsHalf - (m/2)};
-
-        for(int pi{0};pi < BSincPhaseCount;++pi)
-        {
-            for(int i{0};i < m;++i)
-                scDeltas[si][pi][o + i] = filter[si + 1][pi][o + i] - filter[si][pi][o + i];
-        }
-    }
-
-    /* This last simplification is done to complete the bilinear equation for
-     * the combination of phase and scale.
-     */
-    for(unsigned int si{0};si < (BSincScaleCount-1);++si)
-    {
-        const int m{hdr.a[si] * 2};
-        const int o{BSincPointsHalf - (m/2)};
-
-        for(int pi{0};pi < BSincPhaseCount;++pi)
-        {
-            for(int i{0};i < m;++i)
-                spDeltas[si][pi][o + i] = phDeltas[si + 1][pi][o + i] - phDeltas[si][pi][o + i];
         }
     }
 
     Array<float,total_size> ret{};
     size_t idx{0};
 
-    for(unsigned int si{0};si < BSincScaleCount;++si)
+    for(unsigned int si{0};si < BSincScaleCount-1;++si)
     {
         const int m{((hdr.a[si]*2) + 3) & ~3};
         const int o{BSincPointsHalf - (m/2)};
 
         for(int pi{0};pi < BSincPhaseCount;++pi)
         {
+            /* Write out the filter. Also calculate and write out the phase and
+             * scale deltas.
+             */
             for(int i{0};i < m;++i)
-                ret.data[idx++] = static_cast<float>(filter[si][pi][o + i]);
+                ret.data[idx++] = static_cast<float>(filter[si][pi][o+i]);
+
+            /* Linear interpolation between phases is simplified by pre-
+             * calculating the delta (b - a) in: x = a + f (b - a)
+             */
             for(int i{0};i < m;++i)
-                ret.data[idx++] = static_cast<float>(phDeltas[si][pi][o + i]);
+            {
+                const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
+                ret.data[idx++] = static_cast<float>(phDelta);
+            }
+
+            /* Linear interpolation between scales is also simplified.
+             *
+             * Given a difference in points between scales, the destination
+             * points will be 0, thus: x = a + f (-a)
+             */
             for(int i{0};i < m;++i)
-                ret.data[idx++] = static_cast<float>(scDeltas[si][pi][o + i]);
+            {
+                const double scDelta{filter[si+1][pi][o+i] - filter[si][pi][o+i]};
+                ret.data[idx++] = static_cast<float>(scDelta);
+            }
+
+            /* This last simplification is done to complete the bilinear
+             * equation for the combination of phase and scale.
+             */
             for(int i{0};i < m;++i)
-                ret.data[idx++] = static_cast<float>(spDeltas[si][pi][o + i]);
+            {
+                const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -
+                    (filter[si][pi+1][o+i] - filter[si][pi][o+i])};
+                ret.data[idx++] = static_cast<float>(spDelta);
+            }
+        }
+    }
+    {
+        /* The last scale index doesn't have any scale or scale-phase deltas. */
+        const unsigned int si{BSincScaleCount - 1};
+        const int m{((hdr.a[si]*2) + 3) & ~3};
+        const int o{BSincPointsHalf - (m/2)};
+
+        for(int pi{0};pi < BSincPhaseCount;++pi)
+        {
+            for(int i{0};i < m;++i)
+                ret.data[idx++] = static_cast<float>(filter[si][pi][o+i]);
+            for(int i{0};i < m;++i)
+            {
+                const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
+                ret.data[idx++] = static_cast<float>(phDelta);
+            }
+            for(int i{0};i < m;++i)
+                ret.data[idx++] = 0.0f;
+            for(int i{0};i < m;++i)
+                ret.data[idx++] = 0.0f;
         }
     }
     assert(idx == total_size);

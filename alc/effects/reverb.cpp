@@ -336,8 +336,7 @@ struct Modulation {
     /* The vibrato time is tracked with an index over a (MOD_FRACONE)
      * normalized range.
      */
-    ALuint Index[NUM_LINES];
-    ALuint Step;
+    ALuint Index, Step;
 
     /* The depth of frequency change, in samples. */
     float Depth[2];
@@ -346,8 +345,8 @@ struct Modulation {
 
     void updateModulator(float modTime, float modDepth, float frequency);
 
-    void calcDelays(size_t c, size_t todo);
-    void calcFadedDelays(size_t c, size_t todo, float fadeCount, float fadeStep);
+    void calcDelays(size_t todo);
+    void calcFadedDelays(size_t todo, float fadeCount, float fadeStep);
 };
 
 struct LateReverb {
@@ -643,7 +642,7 @@ bool ReverbState::deviceUpdate(const ALCdevice *device)
         t60.LFFilter.clear();
     }
 
-    std::fill(std::begin(mLate.Mod.Index), std::end(mLate.Mod.Index), 0);
+    mLate.Mod.Index = 0;
     mLate.Mod.Step = 1;
     std::fill(std::begin(mLate.Mod.Depth), std::end(mLate.Mod.Depth), 0.0f);
 
@@ -793,6 +792,39 @@ void EarlyReflections::updateLines(const ALfloat density, const ALfloat diffusio
     }
 }
 
+/* Update the EAX modulation step and depth. Keep in mind that this kind of
+ * vibrato is additive and not multiplicative as one may expect. The downswing
+ * will sound stronger than the upswing.
+ */
+void Modulation::updateModulator(float modTime, float modDepth, float frequency)
+{
+    /* Modulation is calculated in two parts.
+     *
+     * The modulation time effects the sinus rate, altering the speed of
+     * frequency changes. An index is incremented for each sample with an
+     * appropriate step size to generate an LFO, which will vary the feedback
+     * delay over time.
+     */
+    Step = maxu(fastf2u(MOD_FRACONE / (frequency * modTime)), 1);
+
+    /* The modulation depth effects the amount of frequency change over the
+     * range of the sinus. It needs to be scaled by the modulation time so that
+     * a given depth produces a consistent change in frequency over all ranges
+     * of time. Since the depth is applied to a sinus value, it needs to be
+     * halved once for the sinus range and again for the sinus swing in time
+     * (half of it is spent decreasing the frequency, half is spent increasing
+     * it).
+     */
+    Depth[1] = modDepth * MODULATION_DEPTH_COEFF * modTime * frequency / 4.0f;
+
+    /* To cancel the effects of a long period modulation on the reverberation,
+     * the amount of pitch should be varied (decreased) according to the
+     * modulation time. The natural form is varying inversely, in fact
+     * resulting in an invariant over the previous expression.
+     */
+    Depth[1] *= minf(AL_EAXREVERB_DEFAULT_MODULATION_TIME / modTime, 1.0f);
+}
+
 /* Update the late reverb line lengths and T60 coefficients. */
 void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
     const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime,
@@ -848,9 +880,11 @@ void LateReverb::updateLines(const ALfloat density, const ALfloat diffusion,
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
-         * filter for each of its four lines.
+         * filter for each of its four lines. Also include the average
+         * modulation delay (depth is half the max delay in samples).
          */
-        length += lerp(LATE_ALLPASS_LENGTHS[i], late_allpass_avg, diffusion) * multiplier;
+        length += lerp(LATE_ALLPASS_LENGTHS[i], late_allpass_avg, diffusion)*multiplier +
+            Mod.Depth[1]/frequency;
 
         /* Calculate the T60 damping coefficients for each line. */
         T60[i].calcCoeffs(length, lfDecayTime, mfDecayTime, hfDecayTime, lf0norm, hf0norm);
@@ -886,39 +920,6 @@ void ReverbState::updateDelayLine(const ALfloat earlyDelay, const ALfloat lateDe
             lateDelay;
         mLateDelayTap[i][1] = mLateFeedTap + float2uint(length * frequency);
     }
-}
-
-/* Update the EAX modulation step and depth. Keep in mind that this kind of
- * vibrato is additive and not multiplicative as one may expect. The downswing
- * will sound stronger than the upswing.
- */
-void Modulation::updateModulator(float modTime, float modDepth, float frequency)
-{
-    /* Modulation is calculated in two parts.
-     *
-     * The modulation time effects the sinus rate, altering the speed of
-     * frequency changes. An index is incremented for each sample with an
-     * appropriate step size to generate an LFO, which will vary the feedback
-     * delay over time.
-     */
-    Step = maxu(fastf2u(MOD_FRACONE / (frequency * modTime)), 1);
-
-    /* The modulation depth effects the amount of frequency change over the
-     * range of the sinus. It needs to be scaled by the modulation time so that
-     * a given depth produces a consistent change in frequency over all ranges
-     * of time. Since the depth is applied to a sinus value, it needs to be
-     * halved once for the sinus range and again for the sinus swing in time
-     * (half of it is spent decreasing the frequency, half is spent increasing
-     * it).
-     */
-    Depth[1] = modDepth * MODULATION_DEPTH_COEFF * modTime * frequency / 4.0f;
-
-    /* To cancel the effects of a long period modulation on the reverberation,
-     * the amount of pitch should be varied (decreased) according to the
-     * modulation time. The natural form is varying inversely, in fact
-     * resulting in an invariant over the previous expression.
-     */
-    Depth[1] *= minf(AL_EAXREVERB_DEFAULT_MODULATION_TIME / modTime, 1.0f);
 }
 
 /* Creates a transform matrix given a reverb vector. The vector pans the reverb
@@ -1031,13 +1032,13 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     const ALfloat hfDecayTime{clampf(props->Reverb.DecayTime * hfRatio,
         AL_EAXREVERB_MIN_DECAY_TIME, AL_EAXREVERB_MAX_DECAY_TIME)};
 
+    /* Update the modulator rate and depth. */
+    mLate.Mod.updateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
+        frequency);
+
     /* Update the late lines. */
     mLate.updateLines(props->Reverb.Density, props->Reverb.Diffusion, lfDecayTime,
         props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
-
-    /* Update the modulator line. */
-    mLate.Mod.updateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
-        frequency);
 
     /* Update early and late 3D panning. */
     const ALfloat gain{props->Reverb.Gain * Slot->Params.Gain * ReverbBoost};
@@ -1408,23 +1409,25 @@ void ReverbState::earlyFaded(const size_t offset, const size_t todo, const ALflo
 }
 
 
-void Modulation::calcDelays(size_t c, size_t todo)
+void Modulation::calcDelays(size_t todo)
 {
-    ALuint idx{Index[c]};
+    constexpr float inv_scale{MOD_FRACONE / al::MathDefs<float>::Tau()};
+    ALuint idx{Index};
     const ALuint step{Step};
     const float depth{Depth[0]};
     for(size_t i{0};i < todo;++i)
     {
         idx += step;
-        ModDelays[i] = (std::sin(static_cast<float>(idx & MOD_FRACMASK) /
-            (MOD_FRACONE / al::MathDefs<float>::Tau())) + 1.0f) * depth;
+        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) / inv_scale)};
+        ModDelays[i] = (lfo+1.0f) * depth;
     }
-    Index[c] = idx;
+    Index = idx;
 }
 
-void Modulation::calcFadedDelays(size_t c, size_t todo, float fadeCount, float fadeStep)
+void Modulation::calcFadedDelays(size_t todo, float fadeCount, float fadeStep)
 {
-    ALuint idx{Index[c]};
+    constexpr float inv_scale{MOD_FRACONE / al::MathDefs<float>::Tau()};
+    ALuint idx{Index};
     const ALuint step{Step};
     const float depth{Depth[0]};
     const float depthStep{(Depth[1]-depth) * fadeStep};
@@ -1432,10 +1435,10 @@ void Modulation::calcFadedDelays(size_t c, size_t todo, float fadeCount, float f
     {
         fadeCount += 1.0f;
         idx += step;
-        ModDelays[i] = (std::sin(static_cast<float>(idx & MOD_FRACMASK) /
-            (MOD_FRACONE / al::MathDefs<float>::Tau())) + 1.0f) * (depth + depthStep*fadeCount);
+        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) / inv_scale)};
+        ModDelays[i] = (lfo+1.0f) * (depth + depthStep*fadeCount);
     }
-    Index[c] = idx;
+    Index = idx;
 }
 
 
@@ -1462,13 +1465,14 @@ void ReverbState::lateUnfaded(const size_t offset, const size_t todo)
 
     ASSUME(todo > 0);
 
-    /* First, load decorrelated samples from the main and feedback delay lines.
+    /* First, calculate the modulated delays for the late feedback. */
+    mLate.Mod.calcDelays(todo);
+
+    /* Next, load decorrelated samples from the main and feedback delay lines.
      * Filter the signal to apply its frequency-dependent decay.
      */
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        mLate.Mod.calcDelays(j, todo);
-
         const DelayLineI mod_delay{mLate.Mod.Delay};
         size_t late_delay_tap{offset - mLateDelayTap[j][0]};
         size_t late_feedb_tap{offset - mLate.Offset[j][0]};
@@ -1529,10 +1533,10 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const ALfloa
 
     ASSUME(todo > 0);
 
+    mLate.Mod.calcFadedDelays(todo, fade, fadeStep);
+
     for(size_t j{0u};j < NUM_LINES;j++)
     {
-        mLate.Mod.calcFadedDelays(j, todo, fade, fadeStep);
-
         const DelayLineI mod_delay{mLate.Mod.Delay};
         const ALfloat oldMidGain{mLate.T60[j].MidGain[0]};
         const ALfloat midGain{mLate.T60[j].MidGain[1]};

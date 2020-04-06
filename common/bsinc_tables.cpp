@@ -211,7 +211,7 @@ struct Array {
 };
 
 template<size_t total_size>
-constexpr auto GenerateBSincCoeffs(const BSincHeader hdr)
+constexpr auto GenerateBSincCoeffs(const BSincHeader &hdr)
 {
     double filter[BSincScaleCount][BSincPhaseCount+1][BSincPointsMax]{};
 
@@ -321,7 +321,7 @@ alignas(16) const auto bsinc12_table = GenerateBSincCoeffs<bsinc12_hdr.total_siz
 alignas(16) const auto bsinc24_table = GenerateBSincCoeffs<bsinc24_hdr.total_size>(bsinc24_hdr);
 
 
-constexpr BSincTable GenerateBSincTable(const BSincHeader hdr, const float *tab)
+constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab)
 {
     BSincTable ret{};
     ret.scaleBase = static_cast<float>(hdr.scaleBase);

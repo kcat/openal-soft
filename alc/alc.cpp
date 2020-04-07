@@ -1621,7 +1621,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
 void ALCcontext::processUpdates()
 {
     std::lock_guard<std::mutex> _{mPropLock};
-    if(mDeferUpdates.exchange(false))
+    if(mDeferUpdates.exchange(false, std::memory_order_acq_rel))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.

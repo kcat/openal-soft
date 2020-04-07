@@ -217,7 +217,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
      * This does *NOT* stop mixing, but rather prevents certain property
      * changes from taking effect.
      */
-    void deferUpdates() noexcept { mDeferUpdates.store(true); }
+    void deferUpdates() noexcept { mDeferUpdates.exchange(true, std::memory_order_acq_rel); }
 
     /** Resumes update processing after being deferred. */
     void processUpdates();

@@ -1627,8 +1627,9 @@ void ALCcontext::processUpdates()
          * updating to finish, before providing updates.
          */
         mHoldUpdates.store(true, std::memory_order_release);
-        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0)
-            std::this_thread::yield();
+        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
+            /* busy-wait */
+        }
 
         if(!mPropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateContextProps(this);

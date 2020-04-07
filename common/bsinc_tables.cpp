@@ -2,6 +2,7 @@
 #include "bsinc_tables.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -198,25 +199,19 @@ constexpr BSincHeader GenerateBSincHeader(int Rejection, int Order)
 }
 
 /* 11th and 23rd order filters (12 and 24-point respectively) with a 60dB drop
- * at nyquist. Each filter will scale up the order when downsampling, to 23 and
- * 47th order respectively.
+ * at nyquist. Each filter will scale up the order when downsampling, to 23rd
+ * and 47th order respectively.
  */
 constexpr BSincHeader bsinc12_hdr{GenerateBSincHeader(60, 11)};
 constexpr BSincHeader bsinc24_hdr{GenerateBSincHeader(60, 23)};
 
 
-/* std::array is missing constexpr for several methods. */
-template<typename T, size_t N>
-struct Array {
-    T data[N];
-};
-
-/* FIXME: This should be constexpr, but the temporary filter table is apparently too big
- * (~200K) for some systems. This requires using heap space, which is not
- * allowed in a constexpr function.
+/* FIXME: This should be constexpr, but the temporary filter arrays are too
+ * big. This requires using heap space, which is not allowed in a constexpr
+ * function (maybe in C++20).
  */
 template<size_t total_size>
-auto GenerateBSincCoeffs(const BSincHeader &hdr)
+std::array<float,total_size> GenerateBSincCoeffs(const BSincHeader &hdr)
 {
     auto filter = std::make_unique<double[][BSincPhaseCount+1][BSincPointsMax]>(BSincScaleCount);
 
@@ -248,7 +243,7 @@ auto GenerateBSincCoeffs(const BSincHeader &hdr)
         }
     }
 
-    Array<float,total_size> ret{};
+    auto ret = std::make_unique<std::array<float,total_size>>();
     size_t idx{0};
 
     for(unsigned int si{0};si < BSincScaleCount-1;++si)
@@ -262,7 +257,7 @@ auto GenerateBSincCoeffs(const BSincHeader &hdr)
              * scale deltas.
              */
             for(int i{0};i < m;++i)
-                ret.data[idx++] = static_cast<float>(filter[si][pi][o+i]);
+                (*ret)[idx++] = static_cast<float>(filter[si][pi][o+i]);
 
             /* Linear interpolation between phases is simplified by pre-
              * calculating the delta (b - a) in: x = a + f (b - a)
@@ -270,7 +265,7 @@ auto GenerateBSincCoeffs(const BSincHeader &hdr)
             for(int i{0};i < m;++i)
             {
                 const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
-                ret.data[idx++] = static_cast<float>(phDelta);
+                (*ret)[idx++] = static_cast<float>(phDelta);
             }
 
             /* Linear interpolation between scales is also simplified.
@@ -281,7 +276,7 @@ auto GenerateBSincCoeffs(const BSincHeader &hdr)
             for(int i{0};i < m;++i)
             {
                 const double scDelta{filter[si+1][pi][o+i] - filter[si][pi][o+i]};
-                ret.data[idx++] = static_cast<float>(scDelta);
+                (*ret)[idx++] = static_cast<float>(scDelta);
             }
 
             /* This last simplification is done to complete the bilinear
@@ -291,7 +286,7 @@ auto GenerateBSincCoeffs(const BSincHeader &hdr)
             {
                 const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -
                     (filter[si][pi+1][o+i] - filter[si][pi][o+i])};
-                ret.data[idx++] = static_cast<float>(spDelta);
+                (*ret)[idx++] = static_cast<float>(spDelta);
             }
         }
     }
@@ -304,24 +299,26 @@ auto GenerateBSincCoeffs(const BSincHeader &hdr)
         for(int pi{0};pi < BSincPhaseCount;++pi)
         {
             for(int i{0};i < m;++i)
-                ret.data[idx++] = static_cast<float>(filter[si][pi][o+i]);
+                (*ret)[idx++] = static_cast<float>(filter[si][pi][o+i]);
             for(int i{0};i < m;++i)
             {
                 const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
-                ret.data[idx++] = static_cast<float>(phDelta);
+                (*ret)[idx++] = static_cast<float>(phDelta);
             }
             for(int i{0};i < m;++i)
-                ret.data[idx++] = 0.0f;
+                (*ret)[idx++] = 0.0f;
             for(int i{0};i < m;++i)
-                ret.data[idx++] = 0.0f;
+                (*ret)[idx++] = 0.0f;
         }
     }
     assert(idx == total_size);
 
-    return ret;
+    return *ret;
 }
 
-/* FIXME: These can't be constexpr due to reaching the step limit. */
+/* FIXME: These can't be constexpr due to the calls reaching the compiler's
+ * step limit.
+ */
 alignas(16) const auto bsinc12_table = GenerateBSincCoeffs<bsinc12_hdr.total_size>(bsinc12_hdr);
 alignas(16) const auto bsinc24_table = GenerateBSincCoeffs<bsinc24_hdr.total_size>(bsinc24_hdr);
 
@@ -342,5 +339,5 @@ constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab
 
 } // namespace
 
-const BSincTable bsinc12{GenerateBSincTable(bsinc12_hdr, bsinc12_table.data)};
-const BSincTable bsinc24{GenerateBSincTable(bsinc24_hdr, bsinc24_table.data)};
+const BSincTable bsinc12{GenerateBSincTable(bsinc12_hdr, &bsinc12_table.front())};
+const BSincTable bsinc24{GenerateBSincTable(bsinc24_hdr, &bsinc24_table.front())};

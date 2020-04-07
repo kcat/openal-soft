@@ -74,7 +74,7 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 
 #ifndef AL_SOFT_effect_chain
 #define AL_SOFT_effect_chain
-#define AL_EFFECTSLOT_TARGET_SOFT                0xf000
+#define AL_EFFECTSLOT_TARGET_SOFT                0x199C
 #endif
 
 #ifndef AL_SOFT_callback_buffer
@@ -96,7 +96,7 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 
 #ifndef AL_SOFT_bformat_hoa
 #define AL_SOFT_bformat_hoa
-#define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x200F
+#define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x199D
 #endif
 
 #ifdef __cplusplus

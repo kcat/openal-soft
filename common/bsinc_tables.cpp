@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 
 #include "math_defs.h"
@@ -210,10 +211,14 @@ struct Array {
     T data[N];
 };
 
+/* FIXME: This should be constexpr, but the temporary filter table is apparently too big
+ * (~200K) for some systems. This requires using heap space, which is not
+ * allowed in a constexpr function.
+ */
 template<size_t total_size>
-constexpr auto GenerateBSincCoeffs(const BSincHeader &hdr)
+auto GenerateBSincCoeffs(const BSincHeader &hdr)
 {
-    double filter[BSincScaleCount][BSincPhaseCount+1][BSincPointsMax]{};
+    auto filter = std::make_unique<double[][BSincPhaseCount+1][BSincPointsMax]>(BSincScaleCount);
 
     /* Calculate the Kaiser-windowed Sinc filter coefficients for each scale
      * and phase index.

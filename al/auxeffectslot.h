@@ -64,12 +64,12 @@ struct ALeffectslot {
         EffectProps mEffectProps{};
         EffectState *mEffectState{nullptr};
 
-        ALfloat RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
-        ALfloat DecayTime{0.0f};
-        ALfloat DecayLFRatio{0.0f};
-        ALfloat DecayHFRatio{0.0f};
+        float RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
+        float DecayTime{0.0f};
+        float DecayLFRatio{0.0f};
+        float DecayHFRatio{0.0f};
         bool DecayHFLimit{false};
-        ALfloat AirAbsorptionGainHF{1.0f};
+        float AirAbsorptionGainHF{1.0f};
     } Params;
 
     /* Self ID */

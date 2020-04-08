@@ -42,7 +42,7 @@ using namespace std::placeholders;
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const float in)
+float UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const float in)
 {
     static constexpr ALuint mask{BUFFERSIZE - 1};
     const ALuint length{Hold->mLength};
@@ -170,7 +170,7 @@ void PeakHoldDetector(Compressor *Comp, const ALuint SamplesToDo)
 
     SlidingHold *hold{Comp->mHold};
     ALuint i{0};
-    auto detect_peak = [&i,hold](const ALfloat x_abs) -> ALfloat
+    auto detect_peak = [&i,hold](const float x_abs) -> float
     {
         const float x_G{std::log(maxf(0.000001f, x_abs))};
         return UpdateSlidingHold(hold, i++, x_G);
@@ -293,8 +293,8 @@ void SignalDelay(Compressor *Comp, const ALuint SamplesToDo, FloatBufferLine *Ou
 
     for(size_t c{0};c < numChans;c++)
     {
-        ALfloat *inout{al::assume_aligned<16>(OutBuffer[c].data())};
-        ALfloat *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
+        float *inout{al::assume_aligned<16>(OutBuffer[c].data())};
+        float *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
 
         auto inout_end = inout + SamplesToDo;
         if LIKELY(SamplesToDo >= lookAhead)
@@ -428,11 +428,11 @@ void Compressor::process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
     if(mDelay)
         SignalDelay(this, SamplesToDo, OutBuffer);
 
-    const ALfloat (&sideChain)[BUFFERSIZE*2] = mSideChain;
+    const float (&sideChain)[BUFFERSIZE*2] = mSideChain;
     auto apply_comp = [SamplesToDo,&sideChain](FloatBufferLine &input) noexcept -> void
     {
-        ALfloat *buffer{al::assume_aligned<16>(input.data())};
-        const ALfloat *gains{al::assume_aligned<16>(&sideChain[0])};
+        float *buffer{al::assume_aligned<16>(input.data())};
+        const float *gains{al::assume_aligned<16>(&sideChain[0])};
         std::transform(gains, gains+SamplesToDo, buffer, buffer,
             std::bind(std::multiplies<float>{}, _1, _2));
     };

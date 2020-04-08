@@ -1269,7 +1269,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                 size_t dstframes;
                 if(mSampleConv)
                 {
-                    const ALvoid *srcdata{rdata};
+                    const void *srcdata{rdata};
                     ALuint srcframes{numsamples};
 
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data.first.buf,

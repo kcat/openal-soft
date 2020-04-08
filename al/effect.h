@@ -27,7 +27,7 @@ enum {
 };
 extern bool DisabledEffects[MAX_EFFECTS];
 
-extern ALfloat ReverbBoost;
+extern float ReverbBoost;
 
 struct EffectList {
     const char name[16];

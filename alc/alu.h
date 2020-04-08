@@ -75,7 +75,8 @@ void aluInitMixer(void);
  * Set up the appropriate panning method and mixing method given the device
  * properties.
  */
-void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq);
+void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
+    HrtfRequestMode hrtf_userreq);
 
 void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
 

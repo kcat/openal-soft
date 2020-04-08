@@ -15,12 +15,12 @@ enum class DistanceModel;
 
 
 struct ALlistenerProps {
-    std::array<ALfloat,3> Position;
-    std::array<ALfloat,3> Velocity;
-    std::array<ALfloat,3> OrientAt;
-    std::array<ALfloat,3> OrientUp;
-    ALfloat Gain;
-    ALfloat MetersPerUnit;
+    std::array<float,3> Position;
+    std::array<float,3> Velocity;
+    std::array<float,3> OrientAt;
+    std::array<float,3> OrientUp;
+    float Gain;
+    float MetersPerUnit;
 
     std::atomic<ALlistenerProps*> next;
 
@@ -28,12 +28,12 @@ struct ALlistenerProps {
 };
 
 struct ALlistener {
-    std::array<ALfloat,3> Position{{0.0f, 0.0f, 0.0f}};
-    std::array<ALfloat,3> Velocity{{0.0f, 0.0f, 0.0f}};
-    std::array<ALfloat,3> OrientAt{{0.0f, 0.0f, -1.0f}};
-    std::array<ALfloat,3> OrientUp{{0.0f, 1.0f, 0.0f}};
-    ALfloat Gain{1.0f};
-    ALfloat mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
+    std::array<float,3> Position{{0.0f, 0.0f, 0.0f}};
+    std::array<float,3> Velocity{{0.0f, 0.0f, 0.0f}};
+    std::array<float,3> OrientAt{{0.0f, 0.0f, -1.0f}};
+    std::array<float,3> OrientUp{{0.0f, 1.0f, 0.0f}};
+    float Gain{1.0f};
+    float mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
     std::atomic_flag PropsClean;
 
@@ -46,11 +46,11 @@ struct ALlistener {
         alu::Matrix Matrix;
         alu::Vector Velocity;
 
-        ALfloat Gain;
-        ALfloat MetersPerUnit;
+        float Gain;
+        float MetersPerUnit;
 
-        ALfloat DopplerFactor;
-        ALfloat SpeedOfSound; /* in units per sec! */
+        float DopplerFactor;
+        float SpeedOfSound; /* in units per sec! */
 
         bool SourceDistanceModel;
         DistanceModel mDistanceModel;

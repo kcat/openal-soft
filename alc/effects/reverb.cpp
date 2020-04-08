@@ -710,11 +710,11 @@ inline float CalcDensityGain(const float a)
 }
 
 /* Calculate the scattering matrix coefficients given a diffusion factor. */
-inline ALvoid CalcMatrixCoeffs(const float diffusion, float *x, float *y)
+inline void CalcMatrixCoeffs(const float diffusion, float *x, float *y)
 {
     /* The matrix is of order 4, so n is sqrt(4 - 1). */
-    float n{std::sqrt(3.0f)};
-    float t{diffusion * std::atan(n)};
+    const float n{std::sqrt(3.0f)};
+    const float t{diffusion * std::atan(n)};
 
     /* Calculate the first mixing matrix coefficient. */
     *x = std::cos(t);

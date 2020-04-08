@@ -101,10 +101,10 @@ constexpr int MSADPCMAdaptionCoeff[7][2] = {
 };
 
 
-void DecodeIMA4Block(ALshort *dst, const al::byte *src, size_t numchans, size_t align)
+void DecodeIMA4Block(int16_t *dst, const al::byte *src, size_t numchans, size_t align)
 {
-    ALint sample[MaxAdpcmChannels]{};
-    ALint index[MaxAdpcmChannels]{};
+    int sample[MaxAdpcmChannels]{};
+    int index[MaxAdpcmChannels]{};
     ALuint code[MaxAdpcmChannels]{};
 
     for(size_t c{0};c < numchans;c++)
@@ -147,11 +147,11 @@ void DecodeIMA4Block(ALshort *dst, const al::byte *src, size_t numchans, size_t 
     }
 }
 
-void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, size_t numchans, size_t align)
+void DecodeMSADPCMBlock(int16_t *dst, const al::byte *src, size_t numchans, size_t align)
 {
     ALubyte blockpred[MaxAdpcmChannels]{};
-    ALint delta[MaxAdpcmChannels]{};
-    ALshort samples[MaxAdpcmChannels][2]{};
+    int delta[MaxAdpcmChannels]{};
+    int16_t samples[MaxAdpcmChannels][2]{};
 
     for(size_t c{0};c < numchans;c++)
     {
@@ -195,23 +195,23 @@ void DecodeMSADPCMBlock(ALshort *dst, const al::byte *src, size_t numchans, size
             else
                 nibble = *(src++) & 0x0f;
 
-            ALint pred{(samples[c][0]*MSADPCMAdaptionCoeff[blockpred[c]][0] +
+            int pred{(samples[c][0]*MSADPCMAdaptionCoeff[blockpred[c]][0] +
                 samples[c][1]*MSADPCMAdaptionCoeff[blockpred[c]][1]) / 256};
             pred += (al::to_integer<int>(nibble^0x08) - 0x08) * delta[c];
             pred  = clampi(pred, -32768, 32767);
 
             samples[c][1] = samples[c][0];
-            samples[c][0] = static_cast<ALshort>(pred);
+            samples[c][0] = static_cast<int16_t>(pred);
 
             delta[c] = (MSADPCMAdaption[al::to_integer<ALubyte>(nibble)] * delta[c]) / 256;
             delta[c] = maxi(16, delta[c]);
 
-            *(dst++) = static_cast<ALshort>(pred);
+            *(dst++) = static_cast<int16_t>(pred);
         }
     }
 }
 
-void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, size_t numchans, size_t len,
+void Convert_ALshort_ALima4(int16_t *dst, const al::byte *src, size_t numchans, size_t len,
     size_t align)
 {
     assert(numchans <= MaxAdpcmChannels);
@@ -226,7 +226,7 @@ void Convert_ALshort_ALima4(ALshort *dst, const al::byte *src, size_t numchans, 
     }
 }
 
-void Convert_ALshort_ALmsadpcm(ALshort *dst, const al::byte *src, size_t numchans, size_t len,
+void Convert_ALshort_ALmsadpcm(int16_t *dst, const al::byte *src, size_t numchans, size_t len,
     size_t align)
 {
     assert(numchans <= MaxAdpcmChannels);
@@ -523,7 +523,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     {
         assert(DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_ALshort_ALima4(reinterpret_cast<ALshort*>(ALBuf->mData.data()),
+            Convert_ALshort_ALima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()),
                 SrcData, NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
@@ -531,7 +531,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     {
         assert(DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_ALshort_ALmsadpcm(reinterpret_cast<ALshort*>(ALBuf->mData.data()),
+            Convert_ALshort_ALmsadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()),
                 SrcData, NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }

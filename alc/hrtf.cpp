@@ -100,7 +100,7 @@ constexpr ALchar magicMarker03[8]{'M','i','n','P','H','R','0','3'};
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr ALfloat PassthruCoeff{0.707106781187f/*sqrt(0.5)*/};
+constexpr float PassthruCoeff{0.707106781187f/*sqrt(0.5)*/};
 
 std::mutex LoadedHrtfLock;
 al::vector<LoadedHrtf> LoadedHrtfs;
@@ -559,7 +559,7 @@ ALushort GetLE_ALushort(std::istream &data)
     return static_cast<ALushort>(ret);
 }
 
-ALint GetLE_ALint24(std::istream &data)
+int GetLE_ALint24(std::istream &data)
 {
     int ret = data.get();
     ret |= data.get() << 8;
@@ -569,11 +569,11 @@ ALint GetLE_ALint24(std::istream &data)
 
 ALuint GetLE_ALuint(std::istream &data)
 {
-    int ret = data.get();
-    ret |= data.get() << 8;
-    ret |= data.get() << 16;
-    ret |= data.get() << 24;
-    return static_cast<ALuint>(ret);
+    ALuint ret{static_cast<ALuint>(data.get())};
+    ret |= static_cast<ALuint>(data.get()) << 8;
+    ret |= static_cast<ALuint>(data.get()) << 16;
+    ret |= static_cast<ALuint>(data.get()) << 24;
+    return ret;
 }
 
 std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
@@ -1381,7 +1381,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const A
     }
 
     std::unique_ptr<std::istream> stream;
-    ALint residx{};
+    int residx{};
     char ch{};
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {

@@ -1247,7 +1247,7 @@ void ProbeCaptureDeviceList()
 } // namespace
 
 /* Mixing thread piority level */
-ALint RTPrioLevel{1};
+int RTPrioLevel{1};
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG
@@ -2123,24 +2123,23 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "dither", 1))
     {
-        ALint depth{
-            ConfigValueInt(device->DeviceName.c_str(), nullptr, "dither-depth").value_or(0)};
+        int depth{ConfigValueInt(device->DeviceName.c_str(), nullptr, "dither-depth").value_or(0)};
         if(depth <= 0)
         {
             switch(device->FmtType)
             {
-                case DevFmtByte:
-                case DevFmtUByte:
-                    depth = 8;
-                    break;
-                case DevFmtShort:
-                case DevFmtUShort:
-                    depth = 16;
-                    break;
-                case DevFmtInt:
-                case DevFmtUInt:
-                case DevFmtFloat:
-                    break;
+            case DevFmtByte:
+            case DevFmtUByte:
+                depth = 8;
+                break;
+            case DevFmtShort:
+            case DevFmtUShort:
+                depth = 16;
+                break;
+            case DevFmtInt:
+            case DevFmtUInt:
+            case DevFmtFloat:
+                break;
             }
         }
 

@@ -19,21 +19,21 @@ namespace {
 #define MAX_UPDATE_SAMPLES  128
 
 
-constexpr ALfloat Filter1CoeffSqr[4] = {
+constexpr float Filter1CoeffSqr[4] = {
     0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
 };
-constexpr ALfloat Filter2CoeffSqr[4] = {
+constexpr float Filter2CoeffSqr[4] = {
     0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
 };
 
-void allpass_process(AllPassState *state, ALfloat *dst, const ALfloat *src, const ALfloat aa,
+void allpass_process(AllPassState *state, float *dst, const float *src, const float aa,
     const size_t todo)
 {
-    ALfloat z1{state->z[0]};
-    ALfloat z2{state->z[1]};
-    auto proc_sample = [aa,&z1,&z2](const ALfloat input) noexcept -> ALfloat
+    float z1{state->z[0]};
+    float z2{state->z[1]};
+    auto proc_sample = [aa,&z1,&z2](const float input) noexcept -> float
     {
-        const ALfloat output{input*aa + z1};
+        const float output{input*aa + z1};
         z1 = z2; z2 = output*aa - input;
         return output;
     };
@@ -68,8 +68,8 @@ void allpass_process(AllPassState *state, ALfloat *dst, const ALfloat *src, cons
 void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
-    alignas(16) ALfloat D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
-    alignas(16) ALfloat temp[MAX_UPDATE_SAMPLES];
+    alignas(16) float D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
+    alignas(16) float temp[MAX_UPDATE_SAMPLES];
 
     ASSUME(SamplesToDo > 0);
 
@@ -122,11 +122,11 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
         mLastWX = temp[todo-1];
 
         /* Left = (S + D)/2.0 */
-        ALfloat *RESTRICT left = al::assume_aligned<16>(LeftOut.data()+base);
+        float *RESTRICT left{al::assume_aligned<16>(LeftOut.data()+base)};
         for(size_t i{0};i < todo;i++)
             left[i] += (S[i] + D[i]) * 0.5f;
         /* Right = (S - D)/2.0 */
-        ALfloat *RESTRICT right = al::assume_aligned<16>(RightOut.data()+base);
+        float *RESTRICT right{al::assume_aligned<16>(RightOut.data()+base)};
         for(size_t i{0};i < todo;i++)
             right[i] += (S[i] - D[i]) * 0.5f;
 

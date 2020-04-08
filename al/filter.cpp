@@ -48,11 +48,11 @@ namespace {
 #define FILTER_MIN_GAIN 0.0f
 #define FILTER_MAX_GAIN 4.0f /* +12dB */
 
-void ALlowpass_setParami(ALfilter*, ALCcontext *context, ALenum param, ALint)
+void ALlowpass_setParami(ALfilter*, ALCcontext *context, ALenum param, int)
 { context->setError(AL_INVALID_ENUM, "Invalid low-pass integer property 0x%04x", param); }
-void ALlowpass_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const ALint*)
+void ALlowpass_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid low-pass integer-vector property 0x%04x", param); }
-void ALlowpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+void ALlowpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -72,14 +72,14 @@ void ALlowpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
         context->setError(AL_INVALID_ENUM, "Invalid low-pass float property 0x%04x", param);
     }
 }
-void ALlowpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALlowpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const float *vals)
 { ALlowpass_setParamf(filter, context, param, vals[0]); }
 
-void ALlowpass_getParami(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALlowpass_getParami(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid low-pass integer property 0x%04x", param); }
-void ALlowpass_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALlowpass_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid low-pass integer-vector property 0x%04x", param); }
-void ALlowpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+void ALlowpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -95,17 +95,17 @@ void ALlowpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum par
         context->setError(AL_INVALID_ENUM, "Invalid low-pass float property 0x%04x", param);
     }
 }
-void ALlowpass_getParamfv(const ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALlowpass_getParamfv(const ALfilter *filter, ALCcontext *context, ALenum param, float *vals)
 { ALlowpass_getParamf(filter, context, param, vals); }
 
 DEFINE_ALFILTER_VTABLE(ALlowpass);
 
 
-void ALhighpass_setParami(ALfilter*, ALCcontext *context, ALenum param, ALint)
+void ALhighpass_setParami(ALfilter*, ALCcontext *context, ALenum param, int)
 { context->setError(AL_INVALID_ENUM, "Invalid high-pass integer property 0x%04x", param); }
-void ALhighpass_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const ALint*)
+void ALhighpass_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid high-pass integer-vector property 0x%04x", param); }
-void ALhighpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+void ALhighpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -125,14 +125,14 @@ void ALhighpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, A
         context->setError(AL_INVALID_ENUM, "Invalid high-pass float property 0x%04x", param);
     }
 }
-void ALhighpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALhighpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const float *vals)
 { ALhighpass_setParamf(filter, context, param, vals[0]); }
 
-void ALhighpass_getParami(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALhighpass_getParami(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid high-pass integer property 0x%04x", param); }
-void ALhighpass_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALhighpass_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid high-pass integer-vector property 0x%04x", param); }
-void ALhighpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+void ALhighpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -148,17 +148,17 @@ void ALhighpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum pa
         context->setError(AL_INVALID_ENUM, "Invalid high-pass float property 0x%04x", param);
     }
 }
-void ALhighpass_getParamfv(const ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALhighpass_getParamfv(const ALfilter *filter, ALCcontext *context, ALenum param, float *vals)
 { ALhighpass_getParamf(filter, context, param, vals); }
 
 DEFINE_ALFILTER_VTABLE(ALhighpass);
 
 
-void ALbandpass_setParami(ALfilter*, ALCcontext *context, ALenum param, ALint)
+void ALbandpass_setParami(ALfilter*, ALCcontext *context, ALenum param, int)
 { context->setError(AL_INVALID_ENUM, "Invalid band-pass integer property 0x%04x", param); }
-void ALbandpass_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const ALint*)
+void ALbandpass_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid band-pass integer-vector property 0x%04x", param); }
-void ALbandpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+void ALbandpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -184,14 +184,14 @@ void ALbandpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, A
         context->setError(AL_INVALID_ENUM, "Invalid band-pass float property 0x%04x", param);
     }
 }
-void ALbandpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+void ALbandpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const float *vals)
 { ALbandpass_setParamf(filter, context, param, vals[0]); }
 
-void ALbandpass_getParami(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALbandpass_getParami(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid band-pass integer property 0x%04x", param); }
-void ALbandpass_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALbandpass_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid band-pass integer-vector property 0x%04x", param); }
-void ALbandpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+void ALbandpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -211,28 +211,28 @@ void ALbandpass_getParamf(const ALfilter *filter, ALCcontext *context, ALenum pa
         context->setError(AL_INVALID_ENUM, "Invalid band-pass float property 0x%04x", param);
     }
 }
-void ALbandpass_getParamfv(const ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+void ALbandpass_getParamfv(const ALfilter *filter, ALCcontext *context, ALenum param, float *vals)
 { ALbandpass_getParamf(filter, context, param, vals); }
 
 DEFINE_ALFILTER_VTABLE(ALbandpass);
 
 
-void ALnullfilter_setParami(ALfilter*, ALCcontext *context, ALenum param, ALint)
+void ALnullfilter_setParami(ALfilter*, ALCcontext *context, ALenum param, int)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
-void ALnullfilter_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const ALint*)
+void ALnullfilter_setParamiv(ALfilter*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
-void ALnullfilter_setParamf(ALfilter*, ALCcontext *context, ALenum param, ALfloat)
+void ALnullfilter_setParamf(ALfilter*, ALCcontext *context, ALenum param, float)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
-void ALnullfilter_setParamfv(ALfilter*, ALCcontext *context, ALenum param, const ALfloat*)
+void ALnullfilter_setParamfv(ALfilter*, ALCcontext *context, ALenum param, const float*)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
 
-void ALnullfilter_getParami(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALnullfilter_getParami(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
-void ALnullfilter_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, ALint*)
+void ALnullfilter_getParamiv(const ALfilter*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
-void ALnullfilter_getParamf(const ALfilter*, ALCcontext *context, ALenum param, ALfloat*)
+void ALnullfilter_getParamf(const ALfilter*, ALCcontext *context, ALenum param, float*)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
-void ALnullfilter_getParamfv(const ALfilter*, ALCcontext *context, ALenum param, ALfloat*)
+void ALnullfilter_getParamfv(const ALfilter*, ALCcontext *context, ALenum param, float*)
 { context->setError(AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param); }
 
 DEFINE_ALFILTER_VTABLE(ALnullfilter);

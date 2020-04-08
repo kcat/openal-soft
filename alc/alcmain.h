@@ -369,7 +369,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 #define RECORD_THREAD_NAME "alsoft-record"
 
 
-extern ALint RTPrioLevel;
+extern int RTPrioLevel;
 void SetRTPriority(void);
 
 void SetDefaultChannelOrder(ALCdevice *device);

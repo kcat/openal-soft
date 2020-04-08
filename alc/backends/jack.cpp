@@ -254,7 +254,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     if(numframes > total)
     {
         jack_nframes_t todo{numframes - total};
-        auto clear_buf = [todo](ALfloat *outbuf) -> void { std::fill_n(outbuf, todo, 0.0f); };
+        auto clear_buf = [todo](float *outbuf) -> void { std::fill_n(outbuf, todo, 0.0f); };
         std::for_each(out, out+numchans, clear_buf);
     }
 

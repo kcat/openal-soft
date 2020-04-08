@@ -55,7 +55,7 @@ enum class WaveForm {
 };
 
 void GetTriangleDelays(ALuint *delays, const ALuint start_offset, const ALuint lfo_range,
-    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const size_t todo)
+    const float lfo_scale, const float depth, const ALsizei delay, const size_t todo)
 {
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
@@ -71,7 +71,7 @@ void GetTriangleDelays(ALuint *delays, const ALuint start_offset, const ALuint l
 }
 
 void GetSinusoidDelays(ALuint *delays, const ALuint start_offset, const ALuint lfo_range,
-    const ALfloat lfo_scale, const ALfloat depth, const ALsizei delay, const size_t todo)
+    const float lfo_scale, const float depth, const ALsizei delay, const size_t todo)
 {
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
@@ -87,25 +87,25 @@ void GetSinusoidDelays(ALuint *delays, const ALuint start_offset, const ALuint l
 }
 
 struct ChorusState final : public EffectState {
-    al::vector<ALfloat,16> mSampleBuffer;
+    al::vector<float,16> mSampleBuffer;
     ALuint mOffset{0};
 
     ALuint mLfoOffset{0};
     ALuint mLfoRange{1};
-    ALfloat mLfoScale{0.0f};
+    float mLfoScale{0.0f};
     ALuint mLfoDisp{0};
 
     /* Gains for left and right sides */
     struct {
-        ALfloat Current[MAX_OUTPUT_CHANNELS]{};
-        ALfloat Target[MAX_OUTPUT_CHANNELS]{};
+        float Current[MAX_OUTPUT_CHANNELS]{};
+        float Target[MAX_OUTPUT_CHANNELS]{};
     } mGains[2];
 
     /* effect parameters */
     WaveForm mWaveform{};
-    ALint mDelay{0};
-    ALfloat mDepth{0.0f};
-    ALfloat mFeedback{0.0f};
+    int mDelay{0};
+    float mDepth{0.0f};
+    float mFeedback{0.0f};
 
 
     bool deviceUpdate(const ALCdevice *device) override;
@@ -117,7 +117,7 @@ struct ChorusState final : public EffectState {
 
 bool ChorusState::deviceUpdate(const ALCdevice *Device)
 {
-    constexpr ALfloat max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
+    constexpr float max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
 
     const auto frequency = static_cast<float>(Device->Frequency);
     const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*frequency) + 1u)};
@@ -164,7 +164,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     mFeedback = props->Chorus.Feedback;
 
     /* Gains for left and right sides */
-    ALfloat coeffs[2][MAX_AMBI_CHANNELS];
+    float coeffs[2][MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f, coeffs[0]);
     CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f, coeffs[1]);
 
@@ -172,7 +172,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     ComputePanGains(target.Main, coeffs[0], Slot->Params.Gain, mGains[0].Target);
     ComputePanGains(target.Main, coeffs[1], Slot->Params.Gain, mGains[1].Target);
 
-    ALfloat rate{props->Chorus.Rate};
+    float rate{props->Chorus.Rate};
     if(!(rate > 0.0f))
     {
         mLfoOffset = 0;
@@ -185,7 +185,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        ALuint lfo_range{float2uint(minf(frequency/rate + 0.5f, ALfloat{INT_MAX/360 - 180}))};
+        ALuint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;
@@ -200,7 +200,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         }
 
         /* Calculate lfo phase displacement */
-        ALint phase{props->Chorus.Phase};
+        int phase{props->Chorus.Phase};
         if(phase < 0) phase = 360 + phase;
         mLfoDisp = (mLfoRange*static_cast<ALuint>(phase) + 180) / 360;
     }
@@ -209,9 +209,9 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
 void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const size_t bufmask{mSampleBuffer.size()-1};
-    const ALfloat feedback{mFeedback};
+    const float feedback{mFeedback};
     const ALuint avgdelay{(static_cast<ALuint>(mDelay) + (FRACTIONONE>>1)) >> FRACTIONBITS};
-    ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
+    float *RESTRICT delaybuf{mSampleBuffer.data()};
     ALuint offset{mOffset};
 
     for(size_t base{0u};base < samplesToDo;)
@@ -235,7 +235,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         }
         mLfoOffset = (mLfoOffset+static_cast<ALuint>(todo)) % mLfoRange;
 
-        alignas(16) ALfloat temps[2][256];
+        alignas(16) float temps[2][256];
         for(size_t i{0u};i < todo;i++)
         {
             // Feed the buffer's input first (necessary for delays < 1).
@@ -243,7 +243,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 
             // Tap for the left output.
             ALuint delay{offset - (moddelays[0][i]>>FRACTIONBITS)};
-            ALfloat mu{static_cast<float>(moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE)};
+            float mu{static_cast<float>(moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE)};
             temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
                 delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 
@@ -269,7 +269,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 }
 
 
-void Chorus_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Chorus_setParami(EffectProps *props, ALCcontext *context, ALenum param, int val)
 {
     switch(param)
     {
@@ -289,9 +289,9 @@ void Chorus_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALi
             context->setError(AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
-void Chorus_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Chorus_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const int *vals)
 { Chorus_setParami(props, context, param, vals[0]); }
-void Chorus_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Chorus_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -323,10 +323,10 @@ void Chorus_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALf
             context->setError(AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
-void Chorus_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Chorus_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Chorus_setParamf(props, context, param, vals[0]); }
 
-void Chorus_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Chorus_getParami(const EffectProps *props, ALCcontext *context, ALenum param, int *val)
 {
     switch(param)
     {
@@ -342,9 +342,9 @@ void Chorus_getParami(const EffectProps *props, ALCcontext *context, ALenum para
             context->setError(AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param);
     }
 }
-void Chorus_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Chorus_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, int *vals)
 { Chorus_getParami(props, context, param, vals); }
-void Chorus_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Chorus_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -368,7 +368,7 @@ void Chorus_getParamf(const EffectProps *props, ALCcontext *context, ALenum para
             context->setError(AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param);
     }
 }
-void Chorus_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Chorus_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Chorus_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Chorus);
@@ -393,7 +393,7 @@ EffectProps ChorusStateFactory::getDefaultProps() const noexcept
 }
 
 
-void Flanger_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Flanger_setParami(EffectProps *props, ALCcontext *context, ALenum param, int val)
 {
     switch(param)
     {
@@ -413,9 +413,9 @@ void Flanger_setParami(EffectProps *props, ALCcontext *context, ALenum param, AL
             context->setError(AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
-void Flanger_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Flanger_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const int *vals)
 { Flanger_setParami(props, context, param, vals[0]); }
-void Flanger_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Flanger_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -447,10 +447,10 @@ void Flanger_setParamf(EffectProps *props, ALCcontext *context, ALenum param, AL
             context->setError(AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
-void Flanger_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Flanger_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Flanger_setParamf(props, context, param, vals[0]); }
 
-void Flanger_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Flanger_getParami(const EffectProps *props, ALCcontext *context, ALenum param, int *val)
 {
     switch(param)
     {
@@ -466,9 +466,9 @@ void Flanger_getParami(const EffectProps *props, ALCcontext *context, ALenum par
             context->setError(AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param);
     }
 }
-void Flanger_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Flanger_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, int *vals)
 { Flanger_getParami(props, context, param, vals); }
-void Flanger_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Flanger_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -492,7 +492,7 @@ void Flanger_getParamf(const EffectProps *props, ALCcontext *context, ALenum par
             context->setError(AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param);
     }
 }
-void Flanger_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Flanger_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Flanger_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Flanger);

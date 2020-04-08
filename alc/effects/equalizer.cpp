@@ -84,8 +84,8 @@ struct EqualizerState final : public EffectState {
         BiquadFilter filter[4];
 
         /* Effect gains for each channel */
-        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
+        float CurrentGains[MAX_OUTPUT_CHANNELS]{};
+        float TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_AMBI_CHANNELS];
 
     FloatBufferLine mSampleBuffer{};
@@ -112,8 +112,8 @@ bool EqualizerState::deviceUpdate(const ALCdevice*)
 void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
-    auto frequency = static_cast<ALfloat>(device->Frequency);
-    ALfloat gain, f0norm;
+    auto frequency = static_cast<float>(device->Frequency);
+    float gain, f0norm;
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * and peaking filters' gain is for the centerpoint of the transition band,
@@ -174,11 +174,11 @@ void EqualizerState::process(const size_t samplesToDo, const al::span<const Floa
 }
 
 
-void Equalizer_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
+void Equalizer_setParami(EffectProps*, ALCcontext *context, ALenum param, int)
 { context->setError(AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
-void Equalizer_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
+void Equalizer_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
-void Equalizer_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Equalizer_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -246,14 +246,14 @@ void Equalizer_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             context->setError(AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
-void Equalizer_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Equalizer_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Equalizer_setParamf(props, context, param, vals[0]); }
 
-void Equalizer_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
+void Equalizer_getParami(const EffectProps*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param); }
-void Equalizer_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
+void Equalizer_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x", param); }
-void Equalizer_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Equalizer_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -301,7 +301,7 @@ void Equalizer_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             context->setError(AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param);
     }
 }
-void Equalizer_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Equalizer_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Equalizer_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Equalizer);

@@ -77,8 +77,8 @@ struct FshifterState final : public EffectState {
 
     /* Effect gains for each output channel */
     struct {
-        ALfloat Current[MAX_OUTPUT_CHANNELS]{};
-        ALfloat Target[MAX_OUTPUT_CHANNELS]{};
+        float Current[MAX_OUTPUT_CHANNELS]{};
+        float Target[MAX_OUTPUT_CHANNELS]{};
     } mGains[2];
 
 
@@ -150,7 +150,7 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
         break;
     }
 
-    ALfloat coeffs[2][MAX_AMBI_CHANNELS];
+    float coeffs[2][MAX_AMBI_CHANNELS];
     CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f, coeffs[0]);
     CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f, coeffs[1]);
 
@@ -198,7 +198,7 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
-    ALfloat *RESTRICT BufferOut{mBufferOut};
+    float *RESTRICT BufferOut{mBufferOut};
     for(ALsizei c{0};c < 2;++c)
     {
         const ALuint phase_step{mPhaseStep[c]};
@@ -221,7 +221,7 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
 }
 
 
-void Fshifter_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Fshifter_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -236,10 +236,10 @@ void Fshifter_setParamf(EffectProps *props, ALCcontext *context, ALenum param, A
                 param);
     }
 }
-void Fshifter_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Fshifter_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Fshifter_setParamf(props, context, param, vals[0]); }
 
-void Fshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Fshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, int val)
 {
     switch(param)
     {
@@ -260,10 +260,10 @@ void Fshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, A
                 param);
     }
 }
-void Fshifter_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Fshifter_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const int *vals)
 { Fshifter_setParami(props, context, param, vals[0]); }
 
-void Fshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Fshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum param, int *val)
 {
     switch(param)
     {
@@ -278,10 +278,10 @@ void Fshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum pa
                 param);
     }
 }
-void Fshifter_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Fshifter_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, int *vals)
 { Fshifter_getParami(props, context, param, vals); }
 
-void Fshifter_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Fshifter_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -294,7 +294,7 @@ void Fshifter_getParamf(const EffectProps *props, ALCcontext *context, ALenum pa
                 param);
     }
 }
-void Fshifter_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Fshifter_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Fshifter_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Fshifter);

@@ -71,32 +71,32 @@ void Oscillate(float *RESTRICT dst, ALuint index, const ALuint step, size_t todo
 
 struct FormantFilter
 {
-    ALfloat mCoeff{0.0f};
-    ALfloat mGain{1.0f};
-    ALfloat mS1{0.0f};
-    ALfloat mS2{0.0f};
+    float mCoeff{0.0f};
+    float mGain{1.0f};
+    float mS1{0.0f};
+    float mS2{0.0f};
 
     FormantFilter() = default;
-    FormantFilter(ALfloat f0norm, ALfloat gain)
+    FormantFilter(float f0norm, float gain)
       : mCoeff{std::tan(al::MathDefs<float>::Pi() * f0norm)}, mGain{gain}
     { }
 
-    inline void process(const ALfloat *samplesIn, ALfloat *samplesOut, const size_t numInput)
+    inline void process(const float *samplesIn, float *samplesOut, const size_t numInput)
     {
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
          */
-        const ALfloat g{mCoeff};
-        const ALfloat gain{mGain};
-        const ALfloat h{1.0f / (1.0f + (g/Q_FACTOR) + (g*g))};
-        ALfloat s1{mS1};
-        ALfloat s2{mS2};
+        const float g{mCoeff};
+        const float gain{mGain};
+        const float h{1.0f / (1.0f + (g/Q_FACTOR) + (g*g))};
+        float s1{mS1};
+        float s2{mS2};
 
         for(size_t i{0u};i < numInput;i++)
         {
-            const ALfloat H{(samplesIn[i] - (1.0f/Q_FACTOR + g)*s1 - s2)*h};
-            const ALfloat B{g*H + s1};
-            const ALfloat L{g*B + s2};
+            const float H{(samplesIn[i] - (1.0f/Q_FACTOR + g)*s1 - s2)*h};
+            const float B{g*H + s1};
+            const float L{g*B + s2};
 
             s1 = g*H + B;
             s2 = g*B + L;
@@ -122,8 +122,8 @@ struct VmorpherState final : public EffectState {
         FormantFilter Formants[NUM_FILTERS][NUM_FORMANTS];
 
         /* Effect gains for each channel */
-        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
+        float CurrentGains[MAX_OUTPUT_CHANNELS]{};
+        float TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_AMBI_CHANNELS];
 
     void (*mGetSamples)(float*RESTRICT, ALuint, const ALuint, size_t){};
@@ -132,19 +132,19 @@ struct VmorpherState final : public EffectState {
     ALuint mStep{1};
 
     /* Effects buffers */
-    ALfloat mSampleBufferA[MAX_UPDATE_SAMPLES]{};
-    ALfloat mSampleBufferB[MAX_UPDATE_SAMPLES]{};
+    float mSampleBufferA[MAX_UPDATE_SAMPLES]{};
+    float mSampleBufferB[MAX_UPDATE_SAMPLES]{};
 
     bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
-    static std::array<FormantFilter,4> getFiltersByPhoneme(ALenum phoneme, ALfloat frequency, ALfloat pitch);
+    static std::array<FormantFilter,4> getFiltersByPhoneme(ALenum phoneme, float frequency, float pitch);
 
     DEF_NEWDEL(VmorpherState)
 };
 
-std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(ALenum phoneme, ALfloat frequency, ALfloat pitch)
+std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(ALenum phoneme, float frequency, float pitch)
 {
     /* Using soprano formant set of values to
      * better match mid-range frequency space.
@@ -210,9 +210,9 @@ bool VmorpherState::deviceUpdate(const ALCdevice* /*device*/)
 void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
-    const ALfloat frequency{static_cast<ALfloat>(device->Frequency)};
-    const ALfloat step{props->Vmorpher.Rate / frequency};
-    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
+    const float frequency{static_cast<float>(device->Frequency)};
+    const float step{props->Vmorpher.Rate / frequency};
+    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, float{WAVEFORM_FRACONE-1}));
 
     if(mStep == 0)
         mGetSamples = Oscillate<Half>;
@@ -223,9 +223,9 @@ void VmorpherState::update(const ALCcontext *context, const ALeffectslot *slot, 
     else /*if(props->Vmorpher.Waveform == AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE)*/
         mGetSamples = Oscillate<Triangle>;
 
-    const ALfloat pitchA{std::pow(2.0f,
+    const float pitchA{std::pow(2.0f,
         static_cast<float>(props->Vmorpher.PhonemeACoarseTuning) / 12.0f)};
-    const ALfloat pitchB{std::pow(2.0f,
+    const float pitchB{std::pow(2.0f,
         static_cast<float>(props->Vmorpher.PhonemeBCoarseTuning) / 12.0f)};
 
     auto vowelA = getFiltersByPhoneme(props->Vmorpher.PhonemeA, frequency, pitchA);
@@ -253,7 +253,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
      */
     for(size_t base{0u};base < samplesToDo;)
     {
-        alignas(16) ALfloat lfo[MAX_UPDATE_SAMPLES];
+        alignas(16) float lfo[MAX_UPDATE_SAMPLES];
         const size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
         mGetSamples(lfo, mIndex, mStep, td);
@@ -281,7 +281,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
             vowelB[2].process(&input[base], mSampleBufferB, td);
             vowelB[3].process(&input[base], mSampleBufferB, td);
 
-            alignas(16) ALfloat blended[MAX_UPDATE_SAMPLES];
+            alignas(16) float blended[MAX_UPDATE_SAMPLES];
             for(size_t i{0u};i < td;i++)
                 blended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
 
@@ -296,7 +296,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
 }
 
 
-void Vmorpher_setParami(EffectProps* props, ALCcontext *context, ALenum param, ALint val)
+void Vmorpher_setParami(EffectProps* props, ALCcontext *context, ALenum param, int val)
 {
     switch(param)
     {
@@ -335,9 +335,9 @@ void Vmorpher_setParami(EffectProps* props, ALCcontext *context, ALenum param, A
                 param);
     }
 }
-void Vmorpher_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
+void Vmorpher_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
-void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -352,10 +352,10 @@ void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, A
                 param);
     }
 }
-void Vmorpher_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Vmorpher_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Vmorpher_setParamf(props, context, param, vals[0]); }
 
-void Vmorpher_getParami(const EffectProps* props, ALCcontext *context, ALenum param, ALint* val)
+void Vmorpher_getParami(const EffectProps* props, ALCcontext *context, ALenum param, int* val)
 {
     switch(param)
     {
@@ -384,9 +384,9 @@ void Vmorpher_getParami(const EffectProps* props, ALCcontext *context, ALenum pa
                 param);
     }
 }
-void Vmorpher_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
+void Vmorpher_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
-void Vmorpher_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Vmorpher_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -399,7 +399,7 @@ void Vmorpher_getParamf(const EffectProps *props, ALCcontext *context, ALenum pa
                 param);
     }
 }
-void Vmorpher_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Vmorpher_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Vmorpher_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Vmorpher);

@@ -37,7 +37,7 @@
 namespace {
 
 struct EchoState final : public EffectState {
-    al::vector<ALfloat,16> mSampleBuffer;
+    al::vector<float,16> mSampleBuffer;
 
     // The echo is two tap. The delay is the number of samples from before the
     // current offset
@@ -48,14 +48,14 @@ struct EchoState final : public EffectState {
 
     /* The panning gains for the two taps */
     struct {
-        ALfloat Current[MAX_OUTPUT_CHANNELS]{};
-        ALfloat Target[MAX_OUTPUT_CHANNELS]{};
+        float Current[MAX_OUTPUT_CHANNELS]{};
+        float Target[MAX_OUTPUT_CHANNELS]{};
     } mGains[2];
 
     BiquadFilter mFilter;
-    ALfloat mFeedGain{0.0f};
+    float mFeedGain{0.0f};
 
-    alignas(16) ALfloat mTempBuffer[2][BUFFERSIZE];
+    alignas(16) float mTempBuffer[2][BUFFERSIZE];
 
     bool deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
@@ -91,20 +91,20 @@ bool EchoState::deviceUpdate(const ALCdevice *Device)
 void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
-    const auto frequency = static_cast<ALfloat>(device->Frequency);
+    const auto frequency = static_cast<float>(device->Frequency);
 
     mTap[0].delay = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);
     mTap[1].delay = float2uint(props->Echo.LRDelay*frequency + 0.5f) + mTap[0].delay;
 
-    const ALfloat gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
+    const float gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LOWPASSFREQREF/frequency, gainhf, 1.0f);
 
     mFeedGain = props->Echo.Feedback;
 
     /* Convert echo spread (where 0 = center, +/-1 = sides) to angle. */
-    const ALfloat angle{std::asin(props->Echo.Spread)};
+    const float angle{std::asin(props->Echo.Spread)};
 
-    ALfloat coeffs[2][MAX_AMBI_CHANNELS];
+    float coeffs[2][MAX_AMBI_CHANNELS];
     CalcAngleCoeffs(-angle, 0.0f, 0.0f, coeffs[0]);
     CalcAngleCoeffs( angle, 0.0f, 0.0f, coeffs[1]);
 
@@ -116,11 +116,11 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
 void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const size_t mask{mSampleBuffer.size()-1};
-    ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
+    float *RESTRICT delaybuf{mSampleBuffer.data()};
     size_t offset{mOffset};
     size_t tap1{offset - mTap[0].delay};
     size_t tap2{offset - mTap[1].delay};
-    ALfloat z1, z2;
+    float z1, z2;
 
     ASSUME(samplesToDo > 0);
 
@@ -157,11 +157,11 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
 }
 
 
-void Echo_setParami(EffectProps*, ALCcontext *context, ALenum param, ALint)
+void Echo_setParami(EffectProps*, ALCcontext *context, ALenum param, int)
 { context->setError(AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void Echo_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const ALint*)
+void Echo_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const int*)
 { context->setError(AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void Echo_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Echo_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -199,14 +199,14 @@ void Echo_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALflo
             context->setError(AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
-void Echo_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Echo_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Echo_setParamf(props, context, param, vals[0]); }
 
-void Echo_getParami(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
+void Echo_getParami(const EffectProps*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void Echo_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, ALint*)
+void Echo_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, int*)
 { context->setError(AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void Echo_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Echo_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -234,7 +234,7 @@ void Echo_getParamf(const EffectProps *props, ALCcontext *context, ALenum param,
             context->setError(AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
-void Echo_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Echo_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Echo_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Echo);

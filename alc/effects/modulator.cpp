@@ -77,8 +77,8 @@ struct ModulatorState final : public EffectState {
     struct {
         BiquadFilter Filter;
 
-        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
+        float CurrentGains[MAX_OUTPUT_CHANNELS]{};
+        float TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MAX_AMBI_CHANNELS];
 
 
@@ -103,8 +103,8 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
 {
     const ALCdevice *device{context->mDevice.get()};
 
-    const float step{props->Modulator.Frequency / static_cast<ALfloat>(device->Frequency)};
-    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, ALfloat{WAVEFORM_FRACONE-1}));
+    const float step{props->Modulator.Frequency / static_cast<float>(device->Frequency)};
+    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, float{WAVEFORM_FRACONE-1}));
 
     if(mStep == 0)
         mGetSamples = Modulate<One>;
@@ -115,7 +115,7 @@ void ModulatorState::update(const ALCcontext *context, const ALeffectslot *slot,
     else /*if(props->Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         mGetSamples = Modulate<Square>;
 
-    float f0norm{props->Modulator.HighPassCutoff / static_cast<ALfloat>(device->Frequency)};
+    float f0norm{props->Modulator.HighPassCutoff / static_cast<float>(device->Frequency)};
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].Filter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);
@@ -134,7 +134,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
 {
     for(size_t base{0u};base < samplesToDo;)
     {
-        alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
+        alignas(16) float modsamples[MAX_UPDATE_SAMPLES];
         size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
         mGetSamples(modsamples, mIndex, mStep, td);
@@ -144,7 +144,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
         auto chandata = std::addressof(mChans[0]);
         for(const auto &input : samplesIn)
         {
-            alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
+            alignas(16) float temps[MAX_UPDATE_SAMPLES];
 
             chandata->Filter.process({&input[base], td}, temps);
             for(size_t i{0u};i < td;i++)
@@ -160,7 +160,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
 }
 
 
-void Modulator_setParamf(EffectProps *props, ALCcontext *context, ALenum param, ALfloat val)
+void Modulator_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
 {
     switch(param)
     {
@@ -180,15 +180,15 @@ void Modulator_setParamf(EffectProps *props, ALCcontext *context, ALenum param, 
             context->setError(AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
-void Modulator_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void Modulator_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 { Modulator_setParamf(props, context, param, vals[0]); }
-void Modulator_setParami(EffectProps *props, ALCcontext *context, ALenum param, ALint val)
+void Modulator_setParami(EffectProps *props, ALCcontext *context, ALenum param, int val)
 {
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            Modulator_setParamf(props, context, param, static_cast<ALfloat>(val));
+            Modulator_setParamf(props, context, param, static_cast<float>(val));
             break;
 
         case AL_RING_MODULATOR_WAVEFORM:
@@ -201,18 +201,18 @@ void Modulator_setParami(EffectProps *props, ALCcontext *context, ALenum param, 
             context->setError(AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
-void Modulator_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void Modulator_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const int *vals)
 { Modulator_setParami(props, context, param, vals[0]); }
 
-void Modulator_getParami(const EffectProps *props, ALCcontext *context, ALenum param, ALint *val)
+void Modulator_getParami(const EffectProps *props, ALCcontext *context, ALenum param, int *val)
 {
     switch(param)
     {
         case AL_RING_MODULATOR_FREQUENCY:
-            *val = static_cast<ALint>(props->Modulator.Frequency);
+            *val = static_cast<int>(props->Modulator.Frequency);
             break;
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-            *val = static_cast<ALint>(props->Modulator.HighPassCutoff);
+            *val = static_cast<int>(props->Modulator.HighPassCutoff);
             break;
         case AL_RING_MODULATOR_WAVEFORM:
             *val = props->Modulator.Waveform;
@@ -222,9 +222,9 @@ void Modulator_getParami(const EffectProps *props, ALCcontext *context, ALenum p
             context->setError(AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
-void Modulator_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void Modulator_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, int *vals)
 { Modulator_getParami(props, context, param, vals); }
-void Modulator_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *val)
+void Modulator_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
 {
     switch(param)
     {
@@ -239,7 +239,7 @@ void Modulator_getParamf(const EffectProps *props, ALCcontext *context, ALenum p
             context->setError(AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
-void Modulator_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void Modulator_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 { Modulator_getParamf(props, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Modulator);

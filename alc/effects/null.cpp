@@ -64,7 +64,7 @@ void NullState::process(const size_t/*samplesToDo*/,
 }
 
 
-void NullEffect_setParami(EffectProps* /*props*/, ALCcontext *context, ALenum param, ALint /*val*/)
+void NullEffect_setParami(EffectProps* /*props*/, ALCcontext *context, ALenum param, int /*val*/)
 {
     switch(param)
     {
@@ -72,7 +72,7 @@ void NullEffect_setParami(EffectProps* /*props*/, ALCcontext *context, ALenum pa
         context->setError(AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
     }
 }
-void NullEffect_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const ALint *vals)
+void NullEffect_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const int *vals)
 {
     switch(param)
     {
@@ -80,7 +80,7 @@ void NullEffect_setParamiv(EffectProps *props, ALCcontext *context, ALenum param
         NullEffect_setParami(props, context, param, vals[0]);
     }
 }
-void NullEffect_setParamf(EffectProps* /*props*/, ALCcontext *context, ALenum param, ALfloat /*val*/)
+void NullEffect_setParamf(EffectProps* /*props*/, ALCcontext *context, ALenum param, float /*val*/)
 {
     switch(param)
     {
@@ -88,7 +88,7 @@ void NullEffect_setParamf(EffectProps* /*props*/, ALCcontext *context, ALenum pa
         context->setError(AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
     }
 }
-void NullEffect_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const ALfloat *vals)
+void NullEffect_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
 {
     switch(param)
     {
@@ -97,7 +97,7 @@ void NullEffect_setParamfv(EffectProps *props, ALCcontext *context, ALenum param
     }
 }
 
-void NullEffect_getParami(const EffectProps* /*props*/, ALCcontext *context, ALenum param, ALint* /*val*/)
+void NullEffect_getParami(const EffectProps* /*props*/, ALCcontext *context, ALenum param, int* /*val*/)
 {
     switch(param)
     {
@@ -105,7 +105,7 @@ void NullEffect_getParami(const EffectProps* /*props*/, ALCcontext *context, ALe
         context->setError(AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x", param);
     }
 }
-void NullEffect_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, ALint *vals)
+void NullEffect_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, int *vals)
 {
     switch(param)
     {
@@ -113,7 +113,7 @@ void NullEffect_getParamiv(const EffectProps *props, ALCcontext *context, ALenum
         NullEffect_getParami(props, context, param, vals);
     }
 }
-void NullEffect_getParamf(const EffectProps* /*props*/, ALCcontext *context, ALenum param, ALfloat* /*val*/)
+void NullEffect_getParamf(const EffectProps* /*props*/, ALCcontext *context, ALenum param, float* /*val*/)
 {
     switch(param)
     {
@@ -121,7 +121,7 @@ void NullEffect_getParamf(const EffectProps* /*props*/, ALCcontext *context, ALe
         context->setError(AL_INVALID_ENUM, "Invalid null effect float property 0x%04x", param);
     }
 }
-void NullEffect_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, ALfloat *vals)
+void NullEffect_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
 {
     switch(param)
     {

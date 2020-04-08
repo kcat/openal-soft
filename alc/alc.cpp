@@ -1311,13 +1311,13 @@ ALuint BytesFromDevFmt(DevFmtType type) noexcept
 {
     switch(type)
     {
-    case DevFmtByte: return sizeof(ALbyte);
-    case DevFmtUByte: return sizeof(ALubyte);
-    case DevFmtShort: return sizeof(ALshort);
-    case DevFmtUShort: return sizeof(ALushort);
-    case DevFmtInt: return sizeof(ALint);
-    case DevFmtUInt: return sizeof(ALuint);
-    case DevFmtFloat: return sizeof(ALfloat);
+    case DevFmtByte: return sizeof(ALCbyte);
+    case DevFmtUByte: return sizeof(ALCubyte);
+    case DevFmtShort: return sizeof(ALCshort);
+    case DevFmtUShort: return sizeof(ALCushort);
+    case DevFmtInt: return sizeof(ALCint);
+    case DevFmtUInt: return sizeof(ALCuint);
+    case DevFmtFloat: return sizeof(ALCfloat);
     }
     return 0;
 }
@@ -2099,7 +2099,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             /* Initialize band-splitting filters for the front-left and front-
              * right channels, with a crossover at 5khz (could be higher).
              */
-            const ALfloat scale{5000.0f / static_cast<ALfloat>(device->Frequency)};
+            const float scale{5000.0f / static_cast<float>(device->Frequency)};
 
             stablizer->LFilter.init(scale);
             stablizer->RFilter = stablizer->LFilter;
@@ -2147,7 +2147,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(depth > 0)
         {
             depth = clampi(depth, 2, 24);
-            device->DitherDepth = std::pow(2.0f, static_cast<ALfloat>(depth-1));
+            device->DitherDepth = std::pow(2.0f, static_cast<float>(depth-1));
         }
     }
     if(!(device->DitherDepth > 0.0f))
@@ -2186,7 +2186,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         TRACE("Output limiter disabled\n");
     else
     {
-        ALfloat thrshld = 1.0f;
+        float thrshld{1.0f};
         switch(device->FmtType)
         {
             case DevFmtByte:
@@ -2366,7 +2366,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(device->AvgSpeakerDist > 0.0f)
             {
                 /* Reinitialize the NFC filters for new parameters. */
-                const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+                const float w1{SPEEDOFSOUNDMETRESPERSEC /
                     (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
                 for(auto &chandata : voice->mChans)
                     chandata.mDryParams.NFCtrlFilter.init(w1);
@@ -3469,12 +3469,12 @@ START_API_FUNC
 
     if(auto volopt = ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust"))
     {
-        const ALfloat valf{*volopt};
+        const float valf{*volopt};
         if(!std::isfinite(valf))
             ERR("volume-adjust must be finite: %f\n", valf);
         else
         {
-            const ALfloat db{clampf(valf, -24.0f, 24.0f)};
+            const float db{clampf(valf, -24.0f, 24.0f)};
             if(db != valf)
                 WARN("volume-adjust clamped: %f, range: +/-%f\n", valf, 24.0f);
             context->mGainBoost = std::pow(10.0f, db/20.0f);

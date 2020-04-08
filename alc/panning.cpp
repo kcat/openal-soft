@@ -147,7 +147,7 @@ void AllocChannels(ALCdevice *device, const ALuint main_chans, const ALuint real
 
 struct ChannelMap {
     Channel ChanName;
-    ALfloat Config[MAX_AMBI2D_CHANNELS];
+    float Config[MAX_AMBI2D_CHANNELS];
 };
 
 bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
@@ -272,7 +272,7 @@ constexpr ChannelMap MonoCfg[1] = {
     { BackRight,   { 2.04124145e-1f, -1.08880247e-1f, -1.88586120e-1f,  1.29099444e-1f,  7.45355993e-2f, -3.73460789e-2f,  0.00000000e+0f } },
 };
 
-void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALuint order, bool is3d)
+void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, ALuint order, bool is3d)
 {
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
     const char *devname{device->DeviceName.c_str()};
@@ -297,14 +297,14 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
 {
     auto get_max = std::bind(maxf, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
-    const ALfloat maxdist{
-        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f}, get_max)};
+    const float maxdist{std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), 0.0f,
+        get_max)};
 
     const char *devname{device->DeviceName.c_str()};
     if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
         return;
 
-    const auto distSampleScale = static_cast<ALfloat>(device->Frequency)/SPEEDOFSOUNDMETRESPERSEC;
+    const auto distSampleScale = static_cast<float>(device->Frequency) / SPEEDOFSOUNDMETRESPERSEC;
     const auto ChanDelay = device->ChannelDelay.as_span();
     size_t total{0u};
     for(size_t i{0u};i < conf->Speakers.size();i++)
@@ -318,12 +318,12 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
          * phase offsets. This means at 48khz, for instance, the distance delay
          * will be in steps of about 7 millimeters.
          */
-        ALfloat delay{std::floor((maxdist - speaker.Distance)*distSampleScale + 0.5f)};
-        if(delay > ALfloat{MAX_DELAY_LENGTH-1})
+        float delay{std::floor((maxdist - speaker.Distance)*distSampleScale + 0.5f)};
+        if(delay > float{MAX_DELAY_LENGTH-1})
         {
             ERR("Delay for speaker \"%s\" exceeds buffer length (%f > %d)\n",
                 speaker.Name.c_str(), delay, MAX_DELAY_LENGTH-1);
-            delay = ALfloat{MAX_DELAY_LENGTH-1};
+            delay = float{MAX_DELAY_LENGTH-1};
         }
 
         ChanDelay[chan].Length = static_cast<ALuint>(delay);
@@ -426,7 +426,7 @@ void InitPanning(ALCdevice *device)
         );
         AllocChannels(device, static_cast<ALuint>(count), 0);
 
-        ALfloat nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
+        float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
         if(nfc_delay > 0.0f)
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
                 true);

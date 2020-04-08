@@ -85,9 +85,9 @@ RowMixerFunc MixRowSamples{MixRow_<CTag>};
 
 namespace {
 
-using HrtfMixerFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples, const ALuint IrSize,
+using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);
-using HrtfMixerBlendFunc = void(*)(const ALfloat *InSamples, float2 *AccumSamples,
+using HrtfMixerBlendFunc = void(*)(const float *InSamples, float2 *AccumSamples,
     const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize);
 
@@ -294,7 +294,7 @@ template<>
 struct FmtTypeTraits<FmtDouble> {
     using Type = ALdouble;
     static constexpr inline float to_float(const Type val) noexcept
-    { return static_cast<ALfloat>(val); }
+    { return static_cast<float>(val); }
 };
 template<>
 struct FmtTypeTraits<FmtMulaw> {
@@ -353,7 +353,7 @@ const float *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, float *ds
 
 
 template<FmtType T>
-inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcstep,
+inline void LoadSampleArray(float *RESTRICT dst, const al::byte *src, const size_t srcstep,
     const size_t samples) noexcept
 {
     using SampleType = typename FmtTypeTraits<T>::Type;
@@ -363,7 +363,7 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const al::byte *src, const si
         dst[i] = FmtTypeTraits<T>::to_float(ssrc[i*srcstep]);
 }
 
-void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
+void LoadSamples(float *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
     const size_t samples) noexcept
 {
 #define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -379,9 +379,9 @@ void LoadSamples(ALfloat *RESTRICT dst, const al::byte *src, const size_t srcste
 #undef HANDLE_FMT
 }
 
-ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
+float *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&BufferLoopItem,
     const size_t NumChannels, const size_t SampleSize, const size_t chan, size_t DataPosInt,
-    al::span<ALfloat> SrcBuffer)
+    al::span<float> SrcBuffer)
 {
     const ALbuffer *Buffer{BufferListItem->mBuffer};
     const ALuint LoopStart{Buffer->LoopStart};
@@ -428,9 +428,9 @@ ALfloat *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&B
     return SrcBuffer.begin();
 }
 
-ALfloat *LoadBufferCallback(ALbufferlistitem *BufferListItem, const size_t NumChannels,
+float *LoadBufferCallback(ALbufferlistitem *BufferListItem, const size_t NumChannels,
     const size_t SampleSize, const size_t chan, size_t NumCallbackSamples,
-    al::span<ALfloat> SrcBuffer)
+    al::span<float> SrcBuffer)
 {
     const ALbuffer *Buffer{BufferListItem->mBuffer};
 
@@ -445,9 +445,9 @@ ALfloat *LoadBufferCallback(ALbufferlistitem *BufferListItem, const size_t NumCh
     return SrcBuffer.begin();
 }
 
-ALfloat *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
+float *LoadBufferQueue(ALbufferlistitem *BufferListItem, ALbufferlistitem *BufferLoopItem,
     const size_t NumChannels, const size_t SampleSize, const size_t chan, size_t DataPosInt,
-    al::span<ALfloat> SrcBuffer)
+    al::span<float> SrcBuffer)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
     while(BufferListItem && !SrcBuffer.empty())
@@ -511,7 +511,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
          */
         if LIKELY(Counter > fademix)
         {
-            const ALfloat a{static_cast<float>(fademix) / static_cast<float>(Counter)};
+            const float a{static_cast<float>(fademix) / static_cast<float>(Counter)};
             gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
         }
         MixHrtfFilter hrtfparams;
@@ -751,7 +751,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                  * silence, but if not the gain fading should help avoid clicks
                  * from sudden amplitude changes.
                  */
-                const ALfloat sample{*(srciter-1)};
+                const float sample{*(srciter-1)};
                 std::fill(srciter, SrcData.end(), sample);
             }
 
@@ -760,7 +760,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                 chandata.mPrevSamples.size(), chandata.mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
-            const ALfloat *ResampledData{Resample(&mResampleState,
+            const float *ResampledData{Resample(&mResampleState,
                 &SrcData[MAX_RESAMPLER_PADDING>>1], DataPosFrac, increment,
                 {Device->ResampledData, DstBufferSize})};
             if((mFlags&VOICE_IS_AMBISONIC))
@@ -777,15 +777,15 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             }
 
             /* Now filter and mix to the appropriate outputs. */
-            ALfloat (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
+            float (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             {
                 DirectParams &parms = chandata.mDryParams;
-                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
+                const float *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
                     {ResampledData, DstBufferSize}, mDirect.FilterType)};
 
                 if((mFlags&VOICE_HAS_HRTF))
                 {
-                    const ALfloat TargetGain{UNLIKELY(vstate == Stopping) ? 0.0f :
+                    const float TargetGain{UNLIKELY(vstate == Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
                     DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos, IrSize,
                         Device);
@@ -812,7 +812,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                     continue;
 
                 SendParams &parms = chandata.mWetParams[send];
-                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
+                const float *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
                     {ResampledData, DstBufferSize}, mSend[send].FilterType)};
 
                 const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()

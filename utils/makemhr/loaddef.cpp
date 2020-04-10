@@ -26,13 +26,14 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <cstring>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <cstdarg>
 #include <vector>
 
 #include "alfstream.h"

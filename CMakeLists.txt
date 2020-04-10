@@ -86,11 +86,6 @@ IF(WIN32)
 
     OPTION(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
 
-    # This option is mainly for static linking OpenAL Soft into another project
-    # that already defines the IDs. It is up to that project to ensure all
-    # required IDs are defined.
-    OPTION(ALSOFT_NO_UID_DEFS "Do not define GUIDs, IIDs, CLSIDs, or PropertyKeys" OFF)
-
     IF(MINGW)
         OPTION(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
         IF(NOT DLLTOOL)
@@ -1132,12 +1127,18 @@ SET(SUBSYS_FLAG )
 
 # Build main library
 IF(LIBTYPE STREQUAL "STATIC")
-    SET(CPP_DEFS ${CPP_DEFS} AL_LIBTYPE_STATIC)
-    IF(WIN32 AND ALSOFT_NO_UID_DEFS)
-        SET(CPP_DEFS ${CPP_DEFS} AL_NO_UID_DEFS)
-    ENDIF()
-    ADD_LIBRARY(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
-    TARGET_LINK_LIBRARIES(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+    add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
+    target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
+    target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+    if(WIN32)
+        # This option is for static linking OpenAL Soft into another project
+        # that already defines the IDs. It is up to that project to ensure all
+        # required IDs are defined.
+        option(ALSOFT_NO_UID_DEFS "Do not define GUIDs, IIDs, CLSIDs, or PropertyKeys" OFF)
+        if(ALSOFT_NO_UID_DEFS)
+            target_compile_definitions(${IMPL_TARGET} PRIVATE AL_NO_UID_DEFS)
+        endif()
+    endif()
 ELSE()
     IF(WIN32)
         IF(MSVC)

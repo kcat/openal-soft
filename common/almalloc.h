@@ -81,7 +81,7 @@ struct allocator {
         using other = allocator<U, (alignment<alignof(U))?alignof(U):alignment>;
     };
 
-    allocator() = default;
+    allocator() noexcept = default;
     template<typename U, std::size_t N>
     constexpr allocator(const allocator<U,N>&) noexcept { }
 

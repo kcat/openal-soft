@@ -156,13 +156,13 @@ void ALhighpass_setParamf(ALfilter *filter, ALenum param, float val)
     {
     case AL_HIGHPASS_GAIN:
         if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
-            throw filter_exception{AL_INVALID_VALUE, "High-pass gain out of range"};
+            throw filter_exception{AL_INVALID_VALUE, "High-pass gain %f out of range", val};
         filter->Gain = val;
         break;
 
     case AL_HIGHPASS_GAINLF:
         if(!(val >= AL_HIGHPASS_MIN_GAINLF && val <= AL_HIGHPASS_MAX_GAINLF))
-            throw filter_exception{AL_INVALID_VALUE, "High-pass gainlf out of range"};
+            throw filter_exception{AL_INVALID_VALUE, "High-pass gainlf %f out of range", val};
         filter->GainLF = val;
         break;
 
@@ -215,19 +215,19 @@ void ALbandpass_setParamf(ALfilter *filter, ALenum param, float val)
     {
     case AL_BANDPASS_GAIN:
         if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
-            throw filter_exception{AL_INVALID_VALUE, "Band-pass gain out of range"};
+            throw filter_exception{AL_INVALID_VALUE, "Band-pass gain %f out of range", val};
         filter->Gain = val;
         break;
 
     case AL_BANDPASS_GAINHF:
         if(!(val >= AL_BANDPASS_MIN_GAINHF && val <= AL_BANDPASS_MAX_GAINHF))
-            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainhf out of range"};
+            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainhf %f out of range", val};
         filter->GainHF = val;
         break;
 
     case AL_BANDPASS_GAINLF:
         if(!(val >= AL_BANDPASS_MIN_GAINLF && val <= AL_BANDPASS_MAX_GAINLF))
-            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainlf out of range"};
+            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainlf %f out of range", val};
         filter->GainLF = val;
         break;
 

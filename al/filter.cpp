@@ -47,33 +47,17 @@
 
 namespace {
 
-class filter_exception final : public std::exception {
-    std::string mMessage;
-    ALenum mErrorCode;
-
+class filter_exception final : public al::base_exception {
 public:
-    filter_exception(ALenum code, const char *msg, ...) ALEXCPT_FORMAT(printf, 3,4);
-
-    const char *what() const noexcept override { return mMessage.c_str(); }
-    ALenum errorCode() const noexcept { return mErrorCode; }
-};
-
-filter_exception::filter_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
-{
-    std::va_list args, args2;
-    va_start(args, msg);
-    va_copy(args2, args);
-    int msglen{std::vsnprintf(nullptr, 0, msg, args)};
-    if LIKELY(msglen > 0)
+    [[gnu::format(printf, 3, 4)]]
+    filter_exception(ALenum code, const char *msg, ...) : base_exception{code}
     {
-        mMessage.resize(static_cast<size_t>(msglen)+1);
-        std::vsnprintf(&mMessage[0], mMessage.length(), msg, args2);
-        mMessage.pop_back();
+        va_list args;
+        va_start(args, msg);
+        setMessage(msg, args);
+        va_end(args);
     }
-    va_end(args2);
-    va_end(args);
-}
-
+};
 
 #define FILTER_MIN_GAIN 0.0f
 #define FILTER_MAX_GAIN 4.0f /* +12dB */

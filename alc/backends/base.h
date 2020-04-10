@@ -8,8 +8,9 @@
 
 #include "AL/alc.h"
 
-#include "alcmain.h"
 #include "albyte.h"
+#include "alcmain.h"
+#include "alexcpt.h"
 
 
 struct ClockLatency {
@@ -78,5 +79,21 @@ struct BackendFactory {
 protected:
     virtual ~BackendFactory() = default;
 };
+
+namespace al {
+
+class backend_exception final : public base_exception {
+public:
+    [[gnu::format(printf, 3, 4)]]
+    backend_exception(ALCenum code, const char *msg, ...) : base_exception{code}
+    {
+        std::va_list args;
+        va_start(args, msg);
+        setMessage(msg, args);
+        va_end(args);
+    }
+};
+
+} // namespace al
 
 #endif /* ALC_BACKENDS_BASE_H */

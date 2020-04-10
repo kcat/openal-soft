@@ -11,10 +11,9 @@
 
 namespace al {
 
-backend_exception::backend_exception(ALCenum code, const char *msg, ...) : mErrorCode{code}
+void base_exception::setMessage(const char* msg, std::va_list args)
 {
-    va_list args, args2;
-    va_start(args, msg);
+    std::va_list args2;
     va_copy(args2, args);
     int msglen{std::vsnprintf(nullptr, 0, msg, args)};
     if LIKELY(msglen > 0)
@@ -24,7 +23,6 @@ backend_exception::backend_exception(ALCenum code, const char *msg, ...) : mErro
         mMessage.pop_back();
     }
     va_end(args2);
-    va_end(args);
 }
 
 } // namespace al

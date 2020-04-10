@@ -13,8 +13,8 @@
 #include "pragmadefs.h"
 
 
-void *al_malloc(size_t alignment, size_t size);
-void *al_calloc(size_t alignment, size_t size);
+[[gnu::alloc_align(1), gnu::alloc_size(2)]] void *al_malloc(size_t alignment, size_t size);
+[[gnu::alloc_align(1), gnu::alloc_size(2)]] void *al_calloc(size_t alignment, size_t size);
 void al_free(void *ptr) noexcept;
 
 
@@ -85,7 +85,7 @@ struct allocator {
     template<typename U, std::size_t N>
     constexpr allocator(const allocator<U,N>&) noexcept { }
 
-    T *allocate(std::size_t n)
+    [[gnu::assume_aligned(alignment), gnu::alloc_size(2)]] T *allocate(std::size_t n)
     {
         if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
         if(auto p = static_cast<T*>(al_malloc(alignment, n*sizeof(T)))) return p;
@@ -99,19 +99,7 @@ template<typename T, std::size_t N, typename U, std::size_t M>
 bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
 template<size_t alignment, typename T>
-inline T* assume_aligned(T *ptr) noexcept
-{
-    static_assert((alignment & (alignment-1)) == 0, "alignment must be a power of 2");
-#ifdef __GNUC__
-    return static_cast<T*>(__builtin_assume_aligned(ptr, alignment));
-#elif defined(_MSC_VER)
-    auto ptrval = reinterpret_cast<uintptr_t>(ptr);
-    if((ptrval&(alignment-1)) != 0) __assume(0);
-    return reinterpret_cast<T*>(ptrval);
-#else
-    return ptr;
-#endif
-}
+[[gnu::assume_aligned(alignment)]] inline T* assume_aligned(T *ptr) noexcept { return ptr; }
 
 /* At least VS 2015 complains that 'ptr' is unused when the given type's
  * destructor is trivial (a no-op). So disable that warning for this call.

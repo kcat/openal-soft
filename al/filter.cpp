@@ -23,6 +23,7 @@
 #include "filter.h"
 
 #include <algorithm>
+#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <iterator>
@@ -59,7 +60,7 @@ public:
 
 filter_exception::filter_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
 {
-    va_list args, args2;
+    std::va_list args, args2;
     va_start(args, msg);
     va_copy(args2, args);
     int msglen{std::vsnprintf(nullptr, 0, msg, args)};

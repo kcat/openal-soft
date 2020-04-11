@@ -312,33 +312,33 @@ START_API_FUNC
     ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else if(param == AL_EFFECT_TYPE)
     {
-        if(param == AL_EFFECT_TYPE)
+        bool isOk{value == AL_EFFECT_NULL};
+        if(!isOk)
         {
-            bool isOk{value == AL_EFFECT_NULL};
-            if(!isOk)
+            for(const EffectList &effectitem : gEffectList)
             {
-                for(const EffectList &effectitem : gEffectList)
+                if(value == effectitem.val && !DisabledEffects[effectitem.type])
                 {
-                    if(value == effectitem.val && !DisabledEffects[effectitem.type])
-                    {
-                        isOk = true;
-                        break;
-                    }
+                    isOk = true;
+                    break;
                 }
             }
+        }
 
-            if(isOk)
-                InitEffectParams(aleffect, value);
-            else
-                context->setError(AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
-        }
+        if(isOk)
+            InitEffectParams(aleffect, value);
         else
-        {
-            /* Call the appropriate handler */
-            ALeffect_setParami(aleffect, context.get(), param, value);
-        }
+            context->setError(AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
+    }
+    else try
+    {
+        /* Call the appropriate handler */
+        ALeffect_setParami(aleffect, context.get(), param, value);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -348,9 +348,9 @@ START_API_FUNC
 {
     switch(param)
     {
-        case AL_EFFECT_TYPE:
-            alEffecti(effect, param, values[0]);
-            return;
+    case AL_EFFECT_TYPE:
+        alEffecti(effect, param, values[0]);
+        return;
     }
 
     ContextRef context{GetContextRef()};
@@ -362,10 +362,13 @@ START_API_FUNC
     ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else try
     {
         /* Call the appropriate handler */
         ALeffect_setParamiv(aleffect, context.get(), param, values);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -382,10 +385,13 @@ START_API_FUNC
     ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else try
     {
         /* Call the appropriate handler */
         ALeffect_setParamf(aleffect, context.get(), param, value);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -402,10 +408,13 @@ START_API_FUNC
     ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else try
     {
         /* Call the appropriate handler */
         ALeffect_setParamfv(aleffect, context.get(), param, values);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -422,15 +431,15 @@ START_API_FUNC
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else if(param == AL_EFFECT_TYPE)
+        *value = aleffect->type;
+    else try
     {
-        if(param == AL_EFFECT_TYPE)
-            *value = aleffect->type;
-        else
-        {
-            /* Call the appropriate handler */
-            ALeffect_getParami(aleffect, context.get(), param, value);
-        }
+        /* Call the appropriate handler */
+        ALeffect_getParami(aleffect, context.get(), param, value);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -440,9 +449,9 @@ START_API_FUNC
 {
     switch(param)
     {
-        case AL_EFFECT_TYPE:
-            alGetEffecti(effect, param, values);
-            return;
+    case AL_EFFECT_TYPE:
+        alGetEffecti(effect, param, values);
+        return;
     }
 
     ContextRef context{GetContextRef()};
@@ -454,10 +463,13 @@ START_API_FUNC
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else try
     {
         /* Call the appropriate handler */
         ALeffect_getParamiv(aleffect, context.get(), param, values);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -474,10 +486,13 @@ START_API_FUNC
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else try
     {
         /* Call the appropriate handler */
         ALeffect_getParamf(aleffect, context.get(), param, value);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC
@@ -494,10 +509,13 @@ START_API_FUNC
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if UNLIKELY(!aleffect)
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
+    else try
     {
         /* Call the appropriate handler */
         ALeffect_getParamfv(aleffect, context.get(), param, values);
+    }
+    catch(effect_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 END_API_FUNC

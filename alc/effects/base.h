@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include "alcmain.h"
+#include "alexcpt.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
@@ -122,6 +123,19 @@ union EffectProps {
     struct {
         float Gain;
     } Dedicated;
+};
+
+
+class effect_exception final : public al::base_exception {
+public:
+    [[gnu::format(printf, 3, 4)]]
+    effect_exception(ALenum code, const char *msg, ...) : base_exception{code}
+    {
+        va_list args;
+        va_start(args, msg);
+        setMessage(msg, args);
+        va_end(args);
+    }
 };
 
 

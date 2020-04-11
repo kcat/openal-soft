@@ -140,15 +140,15 @@ public:
 
 
 struct EffectVtable {
-    void (*const setParami)(EffectProps *props, ALCcontext *context, ALenum param, int val);
-    void (*const setParamiv)(EffectProps *props, ALCcontext *context, ALenum param, const int *vals);
-    void (*const setParamf)(EffectProps *props, ALCcontext *context, ALenum param, float val);
-    void (*const setParamfv)(EffectProps *props, ALCcontext *context, ALenum param, const float *vals);
+    void (*const setParami)(EffectProps *props, ALenum param, int val);
+    void (*const setParamiv)(EffectProps *props, ALenum param, const int *vals);
+    void (*const setParamf)(EffectProps *props, ALenum param, float val);
+    void (*const setParamfv)(EffectProps *props, ALenum param, const float *vals);
 
-    void (*const getParami)(const EffectProps *props, ALCcontext *context, ALenum param, int *val);
-    void (*const getParamiv)(const EffectProps *props, ALCcontext *context, ALenum param, int *vals);
-    void (*const getParamf)(const EffectProps *props, ALCcontext *context, ALenum param, float *val);
-    void (*const getParamfv)(const EffectProps *props, ALCcontext *context, ALenum param, float *vals);
+    void (*const getParami)(const EffectProps *props, ALenum param, int *val);
+    void (*const getParamiv)(const EffectProps *props, ALenum param, int *vals);
+    void (*const getParamf)(const EffectProps *props, ALenum param, float *val);
+    void (*const getParamfv)(const EffectProps *props, ALenum param, float *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \

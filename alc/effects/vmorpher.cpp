@@ -296,111 +296,117 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
 }
 
 
-void Vmorpher_setParami(EffectProps* props, ALCcontext *context, ALenum param, int val)
+void Vmorpher_setParami(EffectProps *props, ALenum param, int val)
 {
     switch(param)
     {
-        case AL_VOCAL_MORPHER_WAVEFORM:
-            if(!(val >= AL_VOCAL_MORPHER_MIN_WAVEFORM && val <= AL_VOCAL_MORPHER_MAX_WAVEFORM))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher waveform out of range");
-            props->Vmorpher.Waveform = val;
-            break;
+    case AL_VOCAL_MORPHER_WAVEFORM:
+        if(!(val >= AL_VOCAL_MORPHER_MIN_WAVEFORM && val <= AL_VOCAL_MORPHER_MAX_WAVEFORM))
+            throw effect_exception{AL_INVALID_VALUE, "Vocal morpher waveform out of range"};
+        props->Vmorpher.Waveform = val;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEA:
-            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEA && val <= AL_VOCAL_MORPHER_MAX_PHONEMEA))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-a out of range");
-            props->Vmorpher.PhonemeA = val;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEA:
+        if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEA && val <= AL_VOCAL_MORPHER_MAX_PHONEMEA))
+            throw effect_exception{AL_INVALID_VALUE, "Vocal morpher phoneme-a out of range"};
+        props->Vmorpher.PhonemeA = val;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEB:
-            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEB && val <= AL_VOCAL_MORPHER_MAX_PHONEMEB))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-b out of range");
-            props->Vmorpher.PhonemeB = val;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEB:
+        if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEB && val <= AL_VOCAL_MORPHER_MAX_PHONEMEB))
+            throw effect_exception{AL_INVALID_VALUE, "Vocal morpher phoneme-b out of range"};
+        props->Vmorpher.PhonemeB = val;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING:
-            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING && val <= AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-a coarse tuning out of range");
-            props->Vmorpher.PhonemeACoarseTuning = val;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING:
+        if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING && val <= AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING))
+            throw effect_exception{AL_INVALID_VALUE, "Vocal morpher phoneme-a coarse tuning out of range"};
+        props->Vmorpher.PhonemeACoarseTuning = val;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING:
-            if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING && val <= AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher phoneme-b coarse tuning out of range");
-            props->Vmorpher.PhonemeBCoarseTuning = val;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING:
+        if(!(val >= AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING && val <= AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING))
+            throw effect_exception{AL_INVALID_VALUE, "Vocal morpher phoneme-b coarse tuning out of range"};
+        props->Vmorpher.PhonemeBCoarseTuning = val;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
-                param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
+            param};
     }
 }
-void Vmorpher_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const int*)
-{ context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
-void Vmorpher_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
+void Vmorpher_setParamiv(EffectProps*, ALenum param, const int*)
+{
+    throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x",
+        param};
+}
+void Vmorpher_setParamf(EffectProps *props, ALenum param, float val)
 {
     switch(param)
     {
-        case AL_VOCAL_MORPHER_RATE:
-            if(!(val >= AL_VOCAL_MORPHER_MIN_RATE && val <= AL_VOCAL_MORPHER_MAX_RATE))
-              SETERR_RETURN(context, AL_INVALID_VALUE,, "Vocal morpher rate out of range");
-            props->Vmorpher.Rate = val;
-            break;
+    case AL_VOCAL_MORPHER_RATE:
+        if(!(val >= AL_VOCAL_MORPHER_MIN_RATE && val <= AL_VOCAL_MORPHER_MAX_RATE))
+            throw effect_exception{AL_INVALID_VALUE, "Vocal morpher rate out of range"};
+        props->Vmorpher.Rate = val;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x",
-                param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x",
+            param};
     }
 }
-void Vmorpher_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
-{ Vmorpher_setParamf(props, context, param, vals[0]); }
+void Vmorpher_setParamfv(EffectProps *props, ALenum param, const float *vals)
+{ Vmorpher_setParamf(props, param, vals[0]); }
 
-void Vmorpher_getParami(const EffectProps* props, ALCcontext *context, ALenum param, int* val)
+void Vmorpher_getParami(const EffectProps *props, ALenum param, int* val)
 {
     switch(param)
     {
-        case AL_VOCAL_MORPHER_PHONEMEA:
-            *val = props->Vmorpher.PhonemeA;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEA:
+        *val = props->Vmorpher.PhonemeA;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEB:
-            *val = props->Vmorpher.PhonemeB;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEB:
+        *val = props->Vmorpher.PhonemeB;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING:
-            *val = props->Vmorpher.PhonemeACoarseTuning;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING:
+        *val = props->Vmorpher.PhonemeACoarseTuning;
+        break;
 
-        case AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING:
-            *val = props->Vmorpher.PhonemeBCoarseTuning;
-            break;
+    case AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING:
+        *val = props->Vmorpher.PhonemeBCoarseTuning;
+        break;
 
-        case AL_VOCAL_MORPHER_WAVEFORM:
-            *val = props->Vmorpher.Waveform;
-            break;
+    case AL_VOCAL_MORPHER_WAVEFORM:
+        *val = props->Vmorpher.Waveform;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
-                param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
+            param};
     }
 }
-void Vmorpher_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, int*)
-{ context->setError(AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x", param); }
-void Vmorpher_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
+void Vmorpher_getParamiv(const EffectProps*, ALenum param, int*)
+{
+    throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x",
+        param};
+}
+void Vmorpher_getParamf(const EffectProps *props, ALenum param, float *val)
 {
     switch(param)
     {
-        case AL_VOCAL_MORPHER_RATE:
-            *val = props->Vmorpher.Rate;
-            break;
+    case AL_VOCAL_MORPHER_RATE:
+        *val = props->Vmorpher.Rate;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x",
-                param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher float property 0x%04x",
+            param};
     }
 }
-void Vmorpher_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
-{ Vmorpher_getParamf(props, context, param, vals); }
+void Vmorpher_getParamfv(const EffectProps *props, ALenum param, float *vals)
+{ Vmorpher_getParamf(props, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Vmorpher);
 

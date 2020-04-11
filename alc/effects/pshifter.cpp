@@ -253,58 +253,64 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 }
 
 
-void Pshifter_setParamf(EffectProps*, ALCcontext *context, ALenum param, float)
-{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
-void Pshifter_setParamfv(EffectProps*, ALCcontext *context, ALenum param, const float*)
-{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x", param); }
+void Pshifter_setParamf(EffectProps*, ALenum param, float)
+{ throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param}; }
+void Pshifter_setParamfv(EffectProps*, ALenum param, const float*)
+{
+    throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x",
+        param};
+}
 
-void Pshifter_setParami(EffectProps *props, ALCcontext *context, ALenum param, int val)
+void Pshifter_setParami(EffectProps *props, ALenum param, int val)
 {
     switch(param)
     {
-        case AL_PITCH_SHIFTER_COARSE_TUNE:
-            if(!(val >= AL_PITCH_SHIFTER_MIN_COARSE_TUNE && val <= AL_PITCH_SHIFTER_MAX_COARSE_TUNE))
-                SETERR_RETURN(context, AL_INVALID_VALUE,,"Pitch shifter coarse tune out of range");
-            props->Pshifter.CoarseTune = val;
-            break;
+    case AL_PITCH_SHIFTER_COARSE_TUNE:
+        if(!(val >= AL_PITCH_SHIFTER_MIN_COARSE_TUNE && val <= AL_PITCH_SHIFTER_MAX_COARSE_TUNE))
+            throw effect_exception{AL_INVALID_VALUE, "Pitch shifter coarse tune out of range"};
+        props->Pshifter.CoarseTune = val;
+        break;
 
-        case AL_PITCH_SHIFTER_FINE_TUNE:
-            if(!(val >= AL_PITCH_SHIFTER_MIN_FINE_TUNE && val <= AL_PITCH_SHIFTER_MAX_FINE_TUNE))
-                SETERR_RETURN(context, AL_INVALID_VALUE,,"Pitch shifter fine tune out of range");
-            props->Pshifter.FineTune = val;
-            break;
+    case AL_PITCH_SHIFTER_FINE_TUNE:
+        if(!(val >= AL_PITCH_SHIFTER_MIN_FINE_TUNE && val <= AL_PITCH_SHIFTER_MAX_FINE_TUNE))
+            throw effect_exception{AL_INVALID_VALUE, "Pitch shifter fine tune out of range"};
+        props->Pshifter.FineTune = val;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
-                param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
+            param};
     }
 }
-void Pshifter_setParamiv(EffectProps *props, ALCcontext *context, ALenum param, const int *vals)
-{ Pshifter_setParami(props, context, param, vals[0]); }
+void Pshifter_setParamiv(EffectProps *props, ALenum param, const int *vals)
+{ Pshifter_setParami(props, param, vals[0]); }
 
-void Pshifter_getParami(const EffectProps *props, ALCcontext *context, ALenum param, int *val)
+void Pshifter_getParami(const EffectProps *props, ALenum param, int *val)
 {
     switch(param)
     {
-        case AL_PITCH_SHIFTER_COARSE_TUNE:
-            *val = props->Pshifter.CoarseTune;
-            break;
-        case AL_PITCH_SHIFTER_FINE_TUNE:
-            *val = props->Pshifter.FineTune;
-            break;
+    case AL_PITCH_SHIFTER_COARSE_TUNE:
+        *val = props->Pshifter.CoarseTune;
+        break;
+    case AL_PITCH_SHIFTER_FINE_TUNE:
+        *val = props->Pshifter.FineTune;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
-                param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
+            param};
     }
 }
-void Pshifter_getParamiv(const EffectProps *props, ALCcontext *context, ALenum param, int *vals)
-{ Pshifter_getParami(props, context, param, vals); }
+void Pshifter_getParamiv(const EffectProps *props, ALenum param, int *vals)
+{ Pshifter_getParami(props, param, vals); }
 
-void Pshifter_getParamf(const EffectProps*, ALCcontext *context, ALenum param, float*)
-{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param); }
-void Pshifter_getParamfv(const EffectProps*, ALCcontext *context, ALenum param, float*)
-{ context->setError(AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x", param); }
+void Pshifter_getParamf(const EffectProps*, ALenum param, float*)
+{ throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param}; }
+void Pshifter_getParamfv(const EffectProps*, ALenum param, float*)
+{
+    throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x",
+        param};
+}
 
 DEFINE_ALEFFECT_VTABLE(Pshifter);
 

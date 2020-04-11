@@ -157,85 +157,85 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
 }
 
 
-void Echo_setParami(EffectProps*, ALCcontext *context, ALenum param, int)
-{ context->setError(AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void Echo_setParamiv(EffectProps*, ALCcontext *context, ALenum param, const int*)
-{ context->setError(AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void Echo_setParamf(EffectProps *props, ALCcontext *context, ALenum param, float val)
+void Echo_setParami(EffectProps*, ALenum param, int)
+{ throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param}; }
+void Echo_setParamiv(EffectProps*, ALenum param, const int*)
+{ throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param}; }
+void Echo_setParamf(EffectProps *props, ALenum param, float val)
 {
     switch(param)
     {
-        case AL_ECHO_DELAY:
-            if(!(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo delay out of range");
-            props->Echo.Delay = val;
-            break;
+    case AL_ECHO_DELAY:
+        if(!(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY))
+            throw effect_exception{AL_INVALID_VALUE, "Echo delay out of range"};
+        props->Echo.Delay = val;
+        break;
 
-        case AL_ECHO_LRDELAY:
-            if(!(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo LR delay out of range");
-            props->Echo.LRDelay = val;
-            break;
+    case AL_ECHO_LRDELAY:
+        if(!(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY))
+            throw effect_exception{AL_INVALID_VALUE, "Echo LR delay out of range"};
+        props->Echo.LRDelay = val;
+        break;
 
-        case AL_ECHO_DAMPING:
-            if(!(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo damping out of range");
-            props->Echo.Damping = val;
-            break;
+    case AL_ECHO_DAMPING:
+        if(!(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING))
+            throw effect_exception{AL_INVALID_VALUE, "Echo damping out of range"};
+        props->Echo.Damping = val;
+        break;
 
-        case AL_ECHO_FEEDBACK:
-            if(!(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo feedback out of range");
-            props->Echo.Feedback = val;
-            break;
+    case AL_ECHO_FEEDBACK:
+        if(!(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK))
+            throw effect_exception{AL_INVALID_VALUE, "Echo feedback out of range"};
+        props->Echo.Feedback = val;
+        break;
 
-        case AL_ECHO_SPREAD:
-            if(!(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo spread out of range");
-            props->Echo.Spread = val;
-            break;
+    case AL_ECHO_SPREAD:
+        if(!(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD))
+            throw effect_exception{AL_INVALID_VALUE, "Echo spread out of range"};
+        props->Echo.Spread = val;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param};
     }
 }
-void Echo_setParamfv(EffectProps *props, ALCcontext *context, ALenum param, const float *vals)
-{ Echo_setParamf(props, context, param, vals[0]); }
+void Echo_setParamfv(EffectProps *props, ALenum param, const float *vals)
+{ Echo_setParamf(props, param, vals[0]); }
 
-void Echo_getParami(const EffectProps*, ALCcontext *context, ALenum param, int*)
-{ context->setError(AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
-void Echo_getParamiv(const EffectProps*, ALCcontext *context, ALenum param, int*)
-{ context->setError(AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
-void Echo_getParamf(const EffectProps *props, ALCcontext *context, ALenum param, float *val)
+void Echo_getParami(const EffectProps*, ALenum param, int*)
+{ throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param}; }
+void Echo_getParamiv(const EffectProps*, ALenum param, int*)
+{ throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param}; }
+void Echo_getParamf(const EffectProps *props, ALenum param, float *val)
 {
     switch(param)
     {
-        case AL_ECHO_DELAY:
-            *val = props->Echo.Delay;
-            break;
+    case AL_ECHO_DELAY:
+        *val = props->Echo.Delay;
+        break;
 
-        case AL_ECHO_LRDELAY:
-            *val = props->Echo.LRDelay;
-            break;
+    case AL_ECHO_LRDELAY:
+        *val = props->Echo.LRDelay;
+        break;
 
-        case AL_ECHO_DAMPING:
-            *val = props->Echo.Damping;
-            break;
+    case AL_ECHO_DAMPING:
+        *val = props->Echo.Damping;
+        break;
 
-        case AL_ECHO_FEEDBACK:
-            *val = props->Echo.Feedback;
-            break;
+    case AL_ECHO_FEEDBACK:
+        *val = props->Echo.Feedback;
+        break;
 
-        case AL_ECHO_SPREAD:
-            *val = props->Echo.Spread;
-            break;
+    case AL_ECHO_SPREAD:
+        *val = props->Echo.Spread;
+        break;
 
-        default:
-            context->setError(AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
+    default:
+        throw effect_exception{AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param};
     }
 }
-void Echo_getParamfv(const EffectProps *props, ALCcontext *context, ALenum param, float *vals)
-{ Echo_getParamf(props, context, param, vals); }
+void Echo_getParamfv(const EffectProps *props, ALenum param, float *vals)
+{ Echo_getParamf(props, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(Echo);
 

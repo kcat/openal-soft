@@ -95,31 +95,23 @@ constexpr struct FactoryItem {
 };
 
 
-template<typename... T>
-void ALeffect_setParami(ALeffect *effect, T&& ...args)
-{ effect->vtab->setParami(&effect->Props, std::forward<T>(args)...); }
-template<typename... T>
-void ALeffect_setParamiv(ALeffect *effect, T&& ...args)
-{ effect->vtab->setParamiv(&effect->Props, std::forward<T>(args)...); }
-template<typename... T>
-void ALeffect_setParamf(ALeffect *effect, T&& ...args)
-{ effect->vtab->setParamf(&effect->Props, std::forward<T>(args)...); }
-template<typename... T>
-void ALeffect_setParamfv(ALeffect *effect, T&& ...args)
-{ effect->vtab->setParamfv(&effect->Props, std::forward<T>(args)...); }
+void ALeffect_setParami(ALeffect *effect, ALenum param, int value)
+{ effect->vtab->setParami(&effect->Props, param, value); }
+void ALeffect_setParamiv(ALeffect *effect, ALenum param, const int *values)
+{ effect->vtab->setParamiv(&effect->Props, param, values); }
+void ALeffect_setParamf(ALeffect *effect, ALenum param, float value)
+{ effect->vtab->setParamf(&effect->Props, param, value); }
+void ALeffect_setParamfv(ALeffect *effect, ALenum param, const float *values)
+{ effect->vtab->setParamfv(&effect->Props, param, values); }
 
-template<typename... T>
-void ALeffect_getParami(const ALeffect *effect, T&& ...args)
-{ effect->vtab->getParami(&effect->Props, std::forward<T>(args)...); }
-template<typename... T>
-void ALeffect_getParamiv(const ALeffect *effect, T&& ...args)
-{ effect->vtab->getParamiv(&effect->Props, std::forward<T>(args)...); }
-template<typename... T>
-void ALeffect_getParamf(const ALeffect *effect, T&& ...args)
-{ effect->vtab->getParamf(&effect->Props, std::forward<T>(args)...); }
-template<typename... T>
-void ALeffect_getParamfv(const ALeffect *effect, T&& ...args)
-{ effect->vtab->getParamfv(&effect->Props, std::forward<T>(args)...); }
+void ALeffect_getParami(const ALeffect *effect, ALenum param, int *value)
+{ effect->vtab->getParami(&effect->Props, param, value); }
+void ALeffect_getParamiv(const ALeffect *effect, ALenum param, int *values)
+{ effect->vtab->getParamiv(&effect->Props, param, values); }
+void ALeffect_getParamf(const ALeffect *effect, ALenum param, float *value)
+{ effect->vtab->getParamf(&effect->Props, param, value); }
+void ALeffect_getParamfv(const ALeffect *effect, ALenum param, float *values)
+{ effect->vtab->getParamfv(&effect->Props, param, values); }
 
 
 void InitEffectParams(ALeffect *effect, ALenum type)
@@ -335,7 +327,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_setParami(aleffect, context.get(), param, value);
+        ALeffect_setParami(aleffect, param, value);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -365,7 +357,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_setParamiv(aleffect, context.get(), param, values);
+        ALeffect_setParamiv(aleffect, param, values);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -388,7 +380,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_setParamf(aleffect, context.get(), param, value);
+        ALeffect_setParamf(aleffect, param, value);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -411,7 +403,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_setParamfv(aleffect, context.get(), param, values);
+        ALeffect_setParamfv(aleffect, param, values);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -436,7 +428,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_getParami(aleffect, context.get(), param, value);
+        ALeffect_getParami(aleffect, param, value);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -466,7 +458,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_getParamiv(aleffect, context.get(), param, values);
+        ALeffect_getParamiv(aleffect, param, values);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -489,7 +481,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_getParamf(aleffect, context.get(), param, value);
+        ALeffect_getParamf(aleffect, param, value);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -512,7 +504,7 @@ START_API_FUNC
     else try
     {
         /* Call the appropriate handler */
-        ALeffect_getParamfv(aleffect, context.get(), param, values);
+        ALeffect_getParamfv(aleffect, param, values);
     }
     catch(effect_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());

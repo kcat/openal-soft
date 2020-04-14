@@ -72,7 +72,8 @@ class bitfield {
     static constexpr size_t bits_per_byte{std::numeric_limits<unsigned char>::digits};
     static constexpr size_t NumElems{(N+bits_per_byte-1) / bits_per_byte};
 
-    typename detail_::ElemT<NumElems> vals{};
+    using storage_type = detail_::ElemT<NumElems>;
+    storage_type vals{};
 
 public:
     template<size_t b>
@@ -85,7 +86,7 @@ public:
     inline void unset() noexcept
     {
         static_assert(b < N, "Bit index out of range");
-        vals &= ~(1 << b);
+        vals &= static_cast<storage_type>(~(1 << b));
     }
     template<size_t b>
     inline bool get() const noexcept

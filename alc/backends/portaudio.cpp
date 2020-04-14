@@ -111,7 +111,7 @@ int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long f
     const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
 {
     aluMixData(mDevice, outputBuffer, static_cast<ALuint>(framesPerBuffer),
-        mDevice->channelsFromFmt());
+        static_cast<ALuint>(mParams.channelCount));
     return 0;
 }
 

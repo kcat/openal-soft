@@ -19,7 +19,6 @@
 #include "atomic.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "logging.h"
 #include "threads.h"
 #include "vector.h"
 #include "voice.h"
@@ -222,7 +221,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     /** Resumes update processing after being deferred. */
     void processUpdates();
 
-    void setError(ALenum errorCode, const char *msg, ...) DECL_FORMAT(printf, 3, 4);
+    [[gnu::format(printf,3,4)]] void setError(ALenum errorCode, const char *msg, ...);
 
     DEF_NEWDEL(ALCcontext)
 };

@@ -41,6 +41,7 @@
 #include "alexcpt.h"
 #include "compat.h"
 #include "dynload.h"
+#include "logging.h"
 #include "strutils.h"
 
 #include <pulse/pulseaudio.h>

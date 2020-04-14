@@ -47,9 +47,10 @@
 #include "alcmain.h"
 #include "alexcpt.h"
 #include "alu.h"
-#include "ringbuffer.h"
 #include "compat.h"
 #include "dynload.h"
+#include "logging.h"
+#include "ringbuffer.h"
 #include "strutils.h"
 #include "threads.h"
 

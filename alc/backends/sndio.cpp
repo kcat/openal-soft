@@ -35,6 +35,7 @@
 #include "threads.h"
 #include "vector.h"
 #include "ringbuffer.h"
+#include "logging.h"
 
 #include <sndio.h>
 

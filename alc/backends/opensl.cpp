@@ -37,6 +37,7 @@
 #include "alu.h"
 #include "compat.h"
 #include "endiantest.h"
+#include "logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
 

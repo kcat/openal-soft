@@ -40,10 +40,11 @@
 #include "alcmain.h"
 #include "alexcpt.h"
 #include "alu.h"
+#include "compat.h"
+#include "logging.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 #include "threads.h"
-#include "compat.h"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003

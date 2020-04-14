@@ -34,6 +34,7 @@
 #include "alconfig.h"
 #include "alexcpt.h"
 #include "dynload.h"
+#include "logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
 

@@ -42,9 +42,10 @@
 #include "alexcpt.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "compat.h"
+#include "logging.h"
 #include "threads.h"
 #include "vector.h"
-#include "compat.h"
 
 #include <sys/audioio.h>
 

@@ -6,16 +6,9 @@
 #include "opthelpers.h"
 
 
-#ifdef __GNUC__
-#define DECL_FORMAT(x, y, z) __attribute__((format(x, (y), (z))))
-#else
-#define DECL_FORMAT(x, y, z)
-#endif
-
-
 extern FILE *gLogFile;
 
-void al_print(FILE *logfile, const char *fmt, ...) DECL_FORMAT(printf, 2,3);
+[[gnu::format(printf,2,3)]] void al_print(FILE *logfile, const char *fmt, ...);
 #if !defined(_WIN32)
 #define AL_PRINT fprintf
 #else

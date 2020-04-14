@@ -31,6 +31,7 @@
 #include "alu.h"
 #include "ringbuffer.h"
 #include "converter.h"
+#include "logging.h"
 #include "backends/base.h"
 
 #include <unistd.h>

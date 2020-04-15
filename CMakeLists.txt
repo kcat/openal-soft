@@ -1344,6 +1344,12 @@ if(ALSOFT_UTILS)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support)
     endif()
+    message(STATUS "Building utility programs")
+    if(TARGET alsoft-config)
+        set(UTIL_TARGETS ${UTIL_TARGETS} alsoft-config)
+        message(STATUS "Building configuration program")
+    endif()
+    message(STATUS "")
 
     if(ALSOFT_INSTALL_UTILS)
         install(TARGETS ${UTIL_TARGETS}
@@ -1351,12 +1357,6 @@ if(ALSOFT_UTILS)
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif()
-
-    message(STATUS "Building utility programs")
-    if(TARGET alsoft-config)
-        message(STATUS "Building configuration program")
-    endif()
-    message(STATUS "")
 endif()
 
 

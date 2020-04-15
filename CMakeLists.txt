@@ -56,13 +56,13 @@ OPTION(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
 OPTION(ALSOFT_UTILS          "Build and install utility programs"         ON)
 OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
-OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
-OPTION(ALSOFT_TESTS     "Build and install test programs"     ON)
+OPTION(ALSOFT_EXAMPLES  "Build example programs"  ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
 OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ON)
-OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
+OPTION(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)" ON)
+OPTION(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 OPTION(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
 if(DEFINED SHARE_INSTALL_DIR)
@@ -1218,34 +1218,32 @@ IF(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC"
     ENDIF()
 ENDIF()
 
-IF(ALSOFT_INSTALL)
-    INSTALL(TARGETS OpenAL EXPORT OpenAL
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
-    EXPORT(TARGETS OpenAL
-        NAMESPACE OpenAL::
-        FILE OpenALConfig.cmake)
-    INSTALL(EXPORT OpenAL
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
-        NAMESPACE OpenAL::
-        FILE OpenALConfig.cmake)
-    INSTALL(FILES
-        include/AL/al.h
-        include/AL/alc.h
-        include/AL/alext.h
-        include/AL/efx.h
-        include/AL/efx-creative.h
-        include/AL/efx-presets.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/AL)
-    INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-    IF(TARGET soft_oal)
-        INSTALL(TARGETS soft_oal
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    ENDIF()
-ENDIF()
+install(TARGETS OpenAL EXPORT OpenAL
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+export(TARGETS OpenAL
+    NAMESPACE OpenAL::
+    FILE OpenALConfig.cmake)
+install(EXPORT OpenAL
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
+    NAMESPACE OpenAL::
+    FILE OpenALConfig.cmake)
+install(FILES
+    include/AL/al.h
+    include/AL/alc.h
+    include/AL/alext.h
+    include/AL/efx.h
+    include/AL/efx-creative.h
+    include/AL/efx-presets.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+if(TARGET soft_oal)
+    install(TARGETS soft_oal
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 
 if(HAS_ROUTER)
@@ -1301,7 +1299,7 @@ IF(ALSOFT_AMBDEC_PRESETS)
     MESSAGE(STATUS "")
 ENDIF()
 
-IF(ALSOFT_UTILS)
+if(ALSOFT_UTILS)
     set(UTIL_TARGETS )
 
     ADD_EXECUTABLE(openal-info utils/openal-info.c)
@@ -1347,19 +1345,19 @@ IF(ALSOFT_UTILS)
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support)
     endif()
 
-    IF(ALSOFT_INSTALL)
-        INSTALL(TARGETS ${UTIL_TARGETS}
+    if(ALSOFT_INSTALL_UTILS)
+        install(TARGETS ${UTIL_TARGETS}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    ENDIF()
+    endif()
 
-    MESSAGE(STATUS "Building utility programs")
-    IF(TARGET alsoft-config)
-        MESSAGE(STATUS "Building configuration program")
-    ENDIF()
-    MESSAGE(STATUS "")
-ENDIF()
+    message(STATUS "Building utility programs")
+    if(TARGET alsoft-config)
+        message(STATUS "Building configuration program")
+    endif()
+    message(STATUS "")
+endif()
 
 
 # Add a static library with common functions used by multiple example targets
@@ -1371,34 +1369,22 @@ TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
 TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
 TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
 
-IF(ALSOFT_TESTS)
+IF(ALSOFT_EXAMPLES)
     ADD_EXECUTABLE(altonegen examples/altonegen.c)
     TARGET_COMPILE_DEFINITIONS(altonegen PRIVATE ${CPP_DEFS})
     TARGET_INCLUDE_DIRECTORIES(altonegen PRIVATE ${OpenAL_SOURCE_DIR}/common)
     TARGET_COMPILE_OPTIONS(altonegen PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common)
 
-    IF(ALSOFT_INSTALL)
-        INSTALL(TARGETS altonegen
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    ENDIF()
-
-    MESSAGE(STATUS "Building test programs")
-    MESSAGE(STATUS "")
-ENDIF()
-
-IF(ALSOFT_EXAMPLES)
     ADD_EXECUTABLE(alrecord examples/alrecord.c)
     TARGET_LINK_LIBRARIES(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
 
-    IF(ALSOFT_INSTALL)
-        INSTALL(TARGETS alrecord
+    if(ALSOFT_INSTALL_EXAMPLES)
+        install(TARGETS altonegen alrecord
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    ENDIF()
+    endif()
 
     MESSAGE(STATUS "Building example programs")
 
@@ -1433,12 +1419,12 @@ IF(ALSOFT_EXAMPLES)
         TARGET_INCLUDE_DIRECTORIES(alstreamcb PRIVATE ${SNDFILE_INCLUDE_DIRS})
         TARGET_LINK_LIBRARIES(alstreamcb PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
 
-        IF(ALSOFT_INSTALL)
-            INSTALL(TARGETS alplay alstream alreverb almultireverb allatency alhrtf
+        if(ALSOFT_INSTALL_EXAMPLES)
+            install(TARGETS alplay alstream alreverb almultireverb allatency alhrtf
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-        ENDIF()
+        endif()
 
         MESSAGE(STATUS "Building SndFile example programs")
     ENDIF()
@@ -1449,12 +1435,12 @@ IF(ALSOFT_EXAMPLES)
         TARGET_LINK_LIBRARIES(alloopback
             PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
 
-        IF(ALSOFT_INSTALL)
-            INSTALL(TARGETS alloopback
+        if(ALSOFT_INSTALL_EXAMPLES)
+            install(TARGETS alloopback
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-        ENDIF()
+        endif()
 
         MESSAGE(STATUS "Building SDL example programs")
 
@@ -1489,13 +1475,13 @@ IF(ALSOFT_EXAMPLES)
             TARGET_LINK_LIBRARIES(alffplay
                 PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ${FFMPEG_LIBRARIES} ex-common)
 
-            IF(ALSOFT_INSTALL)
-                INSTALL(TARGETS alffplay
+            if(ALSOFT_INSTALL_EXAMPLES)
+                install(TARGETS alffplay
                     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-            ENDIF()
-            MESSAGE(STATUS "Building SDL+FFmpeg example programs")
+            endif()
+            message(STATUS "Building SDL+FFmpeg example programs")
         ENDIF()
         MESSAGE(STATUS "")
     ENDIF()

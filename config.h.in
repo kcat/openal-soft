@@ -74,9 +74,6 @@
 /* Define to the size of a long int type */
 #cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
 
-/* Define if we have GCC's format attribute */
-#cmakedefine HAVE_GCC_FORMAT
-
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 
@@ -86,17 +83,11 @@
 /* Define if we have malloc.h */
 #cmakedefine HAVE_MALLOC_H
 
-/* Define if we have dirent.h */
-#cmakedefine HAVE_DIRENT_H
-
 /* Define if we have cpuid.h */
 #cmakedefine HAVE_CPUID_H
 
 /* Define if we have intrin.h */
 #cmakedefine HAVE_INTRIN_H
-
-/* Define if we have sys/sysconf.h */
-#cmakedefine HAVE_SYS_SYSCONF_H
 
 /* Define if we have guiddef.h */
 #cmakedefine HAVE_GUIDDEF_H

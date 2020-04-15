@@ -367,14 +367,9 @@ IF(HAVE_EMMINTRIN_H)
 ENDIF()
 
 
-CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
-                         int main() {return 0;}" HAVE_GCC_FORMAT)
-
 CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-CHECK_INCLUDE_FILE(dirent.h HAVE_DIRENT_H)
 CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
 CHECK_INCLUDE_FILE(intrin.h HAVE_INTRIN_H)
-CHECK_INCLUDE_FILE(sys/sysconf.h HAVE_SYS_SYSCONF_H)
 CHECK_INCLUDE_FILE(guiddef.h HAVE_GUIDDEF_H)
 IF(NOT HAVE_GUIDDEF_H)
     CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)

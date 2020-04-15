@@ -18,6 +18,9 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
+/* Define this first since Windows' system headers may include headers affected
+ * by it (is it even still needed?).
+ */
 #ifdef _WIN32
 #ifdef __MINGW32__
 #define _WIN32_IE 0x501
@@ -37,28 +40,6 @@
 #include <mutex>
 #include <string>
 
-#ifdef HAVE_DIRENT_H
-#include <dirent.h>
-#endif
-#ifdef HAVE_SYS_SYSCONF_H
-#include <sys/sysconf.h>
-#endif
-
-#ifdef HAVE_PROC_PIDPATH
-#include <libproc.h>
-#endif
-
-#ifdef __FreeBSD__
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#endif
-
-#ifndef _WIN32
-#include <unistd.h>
-#elif defined(_WIN32_IE)
-#include <shlobj.h>
-#endif
-
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alfstream.h"
@@ -71,6 +52,8 @@
 
 
 #ifdef _WIN32
+
+#include <shlobj.h>
 
 const PathNamePair &GetProcBinary()
 {
@@ -240,6 +223,15 @@ void SetRTPriority(void)
 
 #else
 
+#include <sys/types.h>
+#include <unistd.h>
+#include <dirent.h>
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
+#ifdef HAVE_PROC_PIDPATH
+#include <libproc.h>
+#endif
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
 #include <pthread.h>
 #include <sched.h>
@@ -327,8 +319,7 @@ const PathNamePair &GetProcBinary()
 
 void al_print(FILE *logfile, const char *fmt, ...)
 {
-    va_list ap;
-
+    std::va_list ap;
     va_start(ap, fmt);
     vfprintf(logfile, fmt, ap);
     va_end(ap);

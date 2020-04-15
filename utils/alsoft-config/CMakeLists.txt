@@ -1,6 +1,5 @@
 project(alsoft-config)
 
-find_package(Qt5Widgets)
 if(Qt5Widgets_FOUND)
     qt5_wrap_ui(UIS  mainwindow.ui)
 
@@ -19,5 +18,14 @@ if(Qt5Widgets_FOUND)
     set_target_properties(alsoft-config PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
     if(TARGET build_version)
         add_dependencies(alsoft-config build_version)
+    endif()
+
+    message(STATUS "Building configuration program")
+
+    if(ALSOFT_INSTALL_UTILS)
+        install(TARGETS alsoft-config
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif()
 endif()

@@ -1058,7 +1058,7 @@ endif()
 
 
 IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
-    add_subdirectory(utils/alsoft-config)
+    find_package(Qt5Widgets)
 ENDIF()
 IF(ALSOFT_EXAMPLES)
     FIND_PACKAGE(SndFile)
@@ -1345,9 +1345,9 @@ if(ALSOFT_UTILS)
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support)
     endif()
     message(STATUS "Building utility programs")
-    if(TARGET alsoft-config)
-        set(UTIL_TARGETS ${UTIL_TARGETS} alsoft-config)
-        message(STATUS "Building configuration program")
+
+    if(NOT ALSOFT_NO_CONFIG_UTIL)
+        add_subdirectory(utils/alsoft-config)
     endif()
     message(STATUS "")
 

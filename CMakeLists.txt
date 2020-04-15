@@ -1299,14 +1299,15 @@ IF(ALSOFT_AMBDEC_PRESETS)
     MESSAGE(STATUS "")
 ENDIF()
 
+set(EXTRA_INSTALLS )
 if(ALSOFT_UTILS)
-    set(UTIL_TARGETS )
-
     ADD_EXECUTABLE(openal-info utils/openal-info.c)
     TARGET_INCLUDE_DIRECTORIES(openal-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
     TARGET_COMPILE_OPTIONS(openal-info PRIVATE ${C_FLAGS})
     TARGET_LINK_LIBRARIES(openal-info PRIVATE ${LINKER_FLAGS} OpenAL)
-    set(UTIL_TARGETS ${UTIL_TARGETS} openal-info)
+    if(ALSOFT_INSTALL_EXAMPLES)
+        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
+    endif()
 
     find_package(MySOFA)
     if(MYSOFA_FOUND)
@@ -1335,7 +1336,9 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
         target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} sofa-support)
-        set(UTIL_TARGETS ${UTIL_TARGETS} makemhr)
+        if(ALSOFT_INSTALL_EXAMPLES)
+            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
+        endif()
 
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)
         add_executable(sofa-info ${SOFAINFO_SRCS})
@@ -1350,13 +1353,6 @@ if(ALSOFT_UTILS)
         add_subdirectory(utils/alsoft-config)
     endif()
     message(STATUS "")
-
-    if(ALSOFT_INSTALL_UTILS)
-        install(TARGETS ${UTIL_TARGETS}
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
 endif()
 
 
@@ -1380,10 +1376,7 @@ IF(ALSOFT_EXAMPLES)
     TARGET_LINK_LIBRARIES(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
 
     if(ALSOFT_INSTALL_EXAMPLES)
-        install(TARGETS altonegen alrecord
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord)
     endif()
 
     MESSAGE(STATUS "Building example programs")
@@ -1420,10 +1413,8 @@ IF(ALSOFT_EXAMPLES)
         TARGET_LINK_LIBRARIES(alstreamcb PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
 
         if(ALSOFT_INSTALL_EXAMPLES)
-            install(TARGETS alplay alstream alreverb almultireverb allatency alhrtf
-                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
+                alhrtf)
         endif()
 
         MESSAGE(STATUS "Building SndFile example programs")
@@ -1436,10 +1427,7 @@ IF(ALSOFT_EXAMPLES)
             PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ex-common ${MATH_LIB})
 
         if(ALSOFT_INSTALL_EXAMPLES)
-            install(TARGETS alloopback
-                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alloopback)
         endif()
 
         MESSAGE(STATUS "Building SDL example programs")
@@ -1476,13 +1464,17 @@ IF(ALSOFT_EXAMPLES)
                 PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ${FFMPEG_LIBRARIES} ex-common)
 
             if(ALSOFT_INSTALL_EXAMPLES)
-                install(TARGETS alffplay
-                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-                    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+                set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alffplay)
             endif()
             message(STATUS "Building SDL+FFmpeg example programs")
         ENDIF()
         MESSAGE(STATUS "")
     ENDIF()
 ENDIF()
+
+if(EXTRA_INSTALLS)
+    install(TARGETS ${EXTRA_INSTALLS}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()

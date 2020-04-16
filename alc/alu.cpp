@@ -151,6 +151,10 @@ struct ChanMap {
     float elevation;
 };
 
+using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
+    const size_t BufferSize);
+
 HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 
 inline HrtfDirectMixerFunc SelectHrtfMixer(void)

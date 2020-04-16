@@ -516,7 +516,7 @@ struct ReverbState final : public EffectState {
         }
     }
 
-    bool allocLines(const float frequency);
+    void allocLines(const float frequency);
 
     void updateDelayLine(const float earlyDelay, const float lateDelay, const float density,
         const float decayTime, const float frequency);
@@ -549,7 +549,7 @@ inline float CalcDelayLengthMult(float density)
  * for all lines given the sample rate (frequency).  If an allocation failure
  * occurs, it returns AL_FALSE.
  */
-bool ReverbState::allocLines(const float frequency)
+void ReverbState::allocLines(const float frequency)
 {
     /* All delay line lengths are calculated to accomodate the full range of
      * lengths given their respective paramters.
@@ -608,8 +608,6 @@ bool ReverbState::allocLines(const float frequency)
     mEarly.Delay.realizeLineOffset(mSampleBuffer.data());
     mLate.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
     mLate.Delay.realizeLineOffset(mSampleBuffer.data());
-
-    return true;
 }
 
 bool ReverbState::deviceUpdate(const ALCdevice *device)
@@ -617,8 +615,7 @@ bool ReverbState::deviceUpdate(const ALCdevice *device)
     const auto frequency = static_cast<float>(device->Frequency);
 
     /* Allocate the delay lines. */
-    if(!allocLines(frequency))
-        return false;
+    allocLines(frequency);
 
     const float multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
@@ -746,8 +743,8 @@ float CalcLimitedHfRatio(const float hfRatio, const float airAbsorptionGainHF,
      * equation, solve for HF ratio.  The delay length is cancelled out of
      * the equation, so it can be calculated once for all lines.
      */
-    float limitRatio{1.0f / CalcDecayLength(airAbsorptionGainHF, decayTime) /
-        SPEEDOFSOUNDMETRESPERSEC};
+    float limitRatio{1.0f / SPEEDOFSOUNDMETRESPERSEC /
+        CalcDecayLength(airAbsorptionGainHF, decayTime)};
 
     /* Using the limit calculated above, apply the upper bound to the HF ratio.
      */

@@ -296,34 +296,3 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
             *(dst++) += *(in_iter++) * gain;
     }
 }
-
-template<>
-void MixRow_<NEONTag>(const al::span<float> OutBuffer, const al::span<const float> Gains,
-    const float *InSamples, const size_t InStride)
-{
-    for(const float gain : Gains)
-    {
-        const float *RESTRICT input{InSamples};
-        InSamples += InStride;
-
-        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
-            continue;
-
-        auto out_iter = OutBuffer.begin();
-        if(size_t todo{OutBuffer.size() >> 2})
-        {
-            const float32x4_t gain4{vdupq_n_f32(gain)};
-            do {
-                const float32x4_t val4 = vld1q_f32(input);
-                float32x4_t dry4 = vld1q_f32(out_iter);
-                dry4 = vmlaq_f32(dry4, val4, gain4);
-                vst1q_f32(out_iter, dry4);
-                out_iter += 4; input += 4;
-            } while(--todo);
-        }
-
-        auto do_mix = [gain](const float cur, const float src) noexcept -> float
-        { return cur + src*gain; };
-        std::transform(out_iter, OutBuffer.end(), input, out_iter, do_mix);
-    }
-}

@@ -82,7 +82,7 @@ constexpr float MODULATION_DEPTH_COEFF{0.05f};
  * tetrahedron, but it's close enough. Should the model be extended to 8-lines
  * in the future, true opposites can be used.
  */
-alignas(16) constexpr float B2A[NUM_LINES][MAX_AMBI_CHANNELS]{
+alignas(16) constexpr float B2A[NUM_LINES][NUM_LINES]{
     { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
     { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
     { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
@@ -443,26 +443,43 @@ struct ReverbState final : public EffectState {
     std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
 
+    static void DoMixRow(const al::span<float> OutBuffer, const al::span<const float> Gains,
+        const float *InSamples, const size_t InStride)
+    {
+        std::fill(OutBuffer.begin(), OutBuffer.end(), 0.0f);
+        for(const float gain : Gains)
+        {
+            const float *RESTRICT input{al::assume_aligned<16>(InSamples)};
+            InSamples += InStride;
+
+            if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+                continue;
+
+            for(float &sample : OutBuffer)
+            {
+                sample += *input * gain;
+                ++input;
+            }
+        }
+    }
+
+
     void MixOutPlain(const al::span<FloatBufferLine> samplesOut, const size_t counter,
         const size_t offset, const size_t todo)
     {
         ASSUME(todo > 0);
 
         /* Convert back to B-Format, and mix the results to output. */
-        const al::span<float> tmpspan{mTempLine.data(), todo};
+        const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
-            MixRowSamples(tmpspan, {A2B[c], NUM_LINES}, mEarlySamples[0].data(),
-                mEarlySamples[0].size());
+            DoMixRow(tmpspan, A2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
             MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], counter,
                 offset);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
-            MixRowSamples(tmpspan, {A2B[c], NUM_LINES}, mLateSamples[0].data(),
-                mLateSamples[0].size());
+            DoMixRow(tmpspan, A2B[c], mLateSamples[0].data(), mLateSamples[0].size());
             MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], counter,
                 offset);
         }
@@ -473,12 +490,10 @@ struct ReverbState final : public EffectState {
     {
         ASSUME(todo > 0);
 
-        const al::span<float> tmpspan{mTempLine.data(), todo};
+        const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
-            MixRowSamples(tmpspan, {A2B[c], NUM_LINES}, mEarlySamples[0].data(),
-                mEarlySamples[0].size());
+            DoMixRow(tmpspan, A2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
 
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
@@ -491,9 +506,7 @@ struct ReverbState final : public EffectState {
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
-            MixRowSamples(tmpspan, {A2B[c], NUM_LINES}, mLateSamples[0].data(),
-                mLateSamples[0].size());
+            DoMixRow(tmpspan, A2B[c], mLateSamples[0].data(), mLateSamples[0].size());
 
             const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].applyHfScale(tmpspan, hfscale);
@@ -1589,12 +1602,22 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
     ASSUME(samplesToDo > 0);
 
     /* Convert B-Format to A-Format for processing. */
-    const size_t numInput{samplesIn.size()};
-    const al::span<float> tmpspan{mTempLine.data(), samplesToDo};
+    const size_t numInput{minz(samplesIn.size(), NUM_LINES)};
+    const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), samplesToDo};
     for(size_t c{0u};c < NUM_LINES;c++)
     {
         std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
-        MixRowSamples(tmpspan, {B2A[c], numInput}, samplesIn[0].data(), samplesIn[0].size());
+        for(size_t i{0};i < numInput;++i)
+        {
+            const float gain{B2A[c][i]};
+            const float *RESTRICT input{al::assume_aligned<16>(samplesIn[i].data())};
+
+            for(float &sample : tmpspan)
+            {
+                sample += *input * gain;
+                ++input;
+            }
+        }
 
         /* Band-pass the incoming samples and feed the initial delay line. */
         mFilter[c].Lp.process(tmpspan, tmpspan.begin());

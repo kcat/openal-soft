@@ -21,14 +21,11 @@ struct ALeffectslot;
 using MixerFunc = void(*)(const al::span<const float> InSamples,
     const al::span<FloatBufferLine> OutBuffer, float *CurrentGains, const float *TargetGains,
     const size_t Counter, const size_t OutPos);
-using RowMixerFunc = void(*)(const al::span<float> OutBuffer, const al::span<const float> Gains,
-    const float *InSamples, const size_t InStride);
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
     const size_t BufferSize);
 
 extern MixerFunc MixSamples;
-extern RowMixerFunc MixRowSamples;
 
 
 #define GAIN_MIX_MAX  1000.0f /* +60dB */

@@ -81,7 +81,6 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 Resampler ResamplerDefault{Resampler::Linear};
 
 MixerFunc MixSamples{Mix_<CTag>};
-RowMixerFunc MixRowSamples{MixRow_<CTag>};
 
 namespace {
 
@@ -105,19 +104,6 @@ inline MixerFunc SelectMixer()
         return Mix_<SSETag>;
 #endif
     return Mix_<CTag>;
-}
-
-inline RowMixerFunc SelectRowMixer()
-{
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixRow_<NEONTag>;
-#endif
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixRow_<SSETag>;
-#endif
-    return MixRow_<CTag>;
 }
 
 inline HrtfMixerFunc SelectHrtfMixer()
@@ -189,7 +175,6 @@ void aluInitMixer()
     }
 
     MixSamples = SelectMixer();
-    MixRowSamples = SelectRowMixer();
     MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
 }

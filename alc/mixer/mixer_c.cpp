@@ -196,27 +196,3 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
             *(dst++) += *(in_iter++) * gain;
     }
 }
-
-/* Basically the inverse of the above. Rather than one input going to multiple
- * outputs (each with its own gain), it's multiple inputs (each with its own
- * gain) going to one output. This applies one row (vs one column) of a matrix
- * transform. And as the matrices are more or less static once set up, no
- * stepping is necessary.
- */
-template<>
-void MixRow_<CTag>(const al::span<float> OutBuffer, const al::span<const float> Gains,
-    const float *InSamples, const size_t InStride)
-{
-    for(const float gain : Gains)
-    {
-        const float *RESTRICT input{InSamples};
-        InSamples += InStride;
-
-        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
-            continue;
-
-        auto do_mix = [gain](const float cur, const float src) noexcept -> float
-        { return cur + src*gain; };
-        std::transform(OutBuffer.begin(), OutBuffer.end(), input, OutBuffer.begin(), do_mix);
-    }
-}

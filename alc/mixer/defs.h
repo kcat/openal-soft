@@ -18,9 +18,6 @@ const float *Resample_(const InterpState *state, const float *RESTRICT src, ALui
 template<typename InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos);
-template<typename InstTag>
-void MixRow_(const al::span<float> OutBuffer, const al::span<const float> Gains,
-    const float *InSamples, const size_t InStride);
 
 template<typename InstTag>
 void MixHrtf_(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,

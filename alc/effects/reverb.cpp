@@ -531,7 +531,7 @@ struct ReverbState final : public EffectState {
     void lateFaded(const size_t offset, const size_t todo, const float fade,
         const float fadeStep);
 
-    bool deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
@@ -597,10 +597,10 @@ void ReverbState::allocLines(const float frequency)
     totalSamples += mLate.Delay.calcLineLength(length, totalSamples, frequency, 1);
 
     if(totalSamples != mSampleBuffer.size())
-        decltype(mSampleBuffer){totalSamples}.swap(mSampleBuffer);
+        decltype(mSampleBuffer)(totalSamples).swap(mSampleBuffer);
 
     /* Clear the sample buffer. */
-    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), std::array<float,NUM_LINES>{});
+    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), decltype(mSampleBuffer)::value_type{});
 
     /* Update all delays to reflect the new sample buffer. */
     mDelay.realizeLineOffset(mSampleBuffer.data());
@@ -610,7 +610,7 @@ void ReverbState::allocLines(const float frequency)
     mLate.Delay.realizeLineOffset(mSampleBuffer.data());
 }
 
-bool ReverbState::deviceUpdate(const ALCdevice *device)
+void ReverbState::deviceUpdate(const ALCdevice *device)
 {
     const auto frequency = static_cast<float>(device->Frequency);
 
@@ -678,8 +678,6 @@ bool ReverbState::deviceUpdate(const ALCdevice *device)
     mAmbiSplitter[0][0].init(400.0f / frequency);
     std::fill(mAmbiSplitter[0].begin()+1, mAmbiSplitter[0].end(), mAmbiSplitter[0][0]);
     std::fill(mAmbiSplitter[1].begin(), mAmbiSplitter[1].end(), mAmbiSplitter[0][0]);
-
-    return true;
 }
 
 /**************************************

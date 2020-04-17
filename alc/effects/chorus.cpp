@@ -80,24 +80,21 @@ struct ChorusState final : public EffectState {
     void getTriangleDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
     void getSinusoidDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
 
-    bool deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ChorusState)
 };
 
-bool ChorusState::deviceUpdate(const ALCdevice *Device)
+void ChorusState::deviceUpdate(const ALCdevice *Device)
 {
     constexpr float max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
 
     const auto frequency = static_cast<float>(Device->Frequency);
     const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*frequency) + 1u)};
     if(maxlen != mSampleBuffer.size())
-    {
-        mSampleBuffer.resize(maxlen);
-        mSampleBuffer.shrink_to_fit();
-    }
+        al::vector<float,16>(maxlen).swap(mSampleBuffer);
 
     std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
     for(auto &e : mGains)
@@ -105,8 +102,6 @@ bool ChorusState::deviceUpdate(const ALCdevice *Device)
         std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
         std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
     }
-
-    return true;
 }
 
 void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)

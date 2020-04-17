@@ -37,17 +37,16 @@ struct DedicatedState final : public EffectState {
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    bool deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DedicatedState)
 };
 
-bool DedicatedState::deviceUpdate(const ALCdevice*)
+void DedicatedState::deviceUpdate(const ALCdevice*)
 {
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
-    return true;
 }
 
 void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

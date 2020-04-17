@@ -2214,21 +2214,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 
-    /* Need to delay returning failure until the Send arrays have been cleared. */
-    bool update_failed{false};
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
-        if(context->mDefaultSlot && !update_failed)
+        if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
-            ALeffectslot *slot{context->mDefaultSlot.get()};
             aluInitEffectPanning(slot, device);
 
             EffectState *state{slot->Effect.State};
             state->mOutTarget = device->Dry.Buffer;
-            update_failed = !state->deviceUpdate(device);
-            if(!update_failed)
-                UpdateEffectSlotProps(slot, context);
+            state->deviceUpdate(device);
+            UpdateEffectSlotProps(slot, context);
         }
 
         std::unique_lock<std::mutex> proplock{context->mPropLock};
@@ -2237,7 +2233,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             std::fill_n(curarray->end(), curarray->size(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
         {
-            if(update_failed) break;
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
@@ -2249,8 +2244,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
                 EffectState *state{slot->Effect.State};
                 state->mOutTarget = device->Dry.Buffer;
-                update_failed = !state->deviceUpdate(device);
-                if(update_failed) break;
+                state->deviceUpdate(device);
                 UpdateEffectSlotProps(slot, context);
             }
         }
@@ -2380,8 +2374,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         UpdateAllSourceProps(context);
     }
     mixer_mode.leave();
-    if(update_failed)
-        return ALC_INVALID_DEVICE;
 
     if(!device->Flags.get<DevicePaused>())
     {

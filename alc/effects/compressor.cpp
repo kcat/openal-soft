@@ -49,28 +49,26 @@ struct CompressorState final : public EffectState {
     float mEnvFollower{1.0f};
 
 
-    bool deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(CompressorState)
 };
 
-bool CompressorState::deviceUpdate(const ALCdevice *device)
+void CompressorState::deviceUpdate(const ALCdevice *device)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
      */
-    const float attackCount  = static_cast<float>(device->Frequency) * ATTACK_TIME;
-    const float releaseCount = static_cast<float>(device->Frequency) * RELEASE_TIME;
+    const float attackCount{static_cast<float>(device->Frequency) * ATTACK_TIME};
+    const float releaseCount{static_cast<float>(device->Frequency) * RELEASE_TIME};
 
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.
      */
     mAttackMult  = std::pow(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
     mReleaseMult = std::pow(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
-
-    return true;
 }
 
 void CompressorState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

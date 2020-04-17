@@ -91,22 +91,20 @@ struct EqualizerState final : public EffectState {
     FloatBufferLine mSampleBuffer{};
 
 
-    bool deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(EqualizerState)
 };
 
-bool EqualizerState::deviceUpdate(const ALCdevice*)
+void EqualizerState::deviceUpdate(const ALCdevice*)
 {
     for(auto &e : mChans)
     {
-        std::for_each(std::begin(e.filter), std::end(e.filter),
-                      std::mem_fn(&BiquadFilter::clear));
+        std::for_each(std::begin(e.filter), std::end(e.filter), std::mem_fn(&BiquadFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
-    return true;
 }
 
 void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)

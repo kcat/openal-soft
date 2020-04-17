@@ -645,23 +645,18 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         EffectState *State{factory->create()};
         if(!State) return AL_OUT_OF_MEMORY;
 
-        FPUCtl mixer_mode{};
         ALCdevice *Device{Context->mDevice.get()};
         std::unique_lock<std::mutex> statelock{Device->StateLock};
         State->mOutTarget = Device->Dry.Buffer;
-        if(State->deviceUpdate(Device) == AL_FALSE)
         {
-            statelock.unlock();
-            mixer_mode.leave();
-            State->release();
-            return AL_OUT_OF_MEMORY;
+            FPUCtl mixer_mode{};
+            State->deviceUpdate(Device);
         }
-        mixer_mode.leave();
 
         if(!effect)
         {
             EffectSlot->Effect.Type = AL_EFFECT_NULL;
-            EffectSlot->Effect.Props = EffectProps {};
+            EffectSlot->Effect.Props = EffectProps{};
         }
         else
         {

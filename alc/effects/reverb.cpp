@@ -694,7 +694,10 @@ inline float CalcDecayCoeff(const float length, const float decayTime)
  * reaches -60 dB.
  */
 inline float CalcDecayLength(const float coeff, const float decayTime)
-{ return std::log10(coeff) * decayTime / std::log10(REVERB_DECAY_GAIN); }
+{
+    constexpr float log10_decaygain{-3.0f/*std::log10(REVERB_DECAY_GAIN)=std::log10(0.001f)*/};
+    return std::log10(coeff) * decayTime / log10_decaygain;
+}
 
 /* Calculate an attenuation to be applied to the input of any echo models to
  * compensate for modal density and decay time.
@@ -721,7 +724,7 @@ inline float CalcDensityGain(const float a)
 inline void CalcMatrixCoeffs(const float diffusion, float *x, float *y)
 {
     /* The matrix is of order 4, so n is sqrt(4 - 1). */
-    const float n{std::sqrt(3.0f)};
+    constexpr float n{1.73205080756887719318f/*std::sqrt(3.0f)*/};
     const float t{diffusion * std::atan(n)};
 
     /* Calculate the first mixing matrix coefficient. */
@@ -771,8 +774,10 @@ void T60Filter::calcCoeffs(const float length, const float lfDecayTime,
 void EarlyReflections::updateLines(const float density_mult, const float diffusion,
     const float decayTime, const float frequency)
 {
+    constexpr float sqrt1_2{0.70710678118654752440f/*1.0f/std::sqrt(2.0f)*/};
+
     /* Calculate the all-pass feed-back/forward coefficient. */
-    VecAp.Coeff = diffusion*diffusion * std::sqrt(0.5f);
+    VecAp.Coeff = diffusion*diffusion * sqrt1_2;
 
     for(size_t i{0u};i < NUM_LINES;i++)
     {
@@ -858,7 +863,8 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
     DensityGain[1] = CalcDensityGain(CalcDecayCoeff(length, decayTimeWeighted));
 
     /* Calculate the all-pass feed-back/forward coefficient. */
-    VecAp.Coeff = diffusion*diffusion * std::sqrt(0.5f);
+    constexpr float sqrt1_2{0.70710678118654752440f/*1.0f/std::sqrt(2.0f)*/};
+    VecAp.Coeff = diffusion*diffusion * sqrt1_2;
 
     for(size_t i{0u};i < NUM_LINES;i++)
     {
@@ -917,7 +923,7 @@ void ReverbState::updateDelayLine(const float earlyDelay, const float lateDelay,
  */
 alu::Matrix GetTransformFromVector(const float *vec)
 {
-    constexpr float sqrt_3{1.73205080756887719318f};
+    constexpr float sqrt3{1.73205080756887719318f};
 
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
@@ -930,9 +936,9 @@ alu::Matrix GetTransformFromVector(const float *vec)
     float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
-        norm[0] = vec[0] / mag * -sqrt_3;
-        norm[1] = vec[1] / mag * sqrt_3;
-        norm[2] = vec[2] / mag * sqrt_3;
+        norm[0] = vec[0] / mag * -sqrt3;
+        norm[1] = vec[1] / mag * sqrt3;
+        norm[2] = vec[2] / mag * sqrt3;
         mag = 1.0f;
     }
     else
@@ -941,9 +947,9 @@ alu::Matrix GetTransformFromVector(const float *vec)
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] = vec[0] * -sqrt_3;
-        norm[1] = vec[1] * sqrt_3;
-        norm[2] = vec[2] * sqrt_3;
+        norm[0] = vec[0] * -sqrt3;
+        norm[1] = vec[1] * sqrt3;
+        norm[2] = vec[2] * sqrt3;
     }
 
     return alu::Matrix{

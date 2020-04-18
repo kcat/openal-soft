@@ -65,6 +65,9 @@
 /* Define if we have the OpenSL backend */
 #cmakedefine HAVE_OPENSL
 
+/* Define if we have the Oboe backend */
+#cmakedefine HAVE_OBOE
+
 /* Define if we have the Wave Writer backend */
 #cmakedefine HAVE_WAVE
 

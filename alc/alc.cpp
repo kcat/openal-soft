@@ -116,6 +116,9 @@
 #ifdef HAVE_OPENSL
 #include "backends/opensl.h"
 #endif
+#ifdef HAVE_OBOE
+#include "backends/oboe.h"
+#endif
 #ifdef HAVE_SOLARIS
 #include "backends/solaris.h"
 #endif
@@ -172,6 +175,9 @@ BackendInfo BackendList[] = {
 #endif
 #ifdef HAVE_COREAUDIO
     { "core", CoreAudioBackendFactory::getFactory },
+#endif
+#ifdef HAVE_OBOE
+    { "oboe", OboeBackendFactory::getFactory },
 #endif
 #ifdef HAVE_OPENSL
     { "opensl", OSLBackendFactory::getFactory },

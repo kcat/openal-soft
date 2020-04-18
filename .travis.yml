@@ -65,4 +65,4 @@ script:
         -DALSOFT_EMBED_HRTF_DATA=YES \
         .
     fi
-  - make -j2
+  - cmake --build . --clean-first

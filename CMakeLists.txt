@@ -993,7 +993,17 @@ set(OBOE_TARGET )
 if(ANDROID)
     set(OBOE_SOURCE "" CACHE STRING "Source directory for Oboe.")
     if(OBOE_SOURCE)
+        # Force Oboe to build with hidden symbols. Don't want to be exporting
+        # them from OpenAL.
+        set(OLD_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+        check_cxx_compiler_flag(-fvisibility=hidden HAVE_VISIBILITY_HIDDEN_SWITCH)
+        if(HAVE_VISIBILITY_HIDDEN_SWITCH)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+        endif()
         add_subdirectory(${OBOE_SOURCE} ./oboe)
+        set(CMAKE_CXX_FLAGS ${OLD_CXX_FLAGS})
+        unset(OLD_CXX_FLAGS)
+
         set(OBOE_TARGET oboe)
     else()
         find_package(Oboe)

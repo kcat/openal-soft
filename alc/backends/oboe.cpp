@@ -62,13 +62,12 @@ void OboePlayback::open(const ALCchar *name)
     else if(std::strcmp(name, device_name) != 0)
         throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
-    oboe::AudioStreamBuilder builder;
-    builder.setDirection(oboe::Direction::Output);
-    builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
-
-    oboe::Result result{builder.openManagedStream(mStream)};
+    /* Open a basic output stream, just to ensure it can work. */
+    oboe::Result result{oboe::AudioStreamBuilder{}.setDirection(oboe::Direction::Output)
+        ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
+        ->openManagedStream(mStream)};
     if(result != oboe::Result::OK)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create stream. Error: %s",
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create stream: %s",
             oboe::convertToText(result)};
 }
 
@@ -133,6 +132,7 @@ bool OboePlayback::reset()
     if(result != oboe::Result::OK)
         throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to create stream: %s",
             oboe::convertToText(result)};
+    TRACE("Got stream with properties:\n%s", oboe::convertToText(mStream.get()));
 
     switch(mStream->getChannelCount())
     {

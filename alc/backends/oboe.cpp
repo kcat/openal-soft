@@ -74,14 +74,15 @@ void OboePlayback::open(const ALCchar *name)
 
 bool OboePlayback::reset()
 {
-    oboe::AudioFormat format{oboe::AudioFormat::Unspecified};
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output);
     builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
-    /* Let Oboe convert sample rate as needed. What is medium? Is it better to
-     * use Low or High? What am I picking here?
+    /* Don't let Oboe convert. We should be able to handle anything it gives
+     * back.
      */
-    builder.setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium);
+    builder.setSampleRateConversionQuality(oboe::SampleRateConversionQuality::None);
+    builder.setChannelConversionAllowed(false);
+    builder.setFormatConversionAllowed(false);
     builder.setCallback(this);
 
     if(mDevice->Flags.get<FrequencyRequest>())
@@ -92,10 +93,12 @@ bool OboePlayback::reset()
          * other counts may be inferred as.
          */
         builder.setChannelCount((mDevice->FmtChans==DevFmtMono) ? oboe::ChannelCount::Mono
-            : oboe::ChannelCount::Stereo);
+            : (mDevice->FmtChans==DevFmtStereo) ? oboe::ChannelCount::Stereo
+            : oboe::ChannelCount::Unspecified);
     }
     if(mDevice->Flags.get<SampleTypeRequest>())
     {
+        oboe::AudioFormat format{oboe::AudioFormat::Unspecified};
         switch(mDevice->FmtType)
         {
         case DevFmtByte:
@@ -114,20 +117,17 @@ bool OboePlayback::reset()
     }
 
     oboe::Result result{builder.openManagedStream(mStream)};
-    if(result == oboe::Result::ErrorInvalidFormat && format == oboe::AudioFormat::Float)
+    /* If the format failed, try asking for the defaults. */
+    while(result == oboe::Result::ErrorInvalidFormat)
     {
-        /* If the format failed with float samples, try int16. */
-        builder.setFormat(oboe::AudioFormat::I16);
-        result = builder.openManagedStream(mStream);
-    }
-    if(result == oboe::Result::ErrorInvalidFormat)
-    {
-        /* If the format still fails, let the system pick a sample rate,
-         * channel count and sample type for us.
-         */
-        builder.setSampleRate(oboe::kUnspecified);
-        builder.setChannelCount(oboe::ChannelCount::Unspecified);
-        builder.setFormat(oboe::AudioFormat::Unspecified);
+        if(builder.getFormat() != oboe::AudioFormat::Unspecified)
+            builder.setFormat(oboe::AudioFormat::Unspecified);
+        else if(builder.getSampleRate() != oboe::kUnspecified)
+            builder.setSampleRate(oboe::kUnspecified);
+        else if(builder.getChannelCount() != oboe::ChannelCount::Unspecified)
+            builder.setChannelCount(oboe::ChannelCount::Unspecified);
+        else
+            break;
         result = builder.openManagedStream(mStream);
     }
     if(result != oboe::Result::OK)
@@ -179,13 +179,15 @@ bool OboePlayback::reset()
         break;
     case oboe::AudioFormat::Unspecified:
     case oboe::AudioFormat::Invalid:
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Got unhandled sample type: %d",
-            mStream->getFormat()};
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Got unhandled sample type: %s",
+            oboe::convertToText(mStream->getFormat())};
     }
     mDevice->Frequency = static_cast<uint32_t>(mStream->getSampleRate());
 
-    /* Ensure the period size is no less than 10ms. It's possible for FramesPerBurst to be 0
+    /* Ensure the period size is no less than 10ms. It's possible for FramesPerCallback to be 0
      * indicating variable updates, but OpenAL should have a reasonable minimum update size set.
+     * FramesPerBurst may not necessarily be correct, but hopefully it can act as a minimum
+     * update size.
      */
     mDevice->UpdateSize = maxu(mDevice->Frequency / 100,
         static_cast<uint32_t>(mStream->getFramesPerBurst()));

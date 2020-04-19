@@ -49,21 +49,21 @@ include(CheckStructHasMember)
 include(GNUInstallDirs)
 
 
-OPTION(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
+option(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
-OPTION(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
+option(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
 
-OPTION(ALSOFT_UTILS          "Build and install utility programs"         ON)
-OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
+option(ALSOFT_UTILS "Build utility programs"  ON)
+option(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
-OPTION(ALSOFT_EXAMPLES  "Build example programs"  ON)
+option(ALSOFT_EXAMPLES  "Build example programs"  ON)
 
-OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
-OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
-OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ON)
-OPTION(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)" ON)
-OPTION(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
-OPTION(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
+option(ALSOFT_INSTALL_CONFIG "Install alsoft.conf sample configuration file" ON)
+option(ALSOFT_INSTALL_HRTF_DEFS "Install HRTF definition files" ON)
+option(ALSOFT_INSTALL_AMBDEC_PRESETS "Install AmbDec preset files" ON)
+option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)" ON)
+option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
+option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -72,6 +72,15 @@ endif()
 
 if(DEFINED LIB_SUFFIX)
     message(WARNING "LIB_SUFFIX is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
+endif()
+if(DEFINED ALSOFT_CONFIG)
+    message(WARNING "ALSOFT_CONFIG is deprecated. Use ALSOFT_INSTALL_CONFIG instead")
+endif()
+if(DEFINED ALSOFT_HRTF_DEFS)
+    message(WARNING "ALSOFT_HRTF_DEFS is deprecated. Use ALSOFT_INSTALL_HRTF_DEFS instead")
+endif()
+if(DEFINED ALSOFT_AMBDEC_PRESETS)
+    message(WARNING "ALSOFT_AMBDEC_PRESETS is deprecated. Use ALSOFT_INSTALL_AMBDEC_PRESETS instead")
 endif()
 
 
@@ -1303,7 +1312,7 @@ if(ALSOFT_EMBED_HRTF_DATA)
 endif()
 
 # Install alsoft.conf configuration file
-IF(ALSOFT_CONFIG)
+IF(ALSOFT_INSTALL_CONFIG)
     INSTALL(FILES alsoftrc.sample
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
     MESSAGE(STATUS "Installing sample configuration")
@@ -1311,7 +1320,7 @@ IF(ALSOFT_CONFIG)
 ENDIF()
 
 # Install HRTF definitions
-IF(ALSOFT_HRTF_DEFS)
+IF(ALSOFT_INSTALL_HRTF_DEFS)
     INSTALL(FILES "hrtf/Default HRTF.mhr"
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/hrtf)
     MESSAGE(STATUS "Installing HRTF definitions")
@@ -1319,7 +1328,7 @@ IF(ALSOFT_HRTF_DEFS)
 ENDIF()
 
 # Install AmbDec presets
-IF(ALSOFT_AMBDEC_PRESETS)
+IF(ALSOFT_INSTALL_AMBDEC_PRESETS)
     INSTALL(FILES
         presets/3D7.1.ambdec
         presets/hexagon.ambdec

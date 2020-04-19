@@ -2,8 +2,8 @@
 # Once done this will define
 #
 #  SNDFILE_FOUND - system has SndFile
-#  SNDFILE_INCLUDE_DIRS - the SndFile include directory
-#  SNDFILE_LIBRARIES - Link these to use SndFile
+#  SndFile::SndFile - the SndFile target
+#
 
 find_path(SNDFILE_INCLUDE_DIR NAMES sndfile.h)
 
@@ -15,8 +15,10 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SndFile DEFAULT_MSG SNDFILE_LIBRARY SNDFILE_INCLUDE_DIR)
 
 if(SNDFILE_FOUND)
-    set(SNDFILE_INCLUDE_DIRS ${SNDFILE_INCLUDE_DIR})
-    set(SNDFILE_LIBRARIES ${SNDFILE_LIBRARY})
+    add_library(SndFile::SndFile UNKNOWN IMPORTED)
+    set_target_properties(SndFile::SndFile PROPERTIES
+        IMPORTED_LOCATION ${SNDFILE_LIBRARY}
+        INTERFACE_INCLUDE_DIRECTORIES ${SNDFILE_INCLUDE_DIR})
 endif()
 
 # show the SNDFILE_INCLUDE_DIR and SNDFILE_LIBRARY variables only in the advanced view

@@ -1417,60 +1417,50 @@ TARGET_INCLUDE_DIRECTORIES(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
 TARGET_COMPILE_OPTIONS(ex-common PUBLIC ${C_FLAGS})
 TARGET_LINK_LIBRARIES(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
 
-IF(ALSOFT_EXAMPLES)
-    ADD_EXECUTABLE(altonegen examples/altonegen.c)
-    TARGET_COMPILE_DEFINITIONS(altonegen PRIVATE ${CPP_DEFS})
-    TARGET_INCLUDE_DIRECTORIES(altonegen PRIVATE ${OpenAL_SOURCE_DIR}/common)
-    TARGET_COMPILE_OPTIONS(altonegen PRIVATE ${C_FLAGS})
-    TARGET_LINK_LIBRARIES(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common)
+if(ALSOFT_EXAMPLES)
+    add_executable(altonegen examples/altonegen.c)
+    target_link_libraries(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common)
 
-    ADD_EXECUTABLE(alrecord examples/alrecord.c)
-    TARGET_LINK_LIBRARIES(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
+    add_executable(alrecord examples/alrecord.c)
+    target_link_libraries(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
 
     if(ALSOFT_INSTALL_EXAMPLES)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord)
     endif()
 
-    MESSAGE(STATUS "Building example programs")
+    message(STATUS "Building example programs")
 
-    IF(SNDFILE_FOUND)
-        ADD_EXECUTABLE(alplay examples/alplay.c)
-        TARGET_INCLUDE_DIRECTORIES(alplay PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(alplay PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+    if(SNDFILE_FOUND)
+        add_executable(alplay examples/alplay.c)
+        target_link_libraries(alplay PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
 
-        ADD_EXECUTABLE(alstream examples/alstream.c)
-        TARGET_INCLUDE_DIRECTORIES(alstream PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(alstream PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+        add_executable(alstream examples/alstream.c)
+        target_link_libraries(alstream PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
 
-        ADD_EXECUTABLE(alreverb examples/alreverb.c)
-        TARGET_INCLUDE_DIRECTORIES(alreverb PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(alreverb PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+        add_executable(alreverb examples/alreverb.c)
+        target_link_libraries(alreverb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
 
-        ADD_EXECUTABLE(almultireverb examples/almultireverb.c)
-        TARGET_INCLUDE_DIRECTORIES(almultireverb PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(almultireverb
-            PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common ${MATH_LIB})
+        add_executable(almultireverb examples/almultireverb.c)
+        target_link_libraries(almultireverb
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB})
 
-        ADD_EXECUTABLE(allatency examples/allatency.c)
-        TARGET_INCLUDE_DIRECTORIES(allatency PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(allatency PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+        add_executable(allatency examples/allatency.c)
+        target_link_libraries(allatency PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
 
-        ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
-        TARGET_INCLUDE_DIRECTORIES(alhrtf PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(alhrtf
-            PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common ${MATH_LIB})
+        add_executable(alhrtf examples/alhrtf.c)
+        target_link_libraries(alhrtf
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB})
 
-        ADD_EXECUTABLE(alstreamcb examples/alstreamcb.cpp)
-        TARGET_INCLUDE_DIRECTORIES(alstreamcb PRIVATE ${SNDFILE_INCLUDE_DIRS})
-        TARGET_LINK_LIBRARIES(alstreamcb PRIVATE ${LINKER_FLAGS} ${SNDFILE_LIBRARIES} ex-common)
+        add_executable(alstreamcb examples/alstreamcb.cpp)
+        target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
                 alhrtf)
         endif()
 
-        MESSAGE(STATUS "Building SndFile example programs")
-    ENDIF()
+        message(STATUS "Building SndFile example programs")
+    endif()
 
     IF(SDL2_FOUND)
         ADD_EXECUTABLE(alloopback examples/alloopback.c)

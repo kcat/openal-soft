@@ -1282,14 +1282,8 @@ install(EXPORT OpenAL
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
     NAMESPACE OpenAL::
     FILE OpenALConfig.cmake)
-install(FILES
-    include/AL/al.h
-    include/AL/alc.h
-    include/AL/alext.h
-    include/AL/efx.h
-    include/AL/efx-creative.h
-    include/AL/efx-presets.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+install(DIRECTORY include/AL
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 if(TARGET soft_oal)
@@ -1321,35 +1315,28 @@ if(ALSOFT_EMBED_HRTF_DATA)
 endif()
 
 # Install alsoft.conf configuration file
-IF(ALSOFT_INSTALL_CONFIG)
-    INSTALL(FILES alsoftrc.sample
+if(ALSOFT_INSTALL_CONFIG)
+    install(FILES alsoftrc.sample
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
-    MESSAGE(STATUS "Installing sample configuration")
-    MESSAGE(STATUS "")
-ENDIF()
+    message(STATUS "Installing sample configuration")
+    message(STATUS "")
+endif()
 
 # Install HRTF definitions
-IF(ALSOFT_INSTALL_HRTF_DEFS)
-    INSTALL(FILES "hrtf/Default HRTF.mhr"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/hrtf)
-    MESSAGE(STATUS "Installing HRTF definitions")
-    MESSAGE(STATUS "")
-ENDIF()
+if(ALSOFT_INSTALL_HRTF_DEFS)
+    install(DIRECTORY hrtf
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
+    message(STATUS "Installing HRTF definitions")
+    message(STATUS "")
+endif()
 
 # Install AmbDec presets
-IF(ALSOFT_INSTALL_AMBDEC_PRESETS)
-    INSTALL(FILES
-        presets/3D7.1.ambdec
-        presets/hexagon.ambdec
-        presets/itu5.1.ambdec
-        presets/itu5.1-nocenter.ambdec
-        presets/rectangle.ambdec
-        presets/square.ambdec
-        presets/presets.txt
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/presets)
-    MESSAGE(STATUS "Installing AmbDec presets")
-    MESSAGE(STATUS "")
-ENDIF()
+if(ALSOFT_INSTALL_AMBDEC_PRESETS)
+    install(DIRECTORY presets
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
+    message(STATUS "Installing AmbDec presets")
+    message(STATUS "")
+endif()
 
 set(EXTRA_INSTALLS )
 if(ALSOFT_UTILS)

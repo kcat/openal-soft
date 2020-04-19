@@ -450,11 +450,6 @@ IF(NOT WIN32)
         SET(LINKER_FLAGS ${LINKER_FLAGS} -pthread)
     ENDIF()
 
-    CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
-    IF(HAVE_LIBPTHREAD)
-        SET(EXTRA_LIBS pthread ${EXTRA_LIBS})
-    ENDIF()
-
     CHECK_SYMBOL_EXISTS(pthread_setschedparam pthread.h HAVE_PTHREAD_SETSCHEDPARAM)
 
     # Some systems need pthread_np.h to get pthread_setname_np

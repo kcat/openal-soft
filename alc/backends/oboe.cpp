@@ -36,8 +36,21 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
     int32_t numFrames)
 {
     assert(numFrames > 0);
+    const int32_t numChannels{oboeStream->getChannelCount()};
+
+    if UNLIKELY(numChannels > 2 && mDevice->FmtChans == DevFmtStereo)
+    {
+        /* If the device is only mixing stereo but there's more than two
+         * output channels, there are unused channels that need to be silenced.
+         */
+        if(mStream->getFormat() == oboe::AudioFormat::Float)
+            memset(audioData, 0, static_cast<uint32_t>(numFrames*numChannels)*sizeof(float));
+        else
+            memset(audioData, 0, static_cast<uint32_t>(numFrames*numChannels)*sizeof(int16_t));
+    }
+
     aluMixData(mDevice, audioData, static_cast<uint32_t>(numFrames),
-        static_cast<uint32_t>(oboeStream->getChannelCount()));
+        static_cast<uint32_t>(numChannels));
     return oboe::DataCallbackResult::Continue;
 }
 
@@ -61,21 +74,28 @@ void OboePlayback::open(const ALCchar *name)
 
 bool OboePlayback::reset()
 {
-    mStream = nullptr;
-
+    oboe::AudioFormat format{oboe::AudioFormat::Unspecified};
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output);
     builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+    /* Let Oboe convert sample rate as needed. What is medium? Is it better to
+     * use Low or High? What am I picking here?
+     */
+    builder.setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium);
     builder.setCallback(this);
 
     if(mDevice->Flags.get<FrequencyRequest>())
         builder.setSampleRate(static_cast<int32_t>(mDevice->Frequency));
     if(mDevice->Flags.get<ChannelsRequest>())
+    {
+        /* Only use mono or stereo at user request. There's no telling what
+         * other counts may be inferred as.
+         */
         builder.setChannelCount((mDevice->FmtChans==DevFmtMono) ? oboe::ChannelCount::Mono
             : oboe::ChannelCount::Stereo);
+    }
     if(mDevice->Flags.get<SampleTypeRequest>())
     {
-        oboe::AudioFormat format{oboe::AudioFormat::Unspecified};
         switch(mDevice->FmtType)
         {
         case DevFmtByte:
@@ -94,10 +114,19 @@ bool OboePlayback::reset()
     }
 
     oboe::Result result{builder.openManagedStream(mStream)};
+    if(result == oboe::Result::ErrorInvalidFormat && format == oboe::AudioFormat::Float)
+    {
+        /* If the format failed with float samples, try int16. */
+        builder.setFormat(oboe::AudioFormat::I16);
+        result = builder.openManagedStream(mStream);
+    }
     if(result == oboe::Result::ErrorInvalidFormat)
     {
+        /* If the format still fails, let the system pick a sample rate,
+         * channel count and sample type for us.
+         */
         builder.setSampleRate(oboe::kUnspecified);
-        builder.setChannelCount(oboe::ChannelCount::Stereo);
+        builder.setChannelCount(oboe::ChannelCount::Unspecified);
         builder.setFormat(oboe::AudioFormat::Unspecified);
         result = builder.openManagedStream(mStream);
     }
@@ -113,7 +142,9 @@ bool OboePlayback::reset()
     case oboe::ChannelCount::Stereo:
         mDevice->FmtChans = DevFmtStereo;
         break;
-    /* Other potential configurations. Assume WFX channel order. */
+    /* Other potential configurations. Could be wrong, but better than failing.
+     * Assume WFX channel order.
+     */
     case 4:
         mDevice->FmtChans = DevFmtQuad;
         break;
@@ -127,8 +158,14 @@ bool OboePlayback::reset()
         mDevice->FmtChans = DevFmtX71;
         break;
     default:
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Got unhandled channel count: %d",
-            mStream->getChannelCount()};
+        if(mStream->getChannelCount() < 1)
+            throw al::backend_exception{ALC_INVALID_DEVICE, "Got unhandled channel count: %d",
+                mStream->getChannelCount()};
+        /* Assume first two channels are front left/right. We can do a stereo
+         * mix and keep the other channels silent.
+         */
+        mDevice->FmtChans = DevFmtStereo;
+        break;
     }
     SetDefaultWFXChannelOrder(mDevice);
 

@@ -61,7 +61,7 @@ BEGIN
             VALUE "FileDescription", "Router library"
             VALUE "FileVersion", ALSOFT_VERSION
             VALUE "InternalName", "OpenAL32.dll"
-            VALUE "LegalCopyright", "GNU LGPL - Version 2, June 1991"
+            VALUE "LegalCopyright", "GNU LGPL - Version 3, June 2007"
             VALUE "OriginalFilename", "OpenAL32.dll"
             VALUE "ProductName", "OpenAL Soft"
             VALUE "ProductVersion", ALSOFT_VERSION

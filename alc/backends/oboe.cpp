@@ -69,6 +69,8 @@ void OboePlayback::open(const ALCchar *name)
     if(result != oboe::Result::OK)
         throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create stream: %s",
             oboe::convertToText(result)};
+
+    mDevice->DeviceName = name;
 }
 
 bool OboePlayback::reset()

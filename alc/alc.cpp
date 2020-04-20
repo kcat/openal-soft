@@ -1760,7 +1760,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     HrtfRequestMode hrtf_userreq{Hrtf_Default};
     HrtfRequestMode hrtf_appreq{Hrtf_Default};
     ALCenum gainLimiter{device->LimiterState};
-    const ALCuint old_sends{device->NumAuxSends};
     ALCuint new_sends{device->NumAuxSends};
     DevFmtChannels oldChans;
     DevFmtType oldType;
@@ -1786,7 +1785,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         ALuint numMono{device->NumMonoSources};
         ALuint numStereo{device->NumStereoSources};
-        ALuint numSends{old_sends};
+        ALuint numSends{device->NumAuxSends};
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
@@ -2256,6 +2255,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         slotlock.unlock();
 
+        const ALuint num_sends{device->NumAuxSends};
         std::unique_lock<std::mutex> srclock{context->mSourceLock};
         for(auto &sublist : context->mSourceList)
         {
@@ -2277,7 +2277,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     send.GainLF = 1.0f;
                     send.LFReference = HIGHPASSFREQREF;
                 };
-                auto send_begin = source->Send.begin()+static_cast<ptrdiff_t>(device->NumAuxSends);
+                auto send_begin = source->Send.begin() + static_cast<ptrdiff_t>(num_sends);
                 std::for_each(send_begin, source->Send.end(), clear_send);
 
                 source->PropsClean.clear(std::memory_order_release);
@@ -2297,25 +2297,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         auto voicelist = context->getVoicesSpan();
-        if(device->NumAuxSends < old_sends)
-        {
-            const ALuint num_sends{device->NumAuxSends};
-            /* Clear extraneous property set sends. */
-            for(Voice *voice : voicelist)
-            {
-                std::fill(std::begin(voice->mProps.Send)+num_sends, std::end(voice->mProps.Send),
-                    VoiceProps::SendData{});
-
-                std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(), Voice::TargetData{});
-                for(auto &chandata : voice->mChans)
-                {
-                    std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
-                        SendParams{});
-                }
-            }
-        }
         for(Voice *voice : voicelist)
         {
+            /* Clear extraneous property set sends. */
+            std::fill(std::begin(voice->mProps.Send)+num_sends, std::end(voice->mProps.Send),
+                VoiceProps::SendData{});
+
+            std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(), Voice::TargetData{});
+            for(auto &chandata : voice->mChans)
+            {
+                std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
+                    SendParams{});
+            }
+
             delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
 
             /* Force the voice to stopped if it was stopping. */
@@ -2344,7 +2338,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     chandata.mAmbiScale = scales[*(OrderFromChan++)];
                     chandata.mAmbiSplitter = splitter;
                     chandata.mDryParams = DirectParams{};
-                    std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+                    std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }
 
                 voice->mFlags |= VOICE_IS_AMBISONIC;
@@ -2356,7 +2350,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 {
                     chandata.mPrevSamples.fill(0.0f);
                     chandata.mDryParams = DirectParams{};
-                    std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+                    std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }
 
                 voice->mFlags &= ~VOICE_IS_AMBISONIC;

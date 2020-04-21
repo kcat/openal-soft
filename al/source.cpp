@@ -738,7 +738,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
 
             voice->mPendingChange.store(true, std::memory_order_relaxed);
             vchg->mVoice = voice;
-            vchg->mSourceID = id;
+            vchg->mSourceID = source->id;
             vchg->mState = AL_STOPPED;
 
             SendVoiceChanges(context, vchg);

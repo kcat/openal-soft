@@ -99,13 +99,12 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
     /* Convert echo spread (where 0 = center, +/-1 = sides) to angle. */
     const float angle{std::asin(props->Echo.Spread)};
 
-    float coeffs[2][MAX_AMBI_CHANNELS];
-    CalcAngleCoeffs(-angle, 0.0f, 0.0f, coeffs[0]);
-    CalcAngleCoeffs( angle, 0.0f, 0.0f, coeffs[1]);
+    const auto coeffs0 = CalcAngleCoeffs(-angle, 0.0f, 0.0f);
+    const auto coeffs1 = CalcAngleCoeffs( angle, 0.0f, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs[0], slot->Params.Gain, mGains[0].Target);
-    ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
+    ComputePanGains(target.Main, coeffs0.data(), slot->Params.Gain, mGains[0].Target);
+    ComputePanGains(target.Main, coeffs1.data(), slot->Params.Gain, mGains[1].Target);
 }
 
 void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

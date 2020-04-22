@@ -82,11 +82,10 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
     mBandpass.setParamsFromBandwidth(BiquadType::BandPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
-    float coeffs[MAX_AMBI_CHANNELS];
-    CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
+    const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
+    ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
 void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

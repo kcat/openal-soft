@@ -882,9 +882,11 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
 }
 
 
-void CalcAmbiCoeffs(const float y, const float z, const float x, const float spread,
-    const al::span<float,MAX_AMBI_CHANNELS> coeffs)
+std::array<float,MAX_AMBI_CHANNELS> CalcAmbiCoeffs(const float y, const float z, const float x,
+    const float spread)
 {
+    std::array<float,MAX_AMBI_CHANNELS> coeffs;
+
     /* Zeroth-order */
     coeffs[0]  = 1.0f; /* ACN 0 = 1 */
     /* First-order */
@@ -973,6 +975,8 @@ void CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
         coeffs[14] *= ZH3_norm;
         coeffs[15] *= ZH3_norm;
     }
+
+    return coeffs;
 }
 
 void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,

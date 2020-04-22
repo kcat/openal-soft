@@ -834,11 +834,11 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mFlags |= VOICE_HAS_NFC;
             }
 
-            float coeffs[MAX_AMBI_CHANNELS];
-            if(Device->mRenderMode != StereoPair)
-                CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
-            else
+            auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
             {
+                if(mode != StereoPair)
+                    return CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
+
                 /* Clamp Y, in case rounding errors caused it to end up outside
                  * of -1...+1.
                  */
@@ -850,17 +850,18 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * being moved to +/-90 degrees for direct right and left
                  * speaker responses.
                  */
-                CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
-            }
+                return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread);
+            };
+            const auto coeffs = calc_coeffs(Device->mRenderMode);
 
             /* NOTE: W needs to be scaled according to channel scaling. */
             const float scale0{GetAmbiScales(voice->mAmbiScaling)[0]};
-            ComputePanGains(&Device->Dry, coeffs, DryGain.Base*scale0,
+            ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base*scale0,
                 voice->mChans[0].mDryParams.Gains.Target);
             for(ALuint i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base*scale0,
+                    ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scale0,
                         voice->mChans[0].mWetParams[i].Gains.Target);
             }
         }
@@ -924,17 +925,17 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 const float scale{scales[acn]};
                 auto in = shrot.cbegin() + offset;
 
-                float coeffs[MAX_AMBI_CHANNELS]{};
+                std::array<float,MAX_AMBI_CHANNELS> coeffs{};
                 for(size_t x{0};x < tocopy;++x)
                     coeffs[offset+x] = in[x][acn] * scale;
 
-                ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
+                ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -974,13 +975,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          */
         for(size_t c{0};c < num_channels;c++)
         {
-            float coeffs[MAX_AMBI_CHANNELS];
-            CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
+            const auto coeffs = CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f);
 
             for(ALuint i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
+                    ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                         voice->mChans[c].mWetParams[i].Gains.Target);
             }
         }
@@ -1016,8 +1016,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Calculate the directional coefficients once, which apply to all
              * input channels of the source sends.
              */
-            float coeffs[MAX_AMBI_CHANNELS];
-            CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
+            const auto coeffs = CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
 
             for(size_t c{0};c < num_channels;c++)
             {
@@ -1027,7 +1026,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * downmix_gain,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1054,13 +1053,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base;
 
                 /* Normal panning for auxiliary sends. */
-                float coeffs[MAX_AMBI_CHANNELS];
-                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread, coeffs);
+                const auto coeffs = CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread);
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1093,15 +1091,15 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Calculate the directional coefficients once, which apply to all
              * input channels.
              */
-            float coeffs[MAX_AMBI_CHANNELS];
-            if(Device->mRenderMode != StereoPair)
-                CalcDirectionCoeffs({xpos, ypos, zpos}, Spread, coeffs);
-            else
+            auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
             {
+                if(mode != StereoPair)
+                    return CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
                 const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
                 const float az{std::atan2(xpos, -zpos)};
-                CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread, coeffs);
-            }
+                return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread);
+            };
+            const auto coeffs = calc_coeffs(Device->mRenderMode);
 
             for(size_t c{0};c < num_channels;c++)
             {
@@ -1117,12 +1115,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     continue;
                 }
 
-                ComputePanGains(&Device->Dry, coeffs, DryGain.Base * downmix_gain,
+                ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base * downmix_gain,
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * downmix_gain,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1155,19 +1153,16 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     continue;
                 }
 
-                float coeffs[MAX_AMBI_CHANNELS];
-                CalcAngleCoeffs(
-                    (Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(chans[c].angle, 3.0f)
-                                                      : chans[c].angle,
-                    chans[c].elevation, Spread, coeffs
-                );
+                const auto coeffs = CalcAngleCoeffs((Device->mRenderMode == StereoPair)
+                    ? ScaleAzimuthFront(chans[c].angle, 3.0f) : chans[c].angle,
+                    chans[c].elevation, Spread);
 
-                ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
+                ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
                     if(const ALeffectslot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }

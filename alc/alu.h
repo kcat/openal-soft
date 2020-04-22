@@ -87,8 +87,8 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
  * The components are ordered such that OpenAL's X, Y, and Z are the first,
  * second, and third parameters respectively -- simply negate X and Z.
  */
-void CalcAmbiCoeffs(const float y, const float z, const float x, const float spread,
-    const al::span<float,MAX_AMBI_CHANNELS> coeffs);
+std::array<float,MAX_AMBI_CHANNELS> CalcAmbiCoeffs(const float y, const float z, const float x,
+    const float spread);
 
 /**
  * CalcDirectionCoeffs
@@ -97,11 +97,11 @@ void CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
  * vector must be normalized (unit length), and the spread is the angular width
  * of the sound (0...tau).
  */
-inline void CalcDirectionCoeffs(const float (&dir)[3], const float spread,
-    const al::span<float,MAX_AMBI_CHANNELS> coeffs)
+inline std::array<float,MAX_AMBI_CHANNELS> CalcDirectionCoeffs(const float (&dir)[3],
+    const float spread)
 {
     /* Convert from OpenAL coords to Ambisonics. */
-    CalcAmbiCoeffs(-dir[0], dir[1], -dir[2], spread, coeffs);
+    return CalcAmbiCoeffs(-dir[0], dir[1], -dir[2], spread);
 }
 
 /**
@@ -111,14 +111,14 @@ inline void CalcDirectionCoeffs(const float (&dir)[3], const float spread,
  * azimuth and elevation parameters are in radians, going right and up
  * respectively.
  */
-inline void CalcAngleCoeffs(const float azimuth, const float elevation, const float spread,
-    const al::span<float,MAX_AMBI_CHANNELS> coeffs)
+inline std::array<float,MAX_AMBI_CHANNELS> CalcAngleCoeffs(const float azimuth,
+    const float elevation, const float spread)
 {
     const float x{-std::sin(azimuth) * std::cos(elevation)};
     const float y{ std::sin(elevation)};
     const float z{ std::cos(azimuth) * std::cos(elevation)};
 
-    CalcAmbiCoeffs(x, y, z, spread, coeffs);
+    return CalcAmbiCoeffs(x, y, z, spread);
 }
 
 

@@ -110,12 +110,12 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
 
     switch(props->Chorus.Waveform)
     {
-        case AL_CHORUS_WAVEFORM_TRIANGLE:
-            mWaveform = WaveForm::Triangle;
-            break;
-        case AL_CHORUS_WAVEFORM_SINUSOID:
-            mWaveform = WaveForm::Sinusoid;
-            break;
+    case AL_CHORUS_WAVEFORM_TRIANGLE:
+        mWaveform = WaveForm::Triangle;
+        break;
+    case AL_CHORUS_WAVEFORM_SINUSOID:
+        mWaveform = WaveForm::Sinusoid;
+        break;
     }
 
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
@@ -131,13 +131,12 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     mFeedback = props->Chorus.Feedback;
 
     /* Gains for left and right sides */
-    float coeffs[2][MAX_AMBI_CHANNELS];
-    CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f, coeffs[0]);
-    CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f, coeffs[1]);
+    const auto lcoeffs = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f);
+    const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs[0], Slot->Params.Gain, mGains[0].Target);
-    ComputePanGains(target.Main, coeffs[1], Slot->Params.Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs.data(), Slot->Params.Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs.data(), Slot->Params.Gain, mGains[1].Target);
 
     float rate{props->Chorus.Rate};
     if(!(rate > 0.0f))

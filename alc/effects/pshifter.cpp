@@ -130,11 +130,10 @@ void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const Ef
     mPitchShiftI = fastf2u(pitch*FRACTIONONE);
     mPitchShift  = mPitchShiftI * double{1.0/FRACTIONONE};
 
-    float coeffs[MAX_AMBI_CHANNELS];
-    CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f, coeffs);
+    const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
+    ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mTargetGains);
 }
 
 void PshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

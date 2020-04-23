@@ -1922,10 +1922,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 freq = maxu(freq, MIN_OUTPUT_RATE);
 
-                device->UpdateSize = (device->UpdateSize*freq + device->Frequency/2) /
-                    device->Frequency;
-                device->BufferSize = (device->BufferSize*freq + device->Frequency/2) /
-                    device->Frequency;
+                const double scale{static_cast<double>(freq) / device->Frequency};
+                device->UpdateSize = static_cast<ALuint>(device->UpdateSize*scale + 0.5);
+                device->BufferSize = static_cast<ALuint>(device->BufferSize*scale + 0.5);
 
                 device->Frequency = freq;
                 device->Flags.set<FrequencyRequest>();

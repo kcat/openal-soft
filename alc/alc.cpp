@@ -1317,13 +1317,13 @@ ALuint BytesFromDevFmt(DevFmtType type) noexcept
 {
     switch(type)
     {
-    case DevFmtByte: return sizeof(ALCbyte);
-    case DevFmtUByte: return sizeof(ALCubyte);
-    case DevFmtShort: return sizeof(ALCshort);
-    case DevFmtUShort: return sizeof(ALCushort);
-    case DevFmtInt: return sizeof(ALCint);
-    case DevFmtUInt: return sizeof(ALCuint);
-    case DevFmtFloat: return sizeof(ALCfloat);
+    case DevFmtByte: return sizeof(int8_t);
+    case DevFmtUByte: return sizeof(uint8_t);
+    case DevFmtShort: return sizeof(int16_t);
+    case DevFmtUShort: return sizeof(uint16_t);
+    case DevFmtInt: return sizeof(int32_t);
+    case DevFmtUInt: return sizeof(uint32_t);
+    case DevFmtFloat: return sizeof(float);
     }
     return 0;
 }

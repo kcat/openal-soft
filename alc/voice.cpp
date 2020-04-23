@@ -184,7 +184,7 @@ namespace {
 
 /* A quick'n'dirty lookup table to decode a muLaw-encoded byte sample into a
  * signed 16-bit sample */
-constexpr ALshort muLawDecompressionTable[256] = {
+constexpr int16_t muLawDecompressionTable[256] = {
     -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
     -23932,-22908,-21884,-20860,-19836,-18812,-17788,-16764,
     -15996,-15484,-14972,-14460,-13948,-13436,-12924,-12412,
@@ -221,7 +221,7 @@ constexpr ALshort muLawDecompressionTable[256] = {
 
 /* A quick'n'dirty lookup table to decode an aLaw-encoded byte sample into a
  * signed 16-bit sample */
-constexpr ALshort aLawDecompressionTable[256] = {
+constexpr int16_t aLawDecompressionTable[256] = {
      -5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736,
      -7552, -7296, -8064, -7808, -6528, -6272, -7040, -6784,
      -2752, -2624, -3008, -2880, -2240, -2112, -2496, -2368,
@@ -261,35 +261,35 @@ struct FmtTypeTraits { };
 
 template<>
 struct FmtTypeTraits<FmtUByte> {
-    using Type = ALubyte;
+    using Type = uint8_t;
     static constexpr inline float to_float(const Type val) noexcept
     { return val*(1.0f/128.0f) - 1.0f; }
 };
 template<>
 struct FmtTypeTraits<FmtShort> {
-    using Type = ALshort;
+    using Type = int16_t;
     static constexpr inline float to_float(const Type val) noexcept { return val*(1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtFloat> {
-    using Type = ALfloat;
+    using Type = float;
     static constexpr inline float to_float(const Type val) noexcept { return val; }
 };
 template<>
 struct FmtTypeTraits<FmtDouble> {
-    using Type = ALdouble;
+    using Type = double;
     static constexpr inline float to_float(const Type val) noexcept
     { return static_cast<float>(val); }
 };
 template<>
 struct FmtTypeTraits<FmtMulaw> {
-    using Type = ALubyte;
+    using Type = uint8_t;
     static constexpr inline float to_float(const Type val) noexcept
     { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtAlaw> {
-    using Type = ALubyte;
+    using Type = uint8_t;
     static constexpr inline float to_float(const Type val) noexcept
     { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 };

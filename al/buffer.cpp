@@ -116,7 +116,7 @@ void DecodeIMA4Block(int16_t *dst, const al::byte *src, size_t numchans, size_t 
         index[c] = clampi((index[c]^0x8000) - 32768, 0, 88);
         src += 2;
 
-        *(dst++) = static_cast<ALshort>(sample[c]);
+        *(dst++) = static_cast<int16_t>(sample[c]);
     }
 
     for(size_t i{1};i < align;i++)
@@ -142,14 +142,14 @@ void DecodeIMA4Block(int16_t *dst, const al::byte *src, size_t numchans, size_t 
             index[c] += IMA4Index_adjust[nibble];
             index[c] = clampi(index[c], 0, 88);
 
-            *(dst++) = static_cast<ALshort>(sample[c]);
+            *(dst++) = static_cast<int16_t>(sample[c]);
         }
     }
 }
 
 void DecodeMSADPCMBlock(int16_t *dst, const al::byte *src, size_t numchans, size_t align)
 {
-    ALubyte blockpred[MaxAdpcmChannels]{};
+    uint8_t blockpred[MaxAdpcmChannels]{};
     int delta[MaxAdpcmChannels]{};
     int16_t samples[MaxAdpcmChannels][2]{};
 
@@ -211,7 +211,7 @@ void DecodeMSADPCMBlock(int16_t *dst, const al::byte *src, size_t numchans, size
     }
 }
 
-void Convert_ALshort_ALima4(int16_t *dst, const al::byte *src, size_t numchans, size_t len,
+void Convert_int16_ima4(int16_t *dst, const al::byte *src, size_t numchans, size_t len,
     size_t align)
 {
     assert(numchans <= MaxAdpcmChannels);
@@ -226,7 +226,7 @@ void Convert_ALshort_ALima4(int16_t *dst, const al::byte *src, size_t numchans, 
     }
 }
 
-void Convert_ALshort_ALmsadpcm(int16_t *dst, const al::byte *src, size_t numchans, size_t len,
+void Convert_int16_msadpcm(int16_t *dst, const al::byte *src, size_t numchans, size_t len,
     size_t align)
 {
     assert(numchans <= MaxAdpcmChannels);
@@ -246,12 +246,12 @@ ALuint BytesFromUserFmt(UserFmtType type) noexcept
 {
     switch(type)
     {
-    case UserFmtUByte: return sizeof(ALubyte);
-    case UserFmtShort: return sizeof(ALshort);
-    case UserFmtFloat: return sizeof(ALfloat);
-    case UserFmtDouble: return sizeof(ALdouble);
-    case UserFmtMulaw: return sizeof(ALubyte);
-    case UserFmtAlaw: return sizeof(ALubyte);
+    case UserFmtUByte: return sizeof(uint8_t);
+    case UserFmtShort: return sizeof(int16_t);
+    case UserFmtFloat: return sizeof(float);
+    case UserFmtDouble: return sizeof(double);
+    case UserFmtMulaw: return sizeof(uint8_t);
+    case UserFmtAlaw: return sizeof(uint8_t);
     case UserFmtIMA4: break; /* not handled here */
     case UserFmtMSADPCM: break; /* not handled here */
     }
@@ -523,16 +523,16 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     {
         assert(DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_ALshort_ALima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()),
-                SrcData, NumChannels, frames, align);
+            Convert_int16_ima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
+                NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
         assert(DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_ALshort_ALmsadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()),
-                SrcData, NumChannels, frames, align);
+            Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
+                NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else
@@ -1019,10 +1019,10 @@ START_API_FUNC
 
             void *dst = albuf->mData.data() + byteoff;
             if(usrfmt->type == UserFmtIMA4 && albuf->mFmtType == FmtShort)
-                Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
-                    static_cast<const al::byte*>(data), num_chans, samplen, align);
+                Convert_int16_ima4(static_cast<int16_t*>(dst), static_cast<const al::byte*>(data),
+                    num_chans, samplen, align);
             else if(usrfmt->type == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
-                Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
+                Convert_int16_msadpcm(static_cast<int16_t*>(dst),
                     static_cast<const al::byte*>(data), num_chans, samplen, align);
             else
             {
@@ -1581,12 +1581,12 @@ ALuint BytesFromFmt(FmtType type) noexcept
 {
     switch(type)
     {
-    case FmtUByte: return sizeof(ALubyte);
-    case FmtShort: return sizeof(ALshort);
-    case FmtFloat: return sizeof(ALfloat);
-    case FmtDouble: return sizeof(ALdouble);
-    case FmtMulaw: return sizeof(ALubyte);
-    case FmtAlaw: return sizeof(ALubyte);
+    case FmtUByte: return sizeof(uint8_t);
+    case FmtShort: return sizeof(int16_t);
+    case FmtFloat: return sizeof(float);
+    case FmtDouble: return sizeof(double);
+    case FmtMulaw: return sizeof(uint8_t);
+    case FmtAlaw: return sizeof(uint8_t);
     }
     return 0;
 }

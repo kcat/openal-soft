@@ -543,8 +543,7 @@ inline float CalcDelayLengthMult(float density)
 { return maxf(5.0f, std::cbrt(density*DENSITY_SCALE)); }
 
 /* Calculates the delay line metrics and allocates the shared sample buffer
- * for all lines given the sample rate (frequency).  If an allocation failure
- * occurs, it returns AL_FALSE.
+ * for all lines given the sample rate (frequency).
  */
 void ReverbState::allocLines(const float frequency)
 {
@@ -556,7 +555,7 @@ void ReverbState::allocLines(const float frequency)
     /* Multiplier for the maximum density value, i.e. density=1, which is
      * actually the least density...
      */
-    float multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
+    const float multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
@@ -584,7 +583,7 @@ void ReverbState::allocLines(const float frequency)
      * time and depth coefficient, and halfed for the low-to-high frequency
      * swing.
      */
-    const float max_mod_delay{AL_EAXREVERB_MAX_MODULATION_TIME*MODULATION_DEPTH_COEFF / 2.0f};
+    constexpr float max_mod_delay{AL_EAXREVERB_MAX_MODULATION_TIME*MODULATION_DEPTH_COEFF / 2.0f};
 
     /* The late delay lines are calculated from the largest maximum density
      * line length, and the maximum modulation delay. An additional sample is
@@ -744,8 +743,7 @@ float CalcLimitedHfRatio(const float hfRatio, const float airAbsorptionGainHF,
     float limitRatio{1.0f / SPEEDOFSOUNDMETRESPERSEC /
         CalcDecayLength(airAbsorptionGainHF, decayTime)};
 
-    /* Using the limit calculated above, apply the upper bound to the HF ratio.
-     */
+    /* Using the limit calculated above, apply the upper bound to the HF ratio. */
     return minf(limitRatio, hfRatio);
 }
 
@@ -814,14 +812,18 @@ void Modulation::updateModulator(float modTime, float modDepth, float frequency)
      * (half of it is spent decreasing the frequency, half is spent increasing
      * it).
      */
-    Depth[1] = modDepth * MODULATION_DEPTH_COEFF * modTime * frequency / 4.0f;
-
-    /* To cancel the effects of a long period modulation on the reverberation,
-     * the amount of pitch should be varied (decreased) according to the
-     * modulation time. The natural form is varying inversely, in fact
-     * resulting in an invariant over the previous expression.
-     */
-    Depth[1] *= minf(AL_EAXREVERB_DEFAULT_MODULATION_TIME / modTime, 1.0f);
+    if(modTime >= AL_EAXREVERB_DEFAULT_MODULATION_TIME)
+    {
+        /* To cancel the effects of a long period modulation on the late
+         * reverberation, the amount of pitch should be varied (decreased)
+         * according to the modulation time. The natural form is varying
+         * inversely, in fact resulting in an invariant.
+         */
+        Depth[1] = MODULATION_DEPTH_COEFF / 4.0f * AL_EAXREVERB_DEFAULT_MODULATION_TIME *
+            modDepth * frequency;
+    }
+    else
+        Depth[1] = MODULATION_DEPTH_COEFF / 4.0f * modTime * modDepth * frequency;
 }
 
 /* Update the late reverb line lengths and T60 coefficients. */
@@ -1605,8 +1607,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         }
 
         /* Band-pass the incoming samples and feed the initial delay line. */
-        mFilter[c].Lp.process(tmpspan, tmpspan.begin());
-        mFilter[c].Hp.process(tmpspan, tmpspan.begin());
+        DualBiquad{mFilter[c].Lp, mFilter[c].Hp}.process(tmpspan, tmpspan.data());
         mDelay.write(offset, c, tmpspan.cbegin(), samplesToDo);
     }
 

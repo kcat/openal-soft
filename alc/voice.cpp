@@ -309,28 +309,27 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 }
 
 
-const float *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter, float *dst,
+const float *DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *dst,
     const al::span<const float> src, int type)
 {
     switch(type)
     {
     case AF_None:
-        lpfilter->clear();
-        hpfilter->clear();
+        lpfilter.clear();
+        hpfilter.clear();
         break;
 
     case AF_LowPass:
-        lpfilter->process(src, dst);
-        hpfilter->clear();
+        lpfilter.process(src, dst);
+        hpfilter.clear();
         return dst;
     case AF_HighPass:
-        lpfilter->clear();
-        hpfilter->process(src, dst);
+        lpfilter.clear();
+        hpfilter.process(src, dst);
         return dst;
 
     case AF_BandPass:
-        lpfilter->process(src, dst);
-        hpfilter->process({dst, src.size()}, dst);
+        DualBiquad{lpfilter, hpfilter}.process(src, dst);
         return dst;
     }
     return src.data();
@@ -765,7 +764,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             float (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
             {
                 DirectParams &parms = chandata.mDryParams;
-                const float *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
+                const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                     {ResampledData, DstBufferSize}, mDirect.FilterType)};
 
                 if((mFlags&VOICE_HAS_HRTF))
@@ -797,7 +796,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                     continue;
 
                 SendParams &parms = chandata.mWetParams[send];
-                const float *samples{DoFilters(&parms.LowPass, &parms.HighPass, FilterBuf,
+                const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                     {ResampledData, DstBufferSize}, mSend[send].FilterType)};
 
                 const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()

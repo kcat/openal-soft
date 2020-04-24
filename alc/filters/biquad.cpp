@@ -120,5 +120,44 @@ void BiquadFilterR<Real>::process(const al::span<const Real> src, Real *dst)
     mZ2 = z2;
 }
 
+template<typename Real>
+void BiquadFilterR<Real>::dualProcess(BiquadFilterR &other, const al::span<const Real> src,
+    Real *dst)
+{
+    const Real b00{mB0};
+    const Real b01{mB1};
+    const Real b02{mB2};
+    const Real a01{mA1};
+    const Real a02{mA2};
+    const Real b10{other.mB0};
+    const Real b11{other.mB1};
+    const Real b12{other.mB2};
+    const Real a11{other.mA1};
+    const Real a12{other.mA2};
+    Real z01{mZ1};
+    Real z02{mZ2};
+    Real z11{other.mZ1};
+    Real z12{other.mZ2};
+
+    auto proc_sample = [b00,b01,b02,a01,a02,b10,b11,b12,a11,a12,&z01,&z02,&z11,&z12](Real input) noexcept -> Real
+    {
+        const Real tmpout{input*b00 + z01};
+        z01 = input*b01 - tmpout*a01 + z02;
+        z02 = input*b02 - tmpout*a02;
+        input = tmpout;
+
+        const Real output{input*b10 + z11};
+        z11 = input*b11 - output*a11 + z12;
+        z12 = input*b12 - output*a12;
+        return output;
+    };
+    std::transform(src.cbegin(), src.cend(), dst, proc_sample);
+
+    mZ1 = z01;
+    mZ2 = z02;
+    other.mZ1 = z11;
+    other.mZ2 = z12;
+}
+
 template class BiquadFilterR<float>;
 template class BiquadFilterR<double>;

@@ -301,10 +301,7 @@ struct T60Filter {
 
     /* Applies the two T60 damping filter sections. */
     void process(const al::span<float> samples)
-    {
-        HFFilter.process(samples, samples.begin());
-        LFFilter.process(samples, samples.begin());
-    }
+    { DualBiquad{HFFilter, LFFilter}.process(samples, samples.data()); }
 };
 
 struct EarlyReflections {

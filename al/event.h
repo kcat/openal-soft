@@ -4,6 +4,8 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "almalloc.h"
+
 struct EffectState;
 
 
@@ -46,6 +48,8 @@ struct AsyncEvent {
 
     AsyncEvent() noexcept = default;
     constexpr AsyncEvent(unsigned int type) noexcept : EnumType{type} { }
+
+    DISABLE_ALLOC()
 };
 
 

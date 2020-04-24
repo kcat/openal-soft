@@ -301,7 +301,7 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
+    AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = AL_STOPPED;
 
@@ -906,7 +906,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0)
         {
-            AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_BufferCompleted}};
+            AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_BufferCompleted}};
             evt->u.bufcomp.id = SourceID;
             evt->u.bufcomp.count = buffers_done;
             ring->writeAdvance(1);

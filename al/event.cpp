@@ -122,7 +122,7 @@ void StopEventThrd(ALCcontext *ctx)
             evt_data = ring->getWriteVector().first;
         } while(evt_data.len == 0);
     }
-    new (evt_data.buf) AsyncEvent{EventType_KillThread};
+    ::new(evt_data.buf) AsyncEvent{EventType_KillThread};
     ring->writeAdvance(1);
 
     ctx->mEventSem.post();

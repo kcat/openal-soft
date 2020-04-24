@@ -480,7 +480,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
         auto evt_vec = ring->getWriteVector();
         if LIKELY(evt_vec.first.len > 0)
         {
-            AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
+            AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
             evt->u.mEffectState = oldstate;
             ring->writeAdvance(1);
         }
@@ -1589,7 +1589,7 @@ void SendSourceStateEvent(ALCcontext *context, ALuint id, ALenum state)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
+    AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = state;
 
@@ -2119,7 +2119,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             auto evt_data = ring->getWriteVector().first;
             if(evt_data.len > 0)
             {
-                ::new (evt_data.buf) AsyncEvent{evt};
+                ::new(evt_data.buf) AsyncEvent{evt};
                 ring->writeAdvance(1);
                 ctx->mEventSem.post();
             }

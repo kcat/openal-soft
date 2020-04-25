@@ -18,17 +18,6 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
-/* Define this first since Windows' system headers may include headers affected
- * by it (is it even still needed?).
- */
-#ifdef _WIN32
-#ifdef __MINGW32__
-#define _WIN32_IE 0x501
-#else
-#define _WIN32_IE 0x400
-#endif
-#endif
-
 #include "config.h"
 
 #include <algorithm>

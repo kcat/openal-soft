@@ -852,19 +852,18 @@ IF(WIN32)
     ENDIF()
 
     # Check MMSystem backend
-    CHECK_INCLUDE_FILES("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
-    FIND_LIBRARY(WINMM_LIBRARY NAMES winmm
-        PATHS ${WINSDK_LIB_DIRS}
-        PATH_SUFFIXES lib lib/x86 lib/x64)
-    IF(HAVE_MMSYSTEM_H AND WINMM_LIBRARY)
-        OPTION(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
-        IF(ALSOFT_BACKEND_WINMM)
-            SET(HAVE_WINMM 1)
-            SET(BACKENDS  "${BACKENDS} WinMM,")
-            SET(ALC_OBJS  ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
-            SET(EXTRA_LIBS ${WINMM_LIBRARY} ${EXTRA_LIBS})
-        ENDIF()
-    ENDIF()
+    check_include_files("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
+    find_library(WINMM_LIBRARY NAMES winmm
+        PATHS ${WINSDK_LIB_DIRS})
+    if(HAVE_MMSYSTEM_H AND WINMM_LIBRARY)
+        option(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
+        if(ALSOFT_BACKEND_WINMM)
+            set(HAVE_WINMM 1)
+            set(BACKENDS  "${BACKENDS} WinMM,")
+            set(ALC_OBJS  ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
+            set(EXTRA_LIBS ${WINMM_LIBRARY} ${EXTRA_LIBS})
+        endif()
+    endif()
 
     # Check DSound backend
     FIND_PACKAGE(DSound)

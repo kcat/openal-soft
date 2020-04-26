@@ -1,14 +1,12 @@
 version: 1.20.1.{build}
 
 environment:
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    GEN: "Visual Studio 15 2017"
     matrix:
-      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        GEN: "Visual Studio 15 2017"
-        ARCH: Win32
+      - ARCH: Win32
         CFG: Release
-      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        GEN: "Visual Studio 15 2017"
-        ARCH: x64
+      - ARCH: x64
         CFG: Release
 
 build_script:

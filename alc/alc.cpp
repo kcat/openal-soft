@@ -3212,8 +3212,11 @@ START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
     if(size <= 0 || values == nullptr)
+    {
         alcSetError(dev.get(), ALC_INVALID_VALUE);
-    else if(!dev || dev->Type == Capture)
+        return;
+    }
+    if(!dev || dev->Type == Capture)
     {
         auto ivals = al::vector<int>(static_cast<ALuint>(size));
         size_t got{GetIntegerv(dev.get(), pname, ivals)};

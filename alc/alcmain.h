@@ -372,15 +372,15 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 extern int RTPrioLevel;
 void SetRTPriority(void);
 
+/** Sets the default channel order used by most non-WaveFormatEx-based APIs. */
 void SetDefaultChannelOrder(ALCdevice *device);
+/** Sets the default channel order used by WaveFormatEx. */
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
 const ALCchar *DevFmtTypeString(DevFmtType type) noexcept;
 const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept;
 
 /**
- * GetChannelIdxByName
- *
  * Returns the index for the given channel name (e.g. FrontCenter), or
  * INVALID_CHANNEL_INDEX if it doesn't exist.
  */

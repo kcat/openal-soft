@@ -1493,10 +1493,6 @@ const std::array<InputRemixMap,1> X71Downmix{{
  * Miscellaneous ALC helpers
  ************************************************/
 
-/* SetDefaultWFXChannelOrder
- *
- * Sets the default channel order used by WaveFormatEx.
- */
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
@@ -1581,10 +1577,6 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
     }
 }
 
-/* SetDefaultChannelOrder
- *
- * Sets the default channel order used by most non-WaveFormatEx-based APIs.
- */
 void SetDefaultChannelOrder(ALCdevice *device)
 {
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
@@ -1701,10 +1693,7 @@ void ALCcontext::allocVoices(size_t addcount)
 }
 
 
-/* alcSetError
- *
- * Stores the latest ALC device error
- */
+/** Stores the latest ALC device error. */
 static void alcSetError(ALCdevice *device, ALCenum errorCode)
 {
     WARN("Error generated on device %p, code 0x%04x\n", decltype(std::declval<void*>()){device},
@@ -1734,8 +1723,7 @@ static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, 
         std::numeric_limits<float>::infinity(), 0.0f, 0.020f, 0.200f);
 }
 
-/* UpdateClockBase
- *
+/**
  * Updates the device's base clock time with however many samples have been
  * done. This is used so frequency changes on the device don't cause the time
  * to jump forward or back. Must not be called while the device is running/
@@ -1749,9 +1737,7 @@ static inline void UpdateClockBase(ALCdevice *device)
     IncrementRef(device->MixCount);
 }
 
-/* UpdateDeviceParams
- *
- * Updates device parameters according to the attribute list (caller is
+/** Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
@@ -2395,11 +2381,6 @@ ALCdevice::ALCdevice(DeviceType type) : Type{type}, mContexts{&EmptyContextArray
 {
 }
 
-/* ALCdevice::~ALCdevice
- *
- * Frees the device structure, and destroys any objects the app failed to
- * delete. Called once there's no more references on the device.
- */
 ALCdevice::~ALCdevice()
 {
     TRACE("Freeing device %p\n", decltype(std::declval<void*>()){this});
@@ -2434,10 +2415,7 @@ ALCdevice::~ALCdevice()
 }
 
 
-/* VerifyDevice
- *
- * Checks if the device handle is valid, and returns a new reference if so.
- */
+/** Checks if the device handle is valid, and returns a new reference if so. */
 static DeviceRef VerifyDevice(ALCdevice *device)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
@@ -2670,8 +2648,7 @@ bool ALCcontext::deinit()
 }
 
 
-/* VerifyContext
- *
+/**
  * Checks if the given context is valid, returning a new reference to it if so.
  */
 static ContextRef VerifyContext(ALCcontext *context)
@@ -2686,10 +2663,7 @@ static ContextRef VerifyContext(ALCcontext *context)
     return nullptr;
 }
 
-/* GetContextRef
- *
- * Returns a new reference to the currently active context for this thread.
- */
+/** Returns a new reference to the currently active context for this thread. */
 ContextRef GetContextRef(void)
 {
     ALCcontext *context{LocalContext};
@@ -2709,10 +2683,7 @@ ContextRef GetContextRef(void)
  * Standard ALC functions
  ************************************************/
 
-/* alcGetError
- *
- * Return last ALC generated error code for the given device
- */
+/** Return last ALC generated error code for the given device. */
 ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 START_API_FUNC
 {
@@ -2723,10 +2694,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcSuspendContext
- *
- * Suspends updates for the given context
- */
+/** Suspends updates for the given context. */
 ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -2741,10 +2709,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcProcessContext
- *
- * Resumes processing updates for the given context
- */
+/** Resumes processing updates for the given context. */
 ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -2760,14 +2725,11 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcGetString
- *
- * Returns information about the device, and error strings
- */
+/** Returns information about the device, and error strings. */
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param)
 START_API_FUNC
 {
-    const ALCchar *value = nullptr;
+    const ALCchar *value{nullptr};
 
     switch(param)
     {
@@ -3191,10 +3153,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     return 0;
 }
 
-/* alcGetIntegerv
- *
- * Returns information about the device and the version of OpenAL
- */
+/** Returns information about the device and the version of OpenAL. */
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
 START_API_FUNC
 {
@@ -3342,10 +3301,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcIsExtensionPresent
- *
- * Determines if there is support for a particular extension
- */
+/** Determines if there is support for a particular extension. */
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
 START_API_FUNC
 {
@@ -3374,10 +3330,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcGetProcAddress
- *
- * Retrieves the function address for a particular extension function
- */
+/** Retrieves the function address for a particular extension function. */
 ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
 START_API_FUNC
 {
@@ -3399,10 +3352,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcGetEnumValue
- *
- * Get the value for a particular ALC enumeration name
- */
+/** Get the value for a particular ALC enumeration name. */
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
 START_API_FUNC
 {
@@ -3424,10 +3374,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcCreateContext
- *
- * Create and attach a context to the given device.
- */
+/** Create and attach a context to the given device. */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 START_API_FUNC
 {
@@ -3523,10 +3470,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcDestroyContext
- *
- * Remove a context from its device
- */
+/** Remove a context from its device. */
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -3556,10 +3500,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcGetCurrentContext
- *
- * Returns the currently active context on the calling thread
- */
+/** Returns the currently active context on the calling thread. */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 START_API_FUNC
 {
@@ -3569,17 +3510,13 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcGetThreadContext
- *
- * Returns the currently active thread-local context
- */
+/** Returns the currently active thread-local context. */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 START_API_FUNC
 { return LocalContext; }
 END_API_FUNC
 
-/* alcMakeContextCurrent
- *
+/**
  * Makes the given context the active process-wide context, and removes the
  * thread-local context for the calling thread.
  */
@@ -3615,10 +3552,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcSetThreadContext
- *
- * Makes the given context the active context for the current thread
- */
+/** Makes the given context the active context for the current thread. */
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -3642,10 +3576,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcGetContextsDevice
- *
- * Returns the device that a particular context is attached to
- */
+/** Returns the device that a particular context is attached to. */
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
 START_API_FUNC
 {
@@ -3660,10 +3591,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-/* alcOpenDevice
- *
- * Opens the named device.
- */
+/** Opens the named playback device. */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 START_API_FUNC
 {
@@ -3800,19 +3728,14 @@ START_API_FUNC
     else
         device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
 
-    if(auto srcsopt = ConfigValueUInt(deviceName, nullptr, "sources"))
-    {
-        if(*srcsopt > 0) device->SourcesMax = *srcsopt;
-    }
+    if(auto srcsmax = ConfigValueUInt(deviceName, nullptr, "sources").value_or(0))
+        device->SourcesMax = srcsmax;
 
-    if(auto slotsopt = ConfigValueUInt(deviceName, nullptr, "slots"))
-    {
-        if(*slotsopt > 0)
-            device->AuxiliaryEffectSlotMax = minu(*slotsopt, INT_MAX);
-    }
+    if(auto slotsmax = ConfigValueUInt(deviceName, nullptr, "slots").value_or(0))
+        device->AuxiliaryEffectSlotMax = minu(slotsmax, INT_MAX);
 
     if(auto sendsopt = ConfigValueInt(deviceName, nullptr, "sends"))
-        device->NumAuxSends = clampu(DEFAULT_SENDS, 0,
+        device->NumAuxSends = minu(DEFAULT_SENDS,
             static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
@@ -3862,10 +3785,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcCloseDevice
- *
- * Closes the given device.
- */
+/** Closes the given playback device. */
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 START_API_FUNC
 {
@@ -4102,10 +4022,7 @@ END_API_FUNC
  * ALC loopback functions
  ************************************************/
 
-/* alcLoopbackOpenDeviceSOFT
- *
- * Open a loopback device, for manual rendering.
- */
+/** Open a loopback device, for manual rendering. */
 ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName)
 START_API_FUNC
 {
@@ -4132,19 +4049,14 @@ START_API_FUNC
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
 
-    if(auto srcsopt = ConfigValueUInt(nullptr, nullptr, "sources"))
-    {
-        if(*srcsopt > 0) device->SourcesMax = *srcsopt;
-    }
+    if(auto srcsmax = ConfigValueUInt(nullptr, nullptr, "sources").value_or(0))
+        device->SourcesMax = srcsmax;
 
-    if(auto slotsopt = ConfigValueUInt(nullptr, nullptr, "slots"))
-    {
-        if(*slotsopt > 0)
-            device->AuxiliaryEffectSlotMax = minu(*slotsopt, INT_MAX);
-    }
+    if(auto slotsmax = ConfigValueUInt(nullptr, nullptr, "slots").value_or(0))
+        device->AuxiliaryEffectSlotMax = minu(slotsmax, INT_MAX);
 
     if(auto sendsopt = ConfigValueInt(nullptr, nullptr, "sends"))
-        device->NumAuxSends = clampu(DEFAULT_SENDS, 0,
+        device->NumAuxSends = minu(DEFAULT_SENDS,
             static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
@@ -4173,8 +4085,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcIsRenderFormatSupportedSOFT
- *
+/**
  * Determines if the loopback device supports the given format for rendering.
  */
 ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type)
@@ -4195,8 +4106,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcRenderSamplesSOFT
- *
+/**
  * Renders some samples into a buffer, using the format last set by the
  * attributes given to alcCreateContext.
  */
@@ -4218,10 +4128,7 @@ END_API_FUNC
  * ALC DSP pause/resume functions
  ************************************************/
 
-/* alcDevicePauseSOFT
- *
- * Pause the DSP to stop audio processing.
- */
+/** Pause the DSP to stop audio processing. */
 ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
 START_API_FUNC
 {
@@ -4239,10 +4146,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcDeviceResumeSOFT
- *
- * Resume the DSP to restart audio processing.
- */
+/** Resume the DSP to restart audio processing. */
 ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
 START_API_FUNC
 {
@@ -4278,10 +4182,7 @@ END_API_FUNC
  * ALC HRTF functions
  ************************************************/
 
-/* alcGetStringiSOFT
- *
- * Gets a string parameter at the given index.
- */
+/** Gets a string parameter at the given index. */
 ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index)
 START_API_FUNC
 {
@@ -4305,10 +4206,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/* alcResetDeviceSOFT
- *
- * Resets the given device output, using the specified attribute list.
- */
+/** Resets the given device output, using the specified attribute list. */
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
 START_API_FUNC
 {

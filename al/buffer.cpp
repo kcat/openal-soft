@@ -391,8 +391,8 @@ const ALchar *NameFromUserFmtType(UserFmtType type)
 {
     switch(type)
     {
-    case UserFmtUByte: return "Unsigned Byte";
-    case UserFmtShort: return "Signed Short";
+    case UserFmtUByte: return "UInt8";
+    case UserFmtShort: return "Int16";
     case UserFmtFloat: return "Float32";
     case UserFmtDouble: return "Float64";
     case UserFmtMulaw: return "muLaw";

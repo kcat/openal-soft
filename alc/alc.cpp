@@ -1286,13 +1286,13 @@ const ALCchar *DevFmtTypeString(DevFmtType type) noexcept
 {
     switch(type)
     {
-    case DevFmtByte: return "Signed Byte";
-    case DevFmtUByte: return "Unsigned Byte";
-    case DevFmtShort: return "Signed Short";
-    case DevFmtUShort: return "Unsigned Short";
-    case DevFmtInt: return "Signed Int";
-    case DevFmtUInt: return "Unsigned Int";
-    case DevFmtFloat: return "Float";
+    case DevFmtByte: return "Int8";
+    case DevFmtUByte: return "UInt8";
+    case DevFmtShort: return "Int16";
+    case DevFmtUShort: return "UInt16";
+    case DevFmtInt: return "Int32";
+    case DevFmtUInt: return "UInt32";
+    case DevFmtFloat: return "Float32";
     }
     return "(unknown type)";
 }

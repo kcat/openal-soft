@@ -185,6 +185,7 @@ bool checkName(const al::vector<DevMap> &list, const std::string &name)
 
 al::vector<DevMap> PlaybackDevices;
 al::vector<DevMap> CaptureDevices;
+al::vector<DevMap> LoopbackDevices;
 
 
 using NameGUIDPair = std::pair<std::string,std::string>;
@@ -606,7 +607,10 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
                 if(msg.mType == MsgType::EnumeratePlayback)
                     probe_devices(Enumerator, eRender, PlaybackDevices);
                 else if(msg.mType == MsgType::EnumerateCapture)
+                {
                     probe_devices(Enumerator, eCapture, CaptureDevices);
+                    probe_devices(Enumerator, eRender, LoopbackDevices);
+                }
                 msg.mPromise.set_value(S_OK);
 
                 Enumerator->Release();
@@ -1213,6 +1217,8 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
+    bool mIsLoopback;
+
     DEF_NEWDEL(WasapiCapture)
 };
 
@@ -1335,29 +1341,60 @@ void WasapiCapture::open(const ALCchar *name)
     {
         if(name)
         {
-            if(CaptureDevices.empty())
-                pushMessage(MsgType::EnumerateCapture).wait();
+            {
+                if(CaptureDevices.empty())
+                    pushMessage(MsgType::EnumerateCapture).wait();
 
-            hr = E_FAIL;
-            auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-                [name](const DevMap &entry) -> bool
+                hr = E_FAIL;
+                auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+                    [name](const DevMap& entry) -> bool
                 { return entry.name == name || entry.endpoint_guid == name; }
-            );
-            if(iter == CaptureDevices.cend())
-            {
-                std::wstring wname{utf8_to_wstr(name)};
-                iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-                    [&wname](const DevMap &entry) -> bool
-                    { return entry.devid == wname; }
                 );
+                if(iter == CaptureDevices.cend())
+                {
+                    std::wstring wname{ utf8_to_wstr(name) };
+                    iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+                        [&wname](const DevMap& entry) -> bool
+                    { return entry.devid == wname; }
+                    );
+                }
+                if(iter == CaptureDevices.cend())
+                    WARN("Failed to find device name matching \"%s\"\n", name);
+                else
+                {
+                    mDevId = iter->devid;
+                    mDevice->DeviceName = iter->name;
+                    mIsLoopback = false;
+                    hr = S_OK;
+                }
             }
-            if(iter == CaptureDevices.cend())
-                WARN("Failed to find device name matching \"%s\"\n", name);
-            else
+
             {
-                mDevId = iter->devid;
-                mDevice->DeviceName = iter->name;
-                hr = S_OK;
+                if(LoopbackDevices.empty())
+                    pushMessage(MsgType::EnumerateCapture).wait();
+
+                hr = E_FAIL;
+                auto iter = std::find_if(LoopbackDevices.cbegin(), LoopbackDevices.cend(),
+                    [name](const DevMap& entry) -> bool
+                { return entry.name == name || entry.endpoint_guid == name; }
+                );
+                if(iter == LoopbackDevices.cend())
+                {
+                    std::wstring wname{ utf8_to_wstr(name) };
+                    iter = std::find_if(LoopbackDevices.cbegin(), LoopbackDevices.cend(),
+                        [&wname](const DevMap& entry) -> bool
+                    { return entry.devid == wname; }
+                    );
+                }
+                if(iter == LoopbackDevices.cend())
+                    WARN("Failed to find device name matching \"%s\"\n", name);
+                else
+                {
+                    mDevId = iter->devid;
+                    mDevice->DeviceName = iter->name;
+                    mIsLoopback = true;
+                    hr = S_OK;
+                }
             }
         }
     }
@@ -1616,8 +1653,19 @@ HRESULT WasapiCapture::resetProxy()
             mDevice->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
     }
 
-    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-        buf_time.count(), 0, &OutputType.Format, nullptr);
+    if(mIsLoopback)
+    {
+        hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
+            AUDCLNT_STREAMFLAGS_LOOPBACK | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+            buf_time.count(), 0, &OutputType.Format, nullptr);
+    }
+    else
+    {
+        hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
+            AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+            buf_time.count(), 0, &OutputType.Format, nullptr);
+    }
+
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
@@ -1766,6 +1814,7 @@ std::string WasapiBackendFactory::probe(BackendType type)
     case BackendType::Capture:
         WasapiProxy::pushMessageStatic(MsgType::EnumerateCapture).wait();
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        std::for_each(LoopbackDevices.cbegin(), LoopbackDevices.cend(), add_device);
         break;
     }
 

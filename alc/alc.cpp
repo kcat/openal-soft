@@ -1865,7 +1865,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 WARN("Missing format for loopback device\n");
                 return ALC_INVALID_VALUE;
             }
-            if(!IsValidALCChannels(schans) || !IsValidALCType(stype) || freq < MIN_OUTPUT_RATE)
+            if(!IsValidALCChannels(schans) || !IsValidALCType(stype) || freq < MIN_OUTPUT_RATE
+                || freq > MAX_OUTPUT_RATE)
                 return ALC_INVALID_VALUE;
             if(schans == ALC_BFORMAT3D_SOFT)
             {
@@ -1906,7 +1907,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 device->Flags.unset<FrequencyRequest>();
             else
             {
-                freq = maxu(freq, MIN_OUTPUT_RATE);
+                freq = clampu(freq, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
 
                 const double scale{static_cast<double>(freq) / device->Frequency};
                 device->UpdateSize = static_cast<ALuint>(device->UpdateSize*scale + 0.5);
@@ -3693,13 +3694,15 @@ START_API_FUNC
 
     if(ALuint freq{ConfigValueUInt(deviceName, nullptr, "frequency").value_or(0)})
     {
-        if(freq < MIN_OUTPUT_RATE)
+        if(freq < MIN_OUTPUT_RATE || freq > MAX_OUTPUT_RATE)
         {
-            ERR("%uhz request clamped to %uhz minimum\n", freq, MIN_OUTPUT_RATE);
-            freq = MIN_OUTPUT_RATE;
+            const ALuint newfreq{clampu(freq, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE)};
+            ERR("%uhz request clamped to %uhz\n", freq, newfreq);
+            freq = newfreq;
         }
-        device->UpdateSize = (device->UpdateSize*freq + device->Frequency/2) / device->Frequency;
-        device->BufferSize = (device->BufferSize*freq + device->Frequency/2) / device->Frequency;
+        const double scale{static_cast<double>(freq) / device->Frequency};
+        device->UpdateSize = static_cast<ALuint>(device->UpdateSize*scale + 0.5);
+        device->BufferSize = static_cast<ALuint>(device->BufferSize*scale + 0.5);
         device->Frequency = freq;
         device->Flags.set<FrequencyRequest>();
     }
@@ -4081,7 +4084,8 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
     {
-        if(IsValidALCType(type) && IsValidALCChannels(channels) && freq >= MIN_OUTPUT_RATE)
+        if(IsValidALCType(type) && IsValidALCChannels(channels) && freq >= MIN_OUTPUT_RATE
+            && freq <= MAX_OUTPUT_RATE)
             return ALC_TRUE;
     }
 

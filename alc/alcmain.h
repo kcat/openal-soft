@@ -43,7 +43,9 @@ struct bs2b;
 
 
 #define MIN_OUTPUT_RATE      8000
+#define MAX_OUTPUT_RATE      192000
 #define DEFAULT_OUTPUT_RATE  44100
+
 #define DEFAULT_UPDATE_SIZE  882 /* 20ms */
 #define DEFAULT_NUM_UPDATES  3
 

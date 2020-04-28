@@ -209,7 +209,6 @@ BackendInfo BackendList[] = {
     { "wave", WaveBackendFactory::getFactory },
 #endif
 };
-auto BackendListEnd = std::end(BackendList);
 
 BackendFactory *PlaybackFactory{};
 BackendFactory *CaptureFactory{};
@@ -989,13 +988,13 @@ void alc_initconfig(void)
         ALSOFT_GIT_BRANCH);
     {
         al::string names;
-        if(std::begin(BackendList) == BackendListEnd)
-            names += "(none)";
+        if(al::size(BackendList) < 1)
+            names = "(none)";
         else
         {
-            const al::span<const BackendInfo> infos{std::begin(BackendList), BackendListEnd};
-            names += infos[0].name;
-            for(const auto &backend : infos.subspan(1))
+            const al::span<const BackendInfo> infos{BackendList};
+            names = infos[0].name;
+            for(const auto &backend : infos.subspan<1>())
             {
                 names += ", ";
                 names += backend.name;
@@ -1102,6 +1101,7 @@ void alc_initconfig(void)
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
     }
 
+    auto BackendListEnd = std::end(BackendList);
     auto devopt = al::getenv("ALSOFT_DRIVERS");
     if(devopt || (devopt=ConfigValueStr(nullptr, nullptr, "drivers")))
     {
@@ -1156,16 +1156,16 @@ void alc_initconfig(void)
             BackendListEnd = backendlist_cur;
     }
 
-    auto init_backend = [](BackendInfo &backend) -> bool
+    auto init_backend = [](BackendInfo &backend) -> void
     {
         if(PlaybackFactory && CaptureFactory)
-            return true;
+            return;
 
         BackendFactory &factory = backend.getFactory();
         if(!factory.init())
         {
             WARN("Failed to initialize backend \"%s\"\n", backend.name);
-            return true;
+            return;
         }
 
         TRACE("Initialized backend \"%s\"\n", backend.name);
@@ -1179,9 +1179,8 @@ void alc_initconfig(void)
             CaptureFactory = &factory;
             TRACE("Added \"%s\" for capture\n", backend.name);
         }
-        return false;
     };
-    BackendListEnd = std::remove_if(std::begin(BackendList), BackendListEnd, init_backend);
+    std::for_each(std::begin(BackendList), BackendListEnd, init_backend);
 
     LoopbackBackendFactory::getFactory().init();
 

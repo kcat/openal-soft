@@ -1737,7 +1737,8 @@ static inline void UpdateClockBase(ALCdevice *device)
     IncrementRef(device->MixCount);
 }
 
-/** Updates device parameters according to the attribute list (caller is
+/**
+ * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
@@ -3296,7 +3297,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Determines if there is support for a particular extension. */
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
 START_API_FUNC
 {
@@ -3325,7 +3325,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Retrieves the function address for a particular extension function. */
 ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
 START_API_FUNC
 {
@@ -3347,7 +3346,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Get the value for a particular ALC enumeration name. */
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
 START_API_FUNC
 {

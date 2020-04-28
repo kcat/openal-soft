@@ -2205,7 +2205,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 
 } // namespace
 
-AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
+AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2247,7 +2247,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
+AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2295,7 +2295,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
+AL_API void AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2311,7 +2311,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
+AL_API void AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2330,7 +2330,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values)
+AL_API void AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2349,7 +2349,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value)
+AL_API void AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2368,7 +2368,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3)
+AL_API void AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2388,7 +2388,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values)
+AL_API void AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2413,7 +2413,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
+AL_API void AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2467,7 +2467,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value)
+AL_API void AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2521,7 +2521,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value)
+AL_API void AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2542,7 +2542,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
+AL_API void AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2567,7 +2567,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values)
+AL_API void AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2653,7 +2653,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value)
+AL_API void AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2773,12 +2773,12 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
+AL_API void AL_APIENTRY alSourcePlay(ALuint source)
 START_API_FUNC
 { alSourcePlayv(1, &source); }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
+AL_API void AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -2964,12 +2964,12 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
+AL_API void AL_APIENTRY alSourcePause(ALuint source)
 START_API_FUNC
 { alSourcePausev(1, &source); }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
+AL_API void AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -3040,12 +3040,12 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
+AL_API void AL_APIENTRY alSourceStop(ALuint source)
 START_API_FUNC
 { alSourceStopv(1, &source); }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
+AL_API void AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -3103,12 +3103,12 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
+AL_API void AL_APIENTRY alSourceRewind(ALuint source)
 START_API_FUNC
 { alSourceRewindv(1, &source); }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
+AL_API void AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -3168,7 +3168,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALuint *buffers)
+AL_API void AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALuint *buffers)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -3289,7 +3289,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *buffers)
+AL_API void AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *buffers)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

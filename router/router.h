@@ -140,9 +140,9 @@ extern std::atomic<DriverIface*> CurrentCtxDriver;
 
 
 class PtrIntMap {
-    ALvoid **mKeys{nullptr};
+    void **mKeys{nullptr};
     /* Shares memory with keys. */
-    ALint *mValues{nullptr};
+    int *mValues{nullptr};
 
     ALsizei mSize{0};
     ALsizei mCapacity{0};
@@ -152,9 +152,9 @@ public:
     PtrIntMap() = default;
     ~PtrIntMap();
 
-    ALenum insert(ALvoid *key, ALint value);
-    ALint removeByKey(ALvoid *key);
-    ALint lookupByKey(ALvoid *key);
+    ALenum insert(void *key, int value);
+    int removeByKey(void *key);
+    int lookupByKey(void *key);
 };
 
 

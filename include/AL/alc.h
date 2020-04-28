@@ -211,7 +211,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
  * Retrieve the address of a function. Given a non-NULL device, the returned
  * function may be device-specific.
  */
-ALC_API void*      ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcname);
+ALC_API ALCvoid*   ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcname);
 /**
  * Retrieve the value of an enum. Given a non-NULL device, the returned value
  * may be device-specific.
@@ -253,7 +253,7 @@ typedef ALCdevice*     (ALC_APIENTRY *LPALCOPENDEVICE)(const ALCchar *devicename
 typedef ALCboolean     (ALC_APIENTRY *LPALCCLOSEDEVICE)(ALCdevice *device);
 typedef ALCenum        (ALC_APIENTRY *LPALCGETERROR)(ALCdevice *device);
 typedef ALCboolean     (ALC_APIENTRY *LPALCISEXTENSIONPRESENT)(ALCdevice *device, const ALCchar *extname);
-typedef void*          (ALC_APIENTRY *LPALCGETPROCADDRESS)(ALCdevice *device, const ALCchar *funcname);
+typedef ALCvoid*       (ALC_APIENTRY *LPALCGETPROCADDRESS)(ALCdevice *device, const ALCchar *funcname);
 typedef ALCenum        (ALC_APIENTRY *LPALCGETENUMVALUE)(ALCdevice *device, const ALCchar *enumname);
 typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRING)(ALCdevice *device, ALCenum param);
 typedef void           (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values);

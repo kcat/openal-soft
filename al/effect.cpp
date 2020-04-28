@@ -211,7 +211,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 
 } // namespace
 
-AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
+AL_API void AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -251,7 +251,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
+AL_API void AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -301,7 +301,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
+AL_API void AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -344,7 +344,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *values)
+AL_API void AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *values)
 START_API_FUNC
 {
     switch(param)
@@ -374,7 +374,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
+AL_API void AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -397,7 +397,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *values)
+AL_API void AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -420,7 +420,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value)
+AL_API void AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -445,7 +445,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *values)
+AL_API void AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *values)
 START_API_FUNC
 {
     switch(param)
@@ -475,7 +475,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *value)
+AL_API void AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -498,7 +498,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *values)
+AL_API void AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

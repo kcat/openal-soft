@@ -703,7 +703,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
 } // namespace
 
 
-AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
+AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -743,7 +743,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
+AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -803,7 +803,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
+AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
 START_API_FUNC
 { alBufferStorageSOFT(buffer, format, data, size, freq, 0); }
 END_API_FUNC
@@ -950,7 +950,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)
+AL_API void AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -1275,7 +1275,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value)
+AL_API void AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -1347,7 +1347,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value)
+AL_API void AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

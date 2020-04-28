@@ -44,7 +44,7 @@
 } while(0)
 
 
-AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
+AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -74,7 +74,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
+AL_API void AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -108,7 +108,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
+AL_API void AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 START_API_FUNC
 {
     if(values)
@@ -156,7 +156,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint /*value*/)
+AL_API void AL_APIENTRY alListeneri(ALenum param, ALint /*value*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -234,7 +234,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
+AL_API void AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -260,7 +260,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
+AL_API void AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -290,7 +290,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
+AL_API void AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
 START_API_FUNC
 {
     switch(param)
@@ -332,7 +332,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
+AL_API void AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

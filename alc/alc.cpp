@@ -219,8 +219,8 @@ BackendFactory *CaptureFactory{};
  ************************************************/
 #define DECL(x) { #x, reinterpret_cast<void*>(x) }
 const struct {
-    const ALCchar *funcName;
-    ALCvoid *address;
+    const char *funcName;
+    void *address;
 } alcFunctions[] = {
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
@@ -2693,7 +2693,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
+ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 START_API_FUNC
 {
     if(!SuspendDefers)
@@ -2707,7 +2707,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
+ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context)
 START_API_FUNC
 {
     if(!SuspendDefers)
@@ -3464,7 +3464,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
+ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 START_API_FUNC
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};

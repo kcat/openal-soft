@@ -391,7 +391,7 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 
 } // namespace
 
-AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
+AL_API void AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -431,7 +431,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
+AL_API void AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -482,7 +482,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
+AL_API void AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -516,7 +516,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *values)
+AL_API void AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *values)
 START_API_FUNC
 {
     switch(param)
@@ -546,7 +546,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
+AL_API void AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -569,7 +569,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *values)
+AL_API void AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -592,7 +592,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value)
+AL_API void AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -620,7 +620,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *values)
+AL_API void AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *values)
 START_API_FUNC
 {
     switch(param)
@@ -650,7 +650,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *value)
+AL_API void AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -673,7 +673,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *values)
+AL_API void AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *values)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

@@ -17,8 +17,8 @@
 
 #define DECL(x) { #x, reinterpret_cast<void*>(x) }
 struct FuncExportEntry {
-    const ALCchar *funcName;
-    ALCvoid *address;
+    const char *funcName;
+    void *address;
 };
 static const std::array<FuncExportEntry,95> alcFunctions{{
     DECL(alcCreateContext),

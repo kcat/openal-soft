@@ -2683,7 +2683,6 @@ ContextRef GetContextRef(void)
  * Standard ALC functions
  ************************************************/
 
-/** Return last ALC generated error code for the given device. */
 ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 START_API_FUNC
 {
@@ -2694,7 +2693,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Suspends updates for the given context. */
 ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -2709,7 +2707,6 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/** Resumes processing updates for the given context. */
 ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -2725,7 +2722,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Returns information about the device, and error strings. */
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param)
 START_API_FUNC
 {
@@ -3153,7 +3149,6 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     return 0;
 }
 
-/** Returns information about the device and the version of OpenAL. */
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
 START_API_FUNC
 {
@@ -3374,7 +3369,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Create and attach a context to the given device. */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 START_API_FUNC
 {
@@ -3470,7 +3464,6 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/** Remove a context from its device. */
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 START_API_FUNC
 {
@@ -3500,7 +3493,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Returns the currently active context on the calling thread. */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 START_API_FUNC
 {
@@ -3516,10 +3508,6 @@ START_API_FUNC
 { return LocalContext; }
 END_API_FUNC
 
-/**
- * Makes the given context the active process-wide context, and removes the
- * thread-local context for the calling thread.
- */
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 START_API_FUNC
 {
@@ -3576,7 +3564,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Returns the device that a particular context is attached to. */
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
 START_API_FUNC
 {
@@ -3591,7 +3578,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-/** Opens the named playback device. */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 START_API_FUNC
 {
@@ -3785,7 +3771,6 @@ START_API_FUNC
 }
 END_API_FUNC
 
-/** Closes the given playback device. */
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 START_API_FUNC
 {

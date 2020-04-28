@@ -935,11 +935,11 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_loopback "
     "ALC_SOFT_output_limiter "
     "ALC_SOFT_pause_device";
-constexpr ALCint alcMajorVersion = 1;
-constexpr ALCint alcMinorVersion = 1;
+constexpr int alcMajorVersion{1};
+constexpr int alcMinorVersion{1};
 
-constexpr ALCint alcEFXMajorVersion = 1;
-constexpr ALCint alcEFXMinorVersion = 0;
+constexpr int alcEFXMajorVersion{1};
+constexpr int alcEFXMinorVersion{0};
 
 
 /* To avoid extraneous allocations, a 0-sized FlexArray<ALCcontext*> is defined
@@ -1755,7 +1755,7 @@ static inline void UpdateClockBase(ALCdevice *device)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
+static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 {
     HrtfRequestMode hrtf_userreq{Hrtf_Default};
     HrtfRequestMode hrtf_appreq{Hrtf_Default};
@@ -2879,7 +2879,7 @@ static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
     return 29;
 }
 
-static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCint> values)
+static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> values)
 {
     size_t i;
 
@@ -3015,13 +3015,13 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
                 if(device->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                    values[i++] = static_cast<ALCint>(device->mAmbiLayout);
+                    values[i++] = static_cast<int>(device->mAmbiLayout);
 
                     values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                    values[i++] = static_cast<ALCint>(device->mAmbiScale);
+                    values[i++] = static_cast<int>(device->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                    values[i++] = static_cast<ALCint>(device->mAmbiOrder);
+                    values[i++] = static_cast<int>(device->mAmbiOrder);
                 }
 
                 values[i++] = ALC_FORMAT_CHANNELS_SOFT;
@@ -3038,7 +3038,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
             values[i++] = static_cast<int>(device->NumStereoSources);
 
             values[i++] = ALC_MAX_AUXILIARY_SENDS;
-            values[i++] = static_cast<ALCint>(device->NumAuxSends);
+            values[i++] = static_cast<int>(device->NumAuxSends);
 
             values[i++] = ALC_HRTF_SOFT;
             values[i++] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
@@ -3121,7 +3121,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = static_cast<ALCint>(device->mAmbiLayout);
+        values[0] = static_cast<int>(device->mAmbiLayout);
         return 1;
 
     case ALC_AMBISONIC_SCALING_SOFT:
@@ -3130,7 +3130,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = static_cast<ALCint>(device->mAmbiScale);
+        values[0] = static_cast<int>(device->mAmbiScale);
         return 1;
 
     case ALC_AMBISONIC_ORDER_SOFT:
@@ -3151,7 +3151,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
         return 1;
 
     case ALC_MAX_AUXILIARY_SENDS:
-        values[0] = static_cast<ALCint>(device->NumAuxSends);
+        values[0] = static_cast<int>(device->NumAuxSends);
         return 1;
 
     case ALC_CONNECTED:
@@ -3173,8 +3173,8 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<ALCin
         {
             std::lock_guard<std::mutex> _{device->StateLock};
             device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-            values[0] = static_cast<ALCint>(minz(device->HrtfList.size(),
-                std::numeric_limits<ALCint>::max()));
+            values[0] = static_cast<int>(minz(device->HrtfList.size(),
+                std::numeric_limits<int>::max()));
         }
         return 1;
 
@@ -3203,7 +3203,7 @@ START_API_FUNC
     if(size <= 0 || values == nullptr)
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
-        GetIntegerv(dev.get(), param, {values, values+size});
+        GetIntegerv(dev.get(), param, {values, static_cast<ALuint>(size)});
 }
 END_API_FUNC
 
@@ -3215,8 +3215,8 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else if(!dev || dev->Type == Capture)
     {
-        auto ivals = al::vector<ALCint>(static_cast<ALuint>(size));
-        size_t got{GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()})};
+        auto ivals = al::vector<int>(static_cast<ALuint>(size));
+        size_t got{GetIntegerv(dev.get(), pname, ivals)};
         std::copy_n(ivals.begin(), got, values);
         return;
     }
@@ -3250,10 +3250,10 @@ START_API_FUNC
                 if(dev->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                    values[i++] = static_cast<ALCint64SOFT>(dev->mAmbiLayout);
+                    values[i++] = static_cast<int64_t>(dev->mAmbiLayout);
 
                     values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                    values[i++] = static_cast<ALCint64SOFT>(dev->mAmbiScale);
+                    values[i++] = static_cast<int64_t>(dev->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                     values[i++] = dev->mAmbiOrder;
@@ -3296,10 +3296,10 @@ START_API_FUNC
         break;
 
     case ALC_DEVICE_CLOCK_SOFT:
-        { std::lock_guard<std::mutex> _{dev->StateLock};
+        {
+            std::lock_guard<std::mutex> _{dev->StateLock};
+            ALuint samplecount, refcount;
             nanoseconds basecount;
-            ALuint samplecount;
-            ALuint refcount;
             do {
                 refcount = dev->waitForMix();
                 basecount = dev->ClockBase;
@@ -3311,7 +3311,8 @@ START_API_FUNC
         break;
 
     case ALC_DEVICE_LATENCY_SOFT:
-        { std::lock_guard<std::mutex> _{dev->StateLock};
+        {
+            std::lock_guard<std::mutex> _{dev->StateLock};
             ClockLatency clock{GetClockLatency(dev.get())};
             *values = clock.Latency.count();
         }
@@ -3330,8 +3331,8 @@ START_API_FUNC
         break;
 
     default:
-        auto ivals = al::vector<ALCint>(static_cast<ALuint>(size));
-        size_t got{GetIntegerv(dev.get(), pname, {ivals.data(), ivals.size()})};
+        auto ivals = al::vector<int>(static_cast<ALuint>(size));
+        size_t got{GetIntegerv(dev.get(), pname, ivals)};
         std::copy_n(ivals.begin(), got, values);
         break;
     }

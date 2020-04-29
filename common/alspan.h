@@ -250,7 +250,7 @@ public:
 
     template<size_t O, size_t C=dynamic_extent>
     constexpr span<element_type,C> subspan() const
-    { return span<element_type,C>{mData+O, (C!=dynamic_extent) ? mData+C : mDataEnd}; }
+    { return span<element_type,C>{mData+O, (C!=dynamic_extent) ? mData+O+C : mDataEnd}; }
 
     constexpr span subspan(size_t offset, size_t count=dynamic_extent) const
     {

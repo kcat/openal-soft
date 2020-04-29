@@ -136,7 +136,7 @@ struct WinMMPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     std::atomic<ALuint> mWritable{0u};
@@ -323,7 +323,7 @@ bool WinMMPlayback::reset()
     return true;
 }
 
-bool WinMMPlayback::start()
+void WinMMPlayback::start()
 {
     try {
         std::for_each(mWaveBuffer.begin(), mWaveBuffer.end(),
@@ -334,14 +334,11 @@ bool WinMMPlayback::start()
 
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WinMMPlayback::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Failed to start mixing thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void WinMMPlayback::stop()
@@ -371,7 +368,7 @@ struct WinMMCapture final : public BackendBase {
     int captureProc();
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -531,7 +528,7 @@ void WinMMCapture::open(const ALCchar *name)
     mDevice->DeviceName = CaptureDevices[DeviceID];
 }
 
-bool WinMMCapture::start()
+void WinMMCapture::start()
 {
     try {
         for(size_t i{0};i < mWaveBuffer.size();++i)
@@ -544,14 +541,11 @@ bool WinMMCapture::start()
         mThread = std::thread{std::mem_fn(&WinMMCapture::captureProc), this};
 
         waveInStart(mInHdl);
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Failed to start mixing thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void WinMMCapture::stop()

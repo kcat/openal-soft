@@ -65,7 +65,7 @@ struct SolarisBackend final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     int mFd{-1};
@@ -228,19 +228,16 @@ bool SolarisBackend::reset()
     return true;
 }
 
-bool SolarisBackend::start()
+void SolarisBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&SolarisBackend::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create playback thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void SolarisBackend::stop()

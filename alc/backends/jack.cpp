@@ -163,7 +163,7 @@ struct JackPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
 
@@ -380,21 +380,17 @@ bool JackPlayback::reset()
     return true;
 }
 
-bool JackPlayback::start()
+void JackPlayback::start()
 {
     if(jack_activate(mClient))
-    {
-        ERR("Failed to activate client\n");
-        return false;
-    }
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to activate client"};
 
     const char **ports{jack_get_ports(mClient, nullptr, nullptr,
         JackPortIsPhysical|JackPortIsInput)};
     if(ports == nullptr)
     {
-        ERR("No physical playback ports found\n");
         jack_deactivate(mClient);
-        return false;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "No physical playback ports found"};
     }
     std::mismatch(std::begin(mPort), std::end(mPort), ports,
         [this](const jack_port_t *port, const char *pname) -> bool
@@ -432,16 +428,13 @@ bool JackPlayback::start()
         mPlaying.store(true, std::memory_order_release);
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create playback thread: %s\n", e.what());
+        jack_deactivate(mClient);
+        mPlaying.store(false, std::memory_order_release);
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    jack_deactivate(mClient);
-    mPlaying.store(false, std::memory_order_release);
-    return false;
 }
 
 void JackPlayback::stop()

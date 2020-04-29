@@ -33,7 +33,7 @@ struct LoopbackBackend final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     DEF_NEWDEL(LoopbackBackend)
@@ -51,8 +51,8 @@ bool LoopbackBackend::reset()
     return true;
 }
 
-bool LoopbackBackend::start()
-{ return true; }
+void LoopbackBackend::start()
+{ }
 
 void LoopbackBackend::stop()
 { }

@@ -53,7 +53,7 @@ struct SndioPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     sio_hdl *mSndHandle{nullptr};
@@ -207,26 +207,20 @@ bool SndioPlayback::reset()
     return true;
 }
 
-bool SndioPlayback::start()
+void SndioPlayback::start()
 {
     if(!sio_start(mSndHandle))
-    {
-        ERR("Error starting playback\n");
-        return false;
-    }
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Error starting playback"};
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&SndioPlayback::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create playback thread: %s\n", e.what());
+        sio_stop(mSndHandle);
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    sio_stop(mSndHandle);
-    return false;
 }
 
 void SndioPlayback::stop()
@@ -247,7 +241,7 @@ struct SndioCapture final : public BackendBase {
     int recordProc();
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -398,26 +392,20 @@ void SndioCapture::open(const ALCchar *name)
     mDevice->DeviceName = name;
 }
 
-bool SndioCapture::start()
+void SndioCapture::start()
 {
     if(!sio_start(mSndHandle))
-    {
-        ERR("Error starting playback\n");
-        return false;
-    }
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Error starting capture"};
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&SndioCapture::recordProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create record thread: %s\n", e.what());
+        sio_stop(mSndHandle);
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    sio_stop(mSndHandle);
-    return false;
 }
 
 void SndioCapture::stop()

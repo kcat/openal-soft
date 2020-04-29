@@ -641,7 +641,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     bool reset() override;
     HRESULT resetProxy() override;
-    bool start() override;
+    void start() override;
     HRESULT startProxy() override;
     void stop() override;
     void stopProxy() override;
@@ -1108,10 +1108,11 @@ HRESULT WasapiPlayback::resetProxy()
 }
 
 
-bool WasapiPlayback::start()
+void WasapiPlayback::start()
 {
-    HRESULT hr{pushMessage(MsgType::StartDevice).get()};
-    return SUCCEEDED(hr) ? true : false;
+    const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
+    if(FAILED(hr))
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start playback: 0x%lx", hr};
 }
 
 HRESULT WasapiPlayback::startProxy()
@@ -1190,7 +1191,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     void closeProxy() override;
 
     HRESULT resetProxy() override;
-    bool start() override;
+    void start() override;
     HRESULT startProxy() override;
     void stop() override;
     void stopProxy() override;
@@ -1650,10 +1651,11 @@ HRESULT WasapiCapture::resetProxy()
 }
 
 
-bool WasapiCapture::start()
+void WasapiCapture::start()
 {
-    HRESULT hr{pushMessage(MsgType::StartDevice).get()};
-    return SUCCEEDED(hr) ? true : false;
+    const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
+    if(FAILED(hr))
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording: 0x%lx", hr};
 }
 
 HRESULT WasapiCapture::startProxy()

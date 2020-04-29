@@ -418,7 +418,7 @@ struct AlsaPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     ClockLatency getClockLatency() override;
@@ -792,7 +792,7 @@ bool AlsaPlayback::reset()
     return true;
 }
 
-bool AlsaPlayback::start()
+void AlsaPlayback::start()
 {
     int err{};
     snd_pcm_access_t access{};
@@ -818,23 +818,19 @@ bool AlsaPlayback::start()
     {
         err = snd_pcm_prepare(mPcmHandle);
         if(err < 0)
-        {
-            ERR("snd_pcm_prepare(data->mPcmHandle) failed: %s\n", snd_strerror(err));
-            return false;
-        }
+            throw al::backend_exception{ALC_INVALID_DEVICE,
+                "snd_pcm_prepare(data->mPcmHandle) failed: %s", snd_strerror(err)};
         thread_func = &AlsaPlayback::mixerProc;
     }
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(thread_func), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create playback thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    mBuffer.clear();
-    return false;
 }
 
 void AlsaPlayback::stop()
@@ -871,7 +867,7 @@ struct AlsaCapture final : public BackendBase {
     ~AlsaCapture() override;
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -995,7 +991,7 @@ void AlsaCapture::open(const ALCchar *name)
 }
 
 
-bool AlsaCapture::start()
+void AlsaCapture::start()
 {
     int err{snd_pcm_prepare(mPcmHandle)};
     if(err < 0)
@@ -1008,7 +1004,6 @@ bool AlsaCapture::start()
             snd_strerror(err)};
 
     mDoCapture = true;
-    return true;
 }
 
 void AlsaCapture::stop()

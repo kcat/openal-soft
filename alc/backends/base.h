@@ -22,7 +22,7 @@ struct BackendBase {
     virtual void open(const ALCchar *name) = 0;
 
     virtual bool reset();
-    virtual bool start() = 0;
+    virtual void start() = 0;
     virtual void stop() = 0;
 
     virtual ALCenum captureSamples(al::byte *buffer, ALCuint samples);

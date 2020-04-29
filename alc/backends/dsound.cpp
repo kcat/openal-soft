@@ -169,7 +169,7 @@ struct DSoundPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     IDirectSound       *mDS{nullptr};
@@ -563,19 +563,16 @@ retry_open:
     return true;
 }
 
-bool DSoundPlayback::start()
+void DSoundPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&DSoundPlayback::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Failed to start mixing thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void DSoundPlayback::stop()
@@ -593,7 +590,7 @@ struct DSoundCapture final : public BackendBase {
     ~DSoundCapture() override;
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -762,16 +759,11 @@ void DSoundCapture::open(const ALCchar *name)
     mDevice->DeviceName = name;
 }
 
-bool DSoundCapture::start()
+void DSoundCapture::start()
 {
-    HRESULT hr{mDSCbuffer->Start(DSCBSTART_LOOPING)};
+    const HRESULT hr{mDSCbuffer->Start(DSCBSTART_LOOPING)};
     if(FAILED(hr))
-    {
-        ERR("start failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(mDevice, "Failure starting capture: 0x%lx", hr);
-        return false;
-    }
-    return true;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failure starting capture: 0x%lx", hr};
 }
 
 void DSoundCapture::stop()

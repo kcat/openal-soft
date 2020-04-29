@@ -88,7 +88,7 @@ struct PortPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     PaStream *mStream{nullptr};
@@ -209,15 +209,12 @@ bool PortPlayback::reset()
     return true;
 }
 
-bool PortPlayback::start()
+void PortPlayback::start()
 {
-    PaError err{Pa_StartStream(mStream)};
-    if(err != paNoError)
-    {
-        ERR("Pa_StartStream() returned an error: %s\n", Pa_GetErrorText(err));
-        return false;
-    }
-    return true;
+    const PaError err{Pa_StartStream(mStream)};
+    if(err == paNoError)
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start playback: %s",
+            Pa_GetErrorText(err)};
 }
 
 void PortPlayback::stop()
@@ -243,7 +240,7 @@ struct PortCapture final : public BackendBase {
     }
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -326,15 +323,12 @@ void PortCapture::open(const ALCchar *name)
 }
 
 
-bool PortCapture::start()
+void PortCapture::start()
 {
-    PaError err{Pa_StartStream(mStream)};
+    const PaError err{Pa_StartStream(mStream)};
     if(err != paNoError)
-    {
-        ERR("Error starting stream: %s\n", Pa_GetErrorText(err));
-        return false;
-    }
-    return true;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording: %s",
+            Pa_GetErrorText(err)};
 }
 
 void PortCapture::stop()

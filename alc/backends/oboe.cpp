@@ -27,7 +27,7 @@ struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 };
 
@@ -199,13 +199,12 @@ bool OboePlayback::reset()
     return true;
 }
 
-bool OboePlayback::start()
+void OboePlayback::start()
 {
-    oboe::Result result{mStream->start()};
+    const oboe::Result result{mStream->start()};
     if(result != oboe::Result::OK)
         throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start stream: %s",
             oboe::convertToText(result)};
-    return true;
 }
 
 void OboePlayback::stop()

@@ -2026,11 +2026,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->UpdateSize, device->BufferSize);
 
     try {
-        if(device->Backend->reset() == false)
-            return ALC_INVALID_DEVICE;
+        auto backend = device->Backend.get();
+        if(!backend->reset())
+            throw al::backend_exception{ALC_INVALID_DEVICE, "Device reset failure"};
     }
     catch(std::exception &e) {
-        ERR("Device reset failed: %s\n", e.what());
+        aluHandleDisconnect(device, "%s", e.what());
         return ALC_INVALID_DEVICE;
     }
 
@@ -2365,12 +2366,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     {
         try {
             auto backend = device->Backend.get();
-            if(!backend->start())
-                throw al::backend_exception{ALC_INVALID_DEVICE, "Backend error"};
+            backend->start();
             device->Flags.set<DeviceRunning>();
         }
         catch(al::backend_exception& e) {
-            WARN("Failed to start playback: %s\n", e.what());
+            aluHandleDisconnect(device, "%s", e.what());
             return ALC_INVALID_DEVICE;
         }
     }
@@ -3392,8 +3392,6 @@ START_API_FUNC
     if(err != ALC_NO_ERROR)
     {
         alcSetError(dev.get(), err);
-        if(err == ALC_INVALID_DEVICE)
-            aluHandleDisconnect(dev.get(), "Device update failure");
         return nullptr;
     }
 
@@ -3941,8 +3939,7 @@ START_API_FUNC
     {
         try {
             auto backend = dev->Backend.get();
-            if(!backend->start())
-                throw al::backend_exception{ALC_INVALID_DEVICE, "Device start failure"};
+            backend->start();
             dev->Flags.set<DeviceRunning>();
         }
         catch(al::backend_exception& e) {
@@ -4153,8 +4150,7 @@ START_API_FUNC
 
     try {
         auto backend = dev->Backend.get();
-        if(!backend->start())
-            throw al::backend_exception{ALC_INVALID_DEVICE, "Device start failure"};
+        backend->start();
         dev->Flags.set<DeviceRunning>();
     }
     catch(al::backend_exception& e) {
@@ -4242,8 +4238,6 @@ START_API_FUNC
     if LIKELY(err == ALC_NO_ERROR) return ALC_TRUE;
 
     alcSetError(dev.get(), err);
-    if(err == ALC_INVALID_DEVICE)
-        aluHandleDisconnect(dev.get(), "Device start failure");
     return ALC_FALSE;
 }
 END_API_FUNC

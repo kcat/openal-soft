@@ -61,7 +61,7 @@ struct CoreAudioPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     AudioUnit mAudioUnit{};
@@ -269,15 +269,11 @@ bool CoreAudioPlayback::reset()
     return true;
 }
 
-bool CoreAudioPlayback::start()
+void CoreAudioPlayback::start()
 {
-    OSStatus err{AudioOutputUnitStart(mAudioUnit)};
+    const OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
-    {
-        ERR("AudioOutputUnitStart failed\n");
-        return false;
-    }
-    return true;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "AudioOutputUnitStart failed: %d", err};
 }
 
 void CoreAudioPlayback::stop()
@@ -304,7 +300,7 @@ struct CoreAudioCapture final : public BackendBase {
     }
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -576,15 +572,11 @@ void CoreAudioCapture::open(const ALCchar *name)
 }
 
 
-bool CoreAudioCapture::start()
+void CoreAudioCapture::start()
 {
     OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
-    {
-        ERR("AudioOutputUnitStart failed\n");
-        return false;
-    }
-    return true;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "AudioOutputUnitStart failed: %d", err};
 }
 
 void CoreAudioCapture::stop()

@@ -251,7 +251,7 @@ struct OSSPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     int mFd{-1};
@@ -432,19 +432,16 @@ bool OSSPlayback::reset()
     return true;
 }
 
-bool OSSPlayback::start()
+void OSSPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSSPlayback::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create playback thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void OSSPlayback::stop()
@@ -465,7 +462,7 @@ struct OSScapture final : public BackendBase {
     int recordProc();
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -614,19 +611,16 @@ void OSScapture::open(const ALCchar *name)
     mDevice->DeviceName = name;
 }
 
-bool OSScapture::start()
+void OSScapture::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&OSScapture::recordProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create record thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void OSScapture::stop()

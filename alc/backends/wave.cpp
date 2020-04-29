@@ -99,7 +99,7 @@ struct WaveBackend final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     FILE *mFile{nullptr};
@@ -332,19 +332,16 @@ bool WaveBackend::reset()
     return true;
 }
 
-bool WaveBackend::start()
+void WaveBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Failed to start mixing thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void WaveBackend::stop()

@@ -155,7 +155,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
 
@@ -540,7 +540,7 @@ bool OpenSLPlayback::reset()
     return true;
 }
 
-bool OpenSLPlayback::start()
+void OpenSLPlayback::start()
 {
     mRing->reset();
 
@@ -548,24 +548,23 @@ bool OpenSLPlayback::start()
     SLresult result{VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
         &bufferQueue)};
     PRINTERR(result, "bufferQueue->GetInterface");
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(bufferQueue,RegisterCallback)(&OpenSLPlayback::processC, this);
+        PRINTERR(result, "bufferQueue->RegisterCallback");
+    }
     if(SL_RESULT_SUCCESS != result)
-        return false;
-
-    result = VCALL(bufferQueue,RegisterCallback)(&OpenSLPlayback::processC, this);
-    PRINTERR(result, "bufferQueue->RegisterCallback");
-    if(SL_RESULT_SUCCESS != result) return false;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to register callback: 0x%08x",
+            result};
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread(std::mem_fn(&OpenSLPlayback::mixerProc), this);
-        return true;
     }
     catch(std::exception& e) {
-        ERR("Could not create playback thread: %s\n", e.what());
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
+            e.what()};
     }
-    catch(...) {
-    }
-    return false;
 }
 
 void OpenSLPlayback::stop()
@@ -631,7 +630,7 @@ struct OpenSLCapture final : public BackendBase {
     { static_cast<OpenSLCapture*>(context)->process(bq); }
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -837,7 +836,7 @@ void OpenSLCapture::open(const ALCchar* name)
     mDevice->DeviceName = name;
 }
 
-bool OpenSLCapture::start()
+void OpenSLCapture::start()
 {
     SLRecordItf record;
     SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_RECORD, &record)};
@@ -848,14 +847,8 @@ bool OpenSLCapture::start()
         result = VCALL(record,SetRecordState)(SL_RECORDSTATE_RECORDING);
         PRINTERR(result, "record->SetRecordState");
     }
-
     if(SL_RESULT_SUCCESS != result)
-    {
-        aluHandleDisconnect(mDevice, "Failed to start capture: 0x%08x", result);
-        return false;
-    }
-
-    return true;
+        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start capture: 0x%08x", result};
 }
 
 void OpenSLCapture::stop()

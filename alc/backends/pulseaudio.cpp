@@ -714,7 +714,7 @@ struct PulsePlayback final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
 
@@ -1047,7 +1047,7 @@ bool PulsePlayback::reset()
     return true;
 }
 
-bool PulsePlayback::start()
+void PulsePlayback::start()
 {
     auto plock = mMainloop.getUniqueLock();
 
@@ -1080,7 +1080,6 @@ bool PulsePlayback::start()
     }
 
     mMainloop.waitForOperation(op, plock);
-    return true;
 }
 
 void PulsePlayback::stop()
@@ -1142,7 +1141,7 @@ struct PulseCapture final : public BackendBase {
     { static_cast<PulseCapture*>(pdata)->streamMovedCallback(stream); }
 
     void open(const ALCchar *name) override;
-    bool start() override;
+    void start() override;
     void stop() override;
     ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
     ALCuint availableSamples() override;
@@ -1308,13 +1307,12 @@ void PulseCapture::open(const ALCchar *name)
     }
 }
 
-bool PulseCapture::start()
+void PulseCapture::start()
 {
     auto plock = mMainloop.getUniqueLock();
     pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
         &mMainloop)};
     mMainloop.waitForOperation(op, plock);
-    return true;
 }
 
 void PulseCapture::stop()

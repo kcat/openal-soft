@@ -58,7 +58,7 @@ struct Sdl2Backend final : public BackendBase {
 
     void open(const ALCchar *name) override;
     bool reset() override;
-    bool start() override;
+    void start() override;
     void stop() override;
 
     SDL_AudioDeviceID mDeviceID{0u};
@@ -170,11 +170,8 @@ bool Sdl2Backend::reset()
     return true;
 }
 
-bool Sdl2Backend::start()
-{
-    SDL_PauseAudioDevice(mDeviceID, 0);
-    return true;
-}
+void Sdl2Backend::start()
+{ SDL_PauseAudioDevice(mDeviceID, 0); }
 
 void Sdl2Backend::stop()
 { SDL_PauseAudioDevice(mDeviceID, 1); }

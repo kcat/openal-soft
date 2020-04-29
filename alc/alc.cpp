@@ -972,17 +972,25 @@ void alc_initconfig(void)
             gLogLevel = static_cast<LogLevel>(lvl);
     }
 
-    if(auto logfile = al::getenv("ALSOFT_LOGFILE"))
-    {
 #ifdef _WIN32
-        std::wstring wname{utf8_to_wstr(logfile->c_str())};
-        FILE *logf{_wfopen(wname.c_str(), L"wt")};
+    if(const auto logfile = al::getenv(L"ALSOFT_LOGFILE"))
+    {
+        FILE *logf{_wfopen(logfile->c_str(), L"wt")};
+        if(logf) gLogFile = logf;
+        else
+        {
+            auto u8name = wstr_to_utf8(logfile->c_str());
+            ERR("Failed to open log file '%s'\n", u8name.c_str());
+        }
+    }
 #else
+    if(const auto logfile = al::getenv("ALSOFT_LOGFILE"))
+    {
         FILE *logf{fopen(logfile->c_str(), "wt")};
-#endif
         if(logf) gLogFile = logf;
         else ERR("Failed to open log file '%s'\n", logfile->c_str());
     }
+#endif
 
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
         ALSOFT_GIT_BRANCH);

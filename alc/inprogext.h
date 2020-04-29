@@ -72,8 +72,8 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #endif
 #endif
 
-#ifndef AL_SOFT_effect_chain
-#define AL_SOFT_effect_chain
+#ifndef AL_SOFT_effect_target
+#define AL_SOFT_effect_target
 #define AL_EFFECTSLOT_TARGET_SOFT                0x199C
 #endif
 

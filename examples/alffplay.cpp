@@ -1677,6 +1677,9 @@ bool MovieState::prepare()
         return false;
     }
 
+    /* Dump information about file onto standard error */
+    av_dump_format(mFormatCtx.get(), 0, mFilename.c_str(), 0);
+
     mParseThread = std::thread{std::mem_fn(&MovieState::parse_handler), this};
     return true;
 }
@@ -1759,9 +1762,6 @@ int MovieState::parse_handler()
 
     int video_index{-1};
     int audio_index{-1};
-
-    /* Dump information about file onto standard error */
-    av_dump_format(mFormatCtx.get(), 0, mFilename.c_str(), 0);
 
     /* Find the first video and audio streams */
     for(unsigned int i{0u};i < mFormatCtx->nb_streams;i++)
@@ -2041,80 +2041,80 @@ int main(int argc, char *argv[])
         if(have_evt) do {
             switch(event.type)
             {
-                case SDL_KEYDOWN:
-                    switch(event.key.keysym.sym)
-                    {
-                        case SDLK_ESCAPE:
-                            movState->mQuit = true;
-                            eom_action = EomAction::Quit;
-                            break;
-
-                        case SDLK_n:
-                            movState->mQuit = true;
-                            eom_action = EomAction::Next;
-                            break;
-
-                        default:
-                            break;
-                    }
-                    break;
-
-                case SDL_WINDOWEVENT:
-                    switch(event.window.event)
-                    {
-                        case SDL_WINDOWEVENT_RESIZED:
-                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                            SDL_RenderFillRect(renderer, nullptr);
-                            force_redraw = true;
-                            break;
-
-                        case SDL_WINDOWEVENT_EXPOSED:
-                            force_redraw = true;
-                            break;
-
-                        default:
-                            break;
-                    }
-                    break;
-
-                case SDL_QUIT:
+            case SDL_KEYDOWN:
+                switch(event.key.keysym.sym)
+                {
+                case SDLK_ESCAPE:
                     movState->mQuit = true;
                     eom_action = EomAction::Quit;
                     break;
 
-                case FF_MOVIE_DONE_EVENT:
-                    std::cout<<'\n';
-                    last_time = seconds::min();
-                    if(eom_action != EomAction::Quit)
-                    {
-                        movState = nullptr;
-                        while(fileidx < argc && !movState)
-                        {
-                            movState = std::unique_ptr<MovieState>{new MovieState{argv[fileidx++]}};
-                            if(!movState->prepare()) movState = nullptr;
-                        }
-                        if(movState)
-                        {
-                            movState->setTitle(screen);
-                            break;
-                        }
-                    }
-
-                    /* Nothing more to play. Shut everything down and quit. */
-                    movState = nullptr;
-
-                    CloseAL();
-
-                    SDL_DestroyRenderer(renderer);
-                    renderer = nullptr;
-                    SDL_DestroyWindow(screen);
-                    screen = nullptr;
-
-                    SDL_Quit();
-                    exit(0);
+                case SDLK_n:
+                    movState->mQuit = true;
+                    eom_action = EomAction::Next;
+                    break;
 
                 default:
                     break;
+                }
+                break;
+
+            case SDL_WINDOWEVENT:
+                switch(event.window.event)
+                {
+                case SDL_WINDOWEVENT_RESIZED:
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    SDL_RenderFillRect(renderer, nullptr);
+                    force_redraw = true;
+                    break;
+
+                case SDL_WINDOWEVENT_EXPOSED:
+                    force_redraw = true;
+                    break;
+
+                default:
+                    break;
+                }
+                break;
+
+            case SDL_QUIT:
+                movState->mQuit = true;
+                eom_action = EomAction::Quit;
+                break;
+
+            case FF_MOVIE_DONE_EVENT:
+                std::cout<<'\n';
+                last_time = seconds::min();
+                if(eom_action != EomAction::Quit)
+                {
+                    movState = nullptr;
+                    while(fileidx < argc && !movState)
+                    {
+                        movState = std::unique_ptr<MovieState>{new MovieState{argv[fileidx++]}};
+                        if(!movState->prepare()) movState = nullptr;
+                    }
+                    if(movState)
+                    {
+                        movState->setTitle(screen);
+                        break;
+                    }
+                }
+
+                /* Nothing more to play. Shut everything down and quit. */
+                movState = nullptr;
+
+                CloseAL();
+
+                SDL_DestroyRenderer(renderer);
+                renderer = nullptr;
+                SDL_DestroyWindow(screen);
+                screen = nullptr;
+
+                SDL_Quit();
+                exit(0);
+
+            default:
+                break;
             }
         } while(SDL_PollEvent(&event));
 

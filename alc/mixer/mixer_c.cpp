@@ -84,11 +84,11 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
     return dst.data();
 }
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
-    const float left, const float right)
+inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
+    const HrirArray &Coeffs, const float left, const float right)
 {
     ASSUME(IrSize >= MIN_IR_LENGTH);
-    for(ALuint c{0};c < IrSize;++c)
+    for(size_t c{0};c < IrSize;++c)
     {
         Values[c][0] += Coeffs[c][0] * left;
         Values[c][1] += Coeffs[c][1] * right;

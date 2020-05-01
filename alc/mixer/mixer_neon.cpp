@@ -24,8 +24,8 @@ namespace {
 #define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
 #define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const HrirArray &Coeffs,
-    const float left, const float right)
+inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
+    const HrirArray &Coeffs, const float left, const float right)
 {
     float32x4_t leftright4;
     {
@@ -36,7 +36,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const ALuint IrSize, const Hrir
     }
 
     ASSUME(IrSize >= MIN_IR_LENGTH);
-    for(ALuint c{0};c < IrSize;c += 2)
+    for(size_t c{0};c < IrSize;c += 2)
     {
         float32x4_t vals = vld1q_f32(&Values[c][0]);
         float32x4_t coefs = vld1q_f32(&Coeffs[c][0]);

@@ -9,8 +9,8 @@
 #include "voice.h"
 
 
-using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const ALuint irSize, const HrirArray &Coeffs,
-    const float left, const float right);
+using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const uint_fast32_t irSize,
+    const HrirArray &Coeffs, const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const ALuint IrSize,
@@ -85,7 +85,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 {
     ASSUME(BufferSize > 0);
 
-    const ALuint IrSize{State->IrSize};
+    const uint_fast32_t IrSize{State->IrSize};
 
     auto coeff_iter = State->Coeffs.begin();
     for(const FloatBufferLine &input : InSamples)

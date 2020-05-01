@@ -161,27 +161,25 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const bool reached_target{InSamples.size() >= Counter};
-    const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
+    const auto min_len = minz(Counter, InSamples.size());
     for(FloatBufferLine &output : OutBuffer)
     {
         float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
         float gain{*CurrentGains};
-        const float diff{*TargetGains - gain};
+        const float step{(*TargetGains-gain) * delta};
 
-        auto in_iter = InSamples.begin();
-        if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
+        size_t pos{0};
+        if(!(std::fabs(step) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
-            const float step{diff * delta};
             float step_count{0.0f};
-            while(in_iter != min_end)
+            for(;pos != min_len;++pos)
             {
-                *(dst++) += *(in_iter++) * (gain + step*step_count);
+                dst[pos] += InSamples[pos] * (gain + step*step_count);
                 step_count += 1.0f;
             }
-            if(reached_target)
+            if(pos == Counter)
                 gain = *TargetGains;
             else
                 gain += step*step_count;
@@ -192,7 +190,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        while(in_iter != InSamples.end())
-            *(dst++) += *(in_iter++) * gain;
+        for(;pos != InSamples.size();++pos)
+            dst[pos] += InSamples[pos] * gain;
     }
 }

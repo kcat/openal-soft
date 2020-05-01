@@ -218,25 +218,22 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const bool reached_target{InSamples.size() >= Counter};
-    const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
-    const auto aligned_end = minz(static_cast<uintptr_t>(min_end-InSamples.begin()+3) & ~3u,
-        InSamples.size()) + InSamples.begin();
+    const auto min_len = minz(Counter, InSamples.size());
+    const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size());
     for(FloatBufferLine &output : OutBuffer)
     {
         float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
         float gain{*CurrentGains};
-        const float diff{*TargetGains - gain};
+        const float step{(*TargetGains-gain) * delta};
 
-        auto in_iter = InSamples.begin();
-        if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
+        size_t pos{0};
+        if(!(std::fabs(step) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
-            const float step{diff * delta};
             float step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(ptrdiff_t todo{(min_end-in_iter) >> 2})
+            if(size_t todo{(min_len-pos) >> 2})
             {
                 const float32x4_t four4{vdupq_n_f32(4.0f)};
                 const float32x4_t step4{vdupq_n_f32(step)};
@@ -247,12 +244,12 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
                 step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);
 
                 do {
-                    const float32x4_t val4 = vld1q_f32(in_iter);
-                    float32x4_t dry4 = vld1q_f32(dst);
+                    const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
+                    float32x4_t dry4 = vld1q_f32(&dst[pos]);
                     dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
                     step_count4 = vaddq_f32(step_count4, four4);
-                    vst1q_f32(dst, dry4);
-                    in_iter += 4; dst += 4;
+                    vst1q_f32(&dst[pos], dry4);
+                    pos += 4;
                 } while(--todo);
                 /* NOTE: step_count4 now represents the next four counts after
                  * the last four mixed samples, so the lowest element
@@ -261,19 +258,19 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
                 step_count = vgetq_lane_f32(step_count4, 0);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            while(in_iter != min_end)
+            for(;pos != min_len;++pos)
             {
-                *(dst++) += *(in_iter++) * (gain + step*step_count);
+                dst[pos] += InSamples[pos] * (gain + step*step_count);
                 step_count += 1.0f;
             }
-            if(reached_target)
+            if(pos == Counter)
                 gain = *TargetGains;
             else
                 gain += step*step_count;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            while(in_iter != aligned_end)
-                *(dst++) += *(in_iter++) * gain;
+            for(;pos != aligned_len;++pos)
+                dst[pos] += InSamples[pos] * gain;
         }
         *CurrentGains = gain;
         ++CurrentGains;
@@ -281,18 +278,18 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        if(ptrdiff_t todo{(InSamples.end()-in_iter) >> 2})
+        if(size_t todo{(InSamples.size()-pos) >> 2})
         {
             const float32x4_t gain4 = vdupq_n_f32(gain);
             do {
-                const float32x4_t val4 = vld1q_f32(in_iter);
-                float32x4_t dry4 = vld1q_f32(dst);
+                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
+                float32x4_t dry4 = vld1q_f32(&dst[pos]);
                 dry4 = vmlaq_f32(dry4, val4, gain4);
-                vst1q_f32(dst, dry4);
-                in_iter += 4; dst += 4;
+                vst1q_f32(&dst[pos], dry4);
+                pos += 4;
             } while(--todo);
         }
-        while(in_iter != InSamples.end())
-            *(dst++) += *(in_iter++) * gain;
+        for(;pos != InSamples.size();++pos)
+            dst[pos] += InSamples[pos] * gain;
     }
 }

@@ -191,40 +191,37 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const bool reached_target{InSamples.size() >= Counter};
-    const auto min_end = reached_target ? InSamples.begin() + Counter : InSamples.end();
-    const auto aligned_end = minz(static_cast<uintptr_t>(min_end-InSamples.begin()+3) & ~3u,
-        InSamples.size()) + InSamples.begin();
+    const auto min_len = minz(Counter, InSamples.size());
+    const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size());
     for(FloatBufferLine &output : OutBuffer)
     {
         float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
         float gain{*CurrentGains};
-        const float diff{*TargetGains - gain};
+        const float step{(*TargetGains-gain) * delta};
 
-        auto in_iter = InSamples.begin();
-        if(!(std::fabs(diff) > std::numeric_limits<float>::epsilon()))
+        size_t pos{0};
+        if(!(std::fabs(step) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
-            const float step{diff * delta};
             float step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(ptrdiff_t todo{(min_end-in_iter) >> 2})
+            if(size_t todo{(min_len-pos) >> 2})
             {
                 const __m128 four4{_mm_set1_ps(4.0f)};
                 const __m128 step4{_mm_set1_ps(step)};
                 const __m128 gain4{_mm_set1_ps(gain)};
                 __m128 step_count4{_mm_setr_ps(0.0f, 1.0f, 2.0f, 3.0f)};
                 do {
-                    const __m128 val4{_mm_load_ps(in_iter)};
-                    __m128 dry4{_mm_load_ps(dst)};
+                    const __m128 val4{_mm_load_ps(&InSamples[pos])};
+                    __m128 dry4{_mm_load_ps(&dst[pos])};
 
                     /* dry += val * (gain + step*step_count) */
                     dry4 = MLA4(dry4, val4, MLA4(gain4, step4, step_count4));
 
-                    _mm_store_ps(dst, dry4);
+                    _mm_store_ps(&dst[pos], dry4);
                     step_count4 = _mm_add_ps(step_count4, four4);
-                    in_iter += 4; dst += 4;
+                    pos += 4;
                 } while(--todo);
                 /* NOTE: step_count4 now represents the next four counts after
                  * the last four mixed samples, so the lowest element
@@ -233,19 +230,19 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
                 step_count = _mm_cvtss_f32(step_count4);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            while(in_iter != min_end)
+            for(;pos != min_len;++pos)
             {
-                *(dst++) += *(in_iter++) * (gain + step*step_count);
+                dst[pos] += InSamples[pos] * (gain + step*step_count);
                 step_count += 1.0f;
             }
-            if(reached_target)
+            if(pos == Counter)
                 gain = *TargetGains;
             else
                 gain += step*step_count;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            while(in_iter != aligned_end)
-                *(dst++) += *(in_iter++) * gain;
+            for(;pos != aligned_len;++pos)
+                dst[pos] += InSamples[pos] * gain;
         }
         *CurrentGains = gain;
         ++CurrentGains;
@@ -253,18 +250,18 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
 
         if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        if(ptrdiff_t todo{(InSamples.end()-in_iter) >> 2})
+        if(size_t todo{(InSamples.size()-pos) >> 2})
         {
             const __m128 gain4{_mm_set1_ps(gain)};
             do {
-                const __m128 val4{_mm_load_ps(in_iter)};
-                __m128 dry4{_mm_load_ps(dst)};
+                const __m128 val4{_mm_load_ps(&InSamples[pos])};
+                __m128 dry4{_mm_load_ps(&dst[pos])};
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-                _mm_store_ps(dst, dry4);
-                in_iter += 4; dst += 4;
+                _mm_store_ps(&dst[pos], dry4);
+                pos += 4;
             } while(--todo);
         }
-        while(in_iter != InSamples.end())
-            *(dst++) += *(in_iter++) * gain;
+        for(;pos != InSamples.size();++pos)
+            dst[pos] += InSamples[pos] * gain;
     }
 }

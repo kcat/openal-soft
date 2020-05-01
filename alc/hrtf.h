@@ -69,17 +69,6 @@ struct HrtfFilter {
     float Gain;
 };
 
-struct DirectHrtfState {
-    /* HRTF filter state for dry buffer content */
-    ALuint IrSize{0};
-    al::FlexArray<HrirArray,16> Coeffs;
-
-    DirectHrtfState(size_t numchans) : Coeffs{numchans} { }
-
-    static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
-
-    DEF_FAM_NEWDEL(DirectHrtfState, Coeffs)
-};
 
 struct EvRadians { float value; };
 struct AzRadians { float value; };
@@ -88,21 +77,32 @@ struct AngularPoint {
     AzRadians Azim;
 };
 
+struct DirectHrtfState {
+    /* HRTF filter state for dry buffer content */
+    ALuint mIrSize{0};
+    al::FlexArray<HrirArray,16> mCoeffs;
+
+    DirectHrtfState(size_t numchans) : mCoeffs{numchans} { }
+    /**
+     * Produces HRTF filter coefficients for decoding B-Format, given a set of
+     * virtual speaker positions, a matching decoding matrix, and per-order
+     * high-frequency gains for the decoder. The calculated impulse responses
+     * are ordered and scaled according to the matrix input.
+     */
+    void build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
+        const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
+        const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain);
+
+    static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
+
+    DEF_FAM_NEWDEL(DirectHrtfState, mCoeffs)
+};
+
 
 al::vector<std::string> EnumerateHrtf(const char *devname);
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
     float spread, HrirArray &coeffs, const al::span<ALuint,2> delays);
-
-/**
- * Produces HRTF filter coefficients for decoding B-Format, given a set of
- * virtual speaker positions, a matching decoding matrix, and per-order high-
- * frequency gains for the decoder. The calculated impulse responses are
- * ordered and scaled according to the matrix input.
- */
-void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
-    const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
-    const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

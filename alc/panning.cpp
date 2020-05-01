@@ -651,8 +651,6 @@ void InitHrtfPanning(ALCdevice *device)
     device->mAmbiOrder = ambi_order;
 
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
-    device->mHrtfState = DirectHrtfState::Create(count);
-
     std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+count,
         std::begin(device->Dry.AmbiMap),
         [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
@@ -660,7 +658,9 @@ void InitHrtfPanning(ALCdevice *device)
     AllocChannels(device, static_cast<ALuint>(count), device->channelsFromFmt());
 
     HrtfStore *Hrtf{device->mHrtf.get()};
-    BuildBFormatHrtf(Hrtf, device->mHrtfState.get(), AmbiPoints, AmbiMatrix, AmbiOrderHFGain);
+    auto hrtfstate = DirectHrtfState::Create(count);
+    hrtfstate->build(Hrtf, AmbiPoints, AmbiMatrix, AmbiOrderHFGain);
+    device->mHrtfState = std::move(hrtfstate);
 
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, true);
 }

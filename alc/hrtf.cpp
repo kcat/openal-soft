@@ -281,8 +281,8 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
     return std::unique_ptr<DirectHrtfState>{new (FamCount{num_chans}) DirectHrtfState{num_chans}};
 }
 
-void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
-    const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
+void DirectHrtfState::build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
+    const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
     const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain)
 {
     using double2 = std::array<double,2>;
@@ -346,9 +346,9 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     const double xover_norm{400.0 / Hrtf->sampleRate};
     BandSplitterR<double> splitter{xover_norm};
 
-    auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(state->Coeffs.size());
+    auto tmpres = al::vector<std::array<double2,HRIR_LENGTH>>(mCoeffs.size());
     auto tmpflt = al::vector<std::array<double,HRIR_LENGTH*4>>(3);
-    const al::span<double,HRIR_LENGTH*4> tempir{tmpflt[2].data(), tmpflt[2].size()};
+    const al::span<double,HRIR_LENGTH*4> tempir{tmpflt[2]};
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const HrirArray &hrir{impres[c].hrir};
@@ -358,7 +358,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         if /*constexpr*/(!DualBand)
         {
             /* For single-band decoding, apply the HF scale to the response. */
-            for(size_t i{0u};i < state->Coeffs.size();++i)
+            for(size_t i{0u};i < mCoeffs.size();++i)
             {
                 const size_t order{AmbiIndex::OrderFromChannel[i]};
                 const double mult{double{AmbiOrderHFGain[order]} * AmbiMatrix[c][i]};
@@ -388,7 +388,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
          * sample array. This produces the forward response with a backwards
          * phase-shift (+n degrees becomes -n degrees).
          */
-        splitter.applyAllpass({tempir.data(), tempir.size()});
+        splitter.applyAllpass(tempir);
         std::reverse(tempir.begin(), tempir.end());
 
         /* Now apply the band-splitter. This applies the normal phase-shift,
@@ -399,7 +399,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         splitter.process(tempir, tmpflt[0].data(), tmpflt[1].data());
 
         /* Apply left ear response with delay and HF scale. */
-        for(size_t i{0u};i < state->Coeffs.size();++i)
+        for(size_t i{0u};i < mCoeffs.size();++i)
         {
             const double mult{AmbiMatrix[c][i]};
             const double hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
@@ -413,13 +413,13 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
         std::transform(hrir.crbegin(), hrir.crend(), tempir.begin(),
             [](const float2 &ir) noexcept -> double { return ir[1]; });
 
-        splitter.applyAllpass({tempir.data(), tempir.size()});
+        splitter.applyAllpass(tempir);
         std::reverse(tempir.begin(), tempir.end());
 
         splitter.clear();
         splitter.process(tempir, tmpflt[0].data(), tmpflt[1].data());
 
-        for(size_t i{0u};i < state->Coeffs.size();++i)
+        for(size_t i{0u};i < mCoeffs.size();++i)
         {
             const double mult{AmbiMatrix[c][i]};
             const double hfgain{AmbiOrderHFGain[AmbiIndex::OrderFromChannel[i]]};
@@ -431,12 +431,11 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     tmpflt.clear();
     impres.clear();
 
-    for(size_t i{0u};i < state->Coeffs.size();++i)
+    for(size_t i{0u};i < mCoeffs.size();++i)
     {
         auto copy_arr = [](const double2 &in) noexcept -> float2
         { return float2{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };
-        std::transform(tmpres[i].cbegin(), tmpres[i].cend(), state->Coeffs[i].begin(),
-            copy_arr);
+        std::transform(tmpres[i].cbegin(), tmpres[i].cend(), mCoeffs[i].begin(), copy_arr);
     }
     tmpres.clear();
 
@@ -450,7 +449,7 @@ void BuildBFormatHrtf(const HrtfStore *Hrtf, DirectHrtfState *state,
     TRACE("Skipped delay: %.2f, max delay: %.2f, new FIR length: %u\n",
         min_delay/double{HRIR_DELAY_FRACONE}, max_delay/double{HRIR_DELAY_FRACONE},
         max_length);
-    state->IrSize = max_length;
+    mIrSize = max_length;
 }
 
 

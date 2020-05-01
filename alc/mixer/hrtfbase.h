@@ -85,9 +85,9 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 {
     ASSUME(BufferSize > 0);
 
-    const uint_fast32_t IrSize{State->IrSize};
+    const uint_fast32_t IrSize{State->mIrSize};
 
-    auto coeff_iter = State->Coeffs.begin();
+    auto coeff_iter = State->mCoeffs.begin();
     for(const FloatBufferLine &input : InSamples)
     {
         const auto &Coeffs = *(coeff_iter++);

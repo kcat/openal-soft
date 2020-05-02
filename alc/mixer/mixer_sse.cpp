@@ -192,7 +192,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = minz(Counter, InSamples.size());
-    const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size());
+    const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size()) - min_len;
     for(FloatBufferLine &output : OutBuffer)
     {
         float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
@@ -230,7 +230,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
                 step_count = _mm_cvtss_f32(step_count4);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            for(;pos != min_len;++pos)
+            for(uint_fast32_t leftover{min_len&3};leftover;++pos,--leftover)
             {
                 dst[pos] += InSamples[pos] * (gain + step*step_count);
                 step_count += 1.0f;
@@ -241,7 +241,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
                 gain += step*step_count;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            for(;pos != aligned_len;++pos)
+            for(uint_fast32_t leftover{aligned_len&3};leftover;++pos,--leftover)
                 dst[pos] += InSamples[pos] * gain;
         }
         *CurrentGains = gain;
@@ -261,7 +261,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
                 pos += 4;
             } while(--todo);
         }
-        for(;pos != InSamples.size();++pos)
+        for(uint_fast32_t leftover{InSamples.size()&3};leftover;++pos,--leftover)
             dst[pos] += InSamples[pos] * gain;
     }
 }

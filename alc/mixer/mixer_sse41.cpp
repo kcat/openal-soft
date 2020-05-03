@@ -47,8 +47,7 @@ const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRIC
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
     auto dst_iter = dst.begin();
-    const auto aligned_end = (dst.size()&~3u) + dst_iter;
-    while(dst_iter != aligned_end)
+    for(size_t todo{dst.size()>>2};todo;--todo)
     {
         const int pos0{_mm_extract_epi32(pos4, 0)};
         const int pos1{_mm_extract_epi32(pos4, 1)};
@@ -70,7 +69,7 @@ const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRIC
         frac4 = _mm_and_si128(frac4, fracMask4);
     }
 
-    if(dst_iter != dst.end())
+    if(size_t todo{dst.size()&3})
     {
         /* NOTE: These four elements represent the position *after* the last
          * four samples, so the lowest element is the next position to
@@ -85,7 +84,7 @@ const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRIC
             frac += increment;
             src  += frac>>FRACTIONBITS;
             frac &= FRACTIONMASK;
-        } while(dst_iter != dst.end());
+        } while(--todo);
     }
     return dst.data();
 }

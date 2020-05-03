@@ -258,7 +258,7 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
                 step_count = vgetq_lane_f32(step_count4, 0);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            for(uint_fast32_t leftover{min_len&3};leftover;++pos,--leftover)
+            for(size_t leftover{min_len&3};leftover;++pos,--leftover)
             {
                 dst[pos] += InSamples[pos] * (gain + step*step_count);
                 step_count += 1.0f;
@@ -269,7 +269,7 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
                 gain += step*step_count;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            for(uint_fast32_t leftover{aligned_len&3};leftover;++pos,--leftover)
+            for(size_t leftover{aligned_len&3};leftover;++pos,--leftover)
                 dst[pos] += InSamples[pos] * gain;
         }
         *CurrentGains = gain;
@@ -289,7 +289,7 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
                 pos += 4;
             } while(--todo);
         }
-        for(uint_fast32_t leftover{InSamples.size()&3};leftover;++pos,--leftover)
+        for(size_t leftover{InSamples.size()&3};leftover;++pos,--leftover)
             dst[pos] += InSamples[pos] * gain;
     }
 }

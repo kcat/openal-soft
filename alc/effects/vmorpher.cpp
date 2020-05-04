@@ -32,7 +32,7 @@
 
 namespace {
 
-#define MAX_UPDATE_SAMPLES 128
+#define MAX_UPDATE_SAMPLES 256
 #define NUM_FORMANTS       4
 #define NUM_FILTERS        2
 #define Q_FACTOR           5.0f
@@ -132,8 +132,9 @@ struct VmorpherState final : public EffectState {
     ALuint mStep{1};
 
     /* Effects buffers */
-    float mSampleBufferA[MAX_UPDATE_SAMPLES]{};
-    float mSampleBufferB[MAX_UPDATE_SAMPLES]{};
+    alignas(16) float mSampleBufferA[MAX_UPDATE_SAMPLES]{};
+    alignas(16) float mSampleBufferB[MAX_UPDATE_SAMPLES]{};
+    alignas(16) float mLfo[MAX_UPDATE_SAMPLES]{};
 
     void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
@@ -249,10 +250,9 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
      */
     for(size_t base{0u};base < samplesToDo;)
     {
-        alignas(16) float lfo[MAX_UPDATE_SAMPLES];
         const size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
-        mGetSamples(lfo, mIndex, mStep, td);
+        mGetSamples(mLfo, mIndex, mStep, td);
         mIndex += static_cast<ALuint>(mStep * td);
         mIndex &= WAVEFORM_FRACMASK;
 
@@ -279,7 +279,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
 
             alignas(16) float blended[MAX_UPDATE_SAMPLES];
             for(size_t i{0u};i < td;i++)
-                blended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], lfo[i]);
+                blended[i] = lerp(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 
             /* Now, mix the processed sound data to the output. */
             MixSamples({blended, td}, samplesOut, chandata->CurrentGains, chandata->TargetGains,

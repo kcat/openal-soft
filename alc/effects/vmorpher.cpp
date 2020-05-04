@@ -259,19 +259,18 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
         auto chandata = std::addressof(mChans[0]);
         for(const auto &input : samplesIn)
         {
-            std::fill_n(std::begin(mSampleBufferA), td, 0.0f);
-            std::fill_n(std::begin(mSampleBufferB), td, 0.0f);
-
             auto& vowelA = chandata->Formants[VOWEL_A_INDEX];
             auto& vowelB = chandata->Formants[VOWEL_B_INDEX];
 
             /* Process first vowel. */
+            std::fill_n(std::begin(mSampleBufferA), td, 0.0f);
             vowelA[0].process(&input[base], mSampleBufferA, td);
             vowelA[1].process(&input[base], mSampleBufferA, td);
             vowelA[2].process(&input[base], mSampleBufferA, td);
             vowelA[3].process(&input[base], mSampleBufferA, td);
 
             /* Process second vowel. */
+            std::fill_n(std::begin(mSampleBufferB), td, 0.0f);
             vowelB[0].process(&input[base], mSampleBufferB, td);
             vowelB[1].process(&input[base], mSampleBufferB, td);
             vowelB[2].process(&input[base], mSampleBufferB, td);

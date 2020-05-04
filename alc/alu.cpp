@@ -1865,22 +1865,23 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     apply_splitter(Buffer[lidx], Stablizer->DelayBuf[lidx], Stablizer->LFilter, lsplit);
     apply_splitter(Buffer[ridx], Stablizer->DelayBuf[ridx], Stablizer->RFilter, rsplit);
 
+    /* This pans the separate low- and high-frequency sums between being on the
+     * center channel and the left/right channels. The low-frequency sum is
+     * 1/3rd toward center (2/3rds on left/right) and the high-frequency sum is
+     * 1/4th toward center (3/4ths on left/right). These values can be tweaked.
+     */
+    const float cos_lf{std::cos(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f))};
+    const float cos_hf{std::cos(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
+    const float sin_lf{std::sin(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f))};
+    const float sin_hf{std::sin(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
     for(ALuint i{0};i < SamplesToDo;i++)
     {
         float lfsum{lsplit[0][i] + rsplit[0][i]};
         float hfsum{lsplit[1][i] + rsplit[1][i]};
         float s{lsplit[0][i] + lsplit[1][i] - rsplit[0][i] - rsplit[1][i]};
 
-        /* This pans the separate low- and high-frequency sums between being on
-         * the center channel and the left/right channels. The low-frequency
-         * sum is 1/3rd toward center (2/3rds on left/right) and the high-
-         * frequency sum is 1/4th toward center (3/4ths on left/right). These
-         * values can be tweaked.
-         */
-        float m{lfsum*std::cos(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f)) +
-            hfsum*std::cos(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
-        float c{lfsum*std::sin(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f)) +
-            hfsum*std::sin(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
+        float m{lfsum*cos_lf + hfsum*cos_hf};
+        float c{lfsum*sin_lf + hfsum*sin_hf};
 
         /* The generated center channel signal adds to the existing signal,
          * while the modified left and right channels replace.

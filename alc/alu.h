@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <type_traits>
 
 #include "AL/al.h"
 
@@ -134,11 +135,21 @@ void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const fl
     const al::span<float,MAX_OUTPUT_CHANNELS> gains);
 
 
-inline std::array<float,MAX_AMBI_CHANNELS> GetAmbiIdentityRow(size_t i) noexcept
+/** Helper to set an identity/pass-through panning for ambisonic mixing (3D input). */
+template<typename T, typename I, typename F>
+auto SetAmbiPanIdentity(T iter, I count, F func) -> std::enable_if_t<std::is_integral<I>::value>
 {
-    std::array<float,MAX_AMBI_CHANNELS> ret{};
-    ret[i] = 1.0f;
-    return ret;
+    if(count < 1) return;
+
+    std::array<float,MAX_AMBI_CHANNELS> coeffs{{1.0f}};
+    func(*iter, coeffs);
+    ++iter;
+    for(I i{1};i < count;++i,++iter)
+    {
+        coeffs[i-1] = 0.0f;
+        coeffs[i  ] = 1.0f;
+        func(*iter, coeffs);
+    }
 }
 
 

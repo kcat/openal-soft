@@ -76,11 +76,9 @@ void CompressorState::update(const ALCcontext*, const ALeffectslot *slot, const 
     mEnabled = props->Compressor.OnOff;
 
     mOutTarget = target.Main->Buffer;
-    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
-    {
-        auto coeffs = GetAmbiIdentityRow(i);
-        ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mGain[i]);
-    }
+    auto set_gains = [slot,target](auto &gains, al::span<const float,MAX_AMBI_CHANNELS> coeffs)
+    { ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, gains); };
+    SetAmbiPanIdentity(std::begin(mGain), slot->Wet.Buffer.size(), set_gains);
 }
 
 void CompressorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

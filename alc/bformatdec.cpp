@@ -117,15 +117,15 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
 
     if(mDualBand)
     {
-        const al::span<const float> hfSamples{mSamples[sHFBand].data(), SamplesToDo};
-        const al::span<const float> lfSamples{mSamples[sLFBand].data(), SamplesToDo};
+        const al::span<float> hfSamples{mSamples[sHFBand].data(), SamplesToDo};
+        const al::span<float> lfSamples{mSamples[sLFBand].data(), SamplesToDo};
         for(auto &chandec : mChannelDec)
         {
-            chandec.mXOver.process({InSamples->data(), SamplesToDo}, mSamples[sHFBand].data(),
-                mSamples[sLFBand].data());
+            chandec.mXOver.process({InSamples->data(), SamplesToDo}, hfSamples.data(),
+                lfSamples.data());
             MixSamples(hfSamples, OutBuffer, chandec.mGains.Dual[sHFBand],
                 chandec.mGains.Dual[sHFBand], 0, 0);
-            MixSamples(hfSamples, OutBuffer, chandec.mGains.Dual[sLFBand],
+            MixSamples(lfSamples, OutBuffer, chandec.mGains.Dual[sLFBand],
                 chandec.mGains.Dual[sLFBand], 0, 0);
             ++InSamples;
         }

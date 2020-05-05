@@ -2095,7 +2095,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     case DevFmtX71:
         if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "front-stablizer", 0))
         {
-            auto stablizer = std::make_unique<FrontStablizer>();
+            auto stablizer = FrontStablizer::Create(device->channelsFromFmt());
+            for(auto &buf : stablizer->DelayBuf)
+                std::fill(buf.begin(), buf.end(), 0.0f);
+
             /* Initialize band-splitting filter for the mid signal, with a
              * crossover at 5khz (could be higher).
              */

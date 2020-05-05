@@ -2096,13 +2096,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "front-stablizer", 0))
         {
             auto stablizer = std::make_unique<FrontStablizer>();
-            /* Initialize band-splitting filters for the front-left and front-
-             * right channels, with a crossover at 5khz (could be higher).
+            /* Initialize band-splitting filter for the mid signal, with a
+             * crossover at 5khz (could be higher).
              */
-            const float scale{5000.0f / static_cast<float>(device->Frequency)};
-
-            stablizer->LFilter.init(scale);
-            stablizer->RFilter = stablizer->LFilter;
+            stablizer->MidFilter.init(5000.0f / static_cast<float>(device->Frequency));
 
             device->Stablizer = std::move(stablizer);
             /* NOTE: Don't know why this has to be "copied" into a local static

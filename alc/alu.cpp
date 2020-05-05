@@ -1830,45 +1830,51 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
         }
     }
 
-    float (&lsplit)[2][BUFFERSIZE] = Stablizer->LSplit;
-    float (&rsplit)[2][BUFFERSIZE] = Stablizer->RSplit;
-    const al::span<float> tmpbuf{Stablizer->TempBuf, SamplesToDo+FrontStablizer::DelayLength};
+    al::span<float> tmpbuf{Stablizer->TempBuf, SamplesToDo+FrontStablizer::DelayLength};
 
-    /* This applies the band-splitter, preserving phase at the cost of some
-     * delay. The shorter the delay, the more error seeps into the result.
+    /* Use the right delay buf for the side signal delay. Combine the delayed
+     * signal with the incoming signal.
      */
-    auto apply_splitter = [tmpbuf,SamplesToDo](const FloatBufferLine &InBuf,
-        const al::span<float,FrontStablizer::DelayLength> DelayBuf, BandSplitter &Filter,
-        float (&splitbuf)[2][BUFFERSIZE]) -> void
-    {
-        /* Combine the input and delayed samples into a temp buffer in reverse,
-         * then copy the final samples into the delay buffer for next time.
-         * Note that the delay buffer's samples are stored backwards here.
-         */
-        auto tmp_iter = std::reverse_copy(InBuf.cbegin(), InBuf.cbegin()+SamplesToDo,
-            tmpbuf.begin());
-        std::copy(DelayBuf.cbegin(), DelayBuf.cend(), tmp_iter);
-        std::copy_n(tmpbuf.cbegin(), DelayBuf.size(), DelayBuf.begin());
+    auto tmpiter = std::copy_n(std::begin(Stablizer->DelayBuf[ridx]), FrontStablizer::DelayLength,
+        tmpbuf.begin());
+    for(size_t i{0};i < SamplesToDo;++i,++tmpiter)
+        *tmpiter = Buffer[lidx][i] - Buffer[ridx][i];
+    /* Hold on to the beginning for later, and save the end for next time. */
+    std::copy_n(tmpbuf.begin(), SamplesToDo, std::begin(Stablizer->Side));
+    std::copy_n(tmpbuf.begin()+SamplesToDo, FrontStablizer::DelayLength,
+        std::begin(Stablizer->DelayBuf[ridx]));
 
-        /* Apply an all-pass on the reversed signal, then reverse the samples
-         * to get the forward signal with a reversed phase shift.
-         */
-        Filter.applyAllpass(tmpbuf);
-        std::reverse(tmpbuf.begin(), tmpbuf.end());
+    /* Use the left delay buf for the mid signal delay. Combine the delayed
+     * signal with the incoming signal. Note that the samples are stored and
+     * combined in reverse, so the newest samples are at the front and the
+     * oldest at the back.
+     */
+    tmpiter = tmpbuf.begin() + SamplesToDo;
+    std::copy_n(std::cbegin(Stablizer->DelayBuf[lidx]), FrontStablizer::DelayLength, tmpiter);
+    for(size_t i{0};i < SamplesToDo;++i)
+        *--tmpiter = Buffer[lidx][i] + Buffer[ridx][i];
+    /* Save the newest samples for next time. */
+    std::copy_n(tmpbuf.cbegin(), FrontStablizer::DelayLength,
+        std::begin(Stablizer->DelayBuf[lidx]));
 
-        /* Now apply the band-splitter, combining its phase shift with the
-         * reversed phase shift, restoring the original phase on the split
-         * signal.
-         */
-        Filter.process(tmpbuf.first(SamplesToDo), splitbuf[1], splitbuf[0]);
-    };
-    apply_splitter(Buffer[lidx], Stablizer->DelayBuf[lidx], Stablizer->LFilter, lsplit);
-    apply_splitter(Buffer[ridx], Stablizer->DelayBuf[ridx], Stablizer->RFilter, rsplit);
+    /* Apply an all-pass on the reversed signal, then reverse the samples to
+     * get the forward signal with a reversed phase shift. The future samples
+     * are included with the all-pass to reduce the error in the output
+     * samples (the smaller the delay, the more error is introduced).
+     */
+    Stablizer->MidFilter.applyAllpass(tmpbuf);
+    tmpbuf = tmpbuf.subspan<FrontStablizer::DelayLength>();
+    std::reverse(tmpbuf.begin(), tmpbuf.end());
 
-    /* This pans the separate low- and high-frequency sums between being on the
-     * center channel and the left/right channels. The low-frequency sum is
-     * 1/3rd toward center (2/3rds on left/right) and the high-frequency sum is
-     * 1/4th toward center (3/4ths on left/right). These values can be tweaked.
+    /* Now apply the band-splitter, combining its phase shift with the reversed
+     * phase shift, restoring the original phase on the split signal.
+     */
+    Stablizer->MidFilter.process(tmpbuf, Stablizer->MidHF, Stablizer->MidLF);
+
+    /* This pans the separate low- and high-frequency signals between being on
+     * the center channel and the left+right channels. The low-frequency signal
+     * is panned 1/3rd toward center and the high-frequency signal is panned
+     * 1/4th toward center. These values can be tweaked.
      */
     const float cos_lf{std::cos(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f))};
     const float cos_hf{std::cos(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
@@ -1876,12 +1882,9 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     const float sin_hf{std::sin(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
     for(ALuint i{0};i < SamplesToDo;i++)
     {
-        float lfsum{lsplit[0][i] + rsplit[0][i]};
-        float hfsum{lsplit[1][i] + rsplit[1][i]};
-        float s{lsplit[0][i] + lsplit[1][i] - rsplit[0][i] - rsplit[1][i]};
-
-        float m{lfsum*cos_lf + hfsum*cos_hf};
-        float c{lfsum*sin_lf + hfsum*sin_hf};
+        const float m{Stablizer->MidLF[i]*cos_lf + Stablizer->MidHF[i]*cos_hf};
+        const float c{Stablizer->MidLF[i]*sin_lf + Stablizer->MidHF[i]*sin_hf};
+        const float s{Stablizer->Side[i]};
 
         /* The generated center channel signal adds to the existing signal,
          * while the modified left and right channels replace.

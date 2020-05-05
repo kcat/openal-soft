@@ -10,13 +10,14 @@
 struct FrontStablizer {
     static constexpr size_t DelayLength{256u};
 
-    alignas(16) float DelayBuf[MAX_OUTPUT_CHANNELS][DelayLength];
-
-    BandSplitter LFilter, RFilter;
-    alignas(16) float LSplit[2][BUFFERSIZE];
-    alignas(16) float RSplit[2][BUFFERSIZE];
+    BandSplitter MidFilter;
+    alignas(16) float MidLF[BUFFERSIZE];
+    alignas(16) float MidHF[BUFFERSIZE];
+    alignas(16) float Side[BUFFERSIZE];
 
     alignas(16) float TempBuf[BUFFERSIZE + DelayLength];
+
+    alignas(16) float DelayBuf[MAX_OUTPUT_CHANNELS][DelayLength];
 
     DEF_NEWDEL(FrontStablizer)
 };

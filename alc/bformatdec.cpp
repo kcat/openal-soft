@@ -49,7 +49,7 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept
 } // namespace
 
 
-BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALuint inchans,
+BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const size_t inchans,
     const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS]) : mChannelDec{inchans}
 {
     mDualBand = allow_2band && (conf->FreqBands == 2);
@@ -98,7 +98,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const ALu
     }
 }
 
-BFormatDec::BFormatDec(const ALuint inchans, const al::span<const ChannelDec> chancoeffs)
+BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> chancoeffs)
     : mChannelDec{inchans}
 {
     for(size_t j{0};j < mChannelDec.size();++j)

@@ -58,6 +58,7 @@ option(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 option(ALSOFT_EXAMPLES  "Build example programs"  ON)
 
+option(ALSOFT_INSTALL "Install main library" ON)
 option(ALSOFT_INSTALL_CONFIG "Install alsoft.conf sample configuration file" ON)
 option(ALSOFT_INSTALL_HRTF_DEFS "Install HRTF definition files" ON)
 option(ALSOFT_INSTALL_AMBDEC_PRESETS "Install AmbDec preset files" ON)
@@ -1263,28 +1264,6 @@ IF(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC"
     ENDIF()
 ENDIF()
 
-install(TARGETS OpenAL EXPORT OpenAL
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
-export(TARGETS OpenAL
-    NAMESPACE OpenAL::
-    FILE OpenALConfig.cmake)
-install(EXPORT OpenAL
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
-    NAMESPACE OpenAL::
-    FILE OpenALConfig.cmake)
-install(DIRECTORY include/AL
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-if(TARGET soft_oal)
-    install(TARGETS soft_oal
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-endif()
-
-
 if(HAS_ROUTER)
     message(STATUS "")
     message(STATUS "Building DLL router")
@@ -1307,29 +1286,51 @@ if(ALSOFT_EMBED_HRTF_DATA)
     message(STATUS "")
 endif()
 
-# Install alsoft.conf configuration file
+# Install main library
+if(ALSOFT_INSTALL)
+    install(TARGETS OpenAL EXPORT OpenAL
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+    export(TARGETS OpenAL
+        NAMESPACE OpenAL::
+        FILE OpenALConfig.cmake)
+    install(EXPORT OpenAL
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
+        NAMESPACE OpenAL::
+        FILE OpenALConfig.cmake)
+    install(DIRECTORY include/AL
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+    if(TARGET soft_oal)
+        install(TARGETS soft_oal
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
+    message(STATUS "Installing library and headers")
+else()
+    message(STATUS "NOT installing library and headers")
+endif()
+
 if(ALSOFT_INSTALL_CONFIG)
     install(FILES alsoftrc.sample
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
     message(STATUS "Installing sample configuration")
-    message(STATUS "")
 endif()
 
-# Install HRTF definitions
 if(ALSOFT_INSTALL_HRTF_DEFS)
     install(DIRECTORY hrtf
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
     message(STATUS "Installing HRTF definitions")
-    message(STATUS "")
 endif()
 
-# Install AmbDec presets
 if(ALSOFT_INSTALL_AMBDEC_PRESETS)
     install(DIRECTORY presets
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
     message(STATUS "Installing AmbDec presets")
-    message(STATUS "")
 endif()
+message(STATUS "")
 
 set(EXTRA_INSTALLS )
 if(ALSOFT_UTILS)

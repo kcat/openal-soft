@@ -98,14 +98,32 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
     }
 }
 
-BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> chancoeffs)
-    : mChannelDec{inchans}
+BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,
+    const al::span<const ChannelDec> coeffslf) : mChannelDec{inchans}
 {
-    for(size_t j{0};j < mChannelDec.size();++j)
+    mDualBand = !coeffslf.empty();
+
+    if(!mDualBand)
     {
-        float *outcoeffs{mChannelDec[j].mGains.Single};
-        for(const ChannelDec &incoeffs : chancoeffs)
-            *(outcoeffs++) = incoeffs[j];
+        for(size_t j{0};j < mChannelDec.size();++j)
+        {
+            float *outcoeffs{mChannelDec[j].mGains.Single};
+            for(const ChannelDec &incoeffs : coeffs)
+                *(outcoeffs++) = incoeffs[j];
+        }
+    }
+    else
+    {
+        for(size_t j{0};j < mChannelDec.size();++j)
+        {
+            float *outcoeffs{mChannelDec[j].mGains.Dual[sHFBand]};
+            for(const ChannelDec &incoeffs : coeffs)
+                *(outcoeffs++) = incoeffs[j];
+
+            outcoeffs = mChannelDec[j].mGains.Dual[sLFBand];
+            for(const ChannelDec &incoeffs : coeffslf)
+                *(outcoeffs++) = incoeffs[j];
+        }
     }
 }
 

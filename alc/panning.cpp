@@ -406,9 +406,16 @@ constexpr DecoderConfig<SingleBand, 2> StereoConfig{
         {{5.00000000e-1f, -2.88675135e-1f,  5.52305643e-2f}},
     }}
 };
-constexpr DecoderConfig<SingleBand, 4> QuadConfig{
+constexpr DecoderConfig<DualBand, 4> QuadConfig{
     2, {{BackLeft, FrontLeft, FrontRight, BackRight}},
-    {{1.15470054e+0f, 1.00000000e+0f, 5.77350269e-1f}},
+    /*HF*/{{1.15470054e+0f, 1.00000000e+0f, 5.77350269e-1f}},
+    {{
+        {{2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f, -1.29099445e-1f, 0.00000000e+0f}},
+        {{2.50000000e-1f,  2.04124145e-1f,  2.04124145e-1f,  1.29099445e-1f, 0.00000000e+0f}},
+        {{2.50000000e-1f, -2.04124145e-1f,  2.04124145e-1f, -1.29099445e-1f, 0.00000000e+0f}},
+        {{2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f,  1.29099445e-1f, 0.00000000e+0f}},
+    }},
+    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
     {{
         {{2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f, -1.29099445e-1f, 0.00000000e+0f}},
         {{2.50000000e-1f,  2.04124145e-1f,  2.04124145e-1f,  1.29099445e-1f, 0.00000000e+0f}},
@@ -447,9 +454,18 @@ constexpr DecoderConfig<SingleBand, 5> X61Config{
         {{2.50001688e-1f,  0.00000000e+0f, -2.50000094e-1f,  0.00000000e+0f,  6.05133395e-2f}},
     }}
 };
-constexpr DecoderConfig<SingleBand, 6> X71Config{
+constexpr DecoderConfig<DualBand, 6> X71Config{
     3, {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight}},
-    {{1.22474487e+0f, 1.13151672e+0f, 8.66025404e-1f, 4.68689571e-1f}},
+    /*HF*/{{1.22474487e+0f, 1.13151672e+0f, 8.66025404e-1f, 4.68689571e-1f}},
+    {{
+        {{1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f,  7.96819073e-2f, 0.00000000e+0f}},
+        {{1.66666667e-1f,  1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f, -7.96819073e-2f, 0.00000000e+0f}},
+        {{1.66666667e-1f,  9.62250449e-2f,  1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f,  7.96819073e-2f, 0.00000000e+0f}},
+        {{1.66666667e-1f, -9.62250449e-2f,  1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f, -7.96819073e-2f, 0.00000000e+0f}},
+        {{1.66666667e-1f, -1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f,  7.96819073e-2f, 0.00000000e+0f}},
+        {{1.66666667e-1f, -9.62250449e-2f, -1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f, -7.96819073e-2f, 0.00000000e+0f}},
+    }},
+    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
     {{
         {{1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f,  7.96819073e-2f, 0.00000000e+0f}},
         {{1.66666667e-1f,  1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f, -7.96819073e-2f, 0.00000000e+0f}},
@@ -460,7 +476,7 @@ constexpr DecoderConfig<SingleBand, 6> X71Config{
     }}
 };
 
-void InitPanning(ALCdevice *device)
+void InitPanning(ALCdevice *device, const bool hqdec=false)
 {
     DecoderView decoder{};
     switch(device->FmtChans)
@@ -511,7 +527,8 @@ void InitPanning(ALCdevice *device)
     }
     else
     {
-        al::vector<ChannelDec> chancoeffs;
+        const bool dual_band{hqdec && !decoder.mCoeffsLF.empty()};
+        al::vector<ChannelDec> chancoeffs, chancoeffslf;
         for(size_t i{0u};i < decoder.mChannels.size();++i)
         {
             const ALuint idx{GetChannelIdxByName(device->RealOut, decoder.mChannels[i])};
@@ -521,14 +538,29 @@ void InitPanning(ALCdevice *device)
                     GetLabelFromChannel(decoder.mChannels[i]));
                 continue;
             }
-            chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
 
+            chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
+            al::span<float,MAX_AMBI_CHANNELS> coeffs{chancoeffs[idx]};
             size_t start{0};
             for(ALuint o{0};o <= decoder.mOrder;++o)
             {
                 size_t count{o ? 2u : 1u};
                 do {
-                    chancoeffs[idx][start] = decoder.mCoeffs[i][start] * decoder.mOrderGain[o];
+                    coeffs[start] = decoder.mCoeffs[i][start] * decoder.mOrderGain[o];
+                    ++start;
+                } while(--count);
+            }
+            if(!dual_band)
+                continue;
+
+            chancoeffslf.resize(maxz(chancoeffslf.size(), idx+1u), ChannelDec{});
+            coeffs = chancoeffslf[idx];
+            start = 0;
+            for(ALuint o{0};o <= decoder.mOrder;++o)
+            {
+                size_t count{o ? 2u : 1u};
+                do {
+                    coeffs[start] = decoder.mCoeffsLF[i][start] * decoder.mOrderGainLF[o];
                     ++start;
                 } while(--count);
             }
@@ -545,11 +577,12 @@ void InitPanning(ALCdevice *device)
         );
         AllocChannels(device, ambicount, device->channelsFromFmt());
 
-        TRACE("Enabling %s-order%s ambisonic decoder\n",
+        TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
+            !dual_band ? "single" : "dual",
             (decoder.mOrder > 2) ? "third" :
             (decoder.mOrder > 1) ? "second" : "first",
             "");
-        device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs);
+        device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf);
     }
 }
 
@@ -819,13 +852,11 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
             }
         }
 
+        const int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1)};
         if(!pconf)
-            InitPanning(device);
+            InitPanning(device, !!hqdec);
         else
-        {
-            int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1)};
             InitCustomPanning(device, !!hqdec, pconf, speakermap);
-        }
         if(device->AmbiDecoder)
             device->PostProcess = &ALCdevice::ProcessAmbiDec;
         return;

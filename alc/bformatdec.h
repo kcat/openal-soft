@@ -43,7 +43,8 @@ class BFormatDec {
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const size_t inchans,
         const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS]);
-    BFormatDec(const size_t inchans, const al::span<const ChannelDec> chancoeffs);
+    BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,
+        const al::span<const ChannelDec> coeffslf);
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,
@@ -60,8 +61,11 @@ public:
             BFormatDec{conf, allow_2band, inchans, srate, chanmap}};
     }
     static std::unique_ptr<BFormatDec> Create(const size_t inchans,
-        const al::span<const ChannelDec> chancoeffs)
-    { return std::unique_ptr<BFormatDec>{new(FamCount{inchans}) BFormatDec{inchans, chancoeffs}}; }
+        const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf)
+    {
+        return std::unique_ptr<BFormatDec>{new(FamCount{inchans})
+            BFormatDec{inchans, coeffs, coeffslf}};
+    }
 
     DEF_FAM_NEWDEL(BFormatDec, mChannelDec)
 };

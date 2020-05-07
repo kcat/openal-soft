@@ -332,39 +332,73 @@ auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,M
 
 
 using ChannelCoeffs = std::array<float,MAX_AMBI2D_CHANNELS>;
+enum DecoderMode : bool {
+    SingleBand = false,
+    DualBand = true
+};
+
+template<DecoderMode Mode, size_t N>
+struct DecoderConfig;
 
 template<size_t N>
-struct DecoderConfig {
+struct DecoderConfig<SingleBand, N> {
     ALuint mOrder;
     std::array<Channel,N> mChannels;
     std::array<float,MAX_AMBI_ORDER+1> mOrderGain;
     std::array<ChannelCoeffs,N> mCoeffs;
 };
 
+template<size_t N>
+struct DecoderConfig<DualBand, N> {
+    ALuint mOrder;
+    std::array<Channel,N> mChannels;
+    std::array<float,MAX_AMBI_ORDER+1> mOrderGain;
+    std::array<ChannelCoeffs,N> mCoeffs;
+    std::array<float,MAX_AMBI_ORDER+1> mOrderGainLF;
+    std::array<ChannelCoeffs,N> mCoeffsLF;
+};
+
 template<>
-struct DecoderConfig<0> {
+struct DecoderConfig<DualBand, 0> {
     ALuint mOrder;
     al::span<const Channel> mChannels;
     al::span<const float> mOrderGain;
     al::span<const ChannelCoeffs> mCoeffs;
+    al::span<const float> mOrderGainLF;
+    al::span<const ChannelCoeffs> mCoeffsLF;
 
     template<size_t N>
-    DecoderConfig& operator=(const DecoderConfig<N> &rhs) noexcept
+    DecoderConfig& operator=(const DecoderConfig<SingleBand,N> &rhs) noexcept
     {
         mOrder = rhs.mOrder;
         mChannels = rhs.mChannels;
         mOrderGain = rhs.mOrderGain;
         mCoeffs = rhs.mCoeffs;
+        mOrderGainLF = {};
+        mCoeffsLF = {};
+        return *this;
+    }
+
+    template<size_t N>
+    DecoderConfig& operator=(const DecoderConfig<DualBand,N> &rhs) noexcept
+    {
+        mOrder = rhs.mOrder;
+        mChannels = rhs.mChannels;
+        mOrderGain = rhs.mOrderGain;
+        mCoeffs = rhs.mCoeffs;
+        mOrderGainLF = rhs.mOrderGainLF;
+        mCoeffsLF = rhs.mCoeffsLF;
         return *this;
     }
 };
+using DecoderView = DecoderConfig<DualBand, 0>;
 
-constexpr DecoderConfig<1> MonoConfig{
+constexpr DecoderConfig<SingleBand, 1> MonoConfig{
     0, {{FrontCenter}},
     {{1.0f}},
     {{ {{1.0f}} }}
 };
-constexpr DecoderConfig<2> StereoConfig{
+constexpr DecoderConfig<SingleBand, 2> StereoConfig{
     1, {{FrontLeft, FrontRight}},
     {{1.0f, 1.0f}},
     {{
@@ -372,7 +406,7 @@ constexpr DecoderConfig<2> StereoConfig{
         {{5.00000000e-1f, -2.88675135e-1f,  5.52305643e-2f}},
     }}
 };
-constexpr DecoderConfig<4> QuadConfig{
+constexpr DecoderConfig<SingleBand, 4> QuadConfig{
     2, {{BackLeft, FrontLeft, FrontRight, BackRight}},
     {{1.15470054e+0f, 1.00000000e+0f, 5.77350269e-1f}},
     {{
@@ -382,7 +416,7 @@ constexpr DecoderConfig<4> QuadConfig{
         {{2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f,  1.29099445e-1f, 0.00000000e+0f}},
     }}
 };
-constexpr DecoderConfig<4> X51Config{
+constexpr DecoderConfig<SingleBand, 4> X51Config{
     2, {{SideLeft, FrontLeft, FrontRight, SideRight}},
     {{1.0f, 1.0f, 1.0f}},
     {{
@@ -392,7 +426,7 @@ constexpr DecoderConfig<4> X51Config{
         {{3.33000782e-1f, -1.89084803e-1f, -2.00042375e-1f,  2.12307769e-2f, -1.14579885e-2f}},
     }}
 };
-constexpr DecoderConfig<4> X51RearConfig{
+constexpr DecoderConfig<SingleBand, 4> X51RearConfig{
     2, {{BackLeft, FrontLeft, FrontRight, BackRight}},
     {{1.0f, 1.0f, 1.0f}},
     {{
@@ -402,7 +436,7 @@ constexpr DecoderConfig<4> X51RearConfig{
         {{3.33000782e-1f, -1.89084803e-1f, -2.00042375e-1f,  2.12307769e-2f, -1.14579885e-2f}},
     }}
 };
-constexpr DecoderConfig<5> X61Config{
+constexpr DecoderConfig<SingleBand, 5> X61Config{
     2, {{SideLeft, FrontLeft, FrontRight, SideRight, BackCenter}},
     {{1.0f, 1.0f, 1.0f}},
     {{
@@ -413,7 +447,7 @@ constexpr DecoderConfig<5> X61Config{
         {{2.50001688e-1f,  0.00000000e+0f, -2.50000094e-1f,  0.00000000e+0f,  6.05133395e-2f}},
     }}
 };
-constexpr DecoderConfig<6> X71Config{
+constexpr DecoderConfig<SingleBand, 6> X71Config{
     3, {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight}},
     {{1.22474487e+0f, 1.13151672e+0f, 8.66025404e-1f, 4.68689571e-1f}},
     {{
@@ -428,8 +462,7 @@ constexpr DecoderConfig<6> X71Config{
 
 void InitPanning(ALCdevice *device)
 {
-    DecoderConfig<0> decoder{};
-
+    DecoderView decoder{};
     switch(device->FmtChans)
     {
     case DevFmtMono:

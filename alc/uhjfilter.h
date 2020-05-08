@@ -1,12 +1,14 @@
 #ifndef UHJFILTER_H
 #define UHJFILTER_H
 
+#include <array>
+
 #include "alcmain.h"
 #include "almalloc.h"
 
 
 struct AllPassState {
-    float z[2]{0.0f, 0.0f};
+    std::array<float,2> z{{0.0f, 0.0f}};
 };
 
 /* Encoding 2-channel UHJ from B-Format is done as:

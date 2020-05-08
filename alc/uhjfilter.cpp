@@ -19,56 +19,34 @@ namespace {
 #define MAX_UPDATE_SAMPLES  128
 
 
-constexpr float Filter1CoeffSqr[4]{
+constexpr std::array<float,4> Filter1CoeffSqr{{
     0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
-};
-constexpr float Filter2CoeffSqr[4]{
+}};
+constexpr std::array<float,4> Filter2CoeffSqr{{
     0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
-};
+}};
 
-void allpass_process(AllPassState *state, float *dst, const float *src, const float *coeffs,
-    const size_t todo)
+void allpass_process(al::span<AllPassState,4> state, float *dst, const float *src,
+    const std::array<float,4> &coeffs, const size_t todo)
 {
-    const float aa0{coeffs[0]};
-    const float aa1{coeffs[1]};
-    const float aa2{coeffs[2]};
-    const float aa3{coeffs[3]};
-    float z01{state[0].z[0]};
-    float z02{state[0].z[1]};
-    float z11{state[1].z[0]};
-    float z12{state[1].z[1]};
-    float z21{state[2].z[0]};
-    float z22{state[2].z[1]};
-    float z31{state[3].z[0]};
-    float z32{state[3].z[1]};
-    auto proc_sample = [aa0,aa1,aa2,aa3,&z01,&z02,&z11,&z12,&z21,&z22,&z31,&z32](
-        float input) noexcept -> float
+    const std::array<float,4> aa{coeffs};
+    std::array<std::array<float,2>,4> z{{state[0].z, state[1].z, state[2].z, state[3].z}};
+    auto proc_sample = [aa,&z](float sample) noexcept -> float
     {
-        float output{input*aa0 + z01};
-        z01 = z02; z02 = output*aa0 - input;
-        input = output;
-
-        output = input*aa1 + z11;
-        z11 = z12; z12 = output*aa1 - input;
-        input = output;
-
-        output = input*aa2 + z21;
-        z21 = z22; z22 = output*aa2 - input;
-        input = output;
-
-        output = input*aa3 + z31;
-        z31 = z32; z32 = output*aa3 - input;
-        return output;
+        for(size_t i{0};i < 4;++i)
+        {
+            const float output{sample*aa[i] + z[i][0]};
+            z[i][0] = z[i][1];
+            z[i][1] = output*aa[i] - sample;
+            sample = output;
+        }
+        return sample;
     };
     std::transform(src, src+todo, dst, proc_sample);
-    state[0].z[0] = z01;
-    state[0].z[1] = z02;
-    state[1].z[0] = z11;
-    state[1].z[1] = z12;
-    state[2].z[0] = z21;
-    state[2].z[1] = z22;
-    state[3].z[0] = z31;
-    state[3].z[1] = z32;
+    state[0].z = z[0];
+    state[1].z = z[1];
+    state[2].z = z[2];
+    state[3].z = z[3];
 }
 
 } // namespace

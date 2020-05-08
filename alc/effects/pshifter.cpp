@@ -56,8 +56,8 @@ std::array<double,STFT_SIZE> InitHannWindow()
     /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
     for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
-        constexpr double scale{al::MathDefs<double>::Pi() / double{STFT_SIZE-1}};
-        const double val{std::sin(static_cast<double>(i) * scale)};
+        constexpr double scale{al::MathDefs<double>::Pi() / double{STFT_SIZE}};
+        const double val{std::sin(static_cast<double>(i+1) * scale)};
         ret[i] = ret[STFT_SIZE-1-i] = val * val;
     }
     return ret;

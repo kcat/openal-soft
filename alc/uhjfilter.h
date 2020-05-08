@@ -7,10 +7,6 @@
 #include "almalloc.h"
 
 
-struct AllPassState {
-    std::array<float,2> z{{0.0f, 0.0f}};
-};
-
 /* Encoding 2-channel UHJ from B-Format is done as:
  *
  * S = 0.9396926*W + 0.1855740*X
@@ -21,36 +17,35 @@ struct AllPassState {
  *
  * where j is a wide-band +90 degree phase shift.
  *
- * The phase shift is done using a Hilbert transform, described here:
- * https://web.archive.org/web/20060708031958/http://www.biochem.oulu.fi/~oniemita/dsp/hilbert/
- * It works using 2 sets of 4 chained filters. The first filter chain produces
- * a phase shift of varying magnitude over a wide range of frequencies, while
- * the second filter chain produces a phase shift 90 degrees ahead of the
- * first over the same range.
- *
- * Combining these two stages requires the use of three filter chains. S-
- * channel output uses a Filter1 chain on the W and X channel mix, while the D-
- * channel output uses a Filter1 chain on the Y channel plus a Filter2 chain on
- * the W and X channel mix. This results in the W and X input mix on the D-
- * channel output having the required +90 degree phase shift relative to the
- * other inputs.
+ * The phase shift is done using a FIR filter derived from an FFT'd impulse
+ * with the desired shift.
  */
 
 struct Uhj2Encoder {
-    alignas(16) std::array<float,BUFFERSIZE> mTemp;
-    alignas(16) std::array<float,BUFFERSIZE+1> mMid;
-    alignas(16) std::array<float,BUFFERSIZE+1> mSide;
+    /* A particular property of the filter allows it to cover nearly twice its
+     * length, so the filter size is also the effective delay (despite being
+     * center-aligned).
+     */
+    constexpr static size_t sFilterSize{128};
 
-    AllPassState mFilter1_Y[4];
-    AllPassState mFilter2_WX[4];
-    AllPassState mFilter1_WX[4];
-    float mLastY{0.0f}, mLastWX{0.0f};
+    /* Delays for the unfiltered signal. */
+    alignas(16) std::array<float,sFilterSize> mMidDelay;
+    alignas(16) std::array<float,sFilterSize> mSideDelay;
 
-    /* Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
+    /* History for the FIR filter. */
+    alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory;
+
+    alignas(16) std::array<float,BUFFERSIZE + sFilterSize*2> mTemp;
+
+    alignas(16) std::array<float,BUFFERSIZE> mMid;
+    alignas(16) std::array<float,BUFFERSIZE> mSide;
+
+    /**
+     * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
      * signal. The input must use FuMa channel ordering and scaling.
      */
-    void encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut, FloatBufferLine *InSamples,
-        const size_t SamplesToDo);
+    void encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+        const FloatBufferLine *InSamples, const size_t SamplesToDo);
 
     DEF_NEWDEL(Uhj2Encoder)
 };

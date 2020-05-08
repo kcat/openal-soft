@@ -2084,6 +2084,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
         device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
+    if(Uhj2Encoder *uhj{device->Uhj_Encoder.get()})
+        device->FixedLatency += nanoseconds{seconds{uhj->sFilterSize}} / device->Frequency;
+
     /* Enable the stablizer only for formats that have front-left, front-right,
      * and front-center outputs.
      */

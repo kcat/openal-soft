@@ -1,8 +1,6 @@
 #ifndef UHJFILTER_H
 #define UHJFILTER_H
 
-#include "AL/al.h"
-
 #include "alcmain.h"
 #include "almalloc.h"
 
@@ -37,6 +35,10 @@ struct AllPassState {
  */
 
 struct Uhj2Encoder {
+    alignas(16) std::array<float,BUFFERSIZE> mTemp;
+    alignas(16) std::array<float,BUFFERSIZE+1> mMid;
+    alignas(16) std::array<float,BUFFERSIZE+1> mSide;
+
     AllPassState mFilter1_Y[4];
     AllPassState mFilter2_WX[4];
     AllPassState mFilter1_WX[4];

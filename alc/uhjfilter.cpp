@@ -19,27 +19,56 @@ namespace {
 #define MAX_UPDATE_SAMPLES  128
 
 
-constexpr float Filter1CoeffSqr[4] = {
+constexpr float Filter1CoeffSqr[4]{
     0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
 };
-constexpr float Filter2CoeffSqr[4] = {
+constexpr float Filter2CoeffSqr[4]{
     0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
 };
 
-void allpass_process(AllPassState *state, float *dst, const float *src, const float aa,
+void allpass_process(AllPassState *state, float *dst, const float *src, const float *coeffs,
     const size_t todo)
 {
-    float z1{state->z[0]};
-    float z2{state->z[1]};
-    auto proc_sample = [aa,&z1,&z2](const float input) noexcept -> float
+    const float aa0{coeffs[0]};
+    const float aa1{coeffs[1]};
+    const float aa2{coeffs[2]};
+    const float aa3{coeffs[3]};
+    float z01{state[0].z[0]};
+    float z02{state[0].z[1]};
+    float z11{state[1].z[0]};
+    float z12{state[1].z[1]};
+    float z21{state[2].z[0]};
+    float z22{state[2].z[1]};
+    float z31{state[3].z[0]};
+    float z32{state[3].z[1]};
+    auto proc_sample = [aa0,aa1,aa2,aa3,&z01,&z02,&z11,&z12,&z21,&z22,&z31,&z32](
+        float input) noexcept -> float
     {
-        const float output{input*aa + z1};
-        z1 = z2; z2 = output*aa - input;
+        float output{input*aa0 + z01};
+        z01 = z02; z02 = output*aa0 - input;
+        input = output;
+
+        output = input*aa1 + z11;
+        z11 = z12; z12 = output*aa1 - input;
+        input = output;
+
+        output = input*aa2 + z21;
+        z21 = z22; z22 = output*aa2 - input;
+        input = output;
+
+        output = input*aa3 + z31;
+        z31 = z32; z32 = output*aa3 - input;
         return output;
     };
     std::transform(src, src+todo, dst, proc_sample);
-    state->z[0] = z1;
-    state->z[1] = z2;
+    state[0].z[0] = z01;
+    state[0].z[1] = z02;
+    state[1].z[0] = z11;
+    state[1].z[1] = z12;
+    state[2].z[0] = z21;
+    state[2].z[1] = z22;
+    state[3].z[0] = z31;
+    state[3].z[1] = z32;
 }
 
 } // namespace
@@ -68,71 +97,45 @@ void allpass_process(AllPassState *state, float *dst, const float *src, const fl
 void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
-    alignas(16) float D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
-    alignas(16) float temp[MAX_UPDATE_SAMPLES];
-
     ASSUME(SamplesToDo > 0);
 
-    auto winput = InSamples[0].cbegin();
-    auto xinput = InSamples[1].cbegin();
-    auto yinput = InSamples[2].cbegin();
-    for(size_t base{0};base < SamplesToDo;)
-    {
-        const size_t todo{minz(SamplesToDo - base, MAX_UPDATE_SAMPLES)};
-        ASSUME(todo > 0);
+    const auto winput = al::assume_aligned<16>(InSamples[0].cbegin());
+    const auto xinput = al::assume_aligned<16>(InSamples[1].cbegin());
+    const auto yinput = al::assume_aligned<16>(InSamples[2].cbegin());
 
-        /* D = 0.6554516*Y */
-        std::transform(yinput, yinput+todo, std::begin(temp),
-            [](const float y) noexcept -> float { return 0.6554516f*y; });
-        allpass_process(&mFilter1_Y[0], temp, temp, Filter1CoeffSqr[0], todo);
-        allpass_process(&mFilter1_Y[1], temp, temp, Filter1CoeffSqr[1], todo);
-        allpass_process(&mFilter1_Y[2], temp, temp, Filter1CoeffSqr[2], todo);
-        allpass_process(&mFilter1_Y[3], temp, temp, Filter1CoeffSqr[3], todo);
-        /* NOTE: Filter1 requires a 1 sample delay for the final output, so
-         * take the last processed sample from the previous run as the first
-         * output sample.
-         */
-        D[0] = mLastY;
-        for(size_t i{1};i < todo;i++)
-            D[i] = temp[i-1];
-        mLastY = temp[todo-1];
+    /* D = 0.6554516*Y */
+    std::transform(yinput, yinput+SamplesToDo, mTemp.begin(),
+        [](const float y) noexcept -> float { return 0.6554516f*y; });
+    /* NOTE: Filter1 requires a 1 sample delay for the final output, so take
+     * the last processed sample from the previous run as the first output
+     * sample.
+     */
+    mSide[0] = mLastY;
+    allpass_process(mFilter1_Y, mSide.data()+1, mTemp.data(), Filter1CoeffSqr, SamplesToDo);
+    mLastY = mSide[SamplesToDo];
 
-        /* D += j(-0.3420201*W + 0.5098604*X) */
-        std::transform(winput, winput+todo, xinput, std::begin(temp),
-            [](const float w, const float x) noexcept -> float
-            { return -0.3420201f*w + 0.5098604f*x; });
-        allpass_process(&mFilter2_WX[0], temp, temp, Filter2CoeffSqr[0], todo);
-        allpass_process(&mFilter2_WX[1], temp, temp, Filter2CoeffSqr[1], todo);
-        allpass_process(&mFilter2_WX[2], temp, temp, Filter2CoeffSqr[2], todo);
-        allpass_process(&mFilter2_WX[3], temp, temp, Filter2CoeffSqr[3], todo);
-        for(size_t i{0};i < todo;i++)
-            D[i] += temp[i];
+    /* D += j(-0.3420201*W + 0.5098604*X) */
+    std::transform(winput, winput+SamplesToDo, xinput, mTemp.begin(),
+        [](const float w, const float x) noexcept -> float
+        { return -0.3420201f*w + 0.5098604f*x; });
+    allpass_process(mFilter2_WX, mTemp.data(), mTemp.data(), Filter2CoeffSqr, SamplesToDo);
+    for(size_t i{0};i < SamplesToDo;++i)
+        mSide[i] += mTemp[i];
 
-        /* S = 0.9396926*W + 0.1855740*X */
-        std::transform(winput, winput+todo, xinput, std::begin(temp),
-            [](const float w, const float x) noexcept -> float
-            { return 0.9396926f*w + 0.1855740f*x; });
-        allpass_process(&mFilter1_WX[0], temp, temp, Filter1CoeffSqr[0], todo);
-        allpass_process(&mFilter1_WX[1], temp, temp, Filter1CoeffSqr[1], todo);
-        allpass_process(&mFilter1_WX[2], temp, temp, Filter1CoeffSqr[2], todo);
-        allpass_process(&mFilter1_WX[3], temp, temp, Filter1CoeffSqr[3], todo);
-        S[0] = mLastWX;
-        for(size_t i{1};i < todo;i++)
-            S[i] = temp[i-1];
-        mLastWX = temp[todo-1];
+    /* S = 0.9396926*W + 0.1855740*X */
+    std::transform(winput, winput+SamplesToDo, xinput, mTemp.begin(),
+        [](const float w, const float x) noexcept -> float
+        { return 0.9396926f*w + 0.1855740f*x; });
+    mMid[0] = mLastWX;
+    allpass_process(mFilter1_WX, mMid.data()+1, mTemp.data(), Filter1CoeffSqr, SamplesToDo);
+    mLastWX = mMid[SamplesToDo];
 
-        /* Left = (S + D)/2.0 */
-        float *RESTRICT left{al::assume_aligned<16>(LeftOut.data()+base)};
-        for(size_t i{0};i < todo;i++)
-            left[i] += (S[i] + D[i]) * 0.5f;
-        /* Right = (S - D)/2.0 */
-        float *RESTRICT right{al::assume_aligned<16>(RightOut.data()+base)};
-        for(size_t i{0};i < todo;i++)
-            right[i] += (S[i] - D[i]) * 0.5f;
-
-        winput += todo;
-        xinput += todo;
-        yinput += todo;
-        base += todo;
-    }
+    /* Left = (S + D)/2.0 */
+    float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
+    for(size_t i{0};i < SamplesToDo;i++)
+        left[i] += (mMid[i] + mSide[i]) * 0.5f;
+    /* Right = (S - D)/2.0 */
+    float *RESTRICT right{al::assume_aligned<16>(RightOut.data())};
+    for(size_t i{0};i < SamplesToDo;i++)
+        right[i] += (mMid[i] - mSide[i]) * 0.5f;
 }

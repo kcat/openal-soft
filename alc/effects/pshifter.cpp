@@ -172,9 +172,9 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         complex_fft(mFftBuffer, -1.0);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
-         * STFT_HALF_SIZE samples are needed.
+         * STFT_HALF_SIZE+1 samples are needed.
          */
-        for(size_t k{0u};k < STFT_HALF_SIZE;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             const double amplitude{std::abs(mFftBuffer[k])};
             const double phase{std::arg(mFftBuffer[k])};
@@ -204,10 +204,10 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          * accumulating the amplitudes of overlapping frequency bins.
          */
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
-        for(size_t k{0u};k < STFT_HALF_SIZE;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             size_t j{(k*mPitchShiftI) >> FRACTIONBITS};
-            if(j >= STFT_HALF_SIZE) break;
+            if(j >= STFT_HALF_SIZE+1) break;
 
             mSynthesisBuffer[j].Amplitude += mAnalysisBuffer[k].Amplitude;
             mSynthesisBuffer[j].Frequency  = mAnalysisBuffer[k].Frequency * mPitchShift;
@@ -216,7 +216,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         /* Reconstruct the frequency-domain signal from the adjusted frequency
          * bins.
          */
-        for(size_t k{0u};k < STFT_HALF_SIZE;k++)
+        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             /* Compute bin deviation from scaled freq */
             const double tmp{mSynthesisBuffer[k].Frequency / freq_per_bin};
@@ -227,7 +227,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             mFftBuffer[k] = std::polar(mSynthesisBuffer[k].Amplitude, mSumPhase[k]);
         }
         /* Clear negative frequencies to recontruct the time-domain signal. */
-        std::fill(mFftBuffer.begin()+STFT_HALF_SIZE, mFftBuffer.end(), complex_d{});
+        std::fill(mFftBuffer.begin()+STFT_HALF_SIZE+1, mFftBuffer.end(), complex_d{});
 
         /* Apply an inverse FFT to get the time-domain siganl, and accumulate
          * for the output with windowing.

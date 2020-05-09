@@ -47,7 +47,7 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
     constexpr size_t half_size{32768};
 
     /* Generate a frequency domain impulse with a +90 degree phase offset. Keep
-     * the latter half clear for converting to the time domain.
+     * the mirrored frequencies clear for converting to the time domain.
      */
     auto fftBuffer = std::vector<complex_d>(half_size*2, complex_d{});
     for(size_t i{0};i < half_size;i += 2)
@@ -55,6 +55,7 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
         fftBuffer[i  ] = c0;
         fftBuffer[i+1] = c1;
     }
+    fftBuffer[half_size] = c0;
     complex_fft(fftBuffer, 1.0);
 
     /* Reverse and truncate the filter to a usable size, and store only the
@@ -64,7 +65,7 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
     auto fftiter = fftBuffer.data() + half_size + (Uhj2Encoder::sFilterSize-1);
     for(float &coeff : ret)
     {
-        coeff = static_cast<float>(fftiter->real() / half_size);
+        coeff = static_cast<float>(fftiter->real() / (half_size+1));
         fftiter -= 2;
     }
     return ret;
@@ -82,6 +83,9 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
         for(size_t i{0};i < todo;i+=4)
         {
             const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[i])};
+            /* NOTE: This could alternatively be done with two unaligned loads
+             * and a shuffle. Which would be better?
+             */
             const __m128 s{_mm_setr_ps(src[i*2], src[i*2 + 2], src[i*2 + 4], src[i*2 + 6])};
             r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
         }

@@ -2085,7 +2085,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
     if(Uhj2Encoder *uhj{device->Uhj_Encoder.get()})
-        device->FixedLatency += nanoseconds{seconds{uhj->sFilterSize}} / device->Frequency;
+    {
+        constexpr size_t filter_len{Uhj2Encoder::sFilterSize};
+        device->FixedLatency += nanoseconds{seconds{filter_len}} / device->Frequency;
+    }
 
     /* Enable the stablizer only for formats that have front-left, front-right,
      * and front-center outputs.

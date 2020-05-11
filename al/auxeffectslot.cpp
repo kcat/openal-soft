@@ -199,7 +199,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
     auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
 
     ALeffectslot *slot{::new (sublist->EffectSlots + slidx) ALeffectslot{}};
-    if(ALenum err{InitEffectSlot(slot)})
+    if(ALenum err{slot->init()})
     {
         al::destroy_at(slot);
         context->setError(err, "Effect slot object initialization failed");
@@ -231,7 +231,7 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
-        UpdateEffectSlotProps(slot, context.get());                           \
+        slot->updateProps(context.get());                                     \
     else                                                                      \
         slot->PropsClean.clear(std::memory_order_release);                    \
 } while(0)
@@ -381,7 +381,7 @@ START_API_FUNC
             ALeffect *effect{value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr};
             if(!(value == 0 || effect != nullptr))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
-            err = InitializeEffect(context.get(), slot, effect);
+            err = slot->initEffect(effect, context.get());
         }
         if(err != AL_NO_ERROR)
         {
@@ -420,7 +420,7 @@ START_API_FUNC
             if(target) IncrementRef(target->ref);
             DecrementRef(oldtarget->ref);
             slot->Target = target;
-            UpdateEffectSlotProps(slot, context.get());
+            slot->updateProps(context.get());
             return;
         }
 
@@ -631,71 +631,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
-{
-    ALenum newtype{effect ? effect->type : AL_EFFECT_NULL};
-    if(newtype != EffectSlot->Effect.Type)
-    {
-        EffectStateFactory *factory{getFactoryByType(newtype)};
-        if(!factory)
-        {
-            ERR("Failed to find factory for effect type 0x%04x\n", newtype);
-            return AL_INVALID_ENUM;
-        }
-        EffectState *State{factory->create()};
-        if(!State) return AL_OUT_OF_MEMORY;
-
-        ALCdevice *Device{Context->mDevice.get()};
-        std::unique_lock<std::mutex> statelock{Device->StateLock};
-        State->mOutTarget = Device->Dry.Buffer;
-        {
-            FPUCtl mixer_mode{};
-            State->deviceUpdate(Device);
-        }
-
-        if(!effect)
-        {
-            EffectSlot->Effect.Type = AL_EFFECT_NULL;
-            EffectSlot->Effect.Props = EffectProps{};
-        }
-        else
-        {
-            EffectSlot->Effect.Type = effect->type;
-            EffectSlot->Effect.Props = effect->Props;
-        }
-
-        EffectSlot->Effect.State->release();
-        EffectSlot->Effect.State = State;
-    }
-    else if(effect)
-        EffectSlot->Effect.Props = effect->Props;
-
-    /* Remove state references from old effect slot property updates. */
-    ALeffectslotProps *props{Context->mFreeEffectslotProps.load()};
-    while(props)
-    {
-        if(props->State)
-            props->State->release();
-        props->State = nullptr;
-        props = props->next.load(std::memory_order_relaxed);
-    }
-
-    return AL_NO_ERROR;
-}
-
-
-ALenum InitEffectSlot(ALeffectslot *slot)
-{
-    EffectStateFactory *factory{getFactoryByType(slot->Effect.Type)};
-    if(!factory) return AL_INVALID_VALUE;
-    slot->Effect.State = factory->create();
-    if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
-
-    slot->Effect.State->add_ref();
-    slot->Params.mEffectState = slot->Effect.State;
-    return AL_NO_ERROR;
-}
-
 ALeffectslot::~ALeffectslot()
 {
     if(Target)
@@ -717,7 +652,71 @@ ALeffectslot::~ALeffectslot()
         Params.mEffectState->release();
 }
 
-void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
+ALenum ALeffectslot::init()
+{
+    EffectStateFactory *factory{getFactoryByType(Effect.Type)};
+    if(!factory) return AL_INVALID_VALUE;
+    Effect.State = factory->create();
+    if(!Effect.State) return AL_OUT_OF_MEMORY;
+
+    Effect.State->add_ref();
+    Params.mEffectState = Effect.State;
+    return AL_NO_ERROR;
+}
+
+ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
+{
+    ALenum newtype{effect ? effect->type : AL_EFFECT_NULL};
+    if(newtype != Effect.Type)
+    {
+        EffectStateFactory *factory{getFactoryByType(newtype)};
+        if(!factory)
+        {
+            ERR("Failed to find factory for effect type 0x%04x\n", newtype);
+            return AL_INVALID_ENUM;
+        }
+        EffectState *State{factory->create()};
+        if(!State) return AL_OUT_OF_MEMORY;
+
+        ALCdevice *Device{context->mDevice.get()};
+        std::unique_lock<std::mutex> statelock{Device->StateLock};
+        State->mOutTarget = Device->Dry.Buffer;
+        {
+            FPUCtl mixer_mode{};
+            State->deviceUpdate(Device);
+        }
+
+        if(!effect)
+        {
+            Effect.Type = AL_EFFECT_NULL;
+            Effect.Props = EffectProps{};
+        }
+        else
+        {
+            Effect.Type = effect->type;
+            Effect.Props = effect->Props;
+        }
+
+        Effect.State->release();
+        Effect.State = State;
+    }
+    else if(effect)
+        Effect.Props = effect->Props;
+
+    /* Remove state references from old effect slot property updates. */
+    ALeffectslotProps *props{context->mFreeEffectslotProps.load()};
+    while(props)
+    {
+        if(props->State)
+            props->State->release();
+        props->State = nullptr;
+        props = props->next.load(std::memory_order_relaxed);
+    }
+
+    return AL_NO_ERROR;
+}
+
+void ALeffectslot::updateProps(ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
     ALeffectslotProps *props{context->mFreeEffectslotProps.load(std::memory_order_relaxed)};
@@ -733,21 +732,21 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     }
 
     /* Copy in current property values. */
-    props->Gain = slot->Gain;
-    props->AuxSendAuto = slot->AuxSendAuto;
-    props->Target = slot->Target;
+    props->Gain = Gain;
+    props->AuxSendAuto = AuxSendAuto;
+    props->Target = Target;
 
-    props->Type = slot->Effect.Type;
-    props->Props = slot->Effect.Props;
+    props->Type = Effect.Type;
+    props->Props = Effect.Props;
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */
     EffectState *oldstate{props->State};
-    slot->Effect.State->add_ref();
-    props->State = slot->Effect.State;
+    Effect.State->add_ref();
+    props->State = Effect.State;
 
     /* Set the new container for updating internal parameters. */
-    props = slot->Params.Update.exchange(props, std::memory_order_acq_rel);
+    props = Params.Update.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the
@@ -770,7 +769,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     for(ALeffectslot *slot : *auxslots)
     {
         if(!slot->PropsClean.test_and_set(std::memory_order_acq_rel))
-            UpdateEffectSlotProps(slot, context);
+            slot->updateProps(context);
     }
 }
 

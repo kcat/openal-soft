@@ -90,17 +90,16 @@ struct ALeffectslot {
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
 
+    ALenum init();
+    ALenum initEffect(ALeffect *effect, ALCcontext *context);
+    void updateProps(ALCcontext *context);
+
     static ALeffectslotArray *CreatePtrArray(size_t count) noexcept;
 
     /* This can be new'd for the context's default effect slot. */
     DEF_NEWDEL(ALeffectslot)
 };
 
-ALenum InitEffectSlot(ALeffectslot *slot);
-void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context);
 void UpdateAllEffectSlotProps(ALCcontext *context);
-
-
-ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
 #endif

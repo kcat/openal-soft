@@ -2230,7 +2230,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             EffectState *state{slot->Effect.State};
             state->mOutTarget = device->Dry.Buffer;
             state->deviceUpdate(device);
-            UpdateEffectSlotProps(slot, context);
+            slot->updateProps(context);
         }
 
         std::unique_lock<std::mutex> proplock{context->mPropLock};
@@ -2251,7 +2251,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 EffectState *state{slot->Effect.State};
                 state->mOutTarget = device->Dry.Buffer;
                 state->deviceUpdate(device);
-                UpdateEffectSlotProps(slot, context);
+                slot->updateProps(context);
             }
         }
         slotlock.unlock();
@@ -2563,7 +2563,7 @@ void ALCcontext::init()
     if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == Playback)
     {
         mDefaultSlot = std::unique_ptr<ALeffectslot>{new ALeffectslot{}};
-        if(InitEffectSlot(mDefaultSlot.get()) == AL_NO_ERROR)
+        if(mDefaultSlot->init() == AL_NO_ERROR)
             aluInitEffectPanning(mDefaultSlot.get(), mDevice.get());
         else
         {
@@ -3462,10 +3462,10 @@ START_API_FUNC
         ContextList.emplace(iter, context.get());
     }
 
-    if(context->mDefaultSlot)
+    if(ALeffectslot *slot{context->mDefaultSlot.get()})
     {
-        if(InitializeEffect(context.get(), context->mDefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
-            UpdateEffectSlotProps(context->mDefaultSlot.get(), context.get());
+        if(slot->initEffect(&DefaultEffect, context.get()) == AL_NO_ERROR)
+            slot->updateProps(context.get());
         else
             ERR("Failed to initialize the default effect\n");
     }

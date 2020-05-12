@@ -29,16 +29,16 @@ struct Uhj2Encoder {
     constexpr static size_t sFilterSize{128};
 
     /* Delays for the unfiltered signal. */
-    alignas(16) std::array<float,sFilterSize> mMidDelay;
-    alignas(16) std::array<float,sFilterSize> mSideDelay;
+    alignas(16) std::array<float,sFilterSize> mMidDelay{};
+    alignas(16) std::array<float,sFilterSize> mSideDelay{};
 
     /* History for the FIR filter. */
-    alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory;
+    alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory{};
 
-    alignas(16) std::array<float,BUFFERSIZE + sFilterSize*2> mTemp;
+    alignas(16) std::array<float,BUFFERSIZE + sFilterSize*2> mTemp{};
 
-    alignas(16) std::array<float,BUFFERSIZE> mMid;
-    alignas(16) std::array<float,BUFFERSIZE> mSide;
+    alignas(16) std::array<float,BUFFERSIZE> mMid{};
+    alignas(16) std::array<float,BUFFERSIZE> mSide{};
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input

@@ -70,7 +70,7 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
     }
     return ret;
 }
-const auto PShiftCoeffs = GenerateFilter();
+alignas(16) const auto PShiftCoeffs = GenerateFilter();
 
 
 void allpass_process(al::span<float> dst, const float *RESTRICT src)
@@ -78,9 +78,8 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
     for(float &output : dst)
     {
 #ifdef HAVE_SSE_INTRINSICS
-        constexpr size_t todo{PShiftCoeffs.size()>>2};
         __m128 r4{_mm_setzero_ps()};
-        for(size_t i{0};i < todo;i+=4)
+        for(size_t i{0};i < PShiftCoeffs.size();i+=4)
         {
             const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[i])};
             /* NOTE: This could alternatively be done with two unaligned loads

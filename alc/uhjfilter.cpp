@@ -75,30 +75,66 @@ alignas(16) const auto PShiftCoeffs = GenerateFilter();
 
 void allpass_process(al::span<float> dst, const float *RESTRICT src)
 {
-    for(float &output : dst)
-    {
 #ifdef HAVE_SSE_INTRINSICS
+    size_t pos{0};
+    if(size_t todo{dst.size()>>1})
+    {
+        do {
+            __m128 r04{_mm_setzero_ps()};
+            __m128 r14{_mm_setzero_ps()};
+            for(size_t j{0};j < PShiftCoeffs.size();j+=4)
+            {
+                const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[j])};
+                const __m128 s0{_mm_loadu_ps(&src[j*2])};
+                const __m128 s1{_mm_loadu_ps(&src[j*2 + 4])};
+
+                __m128 s{_mm_shuffle_ps(s1, s0, _MM_SHUFFLE(3, 1, 3, 1))};
+                r04 = _mm_add_ps(r04, _mm_mul_ps(s, coeffs));
+
+                s = _mm_shuffle_ps(s1, s0, _MM_SHUFFLE(2, 0, 2, 0));
+                r14 = _mm_add_ps(r14, _mm_mul_ps(s, coeffs));
+            }
+            r04 = _mm_add_ps(r04, _mm_shuffle_ps(r04, r04, _MM_SHUFFLE(0, 1, 2, 3)));
+            r04 = _mm_add_ps(r04, _mm_movehl_ps(r04, r04));
+            dst[pos++] += _mm_cvtss_f32(r04);
+
+            r14 = _mm_add_ps(r14, _mm_shuffle_ps(r14, r14, _MM_SHUFFLE(0, 1, 2, 3)));
+            r14 = _mm_add_ps(r14, _mm_movehl_ps(r14, r14));
+            dst[pos++] += _mm_cvtss_f32(r14);
+
+            src += 2;
+        } while(--todo);
+    }
+    if((dst.size()&1))
+    {
         __m128 r4{_mm_setzero_ps()};
-        for(size_t i{0};i < PShiftCoeffs.size();i+=4)
+        for(size_t j{0};j < PShiftCoeffs.size();j+=4)
         {
-            const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[i])};
+            const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[j])};
             /* NOTE: This could alternatively be done with two unaligned loads
              * and a shuffle. Which would be better?
              */
-            const __m128 s{_mm_setr_ps(src[i*2], src[i*2 + 2], src[i*2 + 4], src[i*2 + 6])};
+            const __m128 s{_mm_setr_ps(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
             r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
         }
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-        float ret{_mm_cvtss_f32(r4)};
+
+        dst[pos] += _mm_cvtss_f32(r4);
+    }
+
 #else
+
+    for(float &output : dst)
+    {
         float ret{0.0f};
-        for(size_t i{0};i < PShiftCoeffs.size();++i)
-            ret += src[i*2] * PShiftCoeffs[i];
-#endif
+        for(size_t j{0};j < PShiftCoeffs.size();++j)
+            ret += src[j*2] * PShiftCoeffs[j];
+
         output += ret;
         ++src;
     }
+#endif
 }
 
 } // namespace

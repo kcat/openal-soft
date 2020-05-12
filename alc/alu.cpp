@@ -1728,7 +1728,7 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
         for(ALeffectslot *slot : auxslots)
         {
             for(auto &buffer : slot->MixBuffer)
-                std::fill_n(buffer.begin(), SamplesToDo, 0.0f);
+                buffer.fill(0.0f);
         }
 
         /* Process voices that have a playing source. */
@@ -2018,9 +2018,7 @@ void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
 
         /* Clear main mixing buffers. */
         std::for_each(device->MixBuffer.begin(), device->MixBuffer.end(),
-            [SamplesToDo](FloatBufferLine &buffer) -> void
-            { std::fill_n(buffer.begin(), SamplesToDo, 0.0f); }
-        );
+            [](FloatBufferLine &buffer) -> void { buffer.fill(0.0f); });
 
         /* Increment the mix count at the start (lsb should now be 1). */
         IncrementRef(device->MixCount);

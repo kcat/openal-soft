@@ -1726,9 +1726,23 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
 {
+    constexpr bool AutoKnee{true};
+    constexpr bool AutoAttack{true};
+    constexpr bool AutoRelease{true};
+    constexpr bool AutoPostGain{true};
+    constexpr bool AutoDeclip{true};
+    constexpr float LookAheadTime{0.001f};
+    constexpr float HoldTime{0.002f};
+    constexpr float PreGainDb{0.0f};
+    constexpr float PostGainDb{0.0f};
+    constexpr float Ratio{std::numeric_limits<float>::infinity()};
+    constexpr float KneeDb{0.0f};
+    constexpr float AttackTime{0.02f};
+    constexpr float ReleaseTime{0.2f};
+
     return Compressor::Create(device->RealOut.Buffer.size(), static_cast<float>(device->Frequency),
-        AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f, 0.0f, 0.0f, threshold,
-        std::numeric_limits<float>::infinity(), 0.0f, 0.020f, 0.200f);
+        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, LookAheadTime, HoldTime,
+        PreGainDb, PostGainDb, threshold, Ratio, KneeDb, AttackTime, ReleaseTime);
 }
 
 /**

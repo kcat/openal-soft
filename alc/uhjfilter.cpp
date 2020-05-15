@@ -88,10 +88,10 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
                 const __m128 s0{_mm_loadu_ps(&src[j*2])};
                 const __m128 s1{_mm_loadu_ps(&src[j*2 + 4])};
 
-                __m128 s{_mm_shuffle_ps(s1, s0, _MM_SHUFFLE(3, 1, 3, 1))};
+                __m128 s{_mm_shuffle_ps(s0, s1, _MM_SHUFFLE(2, 0, 2, 0))};
                 r04 = _mm_add_ps(r04, _mm_mul_ps(s, coeffs));
 
-                s = _mm_shuffle_ps(s1, s0, _MM_SHUFFLE(2, 0, 2, 0));
+                s = _mm_shuffle_ps(s0, s1, _MM_SHUFFLE(3, 1, 3, 1));
                 r14 = _mm_add_ps(r14, _mm_mul_ps(s, coeffs));
             }
             r04 = _mm_add_ps(r04, _mm_shuffle_ps(r04, r04, _MM_SHUFFLE(0, 1, 2, 3)));

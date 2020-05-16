@@ -12,16 +12,14 @@
 #endif
 
 
-#define ALIGNED_ALLOC_AVAILABLE (__STDC_VERSION__ >= 201112L || __cplusplus >= 201703L)
-
 void *al_malloc(size_t alignment, size_t size)
 {
     assert((alignment & (alignment-1)) == 0);
     alignment = std::max(alignment, alignof(std::max_align_t));
 
-#if ALIGNED_ALLOC_AVAILABLE
+#if __cplusplus >= 201703L
     size = (size+(alignment-1))&~(alignment-1);
-    return aligned_alloc(alignment, size);
+    return std::aligned_alloc(alignment, size);
 #elif defined(HAVE_POSIX_MEMALIGN)
     void *ret;
     if(posix_memalign(&ret, alignment, size) == 0)
@@ -30,7 +28,7 @@ void *al_malloc(size_t alignment, size_t size)
 #elif defined(HAVE__ALIGNED_MALLOC)
     return _aligned_malloc(size, alignment);
 #else
-    auto *ret = static_cast<char*>(malloc(size+alignment));
+    auto *ret = static_cast<char*>(std::malloc(size+alignment));
     if(ret != nullptr)
     {
         *(ret++) = 0x00;
@@ -44,14 +42,14 @@ void *al_malloc(size_t alignment, size_t size)
 void *al_calloc(size_t alignment, size_t size)
 {
     void *ret = al_malloc(alignment, size);
-    if(ret) memset(ret, 0, size);
+    if(ret) std::memset(ret, 0, size);
     return ret;
 }
 
 void al_free(void *ptr) noexcept
 {
-#if ALIGNED_ALLOC_AVAILABLE || defined(HAVE_POSIX_MEMALIGN)
-    free(ptr);
+#if (__cplusplus >= 201703L) || defined(HAVE_POSIX_MEMALIGN)
+    std::free(ptr);
 #elif defined(HAVE__ALIGNED_MALLOC)
     _aligned_free(ptr);
 #else
@@ -61,7 +59,7 @@ void al_free(void *ptr) noexcept
         do {
             --finder;
         } while(*finder == 0x55);
-        free(finder);
+        std::free(finder);
     }
 #endif
 }

@@ -165,6 +165,9 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
 {
     ASSUME(SamplesToDo > 0);
 
+    float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
+    float *RESTRICT right{al::assume_aligned<16>(RightOut.data())};
+
     const float *RESTRICT winput{al::assume_aligned<16>(InSamples[0].data())};
     const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1].data())};
     const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2].data())};
@@ -177,6 +180,12 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     /* D = 0.6554516*Y */
     std::transform(yinput, yinput+SamplesToDo, mSide.begin(),
         [](const float y) noexcept -> float { return 0.6554516f*y; });
+
+    /* Include any existing direct signal in the mid/side buffers. */
+    for(size_t i{0};i < SamplesToDo;++i)
+        mMid[i] += left[i] + right[i];
+    for(size_t i{0};i < SamplesToDo;++i)
+        mSide[i] += left[i] - right[i];
 
     /* Apply a delay to the non-filtered signal to align with the filter delay. */
     if LIKELY(SamplesToDo >= sFilterSize)
@@ -209,11 +218,9 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     allpass_process({mSide.data(), SamplesToDo}, mTemp.data());
 
     /* Left = (S + D)/2.0 */
-    float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
     for(size_t i{0};i < SamplesToDo;i++)
-        left[i] += (mMid[i] + mSide[i]) * 0.5f;
+        left[i] = (mMid[i] + mSide[i]) * 0.5f;
     /* Right = (S - D)/2.0 */
-    float *RESTRICT right{al::assume_aligned<16>(RightOut.data())};
     for(size_t i{0};i < SamplesToDo;i++)
-        right[i] += (mMid[i] - mSide[i]) * 0.5f;
+        right[i] = (mMid[i] - mSide[i]) * 0.5f;
 }

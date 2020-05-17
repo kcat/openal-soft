@@ -129,11 +129,24 @@ void FillCPUCaps(int capfilter)
         size_t extpos{9};
         while((extpos=features.find("neon", extpos+1)) != std::string::npos)
         {
-            if((extpos == 0 || std::isspace(features[extpos-1])) &&
-                (extpos+4 == features.length() || std::isspace(features[extpos+4])))
+            if(std::isspace(features[extpos-1])
+                && (extpos+4 == features.length() || std::isspace(features[extpos+4])))
             {
                 caps |= CPU_CAP_NEON;
                 break;
+            }
+        }
+        if(!(caps&CPU_CAP_NEON))
+        {
+            extpos = 9;
+            while((extpos=features.find("asimd", extpos+1)) != std::string::npos)
+            {
+                if(std::isspace(features[extpos-1])
+                    && (extpos+5 == features.length() || std::isspace(features[extpos+5])))
+                {
+                    caps |= CPU_CAP_NEON;
+                    break;
+                }
             }
         }
     }

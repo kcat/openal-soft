@@ -101,7 +101,11 @@ void FillCPUCaps(int capfilter)
     caps |= CPU_CAP_SSE;
 #endif
 #endif
+
 #ifdef HAVE_NEON
+#ifdef __ARM_NEON
+    caps |= CPU_CAP_NEON;
+#else
     al::ifstream file{"/proc/cpuinfo"};
     if(!file.is_open())
         ERR("Failed to open /proc/cpuinfo, cannot check for NEON support\n");
@@ -133,6 +137,7 @@ void FillCPUCaps(int capfilter)
             }
         }
     }
+#endif
 #endif
 
     TRACE("Extensions:%s%s%s%s%s%s\n",

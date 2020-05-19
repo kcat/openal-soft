@@ -119,7 +119,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
          * which cancels out with the backwards phase shift to get the original
          * phase on the split signal.
          */
-        chan_iter->mSplitter.applyHfScale(tempbuf, chan_iter->mHfScale);
+        chan_iter->mSplitter.processHfScale(tempbuf, chan_iter->mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
         const auto &Coeffs = chan_iter->mCoeffs;

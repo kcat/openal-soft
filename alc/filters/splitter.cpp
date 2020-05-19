@@ -61,7 +61,7 @@ void BandSplitterR<Real>::process(const al::span<const Real> input, Real *hpout,
 }
 
 template<typename Real>
-void BandSplitterR<Real>::applyHfScale(const al::span<Real> samples, const Real hfscale)
+void BandSplitterR<Real>::processHfScale(const al::span<Real> samples, const Real hfscale)
 {
     const Real ap_coeff{mCoeff};
     const Real lp_coeff{mCoeff*0.5f + 0.5f};

@@ -757,7 +757,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                  * unavoidable.
                  */
                 const al::span<float> samples{const_cast<float*>(ResampledData), DstBufferSize};
-                chandata.mAmbiSplitter.applyHfScale(samples, hfscale);
+                chandata.mAmbiSplitter.processHfScale(samples, hfscale);
             }
 
             /* Now filter and mix to the appropriate outputs. */

@@ -23,6 +23,7 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
+#include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
 #include "hrtf.h"
@@ -156,15 +157,6 @@ struct BFChannelConfig {
     float Scale;
     ALuint Index;
 };
-
-/* Size for temporary storage of buffer data, in floats. Larger values need
- * more memory, while smaller values may need more iterations. The value needs
- * to be a sensible size, however, as it constrains the max stepping value used
- * for mixing, as well as the maximum number of samples per mixing iteration.
- */
-#define BUFFERSIZE 1024
-
-using FloatBufferLine = std::array<float,BUFFERSIZE>;
 
 /* Maximum number of samples to pad on the ends of a buffer for resampling.
  * Note that the padding is symmetric (half at the beginning and half at the

@@ -87,15 +87,73 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 
     const uint_fast32_t IrSize{State->mIrSize};
 
-    auto coeff_iter = State->mCoeffs.begin();
+    auto chan_iter = State->mChannels.begin();
     for(const FloatBufferLine &input : InSamples)
     {
-        const auto &Coeffs = *(coeff_iter++);
+        /* For dual-band processing, the signal needs extra scaling applied to
+         * the high frequency response. The band-splitter alone creates a
+         * frequency-dependent phase shift, which is not ideal. To counteract
+         * it, combine it with a backwards phase-shift.
+         */
+
+        /* Load the input signal backwards, into a temp buffer with delay
+         * padding. The delay serves to reduce the error caused by IIR filter's
+         * phase shift on a partial input.
+         */
+        al::span<float> tempbuf{State->mTemp.data(), HRTF_DIRECT_DELAY+BufferSize};
+        auto tmpiter = std::reverse_copy(input.begin(), input.begin()+BufferSize, tempbuf.begin());
+        std::copy(chan_iter->mDelay.cbegin(), chan_iter->mDelay.cend(), tmpiter);
+
+        /* Save the unfiltered newest input samples for next time. */
+        std::copy_n(tempbuf.begin(), HRTF_DIRECT_DELAY, chan_iter->mDelay.begin());
+
+        /* Apply the all-pass on the reversed signal and reverse the resulting
+         * sample array. This produces the forward response with a backwards
+         * phase shift (+n degrees becomes -n degrees).
+         */
+        chan_iter->mSplitter.applyAllpass(tempbuf);
+        tempbuf = tempbuf.subspan<HRTF_DIRECT_DELAY>();
+        std::reverse(tempbuf.begin(), tempbuf.end());
+
+        /* Now apply the band-splitter. This applies the normal phase shift,
+         * which cancels out with the backwards phase shift to get the original
+         * phase on the split signal.
+         */
+        chan_iter->mSplitter.applyHfScale(tempbuf, chan_iter->mHfScale);
+
+        /* Now apply the HRIR coefficients to this channel. */
+        const auto &Coeffs = chan_iter->mCoeffs;
+        ++chan_iter;
+
         for(size_t i{0u};i < BufferSize;++i)
         {
-            const float insample{input[i]};
+            const float insample{tempbuf[i]};
             ApplyCoeffs(AccumSamples+i, IrSize, Coeffs, insample, insample);
         }
+    }
+
+    /* Apply a delay to the existing signal to align with the input delay. */
+    auto &ldelay = State->mLeftDelay;
+    auto &rdelay = State->mRightDelay;
+    if LIKELY(BufferSize >= HRTF_DIRECT_DELAY)
+    {
+        auto buffer_end = LeftOut.begin() + BufferSize;
+        auto delay_end = std::rotate(LeftOut.begin(), buffer_end - HRTF_DIRECT_DELAY, buffer_end);
+        std::swap_ranges(LeftOut.begin(), delay_end, ldelay.begin());
+
+        buffer_end = RightOut.begin() + BufferSize;
+        delay_end = std::rotate(RightOut.begin(), buffer_end - HRTF_DIRECT_DELAY, buffer_end);
+        std::swap_ranges(RightOut.begin(), delay_end, rdelay.begin());
+    }
+    else
+    {
+        auto buffer_end = LeftOut.begin() + BufferSize;
+        auto delay_start = std::swap_ranges(LeftOut.begin(), buffer_end, ldelay.begin());
+        std::rotate(ldelay.begin(), delay_start, ldelay.end());
+
+        buffer_end = RightOut.begin() + BufferSize;
+        delay_start = std::swap_ranges(RightOut.begin(), buffer_end, rdelay.begin());
+        std::rotate(rdelay.begin(), delay_start, rdelay.end());
     }
     for(size_t i{0u};i < BufferSize;++i)
         LeftOut[i]  += AccumSamples[i][0];

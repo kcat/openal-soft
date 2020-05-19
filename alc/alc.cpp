@@ -2098,11 +2098,16 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
         device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
-    if(Uhj2Encoder *uhj{device->Uhj_Encoder.get()})
+    if(device->Uhj_Encoder)
     {
+        /* NOTE: Don't know why this has to be "copied" into a local constexpr
+         * variable to avoid a reference on Uhj2Encoder::sFilterSize...
+         */
         constexpr size_t filter_len{Uhj2Encoder::sFilterSize};
         device->FixedLatency += nanoseconds{seconds{filter_len}} / device->Frequency;
     }
+    if(device->mHrtfState)
+        device->FixedLatency += nanoseconds{seconds{HRTF_DIRECT_DELAY}} / device->Frequency;
 
     /* Enable the stablizer only for formats that have front-left, front-right,
      * and front-center outputs.
@@ -2125,10 +2130,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             stablizer->MidFilter.init(5000.0f / static_cast<float>(device->Frequency));
 
             device->Stablizer = std::move(stablizer);
-            /* NOTE: Don't know why this has to be "copied" into a local static
-             * constexpr variable to avoid a reference on
-             * FrontStablizer::DelayLength...
-             */
             constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
             device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
         }

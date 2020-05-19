@@ -12,6 +12,8 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
+#include "bufferline.h"
+#include "filters/splitter.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 
@@ -77,12 +79,24 @@ struct AngularPoint {
     AzRadians Azim;
 };
 
+#define HRTF_DIRECT_DELAY 128
 struct DirectHrtfState {
+    struct ChannelData {
+        std::array<float,HRTF_DIRECT_DELAY> mDelay{};
+        BandSplitter mSplitter;
+        float mHfScale{};
+        alignas(16) HrirArray mCoeffs{};
+    };
+
+    std::array<float,HRTF_DIRECT_DELAY> mLeftDelay{};
+    std::array<float,HRTF_DIRECT_DELAY> mRightDelay{};
+    std::array<float,HRTF_DIRECT_DELAY+BUFFERSIZE> mTemp;
+
     /* HRTF filter state for dry buffer content */
     ALuint mIrSize{0};
-    al::FlexArray<HrirArray,16> mCoeffs;
+    al::FlexArray<ChannelData> mChannels;
 
-    DirectHrtfState(size_t numchans) : mCoeffs{numchans} { }
+    DirectHrtfState(size_t numchans) : mChannels{numchans} { }
     /**
      * Produces HRTF filter coefficients for decoding B-Format, given a set of
      * virtual speaker positions, a matching decoding matrix, and per-order
@@ -95,7 +109,7 @@ struct DirectHrtfState {
 
     static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
 
-    DEF_FAM_NEWDEL(DirectHrtfState, mCoeffs)
+    DEF_FAM_NEWDEL(DirectHrtfState, mChannels)
 };
 
 

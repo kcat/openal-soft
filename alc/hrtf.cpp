@@ -277,9 +277,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
 
 
 std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
-{
-    return std::unique_ptr<DirectHrtfState>{new (FamCount{num_chans}) DirectHrtfState{num_chans}};
-}
+{ return std::unique_ptr<DirectHrtfState>{new(FamCount(num_chans)) DirectHrtfState{num_chans}}; }
 
 void DirectHrtfState::build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
     const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],

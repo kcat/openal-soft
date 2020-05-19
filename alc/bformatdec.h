@@ -57,13 +57,13 @@ public:
     static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,
         const size_t inchans, const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS])
     {
-        return std::unique_ptr<BFormatDec>{new(FamCount{inchans})
+        return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
             BFormatDec{conf, allow_2band, inchans, srate, chanmap}};
     }
     static std::unique_ptr<BFormatDec> Create(const size_t inchans,
         const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf)
     {
-        return std::unique_ptr<BFormatDec>{new(FamCount{inchans})
+        return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
             BFormatDec{inchans, coeffs, coeffslf}};
     }
 

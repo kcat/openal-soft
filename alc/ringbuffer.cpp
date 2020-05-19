@@ -50,7 +50,7 @@ RingBufferPtr RingBuffer::Create(size_t sz, size_t elem_sz, int limit_writes)
         throw std::overflow_error{"Ring buffer size overflow"};
 
     const size_t bufbytes{power_of_two * elem_sz};
-    RingBufferPtr rb{new (FamCount{bufbytes}) RingBuffer{bufbytes}};
+    RingBufferPtr rb{new(FamCount(bufbytes)) RingBuffer{bufbytes}};
     rb->mWriteSize = limit_writes ? sz : (power_of_two-1);
     rb->mSizeMask = power_of_two - 1;
     rb->mElemSize = elem_sz;

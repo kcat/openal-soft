@@ -25,7 +25,7 @@ struct FrontStablizer {
     al::FlexArray<DelayLine,16> DelayBuf;
 
     static std::unique_ptr<FrontStablizer> Create(size_t numchans)
-    { return std::unique_ptr<FrontStablizer>{new(FamCount{numchans}) FrontStablizer{numchans}}; }
+    { return std::unique_ptr<FrontStablizer>{new(FamCount(numchans)) FrontStablizer{numchans}}; }
 
     DEF_FAM_NEWDEL(FrontStablizer, DelayBuf)
 };

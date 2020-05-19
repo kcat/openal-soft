@@ -43,15 +43,15 @@ void al_free(void *ptr) noexcept;
     void operator delete[](void *block, void*) noexcept { al_free(block); }   \
     void operator delete[](void *block) noexcept { al_free(block); }
 
-struct FamCount { size_t mCount; };
+enum FamCount : size_t { };
 
 #define DEF_FAM_NEWDEL(T, FamMem)                                             \
     static constexpr size_t Sizeof(size_t count) noexcept                     \
     { return decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)); }          \
                                                                               \
-    void *operator new(size_t /*size*/, FamCount fam)                         \
+    void *operator new(size_t /*size*/, FamCount count)                       \
     {                                                                         \
-        if(void *ret{al_malloc(alignof(T), T::Sizeof(fam.mCount))})           \
+        if(void *ret{al_malloc(alignof(T), T::Sizeof(count))})                \
             return ret;                                                       \
         throw std::bad_alloc();                                               \
     }                                                                         \

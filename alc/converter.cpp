@@ -153,7 +153,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     if(numchans < 1 || srcRate < 1 || dstRate < 1)
         return nullptr;
 
-    SampleConverterPtr converter{new (FamCount{numchans}) SampleConverter{numchans}};
+    SampleConverterPtr converter{new(FamCount(numchans)) SampleConverter{numchans}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mSrcTypeSize = BytesFromDevFmt(srcType);

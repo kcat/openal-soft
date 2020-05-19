@@ -449,9 +449,16 @@ IF(HAVE_INTRIN_H)
         }" HAVE_BITSCANFORWARD_INTRINSIC)
 ENDIF()
 
-CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
-CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
-CHECK_SYMBOL_EXISTS(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)
+check_cxx_source_compiles("#include <cstdlib>
+int main()
+{
+    void *ptr{std::aligned_alloc(alignof(int), sizeof(int))};
+    std::free(ptr);
+    return 0;
+}" HAVE_STD_ALIGNED_ALLOC)
+check_symbol_exists(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
+check_symbol_exists(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
+check_symbol_exists(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)
 
 IF(NOT WIN32)
     # We need pthreads outside of Windows, for semaphores. It's also used to

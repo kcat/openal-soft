@@ -8,6 +8,9 @@
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 
+/* Define if we have the std::aligned_alloc function */
+#cmakedefine HAVE_STD_ALIGNED_ALLOC
+
 /* Define if we have the posix_memalign function */
 #cmakedefine HAVE_POSIX_MEMALIGN
 

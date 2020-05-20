@@ -108,7 +108,8 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
          * padding. The delay serves to reduce the error caused by the IIR
          * filter's phase shift on a partial input.
          */
-        al::span<float> tempbuf{State->mTemp.data(), HRTF_DIRECT_DELAY+BufferSize};
+        al::span<float> tempbuf{al::assume_aligned<16>(State->mTemp.data()),
+            HRTF_DIRECT_DELAY+BufferSize};
         auto tmpiter = std::reverse_copy(input.begin(), input.begin()+BufferSize, tempbuf.begin());
         std::copy(chan_iter->mDelay.cbegin(), chan_iter->mDelay.cend(), tmpiter);
 
@@ -123,9 +124,9 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         tempbuf = tempbuf.subspan<HRTF_DIRECT_DELAY>();
         std::reverse(tempbuf.begin(), tempbuf.end());
 
-        /* Now apply the band-splitter. This applies the normal phase shift,
-         * which cancels out with the backwards phase shift to get the original
-         * phase on the scaled signal.
+        /* Now apply the HF scale with the band-splitter. This applies the
+         * forward phase shift, which cancels out with the backwards phase
+         * shift to get the original phase on the scaled signal.
          */
         chan_iter->mSplitter.processHfScale(tempbuf, chan_iter->mHfScale);
 

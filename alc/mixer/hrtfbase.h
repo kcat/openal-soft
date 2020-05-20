@@ -93,12 +93,12 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         /* For dual-band processing, the signal needs extra scaling applied to
          * the high frequency response. The band-splitter alone creates a
          * frequency-dependent phase shift, which is not ideal. To counteract
-         * it, combine it with a backwards phase-shift.
+         * it, combine it with a backwards phase shift.
          */
 
         /* Load the input signal backwards, into a temp buffer with delay
-         * padding. The delay serves to reduce the error caused by IIR filter's
-         * phase shift on a partial input.
+         * padding. The delay serves to reduce the error caused by the IIR
+         * filter's phase shift on a partial input.
          */
         al::span<float> tempbuf{State->mTemp.data(), HRTF_DIRECT_DELAY+BufferSize};
         auto tmpiter = std::reverse_copy(input.begin(), input.begin()+BufferSize, tempbuf.begin());
@@ -117,7 +117,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 
         /* Now apply the band-splitter. This applies the normal phase shift,
          * which cancels out with the backwards phase shift to get the original
-         * phase on the split signal.
+         * phase on the scaled signal.
          */
         chan_iter->mSplitter.processHfScale(tempbuf, chan_iter->mHfScale);
 

@@ -85,8 +85,16 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 {
     ASSUME(BufferSize > 0);
 
-    const uint_fast32_t IrSize{State->mIrSize};
+    /* Add the existing signal directly to the accumulation buffer, unfiltered,
+     * and with a delay to align with the input delay.
+     */
+    for(size_t i{0};i < BufferSize;++i)
+    {
+        AccumSamples[HRTF_DIRECT_DELAY+i][0] += LeftOut[i];
+        AccumSamples[HRTF_DIRECT_DELAY+i][1] += RightOut[i];
+    }
 
+    const uint_fast32_t IrSize{State->mIrSize};
     auto chan_iter = State->mChannels.begin();
     for(const FloatBufferLine &input : InSamples)
     {
@@ -123,47 +131,25 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
 
         /* Now apply the HRIR coefficients to this channel. */
         const auto &Coeffs = chan_iter->mCoeffs;
-        ++chan_iter;
-
         for(size_t i{0u};i < BufferSize;++i)
         {
             const float insample{tempbuf[i]};
             ApplyCoeffs(AccumSamples+i, IrSize, Coeffs, insample, insample);
         }
+
+        ++chan_iter;
     }
 
-    /* Apply a delay to the existing signal to align with the input delay. */
-    auto &ldelay = State->mLeftDelay;
-    auto &rdelay = State->mRightDelay;
-    if LIKELY(BufferSize >= HRTF_DIRECT_DELAY)
-    {
-        auto buffer_end = LeftOut.begin() + BufferSize;
-        auto delay_end = std::rotate(LeftOut.begin(), buffer_end - HRTF_DIRECT_DELAY, buffer_end);
-        std::swap_ranges(LeftOut.begin(), delay_end, ldelay.begin());
-
-        buffer_end = RightOut.begin() + BufferSize;
-        delay_end = std::rotate(RightOut.begin(), buffer_end - HRTF_DIRECT_DELAY, buffer_end);
-        std::swap_ranges(RightOut.begin(), delay_end, rdelay.begin());
-    }
-    else
-    {
-        auto buffer_end = LeftOut.begin() + BufferSize;
-        auto delay_start = std::swap_ranges(LeftOut.begin(), buffer_end, ldelay.begin());
-        std::rotate(ldelay.begin(), delay_start, ldelay.end());
-
-        buffer_end = RightOut.begin() + BufferSize;
-        delay_start = std::swap_ranges(RightOut.begin(), buffer_end, rdelay.begin());
-        std::rotate(rdelay.begin(), delay_start, rdelay.end());
-    }
     for(size_t i{0u};i < BufferSize;++i)
-        LeftOut[i]  += AccumSamples[i][0];
+        LeftOut[i]  = AccumSamples[i][0];
     for(size_t i{0u};i < BufferSize;++i)
-        RightOut[i] += AccumSamples[i][1];
+        RightOut[i] = AccumSamples[i][1];
 
     /* Copy the new in-progress accumulation values to the front and clear the
      * following samples for the next mix.
      */
-    auto accum_iter = std::copy_n(AccumSamples+BufferSize, HRIR_LENGTH, AccumSamples);
+    auto accum_iter = std::copy_n(AccumSamples+BufferSize, HRIR_LENGTH+HRTF_DIRECT_DELAY,
+        AccumSamples);
     std::fill_n(accum_iter, BufferSize, float2{});
 }
 

@@ -88,7 +88,8 @@ static void SofaInfo(const char *filename)
     MySofaHrtfPtr sofa{mysofa_load(filename, &err)};
     if(!sofa)
     {
-        fprintf(stdout, "Error: Could not load source file '%s'.\n", filename);
+        fprintf(stdout, "Error: Could not load source file '%s' (%s).\n", filename,
+            SofaErrorStr(err));
         return;
     }
 

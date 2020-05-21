@@ -1800,6 +1800,12 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
 }
 
 
+/* FIXME: This shouldn't really be applied to the final output mix like this,
+ * since a source mixed with direct channels shouldn't be subjected to this
+ * filtering. The only way to do that is as part of the ambisonic decode (in
+ * BFormatDec::process) where it can separate the pre-mixed direct-channel feed
+ * from the decoded soundfield.
+ */
 void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> Buffer,
     const ALuint lidx, const ALuint ridx, const ALuint cidx, const ALuint SamplesToDo)
 {
@@ -1820,42 +1826,33 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
         {
             auto delay_end = std::rotate(Buffer[i].begin(),
                 buffer_end - FrontStablizer::DelayLength, buffer_end);
-            std::swap_ranges(Buffer[i].begin(), delay_end, std::begin(DelayBuf));
+            std::swap_ranges(Buffer[i].begin(), delay_end, DelayBuf.begin());
         }
         else
         {
             auto delay_start = std::swap_ranges(Buffer[i].begin(), buffer_end,
-                std::begin(DelayBuf));
-            std::rotate(std::begin(DelayBuf), delay_start, std::end(DelayBuf));
+                DelayBuf.begin());
+            std::rotate(DelayBuf.begin(), delay_start, DelayBuf.end());
         }
     }
 
-    al::span<float> tmpbuf{Stablizer->TempBuf, SamplesToDo+FrontStablizer::DelayLength};
-
-    /* Use the right delay buf for the side signal delay. Combine the delayed
-     * signal with the incoming signal.
+    /* Add a delay to the incoming side signal to keep it aligned with the mid
+     * filter delay.
      */
-    auto tmpiter = std::copy_n(std::begin(Stablizer->DelayBuf[ridx]), FrontStablizer::DelayLength,
-        tmpbuf.begin());
-    for(size_t i{0};i < SamplesToDo;++i,++tmpiter)
-        *tmpiter = Buffer[lidx][i] - Buffer[ridx][i];
-    /* Hold on to the beginning for later, and save the end for next time. */
-    std::copy_n(tmpbuf.begin(), SamplesToDo, std::begin(Stablizer->Side));
-    std::copy_n(tmpbuf.begin()+SamplesToDo, FrontStablizer::DelayLength,
-        std::begin(Stablizer->DelayBuf[ridx]));
+    for(size_t i{0};i < SamplesToDo;++i)
+        Stablizer->Side[FrontStablizer::DelayLength+i] = Buffer[lidx][i] - Buffer[ridx][i];
 
-    /* Use the left delay buf for the mid signal delay. Combine the delayed
-     * signal with the incoming signal. Note that the samples are stored and
-     * combined in reverse, so the newest samples are at the front and the
-     * oldest at the back.
+    /* Combine the delayed mid signal with the incoming signal. Note that the
+     * samples are stored and combined in reverse, so the newest samples are at
+     * the front and the oldest at the back.
      */
-    tmpiter = tmpbuf.begin() + SamplesToDo;
-    std::copy_n(std::cbegin(Stablizer->DelayBuf[lidx]), FrontStablizer::DelayLength, tmpiter);
+    al::span<float> tmpbuf{Stablizer->TempBuf};
+    auto tmpiter = tmpbuf.begin() + SamplesToDo;
+    std::copy(Stablizer->MidDelay.cbegin(), Stablizer->MidDelay.cend(), tmpiter);
     for(size_t i{0};i < SamplesToDo;++i)
         *--tmpiter = Buffer[lidx][i] + Buffer[ridx][i];
     /* Save the newest samples for next time. */
-    std::copy_n(tmpbuf.cbegin(), FrontStablizer::DelayLength,
-        std::begin(Stablizer->DelayBuf[lidx]));
+    std::copy_n(tmpbuf.cbegin(), Stablizer->MidDelay.size(), Stablizer->MidDelay.begin());
 
     /* Apply an all-pass on the reversed signal, then reverse the samples to
      * get the forward signal with a reversed phase shift. The future samples
@@ -1869,7 +1866,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     /* Now apply the band-splitter, combining its phase shift with the reversed
      * phase shift, restoring the original phase on the split signal.
      */
-    Stablizer->MidFilter.process(tmpbuf, Stablizer->MidHF, Stablizer->MidLF);
+    Stablizer->MidFilter.process(tmpbuf, Stablizer->MidHF.data(), Stablizer->MidLF.data());
 
     /* This pans the separate low- and high-frequency signals between being on
      * the center channel and the left+right channels. The low-frequency signal
@@ -1893,6 +1890,9 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
         Buffer[ridx][i] = (m - s) * 0.5f;
         Buffer[cidx][i] += c * 0.5f;
     }
+    /* Move the delayed side samples to the front for next time. */
+    auto side_end = Stablizer->Side.cbegin() + SamplesToDo;
+    std::copy(side_end, side_end+FrontStablizer::DelayLength, Stablizer->Side.begin());
 }
 
 void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALuint SamplesToDo,

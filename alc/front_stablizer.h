@@ -4,8 +4,8 @@
 #include <array>
 #include <memory>
 
-#include "alcmain.h"
 #include "almalloc.h"
+#include "bufferline.h"
 #include "filters/splitter.h"
 
 
@@ -14,12 +14,14 @@ struct FrontStablizer {
 
     FrontStablizer(size_t numchans) : DelayBuf{numchans} { }
 
-    BandSplitter MidFilter;
-    alignas(16) float MidLF[BUFFERSIZE]{};
-    alignas(16) float MidHF[BUFFERSIZE]{};
-    alignas(16) float Side[BUFFERSIZE]{};
+    alignas(16) std::array<float,BUFFERSIZE + DelayLength> Side{};
+    alignas(16) std::array<float,DelayLength> MidDelay{};
 
-    alignas(16) float TempBuf[BUFFERSIZE + DelayLength]{};
+    alignas(16) std::array<float,BUFFERSIZE + DelayLength> TempBuf{};
+
+    BandSplitter MidFilter;
+    alignas(16) FloatBufferLine MidLF{};
+    alignas(16) FloatBufferLine MidHF{};
 
     using DelayLine = std::array<float,DelayLength>;
     al::FlexArray<DelayLine,16> DelayBuf;

@@ -1300,8 +1300,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
                      * decay distance (so it doesn't take any longer to decay
                      * than the air would allow).
                      */
-                    const float absorb_dist{std::log10(REVERB_DECAY_GAIN) /
-                        std::log10(airAbsorption)};
+                    constexpr float log10_decaygain{-3.0f/*std::log10(REVERB_DECAY_GAIN)*/};
+                    const float absorb_dist{log10_decaygain / std::log10(airAbsorption)};
                     DecayDistance[i].HF = minf(absorb_dist, DecayDistance[i].HF);
                 }
             }

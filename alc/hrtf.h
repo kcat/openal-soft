@@ -79,7 +79,7 @@ struct AngularPoint {
     AzRadians Azim;
 };
 
-#define HRTF_DIRECT_DELAY 128
+#define HRTF_DIRECT_DELAY 192
 struct DirectHrtfState {
     struct ChannelData {
         std::array<float,HRTF_DIRECT_DELAY> mDelay{};

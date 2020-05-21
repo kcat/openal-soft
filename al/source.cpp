@@ -1990,7 +1990,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_SOURCE_SPATIALIZE_SOFT:
         CHECKSIZE(values, 1);
-        values[0] = Source->mSpatialize;
+        values[0] = static_cast<int>(Source->mSpatialize);
         return true;
 
     /* 1x float/double */

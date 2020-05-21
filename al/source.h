@@ -56,7 +56,7 @@ struct ALsource {
     DistanceModel mDistanceModel{DistanceModel::Default};
     Resampler mResampler{ResamplerDefault};
     DirectMode DirectChannels{DirectMode::Off};
-    SpatializeMode mSpatialize{SpatializeAuto};
+    SpatializeMode mSpatialize{SpatializeMode::Auto};
 
     bool DryGainHFAuto{true};
     bool WetGainAuto{true};

@@ -19,10 +19,10 @@
 enum class DistanceModel;
 
 
-enum SpatializeMode {
-    SpatializeOff = AL_FALSE,
-    SpatializeOn = AL_TRUE,
-    SpatializeAuto = AL_AUTO_SOFT
+enum class SpatializeMode : unsigned char {
+    Off = AL_FALSE,
+    On = AL_TRUE,
+    Auto = AL_AUTO_SOFT
 };
 
 enum class DirectMode : unsigned char {

@@ -1575,8 +1575,8 @@ void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
 
     if((voice->mProps.DirectChannels != DirectMode::Off && voice->mFmtChannels != FmtMono
             && voice->mFmtChannels != FmtBFormat2D && voice->mFmtChannels != FmtBFormat3D)
-        || voice->mProps.mSpatializeMode == SpatializeOff
-        || (voice->mProps.mSpatializeMode == SpatializeAuto && voice->mFmtChannels != FmtMono))
+        || voice->mProps.mSpatializeMode==SpatializeMode::Off
+        || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && voice->mFmtChannels != FmtMono))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);
     else
         CalcAttnSourceParams(voice, &voice->mProps, context);

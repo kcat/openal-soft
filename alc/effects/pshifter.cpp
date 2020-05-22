@@ -206,7 +206,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
         for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
-            size_t j{(k*mPitchShiftI) >> FRACTIONBITS};
+            const size_t j{(k*mPitchShiftI + (FRACTIONONE>>1)) >> FRACTIONBITS};
             if(j >= STFT_HALF_SIZE+1) break;
 
             mSynthesisBuffer[j].Amplitude += mAnalysisBuffer[k].Amplitude;

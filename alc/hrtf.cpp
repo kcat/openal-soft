@@ -1446,6 +1446,8 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const A
 
     if(hrtf->sampleRate != devrate)
     {
+        TRACE("Resampling HRTF %s (%uhz -> %uhz)\n", name.c_str(), hrtf->sampleRate, devrate);
+
         /* Calculate the last elevation's index and get the total IR count. */
         const size_t lastEv{std::accumulate(hrtf->field, hrtf->field+hrtf->fdCount, size_t{0},
             [](const size_t curval, const HrtfStore::Field &field) noexcept -> size_t
@@ -1501,7 +1503,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const A
         {
             ubyte2 &delays = const_cast<ubyte2&>(hrtf->delays[i]);
             for(size_t j{0};j < 2;++j)
-                delays[j] = static_cast<ALubyte>(float2int(new_delays[i][j] * delay_scale));
+                delays[j] = static_cast<ALubyte>(float2int(new_delays[i][j]*delay_scale + 0.5f));
         }
 
         /* Scale the IR size for the new sample rate and update the stored

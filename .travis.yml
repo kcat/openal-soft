@@ -7,6 +7,8 @@ matrix:
       dist: trusty
       env:
         - BUILD_ANDROID=true
+    - os: freebsd
+      compiler: clang
     - os: osx
 sudo: required
 install:
@@ -39,6 +41,27 @@ install:
       export OBOE_LOC=~/oboe
       git clone --depth 1 -b 1.3-stable https://github.com/google/oboe "$OBOE_LOC"
     fi
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "freebsd" ]]; then
+      # Install Ninja as it's used downstream.
+      # Install dependencies for all supported backends.
+      # Install Qt5 dependency for alsoft-config.
+      # Install ffmpeg for examples.
+      sudo pkg install -y \
+        alsa-lib \
+        ffmpeg \
+        jackit \
+        libmysofa \
+        ninja \
+        portaudio \
+        pulseaudio \
+        qt5-buildtools \
+        qt5-qmake \
+        qt5-widgets \
+        sdl2 \
+        sndio \
+        $NULL
+    fi
 script:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
@@ -59,6 +82,19 @@ script:
         -DOBOE_SOURCE="$OBOE_LOC" \
         -DALSOFT_REQUIRE_OBOE=ON \
         -DALSOFT_REQUIRE_OPENSL=ON \
+        -DALSOFT_EMBED_HRTF_DATA=YES \
+        .
+    fi
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "freebsd" ]]; then
+      cmake -GNinja \
+        -DALSOFT_REQUIRE_ALSA=ON \
+        -DALSOFT_REQUIRE_JACK=ON \
+        -DALSOFT_REQUIRE_OSS=ON \
+        -DALSOFT_REQUIRE_PORTAUDIO=ON \
+        -DALSOFT_REQUIRE_PULSEAUDIO=ON \
+        -DALSOFT_REQUIRE_SDL2=ON \
+        -DALSOFT_REQUIRE_SNDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
         .
     fi

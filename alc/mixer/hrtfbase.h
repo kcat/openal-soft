@@ -48,29 +48,36 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
     const auto &NewCoeffs = *newparams->Coeffs;
     const float newGainStep{newparams->GainStep};
 
-    size_t ldelay{HRTF_HISTORY_LENGTH - oldparams->Delay[0]};
-    size_t rdelay{HRTF_HISTORY_LENGTH - oldparams->Delay[1]};
-    auto stepcount = static_cast<float>(BufferSize);
-    for(size_t i{0u};i < BufferSize;++i)
+    if LIKELY(oldparams->Gain > GAIN_SILENCE_THRESHOLD)
     {
-        const float g{oldGainStep*stepcount};
-        const float left{InSamples[ldelay++] * g};
-        const float right{InSamples[rdelay++] * g};
-        ApplyCoeffs(AccumSamples+i, IrSize, OldCoeffs, left, right);
+        size_t ldelay{HRTF_HISTORY_LENGTH - oldparams->Delay[0]};
+        size_t rdelay{HRTF_HISTORY_LENGTH - oldparams->Delay[1]};
+        auto stepcount = static_cast<float>(BufferSize);
+        for(size_t i{0u};i < BufferSize;++i)
+        {
+            const float g{oldGainStep*stepcount};
+            const float left{InSamples[ldelay++] * g};
+            const float right{InSamples[rdelay++] * g};
+            ApplyCoeffs(AccumSamples+i, IrSize, OldCoeffs, left, right);
 
-        stepcount -= 1.0f;
+            stepcount -= 1.0f;
+        }
     }
 
-    ldelay = HRTF_HISTORY_LENGTH - newparams->Delay[0];
-    rdelay = HRTF_HISTORY_LENGTH - newparams->Delay[1];
-    for(size_t i{0u};i < BufferSize;++i)
+    if LIKELY(newGainStep*static_cast<float>(BufferSize) > GAIN_SILENCE_THRESHOLD)
     {
-        const float g{newGainStep*stepcount};
-        const float left{InSamples[ldelay++] * g};
-        const float right{InSamples[rdelay++] * g};
-        ApplyCoeffs(AccumSamples+i, IrSize, NewCoeffs, left, right);
+        size_t ldelay{HRTF_HISTORY_LENGTH - newparams->Delay[0]};
+        size_t rdelay{HRTF_HISTORY_LENGTH - newparams->Delay[1]};
+        float stepcount{0.0f};
+        for(size_t i{0u};i < BufferSize;++i)
+        {
+            const float g{newGainStep*stepcount};
+            const float left{InSamples[ldelay++] * g};
+            const float right{InSamples[rdelay++] * g};
+            ApplyCoeffs(AccumSamples+i, IrSize, NewCoeffs, left, right);
 
-        stepcount += 1.0f;
+            stepcount += 1.0f;
+        }
     }
 }
 

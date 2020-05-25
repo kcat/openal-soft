@@ -481,13 +481,11 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
     std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.History.size(),
         parms.Hrtf.History.begin());
 
-    /* If fading, the old gain is not silence, and this is the first mixing
-     * pass, fade between the IRs.
-     */
+    /* If fading and this is the first mixing pass, fade between the IRs. */
     ALuint fademix{0u};
-    if(Counter && parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD && OutPos == 0)
+    if(Counter && OutPos == 0)
     {
-        fademix = minu(DstBufferSize, 128);
+        fademix = minu(DstBufferSize, Counter);
 
         float gain{TargetGain};
 
@@ -496,7 +494,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
          * interpolate between the old and new target gains given how much of
          * the fade time this mix handles.
          */
-        if LIKELY(Counter > fademix)
+        if(Counter > fademix)
         {
             const float a{static_cast<float>(fademix) / static_cast<float>(Counter)};
             gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
@@ -515,7 +513,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
         OutPos += fademix;
     }
 
-    if LIKELY(fademix < DstBufferSize)
+    if(fademix < DstBufferSize)
     {
         const ALuint todo{DstBufferSize - fademix};
         float gain{TargetGain};
@@ -624,22 +622,6 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
 
                 SendParams &parms = chandata.mWetParams[send];
                 parms.Gains.Current = parms.Gains.Target;
-            }
-        }
-    }
-    else if((mFlags&VOICE_HAS_HRTF))
-    {
-        for(auto &chandata : mChans)
-        {
-            DirectParams &parms = chandata.mDryParams;
-            if(!(parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
-            {
-                /* The old HRTF params are silent, so overwrite the old
-                 * coefficients with the new, and reset the old gain to 0. The
-                 * future mix will then fade from silence.
-                 */
-                parms.Hrtf.Old = parms.Hrtf.Target;
-                parms.Hrtf.Old.Gain = 0.0f;
             }
         }
     }

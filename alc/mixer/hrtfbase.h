@@ -22,15 +22,14 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
     const float gainstep{hrtfparams->GainStep};
     const float gain{hrtfparams->Gain};
 
-    size_t Delay[2]{
-        HRTF_HISTORY_LENGTH - hrtfparams->Delay[0],
-        HRTF_HISTORY_LENGTH - hrtfparams->Delay[1] };
+    size_t ldelay{HRTF_HISTORY_LENGTH - hrtfparams->Delay[0]};
+    size_t rdelay{HRTF_HISTORY_LENGTH - hrtfparams->Delay[1]};
     float stepcount{0.0f};
     for(size_t i{0u};i < BufferSize;++i)
     {
         const float g{gain + gainstep*stepcount};
-        const float left{InSamples[Delay[0]++] * g};
-        const float right{InSamples[Delay[1]++] * g};
+        const float left{InSamples[ldelay++] * g};
+        const float right{InSamples[rdelay++] * g};
         ApplyCoeffs(AccumSamples+i, IrSize, Coeffs, left, right);
 
         stepcount += 1.0f;
@@ -42,36 +41,33 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
     const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize)
 {
+    ASSUME(BufferSize > 0);
+
     const auto &OldCoeffs = oldparams->Coeffs;
-    const float oldGain{oldparams->Gain};
-    const float oldGainStep{-oldGain / static_cast<float>(BufferSize)};
+    const float oldGainStep{oldparams->Gain / static_cast<float>(BufferSize)};
     const auto &NewCoeffs = *newparams->Coeffs;
     const float newGainStep{newparams->GainStep};
 
-    ASSUME(BufferSize > 0);
-
-    size_t Delay[2]{
-        HRTF_HISTORY_LENGTH - oldparams->Delay[0],
-        HRTF_HISTORY_LENGTH - oldparams->Delay[1] };
-    float stepcount{0.0f};
+    size_t ldelay{HRTF_HISTORY_LENGTH - oldparams->Delay[0]};
+    size_t rdelay{HRTF_HISTORY_LENGTH - oldparams->Delay[1]};
+    auto stepcount = static_cast<float>(BufferSize);
     for(size_t i{0u};i < BufferSize;++i)
     {
-        const float g{oldGain + oldGainStep*stepcount};
-        const float left{InSamples[Delay[0]++] * g};
-        const float right{InSamples[Delay[1]++] * g};
+        const float g{oldGainStep*stepcount};
+        const float left{InSamples[ldelay++] * g};
+        const float right{InSamples[rdelay++] * g};
         ApplyCoeffs(AccumSamples+i, IrSize, OldCoeffs, left, right);
 
-        stepcount += 1.0f;
+        stepcount -= 1.0f;
     }
 
-    Delay[0] = HRTF_HISTORY_LENGTH - newparams->Delay[0];
-    Delay[1] = HRTF_HISTORY_LENGTH - newparams->Delay[1];
-    stepcount = 0.0f;
+    ldelay = HRTF_HISTORY_LENGTH - newparams->Delay[0];
+    rdelay = HRTF_HISTORY_LENGTH - newparams->Delay[1];
     for(size_t i{0u};i < BufferSize;++i)
     {
         const float g{newGainStep*stepcount};
-        const float left{InSamples[Delay[0]++] * g};
-        const float right{InSamples[Delay[1]++] * g};
+        const float left{InSamples[ldelay++] * g};
+        const float right{InSamples[rdelay++] * g};
         ApplyCoeffs(AccumSamples+i, IrSize, NewCoeffs, left, right);
 
         stepcount += 1.0f;

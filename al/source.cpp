@@ -3319,17 +3319,19 @@ START_API_FUNC
     else if(source->state == AL_INITIAL)
         Current = BufferList;
     if UNLIKELY(BufferList == Current)
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing pending buffers");
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffer%s (none processed)", nb,
+            (nb==1) ? "" : "s");
 
     ALuint i{1u};
     while(i < static_cast<ALuint>(nb))
     {
         /* If the next bufferlist to check is NULL or is the current one, it's
-         * trying to unqueue pending buffers.
+         * trying to unqueue more buffers than are processed.
          */
         ALbufferlistitem *next{BufferList->mNext.load(std::memory_order_relaxed)};
         if UNLIKELY(!next || next == Current)
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing pending buffers");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffers (only %u processed)",
+                nb, i);
         BufferList = next;
 
         ++i;

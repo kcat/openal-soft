@@ -1,3 +1,69 @@
+openal-soft-1.21.0:
+
+    Updated library codebase to C++14.
+
+    Improved memory use for mixing voices.
+
+    Improved detection of NEON capabilities.
+
+    Improved handling of PulseAudio devices that lack manual start control.
+
+    Improved mixing performance with PulseAudio.
+
+    Improved high-frequency scaling quality for the HRTF B-Format decoder.
+
+    Improved makemhr's HRIR delay calculation.
+
+    Reimplemented the modulation stage for reverb.
+
+    Enabled real-time mixing priority by default. It can still be disabled in
+    the config file (for backends that use the setting).
+
+    Enabled dual-band processing for the built-in quad and 7.1 output decoders.
+
+    Fixed building with MSVC and static runtime.
+
+    Fixed using source stereo angles outside of -pi...+pi.
+
+    Fixed the buffer processed event count for sources that start with null
+    buffers.
+
+    Fixed handling of unopenable WASAPI devices.
+
+    Fixed stale devices when re-enumerating WASAPI devices.
+
+    Fixed using unicode paths with the log file on Windows.
+
+    Added an in-progress extension for a callback-driven buffer type.
+
+    Added an in-progress extension for higher-order B-Format buffers.
+
+    Added an experimental Oboe backend for Android playback. This requires the
+    Oboe sources at build time, so that it's built as a static library included
+    in libopenal.
+
+    Finally got the mixer to be fully asynchronous with the external API, and
+    should now be real-time safe. Although alcRenderSamplesSOFT is not due to
+    locking to check the device handle validity.
+
+    Modified the UHJ encoder to use an all-pass FIR filter that's less harnful
+    to non-filtered signal phase.
+
+    Converted examples from SDL_sound to libsndfile. To avoid issues when
+    combining SDL2 and SDL_sound.
+
+    Worked around a 32-bit GCC/MinGW bug with TLS destructors. See:
+    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=83562
+
+    Reduced the maximum number of source sends from 16 to 6.
+
+    Removed the QSA backend. It's been broken for who knows how long.
+
+    Got rid of the compile-time native-tools targets, using cmake and global
+    initialization instead. This should make cross-compiling less troublesome.
+
+
+
 openal-soft-1.20.1:
 
     Implemented the AL_SOFT_direct_channels_remix extension. This extends

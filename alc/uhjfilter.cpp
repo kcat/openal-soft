@@ -172,42 +172,30 @@ void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1].data())};
     const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2].data())};
 
+    /* Combine the previously delayed mid/side signal with the input. */
+
     /* S = 0.9396926*W + 0.1855740*X */
-    std::transform(winput, winput+SamplesToDo, xinput, mMid.begin(),
+    auto miditer = std::copy(mMidDelay.cbegin(), mMidDelay.cend(), mMid.begin());
+    std::transform(winput, winput+SamplesToDo, xinput, miditer,
         [](const float w, const float x) noexcept -> float
         { return 0.9396926f*w + 0.1855740f*x; });
 
     /* D = 0.6554516*Y */
-    std::transform(yinput, yinput+SamplesToDo, mSide.begin(),
+    auto sideiter = std::copy(mSideDelay.cbegin(), mSideDelay.cend(), mSide.begin());
+    std::transform(yinput, yinput+SamplesToDo, sideiter,
         [](const float y) noexcept -> float { return 0.6554516f*y; });
 
     /* Include any existing direct signal in the mid/side buffers. */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mMid[i] += left[i] + right[i];
-    for(size_t i{0};i < SamplesToDo;++i)
-        mSide[i] += left[i] - right[i];
+    for(size_t i{0};i < SamplesToDo;++i,++miditer)
+        *miditer += left[i] + right[i];
+    for(size_t i{0};i < SamplesToDo;++i,++sideiter)
+        *sideiter += left[i] - right[i];
 
-    /* Apply a delay to the non-filtered signal to align with the filter delay. */
-    if LIKELY(SamplesToDo >= sFilterSize)
-    {
-        auto buffer_end = mMid.begin() + SamplesToDo;
-        auto delay_end = std::rotate(mMid.begin(), buffer_end - sFilterSize, buffer_end);
-        std::swap_ranges(mMid.begin(), delay_end, mMidDelay.begin());
+    /* Copy the future samples back to the delay buffers for next time. */
+    std::copy_n(mMid.cbegin()+SamplesToDo, mMidDelay.size(), mMidDelay.begin());
+    std::copy_n(mSide.cbegin()+SamplesToDo, mSideDelay.size(), mSideDelay.begin());
 
-        buffer_end = mSide.begin() + SamplesToDo;
-        delay_end = std::rotate(mSide.begin(), buffer_end - sFilterSize, buffer_end);
-        std::swap_ranges(mSide.begin(), delay_end, mSideDelay.begin());
-    }
-    else
-    {
-        auto buffer_end = mMid.begin() + SamplesToDo;
-        auto delay_start = std::swap_ranges(mMid.begin(), buffer_end, mMidDelay.begin());
-        std::rotate(mMidDelay.begin(), delay_start, mMidDelay.end());
-
-        buffer_end = mSide.begin() + SamplesToDo;
-        delay_start = std::swap_ranges(mSide.begin(), buffer_end, mSideDelay.begin());
-        std::rotate(mSideDelay.begin(), delay_start, mSideDelay.end());
-    }
+    /* Now add the all-passed signal into the side signal. */
 
     /* D += j(-0.3420201*W + 0.5098604*X) */
     auto tmpiter = std::copy(mSideHistory.cbegin(), mSideHistory.cend(), mTemp.begin());

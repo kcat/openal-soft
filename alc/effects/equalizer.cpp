@@ -155,17 +155,15 @@ void EqualizerState::update(const ALCcontext *context, const ALeffectslot *slot,
 void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const al::span<float> buffer{mSampleBuffer.data(), samplesToDo};
-    auto chandata = std::addressof(mChans[0]);
+    auto chan = std::addressof(mChans[0]);
     for(const auto &input : samplesIn)
     {
-        chandata->filter[0].process({input.data(), samplesToDo}, buffer.begin());
-        chandata->filter[1].process(buffer, buffer.begin());
-        chandata->filter[2].process(buffer, buffer.begin());
-        chandata->filter[3].process(buffer, buffer.begin());
+        const al::span<const float> inbuf{input.data(), samplesToDo};
+        DualBiquad{chan->filter[0], chan->filter[1]}.process(inbuf, buffer.begin());
+        DualBiquad{chan->filter[2], chan->filter[3]}.process(buffer, buffer.begin());
 
-        MixSamples(buffer, samplesOut, chandata->CurrentGains, chandata->TargetGains, samplesToDo,
-            0u);
-        ++chandata;
+        MixSamples(buffer, samplesOut, chan->CurrentGains, chan->TargetGains, samplesToDo, 0u);
+        ++chan;
     }
 }
 

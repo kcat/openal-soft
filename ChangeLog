@@ -21,14 +21,15 @@ openal-soft-1.21.0:
 
     Enabled dual-band processing for the built-in quad and 7.1 output decoders.
 
-    Fixed building with MSVC and static runtime.
+    Fixed building with the static runtime on MSVC.
 
     Fixed using source stereo angles outside of -pi...+pi.
 
-    Fixed the buffer processed event count for sources that start with null
+    Fixed the buffer processed event count for sources that start with empty
     buffers.
 
-    Fixed handling of unopenable WASAPI devices.
+    Fixed trying to open an unopenable WASAPI device causing all devices to
+    stop working.
 
     Fixed stale devices when re-enumerating WASAPI devices.
 

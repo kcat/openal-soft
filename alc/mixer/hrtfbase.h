@@ -66,10 +66,10 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
     if LIKELY(newGainStep*static_cast<float>(BufferSize) > GAIN_SILENCE_THRESHOLD)
     {
-        size_t ldelay{HRTF_HISTORY_LENGTH - newparams->Delay[0]};
-        size_t rdelay{HRTF_HISTORY_LENGTH - newparams->Delay[1]};
-        float stepcount{0.0f};
-        for(size_t i{0u};i < BufferSize;++i)
+        size_t ldelay{HRTF_HISTORY_LENGTH+1 - newparams->Delay[0]};
+        size_t rdelay{HRTF_HISTORY_LENGTH+1 - newparams->Delay[1]};
+        float stepcount{1.0f};
+        for(size_t i{1u};i < BufferSize;++i)
         {
             const float g{newGainStep*stepcount};
             const float left{InSamples[ldelay++] * g};

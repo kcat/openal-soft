@@ -365,9 +365,9 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const al::span<const AngularP
             for(size_t i{0u};i < mChannels.size();++i)
             {
                 const double mult{AmbiMatrix[c][i]};
-                const ALuint numirs{HRIR_LENGTH - maxu(ldelay, rdelay)};
-                ALuint lidx{ldelay}, ridx{rdelay};
-                for(ALuint j{0};j < numirs;++j)
+                const size_t numirs{HRIR_LENGTH - maxz(ldelay, rdelay)};
+                size_t lidx{ldelay}, ridx{rdelay};
+                for(size_t j{0};j < numirs;++j)
                 {
                     tmpres[i][lidx++][0] += hrir[j][0] * mult;
                     tmpres[i][ridx++][1] += hrir[j][1] * mult;

@@ -117,7 +117,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         std::copy(chan_iter->mDelay.cbegin(), chan_iter->mDelay.cend(), tmpiter);
 
         /* Save the unfiltered newest input samples for next time. */
-        std::copy_n(tempbuf.begin(), HRTF_DIRECT_DELAY, chan_iter->mDelay.begin());
+        std::copy_n(tempbuf.begin(), chan_iter->mDelay.size(), chan_iter->mDelay.begin());
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
          * sample array. This produces the forward response with a backwards

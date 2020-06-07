@@ -192,7 +192,7 @@ bool SndioPlayback::reset()
     if(par.bits != par.bps*8)
     {
         ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
-        return true;
+        return false;
     }
 
     mDevice->Frequency = par.rate;

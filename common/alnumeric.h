@@ -132,7 +132,7 @@ inline int fallback_popcnt64(uint64_t v)
 }
 #define POPCNT64 fallback_popcnt64
 
-#if defined(HAVE_BITSCANFORWARD64_INTRINSIC)
+#if defined(_WIN64)
 
 inline int msvc64_ctz32(uint32_t v)
 {
@@ -149,7 +149,7 @@ inline int msvc64_ctz64(uint64_t v)
 }
 #define CTZ64 msvc64_ctz64
 
-#elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
+#elif defined(_WIN32)
 
 inline int msvc_ctz32(uint32_t v)
 {
@@ -225,8 +225,9 @@ inline int float2int(float f) noexcept
 #if defined(HAVE_SSE_INTRINSICS)
     return _mm_cvtt_ss2si(_mm_set_ss(f));
 
-#elif ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
-       !defined(__SSE_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0)
+#elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0) \
+    || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
+        &&  !defined(__SSE_MATH__))
     int sign, shift, mant;
     union {
         float f;
@@ -260,9 +261,9 @@ inline int double2int(double d) noexcept
 #if defined(HAVE_SSE_INTRINSICS)
     return _mm_cvttsd_si32(_mm_set_sd(d));
 
-#elif ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
-       !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
-
+#elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2) \
+    || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
+        &&  !defined(__SSE2_MATH__))
     int sign, shift;
     int64_t mant;
     union {
@@ -296,8 +297,8 @@ inline int double2int(double d) noexcept
  */
 inline float fast_roundf(float f) noexcept
 {
-#if (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
-    !defined(__SSE_MATH__)
+#if (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
+    && !defined(__SSE_MATH__)
 
     float out;
     __asm__ __volatile__("frndint" : "=t"(out) : "0"(f));

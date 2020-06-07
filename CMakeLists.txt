@@ -433,20 +433,6 @@ IF(HAVE_INTRIN_H)
             __cpuid(regs, 0);
             return regs[0];
         }" HAVE_CPUID_INTRINSIC)
-    CHECK_C_SOURCE_COMPILES("#include <intrin.h>
-        int main()
-        {
-            unsigned long idx = 0;
-            _BitScanForward64(&idx, 1);
-            return idx;
-        }" HAVE_BITSCANFORWARD64_INTRINSIC)
-    CHECK_C_SOURCE_COMPILES("#include <intrin.h>
-        int main()
-        {
-            unsigned long idx = 0;
-            _BitScanForward(&idx, 1);
-            return idx;
-        }" HAVE_BITSCANFORWARD_INTRINSIC)
 ENDIF()
 
 check_cxx_source_compiles("#include <cstdlib>

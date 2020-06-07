@@ -127,7 +127,21 @@ bool SndioPlayback::reset()
     sio_initpar(&par);
 
     par.rate = mDevice->Frequency;
-    par.pchan = ((mDevice->FmtChans != DevFmtMono) ? 2 : 1);
+    switch(mDevice->FmtChans)
+    {
+        case DevFmtMono   : par.pchan = 1; break;
+        case DevFmtQuad   : par.pchan = 4; break;
+        case DevFmtX51Rear: // fall-through - "Similar to 5.1, except using rear channels instead of sides"
+        case DevFmtX51    : par.pchan = 6; break;
+        case DevFmtX61    : par.pchan = 7; break;
+        case DevFmtX71    : par.pchan = 8; break;
+
+        case DevFmtStereo : // fall-through
+        default: // fall back to stereo for all unknown formats and Ambi3D
+            mDevice->FmtChans = DevFmtStereo;
+            par.pchan = 2;
+            break;
+    }
 
     switch(mDevice->FmtType)
     {
@@ -176,7 +190,23 @@ bool SndioPlayback::reset()
     }
 
     mDevice->Frequency = par.rate;
-    mDevice->FmtChans = ((par.pchan==1) ? DevFmtMono : DevFmtStereo);
+
+    switch(par.pchan)
+    {
+        case 1: mDevice->FmtChans = DevFmtMono; break;
+        case 2: mDevice->FmtChans = DevFmtStereo; break;
+        case 4: mDevice->FmtChans = DevFmtQuad; break;
+        case 6:
+            if(mDevice->FmtChans != DevFmtX51Rear) // if it's already DevFmtX51Rear no change is needed
+                mDevice->FmtChans = DevFmtX51;
+            break;
+        case 7: mDevice->FmtChans = DevFmtX61; break;
+        case 8: mDevice->FmtChans = DevFmtX71; break;
+        
+        default:
+            ERR("Unexpected number of channels: %d\n", par.pchan);
+            return ALC_FALSE;
+    }
 
     if(par.bits == 8 && par.sig == 1)
         mDevice->FmtType = DevFmtByte;

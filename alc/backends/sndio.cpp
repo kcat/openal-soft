@@ -194,6 +194,12 @@ bool SndioPlayback::reset()
         ERR("Padded samples not supported (%u of %u bits)\n", par.bits, par.bps*8);
         return false;
     }
+    if(par.le != SIO_LE_NATIVE)
+    {
+        ERR("Non-native-endian samples not supported (got %s-endian)\n",
+            par.le ? "little" : "big");
+        return false;
+    }
 
     mDevice->Frequency = par.rate;
 

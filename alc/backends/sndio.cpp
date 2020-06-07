@@ -58,7 +58,7 @@ struct SndioPlayback final : public BackendBase {
 
     sio_hdl *mSndHandle{nullptr};
 
-    al::vector<ALubyte> mBuffer;
+    al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -75,19 +75,27 @@ SndioPlayback::~SndioPlayback()
 
 int SndioPlayback::mixerProc()
 {
+    sio_par par;
+    sio_initpar(&par);
+    if(!sio_getpar(mSndHandle, &par))
+    {
+        aluHandleDisconnect(mDevice, "Failed to get device parameters");
+        return 1;
+    }
+
+    const size_t frameStep{par.pchan};
+    const size_t frameSize{frameStep * par.bps};
+
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const size_t frameStep{mDevice->channelsFromFmt()};
-    const ALuint frameSize{mDevice->frameSizeFromFmt()};
-
-    while(!mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
-        ALubyte *WritePtr{mBuffer.data()};
+        al::byte *WritePtr{mBuffer.data()};
         size_t len{mBuffer.size()};
 
-        aluMixData(mDevice, WritePtr, static_cast<ALuint>(len/frameSize), frameStep);
+        aluMixData(mDevice, WritePtr, static_cast<ALuint>(len)/frameSize, frameStep);
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             size_t wrote{sio_write(mSndHandle, WritePtr, len)};
@@ -129,47 +137,45 @@ bool SndioPlayback::reset()
     par.rate = mDevice->Frequency;
     switch(mDevice->FmtChans)
     {
-        case DevFmtMono   : par.pchan = 1; break;
-        case DevFmtQuad   : par.pchan = 4; break;
-        case DevFmtX51Rear: // fall-through - "Similar to 5.1, except using rear channels instead of sides"
-        case DevFmtX51    : par.pchan = 6; break;
-        case DevFmtX61    : par.pchan = 7; break;
-        case DevFmtX71    : par.pchan = 8; break;
+    case DevFmtMono   : par.pchan = 1; break;
+    case DevFmtQuad   : par.pchan = 4; break;
+    case DevFmtX51Rear: // fall-through - "Similar to 5.1, except using rear channels instead of sides"
+    case DevFmtX51    : par.pchan = 6; break;
+    case DevFmtX61    : par.pchan = 7; break;
+    case DevFmtX71    : par.pchan = 8; break;
 
-        case DevFmtStereo : // fall-through
-        default: // fall back to stereo for all unknown formats and Ambi3D
-            mDevice->FmtChans = DevFmtStereo;
-            par.pchan = 2;
-            break;
+    // fall back to stereo for Ambi3D
+    case DevFmtAmbi3D : // fall-through
+    case DevFmtStereo : par.pchan = 2; break;
     }
 
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            par.bits = 8;
-            par.sig = 1;
-            break;
-        case DevFmtUByte:
-            par.bits = 8;
-            par.sig = 0;
-            break;
-        case DevFmtFloat:
-        case DevFmtShort:
-            par.bits = 16;
-            par.sig = 1;
-            break;
-        case DevFmtUShort:
-            par.bits = 16;
-            par.sig = 0;
-            break;
-        case DevFmtInt:
-            par.bits = 32;
-            par.sig = 1;
-            break;
-        case DevFmtUInt:
-            par.bits = 32;
-            par.sig = 0;
-            break;
+    case DevFmtByte:
+        par.bits = 8;
+        par.sig = 1;
+        break;
+    case DevFmtUByte:
+        par.bits = 8;
+        par.sig = 0;
+        break;
+    case DevFmtFloat:
+    case DevFmtShort:
+        par.bits = 16;
+        par.sig = 1;
+        break;
+    case DevFmtUShort:
+        par.bits = 16;
+        par.sig = 0;
+        break;
+    case DevFmtInt:
+        par.bits = 32;
+        par.sig = 1;
+        break;
+    case DevFmtUInt:
+        par.bits = 32;
+        par.sig = 0;
+        break;
     }
     par.le = SIO_LE_NATIVE;
 
@@ -191,21 +197,25 @@ bool SndioPlayback::reset()
 
     mDevice->Frequency = par.rate;
 
-    switch(par.pchan)
+    if(par.pchan < 2)
     {
-        case 1: mDevice->FmtChans = DevFmtMono; break;
-        case 2: mDevice->FmtChans = DevFmtStereo; break;
-        case 4: mDevice->FmtChans = DevFmtQuad; break;
-        case 6:
-            if(mDevice->FmtChans != DevFmtX51Rear) // if it's already DevFmtX51Rear no change is needed
-                mDevice->FmtChans = DevFmtX51;
-            break;
-        case 7: mDevice->FmtChans = DevFmtX61; break;
-        case 8: mDevice->FmtChans = DevFmtX71; break;
-        
-        default:
-            ERR("Unexpected number of channels: %d\n", par.pchan);
-            return ALC_FALSE;
+        if(mDevice->FmtChans != DevFmtMono)
+        {
+            WARN("Got %u channel for %s\n", par.pchan, DevFmtChannelsString(mDevice->FmtChans));
+            mDevice->FmtChans = DevFmtMono;
+        }
+    }
+    else if((par.pchan == 2 && mDevice->FmtChans != DevFmtStereo)
+        || par.pchan == 3
+        || (par.pchan == 4 && mDevice->FmtChans != DevFmtQuad)
+        || par.pchan == 5
+        || (par.pchan == 6 && mDevice->FmtChans != DevFmtX51 && mDevice->FmtChans != DevFmtX51Rear)
+        || (par.pchan == 7 && mDevice->FmtChans != DevFmtX61)
+        || (par.pchan == 8 && mDevice->FmtChans != DevFmtX71)
+        || par.pchan > 8)
+    {
+        WARN("Got %u channels for %s\n", par.pchan, DevFmtChannelsString(mDevice->FmtChans));
+        mDevice->FmtChans = DevFmtStereo;
     }
 
     if(par.bits == 8 && par.sig == 1)
@@ -231,8 +241,15 @@ bool SndioPlayback::reset()
     mDevice->UpdateSize = par.round;
     mDevice->BufferSize = par.bufsz + par.round;
 
-    mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
-    std::fill(mBuffer.begin(), mBuffer.end(), 0);
+    mBuffer.resize(mDevice->UpdateSize * par.pchan*par.bps);
+    if(par.sig == 1)
+        std::fill(mBuffer.begin(), mBuffer.end(), al::byte{});
+    else if(par.bits == 8)
+        std::fill_n(mBuffer.data(), mBuffer.size(), al::byte(0x80));
+    else if(par.bits == 16)
+        std::fill_n(reinterpret_cast<uint16_t*>(mBuffer.data()), mBuffer.size()/2, 0x8000);
+    else if(par.bits == 32)
+        std::fill_n(reinterpret_cast<uint32_t*>(mBuffer.data()), mBuffer.size()/4, 0x80000000u);
 
     return true;
 }

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -21,27 +22,31 @@ void *al_malloc(size_t alignment, size_t size)
     size = (size+(alignment-1))&~(alignment-1);
     return std::aligned_alloc(alignment, size);
 #elif defined(HAVE_POSIX_MEMALIGN)
-    void *ret;
+    void *ret{};
     if(posix_memalign(&ret, alignment, size) == 0)
         return ret;
     return nullptr;
 #elif defined(HAVE__ALIGNED_MALLOC)
     return _aligned_malloc(size, alignment);
 #else
-    auto *ret = static_cast<char*>(std::malloc(size+alignment));
-    if(ret != nullptr)
+    size_t total_size{size + alignment-1 + sizeof(void*)};
+    void *base{std::malloc(total_size)};
+    if(base != nullptr)
     {
-        *(ret++) = 0x00;
-        while((reinterpret_cast<uintptr_t>(ret)&(alignment-1)) != 0)
-            *(ret++) = 0x55;
+        void *aligned_ptr{static_cast<char*>(base) + sizeof(void*)};
+        total_size -= sizeof(void*);
+
+        std::align(alignment, size, aligned_ptr, total_size);
+        *(static_cast<void**>(aligned_ptr)-1) = base;
+        base = aligned_ptr;
     }
-    return ret;
+    return base;
 #endif
 }
 
 void *al_calloc(size_t alignment, size_t size)
 {
-    void *ret = al_malloc(alignment, size);
+    void *ret{al_malloc(alignment, size)};
     if(ret) std::memset(ret, 0, size);
     return ret;
 }
@@ -54,12 +59,6 @@ void al_free(void *ptr) noexcept
     _aligned_free(ptr);
 #else
     if(ptr != nullptr)
-    {
-        auto *finder = static_cast<char*>(ptr);
-        do {
-            --finder;
-        } while(*finder == 0x55);
-        std::free(finder);
-    }
+        std::free(*(static_cast<void**>(ptr) - 1));
 #endif
 }

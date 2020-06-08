@@ -43,7 +43,9 @@ openal-soft-1.21.0:
     Oboe sources at build time, so that it's built as a static library included
     in libopenal.
 
-    Finally got the mixer to be fully asynchronous with the external API, and
+    Added greater-than-stereo support to the SoundIO backend.
+
+    Modified the mixer to be fully asynchronous with the external API, and
     should now be real-time safe. Although alcRenderSamplesSOFT is not due to
     locking to check the device handle validity.
 

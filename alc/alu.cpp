@@ -1807,7 +1807,7 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
  * from the decoded soundfield.
  */
 void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> Buffer,
-    const ALuint lidx, const ALuint ridx, const ALuint cidx, const ALuint SamplesToDo)
+    const size_t lidx, const size_t ridx, const size_t cidx, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -1822,7 +1822,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
 
         auto &DelayBuf = Stablizer->DelayBuf[i];
         auto buffer_end = Buffer[i].begin() + SamplesToDo;
-        if LIKELY(SamplesToDo >= ALuint{FrontStablizer::DelayLength})
+        if LIKELY(SamplesToDo >= FrontStablizer::DelayLength)
         {
             auto delay_end = std::rotate(Buffer[i].begin(),
                 buffer_end - FrontStablizer::DelayLength, buffer_end);
@@ -1895,7 +1895,7 @@ void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> B
     std::copy(side_end, side_end+FrontStablizer::DelayLength, Stablizer->Side.begin());
 }
 
-void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALuint SamplesToDo,
+void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t SamplesToDo,
     const DistanceComp::DistData *distcomp)
 {
     ASSUME(SamplesToDo > 0);
@@ -1903,7 +1903,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALuint Sam
     for(auto &chanbuffer : Samples)
     {
         const float gain{distcomp->Gain};
-        const ALuint base{distcomp->Length};
+        const size_t base{distcomp->Length};
         float *distbuf{al::assume_aligned<16>(distcomp->Buffer)};
         ++distcomp;
 
@@ -1927,28 +1927,26 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const ALuint Sam
 }
 
 void ApplyDither(const al::span<FloatBufferLine> Samples, ALuint *dither_seed,
-    const float quant_scale, const ALuint SamplesToDo)
+    const float quant_scale, const size_t SamplesToDo)
 {
+    ASSUME(SamplesToDo > 0);
+
     /* Dithering. Generate whitenoise (uniform distribution of random values
      * between -1 and +1) and add it to the sample values, after scaling up to
      * the desired quantization depth amd before rounding.
      */
     const float invscale{1.0f / quant_scale};
     ALuint seed{*dither_seed};
-    auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](FloatBufferLine &input) -> void
+    auto dither_sample = [&seed,invscale,quant_scale](const float sample) noexcept -> float
     {
-        ASSUME(SamplesToDo > 0);
-        auto dither_sample = [&seed,invscale,quant_scale](const float sample) noexcept -> float
-        {
-            float val{sample * quant_scale};
-            ALuint rng0{dither_rng(&seed)};
-            ALuint rng1{dither_rng(&seed)};
-            val += static_cast<float>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
-            return fast_roundf(val) * invscale;
-        };
-        std::transform(input.begin(), input.begin()+SamplesToDo, input.begin(), dither_sample);
+        float val{sample * quant_scale};
+        ALuint rng0{dither_rng(&seed)};
+        ALuint rng1{dither_rng(&seed)};
+        val += static_cast<float>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
+        return fast_roundf(val) * invscale;
     };
-    std::for_each(Samples.begin(), Samples.end(), dither_channel);
+    for(FloatBufferLine &inout : Samples)
+        std::transform(inout.begin(), inout.begin()+SamplesToDo, inout.begin(), dither_sample);
     *dither_seed = seed;
 }
 

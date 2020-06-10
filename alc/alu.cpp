@@ -1983,16 +1983,16 @@ template<> inline uint8_t SampleConv(float val) noexcept
 
 template<DevFmtType T>
 void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
-    const ALuint SamplesToDo, const size_t FrameStep)
+    const size_t SamplesToDo, const size_t FrameStep)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     ASSUME(FrameStep > 0);
+    ASSUME(SamplesToDo > 0);
 
     SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*FrameStep;
-    auto conv_channel = [&outbase,SamplesToDo,FrameStep](const FloatBufferLine &inbuf) -> void
+    for(const FloatBufferLine &inbuf : InBuffer)
     {
-        ASSUME(SamplesToDo > 0);
         SampleType *out{outbase++};
         auto conv_sample = [FrameStep,&out](const float s) noexcept -> void
         {
@@ -2000,8 +2000,7 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
             out += FrameStep;
         };
         std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);
-    };
-    std::for_each(InBuffer.cbegin(), InBuffer.cend(), conv_channel);
+    }
 }
 
 } // namespace

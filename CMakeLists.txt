@@ -1,50 +1,50 @@
 # CMake build file list for OpenAL
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.0.2)
 
-PROJECT(OpenAL)
+project(OpenAL)
 
-IF(COMMAND CMAKE_POLICY)
-    CMAKE_POLICY(SET CMP0003 NEW)
-    CMAKE_POLICY(SET CMP0005 NEW)
-    IF(POLICY CMP0020)
-        CMAKE_POLICY(SET CMP0020 NEW)
-    ENDIF(POLICY CMP0020)
-    IF(POLICY CMP0042)
-        CMAKE_POLICY(SET CMP0042 NEW)
-    ENDIF(POLICY CMP0042)
-    IF(POLICY CMP0054)
-        CMAKE_POLICY(SET CMP0054 NEW)
-    ENDIF(POLICY CMP0054)
-    IF(POLICY CMP0075)
-        CMAKE_POLICY(SET CMP0075 NEW)
-    ENDIF(POLICY CMP0075)
-ENDIF(COMMAND CMAKE_POLICY)
+if(COMMAND CMAKE_POLICY)
+    cmake_policy(SET CMP0003 NEW)
+    cmake_policy(SET CMP0005 NEW)
+    if(POLICY CMP0020)
+        cmake_policy(SET CMP0020 NEW)
+    endif(POLICY CMP0020)
+    if(POLICY CMP0042)
+        cmake_policy(SET CMP0042 NEW)
+    endif(POLICY CMP0042)
+    if(POLICY CMP0054)
+        cmake_policy(SET CMP0054 NEW)
+    endif(POLICY CMP0054)
+    if(POLICY CMP0075)
+        cmake_policy(SET CMP0075 NEW)
+    endif(POLICY CMP0075)
+endif(COMMAND CMAKE_POLICY)
 
-IF(NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
         "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
         FORCE)
-ENDIF()
-IF(NOT CMAKE_DEBUG_POSTFIX)
-    SET(CMAKE_DEBUG_POSTFIX "" CACHE STRING
+endif()
+if(NOT CMAKE_DEBUG_POSTFIX)
+    set(CMAKE_DEBUG_POSTFIX "" CACHE STRING
         "Library postfix for debug builds. Normally left blank."
         FORCE)
-ENDIF()
+endif()
 
-SET(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
 
 
-INCLUDE(CheckFunctionExists)
-INCLUDE(CheckLibraryExists)
-INCLUDE(CheckIncludeFile)
-INCLUDE(CheckIncludeFiles)
-INCLUDE(CheckSymbolExists)
-INCLUDE(CheckCCompilerFlag)
-INCLUDE(CheckCXXCompilerFlag)
-INCLUDE(CheckCSourceCompiles)
-INCLUDE(CheckCXXSourceCompiles)
-INCLUDE(CheckTypeSize)
+include(CheckFunctionExists)
+include(CheckLibraryExists)
+include(CheckIncludeFile)
+include(CheckIncludeFiles)
+include(CheckSymbolExists)
+include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
+include(CheckCSourceCompiles)
+include(CheckCXXSourceCompiles)
+include(CheckTypeSize)
 include(CheckStructHasMember)
 include(GNUInstallDirs)
 
@@ -85,155 +85,155 @@ if(DEFINED ALSOFT_AMBDEC_PRESETS)
 endif()
 
 
-SET(CPP_DEFS ) # C pre-processor, not C++
-SET(INC_PATHS )
-SET(C_FLAGS )
-SET(LINKER_FLAGS )
-SET(EXTRA_LIBS )
+set(CPP_DEFS ) # C pre-processor, not C++
+set(INC_PATHS )
+set(C_FLAGS )
+set(LINKER_FLAGS )
+set(EXTRA_LIBS )
 
-IF(WIN32)
-    SET(CPP_DEFS ${CPP_DEFS} _WIN32)
+if(WIN32)
+    set(CPP_DEFS ${CPP_DEFS} _WIN32)
 
-    OPTION(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
+    option(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
 
-    IF(MINGW)
-        OPTION(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
-        IF(NOT DLLTOOL)
-            IF(HOST)
-                SET(DLLTOOL "${HOST}-dlltool")
-            ELSE()
-                SET(DLLTOOL "dlltool")
-            ENDIF()
-        ENDIF()
-    ENDIF()
-ENDIF()
+    if(MINGW)
+        option(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
+        if(NOT DLLTOOL)
+            if(HOST)
+                set(DLLTOOL "${HOST}-dlltool")
+            else()
+                set(DLLTOOL "dlltool")
+            endif()
+        endif()
+    endif()
+endif()
 
 
 # QNX's gcc do not uses /usr/include and /usr/lib pathes by default
-IF ("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
-    SET(INC_PATHS ${INC_PATHS} /usr/include)
-    SET(LINKER_FLAGS ${LINKER_FLAGS} -L/usr/lib)
-ENDIF()
+if("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
+    set(INC_PATHS ${INC_PATHS} /usr/include)
+    set(LINKER_FLAGS ${LINKER_FLAGS} -L/usr/lib)
+endif()
 
-IF(NOT LIBTYPE)
-    SET(LIBTYPE SHARED)
-ENDIF()
+if(NOT LIBTYPE)
+    set(LIBTYPE SHARED)
+endif()
 
-SET(LIB_MAJOR_VERSION "1")
-SET(LIB_MINOR_VERSION "20")
-SET(LIB_REVISION "1")
-SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
-SET(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
+set(LIB_MAJOR_VERSION "1")
+set(LIB_MINOR_VERSION "20")
+set(LIB_REVISION "1")
+set(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
+set(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
 
-SET(EXPORT_DECL "")
+set(EXPORT_DECL "")
 
 
-CHECK_TYPE_SIZE("long" SIZEOF_LONG)
+check_type_size("long" SIZEOF_LONG)
 
 
 # Require C++14
-SET(CMAKE_CXX_STANDARD 14)
-SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Prefer C11, but support C99 and C90 too.
-SET(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 11)
 
 
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions
-    CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_DEFAULT)
-    IF(NOT HAVE_POSIX_MEMALIGN_DEFAULT)
-        SET(OLD_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=600")
-        CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_POSIX)
-        IF(NOT HAVE_POSIX_MEMALIGN_POSIX)
-            SET(CMAKE_REQUIRED_FLAGS ${OLD_REQUIRED_FLAGS})
-        ELSE()
-            SET(CPP_DEFS ${CPP_DEFS} _POSIX_C_SOURCE=200112L _XOPEN_SOURCE=600)
-        ENDIF()
-    ENDIF()
-    UNSET(OLD_REQUIRED_FLAGS)
-ENDIF()
+    check_symbol_exists(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_DEFAULT)
+    if(NOT HAVE_POSIX_MEMALIGN_DEFAULT)
+        set(OLD_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=600")
+        check_symbol_exists(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_POSIX)
+        if(NOT HAVE_POSIX_MEMALIGN_POSIX)
+            set(CMAKE_REQUIRED_FLAGS ${OLD_REQUIRED_FLAGS})
+        else()
+            set(CPP_DEFS ${CPP_DEFS} _POSIX_C_SOURCE=200112L _XOPEN_SOURCE=600)
+        endif()
+    endif()
+    unset(OLD_REQUIRED_FLAGS)
+endif()
 
 # C99 has restrict, but C++ does not, so we can only utilize __restrict.
-SET(RESTRICT_DECL )
-CHECK_CXX_SOURCE_COMPILES("int *__restrict foo;
+set(RESTRICT_DECL )
+check_cxx_source_compiles("int *__restrict foo;
 int main() { return 0; }" HAVE___RESTRICT)
-IF(HAVE___RESTRICT)
-    SET(RESTRICT_DECL "__restrict")
-ENDIF()
+if(HAVE___RESTRICT)
+    set(RESTRICT_DECL "__restrict")
+endif()
 
 # Some systems may need libatomic for atomic functions to work
-SET(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-SET(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} atomic)
-CHECK_CXX_SOURCE_COMPILES("#include <atomic>
+set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} atomic)
+check_cxx_source_compiles("#include <atomic>
 std::atomic<int> foo{0};
 int main() { return foo.fetch_add(2); }"
 HAVE_LIBATOMIC)
-IF(NOT HAVE_LIBATOMIC)
-    SET(CMAKE_REQUIRED_LIBRARIES "${OLD_REQUIRED_LIBRARIES}")
-ELSE()
-    SET(EXTRA_LIBS atomic ${EXTRA_LIBS})
-ENDIF()
-UNSET(OLD_REQUIRED_LIBRARIES)
+if(NOT HAVE_LIBATOMIC)
+    set(CMAKE_REQUIRED_LIBRARIES "${OLD_REQUIRED_LIBRARIES}")
+else()
+    set(EXTRA_LIBS atomic ${EXTRA_LIBS})
+endif()
+unset(OLD_REQUIRED_LIBRARIES)
 
 # Include liblog for Android logging
-CHECK_LIBRARY_EXISTS(log __android_log_print "" HAVE_LIBLOG)
-IF(HAVE_LIBLOG)
-    SET(EXTRA_LIBS log ${EXTRA_LIBS})
-    SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
-ENDIF()
+check_library_exists(log __android_log_print "" HAVE_LIBLOG)
+if(HAVE_LIBLOG)
+    set(EXTRA_LIBS log ${EXTRA_LIBS})
+    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
+endif()
 
-IF(MSVC)
-    SET(CPP_DEFS ${CPP_DEFS} _CRT_SECURE_NO_WARNINGS NOMINMAX)
-    CHECK_CXX_COMPILER_FLAG(/permissive- HAVE_PERMISSIVE_SWITCH)
-    IF(HAVE_PERMISSIVE_SWITCH)
-        SET(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
-    ENDIF()
-    SET(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4268 /wd4324 /wd5030)
+if(MSVC)
+    set(CPP_DEFS ${CPP_DEFS} _CRT_SECURE_NO_WARNINGS NOMINMAX)
+    check_cxx_compiler_flag(/permissive- HAVE_PERMISSIVE_SWITCH)
+    if(HAVE_PERMISSIVE_SWITCH)
+        set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
+    endif()
+    set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4268 /wd4324 /wd5030)
 
-    IF(NOT DXSDK_DIR)
-        STRING(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")
-    ELSE()
-        STRING(REGEX REPLACE "\\\\" "/" DXSDK_DIR "${DXSDK_DIR}")
-    ENDIF()
-    IF(DXSDK_DIR)
-        MESSAGE(STATUS "Using DirectX SDK directory: ${DXSDK_DIR}")
-    ENDIF()
+    if(NOT DXSDK_DIR)
+        string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")
+    else()
+        string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "${DXSDK_DIR}")
+    endif()
+    if(DXSDK_DIR)
+        message(STATUS "Using DirectX SDK directory: ${DXSDK_DIR}")
+    endif()
 
-    OPTION(FORCE_STATIC_VCRT "Force /MT for static VC runtimes" OFF)
-    IF(FORCE_STATIC_VCRT)
-        FOREACH(flag_var
+    option(FORCE_STATIC_VCRT "Force /MT for static VC runtimes" OFF)
+    if(FORCE_STATIC_VCRT)
+        foreach(flag_var
                 CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
                 CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
                 CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-            IF(${flag_var} MATCHES "/MD")
-                STRING(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-            ENDIF()
-        ENDFOREACH(flag_var)
-    ENDIF()
-ELSE()
-    SET(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align
+            if(${flag_var} MATCHES "/MD")
+                string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+            endif()
+        endforeach(flag_var)
+    endif()
+else()
+    set(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align
         -Wpedantic
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
 
-    IF(ALSOFT_WERROR)
-        SET(C_FLAGS ${C_FLAGS} -Werror)
-    ENDIF()
+    if(ALSOFT_WERROR)
+        set(C_FLAGS ${C_FLAGS} -Werror)
+    endif()
 
     # We want RelWithDebInfo to actually include debug stuff (define _DEBUG
     # instead of NDEBUG)
-    FOREACH(flag_var  CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-        IF(${flag_var} MATCHES "-DNDEBUG")
-            STRING(REGEX REPLACE "-DNDEBUG" "-D_DEBUG" ${flag_var} "${${flag_var}}")
-        ENDIF()
-    ENDFOREACH()
+    foreach(flag_var  CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+        if(${flag_var} MATCHES "-DNDEBUG")
+            string(REGEX REPLACE "-DNDEBUG" "-D_DEBUG" ${flag_var} "${${flag_var}}")
+        endif()
+    endforeach()
 
-    CHECK_C_COMPILER_FLAG(-fno-math-errno HAVE_FNO_MATH_ERRNO)
-    IF(HAVE_FNO_MATH_ERRNO)
-        SET(C_FLAGS ${C_FLAGS} -fno-math-errno)
-    ENDIF()
+    check_c_compiler_flag(-fno-math-errno HAVE_FNO_MATH_ERRNO)
+    if(HAVE_FNO_MATH_ERRNO)
+        set(C_FLAGS ${C_FLAGS} -fno-math-errno)
+    endif()
 
     option(ALSOFT_STATIC_LIBGCC "Force -static-libgcc for static GCC runtimes" OFF)
     if(ALSOFT_STATIC_LIBGCC)
@@ -278,7 +278,7 @@ ELSE()
             set(LINKER_FLAGS ${LINKER_FLAGS} "-Wl,--push-state,-Bstatic,-lwinpthread,--pop-state")
         endif()
     endif()
-ENDIF()
+endif()
 
 # Set visibility/export options if available
 if(WIN32)
@@ -375,71 +375,71 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "4" AND (SSE2_SWITCH OR MSVC))
     endif()
 endif()
 
-IF(HAVE_EMMINTRIN_H)
-    SET(OLD_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    FOREACH(flag_var ${SSE_FLAGS})
-        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${flag_var}")
-    ENDFOREACH()
+if(HAVE_EMMINTRIN_H)
+    set(OLD_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    foreach(flag_var ${SSE_FLAGS})
+        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${flag_var}")
+    endforeach()
 
-    CHECK_C_SOURCE_COMPILES("#include <emmintrin.h>
+    check_c_source_compiles("#include <emmintrin.h>
                              int main() {_mm_pause(); return 0;}" HAVE_SSE_INTRINSICS)
 
-    SET(CMAKE_REQUIRED_FLAGS ${OLD_REQUIRED_FLAGS})
-ENDIF()
+    set(CMAKE_REQUIRED_FLAGS ${OLD_REQUIRED_FLAGS})
+endif()
 
 
-CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
-CHECK_INCLUDE_FILE(intrin.h HAVE_INTRIN_H)
-CHECK_INCLUDE_FILE(guiddef.h HAVE_GUIDDEF_H)
-IF(NOT HAVE_GUIDDEF_H)
-    CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)
-ENDIF()
+check_include_file(malloc.h HAVE_MALLOC_H)
+check_include_file(cpuid.h HAVE_CPUID_H)
+check_include_file(intrin.h HAVE_INTRIN_H)
+check_include_file(guiddef.h HAVE_GUIDDEF_H)
+if(NOT HAVE_GUIDDEF_H)
+    check_include_file(initguid.h HAVE_INITGUID_H)
+endif()
 
 # Some systems need libm for some math functions to work
-SET(MATH_LIB )
-CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)
-IF(HAVE_LIBM)
-    SET(MATH_LIB ${MATH_LIB} m)
-    SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
-ENDIF()
+set(MATH_LIB )
+check_library_exists(m pow "" HAVE_LIBM)
+if(HAVE_LIBM)
+    set(MATH_LIB ${MATH_LIB} m)
+    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
+endif()
 
 # Some systems need to link with -lrt for clock_gettime as used by the common
 # eaxmple functions.
-SET(RT_LIB )
-CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
-IF(HAVE_LIBRT)
-    SET(RT_LIB rt)
-ENDIF()
+set(RT_LIB )
+check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+if(HAVE_LIBRT)
+    set(RT_LIB rt)
+endif()
 
 # Check for the dlopen API (for dynamicly loading backend libs)
-IF(ALSOFT_DLOPEN)
-    CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)
-    CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
-    IF(HAVE_LIBDL)
-        SET(EXTRA_LIBS dl ${EXTRA_LIBS})
-        SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} dl)
-    ENDIF()
-ENDIF()
+if(ALSOFT_DLOPEN)
+    check_include_file(dlfcn.h HAVE_DLFCN_H)
+    check_library_exists(dl dlopen "" HAVE_LIBDL)
+    if(HAVE_LIBDL)
+        set(EXTRA_LIBS dl ${EXTRA_LIBS})
+        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} dl)
+    endif()
+endif()
 
 # Check for a cpuid intrinsic
-IF(HAVE_CPUID_H)
-    CHECK_C_SOURCE_COMPILES("#include <cpuid.h>
+if(HAVE_CPUID_H)
+    check_c_source_compiles("#include <cpuid.h>
         int main()
         {
             unsigned int eax, ebx, ecx, edx;
             return __get_cpuid(0, &eax, &ebx, &ecx, &edx);
         }" HAVE_GCC_GET_CPUID)
-ENDIF()
-IF(HAVE_INTRIN_H)
-    CHECK_C_SOURCE_COMPILES("#include <intrin.h>
+endif()
+if(HAVE_INTRIN_H)
+    check_c_source_compiles("#include <intrin.h>
         int main()
         {
             int regs[4];
             __cpuid(regs, 0);
             return regs[0];
         }" HAVE_CPUID_INTRINSIC)
-ENDIF()
+endif()
 
 check_cxx_source_compiles("#include <cstdlib>
 int main()
@@ -452,31 +452,31 @@ check_symbol_exists(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 check_symbol_exists(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 check_symbol_exists(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)
 
-IF(NOT WIN32)
+if(NOT WIN32)
     # We need pthreads outside of Windows, for semaphores. It's also used to
     # set the priority and name of threads, when possible.
-    CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
-    IF(NOT HAVE_PTHREAD_H)
-        MESSAGE(FATAL_ERROR "PThreads is required for non-Windows builds!")
-    ENDIF()
+    check_include_file(pthread.h HAVE_PTHREAD_H)
+    if(NOT HAVE_PTHREAD_H)
+        message(FATAL_ERROR "PThreads is required for non-Windows builds!")
+    endif()
 
-    CHECK_C_COMPILER_FLAG(-pthread HAVE_PTHREAD)
-    IF(HAVE_PTHREAD)
-        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -pthread")
-        SET(C_FLAGS ${C_FLAGS} -pthread)
-        SET(LINKER_FLAGS ${LINKER_FLAGS} -pthread)
-    ENDIF()
+    check_c_compiler_flag(-pthread HAVE_PTHREAD)
+    if(HAVE_PTHREAD)
+        set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -pthread")
+        set(C_FLAGS ${C_FLAGS} -pthread)
+        set(LINKER_FLAGS ${LINKER_FLAGS} -pthread)
+    endif()
 
-    CHECK_SYMBOL_EXISTS(pthread_setschedparam pthread.h HAVE_PTHREAD_SETSCHEDPARAM)
+    check_symbol_exists(pthread_setschedparam pthread.h HAVE_PTHREAD_SETSCHEDPARAM)
 
     # Some systems need pthread_np.h to get pthread_setname_np
-    CHECK_INCLUDE_FILES("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
-    IF(HAVE_PTHREAD_NP_H)
-        CHECK_SYMBOL_EXISTS(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
-        IF(NOT HAVE_PTHREAD_SETNAME_NP)
-            CHECK_SYMBOL_EXISTS(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
-        ELSE()
-            CHECK_C_SOURCE_COMPILES("
+    check_include_files("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
+    if(HAVE_PTHREAD_NP_H)
+        check_symbol_exists(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
+        if(NOT HAVE_PTHREAD_SETNAME_NP)
+            check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
+        else()
+            check_c_source_compiles("
 #include <pthread.h>
 #include <pthread_np.h>
 int main()
@@ -486,7 +486,7 @@ int main()
 }"
                 PTHREAD_SETNAME_NP_ONE_PARAM
             )
-            CHECK_C_SOURCE_COMPILES("
+            check_c_source_compiles("
 #include <pthread.h>
 #include <pthread_np.h>
 int main()
@@ -496,13 +496,13 @@ int main()
 }"
                 PTHREAD_SETNAME_NP_THREE_PARAMS
             )
-        ENDIF()
-    ELSE()
-        CHECK_SYMBOL_EXISTS(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
-        IF(NOT HAVE_PTHREAD_SETNAME_NP)
-            CHECK_SYMBOL_EXISTS(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
-        ELSE()
-            CHECK_C_SOURCE_COMPILES("
+        endif()
+    else()
+        check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
+        if(NOT HAVE_PTHREAD_SETNAME_NP)
+            check_symbol_exists(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
+        else()
+            check_c_source_compiles("
 #include <pthread.h>
 int main()
 {
@@ -511,7 +511,7 @@ int main()
 }"
                 PTHREAD_SETNAME_NP_ONE_PARAM
             )
-            CHECK_C_SOURCE_COMPILES("
+            check_c_source_compiles("
 #include <pthread.h>
 int main()
 {
@@ -520,16 +520,16 @@ int main()
 }"
                 PTHREAD_SETNAME_NP_THREE_PARAMS
             )
-        ENDIF()
-    ENDIF()
-ENDIF()
+        endif()
+    endif()
+endif()
 
-CHECK_SYMBOL_EXISTS(getopt unistd.h HAVE_GETOPT)
+check_symbol_exists(getopt unistd.h HAVE_GETOPT)
 
 
 # Common sources used by both the OpenAL implementation library and potentially
 # the OpenAL router.
-SET(COMMON_OBJS
+set(COMMON_OBJS
     common/albyte.h
     common/alcomplex.cpp
     common/alcomplex.h

@@ -281,34 +281,40 @@ ELSE()
 ENDIF()
 
 # Set visibility/export options if available
-IF(WIN32)
-    SET(EXPORT_DECL "__declspec(dllexport)")
-ELSE()
-    SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+if(WIN32)
+    if(NOT LIBTYPE STREQUAL "STATIC")
+        set(EXPORT_DECL "__declspec(dllexport)")
+    endif()
+else()
+    set(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     # Yes GCC, really don't accept visibility modes you don't support
-    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Wattributes -Werror")
+    set(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Wattributes -Werror")
 
-    CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"protected\")));
+    check_c_source_compiles("int foo() __attribute__((visibility(\"protected\")));
                              int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)
-    IF(HAVE_GCC_PROTECTED_VISIBILITY)
-        SET(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
-    ELSE()
-        CHECK_C_SOURCE_COMPILES("int foo() __attribute__((visibility(\"default\")));
+    if(HAVE_GCC_PROTECTED_VISIBILITY)
+        if(NOT LIBTYPE STREQUAL "STATIC")
+            set(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
+        endif()
+    else()
+        check_c_source_compiles("int foo() __attribute__((visibility(\"default\")));
                                  int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
-        IF(HAVE_GCC_DEFAULT_VISIBILITY)
-            SET(EXPORT_DECL "__attribute__((visibility(\"default\")))")
-        ENDIF()
-    ENDIF()
+        if(HAVE_GCC_DEFAULT_VISIBILITY)
+            if(NOT LIBTYPE STREQUAL "STATIC")
+                set(EXPORT_DECL "__attribute__((visibility(\"default\")))")
+            endif()
+        endif()
+    endif()
 
-    IF(HAVE_GCC_PROTECTED_VISIBILITY OR HAVE_GCC_DEFAULT_VISIBILITY)
-        CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_VISIBILITY_HIDDEN_SWITCH)
-        IF(HAVE_VISIBILITY_HIDDEN_SWITCH)
-            SET(C_FLAGS ${C_FLAGS} -fvisibility=hidden)
-        ENDIF()
-    ENDIF()
+    if(HAVE_GCC_PROTECTED_VISIBILITY OR HAVE_GCC_DEFAULT_VISIBILITY)
+        check_c_compiler_flag(-fvisibility=hidden HAVE_VISIBILITY_HIDDEN_SWITCH)
+        if(HAVE_VISIBILITY_HIDDEN_SWITCH)
+            set(C_FLAGS ${C_FLAGS} -fvisibility=hidden)
+        endif()
+    endif()
 
-    SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
-ENDIF()
+    set(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
+endif()
 
 
 set(SSE2_SWITCH "")

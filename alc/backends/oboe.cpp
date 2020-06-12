@@ -169,7 +169,7 @@ bool OboePlayback::reset()
         mDevice->FmtChans = DevFmtStereo;
         break;
     }
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     switch(mStream->getFormat())
     {

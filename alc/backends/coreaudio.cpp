@@ -195,7 +195,7 @@ bool CoreAudioPlayback::reset()
             streamFormat.mChannelsPerFrame = 2;
             break;
     }
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     /* use channel count and sample rate from the default output unit's current
      * parameters, but reset everything else */

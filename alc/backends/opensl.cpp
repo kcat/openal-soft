@@ -431,7 +431,7 @@ bool OpenSLPlayback::reset()
     mDevice->FmtChans = DevFmtStereo;
     mDevice->FmtType = DevFmtShort;
 
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
     mFrameSize = mDevice->frameSizeFromFmt();
 
 

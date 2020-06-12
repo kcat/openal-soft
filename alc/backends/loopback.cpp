@@ -47,7 +47,7 @@ void LoopbackBackend::open(const ALCchar *name)
 
 bool LoopbackBackend::reset()
 {
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
     return true;
 }
 

@@ -119,7 +119,7 @@ void NullBackend::open(const ALCchar *name)
 
 bool NullBackend::reset()
 {
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
     return true;
 }
 

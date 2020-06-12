@@ -1070,7 +1070,7 @@ HRESULT WasapiPlayback::resetProxy()
     mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo
         && (formfactor == Headphones || formfactor == Headset));
 
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
         buf_time.count(), 0, &OutputType.Format, nullptr);

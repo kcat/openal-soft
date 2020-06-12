@@ -558,7 +558,7 @@ retry_open:
     }
 
     ResetEvent(mNotifyEvent);
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     return true;
 }
@@ -754,7 +754,7 @@ void DSoundCapture::open(const ALCchar *name)
     }
 
     mBufferBytes = DSCBDescription.dwBufferBytes;
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     mDevice->DeviceName = name;
 }

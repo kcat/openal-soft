@@ -242,7 +242,7 @@ bool SndioPlayback::reset()
         return false;
     }
 
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     mDevice->UpdateSize = par.round;
     mDevice->BufferSize = par.bufsz + par.round;
@@ -440,7 +440,7 @@ void SndioCapture::open(const ALCchar *name)
 
     mRing = RingBuffer::Create(mDevice->BufferSize, par.bps*par.rchan, false);
 
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     mDevice->DeviceName = name;
 }

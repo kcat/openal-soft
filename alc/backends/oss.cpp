@@ -425,7 +425,7 @@ bool OSSPlayback::reset()
     mDevice->UpdateSize = static_cast<ALuint>(info.fragsize) / frameSize;
     mDevice->BufferSize = static_cast<ALuint>(info.fragments) * mDevice->UpdateSize;
 
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     mMixData.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
 

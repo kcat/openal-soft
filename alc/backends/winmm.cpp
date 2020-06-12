@@ -304,7 +304,7 @@ bool WinMMPlayback::reset()
         ERR("Unhandled channel count: %d\n", mFormat.nChannels);
         return false;
     }
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     ALuint BufferSize{mDevice->UpdateSize * mDevice->frameSizeFromFmt()};
 

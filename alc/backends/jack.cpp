@@ -375,7 +375,7 @@ bool JackPlayback::reset()
         }
     }
 
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     return true;
 }

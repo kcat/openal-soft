@@ -34,6 +34,12 @@ struct BackendBase {
 
     BackendBase(ALCdevice *device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
+
+protected:
+    /** Sets the default channel order used by most non-WaveFormatEx-based APIs. */
+    void setDefaultChannelOrder();
+    /** Sets the default channel order used by WaveFormatEx. */
+    void setDefaultWFXChannelOrder();
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
 

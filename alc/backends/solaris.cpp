@@ -220,7 +220,7 @@ bool SolarisBackend::reset()
     mDevice->BufferSize = info.play.buffer_size / frameSize;
     mDevice->UpdateSize = mDevice->BufferSize / 2;
 
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
     std::fill(mBuffer.begin(), mBuffer.end(), 0);

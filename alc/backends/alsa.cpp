@@ -787,7 +787,7 @@ bool AlsaPlayback::reset()
     mDevice->UpdateSize = static_cast<ALuint>(periodSizeInFrames);
     mDevice->Frequency = rate;
 
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     return true;
 }

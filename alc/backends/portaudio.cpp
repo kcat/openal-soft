@@ -204,7 +204,7 @@ bool PortPlayback::reset()
         ERR("Unexpected channel count: %u\n", mParams.channelCount);
         return false;
     }
-    SetDefaultChannelOrder(mDevice);
+    setDefaultChannelOrder();
 
     return true;
 }

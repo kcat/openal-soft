@@ -324,7 +324,7 @@ bool WaveBackend::reset()
     }
     mDataStart = ftell(mFile);
 
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
 
     const ALuint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
     mBuffer.resize(bufsize);

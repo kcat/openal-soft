@@ -166,7 +166,7 @@ bool Sdl2Backend::reset()
     mDevice->FmtType = mFmtType;
     mDevice->UpdateSize = mUpdateSize;
     mDevice->BufferSize = mUpdateSize * 2;
-    SetDefaultWFXChannelOrder(mDevice);
+    setDefaultWFXChannelOrder();
     return true;
 }
 

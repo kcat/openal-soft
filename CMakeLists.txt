@@ -1258,7 +1258,7 @@ if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC"
             message(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
         endif()
     else()
-        set_propertySET_PROPERTY(TARGET OpenAL APPEND_STRING PROPERTY
+        set_property(TARGET OpenAL APPEND_STRING PROPERTY
             LINK_FLAGS " -Wl,--output-def,OpenAL32.def")
         add_custom_command(TARGET OpenAL POST_BUILD
             COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def

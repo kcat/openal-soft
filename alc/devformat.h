@@ -20,14 +20,13 @@ enum Channel {
     SideLeft,
     SideRight,
 
-    UpperFrontLeft,
-    UpperFrontRight,
-    UpperBackLeft,
-    UpperBackRight,
-    LowerFrontLeft,
-    LowerFrontRight,
-    LowerBackLeft,
-    LowerBackRight,
+    TopFrontLeft,
+    TopFrontCenter,
+    TopFrontRight,
+    TopCenter,
+    TopBackLeft,
+    TopBackCenter,
+    TopBackRight,
 
     MaxChannels
 };

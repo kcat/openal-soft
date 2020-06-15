@@ -90,14 +90,13 @@ inline const char *GetLabelFromChannel(Channel channel)
         case SideLeft: return "side-left";
         case SideRight: return "side-right";
 
-        case UpperFrontLeft: return "upper-front-left";
-        case UpperFrontRight: return "upper-front-right";
-        case UpperBackLeft: return "upper-back-left";
-        case UpperBackRight: return "upper-back-right";
-        case LowerFrontLeft: return "lower-front-left";
-        case LowerFrontRight: return "lower-front-right";
-        case LowerBackLeft: return "lower-back-left";
-        case LowerBackRight: return "lower-back-right";
+        case TopFrontLeft: return "top-front-left";
+        case TopFrontCenter: return "top-front-center";
+        case TopFrontRight: return "top-front-right";
+        case TopCenter: return "top-center";
+        case TopBackLeft: return "top-back-left";
+        case TopBackCenter: return "top-back-center";
+        case TopBackRight: return "top-back-right";
 
         case MaxChannels: break;
     }

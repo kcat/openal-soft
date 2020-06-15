@@ -268,13 +268,13 @@ al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
     case PA_CHANNEL_POSITION_AUX29: break;
     case PA_CHANNEL_POSITION_AUX30: break;
     case PA_CHANNEL_POSITION_AUX31: break;
-    case PA_CHANNEL_POSITION_TOP_CENTER: break;
-    case PA_CHANNEL_POSITION_TOP_FRONT_LEFT: return al::make_optional(UpperFrontLeft);
-    case PA_CHANNEL_POSITION_TOP_FRONT_RIGHT: return al::make_optional(UpperFrontRight);
-    case PA_CHANNEL_POSITION_TOP_FRONT_CENTER: break;
-    case PA_CHANNEL_POSITION_TOP_REAR_LEFT: return al::make_optional(UpperBackLeft);
-    case PA_CHANNEL_POSITION_TOP_REAR_RIGHT: return al::make_optional(UpperBackRight);
-    case PA_CHANNEL_POSITION_TOP_REAR_CENTER: break;
+    case PA_CHANNEL_POSITION_TOP_CENTER: return al::make_optional(TopCenter);
+    case PA_CHANNEL_POSITION_TOP_FRONT_LEFT: return al::make_optional(TopFrontLeft);
+    case PA_CHANNEL_POSITION_TOP_FRONT_RIGHT: return al::make_optional(TopFrontRight);
+    case PA_CHANNEL_POSITION_TOP_FRONT_CENTER: return al::make_optional(TopFrontCenter);
+    case PA_CHANNEL_POSITION_TOP_REAR_LEFT: return al::make_optional(TopBackLeft);
+    case PA_CHANNEL_POSITION_TOP_REAR_RIGHT: return al::make_optional(TopBackRight);
+    case PA_CHANNEL_POSITION_TOP_REAR_CENTER: return al::make_optional(TopBackCenter);
     case PA_CHANNEL_POSITION_MAX: break;
     }
     WARN("Unexpected channel enum %d\n", chan);

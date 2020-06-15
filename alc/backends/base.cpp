@@ -100,31 +100,6 @@ void BackendBase::setDefaultWFXChannelOrder()
         mDevice->RealOut.ChannelIndex[SideRight]   = 7;
         break;
     case DevFmtAmbi3D:
-        mDevice->RealOut.ChannelIndex[Aux0] = 0;
-        if(mDevice->mAmbiOrder > 0)
-        {
-            mDevice->RealOut.ChannelIndex[Aux1] = 1;
-            mDevice->RealOut.ChannelIndex[Aux2] = 2;
-            mDevice->RealOut.ChannelIndex[Aux3] = 3;
-        }
-        if(mDevice->mAmbiOrder > 1)
-        {
-            mDevice->RealOut.ChannelIndex[Aux4] = 4;
-            mDevice->RealOut.ChannelIndex[Aux5] = 5;
-            mDevice->RealOut.ChannelIndex[Aux6] = 6;
-            mDevice->RealOut.ChannelIndex[Aux7] = 7;
-            mDevice->RealOut.ChannelIndex[Aux8] = 8;
-        }
-        if(mDevice->mAmbiOrder > 2)
-        {
-            mDevice->RealOut.ChannelIndex[Aux9]  = 9;
-            mDevice->RealOut.ChannelIndex[Aux10] = 10;
-            mDevice->RealOut.ChannelIndex[Aux11] = 11;
-            mDevice->RealOut.ChannelIndex[Aux12] = 12;
-            mDevice->RealOut.ChannelIndex[Aux13] = 13;
-            mDevice->RealOut.ChannelIndex[Aux14] = 14;
-            mDevice->RealOut.ChannelIndex[Aux15] = 15;
-        }
         break;
     }
 }

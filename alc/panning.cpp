@@ -99,23 +99,6 @@ inline const char *GetLabelFromChannel(Channel channel)
         case LowerBackLeft: return "lower-back-left";
         case LowerBackRight: return "lower-back-right";
 
-        case Aux0: return "aux-0";
-        case Aux1: return "aux-1";
-        case Aux2: return "aux-2";
-        case Aux3: return "aux-3";
-        case Aux4: return "aux-4";
-        case Aux5: return "aux-5";
-        case Aux6: return "aux-6";
-        case Aux7: return "aux-7";
-        case Aux8: return "aux-8";
-        case Aux9: return "aux-9";
-        case Aux10: return "aux-10";
-        case Aux11: return "aux-11";
-        case Aux12: return "aux-12";
-        case Aux13: return "aux-13";
-        case Aux14: return "aux-14";
-        case Aux15: return "aux-15";
-
         case MaxChannels: break;
     }
     return "(unknown)";
@@ -228,17 +211,8 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint (&speakerm
             ch = BackCenter;
         else
         {
-            const char *name{speaker.Name.c_str()};
-            unsigned int n;
-            char c;
-
-            if(sscanf(name, "AUX%u%c", &n, &c) == 1 && n < 16)
-                ch = static_cast<Channel>(Aux0+n);
-            else
-            {
-                ERR("AmbDec speaker label \"%s\" not recognized\n", name);
-                return INVALID_CHANNEL_INDEX;
-            }
+            ERR("AmbDec speaker label \"%s\" not recognized\n", speaker.Name.c_str());
+            return INVALID_CHANNEL_INDEX;
         }
         const ALuint chidx{GetChannelIdxByName(device->RealOut, ch)};
         if(chidx == INVALID_CHANNEL_INDEX)

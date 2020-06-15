@@ -219,39 +219,39 @@ constexpr pa_channel_map MonoChanMap{
     }
 };
 
-size_t ChannelFromPulse(pa_channel_position_t chan)
+al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
 {
     switch(chan)
     {
     case PA_CHANNEL_POSITION_INVALID: break;
-    case PA_CHANNEL_POSITION_MONO: return FrontCenter;
-    case PA_CHANNEL_POSITION_FRONT_LEFT: return FrontLeft;
-    case PA_CHANNEL_POSITION_FRONT_RIGHT: return FrontRight;
-    case PA_CHANNEL_POSITION_FRONT_CENTER: return FrontCenter;
-    case PA_CHANNEL_POSITION_REAR_CENTER: return BackCenter;
-    case PA_CHANNEL_POSITION_REAR_LEFT: return BackLeft;
-    case PA_CHANNEL_POSITION_REAR_RIGHT: return BackRight;
-    case PA_CHANNEL_POSITION_LFE: return LFE;
+    case PA_CHANNEL_POSITION_MONO: return al::make_optional(FrontCenter);
+    case PA_CHANNEL_POSITION_FRONT_LEFT: return al::make_optional(FrontLeft);
+    case PA_CHANNEL_POSITION_FRONT_RIGHT: return al::make_optional(FrontRight);
+    case PA_CHANNEL_POSITION_FRONT_CENTER: return al::make_optional(FrontCenter);
+    case PA_CHANNEL_POSITION_REAR_CENTER: return al::make_optional(BackCenter);
+    case PA_CHANNEL_POSITION_REAR_LEFT: return al::make_optional(BackLeft);
+    case PA_CHANNEL_POSITION_REAR_RIGHT: return al::make_optional(BackRight);
+    case PA_CHANNEL_POSITION_LFE: return al::make_optional(LFE);
     case PA_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER: break;
     case PA_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER: break;
-    case PA_CHANNEL_POSITION_SIDE_LEFT: return SideLeft;
-    case PA_CHANNEL_POSITION_SIDE_RIGHT: return SideRight;
-    case PA_CHANNEL_POSITION_AUX0: return Aux0;
-    case PA_CHANNEL_POSITION_AUX1: return Aux1;
-    case PA_CHANNEL_POSITION_AUX2: return Aux2;
-    case PA_CHANNEL_POSITION_AUX3: return Aux3;
-    case PA_CHANNEL_POSITION_AUX4: return Aux4;
-    case PA_CHANNEL_POSITION_AUX5: return Aux5;
-    case PA_CHANNEL_POSITION_AUX6: return Aux6;
-    case PA_CHANNEL_POSITION_AUX7: return Aux7;
-    case PA_CHANNEL_POSITION_AUX8: return Aux8;
-    case PA_CHANNEL_POSITION_AUX9: return Aux9;
-    case PA_CHANNEL_POSITION_AUX10: return Aux10;
-    case PA_CHANNEL_POSITION_AUX11: return Aux11;
-    case PA_CHANNEL_POSITION_AUX12: return Aux12;
-    case PA_CHANNEL_POSITION_AUX13: return Aux13;
-    case PA_CHANNEL_POSITION_AUX14: return Aux14;
-    case PA_CHANNEL_POSITION_AUX15: return Aux15;
+    case PA_CHANNEL_POSITION_SIDE_LEFT: return al::make_optional(SideLeft);
+    case PA_CHANNEL_POSITION_SIDE_RIGHT: return al::make_optional(SideRight);
+    case PA_CHANNEL_POSITION_AUX0: break;
+    case PA_CHANNEL_POSITION_AUX1: break;
+    case PA_CHANNEL_POSITION_AUX2: break;
+    case PA_CHANNEL_POSITION_AUX3: break;
+    case PA_CHANNEL_POSITION_AUX4: break;
+    case PA_CHANNEL_POSITION_AUX5: break;
+    case PA_CHANNEL_POSITION_AUX6: break;
+    case PA_CHANNEL_POSITION_AUX7: break;
+    case PA_CHANNEL_POSITION_AUX8: break;
+    case PA_CHANNEL_POSITION_AUX9: break;
+    case PA_CHANNEL_POSITION_AUX10: break;
+    case PA_CHANNEL_POSITION_AUX11: break;
+    case PA_CHANNEL_POSITION_AUX12: break;
+    case PA_CHANNEL_POSITION_AUX13: break;
+    case PA_CHANNEL_POSITION_AUX14: break;
+    case PA_CHANNEL_POSITION_AUX15: break;
     case PA_CHANNEL_POSITION_AUX16: break;
     case PA_CHANNEL_POSITION_AUX17: break;
     case PA_CHANNEL_POSITION_AUX18: break;
@@ -269,22 +269,26 @@ size_t ChannelFromPulse(pa_channel_position_t chan)
     case PA_CHANNEL_POSITION_AUX30: break;
     case PA_CHANNEL_POSITION_AUX31: break;
     case PA_CHANNEL_POSITION_TOP_CENTER: break;
-    case PA_CHANNEL_POSITION_TOP_FRONT_LEFT: return UpperFrontLeft;
-    case PA_CHANNEL_POSITION_TOP_FRONT_RIGHT: return UpperFrontRight;
+    case PA_CHANNEL_POSITION_TOP_FRONT_LEFT: return al::make_optional(UpperFrontLeft);
+    case PA_CHANNEL_POSITION_TOP_FRONT_RIGHT: return al::make_optional(UpperFrontRight);
     case PA_CHANNEL_POSITION_TOP_FRONT_CENTER: break;
-    case PA_CHANNEL_POSITION_TOP_REAR_LEFT: return UpperBackLeft;
-    case PA_CHANNEL_POSITION_TOP_REAR_RIGHT: return UpperBackRight;
+    case PA_CHANNEL_POSITION_TOP_REAR_LEFT: return al::make_optional(UpperBackLeft);
+    case PA_CHANNEL_POSITION_TOP_REAR_RIGHT: return al::make_optional(UpperBackRight);
     case PA_CHANNEL_POSITION_TOP_REAR_CENTER: break;
     case PA_CHANNEL_POSITION_MAX: break;
     }
-    throw al::backend_exception{ALC_INVALID_VALUE, "Unexpected channel enum %d", chan};
+    WARN("Unexpected channel enum %d\n", chan);
+    return al::nullopt;
 }
 
 void SetChannelOrderFromMap(ALCdevice *device, const pa_channel_map &chanmap)
 {
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
     for(ALuint i{0};i < chanmap.channels;++i)
-        device->RealOut.ChannelIndex[ChannelFromPulse(chanmap.map[i])] = i;
+    {
+        if(auto label = ChannelFromPulse(chanmap.map[i]))
+            device->RealOut.ChannelIndex[*label] = i;
+    }
 }
 
 

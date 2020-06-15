@@ -29,23 +29,6 @@ enum Channel {
     LowerBackLeft,
     LowerBackRight,
 
-    Aux0,
-    Aux1,
-    Aux2,
-    Aux3,
-    Aux4,
-    Aux5,
-    Aux6,
-    Aux7,
-    Aux8,
-    Aux9,
-    Aux10,
-    Aux11,
-    Aux12,
-    Aux13,
-    Aux14,
-    Aux15,
-
     MaxChannels
 };
 

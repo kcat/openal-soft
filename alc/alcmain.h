@@ -38,7 +38,6 @@ struct ALfilter;
 struct BackendBase;
 struct Compressor;
 struct EffectState;
-struct FrontStablizer;
 struct Uhj2Encoder;
 struct bs2b;
 
@@ -299,8 +298,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     using PostProc = void(ALCdevice::*)(const size_t SamplesToDo);
     PostProc PostProcess{nullptr};
 
-    std::unique_ptr<FrontStablizer> Stablizer;
-
     std::unique_ptr<Compressor> Limiter;
 
     /* Delay buffers used to compensate for speaker distances. */
@@ -347,6 +344,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     void ProcessHrtf(const size_t SamplesToDo);
     void ProcessAmbiDec(const size_t SamplesToDo);
+    void ProcessAmbiDecStablized(const size_t SamplesToDo);
     void ProcessUhj(const size_t SamplesToDo);
     void ProcessBs2b(const size_t SamplesToDo);
 

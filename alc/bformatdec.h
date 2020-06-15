@@ -15,6 +15,7 @@
 #include "filters/splitter.h"
 
 struct AmbDecConf;
+struct FrontStablizer;
 
 
 using ChannelDec = std::array<float,MAX_AMBI_CHANNELS>;
@@ -36,18 +37,27 @@ class BFormatDec {
 
     alignas(16) std::array<FloatBufferLine,2> mSamples;
 
-    bool mDualBand{false};
+    const std::unique_ptr<FrontStablizer> mStablizer;
+    const bool mDualBand{false};
 
     al::FlexArray<ChannelDecoder> mChannelDec;
 
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const size_t inchans,
-        const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS]);
+        const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS],
+        std::unique_ptr<FrontStablizer> stablizer);
     BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,
-        const al::span<const ChannelDec> coeffslf);
+        const al::span<const ChannelDec> coeffslf, std::unique_ptr<FrontStablizer> stablizer);
+
+    bool hasStablizer() const noexcept { return mStablizer != nullptr; };
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,
+        const size_t SamplesToDo);
+
+    /* Decodes the ambisonic input to the given output channels with stablization. */
+    void processStablize(const al::span<FloatBufferLine> OutBuffer,
+        const FloatBufferLine *InSamples, const size_t lidx, const size_t ridx, const size_t cidx,
         const size_t SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
@@ -55,17 +65,11 @@ public:
         const ALuint out_order) noexcept;
 
     static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,
-        const size_t inchans, const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS])
-    {
-        return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
-            BFormatDec{conf, allow_2band, inchans, srate, chanmap}};
-    }
+        const size_t inchans, const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS],
+        std::unique_ptr<FrontStablizer> stablizer);
     static std::unique_ptr<BFormatDec> Create(const size_t inchans,
-        const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf)
-    {
-        return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
-            BFormatDec{inchans, coeffs, coeffslf}};
-    }
+        const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf,
+        std::unique_ptr<FrontStablizer> stablizer);
 
     DEF_FAM_NEWDEL(BFormatDec, mChannelDec)
 };

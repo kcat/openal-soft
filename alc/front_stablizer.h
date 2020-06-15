@@ -15,6 +15,7 @@ struct FrontStablizer {
     FrontStablizer(size_t numchans) : DelayBuf{numchans} { }
 
     alignas(16) std::array<float,BUFFERSIZE + DelayLength> Side{};
+    alignas(16) std::array<float,BUFFERSIZE + DelayLength> MidDirect{};
     alignas(16) std::array<float,DelayLength> MidDelay{};
 
     alignas(16) std::array<float,BUFFERSIZE + DelayLength> TempBuf{};

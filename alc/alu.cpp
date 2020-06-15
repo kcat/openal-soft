@@ -292,6 +292,17 @@ void ALCdevice::ProcessAmbiDec(const size_t SamplesToDo)
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 }
 
+void ALCdevice::ProcessAmbiDecStablized(const size_t SamplesToDo)
+{
+    /* Decode with front image stablization. */
+    const ALuint lidx{RealOut.ChannelIndex[FrontLeft]};
+    const ALuint ridx{RealOut.ChannelIndex[FrontRight]};
+    const ALuint cidx{RealOut.ChannelIndex[FrontCenter]};
+
+    AmbiDecoder->processStablize(RealOut.Buffer, Dry.Buffer.data(), lidx, ridx, cidx,
+        SamplesToDo);
+}
+
 void ALCdevice::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
@@ -1800,101 +1811,6 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
 }
 
 
-/* FIXME: This shouldn't really be applied to the final output mix like this,
- * since a source mixed with direct channels shouldn't be subjected to this
- * filtering. The only way to do that is as part of the ambisonic decode (in
- * BFormatDec::process) where it can separate the pre-mixed direct-channel feed
- * from the decoded soundfield.
- */
-void ApplyStablizer(FrontStablizer *Stablizer, const al::span<FloatBufferLine> Buffer,
-    const size_t lidx, const size_t ridx, const size_t cidx, const size_t SamplesToDo)
-{
-    ASSUME(SamplesToDo > 0);
-
-    /* Apply a delay to all channels, except the front-left and front-right, so
-     * they maintain correct timing.
-     */
-    const size_t NumChannels{Buffer.size()};
-    for(size_t i{0u};i < NumChannels;i++)
-    {
-        if(i == lidx || i == ridx)
-            continue;
-
-        auto &DelayBuf = Stablizer->DelayBuf[i];
-        auto buffer_end = Buffer[i].begin() + SamplesToDo;
-        if LIKELY(SamplesToDo >= FrontStablizer::DelayLength)
-        {
-            auto delay_end = std::rotate(Buffer[i].begin(),
-                buffer_end - FrontStablizer::DelayLength, buffer_end);
-            std::swap_ranges(Buffer[i].begin(), delay_end, DelayBuf.begin());
-        }
-        else
-        {
-            auto delay_start = std::swap_ranges(Buffer[i].begin(), buffer_end,
-                DelayBuf.begin());
-            std::rotate(DelayBuf.begin(), delay_start, DelayBuf.end());
-        }
-    }
-
-    /* Add a delay to the incoming side signal to keep it aligned with the mid
-     * filter delay.
-     */
-    for(size_t i{0};i < SamplesToDo;++i)
-        Stablizer->Side[FrontStablizer::DelayLength+i] = Buffer[lidx][i] - Buffer[ridx][i];
-
-    /* Combine the delayed mid signal with the incoming signal. Note that the
-     * samples are stored and combined in reverse, so the newest samples are at
-     * the front and the oldest at the back.
-     */
-    al::span<float> tmpbuf{Stablizer->TempBuf};
-    auto tmpiter = tmpbuf.begin() + SamplesToDo;
-    std::copy(Stablizer->MidDelay.cbegin(), Stablizer->MidDelay.cend(), tmpiter);
-    for(size_t i{0};i < SamplesToDo;++i)
-        *--tmpiter = Buffer[lidx][i] + Buffer[ridx][i];
-    /* Save the newest samples for next time. */
-    std::copy_n(tmpbuf.cbegin(), Stablizer->MidDelay.size(), Stablizer->MidDelay.begin());
-
-    /* Apply an all-pass on the reversed signal, then reverse the samples to
-     * get the forward signal with a reversed phase shift. The future samples
-     * are included with the all-pass to reduce the error in the output
-     * samples (the smaller the delay, the more error is introduced).
-     */
-    Stablizer->MidFilter.applyAllpass(tmpbuf);
-    tmpbuf = tmpbuf.subspan<FrontStablizer::DelayLength>();
-    std::reverse(tmpbuf.begin(), tmpbuf.end());
-
-    /* Now apply the band-splitter, combining its phase shift with the reversed
-     * phase shift, restoring the original phase on the split signal.
-     */
-    Stablizer->MidFilter.process(tmpbuf, Stablizer->MidHF.data(), Stablizer->MidLF.data());
-
-    /* This pans the separate low- and high-frequency signals between being on
-     * the center channel and the left+right channels. The low-frequency signal
-     * is panned 1/3rd toward center and the high-frequency signal is panned
-     * 1/4th toward center. These values can be tweaked.
-     */
-    const float cos_lf{std::cos(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f))};
-    const float cos_hf{std::cos(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
-    const float sin_lf{std::sin(1.0f/3.0f * (al::MathDefs<float>::Pi()*0.5f))};
-    const float sin_hf{std::sin(1.0f/4.0f * (al::MathDefs<float>::Pi()*0.5f))};
-    for(ALuint i{0};i < SamplesToDo;i++)
-    {
-        const float m{Stablizer->MidLF[i]*cos_lf + Stablizer->MidHF[i]*cos_hf};
-        const float c{Stablizer->MidLF[i]*sin_lf + Stablizer->MidHF[i]*sin_hf};
-        const float s{Stablizer->Side[i]};
-
-        /* The generated center channel signal adds to the existing signal,
-         * while the modified left and right channels replace.
-         */
-        Buffer[lidx][i] = (m + s) * 0.5f;
-        Buffer[ridx][i] = (m - s) * 0.5f;
-        Buffer[cidx][i] += c * 0.5f;
-    }
-    /* Move the delayed side samples to the front for next time. */
-    auto side_end = Stablizer->Side.cbegin() + SamplesToDo;
-    std::copy(side_end, side_end+FrontStablizer::DelayLength, Stablizer->Side.begin());
-}
-
 void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t SamplesToDo,
     const DistanceComp::DistData *distcomp)
 {
@@ -2041,16 +1957,6 @@ void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
         device->postProcess(SamplesToDo);
 
         const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
-
-        /* Apply front image stablization for surround sound, if applicable. */
-        if(FrontStablizer *stablizer{device->Stablizer.get()})
-        {
-            const ALuint lidx{GetChannelIdxByName(device->RealOut, FrontLeft)};
-            const ALuint ridx{GetChannelIdxByName(device->RealOut, FrontRight)};
-            const ALuint cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
-
-            ApplyStablizer(stablizer, RealOut, lidx, ridx, cidx, SamplesToDo);
-        }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */
         if(Compressor *comp{device->Limiter.get()})

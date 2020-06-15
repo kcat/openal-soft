@@ -51,6 +51,7 @@
 #include "bformatdec.h"
 #include "bs2b.h"
 #include "devformat.h"
+#include "front_stablizer.h"
 #include "hrtf.h"
 #include "logging.h"
 #include "math_defs.h"
@@ -120,6 +121,20 @@ inline const char *GetLabelFromChannel(Channel channel)
     return "(unknown)";
 }
 
+
+std::unique_ptr<FrontStablizer> CreateStablizer(const size_t outchans, const ALuint srate)
+{
+    auto stablizer = FrontStablizer::Create(outchans);
+    for(auto &buf : stablizer->DelayBuf)
+        std::fill(buf.begin(), buf.end(), 0.0f);
+
+    /* Initialize band-splitting filter for the mid signal, with a crossover at
+     * 5khz (could be higher).
+     */
+    stablizer->MidFilter.init(5000.0f / static_cast<float>(srate));
+
+    return stablizer;
+}
 
 void AllocChannels(ALCdevice *device, const size_t main_chans, const size_t real_chans)
 {
@@ -476,7 +491,7 @@ constexpr DecoderConfig<DualBand, 6> X71Config{
     }}
 };
 
-void InitPanning(ALCdevice *device, const bool hqdec=false)
+void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=false)
 {
     DecoderView decoder{};
     switch(device->FmtChans)
@@ -577,17 +592,43 @@ void InitPanning(ALCdevice *device, const bool hqdec=false)
         );
         AllocChannels(device, ambicount, device->channelsFromFmt());
 
+        std::unique_ptr<FrontStablizer> stablizer;
+        if(stablize)
+        {
+            /* Only enable the stablizer if the decoder does not output to the
+             * front-center channel.
+             */
+            const auto cidx = device->RealOut.ChannelIndex[FrontCenter];
+            bool hasfc{false};
+            if(cidx < chancoeffs.size())
+            {
+                for(const auto &coeff : chancoeffs[cidx])
+                    hasfc |= coeff != 0.0f;
+            }
+            if(!hasfc && cidx < chancoeffslf.size())
+            {
+                for(const auto &coeff : chancoeffslf[cidx])
+                    hasfc |= coeff != 0.0f;
+            }
+            if(!hasfc)
+            {
+                stablizer = CreateStablizer(device->channelsFromFmt(), device->Frequency);
+                TRACE("Front stablizer enabled\n");
+            }
+        }
+
         TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
             !dual_band ? "single" : "dual",
             (decoder.mOrder > 2) ? "third" :
             (decoder.mOrder > 1) ? "second" : "first",
             "");
-        device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf);
+        device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
+            std::move(stablizer));
     }
 }
 
-void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
-    const ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
+void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
+    const AmbDecConf *conf, const ALuint (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
     if(!hqdec && conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
@@ -616,13 +657,44 @@ void InitCustomPanning(ALCdevice *device, bool hqdec, const AmbDecConf *conf,
     }
     AllocChannels(device, count, device->channelsFromFmt());
 
+    std::unique_ptr<FrontStablizer> stablizer;
+    if(stablize)
+    {
+        /* Only enable the stablizer if the decoder does not output to the
+         * front-center channel.
+         */
+        size_t cidx{0};
+        for(;cidx < conf->Speakers.size();++cidx)
+        {
+            if(speakermap[cidx] == FrontCenter)
+                break;
+        }
+        bool hasfc{false};
+        if(cidx < conf->LFMatrix.size())
+        {
+            for(const auto &coeff : conf->LFMatrix[cidx])
+                hasfc |= coeff != 0.0f;
+        }
+        if(!hasfc && cidx < conf->HFMatrix.size())
+        {
+            for(const auto &coeff : conf->HFMatrix[cidx])
+                hasfc |= coeff != 0.0f;
+        }
+        if(!hasfc)
+        {
+            stablizer = CreateStablizer(device->channelsFromFmt(), device->Frequency);
+            TRACE("Front stablizer enabled\n");
+        }
+    }
+
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (!hqdec || conf->FreqBands == 1) ? "single" : "dual",
         (conf->ChanMask > AMBI_2ORDER_MASK) ? "third" :
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    device->AmbiDecoder = BFormatDec::Create(conf, hqdec, count, device->Frequency, speakermap);
+    device->AmbiDecoder = BFormatDec::Create(conf, hqdec, count, device->Frequency, speakermap,
+        std::move(stablizer));
 
     auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
@@ -852,13 +924,23 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
             }
         }
 
-        const int hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1)};
+        /* Enable the stablizer only for formats that have front-left, front-
+         * right, and front-center outputs.
+         */
+        const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != INVALID_CHANNEL_INDEX
+            && device->RealOut.ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
+            && device->RealOut.ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX
+            && GetConfigValueBool(devname, nullptr, "front-stablizer", 0) != 0};
+        const bool hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1) != 0};
         if(!pconf)
-            InitPanning(device, !!hqdec);
+            InitPanning(device, hqdec, stablize);
         else
-            InitCustomPanning(device, !!hqdec, pconf, speakermap);
-        if(device->AmbiDecoder)
-            device->PostProcess = &ALCdevice::ProcessAmbiDec;
+            InitCustomPanning(device, hqdec, stablize, pconf, speakermap);
+        if(auto *ambidec{device->AmbiDecoder.get()})
+        {
+            device->PostProcess = ambidec->hasStablizer() ? &ALCdevice::ProcessAmbiDecStablized
+                : &ALCdevice::ProcessAmbiDec;
+        }
         return;
     }
 

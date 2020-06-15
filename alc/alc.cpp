@@ -1870,7 +1870,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->Bs2b = nullptr;
     device->PostProcess = nullptr;
 
-    device->Stablizer = nullptr;
     device->Limiter = nullptr;
     device->ChannelDelay.clear();
 
@@ -1986,39 +1985,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     }
     if(device->mHrtfState)
         device->FixedLatency += nanoseconds{seconds{HRTF_DIRECT_DELAY}} / device->Frequency;
-
-    /* Enable the stablizer only for formats that have front-left, front-right,
-     * and front-center outputs.
-     */
-    switch(device->FmtChans)
+    if(auto *ambidec = device->AmbiDecoder.get())
     {
-    case DevFmtX51:
-    case DevFmtX51Rear:
-    case DevFmtX61:
-    case DevFmtX71:
-        if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "front-stablizer", 0))
+        if(ambidec->hasStablizer())
         {
-            auto stablizer = FrontStablizer::Create(device->channelsFromFmt());
-            for(auto &buf : stablizer->DelayBuf)
-                std::fill(buf.begin(), buf.end(), 0.0f);
-
-            /* Initialize band-splitting filter for the mid signal, with a
-             * crossover at 5khz (could be higher).
-             */
-            stablizer->MidFilter.init(5000.0f / static_cast<float>(device->Frequency));
-
-            device->Stablizer = std::move(stablizer);
             constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
             device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
         }
-        break;
-    case DevFmtMono:
-    case DevFmtStereo:
-    case DevFmtQuad:
-    case DevFmtAmbi3D:
-        break;
     }
-    TRACE("Front stablizer %s\n", device->Stablizer ? "enabled" : "disabled");
 
     if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "dither", 1))
     {

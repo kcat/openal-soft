@@ -102,6 +102,7 @@ namespace {
     MAGIC(pa_channel_map_snprint);                                            \
     MAGIC(pa_channel_map_equal);                                              \
     MAGIC(pa_channel_map_superset);                                           \
+    MAGIC(pa_channel_position_to_string);                                     \
     MAGIC(pa_operation_get_state);                                            \
     MAGIC(pa_operation_unref);                                                \
     MAGIC(pa_sample_spec_valid);                                              \
@@ -165,6 +166,7 @@ PULSE_FUNCS(MAKE_FUNC)
 #define pa_channel_map_snprint ppa_channel_map_snprint
 #define pa_channel_map_equal ppa_channel_map_equal
 #define pa_channel_map_superset ppa_channel_map_superset
+#define pa_channel_position_to_string ppa_channel_position_to_string
 #define pa_operation_get_state ppa_operation_get_state
 #define pa_operation_unref ppa_operation_unref
 #define pa_sample_spec_valid ppa_sample_spec_valid
@@ -277,7 +279,7 @@ al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
     case PA_CHANNEL_POSITION_TOP_REAR_CENTER: return al::make_optional(TopBackCenter);
     case PA_CHANNEL_POSITION_MAX: break;
     }
-    WARN("Unexpected channel enum %d\n", chan);
+    WARN("Unexpected channel enum %d (%s)\n", chan, pa_channel_position_to_string(chan));
     return al::nullopt;
 }
 

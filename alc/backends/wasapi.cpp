@@ -100,9 +100,8 @@ inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) no
 #define X5DOT1REAR (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
 #define X6DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_CENTER|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
-#define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
-constexpr inline uint32_t MaskFromTopBits(uint32_t b) noexcept
+constexpr inline DWORD MaskFromTopBits(DWORD b) noexcept
 {
     b |= b>>1;
     b |= b>>2;
@@ -111,14 +110,13 @@ constexpr inline uint32_t MaskFromTopBits(uint32_t b) noexcept
     b |= b>>16;
     return b;
 }
-constexpr uint32_t MonoMask{MaskFromTopBits(MONO)};
-constexpr uint32_t StereoMask{MaskFromTopBits(STEREO)};
-constexpr uint32_t QuadMask{MaskFromTopBits(QUAD)};
-constexpr uint32_t X51Mask{MaskFromTopBits(X5DOT1)};
-constexpr uint32_t X51RearMask{MaskFromTopBits(X5DOT1REAR)};
-constexpr uint32_t X61Mask{MaskFromTopBits(X6DOT1)};
-constexpr uint32_t X71Mask{MaskFromTopBits(X7DOT1)};
-constexpr uint32_t X71WideMask{MaskFromTopBits(X7DOT1_WIDE)};
+constexpr DWORD MonoMask{MaskFromTopBits(MONO)};
+constexpr DWORD StereoMask{MaskFromTopBits(STEREO)};
+constexpr DWORD QuadMask{MaskFromTopBits(QUAD)};
+constexpr DWORD X51Mask{MaskFromTopBits(X5DOT1)};
+constexpr DWORD X51RearMask{MaskFromTopBits(X5DOT1REAR)};
+constexpr DWORD X61Mask{MaskFromTopBits(X6DOT1)};
+constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 
 #define DEVNAME_HEAD "OpenAL Soft on "
 
@@ -891,7 +889,7 @@ HRESULT WasapiPlayback::resetProxy()
     {
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
-        if(chancount >= 8 && ((chanmask&X71Mask)==X7DOT1 || (chanmask&X71WideMask)==X7DOT1_WIDE))
+        if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
             mDevice->FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
             mDevice->FmtChans = DevFmtX61;
@@ -1010,7 +1008,7 @@ HRESULT WasapiPlayback::resetProxy()
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
-        if(chancount >= 8 && ((chanmask&X71Mask)==X7DOT1 || (chanmask&X71WideMask)==X7DOT1_WIDE))
+        if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
             mDevice->FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
             mDevice->FmtChans = DevFmtX61;
@@ -1070,7 +1068,7 @@ HRESULT WasapiPlayback::resetProxy()
     mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo
         && (formfactor == Headphones || formfactor == Headset));
 
-    setDefaultWFXChannelOrder();
+    setChannelOrderFromWFXMask(OutputType.dwChannelMask);
 
     hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
         buf_time.count(), 0, &OutputType.Format, nullptr);

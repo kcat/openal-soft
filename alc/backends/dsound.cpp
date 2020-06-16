@@ -108,6 +108,14 @@ HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallbac
 #endif
 
 
+#define MONO SPEAKER_FRONT_CENTER
+#define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
+#define QUAD (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
+#define X5DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
+#define X5DOT1REAR (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
+#define X6DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_CENTER|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
+#define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
+
 #define MAX_UPDATES 128
 
 struct DevMap {
@@ -358,23 +366,23 @@ bool DSoundPlayback::reset()
 
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            mDevice->FmtType = DevFmtUByte;
+    case DevFmtByte:
+        mDevice->FmtType = DevFmtUByte;
+        break;
+    case DevFmtFloat:
+        if(mDevice->Flags.get<SampleTypeRequest>())
             break;
-        case DevFmtFloat:
-            if(mDevice->Flags.get<SampleTypeRequest>())
-                break;
-            /* fall-through */
-        case DevFmtUShort:
-            mDevice->FmtType = DevFmtShort;
-            break;
-        case DevFmtUInt:
-            mDevice->FmtType = DevFmtInt;
-            break;
-        case DevFmtUByte:
-        case DevFmtShort:
-        case DevFmtInt:
-            break;
+        /* fall-through */
+    case DevFmtUShort:
+        mDevice->FmtType = DevFmtShort;
+        break;
+    case DevFmtUInt:
+        mDevice->FmtType = DevFmtInt;
+        break;
+    case DevFmtUByte:
+    case DevFmtShort:
+    case DevFmtInt:
+        break;
     }
 
     WAVEFORMATEXTENSIBLE OutputType{};
@@ -400,62 +408,20 @@ bool DSoundPlayback::reset()
             else
                 ERR("Unknown system speaker config: 0x%lx\n", speakers);
         }
-        mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo &&
-                                 speakers == DSSPEAKER_HEADPHONE);
+        mDevice->IsHeadphones = mDevice->FmtChans == DevFmtStereo
+            && speakers == DSSPEAKER_HEADPHONE;
 
         switch(mDevice->FmtChans)
         {
-            case DevFmtMono:
-                OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
-                break;
-            case DevFmtAmbi3D:
-                mDevice->FmtChans = DevFmtStereo;
-                /*fall-through*/
-            case DevFmtStereo:
-                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                           SPEAKER_FRONT_RIGHT;
-                break;
-            case DevFmtQuad:
-                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                           SPEAKER_FRONT_RIGHT |
-                                           SPEAKER_BACK_LEFT |
-                                           SPEAKER_BACK_RIGHT;
-                break;
-            case DevFmtX51:
-                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                           SPEAKER_FRONT_RIGHT |
-                                           SPEAKER_FRONT_CENTER |
-                                           SPEAKER_LOW_FREQUENCY |
-                                           SPEAKER_SIDE_LEFT |
-                                           SPEAKER_SIDE_RIGHT;
-                break;
-            case DevFmtX51Rear:
-                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                           SPEAKER_FRONT_RIGHT |
-                                           SPEAKER_FRONT_CENTER |
-                                           SPEAKER_LOW_FREQUENCY |
-                                           SPEAKER_BACK_LEFT |
-                                           SPEAKER_BACK_RIGHT;
-                break;
-            case DevFmtX61:
-                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                           SPEAKER_FRONT_RIGHT |
-                                           SPEAKER_FRONT_CENTER |
-                                           SPEAKER_LOW_FREQUENCY |
-                                           SPEAKER_BACK_CENTER |
-                                           SPEAKER_SIDE_LEFT |
-                                           SPEAKER_SIDE_RIGHT;
-                break;
-            case DevFmtX71:
-                OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
-                                           SPEAKER_FRONT_RIGHT |
-                                           SPEAKER_FRONT_CENTER |
-                                           SPEAKER_LOW_FREQUENCY |
-                                           SPEAKER_BACK_LEFT |
-                                           SPEAKER_BACK_RIGHT |
-                                           SPEAKER_SIDE_LEFT |
-                                           SPEAKER_SIDE_RIGHT;
-                break;
+        case DevFmtMono: OutputType.dwChannelMask = MONO; break;
+        case DevFmtAmbi3D: mDevice->FmtChans = DevFmtStereo;
+            /*fall-through*/
+        case DevFmtStereo: OutputType.dwChannelMask = STEREO; break;
+        case DevFmtQuad: OutputType.dwChannelMask = QUAD; break;
+        case DevFmtX51: OutputType.dwChannelMask = X5DOT1; break;
+        case DevFmtX51Rear: OutputType.dwChannelMask = X5DOT1REAR; break;
+        case DevFmtX61: OutputType.dwChannelMask = X6DOT1; break;
+        case DevFmtX71: OutputType.dwChannelMask = X7DOT1; break;
         }
 
 retry_open:
@@ -507,8 +473,8 @@ retry_open:
 
         DSBUFFERDESC DSBDescription{};
         DSBDescription.dwSize = sizeof(DSBDescription);
-        DSBDescription.dwFlags = DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_GETCURRENTPOSITION2 |
-                                 DSBCAPS_GLOBALFOCUS;
+        DSBDescription.dwFlags = DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_GETCURRENTPOSITION2
+            | DSBCAPS_GLOBALFOCUS;
         DSBDescription.dwBufferBytes = mDevice->BufferSize * OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat = &OutputType.Format;
 
@@ -526,8 +492,7 @@ retry_open:
         hr = mBuffer->QueryInterface(IID_IDirectSoundNotify, &ptr);
         if(SUCCEEDED(hr))
         {
-            auto Notifies = static_cast<IDirectSoundNotify*>(ptr);
-            mNotifies = Notifies;
+            mNotifies = static_cast<IDirectSoundNotify*>(ptr);
 
             ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
             assert(num_updates <= MAX_UPDATES);
@@ -538,7 +503,7 @@ retry_open:
                 nots[i].dwOffset = i * mDevice->UpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;
             }
-            if(Notifies->SetNotificationPositions(num_updates, nots.data()) != DS_OK)
+            if(mNotifies->SetNotificationPositions(num_updates, nots.data()) != DS_OK)
                 hr = E_FAIL;
         }
     }
@@ -558,7 +523,7 @@ retry_open:
     }
 
     ResetEvent(mNotifyEvent);
-    setDefaultWFXChannelOrder();
+    setChannelOrderFromWFXMask(OutputType.dwChannelMask);
 
     return true;
 }
@@ -670,33 +635,13 @@ void DSoundCapture::open(const ALCchar *name)
     WAVEFORMATEXTENSIBLE InputType{};
     switch(mDevice->FmtChans)
     {
-    case DevFmtMono:
-        InputType.dwChannelMask = SPEAKER_FRONT_CENTER;
-        break;
-    case DevFmtStereo:
-        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-        break;
-    case DevFmtQuad:
-        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT |
-            SPEAKER_BACK_RIGHT;
-        break;
-    case DevFmtX51:
-        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
-            SPEAKER_LOW_FREQUENCY | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
-        break;
-    case DevFmtX51Rear:
-        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
-            SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
-        break;
-    case DevFmtX61:
-        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
-            SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_CENTER | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
-        break;
-    case DevFmtX71:
-        InputType.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER |
-            SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_SIDE_LEFT |
-            SPEAKER_SIDE_RIGHT;
-        break;
+    case DevFmtMono: InputType.dwChannelMask = MONO; break;
+    case DevFmtStereo: InputType.dwChannelMask = STEREO; break;
+    case DevFmtQuad: InputType.dwChannelMask = QUAD; break;
+    case DevFmtX51: InputType.dwChannelMask = X5DOT1; break;
+    case DevFmtX51Rear: InputType.dwChannelMask = X5DOT1REAR; break;
+    case DevFmtX61: InputType.dwChannelMask = X6DOT1; break;
+    case DevFmtX71: InputType.dwChannelMask = X7DOT1; break;
     case DevFmtAmbi3D:
         WARN("%s capture not supported\n", DevFmtChannelsString(mDevice->FmtChans));
         throw al::backend_exception{ALC_INVALID_VALUE, "%s capture not supported",
@@ -754,7 +699,7 @@ void DSoundCapture::open(const ALCchar *name)
     }
 
     mBufferBytes = DSCBDescription.dwBufferBytes;
-    setDefaultWFXChannelOrder();
+    setChannelOrderFromWFXMask(InputType.dwChannelMask);
 
     mDevice->DeviceName = name;
 }

@@ -28,6 +28,7 @@
 
 #include <windows.h>
 #include <mmsystem.h>
+#include <mmreg.h>
 
 #include <array>
 #include <atomic>
@@ -263,7 +264,7 @@ bool WinMMPlayback::reset()
 {
     mDevice->BufferSize = static_cast<ALuint>(uint64_t{mDevice->BufferSize} *
         mFormat.nSamplesPerSec / mDevice->Frequency);
-    mDevice->BufferSize = (mDevice->BufferSize+3) & ~0x3;
+    mDevice->BufferSize = (mDevice->BufferSize+3) & ~0x3u;
     mDevice->UpdateSize = mDevice->BufferSize / 4;
     mDevice->Frequency = mFormat.nSamplesPerSec;
 
@@ -295,16 +296,23 @@ bool WinMMPlayback::reset()
         return false;
     }
 
+    ALuint chanmask{};
     if(mFormat.nChannels == 2)
+    {
         mDevice->FmtChans = DevFmtStereo;
+        chanmask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+    }
     else if(mFormat.nChannels == 1)
+    {
         mDevice->FmtChans = DevFmtMono;
+        chanmask = SPEAKER_FRONT_CENTER;
+    }
     else
     {
         ERR("Unhandled channel count: %d\n", mFormat.nChannels);
         return false;
     }
-    setDefaultWFXChannelOrder();
+    setChannelOrderFromWFXMask(chanmask);
 
     ALuint BufferSize{mDevice->UpdateSize * mDevice->frameSizeFromFmt()};
 

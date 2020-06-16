@@ -227,6 +227,9 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint (&speakerm
 
 void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, ALuint order, bool is3d)
 {
+    static const ALuint chans_per_order2d[MAX_AMBI_ORDER+1]{ 1, 2, 2, 2 };
+    static const ALuint chans_per_order3d[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
+
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
     const char *devname{device->DeviceName.c_str()};
     if(!GetConfigValueBool(devname, "decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
@@ -235,12 +238,7 @@ void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, ALuint order, bool is
     device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
     TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
-    static const ALuint chans_per_order2d[MAX_AMBI_ORDER+1]{ 1, 2, 2, 2 };
-    static const ALuint chans_per_order3d[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
-    const al::span<const ALuint> chans_per_order{is3d ? chans_per_order3d : chans_per_order2d,
-        order+1u};
-
-    auto iter = std::copy(chans_per_order.begin(), chans_per_order.end(),
+    auto iter = std::copy_n(is3d ? chans_per_order3d : chans_per_order2d, order+1u,
         std::begin(device->NumChannelsPerOrder));
     std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
 }

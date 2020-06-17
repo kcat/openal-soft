@@ -230,19 +230,17 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
 
 
 /* Calculate the onset time of a HRIR. */
-static double CalcHrirOnset(const uint rate, const uint n, std::vector<double> &upsampled,
-    const double *hrir)
+static constexpr int OnsetRateMultiple{10};
+static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
+    std::vector<double> &upsampled, const double *hrir)
 {
-    {
-        PPhaseResampler rs;
-        rs.init(rate, 10 * rate);
-        rs.process(n, hrir, 10 * n, upsampled.data());
-    }
+    rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
 
     auto abs_lt = [](const double &lhs, const double &rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
     auto iter = std::max_element(upsampled.cbegin(), upsampled.cend(), abs_lt);
-    return static_cast<double>(std::distance(upsampled.cbegin(), iter)) / (10.0*rate);
+    return static_cast<double>(std::distance(upsampled.cbegin(), iter)) /
+        (double{OnsetRateMultiple}*rate);
 }
 
 /* Calculate the magnitude response of a HRIR. */
@@ -269,9 +267,12 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
         /* Temporary buffers used to calculate the IR's onset and frequency
          * magnitudes.
          */
-        auto upsampled = std::vector<double>(10 * hData->mIrPoints);
+        auto upsampled = std::vector<double>(OnsetRateMultiple * hData->mIrPoints);
         auto htemp = std::vector<complex_d>(hData->mFftSize);
         auto hrir = std::vector<double>(hData->mFftSize);
+        /* This resampler is used to help detect the response onset. */
+        PPhaseResampler rs;
+        rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
         for(uint si{0u};si < sofaHrtf->M;++si)
         {
@@ -322,7 +323,7 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
                 std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
                     hData->mIrPoints, hrir.begin());
                 azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
-                azd->mDelays[ti] = CalcHrirOnset(hData->mIrRate, hData->mIrPoints, upsampled,
+                azd->mDelays[ti] = CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints, upsampled,
                     hrir.data());
                 CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, hrir.data(),
                     azd->mIrs[ti]);

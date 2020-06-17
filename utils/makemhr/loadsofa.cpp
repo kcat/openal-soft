@@ -245,13 +245,13 @@ static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
 
 /* Calculate the magnitude response of a HRIR. */
 static void CalcHrirMagnitude(const uint points, const uint n, std::vector<complex_d> &h,
-    const double *hrir, double *mag)
+    double *hrir)
 {
     auto iter = std::copy_n(hrir, points, h.begin());
     std::fill(iter, h.end(), complex_d{0.0, 0.0});
 
     FftForward(n, h.data());
-    MagnitudeResponse(n, h.data(), mag);
+    MagnitudeResponse(n, h.data(), hrir);
 }
 
 static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
@@ -261,18 +261,8 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
     auto load_proc = [sofaHrtf,hData,&loaded_count]() -> bool
     {
         const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-        hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
+        hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize, 0.0);
         double *hrirs = hData->mHrirsBase.data();
-
-        /* Temporary buffers used to calculate the IR's onset and frequency
-         * magnitudes.
-         */
-        auto upsampled = std::vector<double>(OnsetRateMultiple * hData->mIrPoints);
-        auto htemp = std::vector<complex_d>(hData->mFftSize);
-        auto hrir = std::vector<double>(hData->mFftSize);
-        /* This resampler is used to help detect the response onset. */
-        PPhaseResampler rs;
-        rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
         for(uint si{0u};si < sofaHrtf->M;++si)
         {
@@ -320,13 +310,9 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
 
             for(uint ti{0u};ti < channels;++ti)
             {
-                std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
-                    hData->mIrPoints, hrir.begin());
                 azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
-                azd->mDelays[ti] = CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints, upsampled,
-                    hrir.data());
-                CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, hrir.data(),
-                    azd->mIrs[ti]);
+                std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                    hData->mIrPoints, azd->mIrs[ti]);
             }
 
             /* TODO: Since some SOFA files contain minimum phase HRIRs,
@@ -447,11 +433,13 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
         }
     }
 
+
+    size_t hrir_total{0};
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     double *hrirs = hData->mHrirsBase.data();
     for(uint fi{0u};fi < hData->mFdCount;fi++)
     {
-        for(uint ei{0u};ei < hData->mFds[fi].mEvCount;ei++)
+        for(uint ei{0u};ei < hData->mFds[fi].mEvStart;ei++)
         {
             for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
             {
@@ -460,7 +448,80 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
                     azd.mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd.mIndex)];
             }
         }
+
+        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+            hrir_total += hData->mFds[fi].mEvs[ei].mAzCount * channels;
     }
 
-    return true;
+    std::atomic<size_t> hrir_done{0};
+    auto onset_proc = [hData,channels,&hrir_done]() -> bool
+    {
+        /* Temporary buffer used to calculate the IR's onset. */
+        auto upsampled = std::vector<double>(OnsetRateMultiple * hData->mIrPoints);
+        /* This resampler is used to help detect the response onset. */
+        PPhaseResampler rs;
+        rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
+
+        for(uint fi{0u};fi < hData->mFdCount;fi++)
+        {
+            for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+            {
+                for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                {
+                    HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
+                    for(uint ti{0};ti < channels;ti++)
+                    {
+                        hrir_done.fetch_add(1u, std::memory_order_acq_rel);
+                        azd.mDelays[ti] = CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints,
+                            upsampled, azd.mIrs[ti]);
+                    }
+                }
+            }
+        }
+        return true;
+    };
+    auto magnitude_proc = [hData,channels,&hrir_done]() -> bool
+    {
+        /* Temporary buffers used to calculate the IR's frequency magnitudes. */
+        auto htemp = std::vector<complex_d>(hData->mFftSize);
+
+        for(uint fi{0u};fi < hData->mFdCount;fi++)
+        {
+            for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+            {
+                for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                {
+                    HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
+                    for(uint ti{0};ti < channels;ti++)
+                    {
+                        hrir_done.fetch_add(1u, std::memory_order_acq_rel);
+                        CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, azd.mIrs[ti]);
+                    }
+                }
+            }
+        }
+        return true;
+    };
+
+    std::future_status load_status{};
+    auto load_future = std::async(std::launch::async, onset_proc);
+    do {
+        load_status = load_future.wait_for(std::chrono::milliseconds{50});
+        printf("\rCalculating HRIR onsets... %zu of %zu", hrir_done.load(), hrir_total);
+        fflush(stdout);
+    } while(load_status != std::future_status::ready);
+    fputc('\n', stdout);
+    if(!load_future.get())
+        return false;
+
+    hrir_done.store(0u, std::memory_order_relaxed);
+    load_future = std::async(std::launch::async, magnitude_proc);
+    do {
+        load_status = load_future.wait_for(std::chrono::milliseconds{50});
+        printf("\rCalculating HRIR magnitudes... %zu of %zu", hrir_done.load(), hrir_total);
+        fflush(stdout);
+    } while(load_status != std::future_status::ready);
+    fputc('\n', stdout);
+
+    return load_future.get();
 }

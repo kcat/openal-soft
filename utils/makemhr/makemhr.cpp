@@ -853,11 +853,11 @@ static void ReconstructHrirs(const HrirDataT *hData)
     /* Count the number of IRs to process (excluding elevations that will be
      * synthesized later).
      */
-    size_t total{hData->mIrCount};
+    size_t total{0};
     for(uint fi{0u};fi < hData->mFdCount;fi++)
     {
-        for(uint ei{0u};ei < hData->mFds[fi].mEvStart;ei++)
-            total -= hData->mFds[fi].mEvs[ei].mAzCount;
+        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+            total += hData->mFds[fi].mEvs[ei].mAzCount;
     }
     total *= channels;
 
@@ -1377,8 +1377,9 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
  * from standard input.
  */
 static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
-    const uint fftSize, const int equalize, const int surface, const double limit,
-    const uint truncSize, const HeadModelT model, const double radius, const char *outName)
+    const bool farfield, const uint fftSize, const int equalize, const int surface,
+    const double limit, const uint truncSize, const HeadModelT model, const double radius,
+    const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
     HrirDataT hData;
@@ -1440,6 +1441,20 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         fprintf(stdout, "Performing diffuse-field equalization...\n");
         DiffuseFieldEqualize(c, m, dfa.data(), &hData);
     }
+    if(hData.mFds.size() > 1)
+    {
+        fprintf(stdout, "Sorting %zu fields...\n", hData.mFds.size());
+        std::sort(hData.mFds.begin(), hData.mFds.end(),
+            [](const HrirFdT &lhs, const HrirFdT &rhs) noexcept
+            { return lhs.mDistance < rhs.mDistance; });
+        if(farfield)
+        {
+            fprintf(stdout, "Clearing %zu near field%s...\n", hData.mFds.size()-1,
+                (hData.mFds.size()-1 != 1) ? "s" : "");
+            hData.mFds.erase(hData.mFds.cbegin(), hData.mFds.cend()-1);
+            hData.mFdCount = 1;
+        }
+    }
     if(outRate != 0 && outRate != hData.mIrRate)
     {
         fprintf(stdout, "Resampling HRIRs...\n");
@@ -1471,6 +1486,7 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, "                 resample the HRIRs accordingly.\n");
     fprintf(ofile, " -m              Change the data set to mono, mirroring the left ear for the\n");
     fprintf(ofile, "                 right ear.\n");
+    fprintf(ofile, " -a              Change the data set to single field, using the farthest field.\n");
     fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
     fprintf(ofile, " -e {on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
     fprintf(ofile, " -s {on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
@@ -1497,6 +1513,7 @@ int main(int argc, char *argv[])
     HeadModelT model;
     uint truncSize;
     double radius;
+    bool farfield;
     double limit;
     int opt;
 
@@ -1519,8 +1536,9 @@ int main(int argc, char *argv[])
     truncSize = DEFAULT_TRUNCSIZE;
     model = DEFAULT_HEAD_MODEL;
     radius = DEFAULT_CUSTOM_RADIUS;
+    farfield = false;
 
-    while((opt=getopt(argc, argv, "r:mf:e:s:l:w:d:c:e:i:o:h")) != -1)
+    while((opt=getopt(argc, argv, "r:maf:e:s:l:w:d:c:e:i:o:h")) != -1)
     {
         switch(opt)
         {
@@ -1535,6 +1553,10 @@ int main(int argc, char *argv[])
 
         case 'm':
             chanMode = CM_ForceMono;
+            break;
+
+        case 'a':
+            farfield = true;
             break;
 
         case 'f':
@@ -1632,8 +1654,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    int ret = ProcessDefinition(inName, outRate, chanMode, fftSize, equalize, surface, limit,
-        truncSize, model, radius, outName);
+    int ret = ProcessDefinition(inName, outRate, chanMode, farfield, fftSize, equalize, surface,
+        limit, truncSize, model, radius, outName);
     if(!ret) return -1;
     fprintf(stdout, "Operation completed.\n");
 

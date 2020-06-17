@@ -523,6 +523,94 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
  *** HRTF processing ***
  ***********************/
 
+// Resamples the HRIRs for use at the given sampling rate.
+static void ResampleHrirs(const uint rate, HrirDataT *hData)
+{
+    struct Resampler {
+        const double scale;
+        const size_t m;
+        double *const resampled;
+
+        /* Resampling from a lower rate to a higher rate. This likely only
+         * works properly when 1 <= scale <= 2.
+         */
+        void upsample(double *ir) const
+        {
+            std::fill_n(resampled, m, 0.0);
+            resampled[0] = ir[0];
+            for(size_t in{1};in < m;++in)
+            {
+                const auto offset = static_cast<double>(in) / scale;
+                const auto out = static_cast<size_t>(offset);
+
+                const double a{offset - static_cast<double>(out)};
+                if(out == m-1)
+                    resampled[out] += ir[in]*(1.0-a);
+                else
+                {
+                    resampled[out  ] += ir[in]*(1.0-a);
+                    resampled[out+1] += ir[in]*a;
+                }
+            }
+            /* This should probably be rescaled according to the scale, however
+             * it'll all be normalized in the end so a constant scalar is fine
+             * to leave.
+             */
+            std::copy_n(resampled, m, ir);
+        }
+
+        /* Resampling from a higher rate to a lower rate. This likely only
+         * works properly when 0.5 <= scale <= 1.0.
+         */
+        void downsample(double *ir) const
+        {
+            std::fill_n(resampled, m, 0.0);
+            resampled[0] = ir[0];
+            for(size_t out{1};out < m;++out)
+            {
+                const auto offset = static_cast<double>(out) * scale;
+                const auto in = static_cast<size_t>(offset);
+
+                const double a{offset - static_cast<double>(in)};
+                if(in == m-1)
+                    resampled[out] = ir[in]*(1.0-a);
+                else
+                    resampled[out] = ir[in]*(1.0-a) + ir[in+1]*a;
+            }
+            std::copy_n(resampled, m, ir);
+        }
+    };
+
+    while(rate > hData->mIrRate*2)
+        ResampleHrirs(hData->mIrRate*2, hData);
+    while(rate < (hData->mIrRate+1)/2)
+        ResampleHrirs((hData->mIrRate+1)/2, hData);
+
+    const auto scale = static_cast<double>(rate) / hData->mIrRate;
+    const size_t m{hData->mFftSize/2u + 1u};
+    auto resampled = std::vector<double>(m);
+
+    const Resampler resampler{scale, m, resampled.data()};
+    auto do_resample = std::bind(
+        std::mem_fn((scale > 1.0) ? &Resampler::upsample : &Resampler::downsample), &resampler,
+        _1);
+
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    for(uint fi{0};fi < hData->mFdCount;++fi)
+    {
+        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;++ei)
+        {
+            for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;++ai)
+            {
+                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                for(uint ti{0};ti < channels;++ti)
+                    do_resample(azd->mIrs[ti]);
+            }
+        }
+    }
+    hData->mIrRate = rate;
+}
+
 /* Balances the maximum HRIR magnitudes of multi-field data sets by
  * independently normalizing each field in relation to the overall maximum.
  * This is done to ignore distance attenuation.
@@ -816,30 +904,6 @@ static void ReconstructHrirs(const HrirDataT *hData)
 
     if(thrd2.joinable()) thrd2.join();
     if(thrd1.joinable()) thrd1.join();
-}
-
-// Resamples the HRIRs for use at the given sampling rate.
-static void ResampleHrirs(const uint rate, HrirDataT *hData)
-{
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    uint n = hData->mIrPoints;
-    uint ti, fi, ei, ai;
-    PPhaseResampler rs;
-
-    rs.init(hData->mIrRate, rate);
-    for(fi = 0;fi < hData->mFdCount;fi++)
-    {
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
-        {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
-            {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                for(ti = 0;ti < channels;ti++)
-                    rs.process(n, azd->mIrs[ti], n, azd->mIrs[ti]);
-            }
-        }
-    }
-    hData->mIrRate = rate;
 }
 
 /* Given field and elevation indices and an azimuth, calculate the indices of
@@ -1360,6 +1424,11 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         }
     }
 
+    if(outRate != 0 && outRate != hData.mIrRate)
+    {
+        fprintf(stdout, "Resampling HRIRs...\n");
+        ResampleHrirs(outRate, &hData);
+    }
     if(equalize)
     {
         uint c{(hData.mChannelType == CT_STEREO) ? 2u : 1u};
@@ -1378,11 +1447,6 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     }
     fprintf(stdout, "Performing minimum phase reconstruction...\n");
     ReconstructHrirs(&hData);
-    if(outRate != 0 && outRate != hData.mIrRate)
-    {
-        fprintf(stdout, "Resampling HRIRs...\n");
-        ResampleHrirs(outRate, &hData);
-    }
     fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
     hData.mIrPoints = truncSize;
     fprintf(stdout, "Synthesizing missing elevations...\n");

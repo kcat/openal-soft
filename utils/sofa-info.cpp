@@ -72,9 +72,11 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
         fprintf(stdout, ", %.3f", fds[fi].mDistance);
 
     fprintf(stdout, "\nazimuths = ");
-    for(size_t fi{0u};fi < fds.size();fi++)
+    for(size_t fi{0u};fi < fds.size();++fi)
     {
-        for(uint ei{0u};ei < fds[fi].mEvCount;ei++)
+        for(uint ei{0u};ei < fds[fi].mEvStart;++ei)
+            fprintf(stdout, "%d%s", fds[fi].mAzCounts[fds[fi].mEvCount - 1 - ei], ", ");
+        for(uint ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
             fprintf(stdout, "%d%s", fds[fi].mAzCounts[ei],
                 (ei < (fds[fi].mEvCount - 1)) ? ", " :
                 (fi < (fds.size() - 1)) ? ";\n           " : "\n");

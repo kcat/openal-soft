@@ -1062,45 +1062,36 @@ static void SynthesizeHrirs(HrirDataT *hData)
 
         for(uint ti{0u};ti < channels;ti++)
         {
-            for(uint i{0u};i < irSize;i++)
-                field.mEvs[0].mAzs[0].mIrs[ti][i] = 0.0;
-            /* Blend the lowest defined elevation's responses for an average
-             * -90 degree elevation response.
+            uint a0, a1;
+            double af;
+
+            /* Use the lowest immediate-left response for the left ear and
+             * lowest immediate-right response for the right ear. Given no comb
+             * effects as a result of the left response reaching the right ear
+             * and vice-versa, this produces a decent phantom-center response
+             * underneath the head (with a low-pass filter applied to simulate
+             * body occlusion).
              */
-            double blend_count{0.0};
-            for(uint ai{0u};ai < field.mEvs[oi].mAzCount;ai++)
+            CalcAzIndices(field, oi, ((ti==0) ? -M_PI : M_PI) / 2.0, &a0, &a1, &af);
+            for(uint i{0u};i < irSize;i++)
             {
-                /* Only include the left responses for the left ear, and the
-                 * right responses for the right ear. This removes the cross-
-                 * talk that shouldn't exist for the -90 degree elevation
-                 * response (and would be mistimed anyway). NOTE: Azimuth goes
-                 * from 0...2pi rather than -pi...+pi (0 in front, clockwise).
-                 */
-                if(std::abs(field.mEvs[oi].mAzs[ai].mAzimuth) < EPSILON ||
-                   (ti == LeftChannel && field.mEvs[oi].mAzs[ai].mAzimuth > M_PI-EPSILON) ||
-                   (ti == RightChannel && field.mEvs[oi].mAzs[ai].mAzimuth < M_PI+EPSILON))
-                {
-                    for(uint i{0u};i < irSize;i++)
-                        field.mEvs[0].mAzs[0].mIrs[ti][i] += field.mEvs[oi].mAzs[ai].mIrs[ti][i];
-                    blend_count += 1.0;
-                }
+                field.mEvs[0].mAzs[0].mIrs[ti][i] = Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
+                    field.mEvs[oi].mAzs[a1].mIrs[ti][i], af);
             }
-            if(blend_count > 0.0)
-            {
-                for(uint i{0u};i < irSize;i++)
-                    field.mEvs[0].mAzs[0].mIrs[ti][i] /= blend_count;
-            }
+        }
 
-            for(uint ei{1u};ei < field.mEvStart;ei++)
+        for(uint ei{1u};ei < field.mEvStart;ei++)
+        {
+            const double of{static_cast<double>(ei) / field.mEvStart};
+            const double b{(1.0 - of) * beta};
+            for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
             {
-                const double of{static_cast<double>(ei) / field.mEvStart};
-                const double b{(1.0 - of) * beta};
-                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+                uint a0, a1;
+                double af;
+
+                CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                for(uint ti{0u};ti < channels;ti++)
                 {
-                    uint a0, a1;
-                    double af;
-
-                    CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
                     double lp[4]{};
                     for(uint i{0u};i < irSize;i++)
                     {
@@ -1119,6 +1110,9 @@ static void SynthesizeHrirs(HrirDataT *hData)
                     }
                 }
             }
+        }
+        for(uint ti{0u};ti < channels;ti++)
+        {
             const double b{beta};
             double lp[4]{};
             for(uint i{0u};i < irSize;i++)

@@ -28,6 +28,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 #include <future>
 #include <iterator>
 #include <memory>
@@ -335,8 +336,46 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
 }
 
 
-bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize,
-    const ChannelModeT chanMode, HrirDataT *hData)
+/* Calculates the frequency magnitudes of the HRIR set. Work is delegated to
+ * this struct, which runs asynchronously on one or more threads (sharing the
+ * same calculator object).
+ */
+struct MagCalculator {
+    const uint mFftSize{};
+    const uint mIrPoints{};
+    std::vector<double*> mIrs{};
+    std::atomic<size_t> mCurrent{};
+    std::atomic<size_t> mDone{};
+
+    void Worker()
+    {
+        auto htemp = std::vector<complex_d>(mFftSize);
+
+        while(1)
+        {
+            /* Load the current index to process. */
+            size_t idx{mCurrent.load()};
+            do {
+                /* If the index is at the end, we're done. */
+                if(idx >= mIrs.size())
+                    return;
+                /* Otherwise, increment the current index atomically so other
+                 * threads know to go to the next one. If this call fails, the
+                 * current index was just changed by another thread and the new
+                 * value is loaded into idx, which we'll recheck.
+                 */
+            } while(!mCurrent.compare_exchange_weak(idx, idx+1, std::memory_order_relaxed));
+
+            CalcHrirMagnitude(mIrPoints, mFftSize, htemp, mIrs[idx]);
+
+            /* Increment the number of IRs done. */
+            mDone.fetch_add(1);
+        }
+    }
+};
+
+bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSize,
+    const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
 {
     int err;
     MySofaHrtfPtr sofaHrtf{mysofa_load(filename, &err)};
@@ -480,28 +519,6 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
         }
         return true;
     };
-    auto magnitude_proc = [hData,channels,&hrir_done]() -> bool
-    {
-        /* Temporary buffers used to calculate the IR's frequency magnitudes. */
-        auto htemp = std::vector<complex_d>(hData->mFftSize);
-
-        for(uint fi{0u};fi < hData->mFdCount;fi++)
-        {
-            for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
-            {
-                for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
-                {
-                    HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
-                    for(uint ti{0};ti < channels;ti++)
-                    {
-                        hrir_done.fetch_add(1u, std::memory_order_acq_rel);
-                        CalcHrirMagnitude(hData->mIrPoints, hData->mFftSize, htemp, azd.mIrs[ti]);
-                    }
-                }
-            }
-        }
-        return true;
-    };
 
     std::future_status load_status{};
     auto load_future = std::async(std::launch::async, onset_proc);
@@ -514,14 +531,38 @@ bool LoadSofaFile(const char *filename, const uint fftSize, const uint truncSize
     if(!load_future.get())
         return false;
 
-    hrir_done.store(0u, std::memory_order_relaxed);
-    load_future = std::async(std::launch::async, magnitude_proc);
+    MagCalculator calculator{hData->mFftSize, hData->mIrPoints};
+    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    {
+        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+        {
+            for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            {
+                HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
+                for(uint ti{0};ti < channels;ti++)
+                    calculator.mIrs.push_back(azd.mIrs[ti]);
+            }
+        }
+    }
+
+    std::vector<std::thread> thrds;
+    thrds.reserve(numThreads);
+    for(size_t i{0};i < numThreads;++i)
+        thrds.emplace_back(std::mem_fn(&MagCalculator::Worker), &calculator);
+    size_t count;
     do {
-        load_status = load_future.wait_for(std::chrono::milliseconds{50});
-        printf("\rCalculating HRIR magnitudes... %zu of %zu", hrir_done.load(), hrir_total);
+        std::this_thread::sleep_for(std::chrono::milliseconds{50});
+        count = calculator.mDone.load();
+
+        printf("\rCalculating HRIR magnitudes... %zu of %zu", count, calculator.mIrs.size());
         fflush(stdout);
-    } while(load_status != std::future_status::ready);
+    } while(count != calculator.mIrs.size());
     fputc('\n', stdout);
 
-    return load_future.get();
+    for(auto &thrd : thrds)
+    {
+        if(thrd.joinable())
+            thrd.join();
+    }
+    return true;
 }

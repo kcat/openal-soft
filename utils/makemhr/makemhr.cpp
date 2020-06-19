@@ -846,7 +846,7 @@ struct HrirReconstructor {
     }
 };
 
-static void ReconstructHrirs(const HrirDataT *hData)
+static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
 
@@ -885,9 +885,11 @@ static void ReconstructHrirs(const HrirDataT *hData)
         }
     }
 
-    /* Launch two threads to work on reconstruction. */
-    std::thread thrd1{std::mem_fn(&HrirReconstructor::Worker), &reconstructor};
-    std::thread thrd2{std::mem_fn(&HrirReconstructor::Worker), &reconstructor};
+    /* Launch threads to work on reconstruction. */
+    std::vector<std::thread> thrds;
+    thrds.reserve(numThreads);
+    for(size_t i{0};i < numThreads;++i)
+        thrds.emplace_back(std::mem_fn(&HrirReconstructor::Worker), &reconstructor);
 
     /* Keep track of the number of IRs done, periodically reporting it. */
     size_t count;
@@ -902,8 +904,11 @@ static void ReconstructHrirs(const HrirDataT *hData)
     } while(count != total);
     fputc('\n', stdout);
 
-    if(thrd2.joinable()) thrd2.join();
-    if(thrd1.joinable()) thrd1.join();
+    for(auto &thrd : thrds)
+    {
+        if(thrd.joinable())
+            thrd.join();
+    }
 }
 
 /* Given field and elevation indices and an azimuth, calculate the indices of
@@ -1371,13 +1376,14 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
  * from standard input.
  */
 static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
-    const bool farfield, const uint fftSize, const int equalize, const int surface,
-    const double limit, const uint truncSize, const HeadModelT model, const double radius,
-    const char *outName)
+    const bool farfield, const uint numThreads, const uint fftSize, const int equalize,
+    const int surface, const double limit, const uint truncSize, const HeadModelT model,
+    const double radius, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
     HrirDataT hData;
 
+    fprintf(stdout, "Using %u thread%s.\n", numThreads, (numThreads==1)?"":"s");
     if(!inName)
     {
         inName = "stdin";
@@ -1408,7 +1414,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         {
             input = nullptr;
             fprintf(stdout, "Reading HRTF data from %s...\n", inName);
-            if(!LoadSofaFile(inName, fftSize, truncSize, chanMode, &hData))
+            if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, chanMode, &hData))
                 return 0;
         }
         else
@@ -1455,7 +1461,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         ResampleHrirs(outRate, &hData);
     }
     fprintf(stdout, "Performing minimum phase reconstruction...\n");
-    ReconstructHrirs(&hData);
+    ReconstructHrirs(&hData, numThreads);
     fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
     hData.mIrPoints = truncSize;
     fprintf(stdout, "Synthesizing missing elevations...\n");
@@ -1481,6 +1487,7 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, " -m              Change the data set to mono, mirroring the left ear for the\n");
     fprintf(ofile, "                 right ear.\n");
     fprintf(ofile, " -a              Change the data set to single field, using the farthest field.\n");
+    fprintf(ofile, " -j <threads>    Number of threads used to process HRIRs (default: 2).\n");
     fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
     fprintf(ofile, " -e {on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
     fprintf(ofile, " -s {on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
@@ -1505,6 +1512,7 @@ int main(int argc, char *argv[])
     char *end = nullptr;
     ChannelModeT chanMode;
     HeadModelT model;
+    uint numThreads;
     uint truncSize;
     double radius;
     bool farfield;
@@ -1527,12 +1535,13 @@ int main(int argc, char *argv[])
     equalize = DEFAULT_EQUALIZE;
     surface = DEFAULT_SURFACE;
     limit = DEFAULT_LIMIT;
+    numThreads = 2;
     truncSize = DEFAULT_TRUNCSIZE;
     model = DEFAULT_HEAD_MODEL;
     radius = DEFAULT_CUSTOM_RADIUS;
     farfield = false;
 
-    while((opt=getopt(argc, argv, "r:maf:e:s:l:w:d:c:e:i:o:h")) != -1)
+    while((opt=getopt(argc, argv, "r:maj:f:e:s:l:w:d:c:e:i:o:h")) != -1)
     {
         switch(opt)
         {
@@ -1551,6 +1560,17 @@ int main(int argc, char *argv[])
 
         case 'a':
             farfield = true;
+            break;
+
+        case 'j':
+            numThreads = static_cast<uint>(strtoul(optarg, &end, 10));
+            if(end[0] != '\0' || numThreads > 64)
+            {
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, 0, 64);
+                exit(EXIT_FAILURE);
+            }
+            if(numThreads == 0)
+                numThreads = std::thread::hardware_concurrency();
             break;
 
         case 'f':
@@ -1648,8 +1668,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    int ret = ProcessDefinition(inName, outRate, chanMode, farfield, fftSize, equalize, surface,
-        limit, truncSize, model, radius, outName);
+    int ret = ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize, equalize,
+        surface, limit, truncSize, model, radius, outName);
     if(!ret) return -1;
     fprintf(stdout, "Operation completed.\n");
 

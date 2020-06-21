@@ -802,115 +802,6 @@ static void ResampleHrirs(const uint rate, HrirDataT *hData)
     hData->mIrRate = rate;
 }
 
-/* Perform minimum-phase reconstruction using the magnitude responses of the
- * HRIR set. Work is delegated to this struct, which runs asynchronously on one
- * or more threads (sharing the same reconstructor object).
- */
-struct HrirReconstructor {
-    std::vector<double*> mIrs;
-    std::atomic<size_t> mCurrent;
-    std::atomic<size_t> mDone;
-    uint mFftSize;
-    uint mIrPoints;
-
-    void Worker()
-    {
-        auto h = std::vector<complex_d>(mFftSize);
-
-        while(1)
-        {
-            /* Load the current index to process. */
-            size_t idx{mCurrent.load()};
-            do {
-                /* If the index is at the end, we're done. */
-                if(idx >= mIrs.size())
-                    return;
-                /* Otherwise, increment the current index atomically so other
-                 * threads know to go to the next one. If this call fails, the
-                 * current index was just changed by another thread and the new
-                 * value is loaded into idx, which we'll recheck.
-                 */
-            } while(!mCurrent.compare_exchange_weak(idx, idx+1, std::memory_order_relaxed));
-
-            /* Now do the reconstruction, and apply the inverse FFT to get the
-             * time-domain response.
-             */
-            MinimumPhase(mFftSize, mIrs[idx], h.data());
-            FftInverse(mFftSize, h.data());
-            for(uint i{0u};i < mIrPoints;++i)
-                mIrs[idx][i] = h[i].real();
-
-            /* Increment the number of IRs done. */
-            mDone.fetch_add(1);
-        }
-    }
-};
-
-static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
-{
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-
-    /* Count the number of IRs to process (excluding elevations that will be
-     * synthesized later).
-     */
-    size_t total{0};
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
-    {
-        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
-            total += hData->mFds[fi].mEvs[ei].mAzCount;
-    }
-    total *= channels;
-
-    /* Set up the reconstructor with the needed size info and pointers to the
-     * IRs to process.
-     */
-    HrirReconstructor reconstructor;
-    reconstructor.mIrs.reserve(total);
-    reconstructor.mCurrent.store(0, std::memory_order_relaxed);
-    reconstructor.mDone.store(0, std::memory_order_relaxed);
-    reconstructor.mFftSize = hData->mFftSize;
-    reconstructor.mIrPoints = hData->mIrPoints;
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
-    {
-        const HrirFdT &field = hData->mFds[fi];
-        for(uint ei{field.mEvStart};ei < field.mEvCount;ei++)
-        {
-            const HrirEvT &elev = field.mEvs[ei];
-            for(uint ai{0u};ai < elev.mAzCount;ai++)
-            {
-                const HrirAzT &azd = elev.mAzs[ai];
-                for(uint ti{0u};ti < channels;ti++)
-                    reconstructor.mIrs.push_back(azd.mIrs[ti]);
-            }
-        }
-    }
-
-    /* Launch threads to work on reconstruction. */
-    std::vector<std::thread> thrds;
-    thrds.reserve(numThreads);
-    for(size_t i{0};i < numThreads;++i)
-        thrds.emplace_back(std::mem_fn(&HrirReconstructor::Worker), &reconstructor);
-
-    /* Keep track of the number of IRs done, periodically reporting it. */
-    size_t count;
-    do {
-        std::this_thread::sleep_for(std::chrono::milliseconds{50});
-
-        count = reconstructor.mDone.load();
-        size_t pcdone{count * 100 / total};
-
-        printf("\r%3zu%% done (%zu of %zu)", pcdone, count, total);
-        fflush(stdout);
-    } while(count != total);
-    fputc('\n', stdout);
-
-    for(auto &thrd : thrds)
-    {
-        if(thrd.joinable())
-            thrd.join();
-    }
-}
-
 /* Given field and elevation indices and an azimuth, calculate the indices of
  * the two HRIRs that bound the coordinate along with a factor for
  * calculating the continuous HRIR using interpolation.
@@ -1050,17 +941,15 @@ static void SynthesizeOnsets(HrirDataT *hData)
 }
 
 /* Attempt to synthesize any missing HRIRs at the bottom elevations of each
- * field.  Right now this just blends the lowest elevation HRIRs together and
- * applies some attenuation and high frequency damping.  It is a simple, if
- * inaccurate model.
+ * field.  Right now this just blends the lowest elevation HRIRs together.  It
+ * is a simple, if inaccurate model.
  */
 static void SynthesizeHrirs(HrirDataT *hData)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    const uint irSize{hData->mIrPoints};
-    const double beta{3.5e-6 * hData->mIrRate};
+    const uint m{hData->mFftSize/2u + 1u};
 
-    auto proc_field = [channels,irSize,beta](HrirFdT &field) -> void
+    auto proc_field = [channels,m](HrirFdT &field) -> void
     {
         const uint oi{field.mEvStart};
         if(oi <= 0) return;
@@ -1074,11 +963,10 @@ static void SynthesizeHrirs(HrirDataT *hData)
              * lowest immediate-right response for the right ear. Given no comb
              * effects as a result of the left response reaching the right ear
              * and vice-versa, this produces a decent phantom-center response
-             * underneath the head (with a low-pass filter applied to simulate
-             * body occlusion).
+             * underneath the head.
              */
             CalcAzIndices(field, oi, ((ti==0) ? -M_PI : M_PI) / 2.0, &a0, &a1, &af);
-            for(uint i{0u};i < irSize;i++)
+            for(uint i{0u};i < m;i++)
             {
                 field.mEvs[0].mAzs[0].mIrs[ti][i] = Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
                     field.mEvs[oi].mAzs[a1].mIrs[ti][i], af);
@@ -1088,7 +976,6 @@ static void SynthesizeHrirs(HrirDataT *hData)
         for(uint ei{1u};ei < field.mEvStart;ei++)
         {
             const double of{static_cast<double>(ei) / field.mEvStart};
-            const double b{(1.0 - of) * beta};
             for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
             {
                 uint a0, a1;
@@ -1097,15 +984,147 @@ static void SynthesizeHrirs(HrirDataT *hData)
                 CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
                 for(uint ti{0u};ti < channels;ti++)
                 {
-                    double lp[4]{};
-                    for(uint i{0u};i < irSize;i++)
+                    for(uint i{0u};i < m;i++)
                     {
                         /* Blend the two defined HRIRs closest to this azimuth,
                          * then blend that with the synthesized -90 elevation.
                          */
                         const double s1{Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
                             field.mEvs[oi].mAzs[a1].mIrs[ti][i], af)};
-                        const double s0{Lerp(field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of)};
+                        field.mEvs[ei].mAzs[ai].mIrs[ti][i] = Lerp(
+                            field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of);
+                    }
+                }
+            }
+        }
+    };
+    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
+}
+
+/* Perform minimum-phase reconstruction using the magnitude responses of the
+ * HRIR set. Work is delegated to this struct, which runs asynchronously on one
+ * or more threads (sharing the same reconstructor object).
+ */
+struct HrirReconstructor {
+    std::vector<double*> mIrs;
+    std::atomic<size_t> mCurrent;
+    std::atomic<size_t> mDone;
+    uint mFftSize;
+    uint mIrPoints;
+
+    void Worker()
+    {
+        auto h = std::vector<complex_d>(mFftSize);
+
+        while(1)
+        {
+            /* Load the current index to process. */
+            size_t idx{mCurrent.load()};
+            do {
+                /* If the index is at the end, we're done. */
+                if(idx >= mIrs.size())
+                    return;
+                /* Otherwise, increment the current index atomically so other
+                 * threads know to go to the next one. If this call fails, the
+                 * current index was just changed by another thread and the new
+                 * value is loaded into idx, which we'll recheck.
+                 */
+            } while(!mCurrent.compare_exchange_weak(idx, idx+1, std::memory_order_relaxed));
+
+            /* Now do the reconstruction, and apply the inverse FFT to get the
+             * time-domain response.
+             */
+            MinimumPhase(mFftSize, mIrs[idx], h.data());
+            FftInverse(mFftSize, h.data());
+            for(uint i{0u};i < mIrPoints;++i)
+                mIrs[idx][i] = h[i].real();
+
+            /* Increment the number of IRs done. */
+            mDone.fetch_add(1);
+        }
+    }
+};
+
+static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
+{
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+
+    /* Set up the reconstructor with the needed size info and pointers to the
+     * IRs to process.
+     */
+    HrirReconstructor reconstructor;
+    reconstructor.mCurrent.store(0, std::memory_order_relaxed);
+    reconstructor.mDone.store(0, std::memory_order_relaxed);
+    reconstructor.mFftSize = hData->mFftSize;
+    reconstructor.mIrPoints = hData->mIrPoints;
+    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    {
+        const HrirFdT &field = hData->mFds[fi];
+        for(uint ei{0};ei < field.mEvCount;ei++)
+        {
+            const HrirEvT &elev = field.mEvs[ei];
+            for(uint ai{0u};ai < elev.mAzCount;ai++)
+            {
+                const HrirAzT &azd = elev.mAzs[ai];
+                for(uint ti{0u};ti < channels;ti++)
+                    reconstructor.mIrs.push_back(azd.mIrs[ti]);
+            }
+        }
+    }
+
+    /* Launch threads to work on reconstruction. */
+    std::vector<std::thread> thrds;
+    thrds.reserve(numThreads);
+    for(size_t i{0};i < numThreads;++i)
+        thrds.emplace_back(std::mem_fn(&HrirReconstructor::Worker), &reconstructor);
+
+    /* Keep track of the number of IRs done, periodically reporting it. */
+    size_t count;
+    do {
+        std::this_thread::sleep_for(std::chrono::milliseconds{50});
+
+        count = reconstructor.mDone.load();
+        size_t pcdone{count * 100 / reconstructor.mIrs.size()};
+
+        printf("\r%3zu%% done (%zu of %zu)", pcdone, count, reconstructor.mIrs.size());
+        fflush(stdout);
+    } while(count < reconstructor.mIrs.size());
+    fputc('\n', stdout);
+
+    for(auto &thrd : thrds)
+    {
+        if(thrd.joinable())
+            thrd.join();
+    }
+}
+
+/* Attempt to occlude the synthesized HRIRs.  Right now this just applies some
+ * attenuation and high frequency damping.  It is a simple, if inaccurate
+ * model.
+ */
+static void OccludeHrirs(HrirDataT *hData)
+{
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    const uint irSize{hData->mIrPoints};
+    const double beta{3.5e-6 * hData->mIrRate};
+
+    auto proc_field = [channels,irSize,beta](HrirFdT &field) -> void
+    {
+        const uint oi{field.mEvStart};
+        if(oi <= 0) return;
+
+        for(uint ei{0u};ei < field.mEvStart;ei++)
+        {
+            const double of{static_cast<double>(ei) / field.mEvStart};
+            const double b{(1.0 - of) * beta};
+            for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+            {
+                for(uint ti{0u};ti < channels;ti++)
+                {
+                    double lp[4]{};
+                    for(uint i{0u};i < irSize;i++)
+                    {
+                        const double s0{field.mEvs[ei].mAzs[ai].mIrs[ti][i]};
                         /* Apply a low-pass to simulate body occlusion. */
                         lp[0] = Lerp(s0, lp[0], b);
                         lp[1] = Lerp(lp[0], lp[1], b);
@@ -1116,21 +1135,6 @@ static void SynthesizeHrirs(HrirDataT *hData)
                 }
             }
         }
-        for(uint ti{0u};ti < channels;ti++)
-        {
-            const double b{beta};
-            double lp[4]{};
-            for(uint i{0u};i < irSize;i++)
-            {
-                const double s0{field.mEvs[0].mAzs[0].mIrs[ti][i]};
-                lp[0] = Lerp(s0, lp[0], b);
-                lp[1] = Lerp(lp[0], lp[1], b);
-                lp[2] = Lerp(lp[1], lp[2], b);
-                lp[3] = Lerp(lp[2], lp[3], b);
-                field.mEvs[0].mAzs[0].mIrs[ti][i] = lp[3];
-            }
-        }
-        field.mEvStart = 0;
     };
     std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
 }
@@ -1460,14 +1464,16 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         fprintf(stdout, "Resampling HRIRs...\n");
         ResampleHrirs(outRate, &hData);
     }
-    fprintf(stdout, "Performing minimum phase reconstruction...\n");
-    ReconstructHrirs(&hData, numThreads);
-    fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
-    hData.mIrPoints = truncSize;
     fprintf(stdout, "Synthesizing missing elevations...\n");
     if(model == HM_DATASET)
         SynthesizeOnsets(&hData);
     SynthesizeHrirs(&hData);
+    fprintf(stdout, "Performing minimum phase reconstruction...\n");
+    ReconstructHrirs(&hData, numThreads);
+    fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
+    hData.mIrPoints = truncSize;
+    fprintf(stdout, "Occluding synthesized HRIRs...\n");
+    OccludeHrirs(&hData);
     fprintf(stdout, "Normalizing final HRIRs...\n");
     NormalizeHrirs(&hData);
     fprintf(stdout, "Calculating impulse delays...\n");

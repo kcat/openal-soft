@@ -941,15 +941,19 @@ static void SynthesizeOnsets(HrirDataT *hData)
 }
 
 /* Attempt to synthesize any missing HRIRs at the bottom elevations of each
- * field.  Right now this just blends the lowest elevation HRIRs together.  It
- * is a simple, if inaccurate model.
+ * field.  Right now this just blends the lowest elevation HRIRs together and
+ * applies a low-pass filter to simulate body occlusion.  It is a simple, if
+ * inaccurate model.
  */
 static void SynthesizeHrirs(HrirDataT *hData)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    auto htemp = std::vector<complex_d>(hData->mFftSize);
     const uint m{hData->mFftSize/2u + 1u};
+    auto filter = std::vector<double>(m);
+    const double beta{3.5e-6 * hData->mIrRate};
 
-    auto proc_field = [channels,m](HrirFdT &field) -> void
+    auto proc_field = [channels,m,beta,&htemp,&filter](HrirFdT &field) -> void
     {
         const uint oi{field.mEvStart};
         if(oi <= 0) return;
@@ -976,6 +980,30 @@ static void SynthesizeHrirs(HrirDataT *hData)
         for(uint ei{1u};ei < field.mEvStart;ei++)
         {
             const double of{static_cast<double>(ei) / field.mEvStart};
+            const double b{(1.0 - of) * beta};
+            double lp[4]{};
+
+            /* Calculate a low-pass filter to simulate body occlusion. */
+            lp[0] = Lerp(1.0, lp[0], b);
+            lp[1] = Lerp(lp[0], lp[1], b);
+            lp[2] = Lerp(lp[1], lp[2], b);
+            lp[3] = Lerp(lp[2], lp[3], b);
+            htemp[0] = lp[3];
+            for(size_t i{1u};i < htemp.size();i++)
+            {
+                lp[0] = Lerp(0.0, lp[0], b);
+                lp[1] = Lerp(lp[0], lp[1], b);
+                lp[2] = Lerp(lp[1], lp[2], b);
+                lp[3] = Lerp(lp[2], lp[3], b);
+                htemp[i] = lp[3];
+            }
+            /* Get the filter's frequency-domain response and extract the
+             * frequency magnitudes (phase will be reconstructed later)).
+             */
+            FftForward(static_cast<uint>(htemp.size()), htemp.data());
+            std::transform(htemp.cbegin(), htemp.cbegin()+m, filter.begin(),
+                [](const complex_d &c) -> double { return std::abs(c); });
+
             for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
             {
                 uint a0, a1;
@@ -991,15 +1019,41 @@ static void SynthesizeHrirs(HrirDataT *hData)
                          */
                         const double s1{Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
                             field.mEvs[oi].mAzs[a1].mIrs[ti][i], af)};
-                        field.mEvs[ei].mAzs[ai].mIrs[ti][i] = Lerp(
-                            field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of);
+                        const double s{Lerp(field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of)};
+                        field.mEvs[ei].mAzs[ai].mIrs[ti][i] = s * filter[i];
                     }
                 }
             }
         }
+        const double b{beta};
+        double lp[4]{};
+        lp[0] = Lerp(1.0, lp[0], b);
+        lp[1] = Lerp(lp[0], lp[1], b);
+        lp[2] = Lerp(lp[1], lp[2], b);
+        lp[3] = Lerp(lp[2], lp[3], b);
+        htemp[0] = lp[3];
+        for(size_t i{1u};i < htemp.size();i++)
+        {
+            lp[0] = Lerp(0.0, lp[0], b);
+            lp[1] = Lerp(lp[0], lp[1], b);
+            lp[2] = Lerp(lp[1], lp[2], b);
+            lp[3] = Lerp(lp[2], lp[3], b);
+            htemp[i] = lp[3];
+        }
+        FftForward(static_cast<uint>(htemp.size()), htemp.data());
+        std::transform(htemp.cbegin(), htemp.cbegin()+m, filter.begin(),
+            [](const complex_d &c) -> double { return std::abs(c); });
+
+        for(uint ti{0u};ti < channels;ti++)
+        {
+            for(uint i{0u};i < m;i++)
+                field.mEvs[0].mAzs[0].mIrs[ti][i] *= filter[i];
+        }
     };
     std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
 }
+
+// The following routines assume a full set of HRIRs for all elevations.
 
 /* Perform minimum-phase reconstruction using the magnitude responses of the
  * HRIR set. Work is delegated to this struct, which runs asynchronously on one
@@ -1097,49 +1151,6 @@ static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
             thrd.join();
     }
 }
-
-/* Attempt to occlude the synthesized HRIRs.  Right now this just applies some
- * attenuation and high frequency damping.  It is a simple, if inaccurate
- * model.
- */
-static void OccludeHrirs(HrirDataT *hData)
-{
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    const uint irSize{hData->mIrPoints};
-    const double beta{3.5e-6 * hData->mIrRate};
-
-    auto proc_field = [channels,irSize,beta](HrirFdT &field) -> void
-    {
-        const uint oi{field.mEvStart};
-        if(oi <= 0) return;
-
-        for(uint ei{0u};ei < field.mEvStart;ei++)
-        {
-            const double of{static_cast<double>(ei) / field.mEvStart};
-            const double b{(1.0 - of) * beta};
-            for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
-            {
-                for(uint ti{0u};ti < channels;ti++)
-                {
-                    double lp[4]{};
-                    for(uint i{0u};i < irSize;i++)
-                    {
-                        const double s0{field.mEvs[ei].mAzs[ai].mIrs[ti][i]};
-                        /* Apply a low-pass to simulate body occlusion. */
-                        lp[0] = Lerp(s0, lp[0], b);
-                        lp[1] = Lerp(lp[0], lp[1], b);
-                        lp[2] = Lerp(lp[1], lp[2], b);
-                        lp[3] = Lerp(lp[2], lp[3], b);
-                        field.mEvs[ei].mAzs[ai].mIrs[ti][i] = lp[3];
-                    }
-                }
-            }
-        }
-    };
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
-}
-
-// The following routines assume a full set of HRIRs for all elevations.
 
 // Normalize the HRIR set and slightly attenuate the result.
 static void NormalizeHrirs(HrirDataT *hData)
@@ -1472,8 +1483,6 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     ReconstructHrirs(&hData, numThreads);
     fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
     hData.mIrPoints = truncSize;
-    fprintf(stdout, "Occluding synthesized HRIRs...\n");
-    OccludeHrirs(&hData);
     fprintf(stdout, "Normalizing final HRIRs...\n");
     NormalizeHrirs(&hData);
     fprintf(stdout, "Calculating impulse delays...\n");

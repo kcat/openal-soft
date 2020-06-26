@@ -21,8 +21,12 @@ using u32string = basic_string<char32_t>;
 /* These would be better served by using a string_view-like span/view with
  * case-insensitive char traits.
  */
-int strcasecmp(const char *str0, const char *str1) noexcept;
-int strncasecmp(const char *str0, const char *str1, std::size_t len) noexcept;
+#if defined __MINGW64__ || defined __MINGW32__
+    int _stricmp(const char *str0, const char *str1) noexcept;
+    int _strnicmp(const char *str0, const char *str1, std::size_t len) noexcept;
+#endif
+    int strcasecmp(const char *str0, const char *str1) noexcept;
+    int strncasecmp(const char *str0, const char *str1, std::size_t len) noexcept;
 
 } // namespace al
 

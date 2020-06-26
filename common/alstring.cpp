@@ -19,27 +19,49 @@ int to_upper(const char ch)
 
 namespace al {
 
-int strcasecmp(const char *str0, const char *str1) noexcept
-{
-    do {
-        const int diff{to_upper(*str0) - to_upper(*str1)};
-        if(diff < 0) return -1;
-        if(diff > 0) return 1;
-    } while(*(str0++) && *(str1++));
-    return 0;
-}
-
-int strncasecmp(const char *str0, const char *str1, std::size_t len) noexcept
-{
-    if(len > 0)
+#if defined __MINGW64__ || defined __MINGW32__
+    int _stricmp(const char *str0, const char *str1) noexcept
     {
         do {
             const int diff{to_upper(*str0) - to_upper(*str1)};
             if(diff < 0) return -1;
             if(diff > 0) return 1;
-        } while(--len && *(str0++) && *(str1++));
+        } while(*(str0++) && *(str1++));
+        return 0;
     }
-    return 0;
-}
+    int _strnicmp(const char *str0, const char *str1, std::size_t len) noexcept
+    {
+        if(len > 0)
+        {
+            do {
+                const int diff{to_upper(*str0) - to_upper(*str1)};
+                if(diff < 0) return -1;
+                if(diff > 0) return 1;
+            } while(--len && *(str0++) && *(str1++));
+        }
+        return 0;
+    }
+#endif
+    int strcasecmp(const char *str0, const char *str1) noexcept
+    {
+        do {
+            const int diff{to_upper(*str0) - to_upper(*str1)};
+            if(diff < 0) return -1;
+            if(diff > 0) return 1;
+        } while(*(str0++) && *(str1++));
+        return 0;
+    }
 
+    int strncasecmp(const char *str0, const char *str1, std::size_t len) noexcept
+    {
+        if(len > 0)
+        {
+            do {
+                const int diff{to_upper(*str0) - to_upper(*str1)};
+                if(diff < 0) return -1;
+                if(diff > 0) return 1;
+            } while(--len && *(str0++) && *(str1++));
+        }
+        return 0;
+    }
 } // namespace al

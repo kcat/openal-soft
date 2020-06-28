@@ -11,12 +11,9 @@
 #define FORCE_ALIGN
 #endif
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
 #include <dispatch/dispatch.h>
-#else
+#elif !defined(_WIN32)
 #include <semaphore.h>
 #endif
 
@@ -26,7 +23,7 @@ namespace al {
 
 class semaphore {
 #ifdef _WIN32
-    using native_type = HANDLE;
+    using native_type = void*;
 #elif defined(__APPLE__)
     using native_type = dispatch_semaphore_t;
 #else

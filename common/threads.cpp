@@ -20,12 +20,15 @@
 
 #include "config.h"
 
+#include "opthelpers.h"
 #include "threads.h"
 
 #include <system_error>
 
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include <limits>
 
@@ -73,15 +76,15 @@ semaphore::~semaphore()
 
 void semaphore::post()
 {
-    if(!ReleaseSemaphore(mSem, 1, nullptr))
+    if UNLIKELY(!ReleaseSemaphore(static_cast<HANDLE>(mSem), 1, nullptr))
         throw std::system_error(std::make_error_code(std::errc::value_too_large));
 }
 
 void semaphore::wait() noexcept
-{ WaitForSingleObject(mSem, INFINITE); }
+{ WaitForSingleObject(static_cast<HANDLE>(mSem), INFINITE); }
 
 bool semaphore::try_wait() noexcept
-{ return WaitForSingleObject(mSem, 0) == WAIT_OBJECT_0; }
+{ return WaitForSingleObject(static_cast<HANDLE>(mSem), 0) == WAIT_OBJECT_0; }
 
 } // namespace al
 

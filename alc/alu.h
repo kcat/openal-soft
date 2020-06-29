@@ -15,7 +15,7 @@ struct ALbufferlistitem;
 struct ALeffectslot;
 
 
-#define MAX_PITCH  255
+#define MAX_PITCH  10
 #define MAX_SENDS  6
 
 

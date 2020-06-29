@@ -631,31 +631,47 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
     do {
         /* Figure out how many buffer samples will be needed */
         ALuint DstBufferSize{SamplesToDo - OutPos};
+        ALuint SrcBufferSize;
 
-        /* Calculate the last written dst sample pos. */
-        uint64_t DataSize64{DstBufferSize - 1};
-        /* Calculate the last read src sample pos. */
-        DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
-        /* +1 to get the src sample count, include padding. */
-        DataSize64 += 1 + MAX_RESAMPLER_PADDING;
-
-        auto SrcBufferSize = static_cast<ALuint>(
-            minu64(DataSize64, BUFFERSIZE + MAX_RESAMPLER_PADDING + 1));
-        if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLER_PADDING)
+        if(increment <= FRACTIONONE)
         {
-            SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
-            /* If the source buffer got saturated, we can't fill the desired
-             * dst size. Figure out how many samples we can actually mix from
-             * this.
+            /* Calculate the last written dst sample pos. */
+            uint64_t DataSize64{DstBufferSize - 1};
+            /* Calculate the last read src sample pos. */
+            DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
+            /* +1 to get the src sample count, include padding. */
+            DataSize64 += 1 + MAX_RESAMPLER_PADDING;
+
+            /* Result is guaranteed to be <= BUFFERSIZE+MAX_RESAMPLER_PADDING
+             * since we won't use more src samples than dst samples+padding.
              */
-            DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
-            DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
-            if(DataSize64 < DstBufferSize)
+            SrcBufferSize = static_cast<ALuint>(DataSize64);
+        }
+        else
+        {
+            uint64_t DataSize64{DstBufferSize};
+            /* Calculate the end src sample pos, include padding. */
+            DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
+            DataSize64 += MAX_RESAMPLER_PADDING;
+
+            SrcBufferSize = static_cast<ALuint>(minu64(DataSize64,
+                BUFFERSIZE + MAX_RESAMPLER_PADDING + 1));
+            if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLER_PADDING)
             {
-                /* Some mixers require being 16-byte aligned, so also limit to
-                 * a multiple of 4 samples to maintain alignment.
+                SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
+                /* If the source size got saturated, we can't fill the desired
+                 * dst size. Figure out how many samples we can actually mix
+                 * from this.
                  */
-                DstBufferSize = static_cast<ALuint>(DataSize64) & ~3u;
+                DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
+                DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
+                if(DataSize64 < DstBufferSize)
+                {
+                    /* Some mixers require being 16-byte aligned, so also limit
+                     * to a multiple of 4 samples to maintain alignment.
+                     */
+                    DstBufferSize = static_cast<ALuint>(DataSize64) & ~3u;
+                }
             }
         }
 

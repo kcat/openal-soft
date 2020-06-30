@@ -664,7 +664,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                  * from this.
                  */
                 DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
-                DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
+                DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac) / increment;
                 if(DataSize64 < DstBufferSize)
                 {
                     /* Some mixers require being 16-byte aligned, so also limit

@@ -846,10 +846,13 @@ option(ALSOFT_REQUIRE_WASAPI "Require WASAPI backend" OFF)
 if(WIN32)
     set(WINSDK_LIB_DIRS )
     set(WINSDK_INCLUDE_DIRS )
-    find_package(WindowsSDK)
-    if(WINDOWSSDK_FOUND)
-        get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
-        get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
+
+    if(NOT CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
+        find_package(WindowsSDK)
+        if(WINDOWSSDK_FOUND)
+            get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
+            get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
+        endif()
     endif()
 
     # Check MMSystem backend

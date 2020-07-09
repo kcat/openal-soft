@@ -8,12 +8,12 @@
 #   DSOUND_LIBRARY     - the dsound library
 #
 
-if (WIN32)
-  FIND_PACKAGE(WindowsSDK)
-  if (WINDOWSSDK_FOUND)
-    get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
-    get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
-  endif()
+if(WIN32 AND NOT CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
+    find_package(WindowsSDK)
+    if(WINDOWSSDK_FOUND)
+        get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
+        get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
+    endif()
 endif()
 
 # DSOUND_INCLUDE_DIR

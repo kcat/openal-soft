@@ -654,15 +654,15 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
             DataSize64 += MAX_RESAMPLER_PADDING;
 
-            SrcBufferSize = static_cast<ALuint>(minu64(DataSize64,
-                BUFFERSIZE + MAX_RESAMPLER_PADDING + 1));
-            if(SrcBufferSize > BUFFERSIZE + MAX_RESAMPLER_PADDING)
+            if(DataSize64 <= BUFFERSIZE + MAX_RESAMPLER_PADDING)
+                SrcBufferSize = static_cast<ALuint>(DataSize64);
+            else
             {
-                SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
                 /* If the source size got saturated, we can't fill the desired
-                 * dst size. Figure out how many samples we can actually mix
-                 * from this.
+                 * dst size. Figure out how many samples we can actually mix.
                  */
+                SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
+
                 DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
                 DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac) / increment;
                 if(DataSize64 < DstBufferSize)

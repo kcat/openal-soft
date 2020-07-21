@@ -218,6 +218,9 @@ void SetRTPriority(void)
 #ifdef __FreeBSD__
 #include <sys/sysctl.h>
 #endif
+#ifdef __HAIKU__
+#include <FindDirectory.h>
+#endif
 #ifdef HAVE_PROC_PIDPATH
 #include <libproc.h>
 #endif
@@ -254,6 +257,13 @@ const PathNamePair &GetProcBinary()
             ERR("proc_pidpath(%d, ...) failed: %s\n", pid, strerror(errno));
         else
             pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
+    }
+#endif
+#ifdef __HAIKU__
+    char procpath[PATH_MAX];
+    if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath, sizeof(procpath)) == B_OK)
+    {
+        pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
     }
 #endif
     if(pathname.empty())

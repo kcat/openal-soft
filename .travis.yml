@@ -122,4 +122,5 @@ script:
         -DALSOFT_EXAMPLES=OFF \
         .
     fi
+  - cmake --version
   - cmake --build . --clean-first

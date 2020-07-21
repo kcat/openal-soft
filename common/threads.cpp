@@ -114,9 +114,9 @@ void althrd_setname(const char *name)
 void althrd_setname(const char*) { }
 #endif
 
-namespace al {
-
 #ifdef __APPLE__
+
+namespace al {
 
 semaphore::semaphore(unsigned int initial)
 {
@@ -137,9 +137,13 @@ void semaphore::wait() noexcept
 bool semaphore::try_wait() noexcept
 { return dispatch_semaphore_wait(mSem, DISPATCH_TIME_NOW) == 0; }
 
+} // namespace al
+
 #else /* !__APPLE__ */
 
 #include <cerrno>
+
+namespace al {
 
 semaphore::semaphore(unsigned int initial)
 {
@@ -165,8 +169,8 @@ void semaphore::wait() noexcept
 bool semaphore::try_wait() noexcept
 { return sem_trywait(&mSem) == 0; }
 
-#endif /* __APPLE__ */
-
 } // namespace al
+
+#endif /* __APPLE__ */
 
 #endif /* _WIN32 */

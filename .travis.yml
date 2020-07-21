@@ -11,6 +11,7 @@ matrix:
       compiler: clang
     - os: osx
     - os: osx
+      osx_image: xcode11
       env:
         - BUILD_IOS=true
 sudo: required
@@ -111,9 +112,9 @@ script:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "osx" && "${BUILD_IOS}" == "true" ]]; then
       cmake \
-        -Gxcode \
+        -GXcode \
         -DCMAKE_SYSTEM_NAME=iOS \
-        -DCMAKE_OSX_SYSROOT=iphoneos \
+        -DCMAKE_OSX_SYSROOT=iphonesimulator \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
         -DLIBTYPE=STATIC \

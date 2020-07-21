@@ -67,6 +67,7 @@ install:
         $NULL
     fi
 script:
+  - cmake --version
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
       cmake \
@@ -122,5 +123,4 @@ script:
         -DALSOFT_EXAMPLES=OFF \
         .
     fi
-  - cmake --version
   - cmake --build . --clean-first

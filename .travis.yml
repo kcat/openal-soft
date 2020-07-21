@@ -10,6 +10,9 @@ matrix:
     - os: freebsd
       compiler: clang
     - os: osx
+    - os: osx
+      env:
+        - BUILD_IOS=true
 sudo: required
 install:
   - >
@@ -99,10 +102,23 @@ script:
         .
     fi
   - >
-    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+    if [[ "${TRAVIS_OS_NAME}" == "osx" && -z "${BUILD_IOS}" ]]; then
       cmake \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
+        .
+    fi
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "osx" && "${BUILD_IOS}" == "true" ]]; then
+      cmake \
+        -Gxcode \
+        -DCMAKE_SYSTEM_NAME=iOS \
+        -DCMAKE_OSX_SYSROOT=iphoneos \
+        -DALSOFT_REQUIRE_COREAUDIO=ON \
+        -DALSOFT_EMBED_HRTF_DATA=YES \
+        -DLIBTYPE=STATIC \
+        -DALSOFT_UTILS=OFF \
+        -DALSOFT_EXAMPLES=OFF \
         .
     fi
   - cmake --build . --clean-first

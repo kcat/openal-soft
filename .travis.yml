@@ -115,7 +115,7 @@ script:
       cmake \
         -GXcode \
         -DCMAKE_SYSTEM_NAME=iOS \
-        -DCMAKE_OSX_SYSROOT=iphonesimulator \
+        -DCMAKE_OSX_SYSROOT=iphoneos \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
         -DLIBTYPE=STATIC \

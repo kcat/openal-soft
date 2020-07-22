@@ -134,6 +134,7 @@ check_type_size("long" SIZEOF_LONG)
 # Require C++14
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_EXTENSIONS FALSE)
 
 # Prefer C11, but support C99 and C90 too.
 set(CMAKE_C_STANDARD 11)

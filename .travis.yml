@@ -114,8 +114,8 @@ script:
     if [[ "${TRAVIS_OS_NAME}" == "osx" && "${BUILD_IOS}" == "true" ]]; then
       cmake \
         -GXcode \
-        -DCMAKE_SYSTEM_NAME=iOS \
-        -DCMAKE_OSX_SYSROOT=iphoneos \
+        -DCMAKE_TOOLCHAIN_FILE=cmake/ios.toolchain.cmake \
+        -DPLATFORM=OS \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
         -DLIBTYPE=STATIC \

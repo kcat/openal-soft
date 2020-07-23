@@ -410,8 +410,8 @@ public:
     {
         if(op)
         {
-            while(pa_operation_get_state(op) == PA_OPERATION_RUNNING)
-                mCondVar.wait(plock);
+            mCondVar.wait(plock,
+                [op]() -> bool { return pa_operation_get_state(op) != PA_OPERATION_RUNNING; });
             pa_operation_unref(op);
         }
     }
@@ -507,7 +507,7 @@ pa_context *PulseMainloop::connectContext(std::unique_lock<std::mutex> &plock)
     if(!mMainloop)
     {
         mThread = std::thread{std::mem_fn(&PulseMainloop::mainloop_proc), this};
-        while(!mMainloop) mCondVar.wait(plock);
+        mCondVar.wait(plock, [this]() noexcept { return mMainloop; });
     }
 
     pa_context *context{pa_context_new(pa_mainloop_get_api(mMainloop), name)};

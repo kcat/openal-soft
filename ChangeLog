@@ -16,8 +16,8 @@ openal-soft-1.21.0:
 
     Reimplemented the modulation stage for reverb.
 
-    Enabled real-time mixing priority by default. It can still be disabled in
-    the config file (for backends that use the setting).
+    Enabled real-time mixing priority by default, for backends that use the
+    setting. It can still be disabled in the config file.
 
     Enabled dual-band processing for the built-in quad and 7.1 output decoders.
 
@@ -49,7 +49,7 @@ openal-soft-1.21.0:
     should now be real-time safe. Although alcRenderSamplesSOFT is not due to
     locking to check the device handle validity.
 
-    Modified the UHJ encoder to use an all-pass FIR filter that's less harnful
+    Modified the UHJ encoder to use an all-pass FIR filter that's less harmful
     to non-filtered signal phase.
 
     Converted examples from SDL_sound to libsndfile. To avoid issues when

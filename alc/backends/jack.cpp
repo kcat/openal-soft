@@ -385,29 +385,6 @@ void JackPlayback::start()
     if(jack_activate(mClient))
         throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to activate client"};
 
-    const char **ports{jack_get_ports(mClient, nullptr, nullptr,
-        JackPortIsPhysical|JackPortIsInput)};
-    if(ports == nullptr)
-    {
-        jack_deactivate(mClient);
-        throw al::backend_exception{ALC_INVALID_DEVICE, "No physical playback ports found"};
-    }
-    std::mismatch(std::begin(mPort), std::end(mPort), ports,
-        [this](const jack_port_t *port, const char *pname) -> bool
-        {
-            if(!port) return false;
-            if(!pname)
-            {
-                ERR("No physical playback port for \"%s\"\n", jack_port_name(port));
-                return false;
-            }
-            if(jack_connect(mClient, jack_port_name(port), pname))
-                ERR("Failed to connect output port \"%s\" to \"%s\"\n", jack_port_name(port),
-                    pname);
-            return true;
-        });
-    jack_free(ports);
-
     /* Reconfigure buffer metrics in case the server changed it since the reset
      * (it won't change again after jack_activate), then allocate the ring
      * buffer with the appropriate size.

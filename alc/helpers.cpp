@@ -453,13 +453,14 @@ void SetRTPriority()
          * should be 1 for SCHED_RR).
          */
         param.sched_priority = sched_get_priority_min(SCHED_RR);
+        int err;
 #ifdef SCHED_RESET_ON_FORK
-        if(pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param))
+        err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
+        if(err == EINVAL)
 #endif
-        {
-            if(pthread_setschedparam(pthread_self(), SCHED_RR, &param))
-                ERR("Failed to set real-time priority for thread\n");
-        }
+            err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+        if(err != 0)
+            ERR("Failed to set real-time priority for thread: %s (%d)\n", std::strerror(err), err);
     }
 #else
     /* Real-time priority not available */

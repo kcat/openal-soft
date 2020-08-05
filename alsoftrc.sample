@@ -469,6 +469,12 @@
 #  backend, opening devices, etc).
 #spawn-server = false
 
+## connect-ports:
+#  Attempts to automatically connect the client ports to physical server ports.
+#  Client ports that fail to connect will leave the remaining channels
+#  unconnected and silent (the device format won't change to accommodate).
+#connect-ports = true
+
 ## buffer-size:
 #  Sets the update buffer size, in samples, that the backend will keep buffered
 #  to handle the server's real-time processing requests. This value must be a

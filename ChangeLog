@@ -43,6 +43,8 @@ openal-soft-1.21.0:
     Oboe sources at build time, so that it's built as a static library included
     in libopenal.
 
+    Added an option for auto-connecting JACK ports.
+
     Added greater-than-stereo support to the SoundIO backend.
 
     Modified the mixer to be fully asynchronous with the external API, and

@@ -1442,7 +1442,7 @@ drop-outs.</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>40</y>
+          <y>70</y>
           <width>401</width>
           <height>80</height>
          </rect>
@@ -1499,6 +1499,22 @@ processing requests. Must be a power of 2.</string>
           <number>1</number>
          </property>
         </widget>
+       </widget>
+       <widget class="QCheckBox" name="jackConnectPortsCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>40</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>AutoConnect Ports</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
       </widget>
       <widget class="QWidget" name="page_3">

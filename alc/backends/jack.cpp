@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <memory.h>
 
+#include <array>
 #include <thread>
 #include <functional>
 
@@ -168,7 +169,7 @@ struct JackPlayback final : public BackendBase {
     ClockLatency getClockLatency() override;
 
     jack_client_t *mClient{nullptr};
-    jack_port_t *mPort[MAX_OUTPUT_CHANNELS]{};
+    std::array<jack_port_t*,MAX_OUTPUT_CHANNELS> mPort{};
 
     std::mutex mMutex;
 
@@ -187,11 +188,11 @@ JackPlayback::~JackPlayback()
     if(!mClient)
         return;
 
-    std::for_each(std::begin(mPort), std::end(mPort),
+    std::for_each(mPort.begin(), mPort.end(),
         [this](jack_port_t *port) -> void
         { if(port) jack_port_unregister(mClient, port); }
     );
-    std::fill(std::begin(mPort), std::end(mPort), nullptr);
+    mPort.fill(nullptr);
     jack_client_close(mClient);
     mClient = nullptr;
 }
@@ -199,7 +200,7 @@ JackPlayback::~JackPlayback()
 
 int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
-    jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
+    std::array<jack_default_audio_sample_t*,MAX_OUTPUT_CHANNELS> out;
     size_t numchans{0};
     for(auto port : mPort)
     {
@@ -225,7 +226,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
             data.first.buf += sizeof(float);
             return outbuf + todo;
         };
-        std::transform(out, out+numchans, out, write_first);
+        std::transform(out.begin(), out.begin()+numchans, out.begin(), write_first);
         total += todo;
 
         todo = minu(numframes-total, static_cast<ALuint>(data.second.len));
@@ -244,7 +245,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
                 data.second.buf += sizeof(float);
                 return outbuf + todo;
             };
-            std::transform(out, out+numchans, out, write_second);
+            std::transform(out.begin(), out.begin()+numchans, out.begin(), write_second);
             total += todo;
         }
 
@@ -254,9 +255,9 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
 
     if(numframes > total)
     {
-        jack_nframes_t todo{numframes - total};
+        const jack_nframes_t todo{numframes - total};
         auto clear_buf = [todo](float *outbuf) -> void { std::fill_n(outbuf, todo, 0.0f); };
-        std::for_each(out, out+numchans, clear_buf);
+        std::for_each(out.begin(), out.begin()+numchans, clear_buf);
     }
 
     return 0;
@@ -269,8 +270,8 @@ int JackPlayback::mixerProc()
 
     const size_t frame_step{mDevice->channelsFromFmt()};
 
-    while(!mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
         if(mRing->writeSpace() < mDevice->UpdateSize)
         {
@@ -325,11 +326,10 @@ void JackPlayback::open(const ALCchar *name)
 
 bool JackPlayback::reset()
 {
-    std::for_each(std::begin(mPort), std::end(mPort),
+    std::for_each(mPort.begin(), mPort.end(),
         [this](jack_port_t *port) -> void
-        { if(port) jack_port_unregister(mClient, port); }
-    );
-    std::fill(std::begin(mPort), std::end(mPort), nullptr);
+        { if(port) jack_port_unregister(mClient, port); });
+    mPort.fill(nullptr);
 
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
      * ready for when requested.
@@ -346,26 +346,25 @@ bool JackPlayback::reset()
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;
 
-    auto ports_end = std::begin(mPort) + mDevice->channelsFromFmt();
-    auto bad_port = std::find_if_not(std::begin(mPort), ports_end,
+    auto ports_end = mPort.begin() + mDevice->channelsFromFmt();
+    auto bad_port = std::find_if_not(mPort.begin(), ports_end,
         [this](jack_port_t *&port) -> bool
         {
-            std::string name{"channel_" + std::to_string(&port - mPort + 1)};
+            std::string name{"channel_" + std::to_string(&port - &mPort[0] + 1)};
             port = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
                 JackPortIsOutput, 0);
             return port != nullptr;
-        }
-    );
+        });
     if(bad_port != ports_end)
     {
         ERR("Not enough JACK ports available for %s output\n", DevFmtChannelsString(mDevice->FmtChans));
-        if(bad_port == std::begin(mPort)) return false;
+        if(bad_port == mPort.begin()) return false;
 
-        if(bad_port == std::begin(mPort)+1)
+        if(bad_port == mPort.begin()+1)
             mDevice->FmtChans = DevFmtMono;
         else
         {
-            ports_end = mPort+2;
+            ports_end = mPort.begin()+2;
             while(bad_port != ports_end)
             {
                 jack_port_unregister(mClient, *(--bad_port));
@@ -392,7 +391,7 @@ void JackPlayback::start()
         jack_deactivate(mClient);
         throw al::backend_exception{ALC_INVALID_DEVICE, "No physical playback ports found"};
     }
-    std::mismatch(std::begin(mPort), std::end(mPort), ports,
+    std::mismatch(mPort.begin(), mPort.end(), ports,
         [this](const jack_port_t *port, const char *pname) -> bool
         {
             if(!port) return false;

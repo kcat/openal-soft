@@ -364,6 +364,10 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "4" AND (SSE2_SWITCH OR MSVC))
                 set(C_FLAGS ${C_FLAGS} ${SSE_FLAGS})
                 set(FPMATH_SET 2)
             endif()
+            # SSE depends on a 16-byte aligned stack, and by default, GCC
+            # assumes the stack is suitably aligned. Older Linux code or other
+            # OSs don't guarantee this on 32-bit, so externally-callable
+            # functions need to ensure an aligned stack.
             set(EXPORT_DECL "${EXPORT_DECL} __attribute__((force_align_arg_pointer))")
         elseif(MSVC)
             check_c_compiler_flag("/arch:SSE2" HAVE_ARCH_SSE2)

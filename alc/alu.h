@@ -153,11 +153,6 @@ auto SetAmbiPanIdentity(T iter, I count, F func) -> std::enable_if_t<std::is_int
 }
 
 
-void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
-    const size_t FrameStep);
-/* Caller must lock the device state, and the mixer must not be running. */
-[[gnu::format(printf,2,3)]] void aluHandleDisconnect(ALCdevice *device, const char *msg, ...);
-
 extern const float ConeScale;
 extern const float ZScale;
 

@@ -79,7 +79,7 @@ int SndioPlayback::mixerProc()
     sio_initpar(&par);
     if(!sio_getpar(mSndHandle, &par))
     {
-        aluHandleDisconnect(mDevice, "Failed to get device parameters");
+        mDevice->handleDisconnect("Failed to get device parameters");
         return 1;
     }
 
@@ -95,14 +95,14 @@ int SndioPlayback::mixerProc()
         al::byte *WritePtr{mBuffer.data()};
         size_t len{mBuffer.size()};
 
-        aluMixData(mDevice, WritePtr, static_cast<ALuint>(len)/frameSize, frameStep);
+        mDevice->renderSamples(WritePtr, static_cast<ALuint>(len)/frameSize, frameStep);
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             size_t wrote{sio_write(mSndHandle, WritePtr, len)};
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
-                aluHandleDisconnect(mDevice, "Failed to write playback samples");
+                mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }
 
@@ -348,7 +348,7 @@ int SndioCapture::recordProc()
             size_t got{sio_read(mSndHandle, data.first.buf, minz(todo-total, data.first.len))};
             if(!got)
             {
-                aluHandleDisconnect(mDevice, "Failed to read capture samples");
+                mDevice->handleDisconnect("Failed to read capture samples");
                 break;
             }
 

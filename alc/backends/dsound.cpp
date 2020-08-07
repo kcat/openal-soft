@@ -224,7 +224,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
-        aluHandleDisconnect(mDevice, "Failure retrieving playback buffer info: 0x%lx", err);
+        mDevice->handleDisconnect("Failure retrieving playback buffer info: 0x%lx", err);
         return 1;
     }
 
@@ -251,7 +251,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
-                    aluHandleDisconnect(mDevice, "Failure starting playback: 0x%lx", err);
+                    mDevice->handleDisconnect("Failure starting playback: 0x%lx", err);
                     return 1;
                 }
                 Playing = true;
@@ -285,16 +285,16 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
 
         if(SUCCEEDED(err))
         {
-            aluMixData(mDevice, WritePtr1, WriteCnt1/FrameSize, FrameStep);
+            mDevice->renderSamples(WritePtr1, WriteCnt1/FrameSize, FrameStep);
             if(WriteCnt2 > 0)
-                aluMixData(mDevice, WritePtr2, WriteCnt2/FrameSize, FrameStep);
+                mDevice->renderSamples(WritePtr2, WriteCnt2/FrameSize, FrameStep);
 
             mBuffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
-            aluHandleDisconnect(mDevice, "Failed to lock output buffer: 0x%lx", err);
+            mDevice->handleDisconnect("Failed to lock output buffer: 0x%lx", err);
             return 1;
         }
 
@@ -717,7 +717,7 @@ void DSoundCapture::stop()
     if(FAILED(hr))
     {
         ERR("stop failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(mDevice, "Failure stopping capture: 0x%lx", hr);
+        mDevice->handleDisconnect("Failure stopping capture: 0x%lx", hr);
     }
 }
 
@@ -758,7 +758,7 @@ ALCuint DSoundCapture::availableSamples()
     if(FAILED(hr))
     {
         ERR("update failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(mDevice, "Failure retrieving capture data: 0x%lx", hr);
+        mDevice->handleDisconnect("Failure retrieving capture data: 0x%lx", hr);
     }
 
     return static_cast<ALCuint>(mRing->readSpace());

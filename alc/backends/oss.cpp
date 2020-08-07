@@ -277,7 +277,7 @@ int OSSPlayback::mixerProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            aluHandleDisconnect(mDevice, "Failed waiting for playback buffer: %s", strerror(errno));
+            mDevice->handleDisconnect("Failed waiting for playback buffer: %s", strerror(errno));
             break;
         }
         else if(pret == 0)
@@ -288,7 +288,7 @@ int OSSPlayback::mixerProc()
 
         ALubyte *write_ptr{mMixData.data()};
         size_t to_write{mMixData.size()};
-        aluMixData(mDevice, write_ptr, static_cast<ALuint>(to_write/frame_size), frame_step);
+        mDevice->renderSamples(write_ptr, static_cast<ALuint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(mFd, write_ptr, to_write)};
@@ -297,8 +297,7 @@ int OSSPlayback::mixerProc()
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 ERR("write failed: %s\n", strerror(errno));
-                aluHandleDisconnect(mDevice, "Failed writing playback samples: %s",
-                                    strerror(errno));
+                mDevice->handleDisconnect("Failed writing playback samples: %s", strerror(errno));
                 break;
             }
 
@@ -487,7 +486,7 @@ int OSScapture::recordProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            aluHandleDisconnect(mDevice, "Failed to check capture samples: %s", strerror(errno));
+            mDevice->handleDisconnect("Failed to check capture samples: %s", strerror(errno));
             break;
         }
         else if(sret == 0)
@@ -503,8 +502,7 @@ int OSScapture::recordProc()
             if(amt < 0)
             {
                 ERR("read failed: %s\n", strerror(errno));
-                aluHandleDisconnect(mDevice, "Failed reading capture samples: %s",
-                    strerror(errno));
+                mDevice->handleDisconnect("Failed reading capture samples: %s", strerror(errno));
                 break;
             }
             mRing->writeAdvance(static_cast<ALuint>(amt)/frame_size);

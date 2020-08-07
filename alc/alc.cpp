@@ -1935,7 +1935,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             throw al::backend_exception{ALC_INVALID_DEVICE, "Device reset failure"};
     }
     catch(std::exception &e) {
-        aluHandleDisconnect(device, "%s", e.what());
+        device->handleDisconnect("%s", e.what());
         return ALC_INVALID_DEVICE;
     }
 
@@ -2256,7 +2256,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             device->Flags.set<DeviceRunning>();
         }
         catch(al::backend_exception& e) {
-            aluHandleDisconnect(device, "%s", e.what());
+            device->handleDisconnect("%s", e.what());
             return ALC_INVALID_DEVICE;
         }
     }
@@ -3829,7 +3829,7 @@ START_API_FUNC
             dev->Flags.set<DeviceRunning>();
         }
         catch(al::backend_exception& e) {
-            aluHandleDisconnect(dev.get(), "%s", e.what());
+            dev->handleDisconnect("%s", e.what());
             alcSetError(dev.get(), ALC_INVALID_DEVICE);
         }
     }
@@ -3989,7 +3989,7 @@ START_API_FUNC
     else if(samples < 0 || (samples > 0 && buffer == nullptr))
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
-        aluMixData(dev.get(), buffer, static_cast<ALuint>(samples), dev->channelsFromFmt());
+        dev->renderSamples(buffer, static_cast<ALuint>(samples), dev->channelsFromFmt());
 }
 END_API_FUNC
 
@@ -4040,7 +4040,7 @@ START_API_FUNC
         dev->Flags.set<DeviceRunning>();
     }
     catch(al::backend_exception& e) {
-        aluHandleDisconnect(dev.get(), "%s", e.what());
+        dev->handleDisconnect("%s", e.what());
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     }
 }

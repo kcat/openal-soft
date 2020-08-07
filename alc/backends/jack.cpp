@@ -287,9 +287,9 @@ int JackPlayback::mixerProc()
         ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
 
         std::lock_guard<std::mutex> _{mMutex};
-        aluMixData(mDevice, data.first.buf, len1, frame_step);
+        mDevice->renderSamples(data.first.buf, len1, frame_step);
         if(len2 > 0)
-            aluMixData(mDevice, data.second.buf, len2, frame_step);
+            mDevice->renderSamples(data.second.buf, len2, frame_step);
         mRing->writeAdvance(todo);
     }
 

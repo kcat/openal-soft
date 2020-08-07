@@ -683,7 +683,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(mDevice, "COM init failed: 0x%08lx", hr);
+        mDevice->handleDisconnect("COM init failed: 0x%08lx", hr);
         return 1;
     }
 
@@ -699,7 +699,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
-            aluHandleDisconnect(mDevice, "Failed to retrieve buffer padding: 0x%08lx", hr);
+            mDevice->handleDisconnect("Failed to retrieve buffer padding: 0x%08lx", hr);
             break;
         }
         mPadding.store(written, std::memory_order_relaxed);
@@ -719,7 +719,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         {
             {
                 std::lock_guard<std::mutex> _{mMutex};
-                aluMixData(mDevice, buffer, len, mFrameStep);
+                mDevice->renderSamples(buffer, len, mFrameStep);
                 mPadding.store(written + len, std::memory_order_relaxed);
             }
             hr = mRender->ReleaseBuffer(len, 0);
@@ -727,7 +727,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         if(FAILED(hr))
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
-            aluHandleDisconnect(mDevice, "Failed to send playback samples: 0x%08lx", hr);
+            mDevice->handleDisconnect("Failed to send playback samples: 0x%08lx", hr);
             break;
         }
     }
@@ -1233,7 +1233,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(mDevice, "COM init failed: 0x%08lx", hr);
+        mDevice->handleDisconnect("COM init failed: 0x%08lx", hr);
         return 1;
     }
 
@@ -1305,7 +1305,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 
         if(FAILED(hr))
         {
-            aluHandleDisconnect(mDevice, "Failed to capture samples: 0x%08lx", hr);
+            mDevice->handleDisconnect("Failed to capture samples: 0x%08lx", hr);
             break;
         }
 

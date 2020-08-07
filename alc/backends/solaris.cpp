@@ -106,8 +106,7 @@ int SolarisBackend::mixerProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             ERR("poll failed: %s\n", strerror(errno));
-            aluHandleDisconnect(mDevice, "Failed to wait for playback buffer: %s",
-                strerror(errno));
+            mDevice->handleDisconnect("Failed to wait for playback buffer: %s", strerror(errno));
             break;
         }
         else if(pret == 0)
@@ -118,7 +117,7 @@ int SolarisBackend::mixerProc()
 
         ALubyte *write_ptr{mBuffer.data()};
         size_t to_write{mBuffer.size()};
-        aluMixData(mDevice, write_ptr, to_write/frame_size, frame_step);
+        mDevice->renderSamples(write_ptr, static_cast<ALuint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(mFd, write_ptr, to_write)};
@@ -127,12 +126,11 @@ int SolarisBackend::mixerProc()
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 ERR("write failed: %s\n", strerror(errno));
-                aluHandleDisconnect(mDevice, "Failed to write playback samples: %s",
-                    strerror(errno));
+                mDevice->handleDisconnect("Failed to write playback samples: %s", strerror(errno));
                 break;
             }
 
-            to_write -= wrote;
+            to_write -= static_cast<size_t>(wrote);
             write_ptr += wrote;
         }
     }

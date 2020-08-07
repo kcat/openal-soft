@@ -234,10 +234,10 @@ int OpenSLPlayback::mixerProc()
     const size_t frame_step{mDevice->channelsFromFmt()};
 
     if(SL_RESULT_SUCCESS != result)
-        aluHandleDisconnect(mDevice, "Failed to get playback buffer: 0x%08x", result);
+        mDevice->handleDisconnect("Failed to get playback buffer: 0x%08x", result);
 
-    while(SL_RESULT_SUCCESS == result && !mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(SL_RESULT_SUCCESS == result && !mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
         if(mRing->writeSpace() == 0)
         {
@@ -252,7 +252,7 @@ int OpenSLPlayback::mixerProc()
             }
             if(SL_RESULT_SUCCESS != result)
             {
-                aluHandleDisconnect(mDevice, "Failed to start platback: 0x%08x", result);
+                mDevice->handleDisconnect("Failed to start platback: 0x%08x", result);
                 break;
             }
 
@@ -265,10 +265,10 @@ int OpenSLPlayback::mixerProc()
 
         std::unique_lock<std::mutex> dlock{mMutex};
         auto data = mRing->getWriteVector();
-        aluMixData(mDevice, data.first.buf,
+        mDevice->renderSamples(data.first.buf,
             static_cast<ALuint>(data.first.len*mDevice->UpdateSize), frame_step);
         if(data.second.len > 0)
-            aluMixData(mDevice, data.second.buf,
+            mDevice->renderSamples(data.second.buf,
                 static_cast<ALuint>(data.second.len*mDevice->UpdateSize), frame_step);
 
         size_t todo{data.first.len + data.second.len};
@@ -288,7 +288,7 @@ int OpenSLPlayback::mixerProc()
             PRINTERR(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
-                aluHandleDisconnect(mDevice, "Failed to queue audio: 0x%08x", result);
+                mDevice->handleDisconnect("Failed to queue audio: 0x%08x", result);
                 break;
             }
 
@@ -874,7 +874,7 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
         PRINTERR(result, "recordObj->GetInterface");
         if UNLIKELY(SL_RESULT_SUCCESS != result)
         {
-            aluHandleDisconnect(mDevice, "Failed to get capture buffer queue: 0x%08x", result);
+            mDevice->handleDisconnect("Failed to get capture buffer queue: 0x%08x", result);
             bufferQueue = nullptr;
         }
     }
@@ -904,8 +904,7 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
                 PRINTERR(result, "bufferQueue->Enqueue");
                 if UNLIKELY(SL_RESULT_SUCCESS != result)
                 {
-                    aluHandleDisconnect(mDevice, "Failed to update capture buffer: 0x%08x",
-                        result);
+                    mDevice->handleDisconnect("Failed to update capture buffer: 0x%08x", result);
                     bufferQueue = nullptr;
                 }
             }

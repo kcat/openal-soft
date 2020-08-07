@@ -72,8 +72,8 @@ int NullBackend::mixerProc()
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
-    while(!mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 
@@ -86,7 +86,7 @@ int NullBackend::mixerProc()
         }
         while(avail-done >= mDevice->UpdateSize)
         {
-            aluMixData(mDevice, nullptr, mDevice->UpdateSize, 0u);
+            mDevice->renderSamples(nullptr, mDevice->UpdateSize, 0u);
             done += mDevice->UpdateSize;
         }
 

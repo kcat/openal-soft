@@ -199,7 +199,7 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
             WAVEHDR &waveHdr = mWaveBuffer[widx];
             widx = (widx+1) % mWaveBuffer.size();
 
-            aluMixData(mDevice, waveHdr.lpData, mDevice->UpdateSize, frame_step);
+            mDevice->renderSamples(waveHdr.lpData, mDevice->UpdateSize, frame_step);
             mWritable.fetch_sub(1, std::memory_order_acq_rel);
             waveOutWrite(mOutHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);

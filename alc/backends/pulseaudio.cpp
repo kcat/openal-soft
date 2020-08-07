@@ -766,7 +766,7 @@ void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(mDevice, "Playback stream failure");
+        mDevice->handleDisconnect("Playback stream failure");
     }
     mMainloop.getCondVar().notify_all();
 }
@@ -787,7 +787,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexce
             buflen = minz(buflen, nbytes);
         nbytes -= buflen;
 
-        aluMixData(mDevice, buf, static_cast<ALuint>(buflen/mFrameSize), mSpec.channels);
+        mDevice->renderSamples(buf, static_cast<ALuint>(buflen/mFrameSize), mSpec.channels);
 
         int ret{pa_stream_write(stream, buf, buflen, free_func, 0, PA_SEEK_RELATIVE)};
         if UNLIKELY(ret != PA_OK)
@@ -1188,7 +1188,7 @@ void PulseCapture::streamStateCallback(pa_stream *stream) noexcept
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(mDevice, "Capture stream failure");
+        mDevice->handleDisconnect("Capture stream failure");
     }
     mMainloop.getCondVar().notify_all();
 }
@@ -1364,14 +1364,14 @@ ALCenum PulseCapture::captureSamples(al::byte *buffer, ALCuint samples)
         const pa_stream_state_t state{pa_stream_get_state(mStream)};
         if UNLIKELY(!PA_STREAM_IS_GOOD(state))
         {
-            aluHandleDisconnect(mDevice, "Bad capture state: %u", state);
+            mDevice->handleDisconnect("Bad capture state: %u", state);
             break;
         }
         const void *capbuf;
         size_t caplen;
         if UNLIKELY(pa_stream_peek(mStream, &capbuf, &caplen) < 0)
         {
-            aluHandleDisconnect(mDevice, "Failed retrieving capture samples: %s",
+            mDevice->handleDisconnect("Failed retrieving capture samples: %s",
                 pa_strerror(pa_context_errno(mContext)));
             break;
         }
@@ -1402,7 +1402,7 @@ ALCuint PulseCapture::availableSamples()
         {
             const char *err{pa_strerror(static_cast<int>(got))};
             ERR("pa_stream_readable_size() failed: %s\n", err);
-            aluHandleDisconnect(mDevice, "Failed getting readable size: %s", err);
+            mDevice->handleDisconnect("Failed getting readable size: %s", err);
         }
         else
         {

@@ -49,7 +49,7 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
             memset(audioData, 0, static_cast<uint32_t>(numFrames*numChannels)*sizeof(int16_t));
     }
 
-    aluMixData(mDevice, audioData, static_cast<uint32_t>(numFrames),
+    mDevice->renderSamples(audioData, static_cast<uint32_t>(numFrames),
         static_cast<uint32_t>(numChannels));
     return oboe::DataCallbackResult::Continue;
 }

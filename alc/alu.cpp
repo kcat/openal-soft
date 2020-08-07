@@ -1921,65 +1921,61 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
 
 } // namespace
 
-void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
-    const size_t FrameStep)
+void ALCdevice::renderSamples(void *outBuffer, const ALuint numSamples, const size_t frameStep)
 {
     FPUCtl mixer_mode{};
-    for(ALuint SamplesDone{0u};SamplesDone < NumSamples;)
+    for(ALuint written{0u};written < numSamples;)
     {
-        const ALuint SamplesToDo{minu(NumSamples-SamplesDone, BUFFERSIZE)};
+        const ALuint samplesToDo{minu(numSamples-written, BUFFERSIZE)};
 
         /* Clear main mixing buffers. */
-        std::for_each(device->MixBuffer.begin(), device->MixBuffer.end(),
-            [](FloatBufferLine &buffer) -> void { buffer.fill(0.0f); });
+        for(FloatBufferLine &buffer : MixBuffer)
+            buffer.fill(0.0f);
 
         /* Increment the mix count at the start (lsb should now be 1). */
-        IncrementRef(device->MixCount);
+        IncrementRef(MixCount);
 
         /* Process and mix each context's sources and effects. */
-        ProcessContexts(device, SamplesToDo);
+        ProcessContexts(this, samplesToDo);
 
         /* Increment the clock time. Every second's worth of samples is
          * converted and added to clock base so that large sample counts don't
          * overflow during conversion. This also guarantees a stable
          * conversion.
          */
-        device->SamplesDone += SamplesToDo;
-        device->ClockBase += std::chrono::seconds{device->SamplesDone / device->Frequency};
-        device->SamplesDone %= device->Frequency;
+        SamplesDone += samplesToDo;
+        ClockBase += std::chrono::seconds{SamplesDone / Frequency};
+        SamplesDone %= Frequency;
 
         /* Increment the mix count at the end (lsb should now be 0). */
-        IncrementRef(device->MixCount);
+        IncrementRef(MixCount);
 
         /* Apply any needed post-process for finalizing the Dry mix to the
          * RealOut (Ambisonic decode, UHJ encode, etc).
          */
-        device->postProcess(SamplesToDo);
-
-        const al::span<FloatBufferLine> RealOut{device->RealOut.Buffer};
+        postProcess(samplesToDo);
 
         /* Apply compression, limiting sample amplitude if needed or desired. */
-        if(Compressor *comp{device->Limiter.get()})
-            comp->process(SamplesToDo, RealOut.data());
+        if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer.data());
 
         /* Apply delays and attenuation for mismatched speaker distances. */
-        ApplyDistanceComp(RealOut, SamplesToDo, device->ChannelDelay.as_span().cbegin());
+        ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelay.as_span().cbegin());
 
         /* Apply dithering. The compressor should have left enough headroom for
          * the dither noise to not saturate.
          */
-        if(device->DitherDepth > 0.0f)
-            ApplyDither(RealOut, &device->DitherSeed, device->DitherDepth, SamplesToDo);
+        if(DitherDepth > 0.0f)
+            ApplyDither(RealOut.Buffer, &DitherSeed, DitherDepth, samplesToDo);
 
-        if LIKELY(OutBuffer)
+        if LIKELY(outBuffer)
         {
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.
              */
-            switch(device->FmtType)
+            switch(FmtType)
             {
 #define HANDLE_WRITE(T) case T:                                               \
-    Write<T>(RealOut, OutBuffer, SamplesDone, SamplesToDo, FrameStep); break;
+    Write<T>(RealOut.Buffer, outBuffer, written, samplesToDo, frameStep); break;
             HANDLE_WRITE(DevFmtByte)
             HANDLE_WRITE(DevFmtUByte)
             HANDLE_WRITE(DevFmtShort)
@@ -1991,14 +1987,13 @@ void aluMixData(ALCdevice *device, void *OutBuffer, const ALuint NumSamples,
             }
         }
 
-        SamplesDone += SamplesToDo;
+        written += samplesToDo;
     }
 }
 
-
-void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
+void ALCdevice::handleDisconnect(const char *msg, ...)
 {
-    if(!device->Connected.exchange(false, std::memory_order_acq_rel))
+    if(!Connected.exchange(false, std::memory_order_acq_rel))
         return;
 
     AsyncEvent evt{EventType_Disconnected};
@@ -2014,8 +2009,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.user.msg))
         evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
 
-    IncrementRef(device->MixCount);
-    for(ALCcontext *ctx : *device->mContexts.load())
+    IncrementRef(MixCount);
+    for(ALCcontext *ctx : *mContexts.load())
     {
         const ALbitfieldSOFT enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))
@@ -2040,5 +2035,5 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         };
         std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
     }
-    IncrementRef(device->MixCount);
+    IncrementRef(MixCount);
 }

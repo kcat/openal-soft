@@ -351,6 +351,11 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     inline void postProcess(const size_t SamplesToDo)
     { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
 
+    void renderSamples(void *outBuffer, const ALuint numSamples, const size_t frameStep);
+
+    /* Caller must lock the device state, and the mixer must not be running. */
+    [[gnu::format(printf,2,3)]] void handleDisconnect(const char *msg, ...);
+
     DEF_NEWDEL(ALCdevice)
 };
 

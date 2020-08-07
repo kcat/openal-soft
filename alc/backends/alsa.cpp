@@ -457,7 +457,7 @@ int AlsaPlayback::mixerProc()
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
+            mDevice->handleDisconnect("Bad state: %s", snd_strerror(state));
             break;
         }
 
@@ -510,10 +510,10 @@ int AlsaPlayback::mixerProc()
             }
 
             char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
-            aluMixData(mDevice, WritePtr, static_cast<ALuint>(frames), areas->step / samplebits);
+            mDevice->renderSamples(WritePtr, static_cast<ALuint>(frames), areas->step/samplebits);
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
-            if(commitres < 0 || (static_cast<snd_pcm_uframes_t>(commitres)-frames) != 0)
+            if(commitres < 0 || static_cast<snd_pcm_uframes_t>(commitres) != frames)
             {
                 ERR("mmap commit error: %s\n",
                     snd_strerror(commitres >= 0 ? -EPIPE : static_cast<int>(commitres)));
@@ -541,7 +541,7 @@ int AlsaPlayback::mixerNoMMapProc()
         if(state < 0)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
-            aluHandleDisconnect(mDevice, "Bad state: %s", snd_strerror(state));
+            mDevice->handleDisconnect("Bad state: %s", snd_strerror(state));
             break;
         }
 
@@ -578,7 +578,7 @@ int AlsaPlayback::mixerNoMMapProc()
         al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         std::lock_guard<std::mutex> _{mMutex};
-        aluMixData(mDevice, WritePtr, static_cast<ALuint>(avail), frame_step);
+        mDevice->renderSamples(WritePtr, static_cast<ALuint>(avail), frame_step);
         while(avail > 0)
         {
             snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr,
@@ -1071,7 +1071,7 @@ ALCenum AlsaCapture::captureSamples(al::byte *buffer, ALCuint samples)
             {
                 const char *err{snd_strerror(static_cast<int>(amt))};
                 ERR("restore error: %s\n", err);
-                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", err);
+                mDevice->handleDisconnect("Capture recovery failure: %s", err);
                 break;
             }
             /* If the amount available is less than what's asked, we lost it
@@ -1111,7 +1111,7 @@ ALCuint AlsaCapture::availableSamples()
         {
             const char *err{snd_strerror(static_cast<int>(avail))};
             ERR("restore error: %s\n", err);
-            aluHandleDisconnect(mDevice, "Capture recovery failure: %s", err);
+            mDevice->handleDisconnect("Capture recovery failure: %s", err);
         }
     }
 
@@ -1147,7 +1147,7 @@ ALCuint AlsaCapture::availableSamples()
             {
                 const char *err{snd_strerror(static_cast<int>(amt))};
                 ERR("restore error: %s\n", err);
-                aluHandleDisconnect(mDevice, "Capture recovery failure: %s", err);
+                mDevice->handleDisconnect("Capture recovery failure: %s", err);
                 break;
             }
             avail = amt;

@@ -9,7 +9,7 @@
 #else
 #if defined(__GNUC__) || defined(__clang__)
 #define DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
-#define DIAGNOSTIC_POP _Pragma("GCC diagnostic push")
+#define DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
 #else
 #define DIAGNOSTIC_PUSH
 #define DIAGNOSTIC_POP

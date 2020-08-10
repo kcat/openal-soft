@@ -10,7 +10,7 @@
 
 namespace {
 
-#define EPSILON                      1e-9
+constexpr double Epsilon{1e-9};
 
 using uint = unsigned int;
 
@@ -21,7 +21,7 @@ using uint = unsigned int;
  */
 double Sinc(const double x)
 {
-    if UNLIKELY(std::abs(x) < EPSILON)
+    if UNLIKELY(std::abs(x) < Epsilon)
         return 1.0;
     return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
 }
@@ -32,22 +32,20 @@ double Sinc(const double x)
  *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
  *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
  */
-double BesselI_0(const double x)
+constexpr double BesselI_0(const double x)
 {
-    double term, sum, x2, y, last_sum;
-    int k;
-
     // Start at k=1 since k=0 is trivial.
-    term = 1.0;
-    sum = 1.0;
-    x2 = x/2.0;
-    k = 1;
+    const double x2{x/2.0};
+    double term{1.0};
+    double sum{1.0};
+    int k{1};
 
     // Let the integration converge until the term of the sum is no longer
     // significant.
+    double last_sum{};
     do {
-        y = x2 / k;
-        k++;
+        const double y{x2 / k};
+        ++k;
         last_sum = sum;
         term *= y * y;
         sum += term;
@@ -77,11 +75,11 @@ double Kaiser(const double b, const double k)
 }
 
 // Calculates the greatest common divisor of a and b.
-uint Gcd(uint x, uint y)
+constexpr uint Gcd(uint x, uint y)
 {
     while(y > 0)
     {
-        uint z{y};
+        const uint z{y};
         y = x % y;
         x = z;
     }
@@ -95,16 +93,16 @@ uint Gcd(uint x, uint y)
  *       { ceil(5.79 / 2 pi f_t),                r <= 21.
  *
  */
-uint CalcKaiserOrder(const double rejection, const double transition)
+constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 {
-    double w_t = 2.0 * al::MathDefs<double>::Pi() * transition;
+    const double w_t{2.0 * al::MathDefs<double>::Pi() * transition};
     if LIKELY(rejection > 21.0)
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));
 }
 
 // Calculates the beta value of the Kaiser window.  Rejection is in dB.
-double CalcKaiserBeta(const double rejection)
+constexpr double CalcKaiserBeta(const double rejection)
 {
     if LIKELY(rejection > 50.0)
         return 0.1102 * (rejection - 8.7);

@@ -131,7 +131,6 @@ LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
 
 const seconds AVNoSyncThreshold{10};
 
-const milliseconds VideoSyncThreshold{10};
 #define VIDEO_PICTURE_QUEUE_SIZE 24
 
 const seconds_d64 AudioSyncThreshold{0.03};

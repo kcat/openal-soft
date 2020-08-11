@@ -1,5 +1,9 @@
 build*/
-winbuild/
-win64build/
-openal-soft.kdev4
-.kdev4/
+winbuild
+win64build
+
+## kdevelop
+*.kdev4
+
+## qt-creator
+CMakeLists.txt.user*

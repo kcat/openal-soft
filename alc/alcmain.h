@@ -130,11 +130,13 @@ public:
     };
 
 private:
+    using FloatArray = al::FlexArray<float,16>;
     std::array<DistData,MAX_OUTPUT_CHANNELS> mChannels;
-    al::vector<float,16> mSamples;
+    std::unique_ptr<FloatArray> mSamples;
 
 public:
-    void setSampleCount(size_t new_size) { mSamples.resize(new_size); }
+    void setSampleCount(size_t new_size)
+    { mSamples = FloatArray::Create(new_size); }
     void clear() noexcept
     {
         for(auto &chan : mChannels)
@@ -143,11 +145,10 @@ public:
             chan.Length = 0;
             chan.Buffer = nullptr;
         }
-        using SampleVecT = decltype(mSamples);
-        SampleVecT{}.swap(mSamples);
+        mSamples = nullptr;
     }
 
-    float *getSamples() noexcept { return mSamples.data(); }
+    float *getSamples() noexcept { return mSamples->data(); }
 
     al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannels; }
 };

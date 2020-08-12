@@ -495,8 +495,7 @@ struct WasapiProxy {
     static bool popMessage(Msg &msg)
     {
         std::unique_lock<std::mutex> lock{mMsgQueueLock};
-        while(mMsgQueue.empty())
-            mMsgQueueCond.wait(lock);
+        mMsgQueueCond.wait(lock, []{return !mMsgQueue.empty();});
         msg = std::move(mMsgQueue.front());
         mMsgQueue.pop_front();
         return msg.mType != MsgType::QuitThread;

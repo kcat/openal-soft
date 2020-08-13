@@ -31,6 +31,9 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "win_main_utf8.h"
+
+
 #ifndef ALC_ENUMERATE_ALL_EXT
 #define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012
 #define ALC_ALL_DEVICES_SPECIFIER                0x1013

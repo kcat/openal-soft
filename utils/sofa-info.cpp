@@ -27,10 +27,10 @@
 #include <vector>
 
 #include "sofa-support.h"
-#include "win_main_utf8.h"
 
 #include "mysofa.h"
 
+#include "win_main_utf8.h"
 
 using uint = unsigned int;
 
@@ -118,8 +118,6 @@ static void SofaInfo(const char *filename)
 
 int main(int argc, char *argv[])
 {
-    GET_UNICODE_ARGS(&argc, &argv);
-
     if(argc != 2)
     {
         fprintf(stdout, "Usage: %s <sofa-file>\n", argv[0]);

@@ -1342,12 +1342,16 @@ if(ALSOFT_INSTALL_AMBDEC_PRESETS)
 endif()
 message(STATUS "")
 
+set(UNICODE_FLAG )
+if(MINGW)
+    set(UNICODE_FLAG ${UNICODE_FLAG} -municode)
+endif()
 set(EXTRA_INSTALLS )
 if(ALSOFT_UTILS)
     add_executable(openal-info utils/openal-info.c)
     target_include_directories(openal-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
     target_compile_options(openal-info PRIVATE ${C_FLAGS})
-    target_link_libraries(openal-info PRIVATE ${LINKER_FLAGS} OpenAL)
+    target_link_libraries(openal-info PRIVATE ${LINKER_FLAGS} OpenAL ${UNICODE_FLAG})
     if(ALSOFT_INSTALL_EXAMPLES)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
     endif()
@@ -1378,7 +1382,7 @@ if(ALSOFT_UTILS)
         target_include_directories(makemhr
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
-        target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} sofa-support)
+        target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} sofa-support ${UNICODE_FLAG})
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
         endif()
@@ -1388,7 +1392,7 @@ if(ALSOFT_UTILS)
         target_compile_definitions(sofa-info PRIVATE ${CPP_DEFS})
         target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
-        target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support)
+        target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support ${UNICODE_FLAG})
     endif()
     message(STATUS "Building utility programs")
 
@@ -1410,10 +1414,10 @@ target_link_libraries(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
 
 if(ALSOFT_EXAMPLES)
     add_executable(altonegen examples/altonegen.c)
-    target_link_libraries(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common)
+    target_link_libraries(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common ${UNICODE_FLAG})
 
     add_executable(alrecord examples/alrecord.c)
-    target_link_libraries(alrecord PRIVATE ${LINKER_FLAGS} ex-common)
+    target_link_libraries(alrecord PRIVATE ${LINKER_FLAGS} ex-common ${UNICODE_FLAG})
 
     if(ALSOFT_INSTALL_EXAMPLES)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord)
@@ -1423,27 +1427,32 @@ if(ALSOFT_EXAMPLES)
 
     if(SNDFILE_FOUND)
         add_executable(alplay examples/alplay.c)
-        target_link_libraries(alplay PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
+        target_link_libraries(alplay PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
+            ${UNICODE_FLAG})
 
         add_executable(alstream examples/alstream.c)
-        target_link_libraries(alstream PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
+        target_link_libraries(alstream PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
+            ${UNICODE_FLAG})
 
         add_executable(alreverb examples/alreverb.c)
-        target_link_libraries(alreverb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
+        target_link_libraries(alreverb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
+            ${UNICODE_FLAG})
 
         add_executable(almultireverb examples/almultireverb.c)
         target_link_libraries(almultireverb
-            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB})
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB} ${UNICODE_FLAG})
 
         add_executable(allatency examples/allatency.c)
-        target_link_libraries(allatency PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
+        target_link_libraries(allatency PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
+            ${UNICODE_FLAG})
 
         add_executable(alhrtf examples/alhrtf.c)
         target_link_libraries(alhrtf
-            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB})
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB} ${UNICODE_FLAG})
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
-        target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common)
+        target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
+            ${UNICODE_FLAG})
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency

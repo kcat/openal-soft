@@ -35,6 +35,8 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 #if defined(_WIN64)
 #define SZFMT "%I64u"

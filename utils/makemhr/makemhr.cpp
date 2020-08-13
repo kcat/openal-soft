@@ -1534,8 +1534,6 @@ int main(int argc, char *argv[])
     double limit;
     int opt;
 
-    GET_UNICODE_ARGS(&argc, &argv);
-
     if(argc < 2)
     {
         fprintf(stdout, "HRTF Processing and Composition Utility\n\n");

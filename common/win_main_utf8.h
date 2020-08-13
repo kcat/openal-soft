@@ -13,10 +13,23 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shellapi.h>
+#include <wchar.h>
+
+#ifdef __cplusplus
+#include <memory>
+
+#define STATIC_CAST(...) static_cast<__VA_ARGS__>
+#define REINTERPRET_CAST(...) reinterpret_cast<__VA_ARGS__>
+
+#else
+
+#define STATIC_CAST(...) (__VA_ARGS__)
+#define REINTERPRET_CAST(...) (__VA_ARGS__)
+#endif
 
 static FILE *my_fopen(const char *fname, const char *mode)
 {
-    WCHAR *wname=NULL, *wmode=NULL;
+    wchar_t *wname=NULL, *wmode=NULL;
     int namelen, modelen;
     FILE *file = NULL;
     errno_t err;
@@ -30,7 +43,12 @@ static FILE *my_fopen(const char *fname, const char *mode)
         return NULL;
     }
 
-    wname = (WCHAR*)calloc(sizeof(WCHAR), namelen+modelen);
+#ifdef __cplusplus
+    auto strbuf = std::make_unique<wchar_t[]>(static_cast<size_t>(namelen+modelen));
+    wname = strbuf.get();
+#else
+    wname = (wchar_t*)calloc(sizeof(wchar_t), (size_t)(namelen+modelen));
+#endif
     wmode = wname + namelen;
     MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);
     MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, modelen);
@@ -42,56 +60,58 @@ static FILE *my_fopen(const char *fname, const char *mode)
         file = NULL;
     }
 
+#ifndef __cplusplus
     free(wname);
-
+#endif
     return file;
 }
 #define fopen my_fopen
 
 
-static char **arglist;
-static void cleanup_arglist(void)
-{
-    free(arglist);
-}
+/* SDL overrides main and provides UTF-8 args for us. */
+#if !defined(SDL_MAIN_NEEDED) && !defined(SDL_MAIN_AVAILABLE)
+int my_main(int, char**);
+#define main my_main
 
-static void GetUnicodeArgs(int *argc, char ***argv)
-{
-    size_t total;
-    wchar_t **args;
-    int nargs, i;
-
-    args = CommandLineToArgvW(GetCommandLineW(), &nargs);
-    if(!args)
-    {
-        fprintf(stderr, "Failed to get command line args: %ld\n", GetLastError());
-        exit(EXIT_FAILURE);
-    }
-
-    total = sizeof(**argv) * nargs;
-    for(i = 0;i < nargs;i++)
-        total += WideCharToMultiByte(CP_UTF8, 0, args[i], -1, NULL, 0, NULL, NULL);
-
-    atexit(cleanup_arglist);
-    arglist = *argv = (char**)calloc(1, total);
-    (*argv)[0] = (char*)(*argv + nargs);
-    for(i = 0;i < nargs-1;i++)
-    {
-        int len = WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], 65535, NULL, NULL);
-        (*argv)[i+1] = (*argv)[i] + len;
-    }
-    WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], 65535, NULL, NULL);
-    *argc = nargs;
-
-    LocalFree(args);
-}
-#define GET_UNICODE_ARGS(argc, argv) GetUnicodeArgs(argc, argv)
-
-#else
-
-/* Do nothing. */
-#define GET_UNICODE_ARGS(argc, argv)
-
+#ifdef __cplusplus
+extern "C"
 #endif
+int wmain(int argc, wchar_t **wargv)
+{
+    char **argv;
+    size_t total;
+    int i;
+
+    total = sizeof(*argv) * STATIC_CAST(size_t)(argc);
+    for(i = 0;i < argc;i++)
+        total += STATIC_CAST(size_t)(WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL,
+            NULL));
+
+#ifdef __cplusplus
+    auto argbuf = std::make_unique<char[]>(total);
+    argv = reinterpret_cast<char**>(argbuf.get());
+#else
+    argv = (char**)calloc(1, total);
+#endif
+    argv[0] = REINTERPRET_CAST(char*)(argv + argc);
+    for(i = 0;i < argc-1;i++)
+    {
+        int len = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv[i], 65535, NULL, NULL);
+        argv[i+1] = argv[i] + len;
+    }
+    WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv[i], 65535, NULL, NULL);
+
+#ifdef __cplusplus
+    return main(argc, argv);
+#else
+    i = main(argc, argv);
+
+    free(argv);
+    return i;
+#endif
+}
+#endif /* !defined(SDL_MAIN_NEEDED) && !defined(SDL_MAIN_AVAILABLE) */
+
+#endif /* _WIN32 */
 
 #endif /* WIN_MAIN_UTF8_H */

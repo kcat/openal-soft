@@ -89,6 +89,7 @@
 #endif
 
 #include "alfstream.h"
+#include "alspan.h"
 #include "alstring.h"
 #include "loaddef.h"
 #include "loadsofa.h"
@@ -161,42 +162,31 @@ enum ChannelIndex : uint {
  * pattern string are replaced with the replacement string.  The result is
  * truncated if necessary.
  */
-static int StrSubst(const char *in, const char *pat, const char *rep, const size_t maxLen, char *out)
+static std::string StrSubst(al::span<const char> in, const al::span<const char> pat,
+    const al::span<const char> rep)
 {
-    size_t inLen, patLen, repLen;
-    size_t si, di;
-    int truncated;
+    std::string ret;
+    ret.reserve(in.size() + pat.size());
 
-    inLen = strlen(in);
-    patLen = strlen(pat);
-    repLen = strlen(rep);
-    si = 0;
-    di = 0;
-    truncated = 0;
-    while(si < inLen && di < maxLen)
+    while(in.size() >= pat.size())
     {
-        if(patLen <= inLen-si)
+        if(al::strncasecmp(in.data(), pat.data(), pat.size()) == 0)
         {
-            if(al::strncasecmp(&in[si], pat, patLen) == 0)
-            {
-                if(repLen > maxLen-di)
-                {
-                    repLen = maxLen - di;
-                    truncated = 1;
-                }
-                strncpy(&out[di], rep, repLen);
-                si += patLen;
-                di += repLen;
-            }
+            in = in.subspan(pat.size());
+            ret.append(rep.data(), rep.size());
         }
-        out[di] = in[si];
-        si++;
-        di++;
+        else
+        {
+            size_t endpos{1};
+            while(endpos < in.size() && in[endpos] != pat.front())
+                ++endpos;
+            ret.append(in.data(), endpos);
+            in = in.subspan(endpos);
+        }
     }
-    if(si < inLen)
-        truncated = 1;
-    out[di] = '\0';
-    return !truncated;
+    ret.append(in.data(), in.size());
+
+    return ret;
 }
 
 
@@ -1395,7 +1385,6 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     const int surface, const double limit, const uint truncSize, const HeadModelT model,
     const double radius, const char *outName)
 {
-    char rateStr[8+1], expName[MAX_PATH_LEN];
     HrirDataT hData;
 
     fprintf(stdout, "Using %u thread%s.\n", numThreads, (numThreads==1)?"":"s");
@@ -1487,10 +1476,12 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     NormalizeHrirs(&hData);
     fprintf(stdout, "Calculating impulse delays...\n");
     CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
-    snprintf(rateStr, sizeof(rateStr), "%u", hData.mIrRate);
-    StrSubst(outName, "%r", rateStr, sizeof(expName), expName);
-    fprintf(stdout, "Creating MHR data set %s...\n", expName);
-    return StoreMhr(&hData, expName);
+
+    const auto rateStr = std::to_string(hData.mIrRate);
+    const auto expName = StrSubst({outName, strlen(outName)}, {"%r", 2},
+        {rateStr.data(), rateStr.size()});
+    fprintf(stdout, "Creating MHR data set %s...\n", expName.c_str());
+    return StoreMhr(&hData, expName.c_str());
 }
 
 static void PrintHelp(const char *argv0, FILE *ofile)

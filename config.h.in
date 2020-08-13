@@ -77,9 +77,6 @@
 /* Define if we have the SDL2 backend */
 #cmakedefine HAVE_SDL2
 
-/* Define to the size of a long int type */
-#cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
-
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 

@@ -44,7 +44,6 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
-include(CheckTypeSize)
 include(CheckStructHasMember)
 include(GNUInstallDirs)
 
@@ -126,9 +125,6 @@ set(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 set(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
 
 set(EXPORT_DECL "")
-
-
-check_type_size("long" SIZEOF_LONG)
 
 
 # Require C++14

@@ -96,15 +96,27 @@ inline size_t RoundUp(size_t value, size_t r) noexcept
  */
 #ifdef __GNUC__
 
+template<typename T>
+struct NumericDetail64 { };
+template<>
+struct NumericDetail64<unsigned long long> {
+    constexpr static inline auto popcnt64(unsigned long long val) noexcept
+    { return __builtin_popcountll(val); }
+    constexpr static inline auto ctz64(unsigned long long val) noexcept
+    { return __builtin_ctzll(val); }
+};
+template<>
+struct NumericDetail64<unsigned long> {
+    constexpr static inline auto popcnt64(unsigned long val) noexcept
+    { return __builtin_popcountl(val); }
+    constexpr static inline auto ctz64(unsigned long val) noexcept
+    { return __builtin_ctzl(val); }
+};
+
 #define POPCNT32 __builtin_popcount
 #define CTZ32 __builtin_ctz
-#if SIZEOF_LONG == 8
-#define POPCNT64 __builtin_popcountl
-#define CTZ64 __builtin_ctzl
-#else
-#define POPCNT64 __builtin_popcountll
-#define CTZ64 __builtin_ctzll
-#endif
+#define POPCNT64 NumericDetail64<uint64_t>::popcnt64
+#define CTZ64 NumericDetail64<uint64_t>::ctz64
 
 #else
 

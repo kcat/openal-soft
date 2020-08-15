@@ -358,17 +358,13 @@ static void LimitMagnitudeResponse(const uint n, const uint m, const double limi
  * residuals (which were discarded).  The mirrored half of the response is
  * reconstructed.
  */
-static void MinimumPhase(const uint n, const double *in, complex_d *out)
+static void MinimumPhase(const uint n, double *mags, complex_d *out)
 {
-    const uint m = 1 + (n / 2);
-    std::vector<double> mags(n);
+    const uint m{(n/2) + 1};
 
     uint i;
     for(i = 0;i < m;i++)
-    {
-        mags[i] = std::max(EPSILON, in[i]);
-        out[i] = complex_d{std::log(mags[i]), 0.0};
-    }
+        out[i] = std::log(mags[i]);
     for(;i < n;i++)
     {
         mags[i] = mags[n - i];
@@ -380,7 +376,7 @@ static void MinimumPhase(const uint n, const double *in, complex_d *out)
     for(i = 0;i < n;i++)
     {
         auto a = std::exp(complex_d{0.0, out[i].imag()});
-        out[i] = complex_d{mags[i], 0.0} * a;
+        out[i] = a * mags[i];
     }
 }
 
@@ -1059,6 +1055,8 @@ struct HrirReconstructor {
     void Worker()
     {
         auto h = std::vector<complex_d>(mFftSize);
+        auto mags = std::vector<double>(mFftSize);
+        size_t m{(mFftSize/2) + 1};
 
         while(1)
         {
@@ -1078,7 +1076,9 @@ struct HrirReconstructor {
             /* Now do the reconstruction, and apply the inverse FFT to get the
              * time-domain response.
              */
-            MinimumPhase(mFftSize, mIrs[idx], h.data());
+            for(size_t i{0};i < m;++i)
+                mags[i] = std::max(mIrs[idx][i], EPSILON);
+            MinimumPhase(mFftSize, mags.data(), h.data());
             FftInverse(mFftSize, h.data());
             for(uint i{0u};i < mIrPoints;++i)
                 mIrs[idx][i] = h[i].real();

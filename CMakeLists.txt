@@ -65,7 +65,7 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
-option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework support" ON)
+option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework support" OFF)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -1230,7 +1230,7 @@ else()
         set_target_properties(${IMPL_TARGET} PROPERTIES
             FRAMEWORK TRUE
             FRAMEWORK_VERSION C
-            MACOSX_FRAMEWORK_IDENTIFIER org.opena-soft.openal
+            MACOSX_FRAMEWORK_IDENTIFIER org.openal-soft.openal
             MACOSX_FRAMEWORK_INFO_PLIST ${OpenAL_SOURCE_DIR}/info.plist
             PUBLIC_HEADER include/AL/alc.h include/AL/al.h include/AL/alext.h 
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"

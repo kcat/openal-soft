@@ -65,6 +65,8 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
+option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework support" ON)
+
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
     set(CMAKE_INSTALL_DATADIR "${SHARE_INSTALL_DIR}")
@@ -174,10 +176,12 @@ endif()
 unset(OLD_REQUIRED_LIBRARIES)
 
 # Include liblog for Android logging
-check_library_exists(log __android_log_print "" HAVE_LIBLOG)
-if(HAVE_LIBLOG)
-    set(EXTRA_LIBS log ${EXTRA_LIBS})
-    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
+if(ANDROID)
+    check_library_exists(log __android_log_print "" HAVE_LIBLOG)
+    if(HAVE_LIBLOG)
+        set(EXTRA_LIBS log ${EXTRA_LIBS})
+        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
+    endif()
 endif()
 
 if(MSVC)
@@ -1221,6 +1225,17 @@ else()
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+
+    if(APPLE AND ALSOFT_OSX_FRAMEWORK)
+        set_target_properties(${IMPL_TARGET} PROPERTIES
+            FRAMEWORK TRUE
+            FRAMEWORK_VERSION C
+            MACOSX_FRAMEWORK_IDENTIFIER org.opena-soft.openal
+            MACOSX_FRAMEWORK_INFO_PLIST ${OpenAL_SOURCE_DIR}/info.plist
+            PUBLIC_HEADER include/AL/alc.h include/AL/al.h include/AL/alext.h 
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+        )
+    endif()
 endif()
 
 target_include_directories(${IMPL_TARGET}

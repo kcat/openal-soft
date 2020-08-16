@@ -47,7 +47,10 @@ enum FamCount : size_t { };
 
 #define DEF_FAM_NEWDEL(T, FamMem)                                             \
     static constexpr size_t Sizeof(size_t count) noexcept                     \
-    { return decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)); }          \
+    {                                                                         \
+        return std::max<size_t>(sizeof(T),                                    \
+            decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)));            \
+    }                                                                         \
                                                                               \
     void *operator new(size_t /*size*/, FamCount count)                       \
     {                                                                         \

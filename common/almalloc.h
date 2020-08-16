@@ -179,11 +179,10 @@ struct FlexArray {
 
 
     const index_type mSize;
-DIAGNOSTIC_PUSH
-std_pragma("GCC diagnostic ignored \"-Wpedantic\"")
-msc_pragma(warning(disable : 4200))
-    alignas(alignment) element_type mArray[0];
-DIAGNOSTIC_POP
+    union {
+        char mDummy;
+        alignas(alignment) element_type mArray[1];
+    };
 
     static std::unique_ptr<FlexArray> Create(index_type count)
     {

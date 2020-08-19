@@ -1231,9 +1231,12 @@ else()
             FRAMEWORK TRUE
             FRAMEWORK_VERSION C
             MACOSX_FRAMEWORK_IDENTIFIER org.openal-soft.openal
-            MACOSX_FRAMEWORK_INFO_PLIST ${OpenAL_SOURCE_DIR}/info.plist
-            PUBLIC_HEADER include/AL/alc.h include/AL/al.h include/AL/alext.h 
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "1.20"
+            MACOSX_FRAMEWORK_BUNDLE_VERSION 1
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+        )
+        set_target_properties(${IMPL_TARGET} PROPERTIES PUBLIC_HEADER 
+            PUBLIC_HEADER include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h
         )
     endif()
 endif()

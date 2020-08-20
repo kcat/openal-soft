@@ -1220,7 +1220,9 @@ else()
         set(RC_CONFIG resources/soft_oal.rc)
     endif()
 
-    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG})
+    # !important: for osx framework public header works, the headers must be in project
+    set(TARGET_PUBLIC_HEADERS include/AL/al.h;include/AL/alc.h;include/AL/alext.h;include/AL/efx.h)
+    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
@@ -1230,13 +1232,11 @@ else()
         set_target_properties(${IMPL_TARGET} PROPERTIES
             FRAMEWORK TRUE
             FRAMEWORK_VERSION C
-            MACOSX_FRAMEWORK_IDENTIFIER org.openal-soft.openal
+            MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
             MACOSX_FRAMEWORK_SHORT_VERSION_STRING "1.20"
             MACOSX_FRAMEWORK_BUNDLE_VERSION 1
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
-        )
-        set_target_properties(${IMPL_TARGET} PROPERTIES PUBLIC_HEADER 
-            PUBLIC_HEADER include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h
+            PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
         )
     endif()
 endif()

@@ -1229,12 +1229,21 @@ else()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(APPLE AND ALSOFT_OSX_FRAMEWORK)
+        if(GIT_FOUND)
+            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count head
+                TIMEOUT 5
+                OUTPUT_VARIABLE BUNDLE_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+        else()
+            set(BUNDLE_VERSION 1)
+        endif()
         set_target_properties(${IMPL_TARGET} PROPERTIES
             FRAMEWORK TRUE
             FRAMEWORK_VERSION C
             MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
             MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LIB_VERSION}
-            MACOSX_FRAMEWORK_BUNDLE_VERSION 1
+            MACOSX_FRAMEWORK_BUNDLE_VERSION ${BUNDLE_VERSION}
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
             PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
         )

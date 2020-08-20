@@ -65,7 +65,7 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
-option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework support" OFF)
+option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework" OFF)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")

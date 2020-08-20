@@ -94,16 +94,8 @@ if(WIN32)
     set(CPP_DEFS ${CPP_DEFS} _WIN32)
 
     option(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
-
     if(MINGW)
         option(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
-        if(NOT DLLTOOL)
-            if(HOST)
-                set(DLLTOOL "${HOST}-dlltool")
-            else()
-                set(DLLTOOL "dlltool")
-            endif()
-        endif()
     endif()
 endif()
 
@@ -1249,13 +1241,12 @@ endif()
 
 if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC")
     find_program(SED_EXECUTABLE NAMES sed DOC "sed executable")
-    find_program(DLLTOOL_EXECUTABLE NAMES "${DLLTOOL}" DOC "dlltool executable")
-    if(NOT SED_EXECUTABLE OR NOT DLLTOOL_EXECUTABLE)
+    if(NOT SED_EXECUTABLE OR NOT CMAKE_DLLTOOL)
         message(STATUS "")
         if(NOT SED_EXECUTABLE)
             message(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
         endif()
-        if(NOT DLLTOOL_EXECUTABLE)
+        if(NOT CMAKE_DLLTOOL)
             message(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
         endif()
     else()
@@ -1263,7 +1254,7 @@ if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC"
             LINK_FLAGS " -Wl,--output-def,OpenAL32.def")
         add_custom_command(TARGET OpenAL POST_BUILD
             COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def
-            COMMAND "${DLLTOOL_EXECUTABLE}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
+            COMMAND "${CMAKE_DLLTOOL}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
             COMMENT "Stripping ordinals from OpenAL32.def and generating OpenAL32.lib..."
             VERBATIM
         )

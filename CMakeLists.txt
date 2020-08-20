@@ -1221,7 +1221,7 @@ else()
     endif()
 
     # !important: for osx framework public header works, the headers must be in project
-    set(TARGET_PUBLIC_HEADERS include/AL/al.h;include/AL/alc.h;include/AL/alext.h;include/AL/efx.h)
+    set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h)
     add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")

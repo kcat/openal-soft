@@ -385,9 +385,9 @@ endif()
 set(ENABLE_VISIBILITY_INT ${ENABLE_VISIBILITY} CACHE BOOL "Whether or not to hide symbols (-fvisibility=hidden)" ${FORCE_CACHE})
 # Set strict compiler checks or not
 if(NOT DEFINED ENABLE_STRICT_TRY_COMPILE)
-  # Unless specified, disable strict try_compile()
-  set(ENABLE_STRICT_TRY_COMPILE FALSE)
-  message(STATUS "Using NON-strict compiler checks by default. ENABLE_STRICT_TRY_COMPILE not provided!")
+  # By default, enable strict try_compile()
+  set(ENABLE_STRICT_TRY_COMPILE TRUE)
+  message(STATUS "Using strict compiler checks by default. ENABLE_STRICT_TRY_COMPILE not provided!")
 endif()
 set(ENABLE_STRICT_TRY_COMPILE_INT ${ENABLE_STRICT_TRY_COMPILE} CACHE BOOL "Whether or not to use strict compiler checks" ${FORCE_CACHE})
 # Get the SDK version information.

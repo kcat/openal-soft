@@ -136,6 +136,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # Prefer C11, but support C99 and C90 too.
 set(CMAKE_C_STANDARD 11)
 
+# The workaround for solve try_compile failed with code sign
+# since cmake-3.18.2, not required
+set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
+    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
 
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions
@@ -176,12 +183,10 @@ endif()
 unset(OLD_REQUIRED_LIBRARIES)
 
 # Include liblog for Android logging
-if(ANDROID)
-    check_library_exists(log __android_log_print "" HAVE_LIBLOG)
-    if(HAVE_LIBLOG)
-        set(EXTRA_LIBS log ${EXTRA_LIBS})
-        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
-    endif()
+check_library_exists(log __android_log_print "" HAVE_LIBLOG)
+if(HAVE_LIBLOG)
+    set(EXTRA_LIBS log ${EXTRA_LIBS})
+    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
 endif()
 
 if(MSVC)
@@ -1245,7 +1250,9 @@ else()
             MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
             MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LIB_VERSION}
             MACOSX_FRAMEWORK_BUNDLE_VERSION ${BUNDLE_VERSION}
-            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+            XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
             PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
         )
     endif()

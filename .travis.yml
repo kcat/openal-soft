@@ -115,14 +115,12 @@ script:
       cmake \
         -GXcode \
         -DCMAKE_SYSTEM_NAME=iOS \
-        -DCMAKE_CXX_EXTENSIONS=OFF \
+        -DALSOFT_OSX_FRAMEWORK=ON \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
         -DALSOFT_UTILS=OFF \
         -DALSOFT_EXAMPLES=OFF \
         -DALSOFT_INSTALL=OFF \
-        -DCMAKE_CXX_EXTENSIONS=OFF \
-        -DALSOFT_OSX_FRAMEWORK=ON \
         .
     fi
   - cmake --build . --clean-first

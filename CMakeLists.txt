@@ -1276,7 +1276,7 @@ else()
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
             PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
-            MACOSX_RPATH 1
+            MACOSX_RPATH TRUE
         )
     endif()
 endif()

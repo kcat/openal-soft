@@ -118,9 +118,6 @@ script:
         -DALSOFT_OSX_FRAMEWORK=ON \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
-        -DALSOFT_UTILS=OFF \
-        -DALSOFT_EXAMPLES=OFF \
-        -DALSOFT_INSTALL=OFF \
         "-DCMAKE_OSX_ARCHITECTURES=armv7;arm64" \
         .
     fi

@@ -1244,6 +1244,8 @@ else()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(APPLE AND ALSOFT_OSX_FRAMEWORK)
+        # Sets framework name to soft_oal to avoid ambiguous with system OpenAL.framework
+        set(LIBNAME "soft_oal")
         if(GIT_FOUND)
             EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count head
                 TIMEOUT 5

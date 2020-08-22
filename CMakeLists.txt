@@ -1255,6 +1255,16 @@ else()
         else()
             set(BUNDLE_VERSION 1)
         endif()
+
+        # Build: Fix rpath in iOS shared libraries
+        if(NOT CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG)
+            set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
+        endif()
+
+        if(NOT CMAKE_SHARED_LIBRARY_RUNTIME_CXX_FLAG)
+            set(CMAKE_SHARED_LIBRARY_RUNTIME_CXX_FLAG "-Wl,-rpath,")
+        endif()
+
         set_target_properties(${IMPL_TARGET} PROPERTIES
             FRAMEWORK TRUE
             FRAMEWORK_VERSION C
@@ -1266,6 +1276,7 @@ else()
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
             PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
+            MACOSX_RPATH 1
         )
     endif()
 endif()

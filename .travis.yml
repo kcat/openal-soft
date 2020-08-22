@@ -121,6 +121,7 @@ script:
         -DALSOFT_UTILS=OFF \
         -DALSOFT_EXAMPLES=OFF \
         -DALSOFT_INSTALL=OFF \
+        "-DCMAKE_OSX_ARCHITECTURES=armv7;arm64" \
         .
     fi
   - cmake --build . --clean-first

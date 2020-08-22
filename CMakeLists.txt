@@ -2,6 +2,25 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
+# The workaround for solve try_compile failed with code sign
+# since cmake-3.18.2, not required
+# everyting for cmake toolchain config before project(xxx) is better
+set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
+    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+
+# Fix try_compile failed with armv7 deployment target < 10.0
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(DEFINED CMAKE_OSX_ARCHITECTURES)
+        if(CMAKE_OSX_ARCHITECTURES MATCHES ".*armv7.*")
+            message(STATUS "iOS armv7 require min deployment target to 10.0")
+            set (CMAKE_OSX_DEPLOYMENT_TARGET "10.0")
+        endif()
+    endif()
+endif()
+
 project(OpenAL)
 
 if(COMMAND CMAKE_POLICY)
@@ -33,7 +52,6 @@ if(NOT CMAKE_DEBUG_POSTFIX)
 endif()
 
 set(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
-
 
 include(CheckFunctionExists)
 include(CheckLibraryExists)
@@ -135,14 +153,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Prefer C11, but support C99 and C90 too.
 set(CMAKE_C_STANDARD 11)
-
-# The workaround for solve try_compile failed with code sign
-# since cmake-3.18.2, not required
-set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
-    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
-    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
 
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions

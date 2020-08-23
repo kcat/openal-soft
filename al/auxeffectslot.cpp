@@ -640,7 +640,6 @@ ALeffectslot::~ALeffectslot()
     ALeffectslotProps *props{Params.Update.load()};
     if(props)
     {
-        if(props->State) props->State->release();
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n",
             decltype(std::declval<void*>()){props});
         delete props;
@@ -707,8 +706,6 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
     ALeffectslotProps *props{context->mFreeEffectslotProps.load()};
     while(props)
     {
-        if(props->State)
-            props->State->release();
         props->State = nullptr;
         props = props->next.load(std::memory_order_relaxed);
     }
@@ -741,9 +738,8 @@ void ALeffectslot::updateProps(ALCcontext *context)
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */
-    EffectState *oldstate{props->State};
     Effect.State->add_ref();
-    props->State = Effect.State;
+    props->State.reset(Effect.State);
 
     /* Set the new container for updating internal parameters. */
     props = Params.Update.exchange(props, std::memory_order_acq_rel);
@@ -752,14 +748,9 @@ void ALeffectslot::updateProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        if(props->State)
-            props->State->release();
         props->State = nullptr;
         AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
-
-    if(oldstate)
-        oldstate->release();
 }
 
 void UpdateAllEffectSlotProps(ALCcontext *context)

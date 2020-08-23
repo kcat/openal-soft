@@ -12,6 +12,7 @@
 #include "almalloc.h"
 #include "atomic.h"
 #include "effects/base.h"
+#include "intrusive_ptr.h"
 #include "vector.h"
 
 struct ALeffect;
@@ -29,7 +30,7 @@ struct ALeffectslotProps {
     ALenum Type;
     EffectProps Props;
 
-    EffectState *State;
+    al::intrusive_ptr<EffectState> State;
 
     std::atomic<ALeffectslotProps*> next;
 

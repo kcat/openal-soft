@@ -2353,7 +2353,6 @@ ALCcontext::~ALCcontext()
     while(eprops)
     {
         ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
-        if(eprops->State) eprops->State->release();
         delete eprops;
         eprops = next;
         ++count;

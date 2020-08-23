@@ -476,8 +476,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
         slot->Params.AirAbsorptionGainHF = 1.0f;
     }
 
-    EffectState *state{props->State};
-    props->State = nullptr;
+    EffectState *state{props->State.release()};
     EffectState *oldstate{slot->Params.mEffectState};
     slot->Params.mEffectState = state;
 
@@ -502,7 +501,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
              * cleaned up sometime later (not ideal, but better than blocking
              * or leaking).
              */
-            props->State = oldstate;
+            props->State.reset(oldstate);
         }
     }
 

@@ -1257,12 +1257,11 @@ else()
         endif()
 
         # Build: Fix rpath in iOS shared libraries
+        # If no this flag set, the final dylib binary ld path will be /User/xxx/*/soft_oal.framework/soft_oal,
+        # And can't be load by iOS devices.
+        # See also: https://github.com/libjpeg-turbo/libjpeg-turbo/commit/c80ddef7a4ce21ace9e3ca0fd190d320cc8cdaeb
         if(NOT CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG)
             set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
-        endif()
-
-        if(NOT CMAKE_SHARED_LIBRARY_RUNTIME_CXX_FLAG)
-            set(CMAKE_SHARED_LIBRARY_RUNTIME_CXX_FLAG "-Wl,-rpath,")
         endif()
 
         set_target_properties(${IMPL_TARGET} PROPERTIES

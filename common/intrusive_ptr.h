@@ -80,11 +80,11 @@ public:
     T* operator->() const noexcept { return mPtr; }
     T* get() const noexcept { return mPtr; }
 
-    void reset() noexcept
+    void reset(T *ptr=nullptr) noexcept
     {
         if(mPtr)
             mPtr->release();
-        mPtr = nullptr;
+        mPtr = ptr;
     }
 
     T* release() noexcept

@@ -2,26 +2,27 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
-# The workaround for solve try_compile failed with code sign
+# The workaround for try_compile failing with code signing
 # since cmake-3.18.2, not required
-# everyting for cmake toolchain config before project(xxx) is better
 set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
     "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
     "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
 set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
 set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
 
-# Fix compile failed with armv7 deployment target >= 11.0, xcode clang will report follow error
-# clang: error: invalid iOS deployment version '--target=armv7-apple-ios13.6', 
-#        iOS 10 is the maximum deployment target for 32-bit targets
-# If not defined CMAKE_OSX_DEPLOYMENT_TARGET, cmake will choose latest deployment target
+# Fix compile failure with armv7 deployment target >= 11.0, xcode clang will
+# report:
+# error: invalid iOS deployment version '--target=armv7-apple-ios13.6',
+# iOS 10 is the maximum deployment target for 32-bit targets
+# If CMAKE_OSX_DEPLOYMENT_TARGET is not defined, cmake will choose latest
+# deployment target
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
-        if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET 
-        OR "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_GREATER "11.0" 
-        OR "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_EQUAL "11.0")
-            message(STATUS "Sets iOS minimum deployment target to 10.0 for armv7")
-            set(CMAKE_OSX_DEPLOYMENT_TARGET "10.0" CACHE STRING "Minimum OS X deployment version")
+        if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
+            OR NOT CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "11.0")
+            message(STATUS "Forcing iOS deployment target to 10.0 for armv7")
+            set(CMAKE_OSX_DEPLOYMENT_TARGET "10.0" CACHE STRING "Minimum OS X deployment version"
+                FORCE)
         endif()
     endif()
 endif()
@@ -1232,30 +1233,31 @@ else()
         set(RC_CONFIG resources/soft_oal.rc)
     endif()
 
-    # !important: for osx framework public header works, the headers must be in project
+    # !important: for osx framework public header works, the headers must be in
+    # the project
     set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h)
-    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
+    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG}
+        ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(APPLE AND ALSOFT_OSX_FRAMEWORK)
-        # Sets framework name to soft_oal to avoid ambiguous with system OpenAL.framework
+        # Sets framework name to soft_oal to avoid ambiguity with the system OpenAL.framework
         set(LIBNAME "soft_oal")
         if(GIT_FOUND)
             EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count head
                 TIMEOUT 5
                 OUTPUT_VARIABLE BUNDLE_VERSION
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                )
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
         else()
             set(BUNDLE_VERSION 1)
         endif()
 
         # Build: Fix rpath in iOS shared libraries
-        # If no this flag set, the final dylib binary ld path will be /User/xxx/*/soft_oal.framework/soft_oal,
-        # And can't be load by iOS devices.
+        # If this flag is not set, the final dylib binary ld path will be
+        # /User/xxx/*/soft_oal.framework/soft_oal, which can't be loaded by iOS devices.
         # See also: https://github.com/libjpeg-turbo/libjpeg-turbo/commit/c80ddef7a4ce21ace9e3ca0fd190d320cc8cdaeb
         if(NOT CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG)
             set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
@@ -1272,8 +1274,7 @@ else()
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
             PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
-            MACOSX_RPATH TRUE
-        )
+            MACOSX_RPATH TRUE)
     endif()
 endif()
 

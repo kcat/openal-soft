@@ -693,8 +693,6 @@ ALeffectslot::~ALeffectslot()
         delete props;
     }
 
-    if(Effect.State)
-        Effect.State->release();
     if(Params.mEffectState)
         Params.mEffectState->release();
 }
@@ -703,11 +701,12 @@ ALenum ALeffectslot::init()
 {
     EffectStateFactory *factory{getFactoryByType(Effect.Type)};
     if(!factory) return AL_INVALID_VALUE;
-    Effect.State = factory->create();
+
+    Effect.State.reset(factory->create());
     if(!Effect.State) return AL_OUT_OF_MEMORY;
 
     Effect.State->add_ref();
-    Params.mEffectState = Effect.State;
+    Params.mEffectState = Effect.State.get();
     return AL_NO_ERROR;
 }
 
@@ -722,7 +721,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
             ERR("Failed to find factory for effect type 0x%04x\n", newtype);
             return AL_INVALID_ENUM;
         }
-        EffectState *State{factory->create()};
+        al::intrusive_ptr<EffectState> State{factory->create()};
         if(!State) return AL_OUT_OF_MEMORY;
 
         ALCdevice *Device{context->mDevice.get()};
@@ -744,8 +743,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
             Effect.Props = effect->Props;
         }
 
-        Effect.State->release();
-        Effect.State = State;
+        Effect.State = std::move(State);
     }
     else if(effect)
         Effect.Props = effect->Props;
@@ -786,8 +784,7 @@ void ALeffectslot::updateProps(ALCcontext *context)
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */
-    Effect.State->add_ref();
-    props->State.reset(Effect.State);
+    props->State = Effect.State;
 
     /* Set the new container for updating internal parameters. */
     props = Params.Update.exchange(props, std::memory_order_acq_rel);

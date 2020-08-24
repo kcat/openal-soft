@@ -49,7 +49,7 @@ struct ALeffectslot {
         ALenum Type{AL_EFFECT_NULL};
         EffectProps Props{};
 
-        EffectState *State{nullptr};
+        al::intrusive_ptr<EffectState> State;
     } Effect;
 
     std::atomic_flag PropsClean;

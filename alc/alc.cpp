@@ -2095,7 +2095,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         {
             aluInitEffectPanning(slot, device);
 
-            EffectState *state{slot->Effect.State};
+            EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
             state->deviceUpdate(device);
             slot->updateProps(context);
@@ -2116,7 +2116,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
                 aluInitEffectPanning(slot, device);
 
-                EffectState *state{slot->Effect.State};
+                EffectState *state{slot->Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
                 state->deviceUpdate(device);
                 slot->updateProps(context);

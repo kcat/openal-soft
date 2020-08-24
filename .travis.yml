@@ -114,13 +114,11 @@ script:
     if [[ "${TRAVIS_OS_NAME}" == "osx" && "${BUILD_IOS}" == "true" ]]; then
       cmake \
         -GXcode \
-        -DCMAKE_TOOLCHAIN_FILE=cmake/ios.toolchain.cmake \
-        -DPLATFORM=OS \
+        -DCMAKE_SYSTEM_NAME=iOS \
+        -DALSOFT_OSX_FRAMEWORK=ON \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
-        -DLIBTYPE=STATIC \
-        -DALSOFT_UTILS=OFF \
-        -DALSOFT_EXAMPLES=OFF \
+        "-DCMAKE_OSX_ARCHITECTURES=armv7;arm64" \
         .
     fi
   - cmake --build . --clean-first

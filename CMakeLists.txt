@@ -2,6 +2,30 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
+# The workaround for solve try_compile failed with code sign
+# since cmake-3.18.2, not required
+# everyting for cmake toolchain config before project(xxx) is better
+set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
+    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+
+# Fix compile failed with armv7 deployment target >= 11.0, xcode clang will report follow error
+# clang: error: invalid iOS deployment version '--target=armv7-apple-ios13.6', 
+#        iOS 10 is the maximum deployment target for 32-bit targets
+# If not defined CMAKE_OSX_DEPLOYMENT_TARGET, cmake will choose latest deployment target
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
+        if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET 
+        OR "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_GREATER "11.0" 
+        OR "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_EQUAL "11.0")
+            message(STATUS "Sets iOS minimum deployment target to 10.0 for armv7")
+            set(CMAKE_OSX_DEPLOYMENT_TARGET "10.0" CACHE STRING "Minimum OS X deployment version")
+        endif()
+    endif()
+endif()
+
 project(OpenAL)
 
 if(COMMAND CMAKE_POLICY)
@@ -33,7 +57,6 @@ if(NOT CMAKE_DEBUG_POSTFIX)
 endif()
 
 set(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
-
 
 include(CheckFunctionExists)
 include(CheckLibraryExists)
@@ -97,6 +120,8 @@ if(WIN32)
     if(MINGW)
         option(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
     endif()
+elseif(APPLE)
+    option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework" OFF)
 endif()
 
 
@@ -125,7 +150,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Prefer C11, but support C99 and C90 too.
 set(CMAKE_C_STANDARD 11)
-
 
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions
@@ -1208,11 +1232,49 @@ else()
         set(RC_CONFIG resources/soft_oal.rc)
     endif()
 
-    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG})
+    # !important: for osx framework public header works, the headers must be in project
+    set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h)
+    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+
+    if(APPLE AND ALSOFT_OSX_FRAMEWORK)
+        # Sets framework name to soft_oal to avoid ambiguous with system OpenAL.framework
+        set(LIBNAME "soft_oal")
+        if(GIT_FOUND)
+            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count head
+                TIMEOUT 5
+                OUTPUT_VARIABLE BUNDLE_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+        else()
+            set(BUNDLE_VERSION 1)
+        endif()
+
+        # Build: Fix rpath in iOS shared libraries
+        # If no this flag set, the final dylib binary ld path will be /User/xxx/*/soft_oal.framework/soft_oal,
+        # And can't be load by iOS devices.
+        # See also: https://github.com/libjpeg-turbo/libjpeg-turbo/commit/c80ddef7a4ce21ace9e3ca0fd190d320cc8cdaeb
+        if(NOT CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG)
+            set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
+        endif()
+
+        set_target_properties(${IMPL_TARGET} PROPERTIES
+            FRAMEWORK TRUE
+            FRAMEWORK_VERSION C
+            MACOSX_FRAMEWORK_NAME "${IMPL_TARGET}"
+            MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LIB_VERSION}
+            MACOSX_FRAMEWORK_BUNDLE_VERSION ${BUNDLE_VERSION}
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+            XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+            PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
+            MACOSX_RPATH TRUE
+        )
+    endif()
 endif()
 
 target_include_directories(${IMPL_TARGET}
@@ -1289,6 +1351,7 @@ if(ALSOFT_INSTALL)
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
     export(TARGETS OpenAL
         NAMESPACE OpenAL::
@@ -1504,6 +1567,7 @@ endif()
 if(EXTRA_INSTALLS)
     install(TARGETS ${EXTRA_INSTALLS}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        BUNDLE  DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

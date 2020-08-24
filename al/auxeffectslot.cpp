@@ -41,6 +41,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alu.h"
+#include "buffer.h"
 #include "effect.h"
 #include "fpu_ctrl.h"
 #include "inprogext.h"
@@ -74,6 +75,19 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
     if UNLIKELY(sublist.FreeMask & (1_u64 << slidx))
         return nullptr;
     return sublist.Effects + slidx;
+}
+
+inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
+{
+    const size_t lidx{(id-1) >> 6};
+    const ALuint slidx{(id-1) & 0x3f};
+
+    if UNLIKELY(lidx >= device->BufferList.size())
+        return nullptr;
+    BufferSubList &sublist = device->BufferList[lidx];
+    if UNLIKELY(sublist.FreeMask & (1_u64 << slidx))
+        return nullptr;
+    return sublist.Buffers + slidx;
 }
 
 
@@ -370,6 +384,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
 
     ALeffectslot *target{};
+    ALbuffer *buffer{};
     ALCdevice *device{};
     ALenum err{};
     switch(param)
@@ -377,7 +392,8 @@ START_API_FUNC
     case AL_EFFECTSLOT_EFFECT:
         device = context->mDevice.get();
 
-        { std::lock_guard<std::mutex> ___{device->EffectLock};
+        {
+            std::lock_guard<std::mutex> ___{device->EffectLock};
             ALeffect *effect{value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr};
             if(!(value == 0 || effect != nullptr))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
@@ -428,6 +444,26 @@ START_API_FUNC
         slot->Target = target;
         break;
 
+    case AL_BUFFER:
+        device = context->mDevice.get();
+
+        {
+            std::lock_guard<std::mutex> ___{device->BufferLock};
+            if(value)
+            {
+                buffer = LookupBuffer(device, static_cast<ALuint>(value));
+                if(!buffer) SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid buffer ID");
+            }
+
+            if(buffer) IncrementRef(buffer->ref);
+            if(ALbuffer *oldbuffer{slot->Buffer})
+                DecrementRef(oldbuffer->ref);
+            slot->Buffer = buffer;
+
+            /* TODO: Create a shared effectstate representation of the buffer. */
+        }
+        break;
+
     default:
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid effect slot integer property 0x%04x",
             param);
@@ -444,6 +480,7 @@ START_API_FUNC
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
     case AL_EFFECTSLOT_TARGET_SOFT:
+    case AL_BUFFER:
         alAuxiliaryEffectSloti(effectslot, param, values[0]);
         return;
     }
@@ -545,6 +582,13 @@ START_API_FUNC
             *value = 0;
         break;
 
+    case AL_BUFFER:
+        if(auto *buffer = slot->Buffer)
+            *value = static_cast<ALint>(buffer->id);
+        else
+            *value = 0;
+        break;
+
     default:
         context->setError(AL_INVALID_ENUM, "Invalid effect slot integer property 0x%04x", param);
     }
@@ -559,6 +603,7 @@ START_API_FUNC
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
     case AL_EFFECTSLOT_TARGET_SOFT:
+    case AL_BUFFER:
         alGetAuxiliaryEffectSloti(effectslot, param, values);
         return;
     }
@@ -636,6 +681,9 @@ ALeffectslot::~ALeffectslot()
     if(Target)
         DecrementRef(Target->ref);
     Target = nullptr;
+    if(Buffer)
+        DecrementRef(Buffer->ref);
+    Buffer = nullptr;
 
     ALeffectslotProps *props{Params.Update.load()};
     if(props)

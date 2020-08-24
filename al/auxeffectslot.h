@@ -15,6 +15,7 @@
 #include "intrusive_ptr.h"
 #include "vector.h"
 
+struct ALbuffer;
 struct ALeffect;
 struct ALeffectslot;
 
@@ -42,6 +43,7 @@ struct ALeffectslot {
     float Gain{1.0f};
     bool  AuxSendAuto{true};
     ALeffectslot *Target{nullptr};
+    ALbuffer *Buffer{nullptr};
 
     struct {
         ALenum Type{AL_EFFECT_NULL};

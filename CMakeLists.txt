@@ -617,6 +617,8 @@ set(ALC_OBJS
     alc/bsinc_tables.cpp
     alc/bsinc_tables.h
     alc/bufferline.h
+    alc/buffer_formats.cpp
+    alc/buffer_formats.h
     alc/compat.h
     alc/converter.cpp
     alc/converter.h

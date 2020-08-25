@@ -8,59 +8,34 @@
 #include "albyte.h"
 #include "almalloc.h"
 #include "atomic.h"
+#include "buffer_formats.h"
 #include "inprogext.h"
 #include "vector.h"
 
 
 /* User formats */
 enum UserFmtType : unsigned char {
-    UserFmtUByte,
-    UserFmtShort,
-    UserFmtFloat,
-    UserFmtDouble,
-    UserFmtMulaw,
-    UserFmtAlaw,
+    UserFmtUByte = FmtUByte,
+    UserFmtShort = FmtShort,
+    UserFmtFloat = FmtFloat,
+    UserFmtMulaw = FmtMulaw,
+    UserFmtAlaw = FmtAlaw,
+
+    UserFmtDouble = 128,
     UserFmtIMA4,
     UserFmtMSADPCM,
 };
 enum UserFmtChannels : unsigned char {
-    UserFmtMono,
-    UserFmtStereo,
-    UserFmtRear,
-    UserFmtQuad,
-    UserFmtX51, /* (WFX order) */
-    UserFmtX61, /* (WFX order) */
-    UserFmtX71, /* (WFX order) */
-    UserFmtBFormat2D,
-    UserFmtBFormat3D,
+    UserFmtMono = FmtMono,
+    UserFmtStereo = FmtStereo,
+    UserFmtRear = FmtRear,
+    UserFmtQuad = FmtQuad,
+    UserFmtX51 = FmtX51,
+    UserFmtX61 = FmtX61,
+    UserFmtX71 = FmtX71,
+    UserFmtBFormat2D = FmtBFormat2D,
+    UserFmtBFormat3D = FmtBFormat3D,
 };
-
-
-/* Storable formats */
-enum FmtType : unsigned char {
-    FmtUByte  = UserFmtUByte,
-    FmtShort  = UserFmtShort,
-    FmtFloat  = UserFmtFloat,
-    FmtDouble = UserFmtDouble,
-    FmtMulaw  = UserFmtMulaw,
-    FmtAlaw   = UserFmtAlaw,
-};
-enum FmtChannels : unsigned char {
-    FmtMono   = UserFmtMono,
-    FmtStereo = UserFmtStereo,
-    FmtRear   = UserFmtRear,
-    FmtQuad   = UserFmtQuad,
-    FmtX51    = UserFmtX51,
-    FmtX61    = UserFmtX61,
-    FmtX71    = UserFmtX71,
-    FmtBFormat2D = UserFmtBFormat2D,
-    FmtBFormat3D = UserFmtBFormat3D,
-};
-
-ALuint BytesFromFmt(FmtType type) noexcept;
-ALuint ChannelsFromFmt(FmtChannels chans, ALuint ambiorder) noexcept;
-inline ALuint FrameSizeFromFmt(FmtChannels chans, FmtType type, ALuint ambiorder) noexcept
-{ return ChannelsFromFmt(chans, ambiorder) * BytesFromFmt(type); }
 
 
 struct ALbuffer {

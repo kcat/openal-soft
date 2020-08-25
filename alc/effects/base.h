@@ -176,7 +176,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
      * detached and deleted or altered during a mix.
      */
     virtual EffectBufferBase *createBuffer(const ALCdevice */*device*/,
-        const al::byte */*samplesData*/, ALuint /*sampleRate*/, FmtType /*sampleType*/,
+        const al::byte */*sampleData*/, ALuint /*sampleRate*/, FmtType /*sampleType*/,
         FmtChannels /*channelType*/, ALuint /*numSamples*/)
     { return nullptr; }
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
@@ -210,5 +210,6 @@ EffectStateFactory* VmorpherStateFactory_getFactory(void);
 
 EffectStateFactory *DedicatedStateFactory_getFactory(void);
 
+EffectStateFactory *ConvolutionStateFactory_getFactory(void);
 
 #endif /* EFFECTS_BASE_H */

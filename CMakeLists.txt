@@ -629,6 +629,7 @@ set(ALC_OBJS
     alc/effects/autowah.cpp
     alc/effects/chorus.cpp
     alc/effects/compressor.cpp
+    alc/effects/convolution.cpp
     alc/effects/dedicated.cpp
     alc/effects/distortion.cpp
     alc/effects/echo.cpp

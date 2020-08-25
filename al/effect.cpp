@@ -101,7 +101,8 @@ constexpr struct FactoryItem {
     { AL_EFFECT_PITCH_SHIFTER, PshifterStateFactory_getFactory},
     { AL_EFFECT_VOCAL_MORPHER, VmorpherStateFactory_getFactory},
     { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedStateFactory_getFactory },
-    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory }
+    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory },
+    { AL_EFFECT_CONVOLUTION_REVERB_SOFT, ConvolutionStateFactory_getFactory }
 };
 
 

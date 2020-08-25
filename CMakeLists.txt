@@ -1508,6 +1508,10 @@ if(ALSOFT_EXAMPLES)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
 
+        add_executable(alconvolve examples/alconvolve.cpp)
+        target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} common SndFile::SndFile ex-common
+            ${UNICODE_FLAG})
+
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
                 alhrtf)

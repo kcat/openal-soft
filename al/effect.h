@@ -22,6 +22,7 @@ enum {
     PSHIFTER_EFFECT,
     VMORPHER_EFFECT,
     DEDICATED_EFFECT,
+    CONVOLUTION_EFFECT,
 
     MAX_EFFECTS
 };
@@ -34,7 +35,7 @@ struct EffectList {
     int type;
     ALenum val;
 };
-extern const EffectList gEffectList[15];
+extern const EffectList gEffectList[16];
 
 
 struct ALeffect {

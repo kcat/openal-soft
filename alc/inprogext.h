@@ -99,6 +99,11 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x199D
 #endif
 
+#ifndef AL_SOFT_convolution_reverb
+#define AL_SOFT_convolution_reverb
+#define AL_EFFECT_CONVOLUTION_REVERB_SOFT        0xA000
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

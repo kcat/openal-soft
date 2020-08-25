@@ -50,22 +50,23 @@
 #include "vector.h"
 
 
-const EffectList gEffectList[15]{
-    { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
-    { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },
-    { "autowah",    AUTOWAH_EFFECT,    AL_EFFECT_AUTOWAH },
-    { "chorus",     CHORUS_EFFECT,     AL_EFFECT_CHORUS },
-    { "compressor", COMPRESSOR_EFFECT, AL_EFFECT_COMPRESSOR },
-    { "distortion", DISTORTION_EFFECT, AL_EFFECT_DISTORTION },
-    { "echo",       ECHO_EFFECT,       AL_EFFECT_ECHO },
-    { "equalizer",  EQUALIZER_EFFECT,  AL_EFFECT_EQUALIZER },
-    { "flanger",    FLANGER_EFFECT,    AL_EFFECT_FLANGER },
-    { "fshifter",   FSHIFTER_EFFECT,   AL_EFFECT_FREQUENCY_SHIFTER },
-    { "modulator",  MODULATOR_EFFECT,  AL_EFFECT_RING_MODULATOR },
-    { "pshifter",   PSHIFTER_EFFECT,   AL_EFFECT_PITCH_SHIFTER },
-    { "vmorpher",   VMORPHER_EFFECT,   AL_EFFECT_VOCAL_MORPHER },
-    { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
-    { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_DIALOGUE },
+const EffectList gEffectList[16]{
+    { "eaxreverb",   EAXREVERB_EFFECT,   AL_EFFECT_EAXREVERB },
+    { "reverb",      REVERB_EFFECT,      AL_EFFECT_REVERB },
+    { "autowah",     AUTOWAH_EFFECT,     AL_EFFECT_AUTOWAH },
+    { "chorus",      CHORUS_EFFECT,      AL_EFFECT_CHORUS },
+    { "compressor",  COMPRESSOR_EFFECT,  AL_EFFECT_COMPRESSOR },
+    { "distortion",  DISTORTION_EFFECT,  AL_EFFECT_DISTORTION },
+    { "echo",        ECHO_EFFECT,        AL_EFFECT_ECHO },
+    { "equalizer",   EQUALIZER_EFFECT,   AL_EFFECT_EQUALIZER },
+    { "flanger",     FLANGER_EFFECT,     AL_EFFECT_FLANGER },
+    { "fshifter",    FSHIFTER_EFFECT,    AL_EFFECT_FREQUENCY_SHIFTER },
+    { "modulator",   MODULATOR_EFFECT,   AL_EFFECT_RING_MODULATOR },
+    { "pshifter",    PSHIFTER_EFFECT,    AL_EFFECT_PITCH_SHIFTER },
+    { "vmorpher",    VMORPHER_EFFECT,    AL_EFFECT_VOCAL_MORPHER },
+    { "dedicated",   DEDICATED_EFFECT,   AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
+    { "dedicated",   DEDICATED_EFFECT,   AL_EFFECT_DEDICATED_DIALOGUE },
+    { "convolution", CONVOLUTION_EFFECT, AL_EFFECT_CONVOLUTION_REVERB_SOFT },
 };
 
 bool DisabledEffects[MAX_EFFECTS];

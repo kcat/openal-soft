@@ -197,6 +197,7 @@ constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 
 
 struct ConvolutionFilter final : public EffectBufferBase {
+    size_t mCurrentSegment{0};
     size_t mNumConvolveSegs{0};
     complex_d *mInputHistory{};
     complex_d *mConvolveFilter[MAX_FILTER_CHANNELS]{};
@@ -370,6 +371,9 @@ void ConvolutionState::process(const size_t samplesToDo,
     /* No filter, no response. */
     if(!mFilter) return;
 
+    constexpr size_t m{ConvolveUpdateSize/2 + 1};
+    size_t curseg{mFilter->mCurrentSegment};
+
     for(size_t base{0u};base < samplesToDo;)
     {
         const size_t todo{minz(ConvolveUpdateSamples-mFifoPos, samplesToDo-base)};
@@ -397,8 +401,7 @@ void ConvolutionState::process(const size_t samplesToDo,
          */
         complex_fft(mFftBuffer, -1.0);
 
-        constexpr size_t m{ConvolveUpdateSize/2 + 1};
-        std::copy_n(mFftBuffer.begin(), m, mFilter->mInputHistory);
+        std::copy_n(mFftBuffer.begin(), m, &mFilter->mInputHistory[curseg*m]);
         mFftBuffer.fill(complex_d{});
 
         for(size_t c{0};c < mNumChannels;++c)
@@ -406,12 +409,18 @@ void ConvolutionState::process(const size_t samplesToDo,
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
-            for(size_t s{0};s < mFilter->mNumConvolveSegs;++s)
+            const complex_d *RESTRICT filter{mFilter->mConvolveFilter[c]};
+            const complex_d *RESTRICT input{&mFilter->mInputHistory[curseg*m]};
+            for(size_t s{curseg};s < mFilter->mNumConvolveSegs;++s)
             {
-                const complex_d *RESTRICT input{&mFilter->mInputHistory[s*m]};
-                const complex_d *RESTRICT filter{&mFilter->mConvolveFilter[c][s*m]};
-                for(size_t i{0};i < m;++i)
-                    mFftBuffer[i] += input[i] * filter[i];
+                for(size_t i{0};i < m;++i,++input,++filter)
+                    mFftBuffer[i] += *input * *filter;
+            }
+            input = mFilter->mInputHistory;
+            for(size_t s{0};s < curseg;++s)
+            {
+                for(size_t i{0};i < m;++i,++input,++filter)
+                    mFftBuffer[i] += *input * *filter;
             }
 
             /* Apply iFFT to get the 1024 (really 1023) samples for output. The
@@ -429,10 +438,9 @@ void ConvolutionState::process(const size_t samplesToDo,
         }
 
         /* Shift the input history. */
-        std::copy_backward(mFilter->mInputHistory,
-            mFilter->mInputHistory + (mFilter->mNumConvolveSegs-1)*m,
-            mFilter->mInputHistory + mFilter->mNumConvolveSegs*m);
+        curseg = curseg ? (curseg-1) : (mFilter->mNumConvolveSegs-1);
     }
+    mFilter->mCurrentSegment = curseg;
 
     /* Finally, mix to the output. */
     for(size_t c{0};c < mNumChannels;++c)

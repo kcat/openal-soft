@@ -6,6 +6,7 @@
 
 #include "almalloc.h"
 
+struct EffectBufferBase;
 struct EffectState;
 
 
@@ -23,6 +24,7 @@ enum {
 
     /* Internal events. */
     EventType_ReleaseEffectState = 65536,
+    EventType_ReleaseEffectBuffer,
 };
 
 struct AsyncEvent {
@@ -44,6 +46,7 @@ struct AsyncEvent {
             ALchar msg[232];
         } user;
         EffectState *mEffectState;
+        EffectBufferBase *mEffectBuffer;
     } u{};
 
     AsyncEvent() noexcept = default;

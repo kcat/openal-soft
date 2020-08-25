@@ -702,6 +702,8 @@ ALeffectslot::~ALeffectslot()
 
     if(Params.mEffectState)
         Params.mEffectState->release();
+    if(Params.mEffectBuffer)
+        Params.mEffectBuffer->release();
 }
 
 ALenum ALeffectslot::init()
@@ -764,6 +766,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
     while(props)
     {
         props->State = nullptr;
+        props->Buffer = nullptr;
         props = props->next.load(std::memory_order_relaxed);
     }
 
@@ -792,10 +795,8 @@ void ALeffectslot::updateProps(ALCcontext *context)
 
     props->Type = Effect.Type;
     props->Props = Effect.Props;
-    /* Swap out any stale effect state object there may be in the container, to
-     * delete it.
-     */
     props->State = Effect.State;
+    props->Buffer = Effect.Buffer;
 
     /* Set the new container for updating internal parameters. */
     props = Params.Update.exchange(props, std::memory_order_acq_rel);
@@ -805,6 +806,7 @@ void ALeffectslot::updateProps(ALCcontext *context)
          * freelist.
          */
         props->State = nullptr;
+        props->Buffer = nullptr;
         AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
 }

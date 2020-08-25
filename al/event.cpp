@@ -60,6 +60,11 @@ static int EventThread(ALCcontext *context)
                 evt.u.mEffectState->release();
                 continue;
             }
+            if(evt.EnumType == EventType_ReleaseEffectBuffer)
+            {
+                evt.u.mEffectBuffer->release();
+                continue;
+            }
 
             ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_acquire)};
             if(!context->mEventCb) continue;

@@ -32,6 +32,7 @@ struct ALeffectslotProps {
     EffectProps Props;
 
     al::intrusive_ptr<EffectState> State;
+    al::intrusive_ptr<EffectBufferBase> Buffer;
 
     std::atomic<ALeffectslotProps*> next;
 
@@ -67,6 +68,7 @@ struct ALeffectslot {
         ALenum EffectType{AL_EFFECT_NULL};
         EffectProps mEffectProps{};
         EffectState *mEffectState{nullptr};
+        EffectBufferBase *mEffectBuffer{nullptr};
 
         float RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
         float DecayTime{0.0f};

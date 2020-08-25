@@ -460,7 +460,14 @@ START_API_FUNC
                 DecrementRef(oldbuffer->ref);
             slot->Buffer = buffer;
 
-            /* TODO: Create a shared effectstate representation of the buffer. */
+            slot->Effect.Buffer = nullptr;
+            if(buffer)
+            {
+                FPUCtl mixer_mode{};
+                auto *state = slot->Effect.State.get();
+                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mData.data(),
+                    buffer->Frequency, buffer->mFmtType, buffer->mFmtChannels, buffer->SampleLen));
+            }
         }
         break;
 
@@ -730,6 +737,10 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         {
             FPUCtl mixer_mode{};
             State->deviceUpdate(Device);
+            Effect.Buffer = nullptr;
+            if(Buffer)
+                Effect.Buffer.reset(State->createBuffer(Device, Buffer->mData.data(),
+                    Buffer->Frequency, Buffer->mFmtType, Buffer->mFmtChannels, Buffer->SampleLen));
         }
 
         if(!effect)

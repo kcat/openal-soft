@@ -50,6 +50,7 @@ struct ALeffectslot {
         EffectProps Props{};
 
         al::intrusive_ptr<EffectState> State;
+        al::intrusive_ptr<EffectBufferBase> Buffer;
     } Effect;
 
     std::atomic_flag PropsClean;

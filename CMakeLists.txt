@@ -646,6 +646,8 @@ set(ALC_OBJS
     alc/filters/nfc.h
     alc/filters/splitter.cpp
     alc/filters/splitter.h
+    alc/fmt_traits.cpp
+    alc/fmt_traits.h
     alc/fpu_ctrl.cpp
     alc/fpu_ctrl.h
     alc/front_stablizer.h

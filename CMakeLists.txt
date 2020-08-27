@@ -1508,7 +1508,7 @@ if(ALSOFT_EXAMPLES)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
 
-        add_executable(alconvolve examples/alconvolve.cpp)
+        add_executable(alconvolve examples/alconvolve.c)
         target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} common SndFile::SndFile ex-common
             ${UNICODE_FLAG})
 

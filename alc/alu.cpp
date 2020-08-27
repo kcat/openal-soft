@@ -841,14 +841,17 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     {
         /* Special handling for B-Format sources. */
 
-        if(Distance > std::numeric_limits<float>::epsilon())
+        if(Device->AvgSpeakerDist > 0.0f)
         {
-            /* Panning a B-Format sound toward some direction is easy. Just pan
-             * the first (W) channel as a normal mono sound and silence the
-             * others.
-             */
-
-            if(Device->AvgSpeakerDist > 0.0f)
+            if(!(Distance > std::numeric_limits<float>::epsilon()))
+            {
+                /* NOTE: The NFCtrlFilters were created with a w0 of 0, which
+                 * is what we want for FOA input. The first channel may have
+                 * been previously re-adjusted if panned, so reset it.
+                 */
+                voice->mChans[0].mDryParams.NFCtrlFilter.adjust(0.0f);
+            }
+            else
             {
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
@@ -858,54 +861,54 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
-
-                voice->mFlags |= VOICE_HAS_NFC;
             }
 
-            auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
-            {
-                if(mode != StereoPair)
-                    return CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
-
-                /* Clamp Y, in case rounding errors caused it to end up outside
-                 * of -1...+1.
-                 */
-                const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
-                /* Negate Z for right-handed coords with -Z in front. */
-                const float az{std::atan2(xpos, -zpos)};
-
-                /* A scalar of 1.5 for plain stereo results in +/-60 degrees
-                 * being moved to +/-90 degrees for direct right and left
-                 * speaker responses.
-                 */
-                return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread);
-            };
-            const auto coeffs = calc_coeffs(Device->mRenderMode);
-
-            /* NOTE: W needs to be scaled according to channel scaling. */
-            const float scale0{GetAmbiScales(voice->mAmbiScaling)[0]};
-            ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base*scale0,
-                voice->mChans[0].mDryParams.Gains.Target);
-            for(ALuint i{0};i < NumSends;i++)
-            {
-                if(const ALeffectslot *Slot{SendSlots[i]})
-                    ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scale0,
-                        voice->mChans[0].mWetParams[i].Gains.Target);
-            }
+            voice->mFlags |= VOICE_HAS_NFC;
         }
-        else
+
+        /* Panning a B-Format sound toward some direction is easy. Just pan the
+         * first (W) channel as a normal mono sound. The angular spread is used
+         * as a directional scalar to blend between full coverage and full
+         * panning.
+         */
+        const float coverage{!(Distance > std::numeric_limits<float>::epsilon()) ? 1.0f :
+            (Spread * (1.0f/al::MathDefs<float>::Tau()))};
+
+        auto calc_coeffs = [xpos,ypos,zpos](RenderMode mode)
         {
-            if(Device->AvgSpeakerDist > 0.0f)
-            {
-                /* NOTE: The NFCtrlFilters were created with a w0 of 0, which
-                 * is what we want for FOA input. The first channel may have
-                 * been previously re-adjusted if panned, so reset it.
-                 */
-                voice->mChans[0].mDryParams.NFCtrlFilter.adjust(0.0f);
+            if(mode != StereoPair)
+                return CalcDirectionCoeffs({xpos, ypos, zpos}, 0.0f);
 
-                voice->mFlags |= VOICE_HAS_NFC;
-            }
+            /* Clamp Y, in case rounding errors caused it to end up outside
+             * of -1...+1.
+             */
+            const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+            /* Negate Z for right-handed coords with -Z in front. */
+            const float az{std::atan2(xpos, -zpos)};
 
+            /* A scalar of 1.5 for plain stereo results in +/-60 degrees
+             * being moved to +/-90 degrees for direct right and left
+             * speaker responses.
+             */
+            return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, 0.0f);
+        };
+        auto coeffs = calc_coeffs(Device->mRenderMode);
+        std::transform(coeffs.begin()+1, coeffs.end(), coeffs.begin()+1,
+            std::bind(std::multiplies<float>{}, _1, 1.0f-coverage));
+
+        /* NOTE: W needs to be scaled according to channel scaling. */
+        const auto &scales = GetAmbiScales(voice->mAmbiScaling);
+        ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base*scales[0],
+            voice->mChans[0].mDryParams.Gains.Target);
+        for(ALuint i{0};i < NumSends;i++)
+        {
+            if(const ALeffectslot *Slot{SendSlots[i]})
+                ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scales[0],
+                    voice->mChans[0].mWetParams[i].Gains.Target);
+        }
+
+        if(coverage > 0.0f)
+        {
             /* Local B-Format sources have their XYZ channels rotated according
              * to the orientation.
              */
@@ -940,20 +943,19 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             const uint8_t *index_map{(voice->mFmtChannels == FmtBFormat2D) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
-            const float *scales{GetAmbiScales(voice->mAmbiScaling).data()};
 
             static const uint8_t ChansPerOrder[MAX_AMBI_ORDER+1]{1, 3, 5, 7,};
             static const uint8_t OrderOffset[MAX_AMBI_ORDER+1]{0, 1, 4, 9,};
-            for(size_t c{0};c < num_channels;c++)
+            for(size_t c{1};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
                 const size_t order{AmbiIndex::OrderFromChannel[acn]};
                 const size_t tocopy{ChansPerOrder[order]};
                 const size_t offset{OrderOffset[order]};
-                const float scale{scales[acn]};
+                const float scale{scales[acn] * coverage};
                 auto in = shrot.cbegin() + offset;
 
-                std::array<float,MAX_AMBI_CHANNELS> coeffs{};
+                coeffs = std::array<float,MAX_AMBI_CHANNELS>{};
                 for(size_t x{0};x < tocopy;++x)
                     coeffs[offset+x] = in[x][acn] * scale;
 

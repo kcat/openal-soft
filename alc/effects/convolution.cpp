@@ -136,6 +136,9 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
     const al::byte *sampleData, ALuint sampleRate, FmtType sampleType,
     FmtChannels channelType, ALuint numSamples)
 {
+    /* An empty buffer doesn't need a convolution filter. */
+    if(numSamples < 1) return nullptr;
+
     /* FIXME: Support anything. */
     if(channelType != FmtMono && channelType != FmtStereo)
         return nullptr;

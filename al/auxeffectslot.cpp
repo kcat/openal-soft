@@ -453,9 +453,13 @@ START_API_FUNC
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
                 if(!buffer) SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid buffer ID");
+                if(buffer->Callback)
+                    SETERR_RETURN(context, AL_INVALID_OPERATION,,
+                        "Callback buffer not valid for effects");
+
+                IncrementRef(buffer->ref);
             }
 
-            if(buffer) IncrementRef(buffer->ref);
             if(ALbuffer *oldbuffer{slot->Buffer})
                 DecrementRef(oldbuffer->ref);
             slot->Buffer = buffer;

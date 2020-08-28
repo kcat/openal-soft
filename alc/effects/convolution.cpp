@@ -10,6 +10,7 @@
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alspan.h"
+#include "buffer_storage.h"
 #include "effects/base.h"
 #include "fmt_traits.h"
 #include "logging.h"
@@ -107,8 +108,7 @@ struct ConvolutionState final : public EffectState {
     ~ConvolutionState() override = default;
 
     void deviceUpdate(const ALCdevice *device) override;
-    EffectBufferBase *createBuffer(const ALCdevice *device, const al::byte *sampleData,
-        ALuint sampleRate, FmtType sampleType, FmtChannels channelType, ALuint numSamples) override;
+    EffectBufferBase *createBuffer(const ALCdevice *device, const BufferStorage &buffer) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
@@ -133,14 +133,13 @@ void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
 }
 
 EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
-    const al::byte *sampleData, ALuint sampleRate, FmtType sampleType,
-    FmtChannels channelType, ALuint numSamples)
+    const BufferStorage &buffer)
 {
     /* An empty buffer doesn't need a convolution filter. */
-    if(numSamples < 1) return nullptr;
+    if(buffer.mSampleLen < 1) return nullptr;
 
     /* FIXME: Support anything. */
-    if(channelType != FmtMono && channelType != FmtStereo)
+    if(buffer.mChannels != FmtMono && buffer.mChannels != FmtStereo)
         return nullptr;
 
     /* The impulse response needs to have the same sample rate as the input and
@@ -149,21 +148,23 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
      * very infrequent called, go ahead and use the polyphase resampler.
      */
     PPhaseResampler resampler;
-    if(device->Frequency != sampleRate)
-        resampler.init(sampleRate, device->Frequency);
+    if(device->Frequency != buffer.mSampleRate)
+        resampler.init(buffer.mSampleRate, device->Frequency);
     const auto resampledCount = static_cast<ALuint>(
-        (uint64_t{numSamples}*device->Frequency + (sampleRate-1)) / sampleRate);
+        (uint64_t{buffer.mSampleLen}*device->Frequency + (buffer.mSampleRate-1)) /
+        buffer.mSampleRate);
 
     al::intrusive_ptr<ConvolutionFilter> filter{new ConvolutionFilter{}};
 
-    auto bytesPerSample = BytesFromFmt(sampleType);
-    auto numChannels = ChannelsFromFmt(channelType, 1);
+    auto bytesPerSample = BytesFromFmt(buffer.mType);
+    auto numChannels = ChannelsFromFmt(buffer.mChannels, buffer.mAmbiOrder);
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
 
     /* Calculate the number of segments needed to hold the impulse response and
      * the input history (rounded up), and allocate them.
      */
-    filter->mNumConvolveSegs = (numSamples+(ConvolveUpdateSamples-1)) / ConvolveUpdateSamples;
+    filter->mNumConvolveSegs = (buffer.mSampleLen+(ConvolveUpdateSamples-1)) /
+        ConvolveUpdateSamples;
 
     const size_t complex_length{filter->mNumConvolveSegs * m * (numChannels+1)};
     filter->mComplexData = std::make_unique<complex_d[]>(complex_length);
@@ -174,17 +175,18 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
     for(size_t c{1};c < numChannels;++c)
         filter->mConvolveFilter[c] = filter->mConvolveFilter[c-1] + filter->mNumConvolveSegs*m;
 
-    filter->mChannels = channelType;
+    filter->mChannels = buffer.mChannels;
 
     auto fftbuffer = std::make_unique<std::array<complex_d,ConvolveUpdateSize>>();
-    auto srcsamples = std::make_unique<double[]>(maxz(numSamples, resampledCount));
+    auto srcsamples = std::make_unique<double[]>(maxz(buffer.mSampleLen, resampledCount));
     for(size_t c{0};c < numChannels;++c)
     {
         /* Load the samples from the buffer, and resample to match the device. */
-        LoadSamples(srcsamples.get(), sampleData + bytesPerSample*c, numChannels, sampleType,
-            numSamples);
-        if(device->Frequency != sampleRate)
-            resampler.process(numSamples, srcsamples.get(), resampledCount, srcsamples.get());
+        LoadSamples(srcsamples.get(), buffer.mData.data() + bytesPerSample*c, numChannels,
+            buffer.mType, buffer.mSampleLen);
+        if(device->Frequency != buffer.mSampleRate)
+            resampler.process(buffer.mSampleLen, srcsamples.get(), resampledCount,
+                srcsamples.get());
 
         size_t done{0};
         complex_d *filteriter = filter->mConvolveFilter[c];

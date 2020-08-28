@@ -469,9 +469,7 @@ START_API_FUNC
             {
                 FPUCtl mixer_mode{};
                 auto *state = slot->Effect.State.get();
-                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer.mData.data(),
-                    buffer->mBuffer.mSampleRate, buffer->mBuffer.mType, buffer->mBuffer.mChannels,
-                    buffer->mBuffer.mSampleLen));
+                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer));
             }
         }
         break;
@@ -746,9 +744,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
             State->deviceUpdate(Device);
             Effect.Buffer = nullptr;
             if(Buffer)
-                Effect.Buffer.reset(State->createBuffer(Device, Buffer->mBuffer.mData.data(),
-                    Buffer->mBuffer.mSampleRate, Buffer->mBuffer.mType, Buffer->mBuffer.mChannels,
-                    Buffer->mBuffer.mSampleLen));
+                Effect.Buffer.reset(State->createBuffer(Device, Buffer->mBuffer));
         }
 
         if(!effect)

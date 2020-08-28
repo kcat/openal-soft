@@ -8,10 +8,10 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
-#include "buffer_storage.h"
 #include "intrusive_ptr.h"
 
 struct ALeffectslot;
+struct BufferStorage;
 
 
 union EffectProps {
@@ -173,11 +173,10 @@ struct EffectState : public al::intrusive_ref<EffectState> {
     virtual void deviceUpdate(const ALCdevice *device) = 0;
     /* Implementations are currently required to copy the buffer data if they
      * wish to hold on to it, as there's no guarantee the buffer won't be
-     * detached and deleted or altered during a mix.
+     * deleted or altered during a mix.
      */
     virtual EffectBufferBase *createBuffer(const ALCdevice */*device*/,
-        const al::byte */*sampleData*/, ALuint /*sampleRate*/, FmtType /*sampleType*/,
-        FmtChannels /*channelType*/, ALuint /*numSamples*/)
+        const BufferStorage &/*buffer*/)
     { return nullptr; }
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) = 0;

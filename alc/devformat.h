@@ -85,14 +85,14 @@ ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALuint ambiorder) noexcept;
 inline ALuint FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, ALuint ambiorder) noexcept
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
-enum class AmbiLayout {
+enum class DevAmbiLayout : ALenum {
     FuMa = ALC_FUMA_SOFT, /* FuMa channel order */
     ACN = ALC_ACN_SOFT,   /* ACN channel order */
 
     Default = ACN
 };
 
-enum class AmbiNorm {
+enum class DevAmbiScaling : ALenum {
     FuMa = ALC_FUMA_SOFT, /* FuMa normalization */
     SN3D = ALC_SN3D_SOFT, /* SN3D normalization */
     N3D = ALC_N3D_SOFT,   /* N3D normalization */

@@ -1834,8 +1834,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             if(schans == ALC_BFORMAT3D_SOFT)
             {
                 device->mAmbiOrder = aorder;
-                device->mAmbiLayout = static_cast<AmbiLayout>(alayout);
-                device->mAmbiScale = static_cast<AmbiNorm>(ascale);
+                device->mAmbiLayout = static_cast<DevAmbiLayout>(alayout);
+                device->mAmbiScale = static_cast<DevAmbiScaling>(ascale);
             }
         }
 
@@ -2101,8 +2101,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             if(ALbuffer *buffer{slot->Buffer})
             {
                 slot->Effect.Buffer = nullptr;
-                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mData.data(),
-                    buffer->Frequency, buffer->mFmtType, buffer->mFmtChannels, buffer->SampleLen));
+                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer.mData.data(),
+                    buffer->mBuffer.mSampleRate, buffer->mBuffer.mType, buffer->mBuffer.mChannels,
+                    buffer->mBuffer.mSampleLen));
             }
             slot->updateProps(context);
         }
@@ -2128,9 +2129,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 if(ALbuffer *buffer{slot->Buffer})
                 {
                     slot->Effect.Buffer = nullptr;
-                    slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mData.data(),
-                        buffer->Frequency, buffer->mFmtType, buffer->mFmtChannels,
-                        buffer->SampleLen));
+                    slot->Effect.Buffer.reset(state->createBuffer(device,
+                        buffer->mBuffer.mData.data(), buffer->mBuffer.mSampleRate,
+                        buffer->mBuffer.mType, buffer->mBuffer.mChannels,
+                        buffer->mBuffer.mSampleLen));
                 }
                 slot->updateProps(context);
             }
@@ -3634,19 +3636,19 @@ START_API_FUNC
                     ((device->mAmbiOrder%10) == 3) ? "rd" : "th");
             else
             {
-                device->mAmbiLayout = AmbiLayout::FuMa;
-                device->mAmbiScale = AmbiNorm::FuMa;
+                device->mAmbiLayout = DevAmbiLayout::FuMa;
+                device->mAmbiScale = DevAmbiScaling::FuMa;
             }
         }
         else if(al::strcasecmp(fmt, "ambix") == 0 || al::strcasecmp(fmt, "acn+sn3d") == 0)
         {
-            device->mAmbiLayout = AmbiLayout::ACN;
-            device->mAmbiScale = AmbiNorm::SN3D;
+            device->mAmbiLayout = DevAmbiLayout::ACN;
+            device->mAmbiScale = DevAmbiScaling::SN3D;
         }
         else if(al::strcasecmp(fmt, "acn+n3d") == 0)
         {
-            device->mAmbiLayout = AmbiLayout::ACN;
-            device->mAmbiScale = AmbiNorm::N3D;
+            device->mAmbiLayout = DevAmbiLayout::ACN;
+            device->mAmbiScale = DevAmbiScaling::N3D;
         }
         else
             ERR("Unsupported ambi-format: %s\n", fmt);

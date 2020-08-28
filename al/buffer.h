@@ -39,26 +39,13 @@ enum UserFmtChannels : unsigned char {
 
 
 struct ALbuffer {
-    al::vector<al::byte,16> mData;
+    BufferStorage mBuffer;
 
-    ALuint Frequency{0u};
     ALbitfieldSOFT Access{0u};
-    ALuint SampleLen{0u};
-
-    FmtChannels mFmtChannels{};
-    FmtType     mFmtType{};
 
     UserFmtType OriginalType{};
     ALuint OriginalSize{0};
     ALuint OriginalAlign{0};
-
-    ALenum AmbiLayout{AL_FUMA_SOFT};
-    ALenum AmbiScaling{AL_FUMA_SOFT};
-    /* AmbiOrder is only updated when loading new data. */
-    ALuint AmbiOrder{0};
-
-    LPALBUFFERCALLBACKTYPESOFT Callback{nullptr};
-    void *UserData{nullptr};
 
     ALuint LoopStart{0u};
     ALuint LoopEnd{0u};
@@ -77,10 +64,9 @@ struct ALbuffer {
     /* Self ID */
     ALuint id{0};
 
-    inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mFmtType); }
-    inline ALuint channelsFromFmt() const noexcept
-    { return ChannelsFromFmt(mFmtChannels, AmbiOrder); }
-    inline ALuint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
+    inline ALuint bytesFromFmt() const noexcept { return mBuffer.bytesFromFmt(); }
+    inline ALuint channelsFromFmt() const noexcept { return mBuffer.channelsFromFmt(); }
+    inline ALuint frameSizeFromFmt() const noexcept { return mBuffer.frameSizeFromFmt(); }
 
     DISABLE_ALLOC()
 };

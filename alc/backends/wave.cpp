@@ -271,8 +271,8 @@ bool WaveBackend::reset()
         case DevFmtAmbi3D:
             /* .amb output requires FuMa */
             mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);
-            mDevice->mAmbiLayout = AmbiLayout::FuMa;
-            mDevice->mAmbiScale = AmbiNorm::FuMa;
+            mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
+            mDevice->mAmbiScale = DevAmbiScaling::FuMa;
             isbformat = 1;
             chanmask = 0;
             break;

@@ -210,8 +210,8 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
-    AmbiLayout mAmbiLayout{AmbiLayout::Default};
-    AmbiNorm   mAmbiScale{AmbiNorm::Default};
+    DevAmbiLayout mAmbiLayout{DevAmbiLayout::Default};
+    DevAmbiScaling mAmbiScale{DevAmbiScaling::Default};
 
     ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 

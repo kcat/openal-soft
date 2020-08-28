@@ -342,10 +342,10 @@ inline ALuint dither_rng(ALuint *seed) noexcept
 }
 
 
-auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
+auto GetAmbiScales(AmbiScaling scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
 {
-    if(scaletype == AmbiNorm::FuMa) return AmbiScale::FromFuMa;
-    if(scaletype == AmbiNorm::SN3D) return AmbiScale::FromSN3D;
+    if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa;
+    if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D;
     return AmbiScale::FromN3D;
 }
 

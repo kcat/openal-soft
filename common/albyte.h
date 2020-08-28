@@ -2,6 +2,7 @@
 #define AL_BYTE_H
 
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 

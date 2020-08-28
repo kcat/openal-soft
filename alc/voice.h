@@ -10,6 +10,7 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "alu.h"
+#include "buffer_storage.h"
 #include "devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
@@ -221,7 +222,7 @@ struct Voice {
     ALuint mFrequency;
     ALuint mSampleSize;
     AmbiLayout mAmbiLayout;
-    AmbiNorm mAmbiScaling;
+    AmbiScaling mAmbiScaling;
     ALuint mAmbiOrder;
 
     /** Current target parameters used for mixing. */

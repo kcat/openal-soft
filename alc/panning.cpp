@@ -303,16 +303,16 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
 }
 
 
-auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
+auto GetAmbiScales(DevAmbiScaling scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
 {
-    if(scaletype == AmbiNorm::FuMa) return AmbiScale::FromFuMa;
-    if(scaletype == AmbiNorm::SN3D) return AmbiScale::FromSN3D;
+    if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa;
+    if(scaletype == DevAmbiScaling::SN3D) return AmbiScale::FromSN3D;
     return AmbiScale::FromN3D;
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI_CHANNELS>&
+auto GetAmbiLayout(DevAmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI_CHANNELS>&
 {
-    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
+    if(layouttype == DevAmbiLayout::FuMa) return AmbiIndex::FromFuMa;
     return AmbiIndex::FromACN;
 }
 

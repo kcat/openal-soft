@@ -453,7 +453,7 @@ START_API_FUNC
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
                 if(!buffer) SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid buffer ID");
-                if(buffer->Callback)
+                if(buffer->mBuffer.mCallback)
                     SETERR_RETURN(context, AL_INVALID_OPERATION,,
                         "Callback buffer not valid for effects");
 
@@ -469,8 +469,9 @@ START_API_FUNC
             {
                 FPUCtl mixer_mode{};
                 auto *state = slot->Effect.State.get();
-                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mData.data(),
-                    buffer->Frequency, buffer->mFmtType, buffer->mFmtChannels, buffer->SampleLen));
+                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer.mData.data(),
+                    buffer->mBuffer.mSampleRate, buffer->mBuffer.mType, buffer->mBuffer.mChannels,
+                    buffer->mBuffer.mSampleLen));
             }
         }
         break;
@@ -745,8 +746,9 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
             State->deviceUpdate(Device);
             Effect.Buffer = nullptr;
             if(Buffer)
-                Effect.Buffer.reset(State->createBuffer(Device, Buffer->mData.data(),
-                    Buffer->Frequency, Buffer->mFmtType, Buffer->mFmtChannels, Buffer->SampleLen));
+                Effect.Buffer.reset(State->createBuffer(Device, Buffer->mBuffer.mData.data(),
+                    Buffer->mBuffer.mSampleRate, Buffer->mBuffer.mType, Buffer->mBuffer.mChannels,
+                    Buffer->mBuffer.mSampleLen));
         }
 
         if(!effect)

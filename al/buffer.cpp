@@ -466,11 +466,11 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
-        if UNLIKELY(ALBuf->mFmtChannels != DstChannels || ALBuf->OriginalType != SrcType)
+        if UNLIKELY(ALBuf->mBuffer.mChannels != DstChannels || ALBuf->OriginalType != SrcType)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
         if UNLIKELY(ALBuf->OriginalAlign != align)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
-        if(ALBuf->AmbiOrder != ambiorder)
+        if(ALBuf->mBuffer.mAmbiOrder != ambiorder)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched order");
     }
 
@@ -508,55 +508,55 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      * use AL_SIZE to try to get the buffer's play length.
      */
     newsize = RoundUp(newsize, 16);
-    if(newsize != ALBuf->mData.size())
+    if(newsize != ALBuf->mBuffer.mData.size())
     {
         auto newdata = al::vector<al::byte,16>(newsize, al::byte{});
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
-            const size_t tocopy{minz(newdata.size(), ALBuf->mData.size())};
-            std::copy_n(ALBuf->mData.begin(), tocopy, newdata.begin());
+            const size_t tocopy{minz(newdata.size(), ALBuf->mBuffer.mData.size())};
+            std::copy_n(ALBuf->mBuffer.mData.begin(), tocopy, newdata.begin());
         }
-        newdata.swap(ALBuf->mData);
+        newdata.swap(ALBuf->mBuffer.mData);
     }
 
     if(SrcType == UserFmtIMA4)
     {
         assert(DstType == FmtShort);
-        if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_int16_ima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
+        if(SrcData != nullptr && !ALBuf->mBuffer.mData.empty())
+            Convert_int16_ima4(reinterpret_cast<int16_t*>(ALBuf->mBuffer.mData.data()), SrcData,
                 NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
         assert(DstType == FmtShort);
-        if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
+        if(SrcData != nullptr && !ALBuf->mBuffer.mData.empty())
+            Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mBuffer.mData.data()), SrcData,
                 NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else
     {
         assert(static_cast<long>(SrcType) == static_cast<long>(DstType));
-        if(SrcData != nullptr && !ALBuf->mData.empty())
-            std::copy_n(SrcData, frames*FrameSize, ALBuf->mData.begin());
+        if(SrcData != nullptr && !ALBuf->mBuffer.mData.empty())
+            std::copy_n(SrcData, frames*FrameSize, ALBuf->mBuffer.mData.begin());
         ALBuf->OriginalAlign = 1;
     }
     ALBuf->OriginalSize = size;
     ALBuf->OriginalType = SrcType;
 
-    ALBuf->Frequency = static_cast<ALuint>(freq);
-    ALBuf->mFmtChannels = DstChannels;
-    ALBuf->mFmtType = DstType;
+    ALBuf->mBuffer.mSampleRate = static_cast<ALuint>(freq);
+    ALBuf->mBuffer.mChannels = DstChannels;
+    ALBuf->mBuffer.mType = DstType;
     ALBuf->Access = access;
-    ALBuf->AmbiOrder = ambiorder;
+    ALBuf->mBuffer.mAmbiOrder = ambiorder;
 
-    ALBuf->Callback = nullptr;
-    ALBuf->UserData = nullptr;
+    ALBuf->mBuffer.mCallback = nullptr;
+    ALBuf->mBuffer.mUserData = nullptr;
 
-    ALBuf->SampleLen = frames;
+    ALBuf->mBuffer.mSampleLen = frames;
     ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = ALBuf->SampleLen;
+    ALBuf->LoopEnd = ALBuf->mBuffer.mSampleLen;
 }
 
 /** Prepares the buffer to use the specified callback, using the specified format. */
@@ -605,24 +605,24 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
         ALBuf->UnpackAmbiOrder : 0};
 
     al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, ambiorder) *
-        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)}).swap(ALBuf->mData);
+        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)}).swap(ALBuf->mBuffer.mData);
 
-    ALBuf->Callback = callback;
-    ALBuf->UserData = userptr;
+    ALBuf->mBuffer.mCallback = callback;
+    ALBuf->mBuffer.mUserData = userptr;
 
     ALBuf->OriginalType = SrcType;
     ALBuf->OriginalSize = 0;
     ALBuf->OriginalAlign = 1;
 
-    ALBuf->Frequency = static_cast<ALuint>(freq);
-    ALBuf->mFmtChannels = DstChannels;
-    ALBuf->mFmtType = DstType;
+    ALBuf->mBuffer.mSampleRate = static_cast<ALuint>(freq);
+    ALBuf->mBuffer.mChannels = DstChannels;
+    ALBuf->mBuffer.mType = DstType;
     ALBuf->Access = 0;
-    ALBuf->AmbiOrder = ambiorder;
+    ALBuf->mBuffer.mAmbiOrder = ambiorder;
 
-    ALBuf->SampleLen = 0;
+    ALBuf->mBuffer.mSampleLen = 0;
     ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = ALBuf->SampleLen;
+    ALBuf->LoopEnd = ALBuf->mBuffer.mSampleLen;
 }
 
 
@@ -883,7 +883,7 @@ START_API_FUNC
                 offset, length, buffer);
         else
         {
-            void *retval = albuf->mData.data() + offset;
+            void *retval{albuf->mBuffer.mData.data() + offset};
             albuf->MappedAccess = access;
             albuf->MappedOffset = offset;
             albuf->MappedSize = length;
@@ -977,15 +977,15 @@ START_API_FUNC
     ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
     if UNLIKELY(align < 1)
         context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u", unpack_align);
-    else if UNLIKELY(long{usrfmt->channels} != long{albuf->mFmtChannels}
+    else if UNLIKELY(long{usrfmt->channels} != long{albuf->mBuffer.mChannels}
         || usrfmt->type != albuf->OriginalType)
         context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
     else if UNLIKELY(align != albuf->OriginalAlign)
         context->setError(AL_INVALID_VALUE,
             "Unpacking data with alignment %u does not match original alignment %u", align,
             albuf->OriginalAlign);
-    else if UNLIKELY((albuf->mFmtChannels == FmtBFormat2D || albuf->mFmtChannels == FmtBFormat3D)
-        && albuf->UnpackAmbiOrder != albuf->AmbiOrder)
+    else if UNLIKELY(albuf->mBuffer.isBFormat()
+        && albuf->UnpackAmbiOrder != albuf->mBuffer.mAmbiOrder)
         context->setError(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
     else if UNLIKELY(albuf->MappedAccess != 0)
         context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
@@ -1017,16 +1017,16 @@ START_API_FUNC
             size_t byteoff{static_cast<ALuint>(offset)/byte_align * align * frame_size};
             size_t samplen{static_cast<ALuint>(length)/byte_align * align};
 
-            void *dst = albuf->mData.data() + byteoff;
-            if(usrfmt->type == UserFmtIMA4 && albuf->mFmtType == FmtShort)
+            void *dst = albuf->mBuffer.mData.data() + byteoff;
+            if(usrfmt->type == UserFmtIMA4 && albuf->mBuffer.mType == FmtShort)
                 Convert_int16_ima4(static_cast<int16_t*>(dst), static_cast<const al::byte*>(data),
                     num_chans, samplen, align);
-            else if(usrfmt->type == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
+            else if(usrfmt->type == UserFmtMSADPCM && albuf->mBuffer.mType == FmtShort)
                 Convert_int16_msadpcm(static_cast<int16_t*>(dst),
                     static_cast<const al::byte*>(data), num_chans, samplen, align);
             else
             {
-                assert(long{usrfmt->type} == long{albuf->mFmtType});
+                assert(long{usrfmt->type} == long{albuf->mBuffer.mType});
                 memcpy(dst, data, size_t{samplen} * frame_size);
             }
         }
@@ -1177,7 +1177,7 @@ START_API_FUNC
         else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_ACN_SOFT)
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic layout %04x", value);
         else
-            albuf->AmbiLayout = value;
+            albuf->mBuffer.mAmbiLayout = static_cast<AmbiLayout>(value);
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
@@ -1187,7 +1187,7 @@ START_API_FUNC
         else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_SN3D_SOFT && value != AL_N3D_SOFT)
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling %04x", value);
         else
-            albuf->AmbiScaling = value;
+            albuf->mBuffer.mAmbiScaling = static_cast<AmbiScaling>(value);
         break;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
@@ -1258,7 +1258,7 @@ START_API_FUNC
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
         else if UNLIKELY(values[0] < 0 || values[0] >= values[1]
-            || static_cast<ALuint>(values[1]) > albuf->SampleLen)
+            || static_cast<ALuint>(values[1]) > albuf->mBuffer.mSampleLen)
             context->setError(AL_INVALID_VALUE, "Invalid loop point range %d -> %d on buffer %u",
                 values[0], values[1], buffer);
         else
@@ -1363,7 +1363,7 @@ START_API_FUNC
     else switch(param)
     {
     case AL_FREQUENCY:
-        *value = static_cast<ALint>(albuf->Frequency);
+        *value = static_cast<ALint>(albuf->mBuffer.mSampleRate);
         break;
 
     case AL_BITS:
@@ -1375,7 +1375,7 @@ START_API_FUNC
         break;
 
     case AL_SIZE:
-        *value = static_cast<ALint>(albuf->SampleLen * albuf->frameSizeFromFmt());
+        *value = static_cast<ALint>(albuf->mBuffer.mSampleLen * albuf->frameSizeFromFmt());
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
@@ -1387,11 +1387,11 @@ START_API_FUNC
         break;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
-        *value = albuf->AmbiLayout;
+        *value = static_cast<int>(albuf->mBuffer.mAmbiLayout);
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
-        *value = albuf->AmbiScaling;
+        *value = static_cast<int>(albuf->mBuffer.mAmbiScaling);
         break;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
@@ -1516,10 +1516,10 @@ START_API_FUNC
     else switch(param)
     {
     case AL_BUFFER_CALLBACK_FUNCTION_SOFT:
-        *value = reinterpret_cast<void*>(albuf->Callback);
+        *value = reinterpret_cast<void*>(albuf->mBuffer.mCallback);
         break;
     case AL_BUFFER_CALLBACK_USER_PARAM_SOFT:
-        *value = albuf->UserData;
+        *value = albuf->mBuffer.mUserData;
         break;
 
     default:

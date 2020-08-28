@@ -8,7 +8,7 @@
 #include "albyte.h"
 #include "almalloc.h"
 #include "atomic.h"
-#include "buffer_formats.h"
+#include "buffer_storage.h"
 #include "inprogext.h"
 #include "vector.h"
 

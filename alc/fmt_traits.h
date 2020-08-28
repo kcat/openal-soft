@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include "albyte.h"
-#include "buffer_formats.h"
+#include "buffer_storage.h"
 
 
 namespace al {

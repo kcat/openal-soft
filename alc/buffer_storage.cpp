@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "buffer_formats.h"
+#include "buffer_storage.h"
 
 #include <cstdint>
 

@@ -8,7 +8,7 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
-#include "buffer_formats.h"
+#include "buffer_storage.h"
 #include "intrusive_ptr.h"
 
 struct ALeffectslot;

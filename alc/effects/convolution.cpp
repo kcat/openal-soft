@@ -138,7 +138,7 @@ struct ConvolutionState final : public EffectState {
 
     void NormalMix(const al::span<FloatBufferLine> samplesOut, const size_t samplesToDo);
     void UpsampleMix(const al::span<FloatBufferLine> samplesOut, const size_t samplesToDo);
-    void (ConvolutionState::*Mix)(const al::span<FloatBufferLine>,const size_t)
+    void (ConvolutionState::*mMix)(const al::span<FloatBufferLine>,const size_t)
     {&ConvolutionState::NormalMix};
 
     void deviceUpdate(const ALCdevice *device) override;
@@ -273,8 +273,10 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     const EffectProps* /*props*/, const EffectTarget target)
 {
     mFilter = static_cast<ConvolutionFilter*>(slot->Params.mEffectBuffer);
-    mNumChannels = ChannelsFromFmt(mFilter->mChannels, mFilter->mAmbiOrder);
-    Mix = &ConvolutionState::NormalMix;
+    if(!mFilter) return;
+
+    mNumChannels = mFilter ? ChannelsFromFmt(mFilter->mChannels, mFilter->mAmbiOrder) : 0u;
+    mMix = &ConvolutionState::NormalMix;
 
     /* The iFFT'd response is scaled up by the number of bins, so apply the
      * inverse to the output mixing gain.
@@ -286,7 +288,7 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
         ALCdevice *device{context->mDevice.get()};
         if(device->mAmbiOrder > mFilter->mAmbiOrder)
         {
-            Mix = &ConvolutionState::UpsampleMix;
+            mMix = &ConvolutionState::UpsampleMix;
             const auto scales = BFormatDec::GetHFOrderScales(mFilter->mAmbiOrder,
                 device->mAmbiOrder);
             mOutChans[0].mHfScale = scales[0];
@@ -419,7 +421,7 @@ void ConvolutionState::process(const size_t samplesToDo,
     mFilter->mCurrentSegment = curseg;
 
     /* Finally, mix to the output. */
-    (this->*Mix)(samplesOut, samplesToDo);
+    (this->*mMix)(samplesOut, samplesToDo);
 }
 
 

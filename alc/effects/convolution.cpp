@@ -275,7 +275,9 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     mFilter = static_cast<ConvolutionFilter*>(slot->Params.mEffectBuffer);
     if(!mFilter) return;
 
-    mNumChannels = mFilter ? ChannelsFromFmt(mFilter->mChannels, mFilter->mAmbiOrder) : 0u;
+    ALCdevice *device{context->mDevice.get()};
+    const ALuint min_order{minu(mFilter->mAmbiOrder, device->mAmbiOrder)};
+    mNumChannels = mFilter ? ChannelsFromFmt(mFilter->mChannels, min_order) : 0u;
     mMix = &ConvolutionState::NormalMix;
 
     /* The iFFT'd response is scaled up by the number of bins, so apply the
@@ -285,7 +287,6 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     const float gain{slot->Params.Gain * (1.0f/m)};
     if(mFilter->mChannels == FmtBFormat3D || mFilter->mChannels == FmtBFormat2D)
     {
-        ALCdevice *device{context->mDevice.get()};
         if(device->mAmbiOrder > mFilter->mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;

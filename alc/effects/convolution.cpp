@@ -223,7 +223,7 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
     /* Calculate the number of segments needed to hold the impulse response and
      * the input history (rounded up), and allocate them.
      */
-    filter->mNumConvolveSegs = (buffer.mSampleLen+(ConvolveUpdateSamples-1)) /
+    filter->mNumConvolveSegs = (resampledCount+(ConvolveUpdateSamples-1)) /
         ConvolveUpdateSamples;
 
     const size_t complex_length{filter->mNumConvolveSegs * m * (numChannels+1)};

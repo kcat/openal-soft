@@ -73,22 +73,22 @@ struct LoadedHrtf {
 /* Data set limits must be the same as or more flexible than those defined in
  * the makemhr utility.
  */
-#define MIN_FD_COUNT                 (1)
-#define MAX_FD_COUNT                 (16)
+#define MIN_FD_COUNT                 1
+#define MAX_FD_COUNT                 16
 
-#define MIN_FD_DISTANCE              (50)
-#define MAX_FD_DISTANCE              (2500)
+#define MIN_FD_DISTANCE              50
+#define MAX_FD_DISTANCE              2500
 
-#define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (181)
+#define MIN_EV_COUNT                 5
+#define MAX_EV_COUNT                 181
 
-#define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (255)
+#define MIN_AZ_COUNT                 1
+#define MAX_AZ_COUNT                 255
 
 #define MAX_HRIR_DELAY               (HRTF_HISTORY_LENGTH-1)
 
 #define HRIR_DELAY_FRACBITS 2
-#define HRIR_DELAY_FRACONE (1<<HRIR_DELAY_FRACBITS)
+#define HRIR_DELAY_FRACONE  (1<<HRIR_DELAY_FRACBITS)
 #define HRIR_DELAY_FRACHALF (HRIR_DELAY_FRACONE>>1)
 
 static_assert(MAX_HRIR_DELAY*HRIR_DELAY_FRACONE < 256, "MAX_HRIR_DELAY or DELAY_FRAC too large");

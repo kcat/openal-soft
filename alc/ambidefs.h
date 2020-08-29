@@ -27,7 +27,7 @@ constexpr inline size_t AmbiChannelsFromOrder(size_t order) noexcept
  * channels are used/needed, there's no height (e.g. with most surround sound
  * speaker setups). This is ACN ordering, with bit 0 being ACN 0, etc.
  */
-#define AMBI_PERIPHONIC_MASK (0xfe7ce4)
+#define AMBI_PERIPHONIC_MASK 0xfe7ce4
 
 /* The maximum number of ambisonic channels for 2D (non-periphonic)
  * representation. This is 2 per each order above zero-order, plus 1 for zero-

@@ -58,7 +58,7 @@ enum DevFmtChannels : ALenum {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
-#define MAX_OUTPUT_CHANNELS  (16)
+#define MAX_OUTPUT_CHANNELS  16
 
 /* DevFmtType traits, providing the type, etc given a DevFmtType. */
 template<DevFmtType T>

@@ -111,7 +111,19 @@ struct ConvolutionFilter final : public EffectBufferBase {
     AmbiScaling mAmbiScaling{};
     ALuint mAmbiOrder{};
 
+    struct ChannelData {
+        alignas(16) FloatBufferLine mBuffer{};
+        float mHfScale{};
+        BandSplitter mFilter{};
+        float Current[MAX_OUTPUT_CHANNELS]{};
+        float Target[MAX_OUTPUT_CHANNELS]{};
+    };
+    using ChannelDataArray = al::FlexArray<ChannelData>;
+    std::unique_ptr<ChannelDataArray> mChans;
     std::unique_ptr<complex_d[]> mComplexData;
+
+    ConvolutionFilter(size_t numChannels) : mChans{ChannelDataArray::Create(numChannels)}
+    { }
 
     DEF_NEWDEL(ConvolutionFilter)
 };
@@ -122,15 +134,6 @@ struct ConvolutionState final : public EffectState {
     size_t mFifoPos{0};
     alignas(16) std::array<double,ConvolveUpdateSamples*2> mOutput[MAX_FILTER_CHANNELS]{};
     alignas(16) std::array<complex_d,ConvolveUpdateSize> mFftBuffer{};
-
-    ALuint mNumChannels;
-    struct {
-        alignas(16) FloatBufferLine mBuffer{};
-        float mHfScale{};
-        BandSplitter mFilter{};
-        float Current[MAX_OUTPUT_CHANNELS]{};
-        float Target[MAX_OUTPUT_CHANNELS]{};
-    } mChans[MAX_FILTER_CHANNELS];
 
     ConvolutionState() = default;
     ~ConvolutionState() override = default;
@@ -151,38 +154,30 @@ struct ConvolutionState final : public EffectState {
 void ConvolutionState::NormalMix(const al::span<FloatBufferLine> samplesOut,
     const size_t samplesToDo)
 {
-    for(size_t c{0};c < mNumChannels;++c)
-        MixSamples({mChans[c].mBuffer.data(), samplesToDo}, samplesOut, mChans[c].Current,
-            mChans[c].Target, samplesToDo, 0);
+    auto &chans = *mFilter->mChans;
+    for(size_t c{0};c < chans.size();++c)
+        MixSamples({chans[c].mBuffer.data(), samplesToDo}, samplesOut, chans[c].Current,
+            chans[c].Target, samplesToDo, 0);
 }
 
 void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
     const size_t samplesToDo)
 {
-    for(size_t c{0};c < mNumChannels;++c)
+    auto &chans = *mFilter->mChans;
+    for(size_t c{0};c < chans.size();++c)
     {
-        const al::span<float> src{mChans[c].mBuffer.data(), samplesToDo};
-        mChans[c].mFilter.processHfScale(src, mChans[c].mHfScale);
-        MixSamples(src, samplesOut, mChans[c].Current, mChans[c].Target, samplesToDo, 0);
+        const al::span<float> src{chans[c].mBuffer.data(), samplesToDo};
+        chans[c].mFilter.processHfScale(src, chans[c].mHfScale);
+        MixSamples(src, samplesOut, chans[c].Current, chans[c].Target, samplesToDo, 0);
     }
 }
 
-void ConvolutionState::deviceUpdate(const ALCdevice *device)
+void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
 {
     mFifoPos = 0;
     for(auto &buffer : mOutput)
         buffer.fill(0.0f);
     mFftBuffer.fill(complex_d{});
-
-    const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
-    for(auto &e : mChans)
-    {
-        e.mBuffer.fill(0.0f);
-        e.mHfScale = 1.0f;
-        e.mFilter = splitter;
-        std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
-        std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
-    }
 }
 
 EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
@@ -211,11 +206,16 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
         (uint64_t{buffer.mSampleLen}*device->Frequency + (buffer.mSampleRate-1)) /
         buffer.mSampleRate);
 
-    al::intrusive_ptr<ConvolutionFilter> filter{new ConvolutionFilter{}};
-
     auto bytesPerSample = BytesFromFmt(buffer.mType);
-    auto numChannels = ChannelsFromFmt(buffer.mChannels, buffer.mAmbiOrder);
+    auto realChannels = ChannelsFromFmt(buffer.mChannels, buffer.mAmbiOrder);
+    auto numChannels = ChannelsFromFmt(buffer.mChannels,
+        minu(buffer.mAmbiOrder, device->mAmbiOrder));
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
+
+    const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
+    al::intrusive_ptr<ConvolutionFilter> filter{new ConvolutionFilter{numChannels}};
+    for(auto &e : *filter->mChans)
+        e.mFilter = splitter;
 
     /* Calculate the number of segments needed to hold the impulse response and
      * the input history (rounded up), and allocate them.
@@ -242,7 +242,7 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
     for(size_t c{0};c < numChannels;++c)
     {
         /* Load the samples from the buffer, and resample to match the device. */
-        LoadSamples(srcsamples.get(), buffer.mData.data() + bytesPerSample*c, numChannels,
+        LoadSamples(srcsamples.get(), buffer.mData.data() + bytesPerSample*c, realChannels,
             buffer.mType, buffer.mSampleLen);
         if(device->Frequency != buffer.mSampleRate)
             resampler.process(buffer.mSampleLen, srcsamples.get(), resampledCount,
@@ -273,8 +273,6 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     if(!mFilter) return;
 
     ALCdevice *device{context->mDevice.get()};
-    const ALuint min_order{minu(mFilter->mAmbiOrder, device->mAmbiOrder)};
-    mNumChannels = mFilter ? ChannelsFromFmt(mFilter->mChannels, min_order) : 0u;
     mMix = &ConvolutionState::NormalMix;
 
     /* The iFFT'd response is scaled up by the number of bins, so apply the
@@ -282,6 +280,7 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
      */
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
     const float gain{slot->Params.Gain * (1.0f/m)};
+    auto &chans = *mFilter->mChans;
     if(mFilter->mChannels == FmtBFormat3D || mFilter->mChannels == FmtBFormat2D)
     {
         if(device->mAmbiOrder > mFilter->mAmbiOrder)
@@ -289,9 +288,9 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
             mMix = &ConvolutionState::UpsampleMix;
             const auto scales = BFormatDec::GetHFOrderScales(mFilter->mAmbiOrder,
                 device->mAmbiOrder);
-            mChans[0].mHfScale = scales[0];
-            for(size_t i{1};i < mNumChannels;++i)
-                mChans[i].mHfScale = scales[1];
+            chans[0].mHfScale = scales[0];
+            for(size_t i{1};i < chans.size();++i)
+                chans[i].mHfScale = scales[1];
         }
         mOutTarget = target.Main->Buffer;
 
@@ -301,11 +300,11 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
             GetAmbiLayout(mFilter->mAmbiLayout).data()};
 
         std::array<float,MAX_AMBI_CHANNELS> coeffs{};
-        for(size_t c{0u};c < mNumChannels;++c)
+        for(size_t c{0u};c < chans.size();++c)
         {
             const size_t acn{index_map[c]};
             coeffs[acn] = scales[acn];
-            ComputePanGains(target.Main, coeffs.data(), gain, mChans[c].Target);
+            ComputePanGains(target.Main, coeffs.data(), gain, chans[c].Target);
             coeffs[acn] = 0.0f;
         }
     }
@@ -319,8 +318,8 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
         if(lidx != INVALID_CHANNEL_INDEX && ridx != INVALID_CHANNEL_INDEX)
         {
             mOutTarget = target.RealOut->Buffer;
-            mChans[0].Target[lidx] = gain;
-            mChans[1].Target[ridx] = gain;
+            chans[0].Target[lidx] = gain;
+            chans[1].Target[ridx] = gain;
         }
         else
         {
@@ -328,8 +327,8 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
             const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
 
             mOutTarget = target.Main->Buffer;
-            ComputePanGains(target.Main, lcoeffs.data(), gain, mChans[0].Target);
-            ComputePanGains(target.Main, rcoeffs.data(), gain, mChans[1].Target);
+            ComputePanGains(target.Main, lcoeffs.data(), gain, chans[0].Target);
+            ComputePanGains(target.Main, rcoeffs.data(), gain, chans[1].Target);
         }
     }
     else if(mFilter->mChannels == FmtMono)
@@ -337,7 +336,7 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
         const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
 
         mOutTarget = target.Main->Buffer;
-        ComputePanGains(target.Main, coeffs.data(), gain, mChans[0].Target);
+        ComputePanGains(target.Main, coeffs.data(), gain, chans[0].Target);
     }
 }
 
@@ -349,6 +348,7 @@ void ConvolutionState::process(const size_t samplesToDo,
 
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
     size_t curseg{mFilter->mCurrentSegment};
+    auto &chans = *mFilter->mChans;
 
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -357,10 +357,10 @@ void ConvolutionState::process(const size_t samplesToDo,
         /* Retrieve the output samples from the FIFO and fill in the new input
          * samples.
          */
-        for(size_t c{0};c < mNumChannels;++c)
+        for(size_t c{0};c < chans.size();++c)
         {
             auto fifo_iter = mOutput[c].begin() + mFifoPos;
-            std::transform(fifo_iter, fifo_iter+todo, mChans[c].mBuffer.begin()+base,
+            std::transform(fifo_iter, fifo_iter+todo, chans[c].mBuffer.begin()+base,
                 [](double d) noexcept -> float { return static_cast<float>(d); });
         }
 
@@ -380,7 +380,7 @@ void ConvolutionState::process(const size_t samplesToDo,
         std::copy_n(mFftBuffer.begin(), m, &mFilter->mInputHistory[curseg*m]);
         mFftBuffer.fill(complex_d{});
 
-        for(size_t c{0};c < mNumChannels;++c)
+        for(size_t c{0};c < chans.size();++c)
         {
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).

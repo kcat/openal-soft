@@ -101,15 +101,13 @@ constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 
 
 struct ConvolutionFilter final : public EffectBufferBase {
-    size_t mCurrentSegment{0};
-    size_t mNumConvolveSegs{0};
-    complex_d *mInputHistory{};
-    complex_d *mConvolveFilter[MAX_FILTER_CHANNELS]{};
-
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
     ALuint mAmbiOrder{};
+
+    size_t mCurrentSegment{0};
+    size_t mNumConvolveSegs{0};
 
     struct ChannelData {
         alignas(16) FloatBufferLine mBuffer{};
@@ -227,11 +225,6 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
     filter->mComplexData = std::make_unique<complex_d[]>(complex_length);
     std::fill_n(filter->mComplexData.get(), complex_length, complex_d{});
 
-    filter->mInputHistory = filter->mComplexData.get();
-    filter->mConvolveFilter[0] = filter->mInputHistory + filter->mNumConvolveSegs*m;
-    for(size_t c{1};c < numChannels;++c)
-        filter->mConvolveFilter[c] = filter->mConvolveFilter[c-1] + filter->mNumConvolveSegs*m;
-
     filter->mChannels = buffer.mChannels;
     filter->mAmbiLayout = buffer.mAmbiLayout;
     filter->mAmbiScaling = buffer.mAmbiScaling;
@@ -239,6 +232,7 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
 
     auto fftbuffer = std::make_unique<std::array<complex_d,ConvolveUpdateSize>>();
     auto srcsamples = std::make_unique<double[]>(maxz(buffer.mSampleLen, resampledCount));
+    complex_d *filteriter = filter->mComplexData.get() + filter->mNumConvolveSegs*m;
     for(size_t c{0};c < numChannels;++c)
     {
         /* Load the samples from the buffer, and resample to match the device. */
@@ -249,7 +243,6 @@ EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
                 srcsamples.get());
 
         size_t done{0};
-        complex_d *filteriter = filter->mConvolveFilter[c];
         for(size_t s{0};s < filter->mNumConvolveSegs;++s)
         {
             const size_t todo{minz(resampledCount-done, ConvolveUpdateSamples)};
@@ -377,22 +370,22 @@ void ConvolutionState::process(const size_t samplesToDo,
          */
         complex_fft(mFftBuffer, -1.0);
 
-        std::copy_n(mFftBuffer.begin(), m, &mFilter->mInputHistory[curseg*m]);
+        std::copy_n(mFftBuffer.begin(), m, &mFilter->mComplexData[curseg*m]);
         mFftBuffer.fill(complex_d{});
 
+        const complex_d *RESTRICT filter{mFilter->mComplexData.get() + mFilter->mNumConvolveSegs*m};
         for(size_t c{0};c < chans.size();++c)
         {
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
-            const complex_d *RESTRICT filter{mFilter->mConvolveFilter[c]};
-            const complex_d *RESTRICT input{&mFilter->mInputHistory[curseg*m]};
+            const complex_d *RESTRICT input{&mFilter->mComplexData[curseg*m]};
             for(size_t s{curseg};s < mFilter->mNumConvolveSegs;++s)
             {
                 for(size_t i{0};i < m;++i,++input,++filter)
                     mFftBuffer[i] += *input * *filter;
             }
-            input = mFilter->mInputHistory;
+            input = mFilter->mComplexData.get();
             for(size_t s{0};s < curseg;++s)
             {
                 for(size_t i{0};i < m;++i,++input,++filter)

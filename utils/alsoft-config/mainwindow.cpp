@@ -475,10 +475,9 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;backendList[i].backend_name[0];i++)
     {
         QList<QListWidgetItem*> items = ui->backendListWidget->findItems(
-            backendList[i].full_string, Qt::MatchFixedString
-        );
-        foreach(const QListWidgetItem *item, items)
-            ui->backendListWidget->setItemHidden(item, false);
+            backendList[i].full_string, Qt::MatchFixedString);
+        foreach(QListWidgetItem *item, items)
+            item->setHidden(false);
     }
 
     loadConfig(getDefaultConfigName());

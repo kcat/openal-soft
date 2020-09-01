@@ -96,27 +96,28 @@ inline size_t RoundUp(size_t value, size_t r) noexcept
  */
 #ifdef __GNUC__
 
+namespace detail_ {
+
 template<typename T>
-struct NumericDetail64 { };
+constexpr inline auto popcnt64(T val) = delete;
 template<>
-struct NumericDetail64<unsigned long long> {
-    constexpr static inline auto popcnt64(unsigned long long val) noexcept
-    { return __builtin_popcountll(val); }
-    constexpr static inline auto ctz64(unsigned long long val) noexcept
-    { return __builtin_ctzll(val); }
-};
+constexpr inline auto popcnt64(unsigned long long val) { return __builtin_popcountll(val); }
 template<>
-struct NumericDetail64<unsigned long> {
-    constexpr static inline auto popcnt64(unsigned long val) noexcept
-    { return __builtin_popcountl(val); }
-    constexpr static inline auto ctz64(unsigned long val) noexcept
-    { return __builtin_ctzl(val); }
-};
+constexpr inline auto popcnt64(unsigned long val) { return __builtin_popcountl(val); }
+
+template<typename T>
+constexpr inline auto ctz64(T val) = delete;
+template<>
+constexpr inline auto ctz64(unsigned long long val) { return __builtin_ctzll(val); }
+template<>
+constexpr inline auto ctz64(unsigned long val) { return __builtin_ctzl(val); }
+
+} // namespace detail_
 
 #define POPCNT32 __builtin_popcount
 #define CTZ32 __builtin_ctz
-#define POPCNT64 NumericDetail64<uint64_t>::popcnt64
-#define CTZ64 NumericDetail64<uint64_t>::ctz64
+#define POPCNT64 detail_::popcnt64<uint64_t>
+#define CTZ64 detail_::ctz64<uint64_t>
 
 #else
 

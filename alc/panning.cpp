@@ -758,7 +758,7 @@ void InitHrtfPanning(ALCdevice *device)
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
      */
-    device->mRenderMode = HrtfRender;
+    device->mRenderMode = RenderMode::Hrtf;
     ALuint ambi_order{1};
     if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode"))
     {
@@ -768,9 +768,9 @@ void InitHrtfPanning(ALCdevice *device)
             ALuint order;
         };
         static const HrtfModeEntry hrtf_modes[]{
-            { "full", HrtfRender, 1 },
-            { "ambi1", NormalRender, 1 },
-            { "ambi2", NormalRender, 2 },
+            { "full", RenderMode::Hrtf, 1 },
+            { "ambi1", RenderMode::Normal, 1 },
+            { "ambi2", RenderMode::Normal, 2 },
         };
 
         const char *mode{modeopt->c_str()};
@@ -796,7 +796,7 @@ void InitHrtfPanning(ALCdevice *device)
         ((ambi_order%10) == 1) ? "st" :
         ((ambi_order%10) == 2) ? "nd" :
         ((ambi_order%10) == 3) ? "rd" : "th",
-        (device->mRenderMode == HrtfRender) ? "+ Full " : "",
+        (device->mRenderMode == RenderMode::Hrtf) ? "+ Full " : "",
         device->HrtfName.c_str());
 
     al::span<const AngularPoint> AmbiPoints{AmbiPoints1O};
@@ -851,7 +851,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     device->mHrtfState = nullptr;
     device->mHrtf = nullptr;
     device->HrtfName.clear();
-    device->mRenderMode = NormalRender;
+    device->mRenderMode = RenderMode::Normal;
 
     if(device->FmtChans != DevFmtStereo)
     {
@@ -916,7 +916,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     }
 
     bool headphones{device->IsHeadphones};
-    if(device->Type != Loopback)
+    if(device->Type != DeviceType::Loopback)
     {
         if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode"))
         {
@@ -992,9 +992,9 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
 no_hrtf:
     old_hrtf = nullptr;
 
-    device->mRenderMode = StereoPair;
+    device->mRenderMode = RenderMode::Pairwise;
 
-    if(device->Type != Loopback)
+    if(device->Type != DeviceType::Loopback)
     {
         if(auto cflevopt = ConfigValueInt(device->DeviceName.c_str(), nullptr, "cf_level"))
         {
@@ -1015,11 +1015,11 @@ no_hrtf:
     {
         const char *mode{encopt->c_str()};
         if(al::strcasecmp(mode, "uhj") == 0)
-            device->mRenderMode = NormalRender;
+            device->mRenderMode = RenderMode::Normal;
         else if(al::strcasecmp(mode, "panpot") != 0)
             ERR("Unexpected stereo-encoding: %s\n", mode);
     }
-    if(device->mRenderMode == NormalRender)
+    if(device->mRenderMode == RenderMode::Normal)
     {
         device->Uhj_Encoder = std::make_unique<Uhj2Encoder>();
         TRACE("UHJ enabled\n");

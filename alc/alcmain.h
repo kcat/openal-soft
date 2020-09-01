@@ -50,17 +50,17 @@ struct bs2b;
 #define DEFAULT_NUM_UPDATES  3
 
 
-enum DeviceType {
+enum class DeviceType {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum RenderMode {
-    NormalRender,
-    StereoPair,
-    HrtfRender
+enum class RenderMode {
+    Normal,
+    Pairwise,
+    Hrtf
 };
 
 
@@ -248,7 +248,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     al::vector<FilterSubList> FilterList;
 
     /* Rendering mode. */
-    RenderMode mRenderMode{NormalRender};
+    RenderMode mRenderMode{RenderMode::Normal};
 
     /* The average speaker distance as determined by the ambdec configuration,
      * HRTF data set, or the NFC-HOA reference delay. Only used for NFC.

@@ -1653,7 +1653,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     ALCsizei hrtf_id{-1};
     ALCuint oldFreq;
 
-    if((!attrList || !attrList[0]) && device->Type == Loopback)
+    if((!attrList || !attrList[0]) && device->Type == DeviceType::Loopback)
     {
         WARN("Missing attributes for loopback device\n");
         return ALC_INVALID_VALUE;
@@ -1758,7 +1758,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         }
 #undef TRACE_ATTR
 
-        const bool loopback{device->Type == Loopback};
+        const bool loopback{device->Type == DeviceType::Loopback};
         if(loopback)
         {
             if(!schans || !stype || !freq)
@@ -1895,7 +1895,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
      * Update device format request if HRTF is requested
      */
     device->HrtfStatus = ALC_HRTF_DISABLED_SOFT;
-    if(device->Type != Loopback)
+    if(device->Type != DeviceType::Loopback)
     {
         if(auto hrtfopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf"))
         {
@@ -2437,7 +2437,7 @@ ALCcontext::~ALCcontext()
 
 void ALCcontext::init()
 {
-    if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == Playback)
+    if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
     {
         mDefaultSlot = std::unique_ptr<ALeffectslot>{new ALeffectslot{}};
         if(mDefaultSlot->init() == AL_NO_ERROR)
@@ -2722,8 +2722,8 @@ END_API_FUNC
 
 static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
 {
-    if(device->Type == Capture) return 9;
-    if(device->Type != Loopback) return 29;
+    if(device->Type == DeviceType::Capture) return 9;
+    if(device->Type != DeviceType::Loopback) return 29;
     if(device->FmtChans == DevFmtAmbi3D)
         return 35;
     return 29;
@@ -2773,7 +2773,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 0;
     }
 
-    if(device->Type == Capture)
+    if(device->Type == DeviceType::Capture)
     {
         switch(param)
         {
@@ -2852,7 +2852,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
 
             values[i++] = ALC_FREQUENCY;
             values[i++] = static_cast<int>(device->Frequency);
-            if(device->Type != Loopback)
+            if(device->Type != DeviceType::Loopback)
             {
                 values[i++] = ALC_REFRESH;
                 values[i++] = static_cast<int>(device->Frequency / device->UpdateSize);
@@ -2927,7 +2927,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_REFRESH:
-        if(device->Type == Loopback)
+        if(device->Type == DeviceType::Loopback)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -2939,7 +2939,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_SYNC:
-        if(device->Type == Loopback)
+        if(device->Type == DeviceType::Loopback)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -2948,7 +2948,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_FORMAT_CHANNELS_SOFT:
-        if(device->Type != Loopback)
+        if(device->Type != DeviceType::Loopback)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -2957,7 +2957,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_FORMAT_TYPE_SOFT:
-        if(device->Type != Loopback)
+        if(device->Type != DeviceType::Loopback)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -2966,7 +2966,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_AMBISONIC_LAYOUT_SOFT:
-        if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
+        if(device->Type != DeviceType::Loopback || device->FmtChans != DevFmtAmbi3D)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -2975,7 +2975,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_AMBISONIC_SCALING_SOFT:
-        if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
+        if(device->Type != DeviceType::Loopback || device->FmtChans != DevFmtAmbi3D)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -2984,7 +2984,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_AMBISONIC_ORDER_SOFT:
-        if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
+        if(device->Type != DeviceType::Loopback || device->FmtChans != DevFmtAmbi3D)
         {
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
@@ -3062,7 +3062,7 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
         return;
     }
-    if(!dev || dev->Type == Capture)
+    if(!dev || dev->Type == DeviceType::Capture)
     {
         auto ivals = al::vector<int>(static_cast<ALuint>(size));
         size_t got{GetIntegerv(dev.get(), pname, ivals)};
@@ -3086,7 +3086,7 @@ START_API_FUNC
             values[i++] = ALC_FREQUENCY;
             values[i++] = dev->Frequency;
 
-            if(dev->Type != Loopback)
+            if(dev->Type != DeviceType::Loopback)
             {
                 values[i++] = ALC_REFRESH;
                 values[i++] = dev->Frequency / dev->UpdateSize;
@@ -3268,7 +3268,7 @@ START_API_FUNC
      */
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type == Capture || !dev->Connected.load(std::memory_order_relaxed))
+    if(!dev || dev->Type == DeviceType::Capture || !dev->Connected.load(std::memory_order_relaxed))
     {
         listlock.unlock();
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
@@ -3493,7 +3493,7 @@ START_API_FUNC
             deviceName = nullptr;
     }
 
-    DeviceRef device{new ALCdevice{Playback}};
+    DeviceRef device{new ALCdevice{DeviceType::Playback}};
 
     /* Set output format */
     device->FmtChans = DevFmtChannelsDefault;
@@ -3671,7 +3671,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
-    if((*iter)->Type == Capture)
+    if((*iter)->Type == DeviceType::Capture)
     {
         alcSetError(*iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
@@ -3739,7 +3739,7 @@ START_API_FUNC
             deviceName = nullptr;
     }
 
-    DeviceRef device{new ALCdevice{Capture}};
+    DeviceRef device{new ALCdevice{DeviceType::Capture}};
 
     auto decompfmt = DecomposeDevFormat(format);
     if(!decompfmt)
@@ -3794,7 +3794,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
-    if((*iter)->Type != Capture)
+    if((*iter)->Type != DeviceType::Capture)
     {
         alcSetError(*iter, ALC_INVALID_DEVICE);
         return ALC_FALSE;
@@ -3817,7 +3817,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Capture)
+    if(!dev || dev->Type != DeviceType::Capture)
     {
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return;
@@ -3845,7 +3845,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Capture)
+    if(!dev || dev->Type != DeviceType::Capture)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else
     {
@@ -3861,7 +3861,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Capture)
+    if(!dev || dev->Type != DeviceType::Capture)
     {
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return;
@@ -3909,7 +3909,7 @@ START_API_FUNC
         return nullptr;
     }
 
-    DeviceRef device{new ALCdevice{Loopback}};
+    DeviceRef device{new ALCdevice{DeviceType::Loopback}};
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
@@ -3966,7 +3966,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Loopback)
+    if(!dev || dev->Type != DeviceType::Loopback)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else if(freq <= 0)
         alcSetError(dev.get(), ALC_INVALID_VALUE);
@@ -3989,7 +3989,7 @@ FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, AL
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Loopback)
+    if(!dev || dev->Type != DeviceType::Loopback)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == nullptr))
         alcSetError(dev.get(), ALC_INVALID_VALUE);
@@ -4008,7 +4008,7 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Playback)
+    if(!dev || dev->Type != DeviceType::Playback)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else
     {
@@ -4026,7 +4026,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != Playback)
+    if(!dev || dev->Type != DeviceType::Playback)
     {
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return;
@@ -4061,7 +4061,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
 START_API_FUNC
 {
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type == Capture)
+    if(!dev || dev->Type == DeviceType::Capture)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     else switch(paramName)
     {
@@ -4086,7 +4086,7 @@ START_API_FUNC
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type == Capture)
+    if(!dev || dev->Type == DeviceType::Capture)
     {
         listlock.unlock();
         alcSetError(dev.get(), ALC_INVALID_DEVICE);

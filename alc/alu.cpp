@@ -876,7 +876,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
         auto calc_coeffs = [xpos,ypos,zpos](RenderMode mode)
         {
-            if(mode != StereoPair)
+            if(mode != RenderMode::Pairwise)
                 return CalcDirectionCoeffs({xpos, ypos, zpos}, 0.0f);
 
             /* Clamp Y, in case rounding errors caused it to end up outside
@@ -1015,7 +1015,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
         }
     }
-    else if(Device->mRenderMode == HrtfRender)
+    else if(Device->mRenderMode == RenderMode::Hrtf)
     {
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
@@ -1123,7 +1123,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              */
             auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
             {
-                if(mode != StereoPair)
+                if(mode != RenderMode::Pairwise)
                     return CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
                 const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
                 const float az{std::atan2(xpos, -zpos)};
@@ -1183,7 +1183,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     continue;
                 }
 
-                const auto coeffs = CalcAngleCoeffs((Device->mRenderMode == StereoPair)
+                const auto coeffs = CalcAngleCoeffs((Device->mRenderMode == RenderMode::Pairwise)
                     ? ScaleAzimuthFront(chans[c].angle, 3.0f) : chans[c].angle,
                     chans[c].elevation, Spread);
 

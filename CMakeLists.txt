@@ -169,11 +169,12 @@ if(NOT WIN32)
 endif()
 
 # C99 has restrict, but C++ does not, so we can only utilize __restrict.
-set(RESTRICT_DECL )
 check_cxx_source_compiles("int *__restrict foo;
 int main() { return 0; }" HAVE___RESTRICT)
 if(HAVE___RESTRICT)
-    set(RESTRICT_DECL "__restrict")
+    set(CPP_DEFS ${CPP_DEFS} RESTRICT=__restrict)
+else()
+    set(CPP_DEFS ${CPP_DEFS} "RESTRICT=")
 endif()
 
 # Some systems may need libatomic for atomic functions to work

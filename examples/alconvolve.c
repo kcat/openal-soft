@@ -377,10 +377,10 @@ int main(int argc, char **argv)
     if(InitAL(&argv, &argc) != 0)
         return 1;
 
-    if(!alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
+    if(!alIsExtensionPresent("AL_SOFTX_convolution_reverb"))
     {
         CloseAL();
-        fprintf(stderr, "Error: EFX not supported\n");
+        fprintf(stderr, "Error: Convolution revern not supported\n");
         return 1;
     }
 

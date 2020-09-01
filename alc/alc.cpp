@@ -807,6 +807,8 @@ constexpr struct {
     DECL(AL_BUFFER_CALLBACK_USER_PARAM_SOFT),
 
     DECL(AL_UNPACK_AMBISONIC_ORDER_SOFT),
+
+    DECL(AL_EFFECT_CONVOLUTION_REVERB_SOFT),
 };
 #undef DECL
 
@@ -854,6 +856,7 @@ constexpr ALchar alExtList[] =
     "AL_SOFTX_bformat_hoa "
     "AL_SOFT_block_alignment "
     "AL_SOFTX_callback_buffer "
+    "AL_SOFTX_convolution_reverb "
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "
     "AL_SOFT_direct_channels_remix "

@@ -140,24 +140,18 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
 } // namespace
 
 
-/* NOTE: There seems to be a bit of an inconsistency in how this encoding is
- * supposed to work. Some references, such as
+/* Encoding 2-channel UHJ from B-Format is done as:
  *
- * http://members.tripod.com/martin_leese/Ambisonic/UHJ_file_format.html
+ * S = 0.9396926*W + 0.1855740*X
+ * D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y
  *
- * specify a pre-scaling of sqrt(2) on the W channel input, while other
- * references, such as
+ * Left = (S + D)/2.0
+ * Right = (S - D)/2.0
  *
- * https://en.wikipedia.org/wiki/Ambisonic_UHJ_format#Encoding.5B1.5D
- * and
- * https://wiki.xiph.org/Ambisonics#UHJ_format
+ * where j is a wide-band +90 degree phase shift.
  *
- * do not. The sqrt(2) scaling is in line with B-Format decoder coefficients
- * which include such a scaling for the W channel input, however the original
- * source for this equation is a 1985 paper by Michael Gerzon, which does not
- * apparently include the scaling. Applying the extra scaling creates a louder
- * result with a narrower stereo image compared to not scaling, and I don't
- * know which is the intended result.
+ * The phase shift is done using a FIR filter derived from an FFT'd impulse
+ * with the desired shift.
  */
 
 void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,

@@ -7,20 +7,6 @@
 #include "almalloc.h"
 
 
-/* Encoding 2-channel UHJ from B-Format is done as:
- *
- * S = 0.9396926*W + 0.1855740*X
- * D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y
- *
- * Left = (S + D)/2.0
- * Right = (S - D)/2.0
- *
- * where j is a wide-band +90 degree phase shift.
- *
- * The phase shift is done using a FIR filter derived from an FFT'd impulse
- * with the desired shift.
- */
-
 struct Uhj2Encoder {
     /* A particular property of the filter allows it to cover nearly twice its
      * length, so the filter size is also the effective delay (despite being

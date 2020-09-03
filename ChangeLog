@@ -39,6 +39,8 @@ openal-soft-1.21.0:
 
     Added an in-progress extension for higher-order B-Format buffers.
 
+    Added an in-progress extension for convolution reverb.
+
     Added an experimental Oboe backend for Android playback. This requires the
     Oboe sources at build time, so that it's built as a static library included
     in libopenal.

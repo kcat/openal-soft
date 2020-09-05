@@ -175,8 +175,8 @@ struct EffectState : public al::intrusive_ref<EffectState> {
      * wish to hold on to it, as there's no guarantee the buffer won't be
      * deleted or altered during a mix.
      */
-    virtual EffectBufferBase *createBuffer(const ALCdevice */*device*/,
-        const BufferStorage &/*buffer*/)
+    virtual EffectBufferBase *createBuffer(const ALCdevice* /*device*/,
+        const BufferStorage& /*buffer*/)
     { return nullptr; }
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) = 0;
@@ -184,7 +184,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 
 
 struct EffectStateFactory {
-    virtual ~EffectStateFactory() { }
+    virtual ~EffectStateFactory() = default;
 
     virtual EffectState *create() = 0;
     virtual EffectProps getDefaultProps() const noexcept = 0;

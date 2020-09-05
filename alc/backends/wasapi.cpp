@@ -196,7 +196,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-        return { name+"Unknown Device Name", "Unknown Device GUID" };
+        return std::make_pair("Unknown Device Name", "Unknown Device GUID");
     }
 
     PropVariant pvprop;
@@ -231,7 +231,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
 
     ps->Release();
 
-    return {name, guid};
+    return std::make_pair(std::move(name), std::move(guid));
 }
 
 void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
@@ -261,18 +261,23 @@ void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
 
 void add_device(IMMDevice *device, const WCHAR *devid, al::vector<DevMap> &list)
 {
-    std::string basename, guidstr;
-    std::tie(basename, guidstr) = get_device_name_and_guid(device);
+    for(auto &entry : list)
+    {
+        if(entry.devid == devid)
+            return;
+    }
+
+    auto name_guid = get_device_name_and_guid(device);
 
     int count{1};
-    std::string newname{basename};
+    std::string newname{name_guid.first};
     while(checkName(list, newname))
     {
-        newname = basename;
+        newname = name_guid.first;
         newname += " #";
         newname += std::to_string(++count);
     }
-    list.emplace_back(std::move(newname), std::move(guidstr), devid);
+    list.emplace_back(std::move(newname), std::move(name_guid.second), devid);
     const DevMap &newentry = list.back();
 
     TRACE("Got device \"%s\", \"%s\", \"%ls\"\n", newentry.name.c_str(),
@@ -305,41 +310,38 @@ void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<D
         return;
     }
 
-    IMMDevice *defdev{nullptr};
-    WCHAR *defdevid{nullptr};
     UINT count{0};
     hr = coll->GetCount(&count);
     if(SUCCEEDED(hr) && count > 0)
-    {
         list.reserve(count);
 
-        hr = devenum->GetDefaultAudioEndpoint(flowdir, eMultimedia, &defdev);
-    }
-    if(SUCCEEDED(hr) && defdev != nullptr)
+    IMMDevice *device{};
+    hr = devenum->GetDefaultAudioEndpoint(flowdir, eMultimedia, &device);
+    if(SUCCEEDED(hr))
     {
-        defdevid = get_device_id(defdev);
-        if(defdevid)
-            add_device(defdev, defdevid, list);
+        if(WCHAR *devid{get_device_id(device)})
+        {
+            add_device(device, devid, list);
+            CoTaskMemFree(devid);
+        }
+        device->Release();
+        device = nullptr;
     }
 
     for(UINT i{0};i < count;++i)
     {
-        IMMDevice *device;
         hr = coll->Item(i, &device);
         if(FAILED(hr)) continue;
 
-        WCHAR *devid{get_device_id(device)};
-        if(devid)
+        if(WCHAR *devid{get_device_id(device)})
         {
-            if(!defdevid || wcscmp(devid, defdevid) != 0)
-                add_device(device, devid, list);
+            add_device(device, devid, list);
             CoTaskMemFree(devid);
         }
         device->Release();
+        device = nullptr;
     }
 
-    if(defdev) defdev->Release();
-    if(defdevid) CoTaskMemFree(defdevid);
     coll->Release();
 }
 
@@ -758,15 +760,13 @@ void WasapiPlayback::open(const ALCchar *name)
             hr = E_FAIL;
             auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
                 [name](const DevMap &entry) -> bool
-                { return entry.name == name || entry.endpoint_guid == name; }
-            );
+                { return entry.name == name || entry.endpoint_guid == name; });
             if(iter == PlaybackDevices.cend())
             {
-                std::wstring wname{utf8_to_wstr(name)};
+                const std::wstring wname{utf8_to_wstr(name)};
                 iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
                     [&wname](const DevMap &entry) -> bool
-                    { return entry.devid == wname; }
-                );
+                    { return entry.devid == wname; });
             }
             if(iter == PlaybackDevices.cend())
                 WARN("Failed to find device name matching \"%s\"\n", name);
@@ -1339,15 +1339,13 @@ void WasapiCapture::open(const ALCchar *name)
             hr = E_FAIL;
             auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
                 [name](const DevMap &entry) -> bool
-                { return entry.name == name || entry.endpoint_guid == name; }
-            );
+                { return entry.name == name || entry.endpoint_guid == name; });
             if(iter == CaptureDevices.cend())
             {
-                std::wstring wname{utf8_to_wstr(name)};
+                const std::wstring wname{utf8_to_wstr(name)};
                 iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
                     [&wname](const DevMap &entry) -> bool
-                    { return entry.devid == wname; }
-                );
+                    { return entry.devid == wname; });
             }
             if(iter == CaptureDevices.cend())
                 WARN("Failed to find device name matching \"%s\"\n", name);

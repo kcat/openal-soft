@@ -369,6 +369,108 @@ START_API_FUNC
 END_API_FUNC
 
 
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint slotid)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+    ALeffectslot *slot{LookupEffectSlot(context.get(), slotid)};
+    if UNLIKELY(!slot)
+    {
+        context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotid);
+        return;
+    }
+
+    AddActiveEffectSlots(&slotid, 1, context.get());
+    slot->mState = SlotState::Playing;
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei n, const ALuint *slotids)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    if UNLIKELY(n < 0)
+        context->setError(AL_INVALID_VALUE, "Playing %d effect slots", n);
+    if UNLIKELY(n <= 0) return;
+
+    al::vector<ALeffectslot*> slots;
+    slots.reserve(static_cast<ALuint>(n));
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+    auto validate_slot = [&context,&slots](const ALuint id) -> bool
+    {
+        ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
+        if UNLIKELY(!slot)
+        {
+            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
+            return false;
+        }
+        slots.emplace_back(slot);
+        return true;
+    };
+    auto slotids_end = slotids + n;
+    auto bad_slot = std::find_if_not(slotids, slotids_end, validate_slot);
+    if UNLIKELY(bad_slot != slotids_end) return;
+
+    AddActiveEffectSlots(slotids, static_cast<ALuint>(n), context.get());
+    for(auto slot : slots)
+        slot->mState = SlotState::Playing;
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint slotid)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+    ALeffectslot *slot{LookupEffectSlot(context.get(), slotid)};
+    if UNLIKELY(!slot)
+    {
+        context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotid);
+        return;
+    }
+
+    RemoveActiveEffectSlots(&slotid, 1, context.get());
+    slot->mState = SlotState::Stopped;
+}
+END_API_FUNC
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *slotids)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    if UNLIKELY(n < 0)
+        context->setError(AL_INVALID_VALUE, "Stopping %d effect slots", n);
+    if UNLIKELY(n <= 0) return;
+
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+    auto validate_slot = [&context](const ALuint id) -> bool
+    {
+        ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
+        if UNLIKELY(!slot)
+        {
+            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
+            return false;
+        }
+        return true;
+    };
+    auto slotids_end = slotids + n;
+    auto bad_slot = std::find_if_not(slotids, slotids_end, validate_slot);
+    if UNLIKELY(bad_slot != slotids_end) return;
+
+    RemoveActiveEffectSlots(slotids, static_cast<ALuint>(n), context.get());
+}
+END_API_FUNC
+
+
 AL_API void AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint value)
 START_API_FUNC
 {
@@ -397,12 +499,12 @@ START_API_FUNC
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
             err = slot->initEffect(effect, context.get());
         }
-        if(err != AL_NO_ERROR)
+        if UNLIKELY(err != AL_NO_ERROR)
         {
             context->setError(err, "Effect initialization failed");
             return;
         }
-        if(slot->mState == SlotState::Initial)
+        if UNLIKELY(slot->mState == SlotState::Initial)
         {
             AddActiveEffectSlots(&slot->id, 1, context.get());
             slot->mState = SlotState::Playing;
@@ -477,6 +579,9 @@ START_API_FUNC
         }
         break;
 
+    case AL_EFFECTSLOT_STATE_SOFT:
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "AL_EFFECTSLOT_STATE_SOFT is read-only");
+
     default:
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid effect slot integer property 0x%04x",
             param);
@@ -493,6 +598,7 @@ START_API_FUNC
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
     case AL_EFFECTSLOT_TARGET_SOFT:
+    case AL_EFFECTSLOT_STATE_SOFT:
     case AL_BUFFER:
         alAuxiliaryEffectSloti(effectslot, param, values[0]);
         return;
@@ -595,6 +701,10 @@ START_API_FUNC
             *value = 0;
         break;
 
+    case AL_EFFECTSLOT_STATE_SOFT:
+        *value = static_cast<int>(slot->mState);
+        break;
+
     case AL_BUFFER:
         if(auto *buffer = slot->Buffer)
             *value = static_cast<ALint>(buffer->id);
@@ -616,6 +726,7 @@ START_API_FUNC
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
     case AL_EFFECTSLOT_TARGET_SOFT:
+    case AL_EFFECTSLOT_STATE_SOFT:
     case AL_BUFFER:
         alGetAuxiliaryEffectSloti(effectslot, param, values);
         return;

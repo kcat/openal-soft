@@ -102,6 +102,17 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #ifndef AL_SOFT_convolution_reverb
 #define AL_SOFT_convolution_reverb
 #define AL_EFFECT_CONVOLUTION_REVERB_SOFT        0xA000
+#define AL_EFFECTSLOT_STATE_SOFT                 0x199D
+typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTPLAYSOFT)(ALuint slotid);
+typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTPLAYVSOFT)(ALsizei n, const ALuint *slotids);
+typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTSTOPSOFT)(ALuint slotid);
+typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTSTOPVSOFT)(ALsizei n, const ALuint *slotids);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint slotid);
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei n, const ALuint *slotids);
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint slotid);
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *slotids);
+#endif
 #endif
 
 #ifdef __cplusplus

@@ -286,6 +286,7 @@ static ALuint CreateEffect(void)
  */
 static ALuint LoadSound(const char *filename)
 {
+    const char *namepart;
     ALenum err, format;
     ALuint buffer;
     SNDFILE *sndfile;
@@ -321,6 +322,16 @@ static ALuint LoadSound(const char *filename)
         sf_close(sndfile);
         return 0;
     }
+
+    namepart = strrchr(filename, '/');
+    if(namepart || (namepart=strrchr(filename, '\\')))
+        namepart++;
+    else
+        namepart = filename;
+    printf("Loading: %s (%s, %dhz, %" PRId64 " samples / %.2f seconds)\n", namepart,
+        FormatName(format), sfinfo.samplerate, sfinfo.frames,
+        (double)sfinfo.frames / sfinfo.samplerate);
+    fflush(stdout);
 
     /* Decode the whole audio file to a buffer. */
     membuf = malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(float));
@@ -418,19 +429,19 @@ int main(int argc, char **argv)
     LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 
-    /* Load the impulse response sound into a buffer. */
-    ir_buffer = LoadSound(argv[0]);
-    if(!ir_buffer)
+    /* Load the reverb into an effect. */
+    effect = CreateEffect();
+    if(!effect)
     {
         CloseAL();
         return 1;
     }
 
-    /* Load the reverb into an effect. */
-    effect = CreateEffect();
-    if(!effect)
+    /* Load the impulse response sound into a buffer. */
+    ir_buffer = LoadSound(argv[0]);
+    if(!ir_buffer)
     {
-        alDeleteBuffers(1, &ir_buffer);
+        alDeleteEffects(1, &effect);
         CloseAL();
         return 1;
     }

@@ -244,7 +244,8 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
 
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
+    if(!context->mDeferUpdates.load(std::memory_order_acquire)                \
+        && slot->mState == SlotState::Playing)                                \
         slot->updateProps(context.get());                                     \
     else                                                                      \
         slot->PropsClean.clear(std::memory_order_release);                    \
@@ -382,6 +383,11 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotid);
         return;
     }
+    if(slot->mState == SlotState::Playing)
+        return;
+
+    slot->PropsClean.test_and_set(std::memory_order_acq_rel);
+    slot->updateProps(context.get());
 
     AddActiveEffectSlots(&slotid, 1, context.get());
     slot->mState = SlotState::Playing;
@@ -409,7 +415,14 @@ START_API_FUNC
             context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
             return false;
         }
-        slots.emplace_back(slot);
+
+        if(slot->mState != SlotState::Playing)
+        {
+            slot->PropsClean.test_and_set(std::memory_order_acq_rel);
+            slot->updateProps(context.get());
+
+            slots.emplace_back(slot);
+        }
         return true;
     };
     auto slotids_end = slotids + n;

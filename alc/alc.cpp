@@ -403,6 +403,11 @@ const struct {
     DECL(alGetBufferPtrSOFT),
     DECL(alGetBuffer3PtrSOFT),
     DECL(alGetBufferPtrvSOFT),
+
+    DECL(alAuxiliaryEffectSlotPlaySOFT),
+    DECL(alAuxiliaryEffectSlotPlayvSOFT),
+    DECL(alAuxiliaryEffectSlotStopSOFT),
+    DECL(alAuxiliaryEffectSlotStopvSOFT),
 };
 #undef DECL
 
@@ -809,6 +814,7 @@ constexpr struct {
     DECL(AL_UNPACK_AMBISONIC_ORDER_SOFT),
 
     DECL(AL_EFFECT_CONVOLUTION_REVERB_SOFT),
+    DECL(AL_EFFECTSLOT_STATE_SOFT),
 };
 #undef DECL
 

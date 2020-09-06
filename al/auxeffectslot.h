@@ -40,6 +40,12 @@ struct ALeffectslotProps {
 };
 
 
+enum class SlotState : ALenum {
+    Initial = AL_INITIAL,
+    Playing = AL_PLAYING,
+    Stopped = AL_STOPPED,
+};
+
 struct ALeffectslot {
     float Gain{1.0f};
     bool  AuxSendAuto{true};
@@ -55,6 +61,8 @@ struct ALeffectslot {
     } Effect;
 
     std::atomic_flag PropsClean;
+
+    SlotState mState{SlotState::Initial};
 
     RefCount ref{0u};
 

@@ -310,8 +310,6 @@ START_API_FUNC
         } while(--count);
         std::copy(ids.cbegin(), ids.cend(), effectslots);
     }
-
-    AddActiveEffectSlots(effectslots, static_cast<ALuint>(n), context.get());
 }
 END_API_FUNC
 
@@ -403,6 +401,11 @@ START_API_FUNC
         {
             context->setError(err, "Effect initialization failed");
             return;
+        }
+        if(slot->mState == SlotState::Initial)
+        {
+            AddActiveEffectSlots(&slot->id, 1, context.get());
+            slot->mState = SlotState::Playing;
         }
         break;
 

@@ -2459,6 +2459,7 @@ void ALCcontext::init()
     {
         auxslots = ALeffectslot::CreatePtrArray(1);
         (*auxslots)[0] = mDefaultSlot.get();
+        mDefaultSlot->mState = SlotState::Playing;
     }
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 

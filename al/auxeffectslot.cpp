@@ -404,30 +404,24 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Playing %d effect slots", n);
     if UNLIKELY(n <= 0) return;
 
-    al::vector<ALeffectslot*> slots;
-    slots.reserve(static_cast<ALuint>(n));
+    auto slots = al::vector<ALeffectslot*>(static_cast<ALuint>(n));
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
-    auto validate_slot = [&context,&slots](const ALuint id) -> bool
+    for(size_t i{0};i < slots.size();++i)
     {
-        ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
+        ALeffectslot *slot{LookupEffectSlot(context.get(), slotids[i])};
         if UNLIKELY(!slot)
         {
-            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
-            return false;
+            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotids[i]);
+            return;
         }
 
         if(slot->mState != SlotState::Playing)
         {
             slot->PropsClean.test_and_set(std::memory_order_acq_rel);
             slot->updateProps(context.get());
-
-            slots.emplace_back(slot);
         }
-        return true;
+        slots[i] = slot;
     };
-    auto slotids_end = slotids + n;
-    auto bad_slot = std::find_if_not(slotids, slotids_end, validate_slot);
-    if UNLIKELY(bad_slot != slotids_end) return;
 
     AddActiveEffectSlots(slotids, static_cast<ALuint>(n), context.get());
     for(auto slot : slots)
@@ -464,22 +458,23 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Stopping %d effect slots", n);
     if UNLIKELY(n <= 0) return;
 
+    auto slots = al::vector<ALeffectslot*>(static_cast<ALuint>(n));
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
-    auto validate_slot = [&context](const ALuint id) -> bool
+    for(size_t i{0};i < slots.size();++i)
     {
-        ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
+        ALeffectslot *slot{LookupEffectSlot(context.get(), slotids[i])};
         if UNLIKELY(!slot)
         {
-            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
-            return false;
+            context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotids[i]);
+            return;
         }
-        return true;
+
+        slots[i] = slot;
     };
-    auto slotids_end = slotids + n;
-    auto bad_slot = std::find_if_not(slotids, slotids_end, validate_slot);
-    if UNLIKELY(bad_slot != slotids_end) return;
 
     RemoveActiveEffectSlots(slotids, static_cast<ALuint>(n), context.get());
+    for(auto slot : slots)
+        slot->mState = SlotState::Stopped;
 }
 END_API_FUNC
 

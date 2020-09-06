@@ -45,7 +45,7 @@
 
 namespace {
 
-constexpr ALCchar jackDevice[] = "JACK Default";
+constexpr ALCchar jackDevice[] = "system";
 
 
 #ifdef HAVE_DYNLOAD
@@ -301,8 +301,6 @@ void JackPlayback::open(const ALCchar *name)
 {
     if(!name)
         name = jackDevice;
-    else if(strcmp(name, jackDevice) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
 
     const char *client_name{"alsoft"};
     jack_status_t status;
@@ -387,8 +385,7 @@ void JackPlayback::start()
     const char *devname{mDevice->DeviceName.c_str()};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
-        const char **ports{jack_get_ports(mClient, nullptr, nullptr,
-            JackPortIsPhysical|JackPortIsInput)};
+        const char **ports{jack_get_ports(mClient, mDevice->DeviceName.c_str(), nullptr, JackPortIsInput)};
         if(ports == nullptr)
         {
             jack_deactivate(mClient);
@@ -503,11 +500,29 @@ bool JackBackendFactory::querySupport(BackendType type)
 std::string JackBackendFactory::probe(BackendType type)
 {
     std::string outnames;
+
+    auto list_ports = [&outnames] () -> void {
+     jack_client_t *client{nullptr};
+        jack_status_t status;
+        client = jack_client_open("alsoft", JackNoStartServer, &status, nullptr);
+        if(client == nullptr)
+            throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open client connection: 0x%02x",
+                    status};
+        const char **ports{jack_get_ports(client, nullptr, nullptr, JackPortIsInput)};
+        for (int i = 0; ports && ports[i] ; i++) {
+            /* +1 to also append the null char (to ensure a null-separated list and
+            * double-null terminated list).
+            */
+            outnames.append(ports[i], strlen(ports[i]) + 1);
+        }
+        jack_free(ports);
+        jack_client_close (client);
+    };
+
     switch(type)
     {
     case BackendType::Playback:
-        /* Includes null char. */
-        outnames.append(jackDevice, sizeof(jackDevice));
+        list_ports();
         break;
     case BackendType::Capture:
         break;

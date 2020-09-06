@@ -97,7 +97,7 @@ using complex_d = std::complex<double>;
 constexpr size_t ConvolveUpdateSize{1024};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 
-struct ConvolutionFilter final : public EffectBufferBase {
+struct ConvolutionFilter {
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
@@ -385,13 +385,13 @@ void ConvolutionFilter::process(const size_t samplesToDo,
 
 
 struct ConvolutionState final : public EffectState {
-    ConvolutionFilter *mFilter{};
+    std::unique_ptr<ConvolutionFilter> mFilter;
 
     ConvolutionState() = default;
     ~ConvolutionState() override = default;
 
     void deviceUpdate(const ALCdevice *device) override;
-    EffectBufferBase *createBuffer(const ALCdevice *device, const BufferStorage &buffer) override;
+    void setBuffer(const ALCdevice *device, const BufferStorage *buffer) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
 
@@ -402,29 +402,26 @@ void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
 {
 }
 
-EffectBufferBase *ConvolutionState::createBuffer(const ALCdevice *device,
-    const BufferStorage &buffer)
+void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *buffer)
 {
+    mFilter = nullptr;
     /* An empty buffer doesn't need a convolution filter. */
-    if(buffer.mSampleLen < 1) return nullptr;
+    if(!buffer || buffer->mSampleLen < 1) return;
 
-    auto numChannels = ChannelsFromFmt(buffer.mChannels,
-        minu(buffer.mAmbiOrder, device->mAmbiOrder));
+    auto numChannels = ChannelsFromFmt(buffer->mChannels,
+        minu(buffer->mAmbiOrder, device->mAmbiOrder));
 
-    al::intrusive_ptr<ConvolutionFilter> filter{new ConvolutionFilter{numChannels}};
-    if LIKELY(filter->init(device, buffer))
-        return filter.release();
-    return nullptr;
+    mFilter.reset(new ConvolutionFilter{numChannels});
+    if(!mFilter->init(device, *buffer))
+        mFilter = nullptr;
 }
 
 
 void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    mFilter = static_cast<ConvolutionFilter*>(slot->Params.mEffectBuffer);
-    if(!mFilter) return;
-
-    mFilter->update(mOutTarget, context, slot, props, target);
+    if(mFilter)
+        mFilter->update(mOutTarget, context, slot, props, target);
 }
 
 void ConvolutionState::process(const size_t samplesToDo,

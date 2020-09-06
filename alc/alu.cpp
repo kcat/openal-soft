@@ -505,24 +505,6 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
         }
     }
 
-    EffectBufferBase *buffer{props->Buffer.release()};
-    EffectBufferBase *oldbuffer{slot->Params.mEffectBuffer};
-    slot->Params.mEffectBuffer = buffer;
-
-    if(oldbuffer && !oldbuffer->releaseIfNoDelete())
-    {
-        RingBuffer *ring{context->mAsyncEvents.get()};
-        auto evt_vec = ring->getWriteVector();
-        if LIKELY(evt_vec.first.len > 0)
-        {
-            AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectBuffer}};
-            evt->u.mEffectBuffer = oldbuffer;
-            ring->writeAdvance(1);
-        }
-        else
-            props->Buffer.reset(oldbuffer);
-    }
-
     AtomicReplaceHead(context->mFreeEffectslotProps, props);
 
     EffectTarget output;

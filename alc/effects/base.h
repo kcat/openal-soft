@@ -155,10 +155,6 @@ const EffectVtable T##_vtable = {           \
 }
 
 
-struct EffectBufferBase : public al::intrusive_ref<EffectBufferBase> {
-    virtual ~EffectBufferBase() = default;
-};
-
 struct EffectTarget {
     MixParams *Main;
     RealMixParams *RealOut;
@@ -171,13 +167,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
     virtual ~EffectState() = default;
 
     virtual void deviceUpdate(const ALCdevice *device) = 0;
-    /* Implementations are currently required to copy the buffer data if they
-     * wish to hold on to it, as there's no guarantee the buffer won't be
-     * deleted or altered during a mix.
-     */
-    virtual EffectBufferBase *createBuffer(const ALCdevice* /*device*/,
-        const BufferStorage& /*buffer*/)
-    { return nullptr; }
+    virtual void setBuffer(const ALCdevice* /*device*/, const BufferStorage* /*buffer*/) { }
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) = 0;
 };

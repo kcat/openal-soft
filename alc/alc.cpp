@@ -2102,10 +2102,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             state->mOutTarget = device->Dry.Buffer;
             state->deviceUpdate(device);
             if(ALbuffer *buffer{slot->Buffer})
-            {
-                slot->Effect.Buffer = nullptr;
-                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer));
-            }
+                state->setBuffer(device, &buffer->mBuffer);
             slot->updateProps(context);
         }
 
@@ -2128,10 +2125,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 state->mOutTarget = device->Dry.Buffer;
                 state->deviceUpdate(device);
                 if(ALbuffer *buffer{slot->Buffer})
-                {
-                    slot->Effect.Buffer = nullptr;
-                    slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer));
-                }
+                    state->setBuffer(device, &buffer->mBuffer);
                 slot->updateProps(context);
             }
         }

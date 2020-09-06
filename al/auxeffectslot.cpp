@@ -484,7 +484,6 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
 
     ALeffectslot *target{};
-    ALbuffer *buffer{};
     ALCdevice *device{};
     ALenum err{};
     switch(param)
@@ -552,8 +551,13 @@ START_API_FUNC
     case AL_BUFFER:
         device = context->mDevice.get();
 
+        if(slot->mState == SlotState::Playing)
+            SETERR_RETURN(context, AL_INVALID_OPERATION,,
+                "Setting buffer on playing effect slot %u", slot->id);
+
         {
             std::lock_guard<std::mutex> ___{device->BufferLock};
+            ALbuffer *buffer{};
             if(value)
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
@@ -569,13 +573,9 @@ START_API_FUNC
                 DecrementRef(oldbuffer->ref);
             slot->Buffer = buffer;
 
-            slot->Effect.Buffer = nullptr;
-            if(buffer)
-            {
-                FPUCtl mixer_mode{};
-                auto *state = slot->Effect.State.get();
-                slot->Effect.Buffer.reset(state->createBuffer(device, buffer->mBuffer));
-            }
+            FPUCtl mixer_mode{};
+            auto *state = slot->Effect.State.get();
+            state->setBuffer(device, buffer ? &buffer->mBuffer : nullptr);
         }
         break;
 
@@ -819,8 +819,6 @@ ALeffectslot::~ALeffectslot()
 
     if(Params.mEffectState)
         Params.mEffectState->release();
-    if(Params.mEffectBuffer)
-        Params.mEffectBuffer->release();
 }
 
 ALenum ALeffectslot::init()
@@ -856,9 +854,8 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         {
             FPUCtl mixer_mode{};
             State->deviceUpdate(Device);
-            Effect.Buffer = nullptr;
             if(Buffer)
-                Effect.Buffer.reset(State->createBuffer(Device, Buffer->mBuffer));
+                State->setBuffer(Device, &Buffer->mBuffer);
         }
 
         if(!effect)
@@ -882,7 +879,6 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
     while(props)
     {
         props->State = nullptr;
-        props->Buffer = nullptr;
         props = props->next.load(std::memory_order_relaxed);
     }
 
@@ -912,7 +908,6 @@ void ALeffectslot::updateProps(ALCcontext *context)
     props->Type = Effect.Type;
     props->Props = Effect.Props;
     props->State = Effect.State;
-    props->Buffer = Effect.Buffer;
 
     /* Set the new container for updating internal parameters. */
     props = Params.Update.exchange(props, std::memory_order_acq_rel);
@@ -922,7 +917,6 @@ void ALeffectslot::updateProps(ALCcontext *context)
          * freelist.
          */
         props->State = nullptr;
-        props->Buffer = nullptr;
         AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
 }

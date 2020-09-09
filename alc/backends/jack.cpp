@@ -508,15 +508,32 @@ std::string JackBackendFactory::probe(BackendType type)
         if(client == nullptr)
             throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open client connection: 0x%02x",
                     status};
-        const char **ports{jack_get_ports(client, nullptr, nullptr, JackPortIsInput)};
+        const char **ports{jack_get_ports(client, nullptr, nullptr, JackPortIsPhysical|JackPortIsInput)};
         for (int i = 0; ports && ports[i] ; i++) {
-            /* +1 to also append the null char (to ensure a null-separated list and
-            * double-null terminated list).
-            */
-            outnames.append(ports[i], strlen(ports[i]) + 1);
+            const char* colon = strchr(ports[i], ':');
+            int len = static_cast<int>  (colon - ports[i]);
+            if (outnames.find(ports[i], 0, len) == std::string::npos) {
+                outnames.append(ports[i], len);
+                outnames.append(1, '\0');
+            }
         }
         jack_free(ports);
         jack_client_close (client);
+
+        char *customDevices = strdup(GetConfigValue(nullptr, "jack", "custom-devices", ""));
+        size_t len = strlen(customDevices);
+        if (len != 0) {
+            char *ptr = strrchr(customDevices, ';');
+            while (ptr) {
+                *ptr = '\0';
+                ptr = strrchr(ptr, ';');
+            }
+            /* +1 to also append the null char (to ensure a null-separated list and
+            * double-null terminated list).
+            */
+            outnames.append(customDevices, len + 1);
+        }
+        free(customDevices);
     };
 
     switch(type)

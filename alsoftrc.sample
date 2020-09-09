@@ -484,6 +484,12 @@
 #  mixer time to keep enough audio available for the processing requests.
 #buffer-size = 0
 
+## custom-devices:
+#  Additionaly to physical devices, allow to add custom device defined by
+#  port name patterns separated by semicolon.
+#  For example : JACK Input Client:in;ardour:OpenAL/audio_in
+#custom-devices =
+
 ##
 ## WASAPI backend stuff
 ##

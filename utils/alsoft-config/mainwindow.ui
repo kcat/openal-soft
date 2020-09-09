@@ -1442,7 +1442,7 @@ drop-outs.</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>70</y>
+          <y>100</y>
           <width>401</width>
           <height>80</height>
          </rect>
@@ -1514,6 +1514,29 @@ processing requests. Must be a power of 2.</string>
         </property>
         <property name="tristate">
          <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="jackCustomDevicesLine">
+        <property name="geometry">
+         <rect>
+          <x>130</x>
+          <y>70</y>
+          <width>261</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_33">
+        <property name="geometry">
+         <rect>
+          <x>15</x>
+          <y>70</y>
+          <width>121</width>
+          <height>19</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Custom devices:</string>
         </property>
        </widget>
       </widget>

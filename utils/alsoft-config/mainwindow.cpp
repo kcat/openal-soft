@@ -448,6 +448,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->jackAutospawnCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackConnectPortsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackBufferSizeSlider, &QSlider::valueChanged, this, &MainWindow::updateJackBufferSizeEdit);
+    connect(ui->jackCustomDevicesLine, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackBufferSizeLine, &QLineEdit::editingFinished, this, &MainWindow::updateJackBufferSizeSlider);
 
     connect(ui->alsaDefaultDeviceLine, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
@@ -919,6 +920,7 @@ void MainWindow::loadConfig(const QString &fname)
 
     ui->jackAutospawnCheckBox->setCheckState(getCheckState(settings.value("jack/spawn-server")));
     ui->jackConnectPortsCheckBox->setCheckState(getCheckState(settings.value("jack/connect-ports")));
+    ui->jackCustomDevicesLine->setText(settings.value("jack/custom-devices", QString()).toString());
     ui->jackBufferSizeLine->setText(settings.value("jack/buffer-size", QString()).toString());
     updateJackBufferSizeSlider();
 
@@ -1129,6 +1131,7 @@ void MainWindow::saveConfig(const QString &fname) const
 
     settings.setValue("jack/spawn-server", getCheckValue(ui->jackAutospawnCheckBox));
     settings.setValue("jack/connect-ports", getCheckValue(ui->jackConnectPortsCheckBox));
+    settings.setValue("jack/custom-devices", ui->jackCustomDevicesLine->text());
     settings.setValue("jack/buffer-size", ui->jackBufferSizeLine->text());
 
     settings.setValue("alsa/device", ui->alsaDefaultDeviceLine->text());

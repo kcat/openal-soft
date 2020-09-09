@@ -511,7 +511,14 @@ std::string JackBackendFactory::probe(BackendType type)
         const char **ports{jack_get_ports(client, nullptr, nullptr, JackPortIsPhysical|JackPortIsInput)};
         for (int i = 0; ports && ports[i] ; i++) {
             const char* colon = strchr(ports[i], ':');
-            int len = static_cast<int>  (colon - ports[i]);
+            int len;
+            if (colon != nullptr) {
+                len = static_cast<int>  (colon - ports[i]) + 1;
+            }
+            else {
+                len = strlen(ports[i]);
+            }
+            
             if (outnames.find(ports[i], 0, len) == std::string::npos) {
                 outnames.append(ports[i], len);
                 outnames.append(1, '\0');

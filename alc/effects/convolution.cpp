@@ -1,6 +1,10 @@
 
 #include "config.h"
 
+#ifdef HAVE_SSE_INTRINSICS
+#include <xmmintrin.h>
+#endif
+
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -46,12 +50,10 @@ namespace {
  * convolution being applied in the frequency domain, so these "overflow"
  * samples need to be accounted for.
  *
- * Limitations:
- * There is currently a 512-sample delay on the output, as a result of needing
- * to collect that many input samples to do an FFT with. This can be fixed by
- * excluding the first impulse response segment from being FFT'd, and applying
- * it directly in the time domain. This will have higher CPU consumption, but
- * it won't have to wait before generating output.
+ * To avoid a delay with gathering enough input samples to apply an FFT with,
+ * the first segment is applied directly in the time-domain as the samples come
+ * in. Once enough have been retrieved, the FFT is applied on the input and
+ * it's paired with the remaining (FFT'd) filter segments for processing.
  */
 
 
@@ -98,6 +100,39 @@ constexpr size_t ConvolveUpdateSize{1024};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 
 
+void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *RESTRICT filter)
+{
+#ifdef HAVE_SSE_INTRINSICS
+    for(float &output : dst)
+    {
+        __m128 r4{_mm_setzero_ps()};
+        for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
+        {
+            const __m128 coeffs{_mm_load_ps(&filter[j])};
+            const __m128 s{_mm_loadu_ps(&src[j])};
+
+            r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
+        }
+        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
+        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+        output = _mm_cvtss_f32(r4);
+
+        ++src;
+    }
+
+#else
+
+    for(float &output : dst)
+    {
+        float ret{0.0f};
+        for(size_t j{0};j < ConvolveUpdateSamples;++j)
+            ret += src[j] * filter[j];
+        output = ret;
+        ++src;
+    }
+#endif
+}
+
 struct ConvolutionState final : public EffectState {
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
@@ -105,7 +140,10 @@ struct ConvolutionState final : public EffectState {
     ALuint mAmbiOrder{};
 
     size_t mFifoPos{0};
-    al::vector<std::array<double,ConvolveUpdateSamples*2>,16> mOutput;
+    std::array<float,ConvolveUpdateSamples*2> mInput{};
+    al::vector<std::array<float,ConvolveUpdateSamples>,16> mFilter;
+    al::vector<std::array<float,ConvolveUpdateSamples*2>,16> mOutput;
+
     alignas(16) std::array<complex_d,ConvolveUpdateSize> mFftBuffer{};
 
     size_t mCurrentSegment{0};
@@ -166,6 +204,8 @@ void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
 void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *buffer)
 {
     mFifoPos = 0;
+    mInput.fill(0.0f);
+    decltype(mFilter){}.swap(mFilter);
     decltype(mOutput){}.swap(mOutput);
     mFftBuffer.fill(complex_d{});
 
@@ -210,12 +250,16 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
     for(auto &e : *mChans)
         e.mFilter = splitter;
 
+    mFilter.resize(numChannels, {});
     mOutput.resize(numChannels, {});
 
     /* Calculate the number of segments needed to hold the impulse response and
-     * the input history (rounded up), and allocate them.
+     * the input history (rounded up), and allocate them. Exclude one segment
+     * which gets applied as a time-domain FIR filter. Make sure at least one
+     * segment is allocated to simplify handling.
      */
     mNumConvolveSegs = (resampledCount+(ConvolveUpdateSamples-1)) / ConvolveUpdateSamples;
+    mNumConvolveSegs = maxz(mNumConvolveSegs, 2) - 1;
 
     const size_t complex_length{mNumConvolveSegs * m * (numChannels+1)};
     mComplexData = std::make_unique<complex_d[]>(complex_length);
@@ -238,7 +282,14 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
             resampler.process(buffer->mSampleLen, srcsamples.get(), resampledCount,
                 srcsamples.get());
 
-        size_t done{0};
+        /* Store the first segment's samples in reverse in the time-domain, to
+         * apply as a FIR filter.
+         */
+        const size_t first_size{minz(resampledCount, ConvolveUpdateSamples)};
+        std::transform(srcsamples.get(), srcsamples.get()+first_size, mFilter[c].rbegin(),
+            [](const double d) noexcept -> float { return static_cast<float>(d); });
+
+        size_t done{first_size};
         for(size_t s{0};s < mNumConvolveSegs;++s)
         {
             const size_t todo{minz(resampledCount-done, ConvolveUpdateSamples)};
@@ -263,10 +314,7 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     ALCdevice *device{context->mDevice.get()};
     mMix = &ConvolutionState::NormalMix;
 
-    /* The iFFT'd response is scaled up by the number of bins, so apply the
-     * inverse to the output mixing gain.
-     */
-    const float gain{slot->Params.Gain * (1.0f/float{ConvolveUpdateSize})};
+    const float gain{slot->Params.Gain};
     auto &chans = *mChans;
     if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
@@ -340,27 +388,36 @@ void ConvolutionState::process(const size_t samplesToDo,
     {
         const size_t todo{minz(ConvolveUpdateSamples-mFifoPos, samplesToDo-base)};
 
-        /* Retrieve the output samples from the FIFO and fill in the new input
-         * samples.
+        std::copy_n(samplesIn[0].begin() + base, todo,
+            mInput.begin()+ConvolveUpdateSamples+mFifoPos);
+
+        /* Apply the FIR for the newly retrieved input samples, and combine it
+         * with the inverse FFT'd output samples.
          */
         for(size_t c{0};c < chans.size();++c)
         {
+            auto buf_iter = chans[c].mBuffer.begin() + base;
+            apply_fir({std::addressof(*buf_iter), todo}, mInput.cbegin()+1 + mFifoPos,
+                mFilter[c].cbegin());
+
             auto fifo_iter = mOutput[c].begin() + mFifoPos;
-            std::transform(fifo_iter, fifo_iter+todo, chans[c].mBuffer.begin()+base,
-                [](double d) noexcept -> float { return static_cast<float>(d); });
+            std::transform(fifo_iter, fifo_iter+todo, buf_iter, buf_iter, std::plus<>{});
         }
 
-        std::copy_n(samplesIn[0].begin()+base, todo, mFftBuffer.begin()+mFifoPos);
         mFifoPos += todo;
         base += todo;
 
-        /* Check whether FIFO buffer is filled with new samples. */
+        /* Check whether the input buffer is filled with new samples. */
         if(mFifoPos < ConvolveUpdateSamples) break;
         mFifoPos = 0;
 
+        /* Move the newest input to the front for the next iteration's history. */
+        std::copy(mInput.cbegin()+ConvolveUpdateSamples, mInput.cend(), mInput.begin());
+
         /* Calculate the frequency domain response and add the relevant
-         * frequency bins to the input history.
+         * frequency bins to the FFT history.
          */
+        std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
         complex_fft(mFftBuffer, -1.0);
 
         std::copy_n(mFftBuffer.begin(), m, &mComplexData[curseg*m]);
@@ -398,10 +455,17 @@ void ConvolutionState::process(const size_t samplesToDo,
              */
             complex_fft(mFftBuffer, 1.0);
 
+            /* The iFFT'd response is scaled up by the number of bins, so apply
+             * the inverse to normalize the output.
+             */
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][i] = mFftBuffer[i].real() + mOutput[c][ConvolveUpdateSamples+i];
+                mOutput[c][i] =
+                    static_cast<float>(mFftBuffer[i].real() * (1.0/double{ConvolveUpdateSize})) +
+                    mOutput[c][ConvolveUpdateSamples+i];
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i].real();
+                mOutput[c][ConvolveUpdateSamples+i] =
+                    static_cast<float>(mFftBuffer[ConvolveUpdateSamples+i].real() *
+                        (1.0/double{ConvolveUpdateSize}));
             mFftBuffer.fill(complex_d{});
         }
 

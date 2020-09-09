@@ -397,8 +397,8 @@ void ConvolutionState::process(const size_t samplesToDo,
         for(size_t c{0};c < chans.size();++c)
         {
             auto buf_iter = chans[c].mBuffer.begin() + base;
-            apply_fir({std::addressof(*buf_iter), todo}, mInput.cbegin()+1 + mFifoPos,
-                mFilter[c].cbegin());
+            apply_fir({std::addressof(*buf_iter), todo}, mInput.data()+1 + mFifoPos,
+                mFilter[c].data());
 
             auto fifo_iter = mOutput[c].begin() + mFifoPos;
             std::transform(fifo_iter, fifo_iter+todo, buf_iter, buf_iter, std::plus<>{});

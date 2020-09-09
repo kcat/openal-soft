@@ -266,8 +266,7 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     /* The iFFT'd response is scaled up by the number of bins, so apply the
      * inverse to the output mixing gain.
      */
-    constexpr size_t m{ConvolveUpdateSize/2 + 1};
-    const float gain{slot->Params.Gain * (1.0f/m)};
+    const float gain{slot->Params.Gain * (1.0f/float{ConvolveUpdateSize})};
     auto &chans = *mChans;
     if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
@@ -385,6 +384,12 @@ void ConvolutionState::process(const size_t samplesToDo,
                 for(size_t i{0};i < m;++i,++input,++filter)
                     mFftBuffer[i] += *input * *filter;
             }
+
+            /* Reconstruct the mirrored/negative frequencies to do a proper
+             * inverse FFT.
+             */
+            for(size_t i{m};i < ConvolveUpdateSize;++i)
+                mFftBuffer[i] = std::conj(mFftBuffer[ConvolveUpdateSize-i]);
 
             /* Apply iFFT to get the 1024 (really 1023) samples for output. The
              * 512 output samples are combined with the last output's 511

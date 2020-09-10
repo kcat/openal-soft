@@ -14,6 +14,10 @@ public:
     BackendPtr createBackend(ALCdevice *device, BackendType type) override;
 
     static BackendFactory &getFactory();
+
+private:
+	std::vector<std::string> device_list_names;
+	std::vector<std::string> device_list;
 };
 
 #endif /* BACKENDS_JACK_H */

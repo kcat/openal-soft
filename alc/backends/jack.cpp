@@ -24,6 +24,7 @@
 
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <memory.h>
 
 #include <array>
@@ -152,6 +153,57 @@ bool jack_load()
 }
 
 
+struct DeviceEntry {
+    std::string mName;
+    std::string mPattern;
+};
+
+al::vector<DeviceEntry> PlaybackList;
+
+
+void EnumerateDevices(al::vector<DeviceEntry> &list)
+{
+    al::vector<DeviceEntry>{}.swap(list);
+
+    list.emplace_back(DeviceEntry{jackDevice, ""});
+
+    std::string customList{ConfigValueStr(nullptr, "jack", "custom-devices").value_or("")};
+    size_t strpos{0};
+    while(strpos < customList.size())
+    {
+        size_t nextpos{customList.find(';', strpos)};
+        size_t seppos{customList.find('=', strpos)};
+        if(seppos >= nextpos || seppos == strpos)
+        {
+            const std::string entry{customList.substr(strpos, nextpos-strpos)};
+            ERR("Invalid device entry: \"%s\"\n", entry.c_str());
+            if(nextpos != std::string::npos) ++nextpos;
+            strpos = nextpos;
+            continue;
+        }
+
+        size_t count{1};
+        std::string name{customList.substr(strpos, seppos-strpos)};
+        auto check_name = [&name](const DeviceEntry &entry) -> bool
+        { return entry.mName == name; };
+        while(std::find_if(list.cbegin(), list.cend(), check_name) != list.cend())
+        {
+            name = customList.substr(strpos, seppos-strpos);
+            name += " #";
+            name += std::to_string(++count);
+        }
+
+        ++seppos;
+        list.emplace_back(DeviceEntry{std::move(name), customList.substr(seppos, nextpos-seppos)});
+        const auto &entry = list.back();
+        TRACE("Got custom device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
+
+        if(nextpos != std::string::npos) ++nextpos;
+        strpos = nextpos;
+    }
+}
+
+
 struct JackPlayback final : public BackendBase {
     JackPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
@@ -167,6 +219,8 @@ struct JackPlayback final : public BackendBase {
     void start() override;
     void stop() override;
     ClockLatency getClockLatency() override;
+
+    std::string mPortPattern;
 
     jack_client_t *mClient{nullptr};
     std::array<jack_port_t*,MAX_OUTPUT_CHANNELS> mPort{};
@@ -299,10 +353,22 @@ int JackPlayback::mixerProc()
 
 void JackPlayback::open(const ALCchar *name)
 {
+    mPortPattern.clear();
+
     if(!name)
         name = jackDevice;
     else if(strcmp(name, jackDevice) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+    {
+        if(PlaybackList.empty())
+            EnumerateDevices(PlaybackList);
+
+        auto check_name = [name](const DeviceEntry &entry) -> bool
+        { return entry.mName == name; };
+        auto iter = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), check_name);
+        if(iter == PlaybackList.cend())
+            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        mPortPattern = iter->mPattern;
+    }
 
     const char *client_name{"alsoft"};
     jack_status_t status;
@@ -387,7 +453,7 @@ void JackPlayback::start()
     const char *devname{mDevice->DeviceName.c_str()};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
-        const char **ports{jack_get_ports(mClient, nullptr, nullptr,
+        const char **ports{jack_get_ports(mClient, mPortPattern.c_str(), nullptr,
             JackPortIsPhysical|JackPortIsInput)};
         if(ports == nullptr)
         {
@@ -503,11 +569,16 @@ bool JackBackendFactory::querySupport(BackendType type)
 std::string JackBackendFactory::probe(BackendType type)
 {
     std::string outnames;
+    auto append_name = [&outnames](const DeviceEntry &entry) -> void
+    {
+        /* Includes null char. */
+        outnames.append(entry.mName.c_str(), entry.mName.length()+1);
+    };
     switch(type)
     {
     case BackendType::Playback:
-        /* Includes null char. */
-        outnames.append(jackDevice, sizeof(jackDevice));
+        EnumerateDevices(PlaybackList);
+        std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
         break;
     case BackendType::Capture:
         break;

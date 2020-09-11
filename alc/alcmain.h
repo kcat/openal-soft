@@ -139,12 +139,7 @@ public:
     { mSamples = FloatArray::Create(new_size); }
     void clear() noexcept
     {
-        for(auto &chan : mChannels)
-        {
-            chan.Gain = 1.0f;
-            chan.Length = 0;
-            chan.Buffer = nullptr;
-        }
+        mChannels.fill(DistData{});
         mSamples = nullptr;
     }
 

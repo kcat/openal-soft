@@ -44,18 +44,21 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
      */
     constexpr complex_d c0{0.0,  1.0};
     constexpr complex_d c1{0.0, -1.0};
-    constexpr size_t half_size{32768};
+    constexpr size_t fft_size{65536};
+    constexpr size_t half_size{fft_size / 2};
 
-    /* Generate a frequency domain impulse with a +90 degree phase offset. Keep
-     * the mirrored frequencies clear for converting to the time domain.
+    /* Generate a frequency domain impulse with a +90 degree phase offset.
+     * Reconstruct the mirrored frequencies to convert to the time domain.
      */
-    auto fftBuffer = std::vector<complex_d>(half_size*2, complex_d{});
+    auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
     for(size_t i{0};i < half_size;i += 2)
     {
         fftBuffer[i  ] = c0;
         fftBuffer[i+1] = c1;
     }
     fftBuffer[half_size] = c0;
+    for(size_t i{half_size+1};i < fft_size;++i)
+        fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
     complex_fft(fftBuffer, 1.0);
 
     /* Reverse and truncate the filter to a usable size, and store only the
@@ -65,7 +68,7 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
     auto fftiter = fftBuffer.data() + half_size + (Uhj2Encoder::sFilterSize-1);
     for(float &coeff : ret)
     {
-        coeff = static_cast<float>(fftiter->real() / (half_size+1));
+        coeff = static_cast<float>(fftiter->real() / double{fft_size});
         fftiter -= 2;
     }
     return ret;

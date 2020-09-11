@@ -226,15 +226,15 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
             mFftBuffer[k] = std::polar(mSynthesisBuffer[k].Amplitude, mSumPhase[k]);
         }
-        /* Clear negative frequencies to recontruct the time-domain signal. */
-        std::fill(mFftBuffer.begin()+STFT_HALF_SIZE+1, mFftBuffer.end(), complex_d{});
+        for(size_t k{STFT_HALF_SIZE+1};k < STFT_SIZE;++k)
+            mFftBuffer[k] = std::conj(mFftBuffer[STFT_SIZE-k]);
 
         /* Apply an inverse FFT to get the time-domain siganl, and accumulate
          * for the output with windowing.
          */
         complex_fft(mFftBuffer, 1.0);
         for(size_t k{0u};k < STFT_SIZE;k++)
-            mOutputAccum[k] += HannWindow[k]*mFftBuffer[k].real() * (2.0/STFT_HALF_SIZE/OVERSAMP);
+            mOutputAccum[k] += HannWindow[k]*mFftBuffer[k].real() * (2.0/STFT_SIZE/OVERSAMP);
 
         /* Shift FIFO and accumulator. */
         fifo_iter = std::copy(mFIFO.begin()+STFT_STEP, mFIFO.end(), mFIFO.begin());

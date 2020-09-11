@@ -453,8 +453,7 @@ void JackPlayback::start()
     const char *devname{mDevice->DeviceName.c_str()};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
-        const char **ports{jack_get_ports(mClient, mPortPattern.c_str(), nullptr,
-            JackPortIsPhysical|JackPortIsInput)};
+        const char **ports{jack_get_ports(mClient, mPortPattern.c_str(), nullptr, JackPortIsInput)};
         if(ports == nullptr)
         {
             jack_deactivate(mClient);

@@ -329,11 +329,18 @@ void DSoundPlayback::open(const ALCchar *name)
     else
     {
         auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
+            [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        {
+            GUID id{};
+            hr = CLSIDFromString(utf8_to_wstr(name).c_str(), &id);
+            if(SUCCEEDED(hr))
+                iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
+                    [&id](const DevMap &entry) -> bool { return entry.guid == id; });
+            if(iter == PlaybackDevices.cend())
+                throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found",
+                    name};
+        }
         guid = &iter->guid;
     }
 
@@ -608,11 +615,18 @@ void DSoundCapture::open(const ALCchar *name)
     else
     {
         auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
+            [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        {
+            GUID id{};
+            hr = CLSIDFromString(utf8_to_wstr(name).c_str(), &id);
+            if(SUCCEEDED(hr))
+                iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+                    [&id](const DevMap &entry) -> bool { return entry.guid == id; });
+            if(iter == CaptureDevices.cend())
+                throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found",
+                    name};
+        }
         guid = &iter->guid;
     }
 

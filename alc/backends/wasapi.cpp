@@ -121,11 +121,11 @@ constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
-/* Scales the given reftime value, ceiling the result. */
+/* Scales the given reftime value, rounding the result. */
 inline ALuint RefTime2Samples(const ReferenceTime &val, ALuint srate)
 {
-    const auto retval = (val*srate + (seconds{1}-1_reftime)) / seconds{1};
-    return static_cast<ALuint>(retval);
+    const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
+    return static_cast<ALuint>(mini64(retval, std::numeric_limits<ALuint>::max()));
 }
 
 

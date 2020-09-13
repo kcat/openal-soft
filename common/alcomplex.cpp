@@ -18,12 +18,8 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     for(size_t i{1u};i < fftsize-1;i++)
     {
         size_t j{0u};
-        for(size_t mask{1u};mask < fftsize;mask <<= 1)
-        {
-            if((i&mask) != 0)
-                j++;
-            j <<= 1;
-        }
+        for(size_t imask{i + fftsize};imask;imask >>= 1)
+            j = (j<<1) + (imask&1);
         j >>= 1;
 
         if(i < j)
@@ -35,9 +31,9 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {
         const size_t step2{step >> 1};
-        double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
+        const double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
 
-        std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
+        const std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};
         for(size_t j{0};j < step2;j++)
         {

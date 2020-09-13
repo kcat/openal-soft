@@ -59,7 +59,7 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
     fftBuffer[half_size] = c0;
     for(size_t i{half_size+1};i < fft_size;++i)
         fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-    complex_fft(fftBuffer, 1.0);
+    inverse_fft(fftBuffer);
 
     /* Reverse and truncate the filter to a usable size, and store only the
      * non-0 terms. Should this be windowed?

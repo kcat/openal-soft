@@ -26,7 +26,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
             std::swap(buffer[i], buffer[j]);
     }
 
-    /* Iterative form of DanielsonLanczos lemma */
+    /* Iterative form of Danielson-Lanczos lemma */
     size_t step{2u};
     for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {

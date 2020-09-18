@@ -270,7 +270,6 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
     mAmbiScaling = buffer->mAmbiScaling;
     mAmbiOrder = buffer->mAmbiOrder;
 
-    auto fftbuffer = std::make_unique<std::array<complex_d,ConvolveUpdateSize>>();
     auto srcsamples = std::make_unique<double[]>(maxz(buffer->mSampleLen, resampledCount));
     complex_d *filteriter = mComplexData.get() + mNumConvolveSegs*m;
     for(size_t c{0};c < numChannels;++c)
@@ -294,12 +293,12 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
         {
             const size_t todo{minz(resampledCount-done, ConvolveUpdateSamples)};
 
-            auto iter = std::copy_n(&srcsamples[done], todo, fftbuffer->begin());
+            auto iter = std::copy_n(&srcsamples[done], todo, mFftBuffer.begin());
             done += todo;
-            std::fill(iter, fftbuffer->end(), complex_d{});
+            std::fill(iter, mFftBuffer.end(), complex_d{});
 
-            forward_fft(*fftbuffer);
-            filteriter = std::copy_n(fftbuffer->cbegin(), m, filteriter);
+            forward_fft(mFftBuffer);
+            filteriter = std::copy_n(mFftBuffer.cbegin(), m, filteriter);
         }
     }
 }
@@ -417,15 +416,17 @@ void ConvolutionState::process(const size_t samplesToDo,
         /* Calculate the frequency domain response and add the relevant
          * frequency bins to the FFT history.
          */
-        std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
+        auto fftiter = std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
+        std::fill(fftiter, mFftBuffer.end(), complex_d{});
         forward_fft(mFftBuffer);
 
-        std::copy_n(mFftBuffer.begin(), m, &mComplexData[curseg*m]);
-        mFftBuffer.fill(complex_d{});
+        std::copy_n(mFftBuffer.cbegin(), m, &mComplexData[curseg*m]);
 
         const complex_d *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*m};
         for(size_t c{0};c < chans.size();++c)
         {
+            std::fill_n(mFftBuffer.begin(), m, complex_d{});
+
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
@@ -466,7 +467,6 @@ void ConvolutionState::process(const size_t samplesToDo,
                 mOutput[c][ConvolveUpdateSamples+i] =
                     static_cast<float>(mFftBuffer[ConvolveUpdateSamples+i].real() *
                         (1.0/double{ConvolveUpdateSize}));
-            mFftBuffer.fill(complex_d{});
         }
 
         /* Shift the input history. */

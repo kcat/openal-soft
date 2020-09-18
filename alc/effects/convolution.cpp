@@ -203,6 +203,8 @@ void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
 
 void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *buffer)
 {
+    constexpr ALuint MaxConvolveAmbiOrder{1u};
+
     mFifoPos = 0;
     mInput.fill(0.0f);
     decltype(mFilter){}.swap(mFilter);
@@ -222,15 +224,12 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
     if(buffer->mChannels != FmtMono && buffer->mChannels != FmtStereo
         && buffer->mChannels != FmtBFormat2D && buffer->mChannels != FmtBFormat3D)
         return;
-    if((buffer->mChannels == FmtBFormat2D || buffer->mChannels == FmtBFormat3D)
-        && buffer->mAmbiOrder > 1)
-        return;
 
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
     auto bytesPerSample = BytesFromFmt(buffer->mType);
     auto realChannels = ChannelsFromFmt(buffer->mChannels, buffer->mAmbiOrder);
     auto numChannels = ChannelsFromFmt(buffer->mChannels,
-        minu(buffer->mAmbiOrder, device->mAmbiOrder));
+        minu(buffer->mAmbiOrder, MaxConvolveAmbiOrder));
 
     mChans = ChannelDataArray::Create(numChannels);
 
@@ -268,7 +267,7 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
     mChannels = buffer->mChannels;
     mAmbiLayout = buffer->mAmbiLayout;
     mAmbiScaling = buffer->mAmbiScaling;
-    mAmbiOrder = buffer->mAmbiOrder;
+    mAmbiOrder = minu(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
 
     auto srcsamples = std::make_unique<double[]>(maxz(buffer->mSampleLen, resampledCount));
     complex_d *filteriter = mComplexData.get() + mNumConvolveSegs*m;
@@ -310,13 +309,13 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     if(mNumConvolveSegs < 1)
         return;
 
-    ALCdevice *device{context->mDevice.get()};
     mMix = &ConvolutionState::NormalMix;
 
     const float gain{slot->Params.Gain};
     auto &chans = *mChans;
     if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
+        ALCdevice *device{context->mDevice.get()};
         if(device->mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;

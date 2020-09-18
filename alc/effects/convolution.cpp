@@ -342,26 +342,12 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
     }
     else if(mChannels == FmtStereo)
     {
-        /* TODO: Add a "direct channels" setting for this effect? */
-        const ALuint lidx{!target.RealOut ? INVALID_CHANNEL_INDEX :
-            GetChannelIdxByName(*target.RealOut, FrontLeft)};
-        const ALuint ridx{!target.RealOut ? INVALID_CHANNEL_INDEX :
-            GetChannelIdxByName(*target.RealOut, FrontRight)};
-        if(lidx != INVALID_CHANNEL_INDEX && ridx != INVALID_CHANNEL_INDEX)
-        {
-            mOutTarget = target.RealOut->Buffer;
-            chans[0].Target[lidx] = gain;
-            chans[1].Target[ridx] = gain;
-        }
-        else
-        {
-            const auto lcoeffs = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f);
-            const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
+        const auto lcoeffs = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f);
+        const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
 
-            mOutTarget = target.Main->Buffer;
-            ComputePanGains(target.Main, lcoeffs.data(), gain, chans[0].Target);
-            ComputePanGains(target.Main, rcoeffs.data(), gain, chans[1].Target);
-        }
+        mOutTarget = target.Main->Buffer;
+        ComputePanGains(target.Main, lcoeffs.data(), gain, chans[0].Target);
+        ComputePanGains(target.Main, rcoeffs.data(), gain, chans[1].Target);
     }
     else if(mChannels == FmtMono)
     {

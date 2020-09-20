@@ -736,20 +736,6 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
-    if((context->mEnabledEvts.load(std::memory_order_relaxed)&EventType_Deprecated))
-    {
-        std::lock_guard<std::mutex> _{context->mEventCbLock};
-        ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
-        if((enabledevts&EventType_Deprecated) && context->mEventCb)
-        {
-            static const char msg[] =
-                "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
-            const ALsizei msglen{sizeof(msg)-1};
-            (*context->mEventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
-                context->mEventParam);
-        }
-    }
-
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else

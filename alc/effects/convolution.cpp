@@ -94,6 +94,12 @@ auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t
 }
 
 
+struct ChanMap {
+    Channel channel;
+    float angle;
+    float elevation;
+};
+
 using complex_d = std::complex<double>;
 
 constexpr size_t ConvolveUpdateSize{1024};
@@ -220,11 +226,6 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
     /* An empty buffer doesn't need a convolution filter. */
     if(!buffer || buffer->mSampleLen < 1) return;
 
-    /* FIXME: Support anything. */
-    if(buffer->mChannels != FmtMono && buffer->mChannels != FmtStereo
-        && buffer->mChannels != FmtBFormat2D && buffer->mChannels != FmtBFormat3D)
-        return;
-
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
     auto bytesPerSample = BytesFromFmt(buffer->mType);
     auto realChannels = ChannelsFromFmt(buffer->mChannels, buffer->mAmbiOrder);
@@ -306,13 +307,61 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
 void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slot,
     const EffectProps* /*props*/, const EffectTarget target)
 {
+    /* NOTE: Stereo and Rear are slightly different from normal mixing (as
+     * defined in alu.cpp). These are 45 degrees from center, rather than the
+     * 30 degrees used there.
+     *
+     * TODO: LFE is not mixed to output. This will require each buffer channel
+     * to have its own output target since the main mixing buffer won't have an
+     * LFE channel (due to being B-Format).
+     */
+    static const ChanMap MonoMap[1]{
+        { FrontCenter, 0.0f, 0.0f }
+    }, StereoMap[2]{
+        { FrontLeft,  Deg2Rad(-45.0f), Deg2Rad(0.0f) },
+        { FrontRight, Deg2Rad( 45.0f), Deg2Rad(0.0f) }
+    }, RearMap[2]{
+        { BackLeft,  Deg2Rad(-135.0f), Deg2Rad(0.0f) },
+        { BackRight, Deg2Rad( 135.0f), Deg2Rad(0.0f) }
+    }, QuadMap[4]{
+        { FrontLeft,  Deg2Rad( -45.0f), Deg2Rad(0.0f) },
+        { FrontRight, Deg2Rad(  45.0f), Deg2Rad(0.0f) },
+        { BackLeft,   Deg2Rad(-135.0f), Deg2Rad(0.0f) },
+        { BackRight,  Deg2Rad( 135.0f), Deg2Rad(0.0f) }
+    }, X51Map[6]{
+        { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
+        { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
+        { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { SideLeft,    Deg2Rad(-110.0f), Deg2Rad(0.0f) },
+        { SideRight,   Deg2Rad( 110.0f), Deg2Rad(0.0f) }
+    }, X61Map[7]{
+        { FrontLeft,   Deg2Rad(-30.0f), Deg2Rad(0.0f) },
+        { FrontRight,  Deg2Rad( 30.0f), Deg2Rad(0.0f) },
+        { FrontCenter, Deg2Rad(  0.0f), Deg2Rad(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackCenter,  Deg2Rad(180.0f), Deg2Rad(0.0f) },
+        { SideLeft,    Deg2Rad(-90.0f), Deg2Rad(0.0f) },
+        { SideRight,   Deg2Rad( 90.0f), Deg2Rad(0.0f) }
+    }, X71Map[8]{
+        { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
+        { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
+        { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackLeft,    Deg2Rad(-150.0f), Deg2Rad(0.0f) },
+        { BackRight,   Deg2Rad( 150.0f), Deg2Rad(0.0f) },
+        { SideLeft,    Deg2Rad( -90.0f), Deg2Rad(0.0f) },
+        { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
+    };
+
     if(mNumConvolveSegs < 1)
         return;
 
     mMix = &ConvolutionState::NormalMix;
 
+    for(auto &chan : *mChans)
+        std::fill(std::begin(chan.Target), std::end(chan.Target), 0.0f);
     const float gain{slot->Params.Gain};
-    auto &chans = *mChans;
     if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
         ALCdevice *device{context->mDevice.get()};
@@ -320,9 +369,9 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
         {
             mMix = &ConvolutionState::UpsampleMix;
             const auto scales = BFormatDec::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
-            chans[0].mHfScale = scales[0];
-            for(size_t i{1};i < chans.size();++i)
-                chans[i].mHfScale = scales[1];
+            (*mChans)[0].mHfScale = scales[0];
+            for(size_t i{1};i < mChans->size();++i)
+                (*mChans)[i].mHfScale = scales[1];
         }
         mOutTarget = target.Main->Buffer;
 
@@ -332,29 +381,57 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
             GetAmbiLayout(mAmbiLayout).data()};
 
         std::array<float,MAX_AMBI_CHANNELS> coeffs{};
-        for(size_t c{0u};c < chans.size();++c)
+        for(size_t c{0u};c < mChans->size();++c)
         {
             const size_t acn{index_map[c]};
             coeffs[acn] = scales[acn];
-            ComputePanGains(target.Main, coeffs.data(), gain, chans[c].Target);
+            ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[c].Target);
             coeffs[acn] = 0.0f;
         }
     }
-    else if(mChannels == FmtStereo)
+    else
     {
-        const auto lcoeffs = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f}, 0.0f);
-        const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
+        ALCdevice *device{context->mDevice.get()};
+        al::span<const ChanMap> chanmap{};
+        switch(mChannels)
+        {
+        case FmtMono: chanmap = MonoMap; break;
+        case FmtStereo: chanmap = StereoMap; break;
+        case FmtRear: chanmap = RearMap; break;
+        case FmtQuad: chanmap = QuadMap; break;
+        case FmtX51: chanmap = X51Map; break;
+        case FmtX61: chanmap = X61Map; break;
+        case FmtX71: chanmap = X71Map; break;
+        case FmtBFormat2D:
+        case FmtBFormat3D:
+            break;
+        }
 
         mOutTarget = target.Main->Buffer;
-        ComputePanGains(target.Main, lcoeffs.data(), gain, chans[0].Target);
-        ComputePanGains(target.Main, rcoeffs.data(), gain, chans[1].Target);
-    }
-    else if(mChannels == FmtMono)
-    {
-        const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
+        if(device->mRenderMode == RenderMode::Pairwise)
+        {
+            auto ScaleAzimuthFront = [](float azimuth, float scale) -> float
+            {
+                const float abs_azi{std::fabs(azimuth)};
+                if(!(abs_azi >= al::MathDefs<float>::Pi()*0.5f))
+                    return std::copysign(minf(abs_azi*scale, al::MathDefs<float>::Pi()*0.5f), azimuth);
+                return azimuth;
+            };
 
-        mOutTarget = target.Main->Buffer;
-        ComputePanGains(target.Main, coeffs.data(), gain, chans[0].Target);
+            for(size_t i{0};i < chanmap.size();++i)
+            {
+                if(chanmap[i].channel == LFE) continue;
+                const auto coeffs = CalcAngleCoeffs(ScaleAzimuthFront(chanmap[i].angle, 2.0f),
+                    chanmap[i].elevation, 0.0f);
+                ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[i].Target);
+            }
+        }
+        else for(size_t i{0};i < chanmap.size();++i)
+        {
+            if(chanmap[i].channel == LFE) continue;
+            const auto coeffs = CalcAngleCoeffs(chanmap[i].angle, chanmap[i].elevation, 0.0f);
+            ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[i].Target);
+        }
     }
 }
 

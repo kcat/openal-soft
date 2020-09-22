@@ -45,6 +45,19 @@
 #endif
 
 
+/* Filter object functions */
+static LPALGENFILTERS alGenFilters;
+static LPALDELETEFILTERS alDeleteFilters;
+static LPALISFILTER alIsFilter;
+static LPALFILTERI alFilteri;
+static LPALFILTERIV alFilteriv;
+static LPALFILTERF alFilterf;
+static LPALFILTERFV alFilterfv;
+static LPALGETFILTERI alGetFilteri;
+static LPALGETFILTERIV alGetFilteriv;
+static LPALGETFILTERF alGetFilterf;
+static LPALGETFILTERFV alGetFilterfv;
+
 /* Effect object functions */
 static LPALGENEFFECTS alGenEffects;
 static LPALDELETEEFFECTS alDeleteEffects;
@@ -372,15 +385,15 @@ static ALuint LoadSound(const char *filename)
 
 int main(int argc, char **argv)
 {
-    ALuint ir_buffer, effect, slot;
+    ALuint ir_buffer, filter, effect, slot;
     StreamPlayer *player;
     int i;
 
     /* Print out usage if no arguments were specified */
     if(argc < 2)
     {
-        fprintf(stderr, "Usage: %s [-device <name>] <impulse response file> <filenames...>\n",
-            argv[0]);
+        fprintf(stderr, "Usage: %s [-device <name>] <impulse response file> "
+            "<[-dry | -nodry] filename>...\n", argv[0]);
         return 1;
     }
 
@@ -404,6 +417,18 @@ int main(int argc, char **argv)
 
     /* Define a macro to help load the function pointers. */
 #define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+    LOAD_PROC(LPALGENFILTERS, alGenFilters);
+    LOAD_PROC(LPALDELETEFILTERS, alDeleteFilters);
+    LOAD_PROC(LPALISFILTER, alIsFilter);
+    LOAD_PROC(LPALFILTERI, alFilteri);
+    LOAD_PROC(LPALFILTERIV, alFilteriv);
+    LOAD_PROC(LPALFILTERF, alFilterf);
+    LOAD_PROC(LPALFILTERFV, alFilterfv);
+    LOAD_PROC(LPALGETFILTERI, alGetFilteri);
+    LOAD_PROC(LPALGETFILTERIV, alGetFilteriv);
+    LOAD_PROC(LPALGETFILTERF, alGetFilterf);
+    LOAD_PROC(LPALGETFILTERFV, alGetFilterfv);
+
     LOAD_PROC(LPALGENEFFECTS, alGenEffects);
     LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
     LOAD_PROC(LPALISEFFECT, alIsEffect);
@@ -474,6 +499,12 @@ int main(int argc, char **argv)
     alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
     assert(alGetError()==AL_NO_ERROR && "Failed to set effect slot");
 
+    /* Create a filter that can silence the dry path. */
+    filter = 0;
+    alGenFilters(1, &filter);
+    alFilteri(filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+    alFilterf(filter, AL_LOWPASS_GAIN, 0.0f);
+
     player = NewPlayer();
     /* Connect the player's source to the effect slot. */
     alSource3i(player->source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
@@ -483,6 +514,20 @@ int main(int argc, char **argv)
     for(i = 1;i < argc;i++)
     {
         const char *namepart;
+
+        if(argc-i > 1)
+        {
+            if(strcasecmp(argv[i], "-nodry") == 0)
+            {
+                alSourcei(player->source, AL_DIRECT_FILTER, (ALint)filter);
+                ++i;
+            }
+            else if(strcasecmp(argv[i], "-dry") == 0)
+            {
+                alSourcei(player->source, AL_DIRECT_FILTER, AL_FILTER_NULL);
+                ++i;
+            }
+        }
 
         if(!OpenPlayerFile(player, argv[i]))
             continue;
@@ -518,6 +563,7 @@ int main(int argc, char **argv)
 
     alDeleteAuxiliaryEffectSlots(1, &slot);
     alDeleteEffects(1, &effect);
+    alDeleteFilters(1, &filter);
     alDeleteBuffers(1, &ir_buffer);
 
     CloseAL();

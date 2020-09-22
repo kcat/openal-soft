@@ -159,13 +159,24 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
         return 0;
     }
 
+    player->format = AL_NONE;
     if(player->sfinfo.channels == 1)
         player->format = AL_FORMAT_MONO_FLOAT32;
     else if(player->sfinfo.channels == 2)
         player->format = AL_FORMAT_STEREO_FLOAT32;
     else if(player->sfinfo.channels == 6)
         player->format = AL_FORMAT_51CHN32;
-    else
+    else if(player->sfinfo.channels == 3)
+    {
+        if(sf_command(player->sndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+            player->format = AL_FORMAT_BFORMAT2D_FLOAT32;
+    }
+    else if(player->sfinfo.channels == 4)
+    {
+        if(sf_command(player->sndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+            player->format = AL_FORMAT_BFORMAT3D_FLOAT32;
+    }
+    if(!player->format)
     {
         fprintf(stderr, "Unsupported channel count: %d\n", player->sfinfo.channels);
         sf_close(player->sndfile);

@@ -10,8 +10,7 @@ enum class LogLevel {
     Disable,
     Error,
     Warning,
-    Trace,
-    Ref
+    Trace
 };
 extern LogLevel gLogLevel;
 

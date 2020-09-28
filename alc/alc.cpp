@@ -976,7 +976,11 @@ void alc_initconfig(void)
     if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
     {
         long lvl = strtol(loglevel->c_str(), nullptr, 0);
-        if(lvl >= static_cast<long>(LogLevel::Disable) && lvl <= static_cast<long>(LogLevel::Ref))
+        if(lvl >= static_cast<long>(LogLevel::Trace))
+            gLogLevel = LogLevel::Trace;
+        else if(lvl <= static_cast<long>(LogLevel::Disable))
+            gLogLevel = LogLevel::Disable;
+        else
             gLogLevel = static_cast<LogLevel>(lvl);
     }
 

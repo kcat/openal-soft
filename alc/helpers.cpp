@@ -356,7 +356,6 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
         case LogLevel::Warning: return ANDROID_LOG_WARN;
         case LogLevel::Error: return ANDROID_LOG_ERROR;
         /* Should not happen. */
-        case LogLevel::Ref:
         case LogLevel::Disable:
             break;
         }

@@ -976,7 +976,7 @@ void alc_initconfig(void)
     if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
     {
         long lvl = strtol(loglevel->c_str(), nullptr, 0);
-        if(lvl >= NoLog && lvl <= LogRef)
+        if(lvl >= static_cast<long>(LogLevel::Disable) && lvl <= static_cast<long>(LogLevel::Ref))
             gLogLevel = static_cast<LogLevel>(lvl);
     }
 
@@ -1272,9 +1272,9 @@ int RTPrioLevel{1};
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG
-LogLevel gLogLevel{LogWarning};
+LogLevel gLogLevel{LogLevel::Warning};
 #else
-LogLevel gLogLevel{LogError};
+LogLevel gLogLevel{LogLevel::Error};
 #endif
 
 /************************************************

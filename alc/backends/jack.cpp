@@ -167,6 +167,32 @@ void EnumerateDevices(al::vector<DeviceEntry> &list)
 
     list.emplace_back(DeviceEntry{jackDevice, ""});
 
+    jack_client_t *client{nullptr};
+    jack_status_t status;
+    client = jack_client_open("alsoft", JackNoStartServer, &status, nullptr);
+    if(client == nullptr)
+        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open client connection: 0x%02x",
+                status};
+    const char **ports{jack_get_ports(client, nullptr, nullptr, JackPortIsPhysical|JackPortIsInput)};
+    for (unsigned i = 0; ports && ports[i] ; i++)
+    {
+        std::string pattern{ports[i]};
+        size_t colon = pattern.find(':');
+        if (colon != std::string::npos && colon != 0)
+        {
+            pattern.resize(colon + 1);
+            std::string name = pattern;
+            name.pop_back();
+            DeviceEntry device = {name, pattern};
+            auto same_pattern = [&pattern](const DeviceEntry &entry) -> bool
+            { return entry.mPattern == pattern; };
+            if (std::find_if(list.begin(), list.end(), same_pattern) == list.end())
+                list.emplace_back(device);
+        }
+    }
+    jack_free(ports);
+    jack_client_close (client);
+
     std::string customList{ConfigValueStr(nullptr, "jack", "custom-devices").value_or("")};
     size_t strpos{0};
     while(strpos < customList.size())

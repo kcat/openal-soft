@@ -81,10 +81,7 @@ extern "C" {
 #define AL_EVENT_CALLBACK_USER_PARAM_SOFT        0x1221
 #define AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT      0x1222
 #define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x1223
-#define AL_EVENT_TYPE_ERROR_SOFT                 0x1224
-#define AL_EVENT_TYPE_PERFORMANCE_SOFT           0x1225
-#define AL_EVENT_TYPE_DEPRECATED_SOFT            0x1226
-#define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x1227
+#define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x1224
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
                                            ALsizei length, const ALchar *message,
                                            void *userParam);
@@ -904,9 +901,6 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
     {
     case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
     case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: std::cout<< "Source state changed"; break;
-    case AL_EVENT_TYPE_ERROR_SOFT: std::cout<< "API error"; break;
-    case AL_EVENT_TYPE_PERFORMANCE_SOFT: std::cout<< "Performance"; break;
-    case AL_EVENT_TYPE_DEPRECATED_SOFT: std::cout<< "Deprecated"; break;
     case AL_EVENT_TYPE_DISCONNECTED_SOFT: std::cout<< "Disconnected"; break;
     default:
         std::cout<< "0x"<<std::hex<<std::setw(4)<<std::setfill('0')<<eventType<<std::dec<<
@@ -964,9 +958,8 @@ int AudioState::handler()
     ALenum fmt;
 
 #ifdef AL_SOFT_events
-    const std::array<ALenum,6> evt_types{{
+    const std::array<ALenum,3> evt_types{{
         AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
-        AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT,
         AL_EVENT_TYPE_DISCONNECTED_SOFT}};
     if(alEventControlSOFT)
     {

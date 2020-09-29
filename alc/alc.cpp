@@ -794,9 +794,7 @@ constexpr struct {
     DECL(AL_EVENT_CALLBACK_USER_PARAM_SOFT),
     DECL(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT),
     DECL(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT),
-    DECL(AL_EVENT_TYPE_ERROR_SOFT),
-    DECL(AL_EVENT_TYPE_PERFORMANCE_SOFT),
-    DECL(AL_EVENT_TYPE_DEPRECATED_SOFT),
+    DECL(AL_EVENT_TYPE_DISCONNECTED_SOFT),
 
     DECL(AL_DROP_UNMATCHED_SOFT),
     DECL(AL_REMIX_UNMATCHED_SOFT),
@@ -978,7 +976,7 @@ void alc_initconfig(void)
     if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
     {
         long lvl = strtol(loglevel->c_str(), nullptr, 0);
-        if(lvl >= NoLog && lvl <= LogRef)
+        if(lvl >= static_cast<long>(LogLevel::Disable) && lvl <= static_cast<long>(LogLevel::Ref))
             gLogLevel = static_cast<LogLevel>(lvl);
     }
 
@@ -1274,9 +1272,9 @@ int RTPrioLevel{1};
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG
-LogLevel gLogLevel{LogWarning};
+LogLevel gLogLevel{LogLevel::Warning};
 #else
-LogLevel gLogLevel{LogError};
+LogLevel gLogLevel{LogLevel::Error};
 #endif
 
 /************************************************
@@ -1985,23 +1983,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
         device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
+    nanoseconds::rep sample_delay{0};
     if(device->Uhj_Encoder)
-    {
-        /* NOTE: Don't know why this has to be "copied" into a local constexpr
-         * variable to avoid a reference on Uhj2Encoder::sFilterSize...
-         */
-        constexpr size_t filter_len{Uhj2Encoder::sFilterSize};
-        device->FixedLatency += nanoseconds{seconds{filter_len}} / device->Frequency;
-    }
+        sample_delay += Uhj2Encoder::sFilterSize;
     if(device->mHrtfState)
-        device->FixedLatency += nanoseconds{seconds{HRTF_DIRECT_DELAY}} / device->Frequency;
+        sample_delay += HRTF_DIRECT_DELAY;
     if(auto *ambidec = device->AmbiDecoder.get())
     {
         if(ambidec->hasStablizer())
-        {
-            constexpr size_t StablizerDelay{FrontStablizer::DelayLength};
-            device->FixedLatency += nanoseconds{seconds{StablizerDelay}} / device->Frequency;
-        }
+            sample_delay += FrontStablizer::DelayLength;
     }
 
     if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "dither", 1))
@@ -2089,12 +2079,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         const float thrshld_dB{std::log10(thrshld) * 20.0f};
         auto limiter = CreateDeviceLimiter(device, thrshld_dB);
-        /* Convert the lookahead from samples to nanosamples to nanoseconds. */
-        device->FixedLatency += nanoseconds{seconds{limiter->getLookAhead()}} / device->Frequency;
+
+        sample_delay += limiter->getLookAhead();
         device->Limiter = std::move(limiter);
         TRACE("Output limiter enabled, %.4fdB limit\n", thrshld_dB);
     }
 
+    /* Convert the sample delay from samples to nanosamples to nanoseconds. */
+    device->FixedLatency += nanoseconds{seconds{sample_delay}} / device->Frequency;
     TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 
     FPUCtl mixer_mode{};

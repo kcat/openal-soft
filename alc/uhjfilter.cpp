@@ -25,53 +25,50 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
 {
     /* Some notes on this filter construction.
      *
-     * An impulse in the frequency domain is represented by a continuous series
-     * of +1,-1 values, with a 0 imaginary term. Consequently, that impulse
-     * with a +90 degree phase offset would be represented by 0s with imaginary
-     * terms that alternate between +1,-1. Converting that to the time domain
-     * results in a FIR filter that can be convolved with the incoming signal
-     * to apply a wide-band 90-degree phase shift.
+     * A wide-band phase-shift filter needs a delay to maintain linearity. A
+     * dirac impulse in the center of a time-domain buffer represents a filter
+     * passing all frequencies through as-is with a pure delay. Converting that
+     * to the frequency domain, adjusting the phase of each frequency bin by
+     * +90 degrees, then converting back to the time domain, results in a FIR
+     * filter that applies a +90 degree wide-band phase-shift.
      *
      * A particularly notable aspect of the time-domain filter response is that
      * every other coefficient is 0. This allows doubling the effective size of
-     * the filter, by only storing the non-0 coefficients and double-stepping
+     * the filter, by storing only the non-0 coefficients and double-stepping
      * over the input to apply it.
      *
      * Additionally, the resulting filter is independent of the sample rate.
      * The same filter can be applied regardless of the device's sample rate
-     * and achieve the same effect, although a lower rate allows the filter to
-     * cover more time and improve the results.
+     * and achieve the same effect.
      */
-    constexpr complex_d c0{0.0,  1.0};
-    constexpr complex_d c1{0.0, -1.0};
-    constexpr size_t fft_size{65536};
+    constexpr size_t fft_size{Uhj2Encoder::sFilterSize * 2};
     constexpr size_t half_size{fft_size / 2};
 
     /* Generate a frequency domain impulse with a +90 degree phase offset.
      * Reconstruct the mirrored frequencies to convert to the time domain.
      */
-    auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
-    for(size_t i{0};i < half_size;i += 2)
-    {
-        fftBuffer[i  ] = c0;
-        fftBuffer[i+1] = c1;
-    }
-    fftBuffer[half_size] = c0;
+    auto fftBuffer = std::make_unique<complex_d[]>(fft_size);
+    std::fill_n(fftBuffer.get(), fft_size, complex_d{});
+    fftBuffer[half_size] = 1.0;
+
+    forward_fft({fftBuffer.get(), fft_size});
+    for(size_t i{0};i < half_size+1;++i)
+        fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
     for(size_t i{half_size+1};i < fft_size;++i)
         fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-    complex_fft(fftBuffer, 1.0);
+    inverse_fft({fftBuffer.get(), fft_size});
 
-    /* Reverse and truncate the filter to a usable size, and store only the
-     * non-0 terms. Should this be windowed?
+    /* Reverse the filter for simpler processing, and store only the non-0
+     * coefficients.
      */
-    std::array<float,Uhj2Encoder::sFilterSize> ret;
-    auto fftiter = fftBuffer.data() + half_size + (Uhj2Encoder::sFilterSize-1);
-    for(float &coeff : ret)
+    auto ret = std::make_unique<std::array<float,Uhj2Encoder::sFilterSize>>();
+    auto fftiter = fftBuffer.get() + half_size + (Uhj2Encoder::sFilterSize-1);
+    for(float &coeff : *ret)
     {
         coeff = static_cast<float>(fftiter->real() / double{fft_size});
         fftiter -= 2;
     }
-    return ret;
+    return *ret;
 }
 alignas(16) const auto PShiftCoeffs = GenerateFilter();
 

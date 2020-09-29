@@ -40,6 +40,7 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "common/alhelpers.h"
 
@@ -132,7 +133,17 @@ struct StreamPlayer {
             mFormat = AL_FORMAT_MONO16;
         else if(mSfInfo.channels == 2)
             mFormat = AL_FORMAT_STEREO16;
-        else
+        else if(mSfInfo.channels == 3)
+        {
+            if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+                mFormat = AL_FORMAT_BFORMAT2D_16;
+        }
+        else if(mSfInfo.channels == 4)
+        {
+            if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+                mFormat = AL_FORMAT_BFORMAT3D_16;
+        }
+        if(!mFormat)
         {
             fprintf(stderr, "Unsupported channel count: %d\n", mSfInfo.channels);
             sf_close(mSndfile);

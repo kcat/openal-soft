@@ -25,61 +25,6 @@ constexpr int BSincPhaseCount{BSINC_PHASE_COUNT};
 constexpr int BSincScaleCount{BSINC_SCALE_COUNT};
 
 
-template<typename T>
-constexpr std::enable_if_t<std::is_floating_point<T>::value,T> sqrt(T x)
-{
-    if(!(x >= 0 && x < std::numeric_limits<double>::infinity()))
-        throw std::domain_error{"Invalid sqrt value"};
-
-    T cur{x}, prev{0};
-    while(cur != prev)
-    {
-        prev = cur;
-        cur = 0.5f*(cur + x/cur);
-    }
-    return cur;
-}
-
-template<typename T>
-constexpr std::enable_if_t<std::is_floating_point<T>::value,T> sin(T x)
-{
-    if(x >= al::MathDefs<T>::Tau())
-    {
-        if(!(x < 65536))
-            throw std::domain_error{"Invalid sin value"};
-        do {
-            x -= al::MathDefs<T>::Tau();
-        } while(x >= al::MathDefs<T>::Tau());
-    }
-    else if(x < 0)
-    {
-        if(!(x > -65536))
-            throw std::domain_error{"Invalid sin value"};
-        do {
-            x += al::MathDefs<T>::Tau();
-        } while(x < 0);
-    }
-
-    T prev{x}, n{6};
-    int i{4}, s{-1};
-    const T xx{x*x};
-    T t{xx*x};
-
-    T cur{prev + t*s/n};
-    while(prev != cur)
-    {
-        prev = cur;
-        n *= i*(i+1);
-        i += 2;
-        s = -s;
-        t *= xx;
-
-        cur += t*s/n;
-    }
-    return cur;
-}
-
-
 /* This is the normalized cardinal sine (sinc) function.
  *
  *   sinc(x) = { 1,                   x = 0
@@ -89,7 +34,7 @@ constexpr double Sinc(const double x)
 {
     if(!(x > 1e-15 || x < -1e-15))
         return 1.0;
-    return sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
+    return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
 }
 
 /* The zero-order modified Bessel function of the first kind, used for the
@@ -139,7 +84,7 @@ constexpr double Kaiser(const double beta, const double k, const double besseli_
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return BesselI_0(beta * sqrt(1.0 - k*k)) / besseli_0_beta;
+    return BesselI_0(beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the (normalized frequency) transition width of the Kaiser window.

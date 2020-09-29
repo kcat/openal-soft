@@ -121,11 +121,11 @@ constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
-/* Scales the given reftime value, ceiling the result. */
+/* Scales the given reftime value, rounding the result. */
 inline ALuint RefTime2Samples(const ReferenceTime &val, ALuint srate)
 {
-    const auto retval = (val*srate + (seconds{1}-1_reftime)) / seconds{1};
-    return static_cast<ALuint>(retval);
+    const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
+    return static_cast<ALuint>(mini64(retval, std::numeric_limits<ALuint>::max()));
 }
 
 
@@ -251,6 +251,8 @@ al::vector<DevMap> CaptureDevices;
 using NameGUIDPair = std::pair<std::string,std::string>;
 NameGUIDPair get_device_name_and_guid(IMMDevice *device)
 {
+    static constexpr char UnknownName[]{"Unknown Device Name"};
+    static constexpr char UnknownGuid[]{"Unknown Device GUID"};
     std::string name{DEVNAME_HEAD};
     std::string guid;
 
@@ -259,7 +261,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-        return std::make_pair("Unknown Device Name", "Unknown Device GUID");
+        return std::make_pair(UnknownName, UnknownGuid);
     }
 
     PropVariant pvprop;
@@ -267,14 +269,14 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     if(FAILED(hr))
     {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
-        name += "Unknown Device Name";
+        name += UnknownName;
     }
     else if(pvprop->vt == VT_LPWSTR)
         name += wstr_to_utf8(pvprop->pwszVal);
     else
     {
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvprop->vt);
-        name += "Unknown Device Name";
+        name += UnknownName;
     }
 
     pvprop.clear();
@@ -282,14 +284,14 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     if(FAILED(hr))
     {
         WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
-        guid = "Unknown Device GUID";
+        guid = UnknownGuid;
     }
     else if(pvprop->vt == VT_LPWSTR)
         guid = wstr_to_utf8(pvprop->pwszVal);
     else
     {
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvprop->vt);
-        guid = "Unknown Device GUID";
+        guid = UnknownGuid;
     }
 
     return std::make_pair(std::move(name), std::move(guid));

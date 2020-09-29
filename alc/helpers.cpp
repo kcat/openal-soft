@@ -80,7 +80,7 @@ const PathNamePair &GetProcBinary()
 }
 
 
-void al_print(FILE *logfile, const char *fmt, ...)
+void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
 {
     al::vector<char> dynmsg;
     char stcmsg[256];
@@ -100,8 +100,12 @@ void al_print(FILE *logfile, const char *fmt, ...)
     va_end(args);
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fputws(wstr.c_str(), logfile);
-    fflush(logfile);
+    if(gLogLevel >= level)
+    {
+        fputws(wstr.c_str(), logfile);
+        fflush(logfile);
+    }
+    OutputDebugStringW(wstr.c_str());
 }
 
 
@@ -221,6 +225,9 @@ void SetRTPriority(void)
 #ifdef __HAIKU__
 #include <FindDirectory.h>
 #endif
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 #ifdef HAVE_PROC_PIDPATH
 #include <libproc.h>
 #endif
@@ -316,14 +323,47 @@ const PathNamePair &GetProcBinary()
 }
 
 
-void al_print(FILE *logfile, const char *fmt, ...)
+void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
 {
-    std::va_list ap;
-    va_start(ap, fmt);
-    vfprintf(logfile, fmt, ap);
-    va_end(ap);
+    al::vector<char> dynmsg;
+    char stcmsg[256];
+    char *str{stcmsg};
 
-    fflush(logfile);
+    va_list args, args2;
+    va_start(args, fmt);
+    va_copy(args2, args);
+    int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
+    if UNLIKELY(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg))
+    {
+        dynmsg.resize(static_cast<size_t>(msglen) + 1u);
+        str = dynmsg.data();
+        msglen = std::vsnprintf(str, dynmsg.size(), fmt, args2);
+    }
+    va_end(args2);
+    va_end(args);
+
+    if(gLogLevel >= level)
+    {
+        fputs(str, logfile);
+        fflush(logfile);
+    }
+#ifdef __ANDROID__
+    auto android_severity = [](LogLevel l) noexcept
+    {
+        switch(l)
+        {
+        case LogLevel::Trace: return ANDROID_LOG_DEBUG;
+        case LogLevel::Warning: return ANDROID_LOG_WARN;
+        case LogLevel::Error: return ANDROID_LOG_ERROR;
+        /* Should not happen. */
+        case LogLevel::Ref:
+        case LogLevel::Disable:
+            break;
+        }
+        return ANDROID_LOG_ERROR;
+    };
+    __android_log_print(android_severity(level), "openal", "%s", str);
+#endif
 }
 
 

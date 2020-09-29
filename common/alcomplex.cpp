@@ -18,26 +18,22 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     for(size_t i{1u};i < fftsize-1;i++)
     {
         size_t j{0u};
-        for(size_t mask{1u};mask < fftsize;mask <<= 1)
-        {
-            if((i&mask) != 0)
-                j++;
-            j <<= 1;
-        }
+        for(size_t imask{i + fftsize};imask;imask >>= 1)
+            j = (j<<1) + (imask&1);
         j >>= 1;
 
         if(i < j)
             std::swap(buffer[i], buffer[j]);
     }
 
-    /* Iterative form of DanielsonLanczos lemma */
+    /* Iterative form of Danielson-Lanczos lemma */
     size_t step{2u};
     for(size_t i{1u};i < fftsize;i<<=1, step<<=1)
     {
         const size_t step2{step >> 1};
-        double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
+        const double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
 
-        std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
+        const std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};
         for(size_t j{0};j < step2;j++)
         {
@@ -55,7 +51,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 
 void complex_hilbert(const al::span<std::complex<double>> buffer)
 {
-    complex_fft(buffer, 1.0);
+    inverse_fft(buffer);
 
     const double inverse_size = 1.0/static_cast<double>(buffer.size());
     auto bufiter = buffer.begin();
@@ -69,5 +65,5 @@ void complex_hilbert(const al::span<std::complex<double>> buffer)
 
     std::fill(bufiter, buffer.end(), std::complex<double>{});
 
-    complex_fft(buffer, -1.0);
+    forward_fft(buffer);
 }

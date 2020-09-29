@@ -147,6 +147,7 @@ void aluInitMixer()
         constexpr ResamplerEntry ResamplerList[]{
             { "none", Resampler::Point },
             { "point", Resampler::Point },
+            { "linear", Resampler::Linear },
             { "cubic", Resampler::Cubic },
             { "bsinc12", Resampler::BSinc12 },
             { "fast_bsinc12", Resampler::FastBSinc12 },

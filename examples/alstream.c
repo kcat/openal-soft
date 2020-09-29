@@ -33,6 +33,7 @@
 #include "sndfile.h"
 
 #include "AL/al.h"
+#include "AL/alext.h"
 
 #include "common/alhelpers.h"
 
@@ -128,7 +129,17 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
         player->format = AL_FORMAT_MONO16;
     else if(player->sfinfo.channels == 2)
         player->format = AL_FORMAT_STEREO16;
-    else
+    else if(player->sfinfo.channels == 3)
+    {
+        if(sf_command(player->sndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+            player->format = AL_FORMAT_BFORMAT2D_16;
+    }
+    else if(player->sfinfo.channels == 4)
+    {
+        if(sf_command(player->sndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+            player->format = AL_FORMAT_BFORMAT3D_16;
+    }
+    if(!player->format)
     {
         fprintf(stderr, "Unsupported channel count: %d\n", player->sfinfo.channels);
         sf_close(player->sndfile);

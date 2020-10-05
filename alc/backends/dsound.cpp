@@ -757,7 +757,7 @@ ALCuint DSoundCapture::availableSamples()
     if(SUCCEEDED(hr))
     {
         const DWORD NumBytes{(BufferBytes+ReadCursor-LastCursor) % BufferBytes};
-        if(!NumBytes) return static_cast<ALCubyte>(mRing->readSpace());
+        if(!NumBytes) return static_cast<ALCuint>(mRing->readSpace());
         hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))

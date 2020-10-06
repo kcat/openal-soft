@@ -14,6 +14,8 @@ openal-soft-1.21.0:
 
     Improved makemhr's HRIR delay calculation.
 
+    Improved WASAPI capture of mono formats with multichannel input.
+
     Reimplemented the modulation stage for reverb.
 
     Enabled real-time mixing priority by default, for backends that use the
@@ -34,6 +36,9 @@ openal-soft-1.21.0:
     Fixed stale devices when re-enumerating WASAPI devices.
 
     Fixed using unicode paths with the log file on Windows.
+
+    Fixed DirectSound capture reporting the bad sample counts or erroring when
+    reading samples.
 
     Added an in-progress extension for a callback-driven buffer type.
 
@@ -68,8 +73,6 @@ openal-soft-1.21.0:
 
     Got rid of the compile-time native-tools targets, using cmake and global
     initialization instead. This should make cross-compiling less troublesome.
-
-
 
 openal-soft-1.20.1:
 

@@ -1556,18 +1556,6 @@ HRESULT WasapiCapture::resetProxy()
     if(wfx != nullptr)
     {
         TraceFormat("Got capture format", wfx);
-        if(!(wfx->nChannels == InputType.Format.nChannels ||
-             (wfx->nChannels == 1 && InputType.Format.nChannels == 2) ||
-             (wfx->nChannels == 2 && InputType.Format.nChannels == 1)))
-        {
-            ERR("Failed to get matching format, wanted: %s %s %uhz, got: %d channel%s %d-bit %luhz\n",
-                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-                mDevice->Frequency, wfx->nChannels, (wfx->nChannels==1)?"":"s", wfx->wBitsPerSample,
-                wfx->nSamplesPerSec);
-            CoTaskMemFree(wfx);
-            return E_FAIL;
-        }
-
         if(!MakeExtensible(&InputType, wfx))
         {
             CoTaskMemFree(wfx);
@@ -1575,9 +1563,47 @@ HRESULT WasapiCapture::resetProxy()
         }
         CoTaskMemFree(wfx);
         wfx = nullptr;
+
+        auto validate_fmt = [](ALCdevice *device, uint32_t chancount, DWORD chanmask) noexcept
+            -> bool
+        {
+            switch(device->FmtChans)
+            {
+            /* If the device wants mono, we can handle any input. */
+            case DevFmtMono:
+                return true;
+            /* If the device wants stereo, we can handle mono or stereo input. */
+            case DevFmtStereo:
+                return (chancount == 2 && (chanmask == 0 || (chanmask&StereoMask) == STEREO))
+                    || (chancount == 1 && (chanmask&MonoMask) == MONO);
+            /* Otherwise, the device must match the input type. */
+            case DevFmtQuad:
+                return (chancount == 4 && (chanmask == 0 || (chanmask&QuadMask) == QUAD));
+            /* 5.1 (Side) and 5.1 (Rear) are interchangeable here. */
+            case DevFmtX51:
+            case DevFmtX51Rear:
+                return (chancount == 6 && (chanmask == 0 || (chanmask&X51Mask) == X5DOT1
+                        || (chanmask&X51RearMask) == X5DOT1REAR));
+            case DevFmtX61:
+                return (chancount == 7 && (chanmask == 0 || (chanmask&X61Mask) == X6DOT1));
+            case DevFmtX71:
+                return (chancount == 8 && (chanmask == 0 || (chanmask&X71Mask) == X7DOT1));
+            case DevFmtAmbi3D: return (chanmask == 0 && device->channelsFromFmt());
+            }
+            return false;
+        };
+        if(!validate_fmt(mDevice, InputType.Format.nChannels, InputType.dwChannelMask))
+        {
+            ERR("Failed to match format, wanted: %s %s %uhz, got: 0x%08lx mask %d channel%s %d-bit %luhz\n",
+                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
+                mDevice->Frequency, InputType.dwChannelMask, InputType.Format.nChannels,
+                (InputType.Format.nChannels==1)?"":"s", InputType.Format.wBitsPerSample,
+                InputType.Format.nSamplesPerSec);
+            return E_FAIL;
+        }
     }
 
-    DevFmtType srcType;
+    DevFmtType srcType{};
     if(IsEqualGUID(InputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
     {
         if(InputType.Format.wBitsPerSample == 8)
@@ -1608,10 +1634,20 @@ HRESULT WasapiCapture::resetProxy()
         return E_FAIL;
     }
 
-    if(mDevice->FmtChans == DevFmtMono && InputType.Format.nChannels == 2)
+    if(mDevice->FmtChans == DevFmtMono && InputType.Format.nChannels != 1)
     {
-        mChannelConv = ChannelConverter{srcType, DevFmtStereo, mDevice->FmtChans};
-        TRACE("Created %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
+        ALuint chanmask{(1u<<InputType.Format.nChannels) - 1u};
+        /* Exclude LFE from the downmix. */
+        if((InputType.dwChannelMask&SPEAKER_LOW_FREQUENCY))
+        {
+            constexpr auto lfemask = MaskFromTopBits(SPEAKER_LOW_FREQUENCY);
+            const int lfeidx{POPCNT32(InputType.dwChannelMask&lfemask) - 1};
+            chanmask &= ~(1u << lfeidx);
+        }
+
+        mChannelConv = ChannelConverter{srcType, InputType.Format.nChannels, chanmask,
+            mDevice->FmtChans};
+        TRACE("Created %s multichannel-to-mono converter\n", DevFmtTypeString(srcType));
         /* The channel converter always outputs float, so change the input type
          * for the resampler/type-converter.
          */
@@ -1619,7 +1655,7 @@ HRESULT WasapiCapture::resetProxy()
     }
     else if(mDevice->FmtChans == DevFmtStereo && InputType.Format.nChannels == 1)
     {
-        mChannelConv = ChannelConverter{srcType, DevFmtMono, mDevice->FmtChans};
+        mChannelConv = ChannelConverter{srcType, 1, 0x1, mDevice->FmtChans};
         TRACE("Created %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
         srcType = DevFmtFloat;
     }

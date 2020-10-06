@@ -49,11 +49,12 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
 
 
 struct ChannelConverter {
-    DevFmtType mSrcType;
-    DevFmtChannels mSrcChans;
-    DevFmtChannels mDstChans;
+    DevFmtType mSrcType{};
+    ALuint mSrcStep{};
+    ALuint mChanMask{};
+    DevFmtChannels mDstChans{};
 
-    bool is_active() const noexcept { return mSrcChans != mDstChans; }
+    bool is_active() const noexcept { return mChanMask != 0; }
 
     void convert(const void *src, float *dst, ALuint frames) const;
 };

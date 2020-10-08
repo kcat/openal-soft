@@ -49,11 +49,11 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
 
 #ifndef AL_SOFT_events
 #define AL_SOFT_events 1
-#define AL_EVENT_CALLBACK_FUNCTION_SOFT          0x1220
-#define AL_EVENT_CALLBACK_USER_PARAM_SOFT        0x1221
-#define AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT      0x1222
-#define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x1223
-#define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x1224
+#define AL_EVENT_CALLBACK_FUNCTION_SOFT          0x19A2
+#define AL_EVENT_CALLBACK_USER_PARAM_SOFT        0x19A3
+#define AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT      0x19A4
+#define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x19A5
+#define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x19A6
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
                                            ALsizei length, const ALchar *message,
                                            void *userParam);

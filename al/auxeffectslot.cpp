@@ -91,20 +91,19 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
 }
 
 
-void AddActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *context)
+void AddActiveEffectSlots(const al::span<const ALuint> slotids, ALCcontext *context)
 {
-    if(count < 1) return;
+    if(slotids.empty()) return;
     ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
-    size_t newcount{curarray->size() + count};
+    size_t newcount{curarray->size() + slotids.size()};
 
     /* Insert the new effect slots into the head of the array, followed by the
      * existing ones.
      */
     ALeffectslotArray *newarray = ALeffectslot::CreatePtrArray(newcount);
-    auto slotiter = std::transform(slotids, slotids+count, newarray->begin(),
+    auto slotiter = std::transform(slotids.begin(), slotids.end(), newarray->begin(),
         [context](ALuint id) noexcept -> ALeffectslot*
-        { return LookupEffectSlot(context, id); }
-    );
+        { return LookupEffectSlot(context, id); });
     std::copy(curarray->begin(), curarray->end(), slotiter);
 
     /* Remove any duplicates (first instance of each will be kept). */
@@ -137,9 +136,9 @@ void AddActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *conte
     delete curarray;
 }
 
-void RemoveActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *context)
+void RemoveActiveEffectSlots(const al::span<const ALuint> slotids, ALCcontext *context)
 {
-    if(count < 1) return;
+    if(slotids.empty()) return;
     ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
 
     /* Don't shrink the allocated array size since we don't know how many (if
@@ -148,11 +147,9 @@ void RemoveActiveEffectSlots(const ALuint *slotids, size_t count, ALCcontext *co
     ALeffectslotArray *newarray = ALeffectslot::CreatePtrArray(curarray->size());
 
     /* Copy each element in curarray to newarray whose ID is not in slotids. */
-    const ALuint *slotids_end{slotids + count};
     auto slotiter = std::copy_if(curarray->begin(), curarray->end(), newarray->begin(),
-        [slotids, slotids_end](const ALeffectslot *slot) -> bool
-        { return std::find(slotids, slotids_end, slot->id) == slotids_end; }
-    );
+        [slotids](const ALeffectslot *slot) -> bool
+        { return std::find(slotids.begin(), slotids.end(), slot->id) == slotids.end(); });
 
     /* Reallocate with the new size. */
     auto newsize = static_cast<size_t>(std::distance(newarray->begin(), slotiter));
@@ -345,7 +342,7 @@ START_API_FUNC
     if UNLIKELY(bad_slot != effectslots_end) return;
 
     // All effectslots are valid, remove and delete them
-    RemoveActiveEffectSlots(effectslots, static_cast<ALuint>(n), context.get());
+    RemoveActiveEffectSlots({effectslots, static_cast<ALuint>(n)}, context.get());
     auto delete_slot = [&context](const ALuint sid) -> void
     {
         ALeffectslot *slot{LookupEffectSlot(context.get(), sid)};
@@ -389,7 +386,7 @@ START_API_FUNC
     slot->PropsClean.test_and_set(std::memory_order_acq_rel);
     slot->updateProps(context.get());
 
-    AddActiveEffectSlots(&slotid, 1, context.get());
+    AddActiveEffectSlots({&slotid, 1}, context.get());
     slot->mState = SlotState::Playing;
 }
 END_API_FUNC
@@ -423,7 +420,7 @@ START_API_FUNC
         slots[i] = slot;
     };
 
-    AddActiveEffectSlots(slotids, static_cast<ALuint>(n), context.get());
+    AddActiveEffectSlots({slotids, static_cast<ALuint>(n)}, context.get());
     for(auto slot : slots)
         slot->mState = SlotState::Playing;
 }
@@ -443,7 +440,7 @@ START_API_FUNC
         return;
     }
 
-    RemoveActiveEffectSlots(&slotid, 1, context.get());
+    RemoveActiveEffectSlots({&slotid, 1}, context.get());
     slot->mState = SlotState::Stopped;
 }
 END_API_FUNC
@@ -472,7 +469,7 @@ START_API_FUNC
         slots[i] = slot;
     };
 
-    RemoveActiveEffectSlots(slotids, static_cast<ALuint>(n), context.get());
+    RemoveActiveEffectSlots({slotids, static_cast<ALuint>(n)}, context.get());
     for(auto slot : slots)
         slot->mState = SlotState::Stopped;
 }
@@ -513,7 +510,7 @@ START_API_FUNC
         }
         if UNLIKELY(slot->mState == SlotState::Initial)
         {
-            AddActiveEffectSlots(&slot->id, 1, context.get());
+            AddActiveEffectSlots({&slot->id, 1}, context.get());
             slot->mState = SlotState::Playing;
         }
         break;

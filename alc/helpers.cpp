@@ -267,10 +267,11 @@ const PathNamePair &GetProcBinary()
     }
 #endif
 #ifdef __HAIKU__
-    char procpath[PATH_MAX];
-    if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath, sizeof(procpath)) == B_OK)
+    if(pathname.empty())
     {
-        pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
+        char procpath[PATH_MAX];
+        if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath, sizeof(procpath)) == B_OK)
+            pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
     }
 #endif
     if(pathname.empty())

@@ -116,6 +116,9 @@ set(EXTRA_LIBS )
 
 if(WIN32)
     set(CPP_DEFS ${CPP_DEFS} _WIN32)
+    if(MINGW)
+        set(CPP_DEFS ${CPP_DEFS} __USE_MINGW_ANSI_STDIO)
+    endif()
 
     option(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
     if(MINGW)

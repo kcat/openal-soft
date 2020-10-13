@@ -145,8 +145,7 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
 {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), size_t{0},
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
-    )};
+        { return cur + static_cast<ALuint>(PopCount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -174,7 +173,7 @@ ALeffect *AllocEffect(ALCdevice *device)
         { return entry.FreeMask != 0; }
     );
     auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(CountTrailingZeros(sublist->FreeMask));
 
     ALeffect *effect{::new (sublist->Effects + slidx) ALeffect{}};
     InitEffectParams(effect, AL_EFFECT_NULL);
@@ -534,7 +533,7 @@ EffectSubList::~EffectSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        ALsizei idx = CTZ64(usemask);
+        const ALsizei idx{CountTrailingZeros(usemask)};
         al::destroy_at(Effects+idx);
         usemask &= ~(1_u64 << idx);
     }

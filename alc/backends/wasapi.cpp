@@ -1641,7 +1641,7 @@ HRESULT WasapiCapture::resetProxy()
         if((InputType.dwChannelMask&SPEAKER_LOW_FREQUENCY))
         {
             constexpr auto lfemask = MaskFromTopBits(SPEAKER_LOW_FREQUENCY);
-            const int lfeidx{POPCNT32(InputType.dwChannelMask&lfemask) - 1};
+            const int lfeidx{PopCount(uint32_t{InputType.dwChannelMask&lfemask}) - 1};
             chanmask &= ~(1u << lfeidx);
         }
 

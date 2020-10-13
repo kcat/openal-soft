@@ -286,8 +286,7 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
 {
     size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), size_t{0},
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
-    )};
+        { return cur + static_cast<ALuint>(PopCount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -316,7 +315,7 @@ ALbuffer *AllocBuffer(ALCdevice *device)
     );
 
     auto lidx = static_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(CountTrailingZeros(sublist->FreeMask));
 
     ALbuffer *buffer{::new (sublist->Buffers + slidx) ALbuffer{}};
 
@@ -1582,7 +1581,7 @@ BufferSubList::~BufferSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        ALsizei idx{CTZ64(usemask)};
+        const ALsizei idx{CountTrailingZeros(usemask)};
         al::destroy_at(Buffers+idx);
         usemask &= ~(1_u64 << idx);
     }

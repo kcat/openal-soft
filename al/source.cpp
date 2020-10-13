@@ -1252,13 +1252,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values)
 {
     ALCdevice *device{Context->mDevice.get()};
-    ALbuffer *buffer{nullptr};
-    ALfilter *filter{nullptr};
     ALeffectslot *slot{nullptr};
     ALbufferlistitem *oldlist{nullptr};
     std::unique_lock<std::mutex> slotlock;
-    std::unique_lock<std::mutex> filtlock;
-    std::unique_lock<std::mutex> buflock;
     float fvals[6];
 
     switch(prop)
@@ -1303,28 +1299,27 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_BUFFER:
         CHECKSIZE(values, 1);
-        buflock = std::unique_lock<std::mutex>{device->BufferLock};
-        if(values[0] && (buffer=LookupBuffer(device, static_cast<ALuint>(values[0]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
-                static_cast<ALuint>(values[0]));
-
-        if(buffer && buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
-                "Setting non-persistently mapped buffer %u", buffer->id);
-        else if(buffer && buffer->mBuffer.mCallback && ReadRef(buffer->ref) != 0)
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
-                "Setting already-set callback buffer %u", buffer->id);
-        else
         {
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting buffer on playing or paused source %u", Source->id);
         }
-
         oldlist = Source->queue;
-        if(buffer != nullptr)
+        if(values[0])
         {
+            std::lock_guard<std::mutex> _{device->BufferLock};
+            ALbuffer *buffer{LookupBuffer(device, static_cast<ALuint>(values[0]))};
+            if(!buffer)
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
+                    static_cast<ALuint>(values[0]));
+            if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                    "Setting non-persistently mapped buffer %u", buffer->id);
+            if(buffer->mBuffer.mCallback && ReadRef(buffer->ref) != 0)
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                    "Setting already-set callback buffer %u", buffer->id);
+
             /* Add the selected buffer to a one-item queue */
             auto newlist = new ALbufferlistitem{};
             newlist->mSampleLen = buffer->mBuffer.mSampleLen;
@@ -1341,7 +1336,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             Source->SourceType = AL_UNDETERMINED;
             Source->queue = nullptr;
         }
-        buflock.unlock();
 
         /* Delete all elements in the previous queue */
         while(oldlist != nullptr)
@@ -1349,7 +1343,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             std::unique_ptr<ALbufferlistitem> temp{oldlist};
             oldlist = temp->mNext.load(std::memory_order_relaxed);
 
-            if((buffer=temp->mBuffer) != nullptr)
+            if(ALbuffer *buffer{temp->mBuffer})
                 DecrementRef(buffer->ref);
         }
         return true;
@@ -1377,12 +1371,20 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DIRECT_FILTER:
         CHECKSIZE(values, 1);
-        filtlock = std::unique_lock<std::mutex>{device->FilterLock};
-        if(values[0] && (filter=LookupFilter(device, static_cast<ALuint>(values[0]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u",
-                static_cast<ALuint>(values[0]));
-
-        if(!filter)
+        if(values[0])
+        {
+            std::lock_guard<std::mutex> _{device->FilterLock};
+            ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[0]))};
+            if(!filter)
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u",
+                    static_cast<ALuint>(values[0]));
+            Source->Direct.Gain = filter->Gain;
+            Source->Direct.GainHF = filter->GainHF;
+            Source->Direct.HFReference = filter->HFReference;
+            Source->Direct.GainLF = filter->GainLF;
+            Source->Direct.LFReference = filter->LFReference;
+        }
+        else
         {
             Source->Direct.Gain = 1.0f;
             Source->Direct.GainHF = 1.0f;
@@ -1390,15 +1392,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             Source->Direct.GainLF = 1.0f;
             Source->Direct.LFReference = HIGHPASSFREQREF;
         }
-        else
-        {
-            Source->Direct.Gain = filter->Gain;
-            Source->Direct.GainHF = filter->GainHF;
-            Source->Direct.HFReference = filter->HFReference;
-            Source->Direct.GainLF = filter->GainLF;
-            Source->Direct.LFReference = filter->LFReference;
-        }
-        filtlock.unlock();
         return UpdateSourceProps(Source, Context);
 
     case AL_DIRECT_FILTER_GAINHF_AUTO:
@@ -1465,11 +1458,21 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         if(static_cast<ALuint>(values[1]) >= device->NumAuxSends)
             SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid send %u", values[1]);
 
-        filtlock = std::unique_lock<std::mutex>{device->FilterLock};
-        if(values[2] && (filter=LookupFilter(device, static_cast<ALuint>(values[2]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[2]);
+        if(values[2])
+        {
+            std::lock_guard<std::mutex> _{device->FilterLock};
+            ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[2]))};
+            if(!filter)
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[2]);
 
-        if(!filter)
+            auto &send = Source->Send[static_cast<ALuint>(values[1])];
+            send.Gain = filter->Gain;
+            send.GainHF = filter->GainHF;
+            send.HFReference = filter->HFReference;
+            send.GainLF = filter->GainLF;
+            send.LFReference = filter->LFReference;
+        }
+        else
         {
             /* Disable filter */
             auto &send = Source->Send[static_cast<ALuint>(values[1])];
@@ -1479,16 +1482,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             send.GainLF = 1.0f;
             send.LFReference = HIGHPASSFREQREF;
         }
-        else
-        {
-            auto &send = Source->Send[static_cast<ALuint>(values[1])];
-            send.Gain = filter->Gain;
-            send.GainHF = filter->GainHF;
-            send.HFReference = filter->HFReference;
-            send.GainLF = filter->GainLF;
-            send.LFReference = filter->LFReference;
-        }
-        filtlock.unlock();
 
         if(slot != Source->Send[static_cast<ALuint>(values[1])].Slot && IsPlayingOrPaused(Source))
         {

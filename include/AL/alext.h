@@ -537,7 +537,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define ALC_AMBISONIC_ORDER_SOFT                 0x1999
 #define ALC_MAX_AMBISONIC_ORDER_SOFT             0x199B
 
-#define ALC_BFORMAT3D_SOFT                       0x1508
+#define ALC_BFORMAT3D_SOFT                       0x1507
 
 /* Ambisonic layouts */
 #define ALC_FUMA_SOFT                            0x0000

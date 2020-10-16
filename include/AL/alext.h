@@ -25,6 +25,8 @@
 /* Define int64_t and uint64_t types */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 #include <inttypes.h>
+#elif defined(__cplusplus) && __cplusplus >= 201103L
+#include <cinttypes>
 #elif defined(_WIN32) && defined(__GNUC__)
 #include <stdint.h>
 #elif defined(_WIN32)

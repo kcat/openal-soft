@@ -549,6 +549,11 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define ALC_N3D_SOFT                             0x0002
 #endif
 
+#ifndef AL_SOFT_effect_target
+#define AL_SOFT_effect_target
+#define AL_EFFECTSLOT_TARGET_SOFT                0x199C
+#endif
+
 #ifdef __cplusplus
 }
 #endif

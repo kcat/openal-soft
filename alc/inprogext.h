@@ -50,11 +50,6 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #endif
 #endif
 
-#ifndef AL_SOFT_effect_target
-#define AL_SOFT_effect_target
-#define AL_EFFECTSLOT_TARGET_SOFT                0x199C
-#endif
-
 #ifndef AL_SOFT_callback_buffer
 #define AL_SOFT_callback_buffer
 #define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0

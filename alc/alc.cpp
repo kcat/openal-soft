@@ -932,7 +932,8 @@ constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_ENUMERATION_EXT "
     "ALC_EXT_CAPTURE "
     "ALC_EXT_thread_local_context "
-    "ALC_SOFT_loopback";
+    "ALC_SOFT_loopback "
+    "ALC_SOFT_loopback_bformat";
 constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
@@ -944,6 +945,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_device_clock "
     "ALC_SOFT_HRTF "
     "ALC_SOFT_loopback "
+    "ALC_SOFT_loopback_bformat "
     "ALC_SOFT_output_limiter "
     "ALC_SOFT_pause_device";
 constexpr int alcMajorVersion{1};

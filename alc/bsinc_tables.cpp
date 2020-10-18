@@ -155,117 +155,120 @@ constexpr BSincHeader bsinc24_hdr{GenerateBSincHeader(60, 23)};
  * big. This requires using heap space, which is not allowed in a constexpr
  * function (maybe in C++20).
  */
-template<size_t total_size>
-std::array<float,total_size> GenerateBSincCoeffs(const BSincHeader &hdr)
-{
-    auto filter = std::make_unique<double[][BSincPhaseCount+1][BSincPointsMax]>(BSincScaleCount);
+template<const BSincHeader &hdr>
+struct BSincFilterArray {
+    alignas(16) std::array<float, hdr.total_size> mTable;
 
-    /* Calculate the Kaiser-windowed Sinc filter coefficients for each scale
-     * and phase index.
-     */
-    for(unsigned int si{0};si < BSincScaleCount;++si)
+    BSincFilterArray()
     {
-        const int m{hdr.a[si] * 2};
-        const int o{BSincPointsHalf - (m/2)};
-        const int l{hdr.a[si] - 1};
-        const int a{hdr.a[si]};
-        const double scale{hdr.scaleBase + (hdr.scaleRange * si / (BSincScaleCount - 1))};
-        const double cutoff{scale - (hdr.scaleBase * std::max(0.5, scale) * 2.0)};
+        using filter_type = double[][BSincPhaseCount+1][BSincPointsMax];
+        auto filter = std::make_unique<filter_type>(BSincScaleCount);
 
-        /* Do one extra phase index so that the phase delta has a proper target
-         * for its last index.
+        /* Calculate the Kaiser-windowed Sinc filter coefficients for each
+         * scale and phase index.
          */
-        for(int pi{0};pi <= BSincPhaseCount;++pi)
+        for(unsigned int si{0};si < BSincScaleCount;++si)
         {
-            const double phase{l + (pi/double{BSincPhaseCount})};
+            const int m{hdr.a[si] * 2};
+            const int o{BSincPointsHalf - (m/2)};
+            const int l{hdr.a[si] - 1};
+            const int a{hdr.a[si]};
+            const double scale{hdr.scaleBase + (hdr.scaleRange * si / (BSincScaleCount - 1))};
+            const double cutoff{scale - (hdr.scaleBase * std::max(0.5, scale) * 2.0)};
 
-            for(int i{0};i < m;++i)
+            /* Do one extra phase index so that the phase delta has a proper
+             * target for its last index.
+             */
+            for(int pi{0};pi <= BSincPhaseCount;++pi)
             {
-                const double x{i - phase};
-                filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, hdr.besseli_0_beta) * cutoff *
-                    Sinc(cutoff*x);
+                const double phase{l + (pi/double{BSincPhaseCount})};
+
+                for(int i{0};i < m;++i)
+                {
+                    const double x{i - phase};
+                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, hdr.besseli_0_beta) * cutoff *
+                        Sinc(cutoff*x);
+                }
             }
         }
-    }
 
-    auto ret = std::make_unique<std::array<float,total_size>>();
-    size_t idx{0};
-
-    for(unsigned int si{0};si < BSincScaleCount-1;++si)
-    {
-        const int m{((hdr.a[si]*2) + 3) & ~3};
-        const int o{BSincPointsHalf - (m/2)};
-
-        for(int pi{0};pi < BSincPhaseCount;++pi)
+        size_t idx{0};
+        for(unsigned int si{0};si < BSincScaleCount-1;++si)
         {
-            /* Write out the filter. Also calculate and write out the phase and
-             * scale deltas.
-             */
-            for(int i{0};i < m;++i)
-                (*ret)[idx++] = static_cast<float>(filter[si][pi][o+i]);
+            const int m{((hdr.a[si]*2) + 3) & ~3};
+            const int o{BSincPointsHalf - (m/2)};
 
-            /* Linear interpolation between phases is simplified by pre-
-             * calculating the delta (b - a) in: x = a + f (b - a)
-             */
-            for(int i{0};i < m;++i)
+            for(int pi{0};pi < BSincPhaseCount;++pi)
             {
-                const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
-                (*ret)[idx++] = static_cast<float>(phDelta);
-            }
+                /* Write out the filter. Also calculate and write out the phase
+                 * and scale deltas.
+                 */
+                for(int i{0};i < m;++i)
+                    mTable[idx++] = static_cast<float>(filter[si][pi][o+i]);
 
-            /* Linear interpolation between scales is also simplified.
-             *
-             * Given a difference in points between scales, the destination
-             * points will be 0, thus: x = a + f (-a)
-             */
-            for(int i{0};i < m;++i)
-            {
-                const double scDelta{filter[si+1][pi][o+i] - filter[si][pi][o+i]};
-                (*ret)[idx++] = static_cast<float>(scDelta);
-            }
+                /* Linear interpolation between phases is simplified by pre-
+                 * calculating the delta (b - a) in: x = a + f (b - a)
+                 */
+                for(int i{0};i < m;++i)
+                {
+                    const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
+                    mTable[idx++] = static_cast<float>(phDelta);
+                }
 
-            /* This last simplification is done to complete the bilinear
-             * equation for the combination of phase and scale.
-             */
-            for(int i{0};i < m;++i)
-            {
-                const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -
-                    (filter[si][pi+1][o+i] - filter[si][pi][o+i])};
-                (*ret)[idx++] = static_cast<float>(spDelta);
+                /* Linear interpolation between scales is also simplified.
+                 *
+                 * Given a difference in points between scales, the destination
+                 * points will be 0, thus: x = a + f (-a)
+                 */
+                for(int i{0};i < m;++i)
+                {
+                    const double scDelta{filter[si+1][pi][o+i] - filter[si][pi][o+i]};
+                    mTable[idx++] = static_cast<float>(scDelta);
+                }
+
+                /* This last simplification is done to complete the bilinear
+                 * equation for the combination of phase and scale.
+                 */
+                for(int i{0};i < m;++i)
+                {
+                    const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -
+                        (filter[si][pi+1][o+i] - filter[si][pi][o+i])};
+                    mTable[idx++] = static_cast<float>(spDelta);
+                }
             }
         }
-    }
-    {
-        /* The last scale index doesn't have any scale or scale-phase deltas. */
-        const unsigned int si{BSincScaleCount - 1};
-        const int m{((hdr.a[si]*2) + 3) & ~3};
-        const int o{BSincPointsHalf - (m/2)};
-
-        for(int pi{0};pi < BSincPhaseCount;++pi)
         {
-            for(int i{0};i < m;++i)
-                (*ret)[idx++] = static_cast<float>(filter[si][pi][o+i]);
-            for(int i{0};i < m;++i)
-            {
-                const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
-                (*ret)[idx++] = static_cast<float>(phDelta);
-            }
-            for(int i{0};i < m;++i)
-                (*ret)[idx++] = 0.0f;
-            for(int i{0};i < m;++i)
-                (*ret)[idx++] = 0.0f;
-        }
-    }
-    assert(idx == total_size);
+            /* The last scale index doesn't have any scale or scale-phase
+             * deltas.
+             */
+            const unsigned int si{BSincScaleCount - 1};
+            const int m{((hdr.a[si]*2) + 3) & ~3};
+            const int o{BSincPointsHalf - (m/2)};
 
-    return *ret;
-}
+            for(int pi{0};pi < BSincPhaseCount;++pi)
+            {
+                for(int i{0};i < m;++i)
+                    mTable[idx++] = static_cast<float>(filter[si][pi][o+i]);
+                for(int i{0};i < m;++i)
+                {
+                    const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
+                    mTable[idx++] = static_cast<float>(phDelta);
+                }
+                for(int i{0};i < m;++i)
+                    mTable[idx++] = 0.0f;
+                for(int i{0};i < m;++i)
+                    mTable[idx++] = 0.0f;
+            }
+        }
+        assert(idx == hdr.total_size);
+    }
+};
 
 /* FIXME: These can't be constexpr due to the calls reaching the compiler's
  * step limit.
  */
-alignas(16) const auto bsinc12_table = GenerateBSincCoeffs<bsinc12_hdr.total_size>(bsinc12_hdr);
-alignas(16) const auto bsinc24_table = GenerateBSincCoeffs<bsinc24_hdr.total_size>(bsinc24_hdr);
+const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};
+const BSincFilterArray<bsinc24_hdr> bsinc24_filter{};
 
 
 constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab)
@@ -284,5 +287,5 @@ constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab
 
 } // namespace
 
-const BSincTable bsinc12{GenerateBSincTable(bsinc12_hdr, &bsinc12_table.front())};
-const BSincTable bsinc24{GenerateBSincTable(bsinc24_hdr, &bsinc24_table.front())};
+const BSincTable bsinc12{GenerateBSincTable(bsinc12_hdr, &bsinc12_filter.mTable.front())};
+const BSincTable bsinc24{GenerateBSincTable(bsinc24_hdr, &bsinc24_filter.mTable.front())};

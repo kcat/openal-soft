@@ -110,45 +110,42 @@ constexpr double CalcKaiserBeta(const double rejection)
 
 
 struct BSincHeader {
-    double width;
-    double beta;
-    double scaleBase;
-    double scaleRange;
-    double besseli_0_beta;
+    double width{};
+    double beta{};
+    double scaleBase{};
+    double scaleRange{};
+    double besseli_0_beta{};
 
-    int a[BSINC_SCALE_COUNT];
-    int total_size;
-};
+    int a[BSINC_SCALE_COUNT]{};
+    int total_size{};
 
-constexpr BSincHeader GenerateBSincHeader(int Rejection, int Order)
-{
-    BSincHeader ret{};
-    ret.width = CalcKaiserWidth(Rejection, Order);
-    ret.beta = CalcKaiserBeta(Rejection);
-    ret.scaleBase = ret.width / 2.0;
-    ret.scaleRange = 1.0 - ret.scaleBase;
-    ret.besseli_0_beta = BesselI_0(ret.beta);
-
-    int num_points{Order+1};
-    for(int si{0};si < BSincScaleCount;++si)
+    constexpr BSincHeader(int Rejection, int Order) noexcept
     {
-        const double scale{ret.scaleBase + (ret.scaleRange * si / (BSincScaleCount - 1))};
-        const int a{std::min(static_cast<int>(num_points / 2.0 / scale), num_points)};
-        const int m{2 * a};
+        width = CalcKaiserWidth(Rejection, Order);
+        beta = CalcKaiserBeta(Rejection);
+        scaleBase = width / 2.0;
+        scaleRange = 1.0 - scaleBase;
+        besseli_0_beta = BesselI_0(beta);
 
-        ret.a[si] = a;
-        ret.total_size += 4 * BSincPhaseCount * ((m+3) & ~3);
+        int num_points{Order+1};
+        for(int si{0};si < BSincScaleCount;++si)
+        {
+            const double scale{scaleBase + (scaleRange * si / (BSincScaleCount - 1))};
+            const int a_{std::min(static_cast<int>(num_points / 2.0 / scale), num_points)};
+            const int m{2 * a_};
+
+            a[si] = a_;
+            total_size += 4 * BSincPhaseCount * ((m+3) & ~3);
+        }
     }
-
-    return ret;
-}
+};
 
 /* 11th and 23rd order filters (12 and 24-point respectively) with a 60dB drop
  * at nyquist. Each filter will scale up the order when downsampling, to 23rd
  * and 47th order respectively.
  */
-constexpr BSincHeader bsinc12_hdr{GenerateBSincHeader(60, 11)};
-constexpr BSincHeader bsinc24_hdr{GenerateBSincHeader(60, 23)};
+constexpr BSincHeader bsinc12_hdr{60, 11};
+constexpr BSincHeader bsinc24_hdr{60, 23};
 
 
 /* FIXME: This should be constexpr, but the temporary filter arrays are too

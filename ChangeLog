@@ -2,6 +2,10 @@ openal-soft-1.21.0:
 
     Updated library codebase to C++14.
 
+    Implemented the AL_SOFT_effect_target extension.
+
+    Implemented the ALC_SOFT_loopback_bformat extension.
+
     Improved memory use for mixing voices.
 
     Improved detection of NEON capabilities.

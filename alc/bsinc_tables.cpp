@@ -141,15 +141,22 @@ constexpr BSincHeader bsinc12_hdr{60, 11};
 constexpr BSincHeader bsinc24_hdr{60, 23};
 
 
-/* FIXME: This should be constexpr, but the temporary filter arrays are too
- * big. This requires using heap space, which is not allowed in a constexpr
- * function (maybe in C++20).
+/* NOTE: GCC 5 has an issue with BSincHeader objects being in an anonymous
+ * namespace while also being used as non-type template parameters.
  */
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
+template<size_t total_size>
+struct BSincFilterArray {
+    alignas(16) std::array<float, total_size> mTable;
+
+    BSincFilterArray(const BSincHeader &hdr)
+#else
 template<const BSincHeader &hdr>
 struct BSincFilterArray {
     alignas(16) std::array<float, hdr.total_size> mTable;
 
     BSincFilterArray()
+#endif
     {
         using filter_type = double[][BSincPhaseCount+1][BSincPointsMax];
         auto filter = std::make_unique<filter_type>(BSincScaleCount);
@@ -254,12 +261,13 @@ struct BSincFilterArray {
     }
 };
 
-/* FIXME: These can't be constexpr due to the calls reaching the compiler's
- * step limit.
- */
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
+const BSincFilterArray<bsinc12_hdr.total_size> bsinc12_filter{bsinc12_hdr};
+const BSincFilterArray<bsinc24_hdr.total_size> bsinc24_filter{bsinc24_hdr};
+#else
 const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};
 const BSincFilterArray<bsinc24_hdr> bsinc24_filter{};
-
+#endif
 
 constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab)
 {

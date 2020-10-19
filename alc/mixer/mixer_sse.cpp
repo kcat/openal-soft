@@ -20,8 +20,8 @@ struct FastBSincTag;
 
 namespace {
 
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
-#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+constexpr ALuint FracPhaseBitDiff{FRACTIONBITS - BSincPhaseBits};
+constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
 
@@ -86,9 +86,8 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
-            (1.0f/FRAC_PHASE_DIFFONE)};
+        const ALuint pi{frac >> FracPhaseBitDiff};
+        const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
@@ -133,9 +132,8 @@ const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const floa
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
-            (1.0f/FRAC_PHASE_DIFFONE)};
+        const ALuint pi{frac >> FracPhaseBitDiff};
+        const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};

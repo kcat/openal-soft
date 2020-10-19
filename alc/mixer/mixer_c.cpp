@@ -21,8 +21,8 @@ struct FastBSincTag;
 
 namespace {
 
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
-#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+constexpr ALuint FracPhaseBitDiff{FRACTIONBITS - BSincPhaseBits};
+constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 inline float do_point(const InterpState&, const float *RESTRICT vals, const ALuint)
 { return vals[0]; }
@@ -35,8 +35,8 @@ inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, con
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
-    const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) * (1.0f/FRAC_PHASE_DIFFONE)};
+    const ALuint pi{frac >> FracPhaseBitDiff};
+    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
     const float *fil{istate.bsinc.filter + m*pi*4};
     const float *phd{fil + m};
@@ -54,8 +54,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
-    const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) * (1.0f/FRAC_PHASE_DIFFONE)};
+    const ALuint pi{frac >> FracPhaseBitDiff};
+    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
     const float *fil{istate.bsinc.filter + m*pi*4};
     const float *phd{fil + m};

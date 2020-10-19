@@ -21,8 +21,8 @@ struct FastBSincTag;
 
 namespace {
 
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
-#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+constexpr ALuint FracPhaseBitDiff{FRACTIONBITS - BSincPhaseBits};
+constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
     const HrirArray &Coeffs, const float left, const float right)
@@ -114,9 +114,8 @@ const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
-            (1.0f/FRAC_PHASE_DIFFONE)};
+        const ALuint pi{frac >> FracPhaseBitDiff};
+        const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};
@@ -160,9 +159,8 @@ const float *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
-            (1.0f/FRAC_PHASE_DIFFONE)};
+        const ALuint pi{frac >> FracPhaseBitDiff};
+        const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};

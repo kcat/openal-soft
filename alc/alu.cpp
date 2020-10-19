@@ -103,8 +103,8 @@ struct BSincTag;
 struct FastBSincTag;
 
 
-static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= BSINC_POINTS_MAX,
-    "MAX_RESAMPLER_PADDING is not a multiple of two, or is too small");
+static_assert(MAX_RESAMPLER_PADDING >= BSincPointsMax, "MAX_RESAMPLER_PADDING is too small");
+static_assert(!(MAX_RESAMPLER_PADDING&1), "MAX_RESAMPLER_PADDING is not a multiple of two");
 
 
 namespace {
@@ -174,13 +174,13 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 
 inline void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
 {
-    size_t si{BSINC_SCALE_COUNT - 1};
+    size_t si{BSincScaleCount - 1};
     float sf{0.0f};
 
     if(increment > FRACTIONONE)
     {
         sf = FRACTIONONE / static_cast<float>(increment);
-        sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
+        sf = maxf(0.0f, (BSincScaleCount-1) * (sf-table->scaleBase) * table->scaleRange);
         si = float2uint(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different

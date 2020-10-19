@@ -101,12 +101,6 @@ constexpr double CalcKaiserBeta(const double rejection)
     return 0.0;
 }
 
-/* NOTE: GCC 5 has an issue with BSincHeader objects being in an anonymous
- * namespace while also being used as non-type template parameters.
- */
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
-} // namespace
-#endif
 
 struct BSincHeader {
     double width{};
@@ -146,9 +140,6 @@ struct BSincHeader {
 constexpr BSincHeader bsinc12_hdr{60, 11};
 constexpr BSincHeader bsinc24_hdr{60, 23};
 
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
-namespace {
-#endif
 
 /* FIXME: This should be constexpr, but the temporary filter arrays are too
  * big. This requires using heap space, which is not allowed in a constexpr

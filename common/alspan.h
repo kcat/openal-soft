@@ -118,7 +118,7 @@ public:
     constexpr span(const span<U,E> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
-    span& operator=(const span &rhs) noexcept = default;
+    constexpr span& operator=(const span &rhs) noexcept = default;
 
     constexpr reference front() const { return *mData; }
     constexpr reference back() const { return *(mData+E-1); }
@@ -212,7 +212,7 @@ public:
     constexpr span(const span<U,N> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
-    span& operator=(const span &rhs) noexcept = default;
+    constexpr span& operator=(const span &rhs) noexcept = default;
 
     constexpr reference front() const { return *mData; }
     constexpr reference back() const { return *(mDataEnd-1); }

@@ -976,7 +976,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
             device->HrtfName = hrtfname;
             return true;
         };
-        std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);
+        (void)std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);
     }
 
     if(device->mHrtf)

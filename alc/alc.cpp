@@ -2202,7 +2202,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 continue;
 
             voice->mStep = 0;
-            voice->mFlags |= VOICE_IS_FADING;
+            voice->mFlags |= VoiceIsFading;
 
             if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
             {
@@ -2223,7 +2223,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }
 
-                voice->mFlags |= VOICE_IS_AMBISONIC;
+                voice->mFlags |= VoiceIsAmbisonic;
             }
             else
             {
@@ -2235,7 +2235,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }
 
-                voice->mFlags &= ~VOICE_IS_AMBISONIC;
+                voice->mFlags &= ~VoiceIsAmbisonic;
             }
 
             if(device->AvgSpeakerDist > 0.0f)

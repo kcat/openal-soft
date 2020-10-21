@@ -450,8 +450,8 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
     voice->mAmbiScaling = buffer->mBuffer.mAmbiScaling;
     voice->mAmbiOrder = buffer->mBuffer.mAmbiOrder;
 
-    if(buffer->mBuffer.mCallback) voice->mFlags |= VOICE_IS_CALLBACK;
-    else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+    if(buffer->mBuffer.mCallback) voice->mFlags |= VoiceIsCallback;
+    else if(source->SourceType == AL_STATIC) voice->mFlags |= VoiceIsStatic;
     voice->mNumCallbackSamples = 0;
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
@@ -485,7 +485,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
 
-        voice->mFlags |= VOICE_IS_AMBISONIC;
+        voice->mFlags |= VoiceIsAmbisonic;
     }
     else
     {
@@ -605,7 +605,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
     newvoice->mFlags = (vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue) ?
-        VOICE_IS_FADING : 0;
+        VoiceIsFading : 0u;
     InitVoice(newvoice, source, source->queue, context, device);
     source->VoiceIdx = vidx;
 
@@ -1145,7 +1145,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if((voice->mFlags&VOICE_IS_CALLBACK))
+            if((voice->mFlags&VoiceIsCallback))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                     "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
@@ -1356,7 +1356,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if((voice->mFlags&VOICE_IS_CALLBACK))
+            if((voice->mFlags&VoiceIsCallback))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                     "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
@@ -2939,7 +2939,7 @@ START_API_FUNC
                 voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
                 if(vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != source->queue)
-                    voice->mFlags |= VOICE_IS_FADING;
+                    voice->mFlags |= VoiceIsFading;
             }
         }
         InitVoice(voice, source, BufferList, context.get(), device);

@@ -480,7 +480,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
                            Resample_<CopyTag,CTag> : mResampler};
 
-    ALuint Counter{(mFlags&VOICE_IS_FADING) ? SamplesToDo : 0};
+    ALuint Counter{(mFlags&VoiceIsFading) ? SamplesToDo : 0};
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
@@ -488,7 +488,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         {
             {
                 DirectParams &parms = chandata.mDryParams;
-                if(!(mFlags&VOICE_HAS_HRTF))
+                if(!(mFlags&VoiceHasHrtf))
                     parms.Gains.Current = parms.Gains.Target;
                 else
                     parms.Hrtf.Old = parms.Hrtf.Target;
@@ -553,8 +553,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             }
         }
 
-        if((mFlags&(VOICE_IS_CALLBACK|VOICE_CALLBACK_STOPPED)) == VOICE_IS_CALLBACK
-            && BufferListItem)
+        if((mFlags&(VoiceIsCallback|VoiceCallbackStopped)) == VoiceIsCallback && BufferListItem)
         {
             ALbuffer *buffer{BufferListItem->mBuffer};
 
@@ -568,10 +567,10 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                 const ALsizei gotBytes{buffer->mBuffer.mCallback(buffer->mBuffer.mUserData,
                     &buffer->mBuffer.mData[byteOffset], static_cast<ALsizei>(needBytes))};
                 if(gotBytes < 1)
-                    mFlags |= VOICE_CALLBACK_STOPPED;
+                    mFlags |= VoiceCallbackStopped;
                 else if(static_cast<ALuint>(gotBytes) < needBytes)
                 {
-                    mFlags |= VOICE_CALLBACK_STOPPED;
+                    mFlags |= VoiceCallbackStopped;
                     mNumCallbackSamples += static_cast<ALuint>(static_cast<ALuint>(gotBytes) /
                         FrameSize);
                 }
@@ -597,10 +596,10 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             if UNLIKELY(!BufferListItem)
                 srciter = std::copy(chandata.mPrevSamples.begin()+(MAX_RESAMPLER_PADDING>>1),
                     chandata.mPrevSamples.end(), srciter);
-            else if((mFlags&VOICE_IS_STATIC))
+            else if((mFlags&VoiceIsStatic))
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, num_chans,
                     SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
-            else if((mFlags&VOICE_IS_CALLBACK))
+            else if((mFlags&VoiceIsCallback))
                 srciter = LoadBufferCallback(BufferListItem, num_chans, SampleSize, chan,
                     mNumCallbackSamples, {srciter, SrcData.end()});
             else
@@ -626,7 +625,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             const float *ResampledData{Resample(&mResampleState,
                 &SrcData[MAX_RESAMPLER_PADDING>>1], DataPosFrac, increment,
                 {Device->ResampledData, DstBufferSize})};
-            if((mFlags&VOICE_IS_AMBISONIC))
+            if((mFlags&VoiceIsAmbisonic))
             {
                 const float hfscale{chandata.mAmbiScale};
                 /* Beware the evil const_cast. It's safe since it's pointing to
@@ -646,14 +645,14 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                 const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                     {ResampledData, DstBufferSize}, mDirect.FilterType)};
 
-                if((mFlags&VOICE_HAS_HRTF))
+                if((mFlags&VoiceHasHrtf))
                 {
                     const float TargetGain{UNLIKELY(vstate == Stopping) ? 0.0f :
                         parms.Hrtf.Target.Gain};
                     DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos, IrSize,
                         Device);
                 }
-                else if((mFlags&VOICE_HAS_NFC))
+                else if((mFlags&VoiceHasNfc))
                 {
                     const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
                         : parms.Gains.Target.data()};
@@ -697,7 +696,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         {
             /* Do nothing extra when there's no buffers. */
         }
-        else if((mFlags&VOICE_IS_STATIC))
+        else if((mFlags&VoiceIsStatic))
         {
             if(BufferLoopItem)
             {
@@ -721,7 +720,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                 }
             }
         }
-        else if((mFlags&VOICE_IS_CALLBACK))
+        else if((mFlags&VoiceIsCallback))
         {
             ALbuffer *buffer{BufferListItem->mBuffer};
             if(SrcSamplesDone < mNumCallbackSamples)
@@ -754,7 +753,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         }
     } while(OutPos < SamplesToDo);
 
-    mFlags |= VOICE_IS_FADING;
+    mFlags |= VoiceIsFading;
 
     /* Don't update positions and buffers if we were stopping. */
     if UNLIKELY(vstate == Stopping)

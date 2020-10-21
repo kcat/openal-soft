@@ -114,7 +114,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
 
     float mDopplerFactor{1.0f};
     float mDopplerVelocity{1.0f};
-    float mSpeedOfSound{SPEEDOFSOUNDMETRESPERSEC};
+    float mSpeedOfSound{SpeedOfSoundMetersPerSec};
 
     std::atomic_flag mPropsClean;
     std::atomic<bool> mDeferUpdates{false};

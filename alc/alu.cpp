@@ -839,7 +839,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * excessive bass.
                  */
                 const float mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
-                const float w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
+                const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
@@ -1091,7 +1091,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * excessive bass.
                  */
                 const float mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
-                const float w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
+                const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
                 for(size_t c{0};c < num_channels;c++)
@@ -1253,14 +1253,14 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
     const ALlistener &Listener = ALContext->mListener;
     GainTriplet DryGain;
     DryGain.Base  = minf(clampf(props->Gain, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        Listener.Params.Gain, GAIN_MIX_MAX);
+        Listener.Params.Gain, GainMixMax);
     DryGain.HF = props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
     GainTriplet WetGain[MAX_SENDS];
     for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i].Base = minf(clampf(props->Gain, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * Listener.Params.Gain, GAIN_MIX_MAX);
+            props->Send[i].Gain * Listener.Params.Gain, GainMixMax);
         WetGain[i].HF = props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
     }
@@ -1299,7 +1299,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
             /* Calculate the distances to where this effect's decay reaches
              * -60dB.
              */
-            DecayDistance[i].Base = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
+            DecayDistance[i].Base = SendSlots[i]->Params.DecayTime * SpeedOfSoundMetersPerSec;
             DecayDistance[i].LF = DecayDistance[i].Base * SendSlots[i]->Params.DecayLFRatio;
             DecayDistance[i].HF = DecayDistance[i].Base * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
@@ -1312,7 +1312,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
                      * decay distance (so it doesn't take any longer to decay
                      * than the air would allow).
                      */
-                    constexpr float log10_decaygain{-3.0f/*std::log10(REVERB_DECAY_GAIN)*/};
+                    constexpr float log10_decaygain{-3.0f/*std::log10(ReverbDecayGain)*/};
                     const float absorb_dist{log10_decaygain / std::log10(airAbsorption)};
                     DecayDistance[i].HF = minf(absorb_dist, DecayDistance[i].HF);
                 }
@@ -1465,13 +1465,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
 
     /* Apply gain and frequency filters */
     DryGain.Base = minf(clampf(DryGain.Base, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        Listener.Params.Gain, GAIN_MIX_MAX);
+        Listener.Params.Gain, GainMixMax);
     DryGain.HF *= props->Direct.GainHF;
     DryGain.LF *= props->Direct.GainLF;
     for(ALuint i{0};i < NumSends;i++)
     {
         WetGain[i].Base = minf(clampf(WetGain[i].Base, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * Listener.Params.Gain, GAIN_MIX_MAX);
+            props->Send[i].Gain * Listener.Params.Gain, GainMixMax);
         WetGain[i].HF *= props->Send[i].GainHF;
         WetGain[i].LF *= props->Send[i].GainLF;
     }
@@ -1483,7 +1483,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
             Listener.Params.MetersPerUnit};
         if(props->AirAbsorptionFactor > 0.0f)
         {
-            const float hfattn{std::pow(AIRABSORBGAINHF, meters_base*props->AirAbsorptionFactor)};
+            const float hfattn{std::pow(AirAbsorbGainHF, meters_base*props->AirAbsorptionFactor)};
             DryGain.HF *= hfattn;
             std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
                 [hfattn](GainTriplet &gain) noexcept -> void { gain.HF *= hfattn; });
@@ -1500,16 +1500,16 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
                 if(!(DecayDistance[i].Base > 0.0f))
                     continue;
 
-                const float gain{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].Base)};
+                const float gain{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].Base)};
                 WetGain[i].Base *= gain;
                 /* Yes, the wet path's air absorption is applied with
                  * WetGainAuto on, rather than WetGainHFAuto.
                  */
                 if(gain > 0.0f)
                 {
-                    float gainhf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].HF)};
+                    float gainhf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].HF)};
                     WetGain[i].HF *= minf(gainhf / gain, 1.0f);
-                    float gainlf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].LF)};
+                    float gainlf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].LF)};
                     WetGain[i].LF *= minf(gainlf / gain, 1.0f);
                 }
             }

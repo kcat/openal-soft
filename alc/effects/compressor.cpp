@@ -137,7 +137,7 @@ void CompressorState::process(const size_t samplesToDo, const al::span<const Flo
             for(FloatBufferLine &output : samplesOut)
             {
                 const float gain{*(outgains++)};
-                if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+                if(!(std::fabs(gain) > GainSilenceThreshold))
                     continue;
 
                 for(size_t i{0u};i < td;i++)

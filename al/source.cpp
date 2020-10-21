@@ -500,7 +500,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
 
     if(device->AvgSpeakerDist > 0.0f)
     {
-        const float w1{SPEEDOFSOUNDMETRESPERSEC /
+        const float w1{SpeedOfSoundMetersPerSec /
             (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
         for(auto &chandata : voice->mChans)
             chandata.mDryParams.NFCtrlFilter.init(w1);

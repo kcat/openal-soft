@@ -188,7 +188,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
         ++CurrentGains;
         ++TargetGains;
 
-        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+        if(!(std::fabs(gain) > GainSilenceThreshold))
             continue;
         for(;pos != InSamples.size();++pos)
             dst[pos] += InSamples[pos] * gain;

@@ -255,7 +255,7 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
     if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
         return;
 
-    const auto distSampleScale = static_cast<float>(device->Frequency) / SPEEDOFSOUNDMETRESPERSEC;
+    const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
     const auto ChanDelay = device->ChannelDelay.as_span();
     size_t total{0u};
     for(size_t i{0u};i < conf->Speakers.size();i++)
@@ -508,7 +508,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
         float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
         if(nfc_delay > 0.0f)
-            InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
+            InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
                 true);
     }
     else

@@ -2241,7 +2241,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             if(device->AvgSpeakerDist > 0.0f)
             {
                 /* Reinitialize the NFC filters for new parameters. */
-                const float w1{SPEEDOFSOUNDMETRESPERSEC /
+                const float w1{SpeedOfSoundMetersPerSec /
                     (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
                 for(auto &chandata : voice->mChans)
                     chandata.mDryParams.NFCtrlFilter.init(w1);

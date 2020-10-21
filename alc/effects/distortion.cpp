@@ -139,7 +139,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
              * storing only one sample out of four.
              */
             const float gain{*(outgains++)};
-            if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+            if(!(std::fabs(gain) > GainSilenceThreshold))
                 continue;
 
             for(size_t i{0u};i < todo;i++)

@@ -449,7 +449,7 @@ struct ReverbState final : public EffectState {
             const float *RESTRICT input{al::assume_aligned<16>(InSamples)};
             InSamples += InStride;
 
-            if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+            if(!(std::fabs(gain) > GainSilenceThreshold))
                 continue;
 
             for(float &sample : OutBuffer)
@@ -684,14 +684,14 @@ void ReverbState::deviceUpdate(const ALCdevice *device)
  * until the decay reaches -60 dB.
  */
 inline float CalcDecayCoeff(const float length, const float decayTime)
-{ return std::pow(REVERB_DECAY_GAIN, length/decayTime); }
+{ return std::pow(ReverbDecayGain, length/decayTime); }
 
 /* Calculate a decay length from a coefficient and the time until the decay
  * reaches -60 dB.
  */
 inline float CalcDecayLength(const float coeff, const float decayTime)
 {
-    constexpr float log10_decaygain{-3.0f/*std::log10(REVERB_DECAY_GAIN)=std::log10(0.001f)*/};
+    constexpr float log10_decaygain{-3.0f/*std::log10(ReverbDecayGain)*/};
     return std::log10(coeff) * decayTime / log10_decaygain;
 }
 
@@ -740,7 +740,7 @@ float CalcLimitedHfRatio(const float hfRatio, const float airAbsorptionGainHF,
      * equation, solve for HF ratio.  The delay length is cancelled out of
      * the equation, so it can be calculated once for all lines.
      */
-    float limitRatio{1.0f / SPEEDOFSOUNDMETRESPERSEC /
+    float limitRatio{1.0f / SpeedOfSoundMetersPerSec /
         CalcDecayLength(airAbsorptionGainHF, decayTime)};
 
     /* Using the limit calculated above, apply the upper bound to the HF ratio. */

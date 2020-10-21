@@ -214,7 +214,7 @@ START_API_FUNC
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        if(GAIN_MIX_MAX/context->mGainBoost != 0.0f)
+        if(GainMixMax/context->mGainBoost != 0.0f)
             value = AL_TRUE;
         break;
 
@@ -267,7 +267,7 @@ START_API_FUNC
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = ALdouble{GAIN_MIX_MAX}/context->mGainBoost;
+        value = ALdouble{GainMixMax}/context->mGainBoost;
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -318,7 +318,7 @@ START_API_FUNC
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = GAIN_MIX_MAX/context->mGainBoost;
+        value = GainMixMax/context->mGainBoost;
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -369,7 +369,7 @@ START_API_FUNC
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = static_cast<ALint>(GAIN_MIX_MAX/context->mGainBoost);
+        value = static_cast<ALint>(GainMixMax/context->mGainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:
@@ -420,7 +420,7 @@ START_API_FUNC
         break;
 
     case AL_GAIN_LIMIT_SOFT:
-        value = static_cast<ALint64SOFT>(GAIN_MIX_MAX/context->mGainBoost);
+        value = static_cast<ALint64SOFT>(GainMixMax/context->mGainBoost);
         break;
 
     case AL_NUM_RESAMPLERS_SOFT:

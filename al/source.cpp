@@ -195,7 +195,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
 
             readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << 32;
             readPos |= uint64_t{voice->mPositionFrac.load(std::memory_order_relaxed)} <<
-                       (32-FRACTIONBITS);
+                       (32-MixerFracBits);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
@@ -233,7 +233,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
         {
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
-            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << FRACTIONBITS;
+            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
             readPos |= voice->mPositionFrac.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -247,7 +247,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     while(BufferList && BufferList != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
-        readPos += uint64_t{BufferList->mSampleLen} << FRACTIONBITS;
+        readPos += uint64_t{BufferList->mSampleLen} << MixerFracBits;
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
     while(BufferList && !BufferFmt)
@@ -257,7 +257,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     }
     assert(BufferFmt != nullptr);
 
-    return static_cast<double>(readPos) / double{FRACTIONONE} / BufferFmt->mBuffer.mSampleRate;
+    return static_cast<double>(readPos) / double{MixerFracOne} / BufferFmt->mBuffer.mSampleRate;
 }
 
 /* GetSourceOffset
@@ -313,12 +313,11 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     switch(name)
     {
     case AL_SEC_OFFSET:
-        offset = (readPos + static_cast<double>(readPosFrac)/FRACTIONONE) /
-            BufferFmt->mBuffer.mSampleRate;
+        offset = (readPos + readPosFrac/double{MixerFracOne}) / BufferFmt->mBuffer.mSampleRate;
         break;
 
     case AL_SAMPLE_OFFSET:
-        offset = readPos + static_cast<double>(readPosFrac)/FRACTIONONE;
+        offset = readPos + readPosFrac/double{MixerFracOne};
         break;
 
     case AL_BYTE_OFFSET:
@@ -406,13 +405,13 @@ al::optional<VoicePos> GetSampleOffset(ALbufferlistitem *BufferList, ALenum Offs
     case AL_SAMPLE_OFFSET:
         dblfrac = std::modf(Offset, &dbloff);
         offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_SEC_OFFSET:
         dblfrac = std::modf(Offset*BufferFmt->mBuffer.mSampleRate, &dbloff);
         offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
     }
 

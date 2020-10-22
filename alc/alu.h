@@ -36,9 +36,10 @@ constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 /** Target gain for the reverb decay feedback reaching the decay time. */
 constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
 
-#define FRACTIONBITS 12
-#define FRACTIONONE  (1<<FRACTIONBITS)
-#define FRACTIONMASK (FRACTIONONE-1)
+
+constexpr int MixerFracBits{12};
+constexpr int MixerFracOne{1 << MixerFracBits};
+constexpr int MixerFracMask{MixerFracOne - 1};
 
 
 inline float lerp(float val1, float val2, float mu) noexcept

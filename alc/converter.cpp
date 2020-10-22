@@ -175,9 +175,9 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
     auto step = static_cast<ALuint>(
-        mind(srcRate*double{FRACTIONONE}/dstRate + 0.5, MAX_PITCH*FRACTIONONE));
+        mind(srcRate*double{MixerFracOne}/dstRate + 0.5, MAX_PITCH*MixerFracOne));
     converter->mIncrement = maxu(step, 1);
-    if(converter->mIncrement == FRACTIONONE)
+    if(converter->mIncrement == MixerFracOne)
         converter->mResample = Resample_<CopyTag,CTag>;
     else
         converter->mResample = PrepareResampler(resampler, converter->mIncrement,
@@ -214,7 +214,7 @@ ALuint SampleConverter::availableOut(ALuint srcframes) const
     auto DataSize64 = static_cast<uint64_t>(prepcount);
     DataSize64 += srcframes;
     DataSize64 -= MAX_RESAMPLER_PADDING;
-    DataSize64 <<= FRACTIONBITS;
+    DataSize64 <<= MixerFracBits;
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
@@ -271,7 +271,7 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
         auto DataSize64 = static_cast<uint64_t>(prepcount);
         DataSize64 += toread;
         DataSize64 -= MAX_RESAMPLER_PADDING;
-        DataSize64 <<= FRACTIONBITS;
+        DataSize64 <<= MixerFracBits;
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
@@ -293,7 +293,7 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            ALuint SrcDataEnd{(DstSize*increment + DataPosFrac)>>FRACTIONBITS};
+            ALuint SrcDataEnd{(DstSize*increment + DataPosFrac)>>MixerFracBits};
             if(SrcDataEnd >= static_cast<ALuint>(prepcount)+toread)
                 std::fill(std::begin(mChan[chan].PrevSamples),
                     std::end(mChan[chan].PrevSamples), 0.0f);
@@ -317,13 +317,13 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
          * fractional offset.
          */
         DataPosFrac += increment*DstSize;
-        mSrcPrepCount = mini(prepcount + static_cast<int>(toread - (DataPosFrac>>FRACTIONBITS)),
+        mSrcPrepCount = mini(prepcount + static_cast<int>(toread - (DataPosFrac>>MixerFracBits)),
             MAX_RESAMPLER_PADDING);
-        mFracOffset = DataPosFrac & FRACTIONMASK;
+        mFracOffset = DataPosFrac & MixerFracMask;
 
         /* Update the src and dst pointers in case there's still more to do. */
-        SamplesIn += SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
-        NumSrcSamples -= minu(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
+        SamplesIn += SrcFrameSize*(DataPosFrac>>MixerFracBits);
+        NumSrcSamples -= minu(NumSrcSamples, (DataPosFrac>>MixerFracBits));
 
         dst = static_cast<al::byte*>(dst) + DstFrameSize*DstSize;
         pos += DstSize;

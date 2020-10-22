@@ -177,9 +177,9 @@ inline void BsincPrepare(const ALuint increment, BsincState *state, const BSincT
     size_t si{BSincScaleCount - 1};
     float sf{0.0f};
 
-    if(increment > FRACTIONONE)
+    if(increment > MixerFracOne)
     {
-        sf = FRACTIONONE / static_cast<float>(increment);
+        sf = MixerFracOne / static_cast<float>(increment);
         sf = maxf(0.0f, (BSincScaleCount-1) * (sf-table->scaleBase) * table->scaleRange);
         si = float2uint(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
@@ -219,7 +219,7 @@ inline ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
         return Resample_<CubicTag,CTag>;
     case Resampler::BSinc12:
     case Resampler::BSinc24:
-        if(increment <= FRACTIONONE)
+        if(increment <= MixerFracOne)
         {
             /* fall-through */
         case Resampler::FastBSinc12:
@@ -1244,9 +1244,9 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
     const auto Pitch = static_cast<float>(voice->mFrequency) /
         static_cast<float>(Device->Frequency) * props->Pitch;
     if(Pitch > float{MAX_PITCH})
-        voice->mStep = MAX_PITCH<<FRACTIONBITS;
+        voice->mStep = MAX_PITCH<<MixerFracBits;
     else
-        voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
+        voice->mStep = maxu(fastf2u(Pitch * MixerFracOne), 1);
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
@@ -1557,9 +1557,9 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
      */
     Pitch *= static_cast<float>(voice->mFrequency) / static_cast<float>(Device->Frequency);
     if(Pitch > float{MAX_PITCH})
-        voice->mStep = MAX_PITCH<<FRACTIONBITS;
+        voice->mStep = MAX_PITCH<<MixerFracBits;
     else
-        voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
+        voice->mStep = maxu(fastf2u(Pitch * MixerFracOne), 1);
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     float spread{0.0f};

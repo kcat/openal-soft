@@ -106,7 +106,7 @@ void ChorusState::deviceUpdate(const ALCdevice *Device)
 
 void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
 {
-    constexpr ALsizei mindelay{(MAX_RESAMPLER_PADDING>>1) << FRACTIONBITS};
+    constexpr ALsizei mindelay{(MAX_RESAMPLER_PADDING>>1) << MixerFracBits};
 
     switch(props->Chorus.Waveform)
     {
@@ -124,7 +124,7 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     const ALCdevice *device{Context->mDevice.get()};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    mDelay = maxi(float2int(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f), mindelay);
+    mDelay = maxi(float2int(props->Chorus.Delay*frequency*MixerFracOne + 0.5f), mindelay);
     mDepth = minf(props->Chorus.Depth * static_cast<float>(mDelay),
         static_cast<float>(mDelay - mindelay));
 
@@ -227,7 +227,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 {
     const size_t bufmask{mSampleBuffer.size()-1};
     const float feedback{mFeedback};
-    const ALuint avgdelay{(static_cast<ALuint>(mDelay) + (FRACTIONONE>>1)) >> FRACTIONBITS};
+    const ALuint avgdelay{(static_cast<ALuint>(mDelay) + (MixerFracOne>>1)) >> MixerFracBits};
     float *RESTRICT delaybuf{mSampleBuffer.data()};
     ALuint offset{mOffset};
 
@@ -248,14 +248,14 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
             delaybuf[offset&bufmask] = samplesIn[0][base+i];
 
             // Tap for the left output.
-            ALuint delay{offset - (moddelays[0][i]>>FRACTIONBITS)};
-            float mu{static_cast<float>(moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE)};
+            ALuint delay{offset - (moddelays[0][i]>>MixerFracBits)};
+            float mu{static_cast<float>(moddelays[0][i]&MixerFracMask) * (1.0f/MixerFracOne)};
             temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
                 delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 
             // Tap for the right output.
-            delay = offset - (moddelays[1][i]>>FRACTIONBITS);
-            mu = static_cast<float>(moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
+            delay = offset - (moddelays[1][i]>>MixerFracBits);
+            mu = static_cast<float>(moddelays[1][i]&MixerFracMask) * (1.0f/MixerFracOne);
             temps[1][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
                 delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 

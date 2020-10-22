@@ -114,7 +114,7 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     const ALCdevice *device{context->mDevice.get()};
 
     const float step{props->Fshifter.Frequency / static_cast<float>(device->Frequency)};
-    mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * FRACTIONONE);
+    mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * MixerFracOne);
 
     switch(props->Fshifter.LeftDirection)
     {
@@ -202,12 +202,12 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         ALuint phase_idx{mPhase[c]};
         for(size_t k{0};k < samplesToDo;++k)
         {
-            const double phase{phase_idx * ((1.0 / FRACTIONONE) * al::MathDefs<double>::Tau())};
+            const double phase{phase_idx * ((1.0/MixerFracOne) * al::MathDefs<double>::Tau())};
             BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
                 mOutdata[k].imag()*std::sin(phase)*mSign[c]);
 
             phase_idx += phase_step;
-            phase_idx &= FRACTIONMASK;
+            phase_idx &= MixerFracMask;
         }
         mPhase[c] = phase_idx;
 

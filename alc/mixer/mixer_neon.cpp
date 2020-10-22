@@ -21,7 +21,7 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr ALuint FracPhaseBitDiff{FRACTIONBITS - BSincPhaseBits};
+constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
 constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
@@ -54,8 +54,8 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
     ALuint increment, const al::span<float> dst)
 {
     const int32x4_t increment4 = vdupq_n_s32(static_cast<int>(increment*4));
-    const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
-    const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
+    const float32x4_t fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
+    const int32x4_t fracMask4 = vdupq_n_s32(MixerFracMask);
     alignas(16) ALuint pos_[4], frac_[4];
     int32x4_t pos4, frac4;
 
@@ -82,7 +82,7 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
         dst_iter += 4;
 
         frac4 = vaddq_s32(frac4, increment4);
-        pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, FRACTIONBITS));
+        pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, MixerFracBits));
         frac4 = vandq_s32(frac4, fracMask4);
     }
 
@@ -92,11 +92,11 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
         frac = static_cast<ALuint>(vgetq_lane_s32(frac4, 0));
 
         do {
-            *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/FRACTIONONE));
+            *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
-            src  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
+            src  += frac>>MixerFracBits;
+            frac &= MixerFracMask;
         } while(--todo);
     }
     return dst.data();
@@ -142,8 +142,8 @@ const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *
         out_sample = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }
@@ -183,8 +183,8 @@ const float *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
         out_sample = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }

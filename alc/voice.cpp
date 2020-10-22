@@ -75,8 +75,8 @@ struct CopyTag;
 
 
 static_assert((BUFFERSIZE-1)/MAX_PITCH > 0, "MAX_PITCH is too large for BUFFERSIZE!");
-static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
-    "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
+static_assert((INT_MAX>>MixerFracBits)/MAX_PITCH > BUFFERSIZE,
+    "MAX_PITCH and/or BUFFERSIZE are too large for MixerFracBits!");
 
 
 Resampler ResamplerDefault{Resampler::Linear};
@@ -477,7 +477,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
     const ALuint NumSends{Device->NumAuxSends};
     const ALuint IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 
-    ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
+    ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
                            Resample_<CopyTag,CTag> : mResampler};
 
     ALuint Counter{(mFlags&VoiceIsFading) ? SamplesToDo : 0};
@@ -511,12 +511,12 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         ALuint DstBufferSize{SamplesToDo - OutPos};
         ALuint SrcBufferSize;
 
-        if(increment <= FRACTIONONE)
+        if(increment <= MixerFracOne)
         {
             /* Calculate the last written dst sample pos. */
             uint64_t DataSize64{DstBufferSize - 1};
             /* Calculate the last read src sample pos. */
-            DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
+            DataSize64 = (DataSize64*increment + DataPosFrac) >> MixerFracBits;
             /* +1 to get the src sample count, include padding. */
             DataSize64 += 1 + MAX_RESAMPLER_PADDING;
 
@@ -529,7 +529,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         {
             uint64_t DataSize64{DstBufferSize};
             /* Calculate the end src sample pos, include padding. */
-            DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
+            DataSize64 = (DataSize64*increment + DataPosFrac) >> MixerFracBits;
             DataSize64 += MAX_RESAMPLER_PADDING;
 
             if(DataSize64 <= BUFFERSIZE + MAX_RESAMPLER_PADDING)
@@ -542,7 +542,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
                 SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
 
                 DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
-                DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac) / increment;
+                DataSize64 = ((DataSize64<<MixerFracBits) - DataPosFrac) / increment;
                 if(DataSize64 < DstBufferSize)
                 {
                     /* Some mixers require being 16-byte aligned, so also limit
@@ -618,7 +618,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             }
 
             /* Store the last source samples used for next time. */
-            std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
+            std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>MixerFracBits],
                 chandata.mPrevSamples.size(), chandata.mPrevSamples.begin());
 
             /* Resample, then apply ambisonic upsampling as needed. */
@@ -685,9 +685,9 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;
-        const ALuint SrcSamplesDone{DataPosFrac>>FRACTIONBITS};
+        const ALuint SrcSamplesDone{DataPosFrac>>MixerFracBits};
         DataPosInt  += SrcSamplesDone;
-        DataPosFrac &= FRACTIONMASK;
+        DataPosFrac &= MixerFracMask;
 
         OutPos += DstBufferSize;
         Counter = maxu(DstBufferSize, Counter) - DstBufferSize;

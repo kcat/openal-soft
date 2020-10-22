@@ -21,15 +21,15 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr ALuint FracPhaseBitDiff{FRACTIONBITS - BSincPhaseBits};
+constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
 constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 inline float do_point(const InterpState&, const float *RESTRICT vals, const ALuint)
 { return vals[0]; }
 inline float do_lerp(const InterpState&, const float *RESTRICT vals, const ALuint frac)
-{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
+{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 inline float do_cubic(const InterpState&, const float *RESTRICT vals, const ALuint frac)
-{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
+{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const ALuint frac)
 {
     const size_t m{istate.bsinc.m};
@@ -78,8 +78,8 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
         out = Sampler(istate, src, frac);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }

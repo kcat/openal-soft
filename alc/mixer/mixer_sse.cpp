@@ -20,7 +20,7 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr ALuint FracPhaseBitDiff{FRACTIONBITS - BSincPhaseBits};
+constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
 constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
@@ -115,8 +115,8 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
         out_sample = _mm_cvtss_f32(r4);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }
@@ -157,8 +157,8 @@ const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const floa
         out_sample = _mm_cvtss_f32(r4);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }

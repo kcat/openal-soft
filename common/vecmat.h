@@ -58,7 +58,7 @@ public:
       : mVals{{{{aa, ab, ac, ad}}, {{ba, bb, bc, bd}}, {{ca, cb, cc, cd}}, {{da, db, dc, dd}}}}
     { }
 
-    constexpr std::array<float,4>& operator[](size_t idx) noexcept { return mVals[idx]; }
+    std::array<float,4>& operator[](size_t idx) noexcept { return mVals[idx]; }
     constexpr const std::array<float,4>& operator[](size_t idx) const noexcept { return mVals[idx]; }
 
     void setRow(size_t idx, float a, float b, float c, float d) noexcept

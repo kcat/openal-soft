@@ -158,12 +158,19 @@ public:
         return span<element_type,C>{mData+(E-C), C};
     }
 
-    template<size_t O, size_t C, size_t RealC=((C==dynamic_extent) ? E-O : C)>
-    constexpr span<element_type,RealC> subspan() const
+    template<size_t O, size_t C>
+    constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
     {
         static_assert(E >= O, "Offset exceeds extent");
-        static_assert(E-O >= RealC, "New size exceeds original capacity");
-        return span<element_type,RealC>{mData+O, RealC};
+        static_assert(E-O >= C, "New size exceeds original capacity");
+        return span<element_type,C>{mData+O, C};
+    }
+
+    template<size_t O, size_t C=dynamic_extent>
+    constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,E-O>>
+    {
+        static_assert(E >= O, "Offset exceeds extent");
+        return span<element_type,E-O>{mData+O, E-O};
     }
 
     /* NOTE: Can't declare objects of a specialized template class prior to
@@ -257,9 +264,13 @@ public:
     constexpr span last(size_t count) const
     { return (count >= size()) ? *this : span{mDataEnd-count, mDataEnd}; }
 
+    template<size_t O, size_t C>
+    constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
+    { return span<element_type,C>{mData+O, C}; }
+
     template<size_t O, size_t C=dynamic_extent>
-    constexpr span<element_type,C> subspan() const
-    { return span<element_type,C>{mData+O, (C!=dynamic_extent) ? mData+O+C : mDataEnd}; }
+    constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,C>>
+    { return span<element_type,C>{mData+O, mDataEnd}; }
 
     constexpr span subspan(size_t offset, size_t count=dynamic_extent) const
     {

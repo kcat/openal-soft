@@ -58,7 +58,7 @@ public:
       : mVals{{{{aa, ab, ac, ad}}, {{ba, bb, bc, bd}}, {{ca, cb, cc, cd}}, {{da, db, dc, dd}}}}
     { }
 
-    std::array<float,4>& operator[](size_t idx) noexcept { return mVals[idx]; }
+    constexpr std::array<float,4>& operator[](size_t idx) noexcept { return mVals[idx]; }
     constexpr const std::array<float,4>& operator[](size_t idx) const noexcept { return mVals[idx]; }
 
     void setRow(size_t idx, float a, float b, float c, float d) noexcept
@@ -69,15 +69,14 @@ public:
         mVals[idx][3] = d;
     }
 
-    static const Matrix &Identity() noexcept
+    static constexpr Matrix Identity() noexcept
     {
-        static constexpr Matrix identity{
+        return Matrix{
             1.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f
         };
-        return identity;
     }
 };
 

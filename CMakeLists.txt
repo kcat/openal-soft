@@ -135,6 +135,8 @@ if("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
     set(LINKER_FLAGS ${LINKER_FLAGS} -L/usr/lib)
 endif()
 
+# When the library is built for static linking, apps should define
+# AL_LIBTYPE_STATIC when including the AL headers.
 if(NOT LIBTYPE)
     set(LIBTYPE SHARED)
 endif()

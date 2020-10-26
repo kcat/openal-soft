@@ -210,10 +210,10 @@ if(MSVC)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
     endif()
     set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4268 /wd4324 /wd5030)
-    # Remove /W3, which is added by default, since we set /W4. Some versions of
-    # MSVC complain about both /W3 and /W4 being specified.
+    # Remove /W3, which is added by default, since we set /W4. Some build
+    # generators with MSVC complain about both /W3 and /W4 being specified.
     foreach(flag_var  CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-        if(${flag_var} MATCHES "-DNDEBUG")
+        if(${flag_var} MATCHES "/W3")
             string(REGEX REPLACE "/W3" "" ${flag_var} "${${flag_var}}")
         endif()
     endforeach()

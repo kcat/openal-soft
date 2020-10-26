@@ -1940,7 +1940,7 @@ int main(int argc, char *argv[])
         );
     }
 #ifdef AL_SOFT_events
-    if(alIsExtensionPresent("AL_SOFTX_events"))
+    if(alIsExtensionPresent("AL_SOFT_events"))
     {
         std::cout<< "Found AL_SOFT_events" <<std::endl;
         alEventControlSOFT = reinterpret_cast<LPALEVENTCONTROLSOFT>(

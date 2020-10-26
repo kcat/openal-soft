@@ -556,6 +556,28 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define AL_EFFECTSLOT_TARGET_SOFT                0x199C
 #endif
 
+#ifndef AL_SOFT_events
+#define AL_SOFT_events 1
+#define AL_EVENT_CALLBACK_FUNCTION_SOFT          0x19A2
+#define AL_EVENT_CALLBACK_USER_PARAM_SOFT        0x19A3
+#define AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT      0x19A4
+#define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x19A5
+#define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x19A6
+typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
+                                           ALsizei length, const ALchar *message,
+                                           void *userParam);
+typedef void (AL_APIENTRY*LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable);
+typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam);
+typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname);
+typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable);
+AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam);
+AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname);
+AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

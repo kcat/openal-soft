@@ -43,7 +43,7 @@ openal-soft-1.21.0:
 
     Fixed using unicode paths with the log file on Windows.
 
-    Fixed DirectSound capture reporting the bad sample counts or erroring when
+    Fixed DirectSound capture reporting bad sample counts or erroring when
     reading samples.
 
     Added an in-progress extension for a callback-driven buffer type.

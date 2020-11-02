@@ -18,6 +18,7 @@
 struct ALbuffer;
 struct ALeffect;
 struct ALeffectslot;
+struct WetBuffer;
 
 
 using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
@@ -87,7 +88,7 @@ struct ALeffectslot {
     ALuint id{};
 
     /* Mixing buffer used by the Wet mix. */
-    al::vector<FloatBufferLine, 16> MixBuffer;
+    WetBuffer *mWetBuffer{nullptr};
 
     /* Wet buffer configuration is ACN channel order with N3D scaling.
      * Consequently, effects that only want to work with mono input can use

@@ -42,6 +42,17 @@ enum class DistanceModel {
 };
 
 
+struct WetBuffer {
+    bool mInUse;
+    al::FlexArray<FloatBufferLine, 16> mBuffer;
+
+    WetBuffer(size_t count) : mBuffer{count} { }
+
+    DEF_FAM_NEWDEL(WetBuffer, mBuffer)
+};
+using WetBufferPtr = std::unique_ptr<WetBuffer>;
+
+
 struct ALcontextProps {
     float DopplerFactor;
     float DopplerVelocity;
@@ -177,6 +188,9 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
             mActiveVoiceCount.load(std::memory_order_acquire)};
     }
 
+
+    /* Wet buffers used by effect slots. */
+    al::vector<WetBufferPtr> mWetBuffers;
 
     using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
     std::atomic<ALeffectslotArray*> mActiveAuxSlots{nullptr};

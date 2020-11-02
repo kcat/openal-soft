@@ -40,6 +40,7 @@
 #include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -1034,19 +1035,33 @@ no_hrtf:
 }
 
 
-void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
+void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
 {
+    ALCdevice *device{context->mDevice.get()};
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
-    slot->MixBuffer.resize(count);
-    slot->MixBuffer.shrink_to_fit();
+
+    ALuint idx{0};
+    for(auto &wetbuffer : context->mWetBuffers)
+    {
+        if(!wetbuffer->mInUse)
+            break;
+        ++idx;
+    }
+    if(idx == context->mWetBuffers.size())
+    {
+        auto newbuffer = WetBufferPtr{new(FamCount(count)) WetBuffer{count}};
+        context->mWetBuffers.emplace_back(std::move(newbuffer));
+    }
+    auto *wetbuffer = context->mWetBuffers[idx].get();
+    slot->mWetBuffer = wetbuffer;
+    wetbuffer->mInUse = true;
 
     auto acnmap_end = AmbiIndex::FromACN.begin() + count;
     auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f, acn}; }
-    );
+        { return BFChannelConfig{1.0f, acn}; });
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->Wet.Buffer = {slot->MixBuffer.data(), slot->MixBuffer.size()};
+    slot->Wet.Buffer = {wetbuffer->mBuffer.data(), count};
 }
 
 

@@ -2100,9 +2100,35 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
+        std::unique_lock<std::mutex> proplock{context->mPropLock};
+        std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
+        /* HACK: Clear the effect slots' wet buffer references, and clear the wet
+         * buffer array so they're reallocated (with potentially a new channel
+         * count) when reinitialized.
+         */
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
-            aluInitEffectPanning(slot, device);
+            slot->mWetBuffer = nullptr;
+            slot->Wet.Buffer = {};
+        }
+        for(auto &sublist : context->mEffectSlotList)
+        {
+            uint64_t usemask{~sublist.FreeMask};
+            while(usemask)
+            {
+                const ALsizei idx{CountTrailingZeros(usemask)};
+                ALeffectslot *slot{sublist.EffectSlots + idx};
+                usemask &= ~(1_u64 << idx);
+
+                slot->mWetBuffer = nullptr;
+                slot->Wet.Buffer = {};
+            }
+        }
+        decltype(context->mWetBuffers){}.swap(context->mWetBuffers);
+
+        if(ALeffectslot *slot{context->mDefaultSlot.get()})
+        {
+            aluInitEffectPanning(slot, context);
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
@@ -2112,8 +2138,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             slot->updateProps(context);
         }
 
-        std::unique_lock<std::mutex> proplock{context->mPropLock};
-        std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
         if(ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
             std::fill_n(curarray->end(), curarray->size(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
@@ -2125,7 +2149,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 ALeffectslot *slot{sublist.EffectSlots + idx};
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(slot, device);
+                aluInitEffectPanning(slot, context);
 
                 EffectState *state{slot->Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
@@ -2439,7 +2463,7 @@ void ALCcontext::init()
     {
         mDefaultSlot = std::unique_ptr<ALeffectslot>{new ALeffectslot{}};
         if(mDefaultSlot->init() == AL_NO_ERROR)
-            aluInitEffectPanning(mDefaultSlot.get(), mDevice.get());
+            aluInitEffectPanning(mDefaultSlot.get(), this);
         else
         {
             mDefaultSlot = nullptr;

@@ -1739,7 +1739,7 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
         /* Clear auxiliary effect slot mixing buffers. */
         for(ALeffectslot *slot : auxslots)
         {
-            for(auto &buffer : slot->MixBuffer)
+            for(auto &buffer : slot->Wet.Buffer)
                 buffer.fill(0.0f);
         }
 

@@ -216,7 +216,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         context->setError(err, "Effect slot object initialization failed");
         return nullptr;
     }
-    aluInitEffectPanning(slot, context->mDevice.get());
+    aluInitEffectPanning(slot, context);
 
     /* Add 1 to avoid source ID 0. */
     slot->id = ((lidx<<6) | slidx) + 1;
@@ -822,6 +822,8 @@ ALeffectslot::~ALeffectslot()
         delete props;
     }
 
+    if(mWetBuffer)
+        mWetBuffer->mInUse = false;
     if(Params.mEffectState)
         Params.mEffectState->release();
 }

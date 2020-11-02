@@ -11,6 +11,7 @@
 #include "alcmain.h"
 #include "alspan.h"
 
+struct ALCcontext;
 struct ALbufferlistitem;
 struct ALeffectslot;
 
@@ -73,7 +74,7 @@ void aluInitMixer(void);
 void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
     HrtfRequestMode hrtf_userreq);
 
-void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
+void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context);
 
 /**
  * Calculates ambisonic encoder coefficients using the X, Y, and Z direction

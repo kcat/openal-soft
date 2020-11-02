@@ -148,6 +148,7 @@ public:
     al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannels; }
 };
 
+
 struct BFChannelConfig {
     float Scale;
     ALuint Index;

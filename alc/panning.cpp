@@ -1040,20 +1040,43 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
     ALCdevice *device{context->mDevice.get()};
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
 
-    ALuint idx{0};
-    for(auto &wetbuffer : context->mWetBuffers)
+    auto wetbuffer_iter = context->mWetBuffers.end();
+    if(slot->mWetBuffer)
     {
-        if(!wetbuffer->mInUse)
-            break;
-        ++idx;
+        /* If the effect slot already has a wet buffer attached, allocate a new
+         * one in its place.
+         */
+        wetbuffer_iter = context->mWetBuffers.begin();
+        for(;wetbuffer_iter != context->mWetBuffers.end();++wetbuffer_iter)
+        {
+            if(wetbuffer_iter->get() == slot->mWetBuffer)
+            {
+                slot->mWetBuffer = nullptr;
+                slot->Wet.Buffer = {};
+
+                *wetbuffer_iter = WetBufferPtr{new(FamCount(count)) WetBuffer{count}};
+
+                break;
+            }
+        }
     }
-    if(idx == context->mWetBuffers.size())
+    if(wetbuffer_iter == context->mWetBuffers.end())
     {
-        auto newbuffer = WetBufferPtr{new(FamCount(count)) WetBuffer{count}};
-        context->mWetBuffers.emplace_back(std::move(newbuffer));
+        /* Otherwise, search for an unused wet buffer. */
+        wetbuffer_iter = context->mWetBuffers.begin();
+        for(;wetbuffer_iter != context->mWetBuffers.end();++wetbuffer_iter)
+        {
+            if(!(*wetbuffer_iter)->mInUse)
+                break;
+        }
+        if(wetbuffer_iter == context->mWetBuffers.end())
+        {
+            /* Otherwise, allocate a new one to use. */
+            context->mWetBuffers.emplace_back(WetBufferPtr{new(FamCount(count)) WetBuffer{count}});
+            wetbuffer_iter = context->mWetBuffers.end()-1;
+        }
     }
-    auto *wetbuffer = context->mWetBuffers[idx].get();
-    slot->mWetBuffer = wetbuffer;
+    WetBuffer *wetbuffer{slot->mWetBuffer = wetbuffer_iter->get()};
     wetbuffer->mInUse = true;
 
     auto acnmap_end = AmbiIndex::FromACN.begin() + count;
@@ -1061,7 +1084,7 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; });
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->Wet.Buffer = {wetbuffer->mBuffer.data(), count};
+    slot->Wet.Buffer = wetbuffer->mBuffer;
 }
 
 

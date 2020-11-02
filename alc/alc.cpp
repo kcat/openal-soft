@@ -2102,29 +2102,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     {
         std::unique_lock<std::mutex> proplock{context->mPropLock};
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
-        /* HACK: Clear the effect slots' wet buffer references, and clear the wet
-         * buffer array so they're reallocated (with potentially a new channel
-         * count) when reinitialized.
-         */
-        if(ALeffectslot *slot{context->mDefaultSlot.get()})
-        {
-            slot->mWetBuffer = nullptr;
-            slot->Wet.Buffer = {};
-        }
-        for(auto &sublist : context->mEffectSlotList)
-        {
-            uint64_t usemask{~sublist.FreeMask};
-            while(usemask)
-            {
-                const ALsizei idx{CountTrailingZeros(usemask)};
-                ALeffectslot *slot{sublist.EffectSlots + idx};
-                usemask &= ~(1_u64 << idx);
 
-                slot->mWetBuffer = nullptr;
-                slot->Wet.Buffer = {};
-            }
-        }
-        decltype(context->mWetBuffers){}.swap(context->mWetBuffers);
+        /* Clear out unused wet buffers. */
+        auto buffer_not_in_use = [](WetBufferPtr &wetbuffer) noexcept -> bool
+        { return !wetbuffer->mInUse; };
+        auto wetbuffer_iter = std::remove_if(context->mWetBuffers.begin(),
+            context->mWetBuffers.end(), buffer_not_in_use);
+        context->mWetBuffers.erase(wetbuffer_iter, context->mWetBuffers.end());
 
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {

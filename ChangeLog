@@ -29,6 +29,9 @@ openal-soft-1.21.0:
 
     Enabled dual-band processing for the built-in quad and 7.1 output decoders.
 
+    Fixed a potential crash when deleting an effect slot immediately after the
+    last source using it stops.
+
     Fixed building with the static runtime on MSVC.
 
     Fixed using source stereo angles outside of -pi...+pi.

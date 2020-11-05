@@ -1757,51 +1757,61 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
             auto slots = auxslots.data();
             auto slots_end = slots + num_slots;
 
-            /* First sort the slots into extra storage, so that effects come
-             * before their effect target (or their targets' target).
+            /* Sort the slots into extra storage, so that effect slots come
+             * before their effect slot target (or their targets' target).
              */
-            auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
-            auto sorted_slots_end = sorted_slots;
-            if(*sorted_slots)
+            const al::span<ALeffectslot*> sorted_slots{const_cast<ALeffectslot**>(slots_end),
+                num_slots};
+            /* Skip sorting if it has already been done. */
+            if(!sorted_slots[0])
             {
-                /* Skip sorting if it has already been done. */
-                sorted_slots_end += num_slots;
-                goto skip_sorting;
-            }
-
-            *sorted_slots_end = *slots;
-            ++sorted_slots_end;
-            while(++slots != slots_end)
-            {
-                auto in_chain = [](const ALeffectslot *s1, const ALeffectslot *s2) noexcept -> bool
-                {
-                    while((s1=s1->Params.Target) != nullptr) {
-                        if(s1 == s2) return true;
-                    }
-                    return false;
-                };
-
-                /* If this effect slot targets an effect slot already in the
-                 * list (i.e. slots outputs to something in sorted_slots),
-                 * directly or indirectly, insert it prior to that element.
+                /* First, copy the slots to the sorted list, then partition the
+                 * sorted list so that all slots without a target slot go to
+                 * the end.
                  */
-                auto checker = sorted_slots;
-                do {
-                    if(in_chain(*slots, *checker)) break;
-                } while(++checker != sorted_slots_end);
+                std::copy(slots, slots_end, sorted_slots.begin());
+                auto split_point = std::partition(sorted_slots.begin(), sorted_slots.end(),
+                    [](const ALeffectslot *slot) noexcept -> bool
+                    { return slot->Params.Target != nullptr; });
+                /* There must be at least one slot without a slot target. */
+                assert(split_point != sorted_slots.end());
 
-                checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
-                *--checker = *slots;
-                ++sorted_slots_end;
+                /* Simple case: no more than 1 slot has a target slot. Either
+                 * all slots go right to the output, or the remaining one must
+                 * target an already-partitioned slot.
+                 */
+                if(split_point - sorted_slots.begin() > 1)
+                {
+                    /* At least two slots target other slots. Starting from the
+                     * back of the sorted list, continue partitioning the front
+                     * of the list given each target until all targets are
+                     * accounted for. This ensures all slots without a target
+                     * go last, all slots directly targeting those last slots
+                     * go second-to-last, all slots directly targeting those
+                     * second-last slots go third-to-last, etc.
+                     */
+                    auto next_target = sorted_slots.end();
+                    do {
+                        /* This shouldn't happen, but if there's unsorted slots
+                         * left that don't target any sorted slots, they can't
+                         * contribute to the output, so leave them.
+                         */
+                        if UNLIKELY(next_target == split_point)
+                            break;
+
+                        --next_target;
+                        split_point = std::partition(sorted_slots.begin(), split_point,
+                            [next_target](const ALeffectslot *slot) noexcept -> bool
+                            { return slot->Params.Target != *next_target; });
+                    } while(split_point - sorted_slots.begin() > 1);
+                }
             }
 
-        skip_sorting:
-            auto process_effect = [SamplesToDo](const ALeffectslot *slot) -> void
+            for(const ALeffectslot *slot : sorted_slots)
             {
                 EffectState *state{slot->Params.mEffectState};
                 state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
-            };
-            std::for_each(sorted_slots, sorted_slots_end, process_effect);
+            }
         }
 
         /* Signal the event handler if there are any events to read. */

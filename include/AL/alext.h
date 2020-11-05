@@ -23,18 +23,15 @@
 
 #include <stddef.h>
 /* Define int64_t and uint64_t types */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-#include <inttypes.h>
-#elif defined(__cplusplus) && __cplusplus >= 201103L
-#include <cinttypes>
-#elif defined(_WIN32) && defined(__GNUC__)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||             \
+    (defined(__cplusplus) && __cplusplus >= 201103L)
 #include <stdint.h>
 #elif defined(_WIN32)
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 #else
 /* Fallback if nothing above works */
-#include <inttypes.h>
+#include <stdint.h>
 #endif
 
 #include "alc.h"

@@ -969,15 +969,15 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     if(!device->mHrtf)
     {
         const char *devname{device->DeviceName.c_str()};
-        auto find_hrtf = [device,devname](const std::string &hrtfname) -> bool
+        for(const auto &hrtfname : device->HrtfList)
         {
-            HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)};
-            if(!hrtf) return false;
-            device->mHrtf = std::move(hrtf);
-            device->HrtfName = hrtfname;
-            return true;
-        };
-        (void)std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);
+            if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
+            {
+                device->mHrtf = std::move(hrtf);
+                device->HrtfName = hrtfname;
+                break;
+            }
+        }
     }
 
     if(device->mHrtf)

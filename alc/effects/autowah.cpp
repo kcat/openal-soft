@@ -70,8 +70,10 @@ struct AutowahState final : public EffectState {
 
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(AutowahState)
 };
@@ -102,7 +104,8 @@ void AutowahState::deviceUpdate(const ALCdevice*)
     }
 }
 
-void AutowahState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void AutowahState::update(const ALCcontext *context, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
     const auto frequency = static_cast<float>(device->Frequency);
@@ -119,11 +122,12 @@ void AutowahState::update(const ALCcontext *context, const ALeffectslot *slot, c
 
     mOutTarget = target.Main->Buffer;
     auto set_gains = [slot,target](auto &chan, al::span<const float,MAX_AMBI_CHANNELS> coeffs)
-    { ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, chan.TargetGains); };
+    { ComputePanGains(target.Main, coeffs.data(), slot->Gain, chan.TargetGains); };
     SetAmbiPanIdentity(std::begin(mChans), slot->Wet.Buffer.size(), set_gains);
 }
 
-void AutowahState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void AutowahState::process(const size_t samplesToDo,
+    const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const float attack_rate{mAttackRate};
     const float release_rate{mReleaseRate};

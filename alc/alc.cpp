@@ -2122,7 +2122,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             slot->updateProps(context);
         }
 
-        if(ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
+        if(EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
             std::fill_n(curarray->end(), curarray->size(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
         {
@@ -2366,17 +2366,17 @@ ALCcontext::~ALCcontext()
     mNumSources = 0;
 
     count = 0;
-    ALeffectslotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
+    EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
     while(eprops)
     {
-        ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
+        EffectSlotProps *next{eprops->next.load(std::memory_order_relaxed)};
         delete eprops;
         eprops = next;
         ++count;
     }
     TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    if(ALeffectslotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
+    if(EffectSlotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
     {
         al::destroy_n(curarray->end(), curarray->size());
         delete curarray;
@@ -2455,13 +2455,13 @@ void ALCcontext::init()
         }
     }
 
-    ALeffectslotArray *auxslots;
+    EffectSlotArray *auxslots;
     if(!mDefaultSlot)
-        auxslots = ALeffectslot::CreatePtrArray(0);
+        auxslots = EffectSlot::CreatePtrArray(0);
     else
     {
-        auxslots = ALeffectslot::CreatePtrArray(1);
-        (*auxslots)[0] = mDefaultSlot.get();
+        auxslots = EffectSlot::CreatePtrArray(1);
+        (*auxslots)[0] = &mDefaultSlot->mSlot;
         mDefaultSlot->mState = SlotState::Playing;
     }
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);

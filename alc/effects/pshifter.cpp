@@ -97,8 +97,10 @@ struct PshifterState final : public EffectState {
 
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(PshifterState)
 };
@@ -123,7 +125,8 @@ void PshifterState::deviceUpdate(const ALCdevice *device)
     std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
 }
 
-void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void PshifterState::update(const ALCcontext*, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const int tune{props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune};
     const float pitch{std::pow(2.0f, static_cast<float>(tune) / 1200.0f)};
@@ -133,7 +136,7 @@ void PshifterState::update(const ALCcontext*, const ALeffectslot *slot, const Ef
     const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain, mTargetGains);
+    ComputePanGains(target.Main, coeffs.data(), slot->Gain, mTargetGains);
 }
 
 void PshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

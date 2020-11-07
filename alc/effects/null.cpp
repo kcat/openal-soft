@@ -19,8 +19,10 @@ struct NullState final : public EffectState {
     ~NullState() override;
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(NullState)
 };
@@ -47,7 +49,7 @@ void NullState::deviceUpdate(const ALCdevice* /*device*/)
 /* This updates the effect state with new properties. This is called any time
  * the effect is (re)loaded into a slot.
  */
-void NullState::update(const ALCcontext* /*context*/, const ALeffectslot* /*slot*/,
+void NullState::update(const ALCcontext* /*context*/, const EffectSlot* /*slot*/,
     const EffectProps* /*props*/, const EffectTarget /*target*/)
 {
 }

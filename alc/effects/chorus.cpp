@@ -81,8 +81,10 @@ struct ChorusState final : public EffectState {
     void getSinusoidDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ChorusState)
 };
@@ -104,7 +106,8 @@ void ChorusState::deviceUpdate(const ALCdevice *Device)
     }
 }
 
-void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
+void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
+    const EffectProps *props, const EffectTarget target)
 {
     constexpr ALsizei mindelay{(MAX_RESAMPLER_PADDING>>1) << MixerFracBits};
 
@@ -135,8 +138,8 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs.data(), Slot->Params.Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs.data(), Slot->Params.Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs.data(), Slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs.data(), Slot->Gain, mGains[1].Target);
 
     float rate{props->Chorus.Rate};
     if(!(rate > 0.0f))

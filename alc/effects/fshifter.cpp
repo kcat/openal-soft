@@ -83,8 +83,10 @@ struct FshifterState final : public EffectState {
 
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(FshifterState)
 };
@@ -109,7 +111,8 @@ void FshifterState::deviceUpdate(const ALCdevice*)
     }
 }
 
-void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void FshifterState::update(const ALCcontext *context, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
 
@@ -152,8 +155,8 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs.data(), slot->Params.Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs.data(), slot->Params.Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs.data(), slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs.data(), slot->Gain, mGains[1].Target);
 }
 
 void FshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

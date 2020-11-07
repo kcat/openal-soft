@@ -529,8 +529,10 @@ struct ReverbState final : public EffectState {
         const float fadeStep);
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ReverbState)
 };
@@ -984,7 +986,8 @@ void ReverbState::update3DPanning(const float *ReflectionsPan, const float *Late
     }
 }
 
-void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
+void ReverbState::update(const ALCcontext *Context, const EffectSlot *Slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *Device{Context->mDevice.get()};
     const auto frequency = static_cast<float>(Device->Frequency);
@@ -1036,7 +1039,7 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
 
     /* Update early and late 3D panning. */
-    const float gain{props->Reverb.Gain * Slot->Params.Gain * ReverbBoost};
+    const float gain{props->Reverb.Gain * Slot->Gain * ReverbBoost};
     update3DPanning(props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
         props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, target);
 

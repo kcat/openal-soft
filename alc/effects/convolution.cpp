@@ -177,8 +177,10 @@ struct ConvolutionState final : public EffectState {
 
     void deviceUpdate(const ALCdevice *device) override;
     void setBuffer(const ALCdevice *device, const BufferStorage *buffer) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ConvolutionState)
 };
@@ -304,7 +306,7 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
 }
 
 
-void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slot,
+void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
     const EffectProps* /*props*/, const EffectTarget target)
 {
     /* NOTE: Stereo and Rear are slightly different from normal mixing (as
@@ -361,7 +363,7 @@ void ConvolutionState::update(const ALCcontext *context, const ALeffectslot *slo
 
     for(auto &chan : *mChans)
         std::fill(std::begin(chan.Target), std::end(chan.Target), 0.0f);
-    const float gain{slot->Params.Gain};
+    const float gain{slot->Gain};
     if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
         ALCdevice *device{context->mDevice.get()};

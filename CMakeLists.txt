@@ -638,6 +638,8 @@ set(ALC_OBJS
     alc/cpu_caps.cpp
     alc/cpu_caps.h
     alc/devformat.h
+    alc/effectslot.cpp
+    alc/effectslot.h
     alc/effects/base.h
     alc/effects/autowah.cpp
     alc/effects/chorus.cpp

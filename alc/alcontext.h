@@ -24,8 +24,9 @@
 #include "voice.h"
 
 struct ALeffectslot;
-struct ALeffectslotProps;
 struct ALsource;
+struct EffectSlot;
+struct EffectSlotProps;
 struct RingBuffer;
 
 
@@ -148,7 +149,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::atomic<ALcontextProps*> mFreeContextProps{nullptr};
     std::atomic<ALlistenerProps*> mFreeListenerProps{nullptr};
     std::atomic<VoicePropsItem*> mFreeVoiceProps{nullptr};
-    std::atomic<ALeffectslotProps*> mFreeEffectslotProps{nullptr};
+    std::atomic<EffectSlotProps*> mFreeEffectslotProps{nullptr};
 
     /* Asynchronous voice change actions are processed as a linked list of
      * VoiceChange objects by the mixer, which is atomically appended to.
@@ -192,8 +193,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     /* Wet buffers used by effect slots. */
     al::vector<WetBufferPtr> mWetBuffers;
 
-    using ALeffectslotArray = al::FlexArray<ALeffectslot*>;
-    std::atomic<ALeffectslotArray*> mActiveAuxSlots{nullptr};
+    using EffectSlotArray = al::FlexArray<EffectSlot*>;
+    std::atomic<EffectSlotArray*> mActiveAuxSlots{nullptr};
 
     std::thread mEventThread;
     al::semaphore mEventSem;

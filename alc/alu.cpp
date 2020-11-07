@@ -442,43 +442,43 @@ bool CalcListenerParams(ALCcontext *Context)
     return true;
 }
 
-bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCcontext *context)
+bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ALCcontext *context)
 {
-    ALeffectslotProps *props{slot->Params.Update.exchange(nullptr, std::memory_order_acq_rel)};
+    EffectSlotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
     /* If the effect slot target changed, clear the first sorted entry to force
      * a re-sort.
      */
-    if(slot->Params.Target != props->Target)
+    if(slot->Target != props->Target)
         *sorted_slots = nullptr;
-    slot->Params.Gain = props->Gain;
-    slot->Params.AuxSendAuto = props->AuxSendAuto;
-    slot->Params.Target = props->Target;
-    slot->Params.EffectType = props->Type;
-    slot->Params.mEffectProps = props->Props;
+    slot->Gain = props->Gain;
+    slot->AuxSendAuto = props->AuxSendAuto;
+    slot->Target = props->Target;
+    slot->EffectType = props->Type;
+    slot->mEffectProps = props->Props;
     if(IsReverbEffect(props->Type))
     {
-        slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
-        slot->Params.DecayTime = props->Props.Reverb.DecayTime;
-        slot->Params.DecayLFRatio = props->Props.Reverb.DecayLFRatio;
-        slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
-        slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
-        slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+        slot->RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
+        slot->DecayTime = props->Props.Reverb.DecayTime;
+        slot->DecayLFRatio = props->Props.Reverb.DecayLFRatio;
+        slot->DecayHFRatio = props->Props.Reverb.DecayHFRatio;
+        slot->DecayHFLimit = props->Props.Reverb.DecayHFLimit;
+        slot->AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
     }
     else
     {
-        slot->Params.RoomRolloff = 0.0f;
-        slot->Params.DecayTime = 0.0f;
-        slot->Params.DecayLFRatio = 0.0f;
-        slot->Params.DecayHFRatio = 0.0f;
-        slot->Params.DecayHFLimit = false;
-        slot->Params.AirAbsorptionGainHF = 1.0f;
+        slot->RoomRolloff = 0.0f;
+        slot->DecayTime = 0.0f;
+        slot->DecayLFRatio = 0.0f;
+        slot->DecayHFRatio = 0.0f;
+        slot->DecayHFLimit = false;
+        slot->AirAbsorptionGainHF = 1.0f;
     }
 
     EffectState *state{props->State.release()};
-    EffectState *oldstate{slot->Params.mEffectState};
-    slot->Params.mEffectState = state;
+    EffectState *oldstate{slot->mEffectState};
+    slot->mEffectState = state;
 
     /* Only release the old state if it won't get deleted, since we can't be
      * deleting/freeing anything in the mixer.
@@ -508,14 +508,14 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
     AtomicReplaceHead(context->mFreeEffectslotProps, props);
 
     EffectTarget output;
-    if(ALeffectslot *target{slot->Params.Target})
+    if(EffectSlot *target{slot->Target})
         output = EffectTarget{&target->Wet, nullptr};
     else
     {
         ALCdevice *device{context->mDevice.get()};
         output = EffectTarget{&device->Dry, &device->RealOut};
     }
-    state->update(context, slot, &slot->Params.mEffectProps, output);
+    state->update(context, slot, &slot->mEffectProps, output);
     return true;
 }
 
@@ -701,7 +701,7 @@ struct GainTriplet { float Base, HF, LF; };
 
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
-    const al::span<const GainTriplet,MAX_SENDS> WetGain, ALeffectslot *(&SendSlots)[MAX_SENDS],
+    const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
     const VoiceProps *props, const ALlistener &Listener, const ALCdevice *Device)
 {
     static const ChanMap MonoMap[1]{
@@ -884,7 +884,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             voice->mChans[0].mDryParams.Gains.Target);
         for(ALuint i{0};i < NumSends;i++)
         {
-            if(const ALeffectslot *Slot{SendSlots[i]})
+            if(const EffectSlot *Slot{SendSlots[i]})
                 ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scales[0],
                     voice->mChans[0].mWetParams[i].Gains.Target);
         }
@@ -946,7 +946,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -991,7 +991,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
             for(ALuint i{0};i < NumSends;i++)
             {
-                if(const ALeffectslot *Slot{SendSlots[i]})
+                if(const EffectSlot *Slot{SendSlots[i]})
                     ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                         voice->mChans[c].mWetParams[i].Gains.Target);
             }
@@ -1037,7 +1037,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     continue;
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1069,7 +1069,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1131,7 +1131,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1173,7 +1173,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1223,15 +1223,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->mDevice.get()};
-    ALeffectslot *SendSlots[MAX_SENDS];
+    EffectSlot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
     for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
-        if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->mDefaultSlot.get();
-        if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
             voice->mSend[i].Buffer = {};
@@ -1277,15 +1275,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    ALeffectslot *SendSlots[MAX_SENDS];
+    EffectSlot *SendSlots[MAX_SENDS];
     float RoomRolloff[MAX_SENDS];
     GainTriplet DecayDistance[MAX_SENDS];
     for(ALuint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
-        if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->mDefaultSlot.get();
-        if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
             RoomRolloff[i] = 0.0f;
@@ -1293,18 +1289,18 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
             DecayDistance[i].LF = 0.0f;
             DecayDistance[i].HF = 0.0f;
         }
-        else if(SendSlots[i]->Params.AuxSendAuto)
+        else if(SendSlots[i]->AuxSendAuto)
         {
-            RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + props->RoomRolloffFactor;
+            RoomRolloff[i] = SendSlots[i]->RoomRolloff + props->RoomRolloffFactor;
             /* Calculate the distances to where this effect's decay reaches
              * -60dB.
              */
-            DecayDistance[i].Base = SendSlots[i]->Params.DecayTime * SpeedOfSoundMetersPerSec;
-            DecayDistance[i].LF = DecayDistance[i].Base * SendSlots[i]->Params.DecayLFRatio;
-            DecayDistance[i].HF = DecayDistance[i].Base * SendSlots[i]->Params.DecayHFRatio;
-            if(SendSlots[i]->Params.DecayHFLimit)
+            DecayDistance[i].Base = SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec;
+            DecayDistance[i].LF = DecayDistance[i].Base * SendSlots[i]->DecayLFRatio;
+            DecayDistance[i].HF = DecayDistance[i].Base * SendSlots[i]->DecayHFRatio;
+            if(SendSlots[i]->DecayHFLimit)
             {
-                const float airAbsorption{SendSlots[i]->Params.AirAbsorptionGainHF};
+                const float airAbsorption{SendSlots[i]->AirAbsorptionGainHF};
                 if(airAbsorption < 1.0f)
                 {
                     /* Calculate the distance to where this effect's air
@@ -1700,7 +1696,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 
-void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
+void ProcessParamUpdates(ALCcontext *ctx, const EffectSlotArray &slots,
     const al::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
@@ -1710,8 +1706,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     {
         bool force{CalcContextParams(ctx)};
         force |= CalcListenerParams(ctx);
-        auto sorted_slots = const_cast<ALeffectslot**>(slots.data() + slots.size());
-        for(ALeffectslot *slot : slots)
+        auto sorted_slots = const_cast<EffectSlot**>(slots.data() + slots.size());
+        for(EffectSlot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
         for(Voice *voice : voices)
@@ -1730,14 +1726,14 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
 
     for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
     {
-        const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
+        const EffectSlotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
         const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
 
         /* Process pending propery updates for objects on the context. */
         ProcessParamUpdates(ctx, auxslots, voices);
 
         /* Clear auxiliary effect slot mixing buffers. */
-        for(ALeffectslot *slot : auxslots)
+        for(EffectSlot *slot : auxslots)
         {
             for(auto &buffer : slot->Wet.Buffer)
                 buffer.fill(0.0f);
@@ -1760,7 +1756,7 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
             /* Sort the slots into extra storage, so that effect slots come
              * before their effect slot target (or their targets' target).
              */
-            const al::span<ALeffectslot*> sorted_slots{const_cast<ALeffectslot**>(slots_end),
+            const al::span<EffectSlot*> sorted_slots{const_cast<EffectSlot**>(slots_end),
                 num_slots};
             /* Skip sorting if it has already been done. */
             if(!sorted_slots[0])
@@ -1771,8 +1767,8 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
                  */
                 std::copy(slots, slots_end, sorted_slots.begin());
                 auto split_point = std::partition(sorted_slots.begin(), sorted_slots.end(),
-                    [](const ALeffectslot *slot) noexcept -> bool
-                    { return slot->Params.Target != nullptr; });
+                    [](const EffectSlot *slot) noexcept -> bool
+                    { return slot->Target != nullptr; });
                 /* There must be at least one slot without a slot target. */
                 assert(split_point != sorted_slots.end());
 
@@ -1801,15 +1797,15 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
 
                         --next_target;
                         split_point = std::partition(sorted_slots.begin(), split_point,
-                            [next_target](const ALeffectslot *slot) noexcept -> bool
-                            { return slot->Params.Target != *next_target; });
+                            [next_target](const EffectSlot *slot) noexcept -> bool
+                            { return slot->Target != *next_target; });
                     } while(split_point - sorted_slots.begin() > 1);
                 }
             }
 
-            for(const ALeffectslot *slot : sorted_slots)
+            for(const EffectSlot *slot : sorted_slots)
             {
-                EffectState *state{slot->Params.mEffectState};
+                EffectState *state{slot->mEffectState};
                 state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
             }
         }

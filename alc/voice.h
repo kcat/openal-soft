@@ -17,6 +17,7 @@
 #include "filters/splitter.h"
 #include "hrtf.h"
 
+struct EffectSlot;
 enum class DistanceModel;
 
 
@@ -160,7 +161,7 @@ struct VoiceProps {
         float LFReference;
     } Direct;
     struct SendData {
-        ALeffectslot *Slot;
+        EffectSlot *Slot;
         float Gain;
         float GainHF;
         float HFReference;

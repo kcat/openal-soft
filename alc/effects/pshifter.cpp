@@ -192,11 +192,10 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected;
 
-            /* Compute the k-th partials' true frequency, twice the amplitude
-             * for maintain the gain (because half of bins are used) and store
-             * amplitude and true frequency in analysis buffer.
+            /* Compute the k-th partials' true frequency and store the
+             * amplitude and true frequency in the analysis buffer.
              */
-            mAnalysisBuffer[k].Amplitude = 2.0 * amplitude;
+            mAnalysisBuffer[k].Amplitude = amplitude;
             mAnalysisBuffer[k].Frequency = (static_cast<double>(k) + tmp) * freq_per_bin;
 
             /* Store the actual phase[k] for the next frame. */
@@ -207,11 +206,11 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          * accumulating the amplitudes of overlapping frequency bins.
          */
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
-        for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
+        const size_t bin_count{minz(STFT_HALF_SIZE+1,
+            (((STFT_HALF_SIZE+1)<<MixerFracBits) - (MixerFracOne>>1))/mPitchShiftI)};
+        for(size_t k{0u};k < bin_count;k++)
         {
             const size_t j{(k*mPitchShiftI + (MixerFracOne>>1)) >> MixerFracBits};
-            if(j >= STFT_HALF_SIZE+1) break;
-
             mSynthesisBuffer[j].Amplitude += mAnalysisBuffer[k].Amplitude;
             mSynthesisBuffer[j].Frequency  = mAnalysisBuffer[k].Frequency * mPitchShift;
         }
@@ -237,7 +236,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          */
         inverse_fft(mFftBuffer);
         for(size_t k{0u};k < STFT_SIZE;k++)
-            mOutputAccum[k] += HannWindow[k]*mFftBuffer[k].real() * (2.0/STFT_SIZE/OVERSAMP);
+            mOutputAccum[k] += HannWindow[k]*mFftBuffer[k].real() * (4.0/OVERSAMP/STFT_SIZE);
 
         /* Shift FIFO and accumulator. */
         fifo_iter = std::copy(mFIFO.begin()+STFT_STEP, mFIFO.end(), mFIFO.begin());

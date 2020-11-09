@@ -207,7 +207,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          */
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
         const size_t bin_count{minz(STFT_HALF_SIZE+1,
-            (((STFT_HALF_SIZE+1)<<MixerFracBits) - (MixerFracOne>>1))/mPitchShiftI)};
+            (((STFT_HALF_SIZE+1)<<MixerFracBits) - (MixerFracOne>>1) - 1)/mPitchShiftI + 1)};
         for(size_t k{0u};k < bin_count;k++)
         {
             const size_t j{(k*mPitchShiftI + (MixerFracOne>>1)) >> MixerFracBits};

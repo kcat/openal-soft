@@ -67,7 +67,7 @@ alignas(16) const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
 
 struct FrequencyBin {
     double Amplitude;
-    double Frequency;
+    double FreqBin;
 };
 
 
@@ -76,7 +76,6 @@ struct PshifterState final : public EffectState {
     size_t mCount;
     ALuint mPitchShiftI;
     double mPitchShift;
-    double mFreqPerBin;
 
     /* Effects buffers */
     std::array<double,STFT_SIZE> mFIFO;
@@ -105,13 +104,12 @@ struct PshifterState final : public EffectState {
     DEF_NEWDEL(PshifterState)
 };
 
-void PshifterState::deviceUpdate(const ALCdevice *device)
+void PshifterState::deviceUpdate(const ALCdevice* /*device*/)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount       = FIFO_LATENCY;
     mPitchShiftI = MixerFracOne;
     mPitchShift  = 1.0;
-    mFreqPerBin  = device->Frequency / double{STFT_SIZE};
 
     std::fill(mFIFO.begin(),            mFIFO.end(),            0.0);
     std::fill(mLastPhase.begin(),       mLastPhase.end(),       0.0);
@@ -145,8 +143,10 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
      */
 
-    static constexpr double expected{al::MathDefs<double>::Tau() / OVERSAMP};
-    const double freq_per_bin{mFreqPerBin};
+    /* Cycle offset per update expected of each frequency bin (bin 0 is none,
+     * bin 1 is x1, bin 2 is x2, etc).
+     */
+    constexpr double expected_cycles{al::MathDefs<double>::Tau() / OVERSAMP};
 
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -183,20 +183,20 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             const double phase{std::arg(mFftBuffer[k])};
 
             /* Compute phase difference and subtract expected phase difference */
-            double tmp{(phase - mLastPhase[k]) - static_cast<double>(k)*expected};
+            double tmp{(phase - mLastPhase[k]) - static_cast<double>(k)*expected_cycles};
 
             /* Map delta phase into +/- Pi interval */
             int qpd{double2int(tmp / al::MathDefs<double>::Pi())};
             tmp -= al::MathDefs<double>::Pi() * (qpd + (qpd%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
-            tmp /= expected;
+            tmp /= expected_cycles;
 
             /* Compute the k-th partials' true frequency and store the
-             * amplitude and true frequency in the analysis buffer.
+             * amplitude and frequency bin in the analysis buffer.
              */
             mAnalysisBuffer[k].Amplitude = amplitude;
-            mAnalysisBuffer[k].Frequency = (static_cast<double>(k) + tmp) * freq_per_bin;
+            mAnalysisBuffer[k].FreqBin = static_cast<double>(k) + tmp;
 
             /* Store the actual phase[k] for the next frame. */
             mLastPhase[k] = phase;
@@ -212,7 +212,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         {
             const size_t j{(k*mPitchShiftI + (MixerFracOne>>1)) >> MixerFracBits};
             mSynthesisBuffer[j].Amplitude += mAnalysisBuffer[k].Amplitude;
-            mSynthesisBuffer[j].Frequency  = mAnalysisBuffer[k].Frequency * mPitchShift;
+            mSynthesisBuffer[j].FreqBin    = mAnalysisBuffer[k].FreqBin * mPitchShift;
         }
 
         /* Reconstruct the frequency-domain signal from the adjusted frequency
@@ -220,11 +220,8 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          */
         for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
-            /* Compute bin deviation from scaled freq */
-            const double tmp{mSynthesisBuffer[k].Frequency / freq_per_bin};
-
             /* Calculate actual delta phase and accumulate it to get bin phase */
-            mSumPhase[k] += tmp * expected;
+            mSumPhase[k] += mSynthesisBuffer[k].FreqBin * expected_cycles;
 
             mFftBuffer[k] = std::polar(mSynthesisBuffer[k].Amplitude, mSumPhase[k]);
         }

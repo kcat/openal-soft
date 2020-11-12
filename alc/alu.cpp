@@ -1334,7 +1334,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     alu::Vector Position{props->Position[0], props->Position[1], props->Position[2], 1.0f};
     alu::Vector Velocity{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
     alu::Vector Direction{props->Direction[0], props->Direction[1], props->Direction[2], 0.0f};
-    if(props->HeadRelative == AL_FALSE)
+    if(!props->HeadRelative)
     {
         /* Transform source vectors */
         Position = Listener.Params.Matrix * Position;

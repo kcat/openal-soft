@@ -38,8 +38,10 @@ struct DedicatedState final : public EffectState {
 
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DedicatedState)
 };
@@ -49,13 +51,14 @@ void DedicatedState::deviceUpdate(const ALCdevice*)
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
 }
 
-void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void DedicatedState::update(const ALCcontext*, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);
 
-    const float Gain{slot->Params.Gain * props->Dedicated.Gain};
+    const float Gain{slot->Gain * props->Dedicated.Gain};
 
-    if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    if(slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
         const ALuint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
             GetChannelIdxByName(*target.RealOut, LFE)};
@@ -65,7 +68,7 @@ void DedicatedState::update(const ALCcontext*, const ALeffectslot *slot, const E
             mTargetGains[idx] = Gain;
         }
     }
-    else if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
+    else if(slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
     {
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */

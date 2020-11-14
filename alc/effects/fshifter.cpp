@@ -83,8 +83,10 @@ struct FshifterState final : public EffectState {
 
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(FshifterState)
 };
@@ -109,12 +111,13 @@ void FshifterState::deviceUpdate(const ALCdevice*)
     }
 }
 
-void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void FshifterState::update(const ALCcontext *context, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
 
     const float step{props->Fshifter.Frequency / static_cast<float>(device->Frequency)};
-    mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * FRACTIONONE);
+    mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * MixerFracOne);
 
     switch(props->Fshifter.LeftDirection)
     {
@@ -152,8 +155,8 @@ void FshifterState::update(const ALCcontext *context, const ALeffectslot *slot, 
     const auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs.data(), slot->Params.Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs.data(), slot->Params.Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs.data(), slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs.data(), slot->Gain, mGains[1].Target);
 }
 
 void FshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
@@ -202,12 +205,12 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         ALuint phase_idx{mPhase[c]};
         for(size_t k{0};k < samplesToDo;++k)
         {
-            const double phase{phase_idx * ((1.0 / FRACTIONONE) * al::MathDefs<double>::Tau())};
+            const double phase{phase_idx * ((1.0/MixerFracOne) * al::MathDefs<double>::Tau())};
             BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
                 mOutdata[k].imag()*std::sin(phase)*mSign[c]);
 
             phase_idx += phase_step;
-            phase_idx &= FRACTIONMASK;
+            phase_idx &= MixerFracMask;
         }
         mPhase[c] = phase_idx;
 

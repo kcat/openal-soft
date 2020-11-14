@@ -10,11 +10,11 @@
 namespace al {
 
 template<typename T>
-constexpr auto size(T &cont) -> decltype(cont.size())
+constexpr auto size(T &cont) noexcept(noexcept(cont.size())) -> decltype(cont.size())
 { return cont.size(); }
 
 template<typename T>
-constexpr auto size(const T &cont) -> decltype(cont.size())
+constexpr auto size(const T &cont) noexcept(noexcept(cont.size())) -> decltype(cont.size())
 { return cont.size(); }
 
 template<typename T, size_t N>
@@ -27,11 +27,11 @@ constexpr size_t size(std::initializer_list<T> list) noexcept
 
 
 template<typename T>
-constexpr auto data(T &cont) -> decltype(cont.data())
+constexpr auto data(T &cont) noexcept(noexcept(cont.data())) -> decltype(cont.data())
 { return cont.data(); }
 
 template<typename T>
-constexpr auto data(const T &cont) -> decltype(cont.data())
+constexpr auto data(const T &cont) noexcept(noexcept(cont.data())) -> decltype(cont.data())
 { return cont.data(); }
 
 template<typename T, size_t N>
@@ -43,7 +43,9 @@ constexpr const T* data(std::initializer_list<T> list) noexcept
 { return list.begin(); }
 
 
-template<typename T, size_t E=static_cast<size_t>(-1)>
+constexpr size_t dynamic_extent{static_cast<size_t>(-1)};
+
+template<typename T, size_t E=dynamic_extent>
 class span;
 
 namespace detail_ {
@@ -82,8 +84,6 @@ namespace detail_ {
 
 template<typename T, size_t E>
 class span {
-    static constexpr size_t dynamic_extent{static_cast<size_t>(-1)};
-
 public:
     using element_type = T;
     using value_type = std::remove_cv_t<T>;
@@ -109,16 +109,19 @@ public:
     constexpr span(element_type (&arr)[E]) noexcept : span{al::data(arr), al::size(arr)} { }
     constexpr span(std::array<value_type,E> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
     template<REQUIRES(std::is_const<element_type>::value)>
-    constexpr span(const std::array<value_type,E> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
+    constexpr span(const std::array<value_type,E> &arr) noexcept
+      : span{al::data(arr), al::size(arr)}
+    { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(U))>
     constexpr span(U &cont) : span{al::data(cont), al::size(cont)} { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(const U))>
     constexpr span(const U &cont) : span{al::data(cont), al::size(cont)} { }
-    template<typename U, REQUIRES(!std::is_same<element_type,U>::value && std::is_convertible<U(*)[],element_type(*)[]>::value)>
+    template<typename U, REQUIRES(!std::is_same<element_type,U>::value
+        && std::is_convertible<U(*)[],element_type(*)[]>::value)>
     constexpr span(const span<U,E> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
-    span& operator=(const span &rhs) noexcept = default;
+    constexpr span& operator=(const span &rhs) noexcept = default;
 
     constexpr reference front() const { return *mData; }
     constexpr reference back() const { return *(mData+E-1); }
@@ -136,8 +139,10 @@ public:
 
     constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{end()}; }
     constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
-    constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator{cend()}; }
-    constexpr const_reverse_iterator crend() const noexcept { return const_reverse_iterator{cbegin()}; }
+    constexpr const_reverse_iterator crbegin() const noexcept
+    { return const_reverse_iterator{cend()}; }
+    constexpr const_reverse_iterator crend() const noexcept
+    { return const_reverse_iterator{cbegin()}; }
 
     template<size_t C>
     constexpr span<element_type,C> first() const
@@ -153,12 +158,19 @@ public:
         return span<element_type,C>{mData+(E-C), C};
     }
 
-    template<size_t O, size_t C, size_t RealC=((C==dynamic_extent) ? E-O : C)>
-    constexpr span<element_type,RealC> subspan() const
+    template<size_t O, size_t C>
+    constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
     {
         static_assert(E >= O, "Offset exceeds extent");
-        static_assert(E-O >= RealC, "New size exceeds original capacity");
-        return span<element_type,RealC>{mData+O, RealC};
+        static_assert(E-O >= C, "New size exceeds original capacity");
+        return span<element_type,C>{mData+O, C};
+    }
+
+    template<size_t O, size_t C=dynamic_extent>
+    constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,E-O>>
+    {
+        static_assert(E >= O, "Offset exceeds extent");
+        return span<element_type,E-O>{mData+O, E-O};
     }
 
     /* NOTE: Can't declare objects of a specialized template class prior to
@@ -167,16 +179,15 @@ public:
      */
     constexpr span<element_type,dynamic_extent> first(size_t count) const;
     constexpr span<element_type,dynamic_extent> last(size_t count) const;
-    constexpr span<element_type,dynamic_extent> subspan(size_t offset, size_t count=dynamic_extent) const;
+    constexpr span<element_type,dynamic_extent> subspan(size_t offset,
+        size_t count=dynamic_extent) const;
 
 private:
     pointer mData{nullptr};
 };
 
 template<typename T>
-class span<T,static_cast<size_t>(-1)> {
-    static constexpr size_t dynamic_extent{static_cast<size_t>(-1)};
-
+class span<T,dynamic_extent> {
 public:
     using element_type = T;
     using value_type = std::remove_cv_t<T>;
@@ -193,7 +204,7 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    static constexpr size_t extent{static_cast<size_t>(-1)};
+    static constexpr size_t extent{dynamic_extent};
 
     constexpr span() noexcept = default;
     constexpr span(pointer ptr, index_type count) : mData{ptr}, mDataEnd{ptr+count} { }
@@ -203,16 +214,19 @@ public:
     template<size_t N>
     constexpr span(std::array<value_type,N> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
     template<size_t N, REQUIRES(std::is_const<element_type>::value)>
-    constexpr span(const std::array<value_type,N> &arr) noexcept : span{al::data(arr), al::size(arr)} { }
+    constexpr span(const std::array<value_type,N> &arr) noexcept
+      : span{al::data(arr), al::size(arr)}
+    { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(U))>
     constexpr span(U &cont) : span{al::data(cont), al::size(cont)} { }
     template<typename U, REQUIRES(IS_VALID_CONTAINER(const U))>
     constexpr span(const U &cont) : span{al::data(cont), al::size(cont)} { }
-    template<typename U, size_t N, REQUIRES((!std::is_same<element_type,U>::value || extent != N) && std::is_convertible<U(*)[],element_type(*)[]>::value)>
+    template<typename U, size_t N, REQUIRES((!std::is_same<element_type,U>::value || extent != N)
+        && std::is_convertible<U(*)[],element_type(*)[]>::value)>
     constexpr span(const span<U,N> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
-    span& operator=(const span &rhs) noexcept = default;
+    constexpr span& operator=(const span &rhs) noexcept = default;
 
     constexpr reference front() const { return *mData; }
     constexpr reference back() const { return *(mDataEnd-1); }
@@ -231,8 +245,10 @@ public:
 
     constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{end()}; }
     constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
-    constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator{cend()}; }
-    constexpr const_reverse_iterator crend() const noexcept { return const_reverse_iterator{cbegin()}; }
+    constexpr const_reverse_iterator crbegin() const noexcept
+    { return const_reverse_iterator{cend()}; }
+    constexpr const_reverse_iterator crend() const noexcept
+    { return const_reverse_iterator{cbegin()}; }
 
     template<size_t C>
     constexpr span<element_type,C> first() const
@@ -248,9 +264,13 @@ public:
     constexpr span last(size_t count) const
     { return (count >= size()) ? *this : span{mDataEnd-count, mDataEnd}; }
 
+    template<size_t O, size_t C>
+    constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
+    { return span<element_type,C>{mData+O, C}; }
+
     template<size_t O, size_t C=dynamic_extent>
-    constexpr span<element_type,C> subspan() const
-    { return span<element_type,C>{mData+O, (C!=dynamic_extent) ? mData+O+C : mDataEnd}; }
+    constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,C>>
+    { return span<element_type,C>{mData+O, mDataEnd}; }
 
     constexpr span subspan(size_t offset, size_t count=dynamic_extent) const
     {
@@ -279,7 +299,8 @@ constexpr inline auto span<T,E>::last(size_t count) const -> span<element_type,d
 }
 
 template<typename T, size_t E>
-constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const -> span<element_type,dynamic_extent>
+constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const
+    -> span<element_type,dynamic_extent>
 {
     return (offset > size()) ? span<element_type>{} :
         (count >= size()-offset) ? span<element_type>{mData+offset, mData+extent} :

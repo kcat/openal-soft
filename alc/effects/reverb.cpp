@@ -449,7 +449,7 @@ struct ReverbState final : public EffectState {
             const float *RESTRICT input{al::assume_aligned<16>(InSamples)};
             InSamples += InStride;
 
-            if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+            if(!(std::fabs(gain) > GainSilenceThreshold))
                 continue;
 
             for(float &sample : OutBuffer)
@@ -529,8 +529,10 @@ struct ReverbState final : public EffectState {
         const float fadeStep);
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(ReverbState)
 };
@@ -684,14 +686,14 @@ void ReverbState::deviceUpdate(const ALCdevice *device)
  * until the decay reaches -60 dB.
  */
 inline float CalcDecayCoeff(const float length, const float decayTime)
-{ return std::pow(REVERB_DECAY_GAIN, length/decayTime); }
+{ return std::pow(ReverbDecayGain, length/decayTime); }
 
 /* Calculate a decay length from a coefficient and the time until the decay
  * reaches -60 dB.
  */
 inline float CalcDecayLength(const float coeff, const float decayTime)
 {
-    constexpr float log10_decaygain{-3.0f/*std::log10(REVERB_DECAY_GAIN)=std::log10(0.001f)*/};
+    constexpr float log10_decaygain{-3.0f/*std::log10(ReverbDecayGain)*/};
     return std::log10(coeff) * decayTime / log10_decaygain;
 }
 
@@ -740,7 +742,7 @@ float CalcLimitedHfRatio(const float hfRatio, const float airAbsorptionGainHF,
      * equation, solve for HF ratio.  The delay length is cancelled out of
      * the equation, so it can be calculated once for all lines.
      */
-    float limitRatio{1.0f / SPEEDOFSOUNDMETRESPERSEC /
+    float limitRatio{1.0f / SpeedOfSoundMetersPerSec /
         CalcDecayLength(airAbsorptionGainHF, decayTime)};
 
     /* Using the limit calculated above, apply the upper bound to the HF ratio. */
@@ -984,7 +986,8 @@ void ReverbState::update3DPanning(const float *ReflectionsPan, const float *Late
     }
 }
 
-void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const EffectProps *props, const EffectTarget target)
+void ReverbState::update(const ALCcontext *Context, const EffectSlot *Slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *Device{Context->mDevice.get()};
     const auto frequency = static_cast<float>(Device->Frequency);
@@ -1036,7 +1039,7 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
         props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
 
     /* Update early and late 3D panning. */
-    const float gain{props->Reverb.Gain * Slot->Params.Gain * ReverbBoost};
+    const float gain{props->Reverb.Gain * Slot->Gain * ReverbBoost};
     update3DPanning(props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
         props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, target);
 

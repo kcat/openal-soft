@@ -777,6 +777,8 @@ constexpr struct {
     DECL(AL_VOCAL_MORPHER_WAVEFORM),
     DECL(AL_VOCAL_MORPHER_RATE),
 
+    DECL(AL_EFFECTSLOT_TARGET_SOFT),
+
     DECL(AL_NUM_RESAMPLERS_SOFT),
     DECL(AL_DEFAULT_RESAMPLER_SOFT),
     DECL(AL_SOURCE_RESAMPLER_SOFT),
@@ -864,8 +866,8 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "
     "AL_SOFT_direct_channels_remix "
-    "AL_SOFTX_effect_target "
-    "AL_SOFTX_events "
+    "AL_SOFT_effect_target "
+    "AL_SOFT_events "
     "AL_SOFTX_filter_gain_ex "
     "AL_SOFT_gain_clamp_ex "
     "AL_SOFT_loop_points "
@@ -932,7 +934,8 @@ constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_ENUMERATION_EXT "
     "ALC_EXT_CAPTURE "
     "ALC_EXT_thread_local_context "
-    "ALC_SOFT_loopback";
+    "ALC_SOFT_loopback "
+    "ALC_SOFT_loopback_bformat";
 constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
@@ -944,6 +947,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_device_clock "
     "ALC_SOFT_HRTF "
     "ALC_SOFT_loopback "
+    "ALC_SOFT_loopback_bformat "
     "ALC_SOFT_output_limiter "
     "ALC_SOFT_pause_device";
 constexpr int alcMajorVersion{1};
@@ -976,7 +980,11 @@ void alc_initconfig(void)
     if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
     {
         long lvl = strtol(loglevel->c_str(), nullptr, 0);
-        if(lvl >= static_cast<long>(LogLevel::Disable) && lvl <= static_cast<long>(LogLevel::Ref))
+        if(lvl >= static_cast<long>(LogLevel::Trace))
+            gLogLevel = LogLevel::Trace;
+        else if(lvl <= static_cast<long>(LogLevel::Disable))
+            gLogLevel = LogLevel::Disable;
+        else
             gLogLevel = static_cast<LogLevel>(lvl);
     }
 
@@ -2092,9 +2100,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
+        std::unique_lock<std::mutex> proplock{context->mPropLock};
+        std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
+
+        /* Clear out unused wet buffers. */
+        auto buffer_not_in_use = [](WetBufferPtr &wetbuffer) noexcept -> bool
+        { return !wetbuffer->mInUse; };
+        auto wetbuffer_iter = std::remove_if(context->mWetBuffers.begin(),
+            context->mWetBuffers.end(), buffer_not_in_use);
+        context->mWetBuffers.erase(wetbuffer_iter, context->mWetBuffers.end());
+
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
-            aluInitEffectPanning(slot, device);
+            aluInitEffectPanning(slot, context);
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
@@ -2104,20 +2122,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             slot->updateProps(context);
         }
 
-        std::unique_lock<std::mutex> proplock{context->mPropLock};
-        std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
-        if(ALeffectslotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
+        if(EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
             std::fill_n(curarray->end(), curarray->size(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
         {
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                ALsizei idx{CTZ64(usemask)};
+                const ALsizei idx{CountTrailingZeros(usemask)};
                 ALeffectslot *slot{sublist.EffectSlots + idx};
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(slot, device);
+                aluInitEffectPanning(slot, context);
 
                 EffectState *state{slot->Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
@@ -2136,7 +2152,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                ALsizei idx{CTZ64(usemask)};
+                const ALsizei idx{CountTrailingZeros(usemask)};
                 ALsource *source{sublist.Sources + idx};
                 usemask &= ~(1_u64 << idx);
 
@@ -2194,7 +2210,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 continue;
 
             voice->mStep = 0;
-            voice->mFlags |= VOICE_IS_FADING;
+            voice->mFlags |= VoiceIsFading;
 
             if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
             {
@@ -2215,7 +2231,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }
 
-                voice->mFlags |= VOICE_IS_AMBISONIC;
+                voice->mFlags |= VoiceIsAmbisonic;
             }
             else
             {
@@ -2227,13 +2243,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }
 
-                voice->mFlags &= ~VOICE_IS_AMBISONIC;
+                voice->mFlags &= ~VoiceIsAmbisonic;
             }
 
             if(device->AvgSpeakerDist > 0.0f)
             {
                 /* Reinitialize the NFC filters for new parameters. */
-                const float w1{SPEEDOFSOUNDMETRESPERSEC /
+                const float w1{SpeedOfSoundMetersPerSec /
                     (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
                 for(auto &chandata : voice->mChans)
                     chandata.mDryParams.NFCtrlFilter.init(w1);
@@ -2278,22 +2294,19 @@ ALCdevice::~ALCdevice()
 
     size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), size_t{0u},
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
-    )};
+        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); })};
     if(count > 0)
         WARN("%zu Buffer%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), size_t{0u},
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
-    );
+        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Effect%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), size_t{0u},
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
-    );
+        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
 
@@ -2346,25 +2359,24 @@ ALCcontext::~ALCcontext()
 
     count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
-    );
+        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
     mSourceList.clear();
     mNumSources = 0;
 
     count = 0;
-    ALeffectslotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
+    EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
     while(eprops)
     {
-        ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
+        EffectSlotProps *next{eprops->next.load(std::memory_order_relaxed)};
         delete eprops;
         eprops = next;
         ++count;
     }
     TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    if(ALeffectslotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
+    if(EffectSlotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
     {
         al::destroy_n(curarray->end(), curarray->size());
         delete curarray;
@@ -2373,8 +2385,7 @@ ALCcontext::~ALCcontext()
 
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(~sublist.FreeMask)); }
-    );
+        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     mEffectSlotList.clear();
@@ -2436,7 +2447,7 @@ void ALCcontext::init()
     {
         mDefaultSlot = std::unique_ptr<ALeffectslot>{new ALeffectslot{}};
         if(mDefaultSlot->init() == AL_NO_ERROR)
-            aluInitEffectPanning(mDefaultSlot.get(), mDevice.get());
+            aluInitEffectPanning(mDefaultSlot.get(), this);
         else
         {
             mDefaultSlot = nullptr;
@@ -2444,13 +2455,13 @@ void ALCcontext::init()
         }
     }
 
-    ALeffectslotArray *auxslots;
+    EffectSlotArray *auxslots;
     if(!mDefaultSlot)
-        auxslots = ALeffectslot::CreatePtrArray(0);
+        auxslots = EffectSlot::CreatePtrArray(0);
     else
     {
-        auxslots = ALeffectslot::CreatePtrArray(1);
-        (*auxslots)[0] = mDefaultSlot.get();
+        auxslots = EffectSlot::CreatePtrArray(1);
+        (*auxslots)[0] = &mDefaultSlot->mSlot;
         mDefaultSlot->mState = SlotState::Playing;
     }
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);

@@ -21,22 +21,22 @@ struct FastBSincTag;
 
 namespace {
 
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
-#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
+constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 inline float do_point(const InterpState&, const float *RESTRICT vals, const ALuint)
 { return vals[0]; }
 inline float do_lerp(const InterpState&, const float *RESTRICT vals, const ALuint frac)
-{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
+{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 inline float do_cubic(const InterpState&, const float *RESTRICT vals, const ALuint frac)
-{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/FRACTIONONE)); }
+{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const ALuint frac)
 {
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
-    const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) * (1.0f/FRAC_PHASE_DIFFONE)};
+    const ALuint pi{frac >> FracPhaseBitDiff};
+    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
     const float *fil{istate.bsinc.filter + m*pi*4};
     const float *phd{fil + m};
@@ -54,8 +54,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     const size_t m{istate.bsinc.m};
 
     // Calculate the phase index and factor.
-    const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-    const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) * (1.0f/FRAC_PHASE_DIFFONE)};
+    const ALuint pi{frac >> FracPhaseBitDiff};
+    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
     const float *fil{istate.bsinc.filter + m*pi*4};
     const float *phd{fil + m};
@@ -78,8 +78,8 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, ALu
         out = Sampler(istate, src, frac);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }
@@ -188,7 +188,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
         ++CurrentGains;
         ++TargetGains;
 
-        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+        if(!(std::fabs(gain) > GainSilenceThreshold))
             continue;
         for(;pos != InSamples.size();++pos)
             dst[pos] += InSamples[pos] * gain;

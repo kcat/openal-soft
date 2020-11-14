@@ -67,7 +67,15 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
         return;
     }
 
-    fprintf(stdout, "Compatible Layout:\n\ndistance = %.3f", fds[0].mDistance);
+    uint used_elems{0};
+    for(size_t fi{0u};fi < fds.size();++fi)
+    {
+        for(uint ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
+            used_elems += fds[fi].mAzCounts[ei];
+    }
+
+    fprintf(stdout, "Compatible Layout (%u of %u measurements):\n\ndistance = %.3f", used_elems, m,
+        fds[0].mDistance);
     for(size_t fi{1u};fi < fds.size();fi++)
         fprintf(stdout, ", %.3f", fds[fi].mDistance);
 

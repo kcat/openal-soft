@@ -183,7 +183,7 @@ void BackendBase::setChannelOrderFromWFXMask(ALuint chanmask)
     ALuint idx{0};
     while(chanmask)
     {
-        const int bit{CTZ32(chanmask)};
+        const int bit{CountTrailingZeros(chanmask)};
         const ALuint mask{1u << bit};
         chanmask &= ~mask;
 

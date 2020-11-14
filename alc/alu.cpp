@@ -103,8 +103,8 @@ struct BSincTag;
 struct FastBSincTag;
 
 
-static_assert(!(MAX_RESAMPLER_PADDING&1) && MAX_RESAMPLER_PADDING >= BSINC_POINTS_MAX,
-    "MAX_RESAMPLER_PADDING is not a multiple of two, or is too small");
+static_assert(MAX_RESAMPLER_PADDING >= BSincPointsMax, "MAX_RESAMPLER_PADDING is too small");
+static_assert(!(MAX_RESAMPLER_PADDING&1), "MAX_RESAMPLER_PADDING is not a multiple of two");
 
 
 namespace {
@@ -174,13 +174,13 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 
 inline void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
 {
-    size_t si{BSINC_SCALE_COUNT - 1};
+    size_t si{BSincScaleCount - 1};
     float sf{0.0f};
 
-    if(increment > FRACTIONONE)
+    if(increment > MixerFracOne)
     {
-        sf = FRACTIONONE / static_cast<float>(increment);
-        sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
+        sf = MixerFracOne / static_cast<float>(increment);
+        sf = maxf(0.0f, (BSincScaleCount-1) * (sf-table->scaleBase) * table->scaleRange);
         si = float2uint(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different
@@ -219,7 +219,7 @@ inline ResamplerFunc SelectResampler(Resampler resampler, ALuint increment)
         return Resample_<CubicTag,CTag>;
     case Resampler::BSinc12:
     case Resampler::BSinc24:
-        if(increment <= FRACTIONONE)
+        if(increment <= MixerFracOne)
         {
             /* fall-through */
         case Resampler::FastBSinc12:
@@ -362,33 +362,6 @@ auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t
 }
 
 
-inline alu::Vector aluCrossproduct(const alu::Vector &in1, const alu::Vector &in2)
-{
-    return alu::Vector{
-        in1[1]*in2[2] - in1[2]*in2[1],
-        in1[2]*in2[0] - in1[0]*in2[2],
-        in1[0]*in2[1] - in1[1]*in2[0],
-        0.0f
-    };
-}
-
-inline float aluDotproduct(const alu::Vector &vec1, const alu::Vector &vec2)
-{
-    return vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2];
-}
-
-
-alu::Vector operator*(const alu::Matrix &mtx, const alu::Vector &vec) noexcept
-{
-    return alu::Vector{
-        vec[0]*mtx[0][0] + vec[1]*mtx[1][0] + vec[2]*mtx[2][0] + vec[3]*mtx[3][0],
-        vec[0]*mtx[0][1] + vec[1]*mtx[1][1] + vec[2]*mtx[2][1] + vec[3]*mtx[3][1],
-        vec[0]*mtx[0][2] + vec[1]*mtx[1][2] + vec[2]*mtx[2][2] + vec[3]*mtx[3][2],
-        vec[0]*mtx[0][3] + vec[1]*mtx[1][3] + vec[2]*mtx[2][3] + vec[3]*mtx[3][3]
-    };
-}
-
-
 bool CalcContextParams(ALCcontext *Context)
 {
     ALcontextProps *props{Context->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
@@ -418,19 +391,22 @@ bool CalcListenerParams(ALCcontext *Context)
     alu::Vector V{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
     V.normalize();
     /* Build and normalize right-vector */
-    alu::Vector U{aluCrossproduct(N, V)};
+    alu::Vector U{N.cross_product(V)};
     U.normalize();
 
-    Listener.Params.Matrix = alu::Matrix{
-        U[0], V[0], -N[0], 0.0f,
-        U[1], V[1], -N[1], 0.0f,
-        U[2], V[2], -N[2], 0.0f,
-        0.0f, 0.0f,  0.0f, 1.0f
-    };
+    const alu::MatrixR<double> rot{
+        U[0], V[0], -N[0], 0.0,
+        U[1], V[1], -N[1], 0.0,
+        U[2], V[2], -N[2], 0.0,
+         0.0,  0.0,   0.0, 1.0};
+    const alu::VectorR<double> pos{props->Position[0],props->Position[1],props->Position[2],1.0};
+    const alu::Vector P{alu::cast_to<float>(rot * pos)};
 
-    const alu::Vector P{Listener.Params.Matrix *
-        alu::Vector{props->Position[0], props->Position[1], props->Position[2], 1.0f}};
-    Listener.Params.Matrix.setRow(3, -P[0], -P[1], -P[2], 1.0f);
+    Listener.Params.Matrix = alu::Matrix{
+         U[0],  V[0], -N[0], 0.0f,
+         U[1],  V[1], -N[1], 0.0f,
+         U[2],  V[2], -N[2], 0.0f,
+        -P[0], -P[1], -P[2], 1.0f};
 
     const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
     Listener.Params.Velocity = Listener.Params.Matrix * vel;
@@ -442,43 +418,43 @@ bool CalcListenerParams(ALCcontext *Context)
     return true;
 }
 
-bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCcontext *context)
+bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ALCcontext *context)
 {
-    ALeffectslotProps *props{slot->Params.Update.exchange(nullptr, std::memory_order_acq_rel)};
+    EffectSlotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
     /* If the effect slot target changed, clear the first sorted entry to force
      * a re-sort.
      */
-    if(slot->Params.Target != props->Target)
+    if(slot->Target != props->Target)
         *sorted_slots = nullptr;
-    slot->Params.Gain = props->Gain;
-    slot->Params.AuxSendAuto = props->AuxSendAuto;
-    slot->Params.Target = props->Target;
-    slot->Params.EffectType = props->Type;
-    slot->Params.mEffectProps = props->Props;
+    slot->Gain = props->Gain;
+    slot->AuxSendAuto = props->AuxSendAuto;
+    slot->Target = props->Target;
+    slot->EffectType = props->Type;
+    slot->mEffectProps = props->Props;
     if(IsReverbEffect(props->Type))
     {
-        slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
-        slot->Params.DecayTime = props->Props.Reverb.DecayTime;
-        slot->Params.DecayLFRatio = props->Props.Reverb.DecayLFRatio;
-        slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
-        slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
-        slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+        slot->RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
+        slot->DecayTime = props->Props.Reverb.DecayTime;
+        slot->DecayLFRatio = props->Props.Reverb.DecayLFRatio;
+        slot->DecayHFRatio = props->Props.Reverb.DecayHFRatio;
+        slot->DecayHFLimit = props->Props.Reverb.DecayHFLimit;
+        slot->AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
     }
     else
     {
-        slot->Params.RoomRolloff = 0.0f;
-        slot->Params.DecayTime = 0.0f;
-        slot->Params.DecayLFRatio = 0.0f;
-        slot->Params.DecayHFRatio = 0.0f;
-        slot->Params.DecayHFLimit = false;
-        slot->Params.AirAbsorptionGainHF = 1.0f;
+        slot->RoomRolloff = 0.0f;
+        slot->DecayTime = 0.0f;
+        slot->DecayLFRatio = 0.0f;
+        slot->DecayHFRatio = 0.0f;
+        slot->DecayHFLimit = false;
+        slot->AirAbsorptionGainHF = 1.0f;
     }
 
     EffectState *state{props->State.release()};
-    EffectState *oldstate{slot->Params.mEffectState};
-    slot->Params.mEffectState = state;
+    EffectState *oldstate{slot->mEffectState};
+    slot->mEffectState = state;
 
     /* Only release the old state if it won't get deleted, since we can't be
      * deleting/freeing anything in the mixer.
@@ -508,14 +484,14 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALeffectslot **sorted_slots, ALCco
     AtomicReplaceHead(context->mFreeEffectslotProps, props);
 
     EffectTarget output;
-    if(ALeffectslot *target{slot->Params.Target})
+    if(EffectSlot *target{slot->Target})
         output = EffectTarget{&target->Wet, nullptr};
     else
     {
         ALCdevice *device{context->mDevice.get()};
         output = EffectTarget{&device->Dry, &device->RealOut};
     }
-    state->update(context, slot, &slot->Params.mEffectProps, output);
+    state->update(context, slot, &slot->mEffectProps, output);
     return true;
 }
 
@@ -701,7 +677,7 @@ struct GainTriplet { float Base, HF, LF; };
 
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
-    const al::span<const GainTriplet,MAX_SENDS> WetGain, ALeffectslot *(&SendSlots)[MAX_SENDS],
+    const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
     const VoiceProps *props, const ALlistener &Listener, const ALCdevice *Device)
 {
     static const ChanMap MonoMap[1]{
@@ -818,7 +794,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         break;
     }
 
-    voice->mFlags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
+    voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
     if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
     {
         /* Special handling for B-Format sources. */
@@ -839,13 +815,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * excessive bass.
                  */
                 const float mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
-                const float w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
+                const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
             }
 
-            voice->mFlags |= VOICE_HAS_NFC;
+            voice->mFlags |= VoiceHasNfc;
         }
 
         /* Panning a B-Format sound toward some direction is easy. Just pan the
@@ -884,7 +860,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             voice->mChans[0].mDryParams.Gains.Target);
         for(ALuint i{0};i < NumSends;i++)
         {
-            if(const ALeffectslot *Slot{SendSlots[i]})
+            if(const EffectSlot *Slot{SendSlots[i]})
                 ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scales[0],
                     voice->mChans[0].mWetParams[i].Gains.Target);
         }
@@ -905,7 +881,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 V = Listener.Params.Matrix * V;
             }
             /* Build and normalize right-vector */
-            alu::Vector U{aluCrossproduct(N, V)};
+            alu::Vector U{N.cross_product(V)};
             U.normalize();
 
             /* Build a rotation matrix. Manually fill the zeroth- and first-
@@ -946,7 +922,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -991,7 +967,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
             for(ALuint i{0};i < NumSends;i++)
             {
-                if(const ALeffectslot *Slot{SendSlots[i]})
+                if(const EffectSlot *Slot{SendSlots[i]})
                     ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                         voice->mChans[c].mWetParams[i].Gains.Target);
             }
@@ -1037,7 +1013,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     continue;
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1069,14 +1045,14 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
         }
 
-        voice->mFlags |= VOICE_HAS_HRTF;
+        voice->mFlags |= VoiceHasHrtf;
     }
     else
     {
@@ -1091,13 +1067,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * excessive bass.
                  */
                 const float mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
-                const float w0{SPEEDOFSOUNDMETRESPERSEC / (mdist * Frequency)};
+                const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
                 for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
-                voice->mFlags |= VOICE_HAS_NFC;
+                voice->mFlags |= VoiceHasNfc;
             }
 
             /* Calculate the directional coefficients once, which apply to all
@@ -1131,7 +1107,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1148,7 +1124,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
-                voice->mFlags |= VOICE_HAS_NFC;
+                voice->mFlags |= VoiceHasNfc;
             }
 
             for(size_t c{0};c < num_channels;c++)
@@ -1173,7 +1149,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(ALuint i{0};i < NumSends;i++)
                 {
-                    if(const ALeffectslot *Slot{SendSlots[i]})
+                    if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1223,15 +1199,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *ALContext)
 {
     const ALCdevice *Device{ALContext->mDevice.get()};
-    ALeffectslot *SendSlots[MAX_SENDS];
+    EffectSlot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
     for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
-        if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->mDefaultSlot.get();
-        if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
             voice->mSend[i].Buffer = {};
@@ -1244,23 +1218,23 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
     const auto Pitch = static_cast<float>(voice->mFrequency) /
         static_cast<float>(Device->Frequency) * props->Pitch;
     if(Pitch > float{MAX_PITCH})
-        voice->mStep = MAX_PITCH<<FRACTIONBITS;
+        voice->mStep = MAX_PITCH<<MixerFracBits;
     else
-        voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
+        voice->mStep = maxu(fastf2u(Pitch * MixerFracOne), 1);
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
     const ALlistener &Listener = ALContext->mListener;
     GainTriplet DryGain;
     DryGain.Base  = minf(clampf(props->Gain, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        Listener.Params.Gain, GAIN_MIX_MAX);
+        Listener.Params.Gain, GainMixMax);
     DryGain.HF = props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
     GainTriplet WetGain[MAX_SENDS];
     for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i].Base = minf(clampf(props->Gain, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * Listener.Params.Gain, GAIN_MIX_MAX);
+            props->Send[i].Gain * Listener.Params.Gain, GainMixMax);
         WetGain[i].HF = props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
     }
@@ -1277,15 +1251,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    ALeffectslot *SendSlots[MAX_SENDS];
+    EffectSlot *SendSlots[MAX_SENDS];
     float RoomRolloff[MAX_SENDS];
     GainTriplet DecayDistance[MAX_SENDS];
     for(ALuint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
-        if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->mDefaultSlot.get();
-        if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = nullptr;
             RoomRolloff[i] = 0.0f;
@@ -1293,18 +1265,18 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
             DecayDistance[i].LF = 0.0f;
             DecayDistance[i].HF = 0.0f;
         }
-        else if(SendSlots[i]->Params.AuxSendAuto)
+        else if(SendSlots[i]->AuxSendAuto)
         {
-            RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + props->RoomRolloffFactor;
+            RoomRolloff[i] = SendSlots[i]->RoomRolloff + props->RoomRolloffFactor;
             /* Calculate the distances to where this effect's decay reaches
              * -60dB.
              */
-            DecayDistance[i].Base = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
-            DecayDistance[i].LF = DecayDistance[i].Base * SendSlots[i]->Params.DecayLFRatio;
-            DecayDistance[i].HF = DecayDistance[i].Base * SendSlots[i]->Params.DecayHFRatio;
-            if(SendSlots[i]->Params.DecayHFLimit)
+            DecayDistance[i].Base = SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec;
+            DecayDistance[i].LF = DecayDistance[i].Base * SendSlots[i]->DecayLFRatio;
+            DecayDistance[i].HF = DecayDistance[i].Base * SendSlots[i]->DecayHFRatio;
+            if(SendSlots[i]->DecayHFLimit)
             {
-                const float airAbsorption{SendSlots[i]->Params.AirAbsorptionGainHF};
+                const float airAbsorption{SendSlots[i]->AirAbsorptionGainHF};
                 if(airAbsorption < 1.0f)
                 {
                     /* Calculate the distance to where this effect's air
@@ -1312,7 +1284,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
                      * decay distance (so it doesn't take any longer to decay
                      * than the air would allow).
                      */
-                    constexpr float log10_decaygain{-3.0f/*std::log10(REVERB_DECAY_GAIN)*/};
+                    constexpr float log10_decaygain{-3.0f/*std::log10(ReverbDecayGain)*/};
                     const float absorb_dist{log10_decaygain / std::log10(airAbsorption)};
                     DecayDistance[i].HF = minf(absorb_dist, DecayDistance[i].HF);
                 }
@@ -1338,7 +1310,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     alu::Vector Position{props->Position[0], props->Position[1], props->Position[2], 1.0f};
     alu::Vector Velocity{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
     alu::Vector Direction{props->Direction[0], props->Direction[1], props->Direction[2], 0.0f};
-    if(props->HeadRelative == AL_FALSE)
+    if(!props->HeadRelative)
     {
         /* Transform source vectors */
         Position = Listener.Params.Matrix * Position;
@@ -1431,8 +1403,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        const float Angle{Rad2Deg(std::acos(-aluDotproduct(Direction, ToSource)) *
-            ConeScale * 2.0f)};
+        const float Angle{Rad2Deg(std::acos(Direction.dot_product(ToSource)) * ConeScale * -2.0f)};
 
         float ConeGain, ConeHF;
         if(!(Angle > props->InnerAngle))
@@ -1465,13 +1436,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
 
     /* Apply gain and frequency filters */
     DryGain.Base = minf(clampf(DryGain.Base, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        Listener.Params.Gain, GAIN_MIX_MAX);
+        Listener.Params.Gain, GainMixMax);
     DryGain.HF *= props->Direct.GainHF;
     DryGain.LF *= props->Direct.GainLF;
     for(ALuint i{0};i < NumSends;i++)
     {
         WetGain[i].Base = minf(clampf(WetGain[i].Base, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * Listener.Params.Gain, GAIN_MIX_MAX);
+            props->Send[i].Gain * Listener.Params.Gain, GainMixMax);
         WetGain[i].HF *= props->Send[i].GainHF;
         WetGain[i].LF *= props->Send[i].GainLF;
     }
@@ -1483,7 +1454,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
             Listener.Params.MetersPerUnit};
         if(props->AirAbsorptionFactor > 0.0f)
         {
-            const float hfattn{std::pow(AIRABSORBGAINHF, meters_base*props->AirAbsorptionFactor)};
+            const float hfattn{std::pow(AirAbsorbGainHF, meters_base*props->AirAbsorptionFactor)};
             DryGain.HF *= hfattn;
             std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
                 [hfattn](GainTriplet &gain) noexcept -> void { gain.HF *= hfattn; });
@@ -1500,16 +1471,16 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
                 if(!(DecayDistance[i].Base > 0.0f))
                     continue;
 
-                const float gain{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].Base)};
+                const float gain{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].Base)};
                 WetGain[i].Base *= gain;
                 /* Yes, the wet path's air absorption is applied with
                  * WetGainAuto on, rather than WetGainHFAuto.
                  */
                 if(gain > 0.0f)
                 {
-                    float gainhf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].HF)};
+                    float gainhf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].HF)};
                     WetGain[i].HF *= minf(gainhf / gain, 1.0f);
-                    float gainlf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i].LF)};
+                    float gainlf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].LF)};
                     WetGain[i].LF *= minf(gainlf / gain, 1.0f);
                 }
             }
@@ -1525,8 +1496,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     if(DopplerFactor > 0.0f)
     {
         const alu::Vector &lvelocity = Listener.Params.Velocity;
-        float vss{aluDotproduct(Velocity, ToSource) * -DopplerFactor};
-        float vls{aluDotproduct(lvelocity, ToSource) * -DopplerFactor};
+        float vss{Velocity.dot_product(ToSource) * -DopplerFactor};
+        float vls{lvelocity.dot_product(ToSource) * -DopplerFactor};
 
         const float SpeedOfSound{Listener.Params.SpeedOfSound};
         if(!(vls < SpeedOfSound))
@@ -1557,9 +1528,9 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
      */
     Pitch *= static_cast<float>(voice->mFrequency) / static_cast<float>(Device->Frequency);
     if(Pitch > float{MAX_PITCH})
-        voice->mStep = MAX_PITCH<<FRACTIONBITS;
+        voice->mStep = MAX_PITCH<<MixerFracBits;
     else
-        voice->mStep = maxu(fastf2u(Pitch * FRACTIONONE), 1);
+        voice->mStep = maxu(fastf2u(Pitch * MixerFracOne), 1);
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     float spread{0.0f};
@@ -1700,7 +1671,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 
-void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
+void ProcessParamUpdates(ALCcontext *ctx, const EffectSlotArray &slots,
     const al::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
@@ -1710,8 +1681,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray &slots,
     {
         bool force{CalcContextParams(ctx)};
         force |= CalcListenerParams(ctx);
-        auto sorted_slots = const_cast<ALeffectslot**>(slots.data() + slots.size());
-        for(ALeffectslot *slot : slots)
+        auto sorted_slots = const_cast<EffectSlot**>(slots.data() + slots.size());
+        for(EffectSlot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
         for(Voice *voice : voices)
@@ -1730,16 +1701,16 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
 
     for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
     {
-        const ALeffectslotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
+        const EffectSlotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
         const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
 
         /* Process pending propery updates for objects on the context. */
         ProcessParamUpdates(ctx, auxslots, voices);
 
         /* Clear auxiliary effect slot mixing buffers. */
-        for(ALeffectslot *slot : auxslots)
+        for(EffectSlot *slot : auxslots)
         {
-            for(auto &buffer : slot->MixBuffer)
+            for(auto &buffer : slot->Wet.Buffer)
                 buffer.fill(0.0f);
         }
 
@@ -1757,51 +1728,61 @@ void ProcessContexts(ALCdevice *device, const ALuint SamplesToDo)
             auto slots = auxslots.data();
             auto slots_end = slots + num_slots;
 
-            /* First sort the slots into extra storage, so that effects come
-             * before their effect target (or their targets' target).
+            /* Sort the slots into extra storage, so that effect slots come
+             * before their effect slot target (or their targets' target).
              */
-            auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
-            auto sorted_slots_end = sorted_slots;
-            if(*sorted_slots)
+            const al::span<EffectSlot*> sorted_slots{const_cast<EffectSlot**>(slots_end),
+                num_slots};
+            /* Skip sorting if it has already been done. */
+            if(!sorted_slots[0])
             {
-                /* Skip sorting if it has already been done. */
-                sorted_slots_end += num_slots;
-                goto skip_sorting;
-            }
-
-            *sorted_slots_end = *slots;
-            ++sorted_slots_end;
-            while(++slots != slots_end)
-            {
-                auto in_chain = [](const ALeffectslot *s1, const ALeffectslot *s2) noexcept -> bool
-                {
-                    while((s1=s1->Params.Target) != nullptr) {
-                        if(s1 == s2) return true;
-                    }
-                    return false;
-                };
-
-                /* If this effect slot targets an effect slot already in the
-                 * list (i.e. slots outputs to something in sorted_slots),
-                 * directly or indirectly, insert it prior to that element.
+                /* First, copy the slots to the sorted list, then partition the
+                 * sorted list so that all slots without a target slot go to
+                 * the end.
                  */
-                auto checker = sorted_slots;
-                do {
-                    if(in_chain(*slots, *checker)) break;
-                } while(++checker != sorted_slots_end);
+                std::copy(slots, slots_end, sorted_slots.begin());
+                auto split_point = std::partition(sorted_slots.begin(), sorted_slots.end(),
+                    [](const EffectSlot *slot) noexcept -> bool
+                    { return slot->Target != nullptr; });
+                /* There must be at least one slot without a slot target. */
+                assert(split_point != sorted_slots.end());
 
-                checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
-                *--checker = *slots;
-                ++sorted_slots_end;
+                /* Simple case: no more than 1 slot has a target slot. Either
+                 * all slots go right to the output, or the remaining one must
+                 * target an already-partitioned slot.
+                 */
+                if(split_point - sorted_slots.begin() > 1)
+                {
+                    /* At least two slots target other slots. Starting from the
+                     * back of the sorted list, continue partitioning the front
+                     * of the list given each target until all targets are
+                     * accounted for. This ensures all slots without a target
+                     * go last, all slots directly targeting those last slots
+                     * go second-to-last, all slots directly targeting those
+                     * second-last slots go third-to-last, etc.
+                     */
+                    auto next_target = sorted_slots.end();
+                    do {
+                        /* This shouldn't happen, but if there's unsorted slots
+                         * left that don't target any sorted slots, they can't
+                         * contribute to the output, so leave them.
+                         */
+                        if UNLIKELY(next_target == split_point)
+                            break;
+
+                        --next_target;
+                        split_point = std::partition(sorted_slots.begin(), split_point,
+                            [next_target](const EffectSlot *slot) noexcept -> bool
+                            { return slot->Target != *next_target; });
+                    } while(split_point - sorted_slots.begin() > 1);
+                }
             }
 
-        skip_sorting:
-            auto process_effect = [SamplesToDo](const ALeffectslot *slot) -> void
+            for(const EffectSlot *slot : sorted_slots)
             {
-                EffectState *state{slot->Params.mEffectState};
+                EffectState *state{slot->mEffectState};
                 state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
-            };
-            std::for_each(sorted_slots, sorted_slots_end, process_effect);
+            }
         }
 
         /* Signal the event handler if there are any events to read. */

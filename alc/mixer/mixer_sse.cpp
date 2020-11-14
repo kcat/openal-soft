@@ -20,8 +20,8 @@ struct FastBSincTag;
 
 namespace {
 
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS - BSINC_PHASE_BITS)
-#define FRAC_PHASE_DIFFONE (1<<FRAC_PHASE_BITDIFF)
+constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
+constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
 
@@ -86,9 +86,8 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
-            (1.0f/FRAC_PHASE_DIFFONE)};
+        const ALuint pi{frac >> FracPhaseBitDiff};
+        const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
@@ -116,8 +115,8 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
         out_sample = _mm_cvtss_f32(r4);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }
@@ -133,9 +132,8 @@ const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const floa
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FRAC_PHASE_BITDIFF};
-        const float pf{static_cast<float>(frac & (FRAC_PHASE_DIFFONE-1)) *
-            (1.0f/FRAC_PHASE_DIFFONE)};
+        const ALuint pi{frac >> FracPhaseBitDiff};
+        const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
         __m128 r4{_mm_setzero_ps()};
@@ -159,8 +157,8 @@ const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const floa
         out_sample = _mm_cvtss_f32(r4);
 
         frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
     }
     return dst.data();
 }
@@ -249,7 +247,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
         ++CurrentGains;
         ++TargetGains;
 
-        if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+        if(!(std::fabs(gain) > GainSilenceThreshold))
             continue;
         if(size_t todo{(InSamples.size()-pos) >> 2})
         {

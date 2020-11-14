@@ -58,8 +58,10 @@ struct EchoState final : public EffectState {
     alignas(16) float mTempBuffer[2][BUFFERSIZE];
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(EchoState)
 };
@@ -83,7 +85,8 @@ void EchoState::deviceUpdate(const ALCdevice *Device)
     }
 }
 
-void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void EchoState::update(const ALCcontext *context, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
     const auto frequency = static_cast<float>(device->Frequency);
@@ -103,8 +106,8 @@ void EchoState::update(const ALCcontext *context, const ALeffectslot *slot, cons
     const auto coeffs1 = CalcAngleCoeffs( angle, 0.0f, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs0.data(), slot->Params.Gain, mGains[0].Target);
-    ComputePanGains(target.Main, coeffs1.data(), slot->Params.Gain, mGains[1].Target);
+    ComputePanGains(target.Main, coeffs0.data(), slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, coeffs1.data(), slot->Gain, mGains[1].Target);
 }
 
 void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

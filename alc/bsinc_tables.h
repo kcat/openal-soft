@@ -6,8 +6,8 @@
 
 struct BSincTable {
     float scaleBase, scaleRange;
-    unsigned int m[BSINC_SCALE_COUNT];
-    unsigned int filterOffset[BSINC_SCALE_COUNT];
+    unsigned int m[BSincScaleCount];
+    unsigned int filterOffset[BSincScaleCount];
     const float *Tab;
 };
 

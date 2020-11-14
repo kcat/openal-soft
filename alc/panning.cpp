@@ -40,6 +40,7 @@
 #include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alconfig.h"
+#include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -255,7 +256,7 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
     if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
         return;
 
-    const auto distSampleScale = static_cast<float>(device->Frequency) / SPEEDOFSOUNDMETRESPERSEC;
+    const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
     const auto ChanDelay = device->ChannelDelay.as_span();
     size_t total{0u};
     for(size_t i{0u};i < conf->Speakers.size();i++)
@@ -508,7 +509,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
         float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
         if(nfc_delay > 0.0f)
-            InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC, device->mAmbiOrder,
+            InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
                 true);
     }
     else
@@ -968,15 +969,15 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     if(!device->mHrtf)
     {
         const char *devname{device->DeviceName.c_str()};
-        auto find_hrtf = [device,devname](const std::string &hrtfname) -> bool
+        for(const auto &hrtfname : device->HrtfList)
         {
-            HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)};
-            if(!hrtf) return false;
-            device->mHrtf = std::move(hrtf);
-            device->HrtfName = hrtfname;
-            return true;
-        };
-        std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);
+            if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
+            {
+                device->mHrtf = std::move(hrtf);
+                device->HrtfName = hrtfname;
+                break;
+            }
+        }
     }
 
     if(device->mHrtf)
@@ -1034,19 +1035,57 @@ no_hrtf:
 }
 
 
-void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device)
+void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
 {
+    ALCdevice *device{context->mDevice.get()};
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
-    slot->MixBuffer.resize(count);
-    slot->MixBuffer.shrink_to_fit();
+
+    auto wetbuffer_iter = context->mWetBuffers.end();
+    if(slot->mWetBuffer)
+    {
+        /* If the effect slot already has a wet buffer attached, allocate a new
+         * one in its place.
+         */
+        wetbuffer_iter = context->mWetBuffers.begin();
+        for(;wetbuffer_iter != context->mWetBuffers.end();++wetbuffer_iter)
+        {
+            if(wetbuffer_iter->get() == slot->mWetBuffer)
+            {
+                slot->mWetBuffer = nullptr;
+                slot->mSlot.Wet.Buffer = {};
+
+                *wetbuffer_iter = WetBufferPtr{new(FamCount(count)) WetBuffer{count}};
+
+                break;
+            }
+        }
+    }
+    if(wetbuffer_iter == context->mWetBuffers.end())
+    {
+        /* Otherwise, search for an unused wet buffer. */
+        wetbuffer_iter = context->mWetBuffers.begin();
+        for(;wetbuffer_iter != context->mWetBuffers.end();++wetbuffer_iter)
+        {
+            if(!(*wetbuffer_iter)->mInUse)
+                break;
+        }
+        if(wetbuffer_iter == context->mWetBuffers.end())
+        {
+            /* Otherwise, allocate a new one to use. */
+            context->mWetBuffers.emplace_back(WetBufferPtr{new(FamCount(count)) WetBuffer{count}});
+            wetbuffer_iter = context->mWetBuffers.end()-1;
+        }
+    }
+    WetBuffer *wetbuffer{slot->mWetBuffer = wetbuffer_iter->get()};
+    wetbuffer->mInUse = true;
 
     auto acnmap_end = AmbiIndex::FromACN.begin() + count;
-    auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
+    auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end,
+        slot->mSlot.Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f, acn}; }
-    );
-    std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->Wet.Buffer = {slot->MixBuffer.data(), slot->MixBuffer.size()};
+        { return BFChannelConfig{1.0f, acn}; });
+    std::fill(iter, slot->mSlot.Wet.AmbiMap.end(), BFChannelConfig{});
+    slot->mSlot.Wet.Buffer = wetbuffer->mBuffer;
 }
 
 

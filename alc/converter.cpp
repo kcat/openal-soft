@@ -135,14 +135,24 @@ void Mono2Stereo(float *RESTRICT dst, const void *src, const size_t frames) noex
 }
 
 template<DevFmtType T>
-void Stereo2Mono(float *RESTRICT dst, const void *src, const size_t frames) noexcept
+void Multi2Mono(ALuint chanmask, const size_t step, const float scale, float *RESTRICT dst,
+    const void *src, const size_t frames) noexcept
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     const SampleType *ssrc = static_cast<const SampleType*>(src);
+    std::fill_n(dst, frames, 0.0f);
+    for(size_t c{0};chanmask;++c)
+    {
+        if LIKELY((chanmask&1))
+        {
+            for(size_t i{0u};i < frames;i++)
+                dst[i] += LoadSample<T>(ssrc[i*step + c]);
+        }
+        chanmask >>= 1;
+    }
     for(size_t i{0u};i < frames;i++)
-        dst[i] = (LoadSample<T>(ssrc[i*2 + 0])+LoadSample<T>(ssrc[i*2 + 1])) *
-                 0.707106781187f;
+        dst[i] *= scale;
 }
 
 } // namespace
@@ -165,9 +175,9 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
     auto step = static_cast<ALuint>(
-        mind(srcRate*double{FRACTIONONE}/dstRate + 0.5, MAX_PITCH*FRACTIONONE));
+        mind(srcRate*double{MixerFracOne}/dstRate + 0.5, MAX_PITCH*MixerFracOne));
     converter->mIncrement = maxu(step, 1);
-    if(converter->mIncrement == FRACTIONONE)
+    if(converter->mIncrement == MixerFracOne)
         converter->mResample = Resample_<CopyTag,CTag>;
     else
         converter->mResample = PrepareResampler(resampler, converter->mIncrement,
@@ -204,7 +214,7 @@ ALuint SampleConverter::availableOut(ALuint srcframes) const
     auto DataSize64 = static_cast<uint64_t>(prepcount);
     DataSize64 += srcframes;
     DataSize64 -= MAX_RESAMPLER_PADDING;
-    DataSize64 <<= FRACTIONBITS;
+    DataSize64 <<= MixerFracBits;
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
@@ -261,7 +271,7 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
         auto DataSize64 = static_cast<uint64_t>(prepcount);
         DataSize64 += toread;
         DataSize64 -= MAX_RESAMPLER_PADDING;
-        DataSize64 <<= FRACTIONBITS;
+        DataSize64 <<= MixerFracBits;
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
@@ -283,7 +293,7 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            ALuint SrcDataEnd{(DstSize*increment + DataPosFrac)>>FRACTIONBITS};
+            ALuint SrcDataEnd{(DstSize*increment + DataPosFrac)>>MixerFracBits};
             if(SrcDataEnd >= static_cast<ALuint>(prepcount)+toread)
                 std::fill(std::begin(mChan[chan].PrevSamples),
                     std::end(mChan[chan].PrevSamples), 0.0f);
@@ -307,13 +317,13 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
          * fractional offset.
          */
         DataPosFrac += increment*DstSize;
-        mSrcPrepCount = mini(prepcount + static_cast<int>(toread - (DataPosFrac>>FRACTIONBITS)),
+        mSrcPrepCount = mini(prepcount + static_cast<int>(toread - (DataPosFrac>>MixerFracBits)),
             MAX_RESAMPLER_PADDING);
-        mFracOffset = DataPosFrac & FRACTIONMASK;
+        mFracOffset = DataPosFrac & MixerFracMask;
 
         /* Update the src and dst pointers in case there's still more to do. */
-        SamplesIn += SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
-        NumSrcSamples -= minu(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
+        SamplesIn += SrcFrameSize*(DataPosFrac>>MixerFracBits);
+        NumSrcSamples -= minu(NumSrcSamples, (DataPosFrac>>MixerFracBits));
 
         dst = static_cast<al::byte*>(dst) + DstFrameSize*DstSize;
         pos += DstSize;
@@ -328,11 +338,12 @@ ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, 
 
 void ChannelConverter::convert(const void *src, float *dst, ALuint frames) const
 {
-    if(mSrcChans == DevFmtStereo && mDstChans == DevFmtMono)
+    if(mDstChans == DevFmtMono)
     {
+        const float scale{std::sqrt(1.0f / static_cast<float>(PopCount(mChanMask)))};
         switch(mSrcType)
         {
-#define HANDLE_FMT(T) case T: Stereo2Mono<T>(dst, src, frames); break
+#define HANDLE_FMT(T) case T: Multi2Mono<T>(mChanMask, mSrcStep, scale, dst, src, frames); break
         HANDLE_FMT(DevFmtByte);
         HANDLE_FMT(DevFmtUByte);
         HANDLE_FMT(DevFmtShort);
@@ -343,7 +354,7 @@ void ChannelConverter::convert(const void *src, float *dst, ALuint frames) const
 #undef HANDLE_FMT
         }
     }
-    else if(mSrcChans == DevFmtMono && mDstChans == DevFmtStereo)
+    else if(mChanMask == 0x1 && mDstChans == DevFmtStereo)
     {
         switch(mSrcType)
         {
@@ -358,6 +369,4 @@ void ChannelConverter::convert(const void *src, float *dst, ALuint frames) const
 #undef HANDLE_FMT
         }
     }
-    else
-        LoadSamples(dst, src, 1u, mSrcType, frames * ChannelsFromDevFmt(mSrcChans, 0));
 }

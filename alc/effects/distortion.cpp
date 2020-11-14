@@ -47,8 +47,10 @@ struct DistortionState final : public EffectState {
 
 
     void deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut) override;
+    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 
     DEF_NEWDEL(DistortionState)
 };
@@ -59,7 +61,8 @@ void DistortionState::deviceUpdate(const ALCdevice*)
     mBandpass.clear();
 }
 
-void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot, const EffectProps *props, const EffectTarget target)
+void DistortionState::update(const ALCcontext *context, const EffectSlot *slot,
+    const EffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->mDevice.get()};
 
@@ -85,7 +88,7 @@ void DistortionState::update(const ALCcontext *context, const ALeffectslot *slot
     const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs.data(), slot->Params.Gain*props->Distortion.Gain, mGain);
+    ComputePanGains(target.Main, coeffs.data(), slot->Gain*props->Distortion.Gain, mGain);
 }
 
 void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
@@ -139,7 +142,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
              * storing only one sample out of four.
              */
             const float gain{*(outgains++)};
-            if(!(std::fabs(gain) > GAIN_SILENCE_THRESHOLD))
+            if(!(std::fabs(gain) > GainSilenceThreshold))
                 continue;
 
             for(size_t i{0u};i < todo;i++)

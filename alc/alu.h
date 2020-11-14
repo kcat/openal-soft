@@ -11,6 +11,7 @@
 #include "alcmain.h"
 #include "alspan.h"
 
+struct ALCcontext;
 struct ALbufferlistitem;
 struct ALeffectslot;
 
@@ -26,19 +27,20 @@ using MixerFunc = void(*)(const al::span<const float> InSamples,
 extern MixerFunc MixSamples;
 
 
-#define GAIN_MIX_MAX  1000.0f /* +60dB */
+constexpr float GainMixMax{1000.0f}; /* +60dB */
 
-#define GAIN_SILENCE_THRESHOLD  0.00001f /* -100dB */
+constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 
-#define SPEEDOFSOUNDMETRESPERSEC  343.3f
-#define AIRABSORBGAINHF           0.99426f /* -0.05dB */
+constexpr float SpeedOfSoundMetersPerSec{343.3f};
+constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 
-/* Target gain for the reverb decay feedback reaching the decay time. */
-#define REVERB_DECAY_GAIN  0.001f /* -60 dB */
+/** Target gain for the reverb decay feedback reaching the decay time. */
+constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
 
-#define FRACTIONBITS 12
-#define FRACTIONONE  (1<<FRACTIONBITS)
-#define FRACTIONMASK (FRACTIONONE-1)
+
+constexpr int MixerFracBits{12};
+constexpr int MixerFracOne{1 << MixerFracBits};
+constexpr int MixerFracMask{MixerFracOne - 1};
 
 
 inline float lerp(float val1, float val2, float mu) noexcept
@@ -72,7 +74,7 @@ void aluInitMixer(void);
 void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
     HrtfRequestMode hrtf_userreq);
 
-void aluInitEffectPanning(ALeffectslot *slot, ALCdevice *device);
+void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context);
 
 /**
  * Calculates ambisonic encoder coefficients using the X, Y, and Z direction

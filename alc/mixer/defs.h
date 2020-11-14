@@ -5,6 +5,7 @@
 
 #include "alcmain.h"
 #include "alspan.h"
+#include "alu.h"
 #include "hrtf.h"
 
 union InterpState;
@@ -39,8 +40,8 @@ inline void InitPosArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuin
     for(size_t i{1};i < size;i++)
     {
         const ALuint frac_tmp{frac_arr[i-1] + increment};
-        pos_arr[i] = pos_arr[i-1] + (frac_tmp>>FRACTIONBITS);
-        frac_arr[i] = frac_tmp&FRACTIONMASK;
+        pos_arr[i] = pos_arr[i-1] + (frac_tmp>>MixerFracBits);
+        frac_arr[i] = frac_tmp&MixerFracMask;
     }
 }
 

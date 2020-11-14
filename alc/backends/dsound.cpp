@@ -746,9 +746,9 @@ ALCuint DSoundCapture::availableSamples()
     if(!mDevice->Connected.load(std::memory_order_acquire))
         return static_cast<ALCuint>(mRing->readSpace());
 
-    ALuint FrameSize{mDevice->frameSizeFromFmt()};
-    DWORD BufferBytes{mBufferBytes};
-    DWORD LastCursor{mCursor};
+    const ALuint FrameSize{mDevice->frameSizeFromFmt()};
+    const DWORD BufferBytes{mBufferBytes};
+    const DWORD LastCursor{mCursor};
 
     DWORD ReadCursor{};
     void *ReadPtr1{}, *ReadPtr2{};
@@ -756,8 +756,8 @@ ALCuint DSoundCapture::availableSamples()
     HRESULT hr{mDSCbuffer->GetCurrentPosition(nullptr, &ReadCursor)};
     if(SUCCEEDED(hr))
     {
-        DWORD NumBytes{(ReadCursor-LastCursor + BufferBytes) % BufferBytes};
-        if(!NumBytes) return static_cast<ALCubyte>(mRing->readSpace());
+        const DWORD NumBytes{(BufferBytes+ReadCursor-LastCursor) % BufferBytes};
+        if(!NumBytes) return static_cast<ALCuint>(mRing->readSpace());
         hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))
@@ -766,7 +766,7 @@ ALCuint DSoundCapture::availableSamples()
         if(ReadPtr2 != nullptr && ReadCnt2 > 0)
             mRing->write(ReadPtr2, ReadCnt2/FrameSize);
         hr = mDSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
-        mCursor = (LastCursor+ReadCnt1+ReadCnt2) % BufferBytes;
+        mCursor = ReadCursor;
     }
 
     if(FAILED(hr))

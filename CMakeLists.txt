@@ -116,6 +116,9 @@ set(EXTRA_LIBS )
 
 if(WIN32)
     set(CPP_DEFS ${CPP_DEFS} _WIN32)
+    if(MINGW)
+        set(CPP_DEFS ${CPP_DEFS} __USE_MINGW_ANSI_STDIO)
+    endif()
 
     option(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
     if(MINGW)
@@ -132,13 +135,15 @@ if("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
     set(LINKER_FLAGS ${LINKER_FLAGS} -L/usr/lib)
 endif()
 
+# When the library is built for static linking, apps should define
+# AL_LIBTYPE_STATIC when including the AL headers.
 if(NOT LIBTYPE)
     set(LIBTYPE SHARED)
 endif()
 
 set(LIB_MAJOR_VERSION "1")
-set(LIB_MINOR_VERSION "20")
-set(LIB_REVISION "1")
+set(LIB_MINOR_VERSION "21")
+set(LIB_REVISION "0")
 set(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 set(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
 
@@ -205,6 +210,13 @@ if(MSVC)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
     endif()
     set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4268 /wd4324 /wd5030)
+    # Remove /W3, which is added by default, since we set /W4. Some build
+    # generators with MSVC complain about both /W3 and /W4 being specified.
+    foreach(flag_var  CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+        if(${flag_var} MATCHES "/W3")
+            string(REGEX REPLACE "/W3" "" ${flag_var} "${${flag_var}}")
+        endif()
+    endforeach()
 
     if(NOT DXSDK_DIR)
         string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")
@@ -626,6 +638,8 @@ set(ALC_OBJS
     alc/cpu_caps.cpp
     alc/cpu_caps.h
     alc/devformat.h
+    alc/effectslot.cpp
+    alc/effectslot.h
     alc/effects/base.h
     alc/effects/autowah.cpp
     alc/effects/chorus.cpp

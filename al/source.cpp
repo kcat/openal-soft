@@ -149,8 +149,8 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
 
     auto copy_send = [](const ALsource::SendData &srcsend) noexcept -> VoiceProps::SendData
     {
-        VoiceProps::SendData ret;
-        ret.Slot = srcsend.Slot;
+        VoiceProps::SendData ret{};
+        ret.Slot = srcsend.Slot ? &srcsend.Slot->mSlot : nullptr;
         ret.Gain = srcsend.Gain;
         ret.GainHF = srcsend.GainHF;
         ret.HFReference = srcsend.HFReference;
@@ -159,6 +159,8 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
         return ret;
     };
     std::transform(source->Send.cbegin(), source->Send.cend(), props->Send, copy_send);
+    if(!props->Send[0].Slot && context->mDefaultSlot)
+        props->Send[0].Slot = &context->mDefaultSlot->mSlot;
 
     /* Set the new container for updating internal parameters. */
     props = voice->mUpdate.exchange(props, std::memory_order_acq_rel);
@@ -195,7 +197,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
 
             readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << 32;
             readPos |= uint64_t{voice->mPositionFrac.load(std::memory_order_relaxed)} <<
-                       (32-FRACTIONBITS);
+                       (32-MixerFracBits);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
@@ -233,7 +235,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
         {
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
-            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << FRACTIONBITS;
+            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
             readPos |= voice->mPositionFrac.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -247,7 +249,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     while(BufferList && BufferList != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
-        readPos += uint64_t{BufferList->mSampleLen} << FRACTIONBITS;
+        readPos += uint64_t{BufferList->mSampleLen} << MixerFracBits;
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
     while(BufferList && !BufferFmt)
@@ -257,7 +259,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     }
     assert(BufferFmt != nullptr);
 
-    return static_cast<double>(readPos) / double{FRACTIONONE} / BufferFmt->mBuffer.mSampleRate;
+    return static_cast<double>(readPos) / double{MixerFracOne} / BufferFmt->mBuffer.mSampleRate;
 }
 
 /* GetSourceOffset
@@ -313,12 +315,11 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     switch(name)
     {
     case AL_SEC_OFFSET:
-        offset = (readPos + static_cast<double>(readPosFrac)/FRACTIONONE) /
-            BufferFmt->mBuffer.mSampleRate;
+        offset = (readPos + readPosFrac/double{MixerFracOne}) / BufferFmt->mBuffer.mSampleRate;
         break;
 
     case AL_SAMPLE_OFFSET:
-        offset = readPos + static_cast<double>(readPosFrac)/FRACTIONONE;
+        offset = readPos + readPosFrac/double{MixerFracOne};
         break;
 
     case AL_BYTE_OFFSET:
@@ -406,13 +407,13 @@ al::optional<VoicePos> GetSampleOffset(ALbufferlistitem *BufferList, ALenum Offs
     case AL_SAMPLE_OFFSET:
         dblfrac = std::modf(Offset, &dbloff);
         offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_SEC_OFFSET:
         dblfrac = std::modf(Offset*BufferFmt->mBuffer.mSampleRate, &dbloff);
         offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        frac = static_cast<ALuint>(mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0));
+        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
     }
 
@@ -450,8 +451,8 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
     voice->mAmbiScaling = buffer->mBuffer.mAmbiScaling;
     voice->mAmbiOrder = buffer->mBuffer.mAmbiOrder;
 
-    if(buffer->mBuffer.mCallback) voice->mFlags |= VOICE_IS_CALLBACK;
-    else if(source->SourceType == AL_STATIC) voice->mFlags |= VOICE_IS_STATIC;
+    if(buffer->mBuffer.mCallback) voice->mFlags |= VoiceIsCallback;
+    else if(source->SourceType == AL_STATIC) voice->mFlags |= VoiceIsStatic;
     voice->mNumCallbackSamples = 0;
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
@@ -485,7 +486,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
 
-        voice->mFlags |= VOICE_IS_AMBISONIC;
+        voice->mFlags |= VoiceIsAmbisonic;
     }
     else
     {
@@ -500,7 +501,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferlistitem *BufferList, ALC
 
     if(device->AvgSpeakerDist > 0.0f)
     {
-        const float w1{SPEEDOFSOUNDMETRESPERSEC /
+        const float w1{SpeedOfSoundMetersPerSec /
             (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
         for(auto &chandata : voice->mChans)
             chandata.mDryParams.NFCtrlFilter.init(w1);
@@ -605,7 +606,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
     newvoice->mFlags = (vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue) ?
-        VOICE_IS_FADING : 0;
+        VoiceIsFading : 0u;
     InitVoice(newvoice, source, source->queue, context, device);
     source->VoiceIdx = vidx;
 
@@ -683,8 +684,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     size_t count{std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(),
         size_t{0},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(POPCNT64(sublist.FreeMask)); }
-    )};
+        { return cur + static_cast<ALuint>(PopCount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -712,7 +712,7 @@ ALsource *AllocSource(ALCcontext *context)
         { return entry.FreeMask != 0; }
     );
     auto lidx = static_cast<ALuint>(std::distance(context->mSourceList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(CTZ64(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(CountTrailingZeros(sublist->FreeMask));
 
     ALsource *source{::new(sublist->Sources + slidx) ALsource{}};
 
@@ -1146,7 +1146,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if((voice->mFlags&VOICE_IS_CALLBACK))
+            if((voice->mFlags&VoiceIsCallback))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                     "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
@@ -1253,13 +1253,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values)
 {
     ALCdevice *device{Context->mDevice.get()};
-    ALbuffer *buffer{nullptr};
-    ALfilter *filter{nullptr};
     ALeffectslot *slot{nullptr};
     ALbufferlistitem *oldlist{nullptr};
     std::unique_lock<std::mutex> slotlock;
-    std::unique_lock<std::mutex> filtlock;
-    std::unique_lock<std::mutex> buflock;
     float fvals[6];
 
     switch(prop)
@@ -1304,28 +1300,27 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_BUFFER:
         CHECKSIZE(values, 1);
-        buflock = std::unique_lock<std::mutex>{device->BufferLock};
-        if(values[0] && (buffer=LookupBuffer(device, static_cast<ALuint>(values[0]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
-                static_cast<ALuint>(values[0]));
-
-        if(buffer && buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
-                "Setting non-persistently mapped buffer %u", buffer->id);
-        else if(buffer && buffer->mBuffer.mCallback && ReadRef(buffer->ref) != 0)
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
-                "Setting already-set callback buffer %u", buffer->id);
-        else
         {
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting buffer on playing or paused source %u", Source->id);
         }
-
         oldlist = Source->queue;
-        if(buffer != nullptr)
+        if(values[0])
         {
+            std::lock_guard<std::mutex> _{device->BufferLock};
+            ALbuffer *buffer{LookupBuffer(device, static_cast<ALuint>(values[0]))};
+            if(!buffer)
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
+                    static_cast<ALuint>(values[0]));
+            if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                    "Setting non-persistently mapped buffer %u", buffer->id);
+            if(buffer->mBuffer.mCallback && ReadRef(buffer->ref) != 0)
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                    "Setting already-set callback buffer %u", buffer->id);
+
             /* Add the selected buffer to a one-item queue */
             auto newlist = new ALbufferlistitem{};
             newlist->mSampleLen = buffer->mBuffer.mSampleLen;
@@ -1342,7 +1337,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             Source->SourceType = AL_UNDETERMINED;
             Source->queue = nullptr;
         }
-        buflock.unlock();
 
         /* Delete all elements in the previous queue */
         while(oldlist != nullptr)
@@ -1350,7 +1344,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             std::unique_ptr<ALbufferlistitem> temp{oldlist};
             oldlist = temp->mNext.load(std::memory_order_relaxed);
 
-            if((buffer=temp->mBuffer) != nullptr)
+            if(ALbuffer *buffer{temp->mBuffer})
                 DecrementRef(buffer->ref);
         }
         return true;
@@ -1363,7 +1357,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if((voice->mFlags&VOICE_IS_CALLBACK))
+            if((voice->mFlags&VoiceIsCallback))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                     "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
@@ -1378,12 +1372,20 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DIRECT_FILTER:
         CHECKSIZE(values, 1);
-        filtlock = std::unique_lock<std::mutex>{device->FilterLock};
-        if(values[0] && (filter=LookupFilter(device, static_cast<ALuint>(values[0]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u",
-                static_cast<ALuint>(values[0]));
-
-        if(!filter)
+        if(values[0])
+        {
+            std::lock_guard<std::mutex> _{device->FilterLock};
+            ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[0]))};
+            if(!filter)
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u",
+                    static_cast<ALuint>(values[0]));
+            Source->Direct.Gain = filter->Gain;
+            Source->Direct.GainHF = filter->GainHF;
+            Source->Direct.HFReference = filter->HFReference;
+            Source->Direct.GainLF = filter->GainLF;
+            Source->Direct.LFReference = filter->LFReference;
+        }
+        else
         {
             Source->Direct.Gain = 1.0f;
             Source->Direct.GainHF = 1.0f;
@@ -1391,15 +1393,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             Source->Direct.GainLF = 1.0f;
             Source->Direct.LFReference = HIGHPASSFREQREF;
         }
-        else
-        {
-            Source->Direct.Gain = filter->Gain;
-            Source->Direct.GainHF = filter->GainHF;
-            Source->Direct.HFReference = filter->HFReference;
-            Source->Direct.GainLF = filter->GainLF;
-            Source->Direct.LFReference = filter->LFReference;
-        }
-        filtlock.unlock();
         return UpdateSourceProps(Source, Context);
 
     case AL_DIRECT_FILTER_GAINHF_AUTO:
@@ -1466,11 +1459,21 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         if(static_cast<ALuint>(values[1]) >= device->NumAuxSends)
             SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid send %u", values[1]);
 
-        filtlock = std::unique_lock<std::mutex>{device->FilterLock};
-        if(values[2] && (filter=LookupFilter(device, static_cast<ALuint>(values[2]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[2]);
+        if(values[2])
+        {
+            std::lock_guard<std::mutex> _{device->FilterLock};
+            ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[2]))};
+            if(!filter)
+                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[2]);
 
-        if(!filter)
+            auto &send = Source->Send[static_cast<ALuint>(values[1])];
+            send.Gain = filter->Gain;
+            send.GainHF = filter->GainHF;
+            send.HFReference = filter->HFReference;
+            send.GainLF = filter->GainLF;
+            send.LFReference = filter->LFReference;
+        }
+        else
         {
             /* Disable filter */
             auto &send = Source->Send[static_cast<ALuint>(values[1])];
@@ -1480,16 +1483,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             send.GainLF = 1.0f;
             send.LFReference = HIGHPASSFREQREF;
         }
-        else
-        {
-            auto &send = Source->Send[static_cast<ALuint>(values[1])];
-            send.Gain = filter->Gain;
-            send.GainHF = filter->GainHF;
-            send.HFReference = filter->HFReference;
-            send.GainLF = filter->GainLF;
-            send.LFReference = filter->LFReference;
-        }
-        filtlock.unlock();
 
         if(slot != Source->Send[static_cast<ALuint>(values[1])].Slot && IsPlayingOrPaused(Source))
         {
@@ -2947,7 +2940,7 @@ START_API_FUNC
                 voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
                 if(vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != source->queue)
-                    voice->mFlags |= VOICE_IS_FADING;
+                    voice->mFlags |= VoiceIsFading;
             }
         }
         InitVoice(voice, source, BufferList, context.get(), device);
@@ -3410,7 +3403,7 @@ SourceSubList::~SourceSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        ALsizei idx{CTZ64(usemask)};
+        const ALsizei idx{CountTrailingZeros(usemask)};
         al::destroy_at(Sources+idx);
         usemask &= ~(1_u64 << idx);
     }

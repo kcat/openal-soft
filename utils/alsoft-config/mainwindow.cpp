@@ -365,11 +365,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->closeCancelButton, &QPushButton::clicked, this, &MainWindow::cancelCloseAction);
     connect(ui->applyButton, &QPushButton::clicked, this, &MainWindow::saveCurrentConfig);
 
-    auto qcb_cicstr = static_cast<void(QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged);
-    connect(ui->channelConfigCombo, qcb_cicstr, this, &MainWindow::enableApplyButton);
-    connect(ui->sampleFormatCombo, qcb_cicstr, this, &MainWindow::enableApplyButton);
-    connect(ui->stereoModeCombo, qcb_cicstr, this, &MainWindow::enableApplyButton);
-    connect(ui->sampleRateCombo, qcb_cicstr, this, &MainWindow::enableApplyButton);
+    auto qcb_cicint = static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged);
+    connect(ui->channelConfigCombo, qcb_cicint, this, &MainWindow::enableApplyButton);
+    connect(ui->sampleFormatCombo, qcb_cicint, this, &MainWindow::enableApplyButton);
+    connect(ui->stereoModeCombo, qcb_cicint, this, &MainWindow::enableApplyButton);
+    connect(ui->sampleRateCombo, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->sampleRateCombo, &QComboBox::editTextChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->resamplerSlider, &QSlider::valueChanged, this, &MainWindow::updateResamplerLabel);
@@ -379,8 +379,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->periodCountSlider, &QSlider::valueChanged, this, &MainWindow::updatePeriodCountEdit);
     connect(ui->periodCountEdit, &QLineEdit::editingFinished, this, &MainWindow::updatePeriodCountSlider);
 
-    connect(ui->stereoEncodingComboBox, qcb_cicstr, this, &MainWindow::enableApplyButton);
-    connect(ui->ambiFormatComboBox, qcb_cicstr, this, &MainWindow::enableApplyButton);
+    connect(ui->stereoEncodingComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
+    connect(ui->ambiFormatComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->outputLimiterCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->outputDitherCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
 
@@ -398,8 +398,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoder71LineEdit, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->decoder71Button, &QPushButton::clicked, this, &MainWindow::select71DecoderFile);
 
-    connect(ui->preferredHrtfComboBox, qcb_cicstr, this, &MainWindow::enableApplyButton);
-    connect(ui->hrtfStateComboBox, qcb_cicstr, this, &MainWindow::enableApplyButton);
+    connect(ui->preferredHrtfComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
+    connect(ui->hrtfStateComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->hrtfmodeSlider, &QSlider::valueChanged, this, &MainWindow::updateHrtfModeLabel);
 
     connect(ui->hrtfAddButton, &QPushButton::clicked, this, &MainWindow::addHrtfFile);
@@ -424,7 +424,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->disabledBackendList, &QListWidget::customContextMenuRequested, this, &MainWindow::showDisabledBackendMenu);
     connect(ui->backendCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
 
-    connect(ui->defaultReverbComboBox, qcb_cicstr, this, &MainWindow::enableApplyButton);
+    connect(ui->defaultReverbComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->enableEaxReverbCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->enableStdReverbCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->enableAutowahCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);

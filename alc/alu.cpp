@@ -362,33 +362,6 @@ auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t
 }
 
 
-inline alu::Vector aluCrossproduct(const alu::Vector &in1, const alu::Vector &in2)
-{
-    return alu::Vector{
-        in1[1]*in2[2] - in1[2]*in2[1],
-        in1[2]*in2[0] - in1[0]*in2[2],
-        in1[0]*in2[1] - in1[1]*in2[0],
-        0.0f
-    };
-}
-
-inline float aluDotproduct(const alu::Vector &vec1, const alu::Vector &vec2)
-{
-    return vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2];
-}
-
-
-alu::Vector operator*(const alu::Matrix &mtx, const alu::Vector &vec) noexcept
-{
-    return alu::Vector{
-        vec[0]*mtx[0][0] + vec[1]*mtx[1][0] + vec[2]*mtx[2][0] + vec[3]*mtx[3][0],
-        vec[0]*mtx[0][1] + vec[1]*mtx[1][1] + vec[2]*mtx[2][1] + vec[3]*mtx[3][1],
-        vec[0]*mtx[0][2] + vec[1]*mtx[1][2] + vec[2]*mtx[2][2] + vec[3]*mtx[3][2],
-        vec[0]*mtx[0][3] + vec[1]*mtx[1][3] + vec[2]*mtx[2][3] + vec[3]*mtx[3][3]
-    };
-}
-
-
 bool CalcContextParams(ALCcontext *Context)
 {
     ALcontextProps *props{Context->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
@@ -418,19 +391,22 @@ bool CalcListenerParams(ALCcontext *Context)
     alu::Vector V{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
     V.normalize();
     /* Build and normalize right-vector */
-    alu::Vector U{aluCrossproduct(N, V)};
+    alu::Vector U{N.cross_product(V)};
     U.normalize();
 
-    Listener.Params.Matrix = alu::Matrix{
-        U[0], V[0], -N[0], 0.0f,
-        U[1], V[1], -N[1], 0.0f,
-        U[2], V[2], -N[2], 0.0f,
-        0.0f, 0.0f,  0.0f, 1.0f
-    };
+    const alu::MatrixR<double> rot{
+        U[0], V[0], -N[0], 0.0,
+        U[1], V[1], -N[1], 0.0,
+        U[2], V[2], -N[2], 0.0,
+         0.0,  0.0,   0.0, 1.0};
+    const alu::VectorR<double> pos{props->Position[0],props->Position[1],props->Position[2],1.0};
+    const alu::Vector P{alu::cast_to<float>(rot * pos)};
 
-    const alu::Vector P{Listener.Params.Matrix *
-        alu::Vector{props->Position[0], props->Position[1], props->Position[2], 1.0f}};
-    Listener.Params.Matrix.setRow(3, -P[0], -P[1], -P[2], 1.0f);
+    Listener.Params.Matrix = alu::Matrix{
+         U[0],  V[0], -N[0], 0.0f,
+         U[1],  V[1], -N[1], 0.0f,
+         U[2],  V[2], -N[2], 0.0f,
+        -P[0], -P[1], -P[2], 1.0f};
 
     const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
     Listener.Params.Velocity = Listener.Params.Matrix * vel;
@@ -905,7 +881,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 V = Listener.Params.Matrix * V;
             }
             /* Build and normalize right-vector */
-            alu::Vector U{aluCrossproduct(N, V)};
+            alu::Vector U{N.cross_product(V)};
             U.normalize();
 
             /* Build a rotation matrix. Manually fill the zeroth- and first-
@@ -1427,8 +1403,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        const float Angle{Rad2Deg(std::acos(-aluDotproduct(Direction, ToSource)) *
-            ConeScale * 2.0f)};
+        const float Angle{Rad2Deg(std::acos(Direction.dot_product(ToSource)) * ConeScale * -2.0f)};
 
         float ConeGain, ConeHF;
         if(!(Angle > props->InnerAngle))
@@ -1521,8 +1496,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     if(DopplerFactor > 0.0f)
     {
         const alu::Vector &lvelocity = Listener.Params.Velocity;
-        float vss{aluDotproduct(Velocity, ToSource) * -DopplerFactor};
-        float vls{aluDotproduct(lvelocity, ToSource) * -DopplerFactor};
+        float vss{Velocity.dot_product(ToSource) * -DopplerFactor};
+        float vls{lvelocity.dot_product(ToSource) * -DopplerFactor};
 
         const float SpeedOfSound{Listener.Params.SpeedOfSound};
         if(!(vls < SpeedOfSound))

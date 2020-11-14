@@ -483,14 +483,14 @@ void JackPlayback::start()
         if(ports == nullptr)
         {
             jack_deactivate(mClient);
-            throw al::backend_exception{ALC_INVALID_DEVICE, "No physical playback ports found"};
+            throw al::backend_exception{ALC_INVALID_DEVICE, "No playback ports found"};
         }
         auto connect_port = [this](const jack_port_t *port, const char *pname) -> bool
         {
             if(!port) return false;
             if(!pname)
             {
-                ERR("No physical playback port for \"%s\"\n", jack_port_name(port));
+                ERR("No playback port for \"%s\"\n", jack_port_name(port));
                 return false;
             }
             if(jack_connect(mClient, jack_port_name(port), pname))

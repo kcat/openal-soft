@@ -401,6 +401,13 @@
 #  case-sensitive.
 #device-prefix- =
 
+## custom-devices: (global)
+#  Specifies a list of enumerated playback devices and the ALSA devices they
+#  refer to. The list pattern is "Display Name=ALSA device;...". The display
+#  names will be returned for device enumeration, and the ALSA device is the
+#  device name to open for each enumerated device.
+#custom-devices =
+
 ## capture: (global)
 #  Sets the device name for the default capture device.
 #capture = default
@@ -417,6 +424,13 @@
 #  capture-prefix-NVidia), or the card id and device index (eg,
 #  capture-prefix-NVidia-0). The card id is case-sensitive.
 #capture-prefix- =
+
+## custom-captures: (global)
+#  Specifies a list of enumerated capture devices and the ALSA devices they
+#  refer to. The list pattern is "Display Name=ALSA device;...". The display
+#  names will be returned for device enumeration, and the ALSA device is the
+#  device name to open for each enumerated device.
+#custom-captures =
 
 ## mmap:
 #  Sets whether to try using mmap mode (helps reduce latencies and CPU
@@ -468,6 +482,14 @@
 #  Attempts to autospawn a JACK server whenever needed (initializing the
 #  backend, opening devices, etc).
 #spawn-server = false
+
+## custom-devices: (global)
+#  Specifies a list of enumerated devices and the ports they connect to. The
+#  list pattern is "Display Name=ports regex;Display Name=ports regex;...". The
+#  display names will be returned for device enumeration, and the ports regex
+#  is the regular expression to identify the target ports on the server (as
+#  given by the jack_get_ports function) for each enumerated device.
+#custom-devices =
 
 ## connect-ports:
 #  Attempts to automatically connect the client ports to physical server ports.

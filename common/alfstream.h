@@ -34,6 +34,8 @@ public:
     bool open(const char *filename, std::ios_base::openmode mode);
 
     bool is_open() const noexcept { return mFile != INVALID_HANDLE_VALUE; }
+
+    void close();
 };
 
 // Inherit from std::istream to use our custom streambuf
@@ -50,6 +52,8 @@ public:
     ~ifstream() override;
 
     bool is_open() const noexcept { return mStreamBuf.is_open(); }
+
+    void close() { mStreamBuf.close(); }
 };
 
 } // namespace al

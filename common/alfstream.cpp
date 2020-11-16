@@ -88,11 +88,7 @@ auto filebuf::seekpos(pos_type pos, std::ios_base::openmode mode) -> pos_type
 }
 
 filebuf::~filebuf()
-{
-    if(mFile != INVALID_HANDLE_VALUE)
-        CloseHandle(mFile);
-    mFile = INVALID_HANDLE_VALUE;
-}
+{ close(); }
 
 bool filebuf::open(const wchar_t *filename, std::ios_base::openmode mode)
 {
@@ -113,6 +109,13 @@ bool filebuf::open(const char *filename, std::ios_base::openmode mode)
 {
     std::wstring wname{utf8_to_wstr(filename)};
     return open(wname.c_str(), mode);
+}
+
+void filebuf::close()
+{
+    if(mFile != INVALID_HANDLE_VALUE)
+        CloseHandle(mFile);
+    mFile = INVALID_HANDLE_VALUE;
 }
 
 

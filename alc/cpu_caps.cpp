@@ -3,6 +3,14 @@
 
 #include "cpu_caps.h"
 
+#if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#ifndef PF_ARM_NEON_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_NEON_INSTRUCTIONS_AVAILABLE 19
+#endif
+#endif
+
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif
@@ -105,6 +113,9 @@ void FillCPUCaps(int capfilter)
 #ifdef HAVE_NEON
 #ifdef __ARM_NEON
     caps |= CPU_CAP_NEON;
+#elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+    if(IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
+        caps |= CPU_CAP_NEON;
 #else
     al::ifstream file{"/proc/cpuinfo"};
     if(!file.is_open())

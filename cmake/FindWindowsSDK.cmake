@@ -476,9 +476,11 @@ find_package_handle_standard_args(WindowsSDK
 
 if(WINDOWSSDK_FOUND)
 	# Internal: Architecture-appropriate library directory names.
-	if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM")
+	if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64")
 		if(CMAKE_SIZEOF_VOID_P MATCHES "8")
 			# Only supported in Win10 SDK and up.
+			set(_winsdk_archbare ) # what the architecture used to be called in oldest SDKs
+			set(_winsdk_arch arm64) # what the architecture used to be called
 			set(_winsdk_arch8 arm64) # what the WDK for Win8+ calls this architecture
 		else()
 			set(_winsdk_archbare /arm) # what the architecture used to be called in oldest SDKs

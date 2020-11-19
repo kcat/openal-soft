@@ -554,8 +554,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mBuffer.mUserData = nullptr;
 
     ALBuf->mBuffer.mSampleLen = frames;
-    ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = ALBuf->mBuffer.mSampleLen;
+    ALBuf->mBuffer.mLoopStart = 0;
+    ALBuf->mBuffer.mLoopEnd = ALBuf->mBuffer.mSampleLen;
 }
 
 /** Prepares the buffer to use the specified callback, using the specified format. */
@@ -620,8 +620,8 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     ALBuf->mBuffer.mAmbiOrder = ambiorder;
 
     ALBuf->mBuffer.mSampleLen = 0;
-    ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = ALBuf->mBuffer.mSampleLen;
+    ALBuf->mBuffer.mLoopStart = 0;
+    ALBuf->mBuffer.mLoopEnd = ALBuf->mBuffer.mSampleLen;
 }
 
 
@@ -1262,8 +1262,8 @@ START_API_FUNC
                 values[0], values[1], buffer);
         else
         {
-            albuf->LoopStart = static_cast<ALuint>(values[0]);
-            albuf->LoopEnd = static_cast<ALuint>(values[1]);
+            albuf->mBuffer.mLoopStart = static_cast<ALuint>(values[0]);
+            albuf->mBuffer.mLoopEnd = static_cast<ALuint>(values[1]);
         }
         break;
 
@@ -1457,8 +1457,8 @@ START_API_FUNC
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        values[0] = static_cast<ALint>(albuf->LoopStart);
-        values[1] = static_cast<ALint>(albuf->LoopEnd);
+        values[0] = static_cast<ALint>(albuf->mBuffer.mLoopStart);
+        values[1] = static_cast<ALint>(albuf->mBuffer.mLoopEnd);
         break;
 
     default:

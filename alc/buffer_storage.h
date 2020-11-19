@@ -61,6 +61,9 @@ struct BufferStorage {
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
     ALuint mAmbiOrder{0u};
 
+    ALuint mLoopStart{0u};
+    ALuint mLoopEnd{0u};
+
     inline ALuint bytesFromFmt() const noexcept { return BytesFromFmt(mType); }
     inline ALuint channelsFromFmt() const noexcept
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }

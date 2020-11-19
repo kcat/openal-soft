@@ -47,9 +47,6 @@ struct ALbuffer {
     ALuint OriginalSize{0};
     ALuint OriginalAlign{0};
 
-    ALuint LoopStart{0u};
-    ALuint LoopEnd{0u};
-
     ALuint UnpackAlign{0};
     ALuint PackAlign{0};
     ALuint UnpackAmbiOrder{1};

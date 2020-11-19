@@ -245,9 +245,9 @@ float *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Buf
     const size_t NumChannels, const size_t SampleSize, const size_t chan, size_t DataPosInt,
     al::span<float> SrcBuffer)
 {
-    const ALbuffer *Buffer{BufferListItem->mBuffer};
-    const ALuint LoopStart{Buffer->LoopStart};
-    const ALuint LoopEnd{Buffer->LoopEnd};
+    const BufferStorage &Buffer = BufferListItem->mBuffer->mBuffer;
+    const ALuint LoopStart{Buffer.mLoopStart};
+    const ALuint LoopEnd{Buffer.mLoopEnd};
     ASSUME(LoopEnd > LoopStart);
 
     /* If current pos is beyond the loop range, do not loop */
@@ -256,12 +256,12 @@ float *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Buf
         BufferLoopItem = nullptr;
 
         /* Load what's left to play from the buffer */
-        const size_t DataRem{minz(SrcBuffer.size(), Buffer->mBuffer.mSampleLen-DataPosInt)};
+        const size_t DataRem{minz(SrcBuffer.size(), Buffer.mSampleLen-DataPosInt)};
 
-        const al::byte *Data{Buffer->mBuffer.mData.data()};
+        const al::byte *Data{Buffer.mData.data()};
         Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mBuffer.mType, DataRem);
+        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer.mType, DataRem);
         SrcBuffer = SrcBuffer.subspan(DataRem);
     }
     else
@@ -269,10 +269,10 @@ float *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Buf
         /* Load what's left of this loop iteration */
         const size_t DataRem{minz(SrcBuffer.size(), LoopEnd-DataPosInt)};
 
-        const al::byte *Data{Buffer->mBuffer.mData.data()};
+        const al::byte *Data{Buffer.mData.data()};
         Data += (DataPosInt*NumChannels + chan)*SampleSize;
 
-        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mBuffer.mType, DataRem);
+        LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer.mType, DataRem);
         SrcBuffer = SrcBuffer.subspan(DataRem);
 
         /* Load any repeats of the loop we can to fill the buffer. */
@@ -281,9 +281,9 @@ float *LoadBufferStatic(ALbufferlistitem *BufferListItem, ALbufferlistitem *&Buf
         {
             const size_t DataSize{minz(SrcBuffer.size(), LoopSize)};
 
-            Data = Buffer->mBuffer.mData.data() + (LoopStart*NumChannels + chan)*SampleSize;
+            Data = Buffer.mData.data() + (LoopStart*NumChannels + chan)*SampleSize;
 
-            LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mBuffer.mType, DataSize);
+            LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer.mType, DataSize);
             SrcBuffer = SrcBuffer.subspan(DataSize);
         }
     }
@@ -294,14 +294,14 @@ float *LoadBufferCallback(ALbufferlistitem *BufferListItem, const size_t NumChan
     const size_t SampleSize, const size_t chan, size_t NumCallbackSamples,
     al::span<float> SrcBuffer)
 {
-    const ALbuffer *Buffer{BufferListItem->mBuffer};
+    const BufferStorage &Buffer = BufferListItem->mBuffer->mBuffer;
 
     /* Load what's left to play from the buffer */
     const size_t DataRem{minz(SrcBuffer.size(), NumCallbackSamples)};
 
-    const al::byte *Data{Buffer->mBuffer.mData.data() + chan*SampleSize};
+    const al::byte *Data{Buffer.mData.data() + chan*SampleSize};
 
-    LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer->mBuffer.mType, DataRem);
+    LoadSamples(SrcBuffer.data(), Data, NumChannels, Buffer.mType, DataRem);
     SrcBuffer = SrcBuffer.subspan(DataRem);
 
     return SrcBuffer.begin();
@@ -701,9 +701,9 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
             if(BufferLoopItem)
             {
                 /* Handle looping static source */
-                const ALbuffer *Buffer{BufferListItem->mBuffer};
-                const ALuint LoopStart{Buffer->LoopStart};
-                const ALuint LoopEnd{Buffer->LoopEnd};
+                const BufferStorage &Buffer = BufferListItem->mBuffer->mBuffer;
+                const ALuint LoopStart{Buffer.mLoopStart};
+                const ALuint LoopEnd{Buffer.mLoopEnd};
                 if(DataPosInt >= LoopEnd)
                 {
                     assert(LoopEnd > LoopStart);
@@ -722,12 +722,12 @@ void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToD
         }
         else if((mFlags&VoiceIsCallback))
         {
-            ALbuffer *buffer{BufferListItem->mBuffer};
+            BufferStorage &buffer = BufferListItem->mBuffer->mBuffer;
             if(SrcSamplesDone < mNumCallbackSamples)
             {
                 const size_t byteOffset{SrcSamplesDone*FrameSize};
                 const size_t byteEnd{mNumCallbackSamples*FrameSize};
-                al::byte *data{buffer->mBuffer.mData.data()};
+                al::byte *data{buffer.mData.data()};
                 std::copy(data+byteOffset, data+byteEnd, data);
                 mNumCallbackSamples -= SrcSamplesDone;
             }

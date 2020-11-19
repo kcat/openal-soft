@@ -18,6 +18,7 @@
 #include "hrtf.h"
 
 struct EffectSlot;
+struct BufferlistItem;
 enum class DistanceModel;
 
 
@@ -209,12 +210,12 @@ struct Voice {
     std::atomic<ALuint> mPositionFrac;
 
     /* Current buffer queue item being played. */
-    std::atomic<ALbufferlistitem*> mCurrentBuffer;
+    std::atomic<BufferlistItem*> mCurrentBuffer;
 
     /* Buffer queue item to loop to at end of queue (will be NULL for non-
      * looping voices).
      */
-    std::atomic<ALbufferlistitem*> mLoopBuffer;
+    std::atomic<BufferlistItem*> mLoopBuffer;
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;

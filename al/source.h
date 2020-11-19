@@ -19,19 +19,12 @@
 
 struct ALbuffer;
 struct ALeffectslot;
+struct BufferlistItem;
 
 
 #define DEFAULT_SENDS  2
 
 #define INVALID_VOICE_IDX static_cast<ALuint>(-1)
-
-struct ALbufferlistitem {
-    std::atomic<ALbufferlistitem*> mNext{nullptr};
-    ALuint mSampleLen{0u};
-    ALbuffer *mBuffer{nullptr};
-
-    DEF_NEWDEL(ALbufferlistitem)
-};
 
 
 struct ALsource {
@@ -106,7 +99,7 @@ struct ALsource {
     ALenum state{AL_INITIAL};
 
     /** Source Buffer Queue head. */
-    ALbufferlistitem *queue{nullptr};
+    BufferlistItem *queue{nullptr};
 
     std::atomic_flag PropsClean;
 

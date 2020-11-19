@@ -1,10 +1,13 @@
-#ifndef ALC_BUFFER_FORMATS_H
-#define ALC_BUFFER_FORMATS_H
+#ifndef ALC_BUFFER_STORAGE_H
+#define ALC_BUFFER_STORAGE_H
+
+#include <atomic>
 
 #include "AL/al.h"
 #include "AL/alext.h"
 
 #include "albyte.h"
+#include "almalloc.h"
 #include "inprogext.h"
 #include "vector.h"
 
@@ -73,4 +76,13 @@ struct BufferStorage {
     { return mChannels == FmtBFormat2D || mChannels == FmtBFormat3D; }
 };
 
-#endif /* ALC_BUFFER_FORMATS_H */
+
+struct BufferlistItem {
+    std::atomic<BufferlistItem*> mNext{nullptr};
+    ALuint mSampleLen{0u};
+    BufferStorage *mBuffer{nullptr};
+
+    DEF_NEWDEL(BufferlistItem)
+};
+
+#endif /* ALC_BUFFER_STORAGE_H */

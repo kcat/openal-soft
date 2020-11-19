@@ -12,7 +12,6 @@
 #include "alspan.h"
 
 struct ALCcontext;
-struct ALbufferlistitem;
 struct ALeffectslot;
 
 

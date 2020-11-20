@@ -274,6 +274,46 @@ ALuint ChannelsFromUserFmt(UserFmtChannels chans, ALuint ambiorder) noexcept
     return 0;
 }
 
+al::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout)
+{
+    switch(layout)
+    {
+    case AL_FUMA_SOFT: return al::make_optional(AmbiLayout::FuMa);
+    case AL_ACN_SOFT: return al::make_optional(AmbiLayout::ACN);
+    }
+    return al::nullopt;
+}
+ALenum EnumFromAmbiLayout(AmbiLayout layout)
+{
+    switch(layout)
+    {
+    case AmbiLayout::FuMa: return AL_FUMA_SOFT;
+    case AmbiLayout::ACN: return AL_ACN_SOFT;
+    }
+    throw std::runtime_error{"Invalid AmbiLayout: "+std::to_string(int(layout))};
+}
+
+al::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale)
+{
+    switch(scale)
+    {
+    case AL_FUMA_SOFT: return al::make_optional(AmbiScaling::FuMa);
+    case AL_SN3D_SOFT: return al::make_optional(AmbiScaling::SN3D);
+    case AL_N3D_SOFT: return al::make_optional(AmbiScaling::N3D);
+    }
+    return al::nullopt;
+}
+ALenum EnumFromAmbiScaling(AmbiScaling scale)
+{
+    switch(scale)
+    {
+    case AmbiScaling::FuMa: return AL_FUMA_SOFT;
+    case AmbiScaling::SN3D: return AL_SN3D_SOFT;
+    case AmbiScaling::N3D: return AL_SN3D_SOFT;
+    }
+    throw std::runtime_error{"Invalid AmbiScaling: "+std::to_string(int(scale))};
+}
+
 
 constexpr ALbitfieldSOFT INVALID_STORAGE_MASK{~unsigned(AL_MAP_READ_BIT_SOFT |
     AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT)};
@@ -1176,7 +1216,7 @@ START_API_FUNC
         else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_ACN_SOFT)
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic layout %04x", value);
         else
-            albuf->mBuffer.mAmbiLayout = static_cast<AmbiLayout>(value);
+            albuf->mBuffer.mAmbiLayout = AmbiLayoutFromEnum(value).value();
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
@@ -1186,7 +1226,7 @@ START_API_FUNC
         else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_SN3D_SOFT && value != AL_N3D_SOFT)
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling %04x", value);
         else
-            albuf->mBuffer.mAmbiScaling = static_cast<AmbiScaling>(value);
+            albuf->mBuffer.mAmbiScaling = AmbiScalingFromEnum(value).value();
         break;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
@@ -1386,11 +1426,11 @@ START_API_FUNC
         break;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
-        *value = static_cast<int>(albuf->mBuffer.mAmbiLayout);
+        *value = EnumFromAmbiLayout(albuf->mBuffer.mAmbiLayout);
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
-        *value = static_cast<int>(albuf->mBuffer.mAmbiScaling);
+        *value = EnumFromAmbiScaling(albuf->mBuffer.mAmbiScaling);
         break;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:

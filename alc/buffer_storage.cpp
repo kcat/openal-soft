@@ -6,7 +6,7 @@
 #include <cstdint>
 
 
-ALuint BytesFromFmt(FmtType type) noexcept
+uint BytesFromFmt(FmtType type) noexcept
 {
     switch(type)
     {
@@ -19,7 +19,8 @@ ALuint BytesFromFmt(FmtType type) noexcept
     }
     return 0;
 }
-ALuint ChannelsFromFmt(FmtChannels chans, ALuint ambiorder) noexcept
+
+uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
 {
     switch(chans)
     {

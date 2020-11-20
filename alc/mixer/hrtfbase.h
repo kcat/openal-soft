@@ -9,11 +9,13 @@
 #include "voice.h"
 
 
+using uint = unsigned int;
+
 using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const uint_fast32_t irSize,
     const HrirArray &Coeffs, const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const ALuint IrSize,
+inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
@@ -38,7 +40,7 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSamples,
-    const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
+    const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);

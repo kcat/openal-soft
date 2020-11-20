@@ -31,8 +31,8 @@ inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
     return ret;
 }
 
-constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
-constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
+constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
+constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
     const HrirArray &Coeffs, const float left, const float right)
@@ -60,13 +60,13 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
 } // namespace
 
 template<>
-const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, ALuint frac,
-    ALuint increment, const al::span<float> dst)
+const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst)
 {
     const int32x4_t increment4 = vdupq_n_s32(static_cast<int>(increment*4));
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
     const int32x4_t fracMask4 = vdupq_n_s32(MixerFracMask);
-    alignas(16) ALuint pos_[4], frac_[4];
+    alignas(16) uint pos_[4], frac_[4];
     int32x4_t pos4, frac4;
 
     InitPosArrays(frac, increment, frac_, pos_, 4);
@@ -98,8 +98,8 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
 
     if(size_t todo{dst.size()&3})
     {
-        src += static_cast<ALuint>(vgetq_lane_s32(pos4, 0));
-        frac = static_cast<ALuint>(vgetq_lane_s32(frac4, 0));
+        src += static_cast<uint>(vgetq_lane_s32(pos4, 0));
+        frac = static_cast<uint>(vgetq_lane_s32(frac4, 0));
 
         do {
             *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
@@ -114,7 +114,7 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
 
 template<>
 const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst)
+    uint frac, uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
@@ -124,7 +124,7 @@ const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FracPhaseBitDiff};
+        const uint pi{frac >> FracPhaseBitDiff};
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
@@ -160,7 +160,7 @@ const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *
 
 template<>
 const float *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
-    const float *RESTRICT src, ALuint frac, ALuint increment, const al::span<float> dst)
+    const float *RESTRICT src, uint frac, uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
@@ -169,7 +169,7 @@ const float *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FracPhaseBitDiff};
+        const uint pi{frac >> FracPhaseBitDiff};
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
@@ -201,12 +201,12 @@ const float *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
 
 
 template<>
-void MixHrtf_<NEONTag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+void MixHrtf_<NEONTag>(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, BufferSize); }
 
 template<>
-void MixHrtfBlend_<NEONTag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+void MixHrtfBlend_<NEONTag>(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,

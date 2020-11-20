@@ -34,9 +34,6 @@
 #include <new>
 #include <utility>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-
 #include "al/buffer.h"
 #include "al/event.h"
 #include "al/source.h"
@@ -85,10 +82,10 @@ MixerFunc MixSamples{Mix_<CTag>};
 
 namespace {
 
-using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);
 using HrtfMixerBlendFunc = void(*)(const float *InSamples, float2 *AccumSamples,
-    const ALuint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
+    const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize);
 
 HrtfMixerFunc MixHrtfSamples{MixHrtf_<CTag>};
@@ -246,8 +243,8 @@ float *LoadBufferStatic(BufferlistItem *BufferListItem, BufferlistItem *&BufferL
     al::span<float> SrcBuffer)
 {
     const BufferStorage &Buffer = *BufferListItem->mBuffer;
-    const ALuint LoopStart{Buffer.mLoopStart};
-    const ALuint LoopEnd{Buffer.mLoopEnd};
+    const uint LoopStart{Buffer.mLoopStart};
+    const uint LoopEnd{Buffer.mLoopEnd};
     ASSUME(LoopEnd > LoopStart);
 
     /* If current pos is beyond the loop range, do not loop */
@@ -341,8 +338,8 @@ float *LoadBufferQueue(BufferlistItem *BufferListItem, BufferlistItem *BufferLoo
 }
 
 
-void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &parms,
-    const float TargetGain, const ALuint Counter, ALuint OutPos, const ALuint IrSize,
+void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &parms,
+    const float TargetGain, const uint Counter, uint OutPos, const uint IrSize,
     ALCdevice *Device)
 {
     auto &HrtfSamples = Device->HrtfSourceData;
@@ -360,7 +357,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
         parms.Hrtf.History.begin());
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
-    ALuint fademix{0u};
+    uint fademix{0u};
     if(Counter && OutPos == 0)
     {
         fademix = minu(DstBufferSize, Counter);
@@ -393,7 +390,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
 
     if(fademix < DstBufferSize)
     {
-        const ALuint todo{DstBufferSize - fademix};
+        const uint todo{DstBufferSize - fademix};
         float gain{TargetGain};
 
         /* Interpolate the target gain if the gain fading lasts longer than
@@ -417,7 +414,7 @@ void DoHrtfMix(const float *samples, const ALuint DstBufferSize, DirectParams &p
 }
 
 void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, DirectParams &parms,
-    const float *TargetGains, const ALuint Counter, const ALuint OutPos, ALCdevice *Device)
+    const float *TargetGains, const uint Counter, const uint OutPos, ALCdevice *Device)
 {
     using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
     static constexpr FilterProc NfcProcess[MAX_AMBI_ORDER+1]{
@@ -452,12 +449,12 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
     ASSUME(SamplesToDo > 0);
 
     /* Get voice info */
-    ALuint DataPosInt{mPosition.load(std::memory_order_relaxed)};
-    ALuint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
+    uint DataPosInt{mPosition.load(std::memory_order_relaxed)};
+    uint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
     BufferlistItem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     BufferlistItem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
-    const ALuint SampleSize{mSampleSize};
-    const ALuint increment{mStep};
+    const uint SampleSize{mSampleSize};
+    const uint increment{mStep};
     if UNLIKELY(increment < 1)
     {
         /* If the voice is supposed to be stopping but can't be mixed, just
@@ -474,13 +471,13 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
     ASSUME(FrameSize > 0);
 
     ALCdevice *Device{Context->mDevice.get()};
-    const ALuint NumSends{Device->NumAuxSends};
-    const ALuint IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
+    const uint NumSends{Device->NumAuxSends};
+    const uint IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 
     ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
                            Resample_<CopyTag,CTag> : mResampler};
 
-    ALuint Counter{(mFlags&VoiceIsFading) ? SamplesToDo : 0};
+    uint Counter{(mFlags&VoiceIsFading) ? SamplesToDo : 0};
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
@@ -493,7 +490,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                 else
                     parms.Hrtf.Old = parms.Hrtf.Target;
             }
-            for(ALuint send{0};send < NumSends;++send)
+            for(uint send{0};send < NumSends;++send)
             {
                 if(mSend[send].Buffer.empty())
                     continue;
@@ -504,12 +501,12 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         }
     }
 
-    ALuint buffers_done{0u};
-    ALuint OutPos{0u};
+    uint buffers_done{0u};
+    uint OutPos{0u};
     do {
         /* Figure out how many buffer samples will be needed */
-        ALuint DstBufferSize{SamplesToDo - OutPos};
-        ALuint SrcBufferSize;
+        uint DstBufferSize{SamplesToDo - OutPos};
+        uint SrcBufferSize;
 
         if(increment <= MixerFracOne)
         {
@@ -523,7 +520,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             /* Result is guaranteed to be <= BUFFERSIZE+MAX_RESAMPLER_PADDING
              * since we won't use more src samples than dst samples+padding.
              */
-            SrcBufferSize = static_cast<ALuint>(DataSize64);
+            SrcBufferSize = static_cast<uint>(DataSize64);
         }
         else
         {
@@ -533,7 +530,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             DataSize64 += MAX_RESAMPLER_PADDING;
 
             if(DataSize64 <= BUFFERSIZE + MAX_RESAMPLER_PADDING)
-                SrcBufferSize = static_cast<ALuint>(DataSize64);
+                SrcBufferSize = static_cast<uint>(DataSize64);
             else
             {
                 /* If the source size got saturated, we can't fill the desired
@@ -548,7 +545,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                     /* Some mixers require being 16-byte aligned, so also limit
                      * to a multiple of 4 samples to maintain alignment.
                      */
-                    DstBufferSize = static_cast<ALuint>(DataSize64) & ~3u;
+                    DstBufferSize = static_cast<uint>(DataSize64) & ~3u;
                 }
             }
         }
@@ -558,20 +555,20 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             BufferStorage *buffer{BufferListItem->mBuffer};
 
             /* Exclude resampler pre-padding from the needed size. */
-            const ALuint toLoad{SrcBufferSize - (MAX_RESAMPLER_PADDING>>1)};
+            const uint toLoad{SrcBufferSize - (MAX_RESAMPLER_PADDING>>1)};
             if(toLoad > mNumCallbackSamples)
             {
                 const size_t byteOffset{mNumCallbackSamples*FrameSize};
                 const size_t needBytes{toLoad*FrameSize - byteOffset};
 
-                const ALsizei gotBytes{buffer->mCallback(buffer->mUserData,
-                    &buffer->mData[byteOffset], static_cast<ALsizei>(needBytes))};
+                const int gotBytes{buffer->mCallback(buffer->mUserData,
+                    &buffer->mData[byteOffset], static_cast<int>(needBytes))};
                 if(gotBytes < 1)
                     mFlags |= VoiceCallbackStopped;
-                else if(static_cast<ALuint>(gotBytes) < needBytes)
+                else if(static_cast<uint>(gotBytes) < needBytes)
                 {
                     mFlags |= VoiceCallbackStopped;
-                    mNumCallbackSamples += static_cast<ALuint>(static_cast<ALuint>(gotBytes) /
+                    mNumCallbackSamples += static_cast<uint>(static_cast<uint>(gotBytes) /
                         FrameSize);
                 }
                 else
@@ -668,7 +665,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                 }
             }
 
-            for(ALuint send{0};send < NumSends;++send)
+            for(uint send{0};send < NumSends;++send)
             {
                 if(mSend[send].Buffer.empty())
                     continue;
@@ -685,7 +682,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;
-        const ALuint SrcSamplesDone{DataPosFrac>>MixerFracBits};
+        const uint SrcSamplesDone{DataPosFrac>>MixerFracBits};
         DataPosInt  += SrcSamplesDone;
         DataPosFrac &= MixerFracMask;
 
@@ -702,8 +699,8 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             {
                 /* Handle looping static source */
                 const BufferStorage &Buffer = *BufferListItem->mBuffer;
-                const ALuint LoopStart{Buffer.mLoopStart};
-                const ALuint LoopEnd{Buffer.mLoopEnd};
+                const uint LoopStart{Buffer.mLoopStart};
+                const uint LoopEnd{Buffer.mLoopEnd};
                 if(DataPosInt >= LoopEnd)
                 {
                     assert(LoopEnd > LoopStart);
@@ -763,7 +760,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
     }
 
     /* Capture the source ID in case it's reset for stopping. */
-    const ALuint SourceID{mSourceID.load(std::memory_order_relaxed)};
+    const uint SourceID{mSourceID.load(std::memory_order_relaxed)};
 
     /* Update voice info */
     mPosition.store(DataPosInt, std::memory_order_relaxed);
@@ -777,7 +774,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
     std::atomic_thread_fence(std::memory_order_release);
 
     /* Send any events now, after the position/buffer info was updated. */
-    const ALbitfieldSOFT enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
+    const uint enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
     {
         RingBuffer *ring{Context->mAsyncEvents.get()};

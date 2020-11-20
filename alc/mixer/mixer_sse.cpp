@@ -20,8 +20,8 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr ALuint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
-constexpr ALuint FracPhaseDiffOne{1 << FracPhaseBitDiff};
+constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
+constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
 
@@ -76,7 +76,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
 
 template<>
 const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst)
+    uint frac, uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
@@ -86,7 +86,7 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FracPhaseBitDiff};
+        const uint pi{frac >> FracPhaseBitDiff};
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
@@ -123,7 +123,7 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
 
 template<>
 const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const float *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst)
+    uint frac, uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
@@ -132,7 +132,7 @@ const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const floa
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const ALuint pi{frac >> FracPhaseBitDiff};
+        const uint pi{frac >> FracPhaseBitDiff};
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
@@ -165,12 +165,12 @@ const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const floa
 
 
 template<>
-void MixHrtf_<SSETag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+void MixHrtf_<SSETag>(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, BufferSize); }
 
 template<>
-void MixHrtfBlend_<SSETag>(const float *InSamples, float2 *AccumSamples, const ALuint IrSize,
+void MixHrtfBlend_<SSETag>(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,

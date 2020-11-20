@@ -32,14 +32,14 @@ struct LerpTag;
 
 
 template<>
-const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRICT src, ALuint frac,
-    ALuint increment, const al::span<float> dst)
+const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst)
 {
     const __m128i increment4{_mm_set1_epi32(static_cast<int>(increment*4))};
     const __m128 fracOne4{_mm_set1_ps(1.0f/MixerFracOne)};
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
 
-    alignas(16) ALuint pos_[4], frac_[4];
+    alignas(16) uint pos_[4], frac_[4];
     InitPosArrays(frac, increment, frac_, pos_, 4);
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
@@ -75,8 +75,8 @@ const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRIC
          * four samples, so the lowest element is the next position to
          * resample.
          */
-        src += static_cast<ALuint>(_mm_cvtsi128_si32(pos4));
-        frac = static_cast<ALuint>(_mm_cvtsi128_si32(frac4));
+        src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
+        frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
         do {
             *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));

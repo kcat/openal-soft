@@ -380,11 +380,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     AudioStreamBasicDescription outputFormat;     // The AudioUnit output format
     AURenderCallbackStruct input;
     AudioComponentDescription desc;
-    UInt32 outputFrameCount;
     UInt32 propertySize;
-#if !TARGET_OS_IOS
-    AudioObjectPropertyAddress propertyAddress;
-#endif
     UInt32 enableIO;
     AudioComponent comp;
     OSStatus err;
@@ -437,6 +433,7 @@ void CoreAudioCapture::open(const ALCchar *name)
         AudioDeviceID inputDevice = kAudioDeviceUnknown;
 
         propertySize = sizeof(AudioDeviceID);
+        AudioObjectPropertyAddress propertyAddress{};
         propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
         propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
         propertyAddress.mElement = kAudioObjectPropertyElementMaster;
@@ -480,6 +477,10 @@ void CoreAudioCapture::open(const ALCchar *name)
     // Set up the requested format description
     switch(mDevice->FmtType)
     {
+    case DevFmtByte:
+        requestedFormat.mBitsPerChannel = 8;
+        requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+        break;
     case DevFmtUByte:
         requestedFormat.mBitsPerChannel = 8;
         requestedFormat.mFormatFlags = kAudioFormatFlagIsPacked;
@@ -488,19 +489,22 @@ void CoreAudioCapture::open(const ALCchar *name)
         requestedFormat.mBitsPerChannel = 16;
         requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
         break;
+    case DevFmtUShort:
+        requestedFormat.mBitsPerChannel = 16;
+        requestedFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
+        break;
     case DevFmtInt:
         requestedFormat.mBitsPerChannel = 32;
         requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
         break;
+    case DevFmtUInt:
+        requestedFormat.mBitsPerChannel = 32;
+        requestedFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
+        break;
     case DevFmtFloat:
         requestedFormat.mBitsPerChannel = 32;
-        requestedFormat.mFormatFlags = kAudioFormatFlagIsPacked;
+        requestedFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
         break;
-    case DevFmtByte:
-    case DevFmtUShort:
-    case DevFmtUInt:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s samples not suppoted",
-            DevFmtTypeString(mDevice->FmtType)};
     }
 
     switch(mDevice->FmtChans)
@@ -545,29 +549,33 @@ void CoreAudioCapture::open(const ALCchar *name)
     if(err != noErr)
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not set input format: %u", err};
 
-    // Set the AudioUnit output format frame count
+    /* Calculate the minimum AudioUnit output format frame count for the pre-
+     * conversion ring buffer.
+     */
     uint64_t FrameCount64{mDevice->UpdateSize};
-    FrameCount64 = static_cast<uint64_t>(FrameCount64*outputFormat.mSampleRate + mDevice->Frequency-1) /
+    FrameCount64 = FrameCount64*static_cast<UInt32>(outputFormat.mSampleRate) + (mDevice->Frequency-1) /
         mDevice->Frequency;
     FrameCount64 += MAX_RESAMPLER_PADDING;
     if(FrameCount64 > std::numeric_limits<uint32_t>::max()/2)
         throw al::backend_exception{ALC_INVALID_VALUE,
             "Calculated frame count is too large: %" PRIu64, FrameCount64};
 
-    outputFrameCount = static_cast<uint32_t>(FrameCount64);
-    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
-        kAudioUnitScope_Output, 0, &outputFrameCount, sizeof(outputFrameCount));
-    if(err != noErr)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set capture frame count: %u",
+    UInt32 outputFrameCount{};
+    propertySize = sizeof(outputFrameCount);
+    err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
+        kAudioUnitScope_Output, 0, &outputFrameCount, &propertySize);
+    if(err != noErr || propertySize != sizeof(outputFrameCount))
+        throw al::backend_exception{ALC_INVALID_VALUE, "Could not get input frame count: %u",
             err};
 
-    // Set up sample converter if needed
+    outputFrameCount = static_cast<UInt32>(maxu64(outputFrameCount, FrameCount64));
+    mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
+
+    /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->Frequency)
         mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
             mFormat.mChannelsPerFrame, static_cast<ALuint>(hardwareFormat.mSampleRate),
             mDevice->Frequency, Resampler::FastBSinc24);
-
-    mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
 
     mDevice->DeviceName = name;
 }

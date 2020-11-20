@@ -1336,7 +1336,7 @@ const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept
     return "(unknown channels)";
 }
 
-ALuint BytesFromDevFmt(DevFmtType type) noexcept
+uint BytesFromDevFmt(DevFmtType type) noexcept
 {
     switch(type)
     {
@@ -1350,7 +1350,7 @@ ALuint BytesFromDevFmt(DevFmtType type) noexcept
     }
     return 0;
 }
-ALuint ChannelsFromDevFmt(DevFmtChannels chans, ALuint ambiorder) noexcept
+uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept
 {
     switch(chans)
     {
@@ -1410,59 +1410,107 @@ al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     return al::nullopt;
 }
 
-bool IsValidALCType(ALCenum type)
+al::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
 {
     switch(type)
     {
-    case ALC_BYTE_SOFT:
-    case ALC_UNSIGNED_BYTE_SOFT:
-    case ALC_SHORT_SOFT:
-    case ALC_UNSIGNED_SHORT_SOFT:
-    case ALC_INT_SOFT:
-    case ALC_UNSIGNED_INT_SOFT:
-    case ALC_FLOAT_SOFT:
-        return true;
+    case ALC_BYTE_SOFT: return al::make_optional(DevFmtByte);
+    case ALC_UNSIGNED_BYTE_SOFT: return al::make_optional(DevFmtUByte);
+    case ALC_SHORT_SOFT: return al::make_optional(DevFmtShort);
+    case ALC_UNSIGNED_SHORT_SOFT: return al::make_optional(DevFmtUShort);
+    case ALC_INT_SOFT: return al::make_optional(DevFmtInt);
+    case ALC_UNSIGNED_INT_SOFT: return al::make_optional(DevFmtUInt);
+    case ALC_FLOAT_SOFT: return al::make_optional(DevFmtFloat);
     }
-    return false;
+    WARN("Unsupported format type: 0x%04x\n", type);
+    return al::nullopt;
+}
+ALCenum EnumFromDevFmt(DevFmtType type)
+{
+    switch(type)
+    {
+    case DevFmtByte: return ALC_BYTE_SOFT;
+    case DevFmtUByte: return ALC_UNSIGNED_BYTE_SOFT;
+    case DevFmtShort: return ALC_SHORT_SOFT;
+    case DevFmtUShort: return ALC_UNSIGNED_SHORT_SOFT;
+    case DevFmtInt: return ALC_INT_SOFT;
+    case DevFmtUInt: return ALC_UNSIGNED_INT_SOFT;
+    case DevFmtFloat: return ALC_FLOAT_SOFT;
+    }
+    throw std::runtime_error{"Invalid DevFmtType: "+std::to_string(int(type))};
 }
 
-bool IsValidALCChannels(ALCenum channels)
+al::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
 {
     switch(channels)
     {
-    case ALC_MONO_SOFT:
-    case ALC_STEREO_SOFT:
-    case ALC_QUAD_SOFT:
-    case ALC_5POINT1_SOFT:
-    case ALC_6POINT1_SOFT:
-    case ALC_7POINT1_SOFT:
-    case ALC_BFORMAT3D_SOFT:
-        return true;
+    case ALC_MONO_SOFT: return al::make_optional(DevFmtMono);
+    case ALC_STEREO_SOFT: return al::make_optional(DevFmtStereo);
+    case ALC_QUAD_SOFT: return al::make_optional(DevFmtQuad);
+    case ALC_5POINT1_SOFT: return al::make_optional(DevFmtX51);
+    case ALC_6POINT1_SOFT: return al::make_optional(DevFmtX61);
+    case ALC_7POINT1_SOFT: return al::make_optional(DevFmtX71);
+    case ALC_BFORMAT3D_SOFT: return al::make_optional(DevFmtAmbi3D);
     }
-    return false;
+    WARN("Unsupported format channels: 0x%04x\n", channels);
+    return al::nullopt;
+}
+ALCenum EnumFromDevFmt(DevFmtChannels channels)
+{
+    switch(channels)
+    {
+    case DevFmtMono: return ALC_MONO_SOFT;
+    case DevFmtStereo: return ALC_STEREO_SOFT;
+    case DevFmtQuad: return ALC_QUAD_SOFT;
+    case DevFmtX51: /* fall-through */
+    case DevFmtX51Rear: return ALC_5POINT1_SOFT;
+    case DevFmtX61: return ALC_6POINT1_SOFT;
+    case DevFmtX71: return ALC_7POINT1_SOFT;
+    case DevFmtAmbi3D: return ALC_BFORMAT3D_SOFT;
+    }
+    throw std::runtime_error{"Invalid DevFmtChannels: "+std::to_string(int(channels))};
 }
 
-bool IsValidAmbiLayout(ALCenum layout)
+al::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
 {
     switch(layout)
     {
-    case ALC_ACN_SOFT:
-    case ALC_FUMA_SOFT:
-        return true;
+    case ALC_FUMA_SOFT: return al::make_optional(DevAmbiLayout::FuMa);
+    case ALC_ACN_SOFT: return al::make_optional(DevAmbiLayout::ACN);
     }
-    return false;
+    WARN("Unsupported ambisonic layout: 0x%04x\n", layout);
+    return al::nullopt;
+}
+ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
+{
+    switch(layout)
+    {
+    case DevAmbiLayout::FuMa: return ALC_FUMA_SOFT;
+    case DevAmbiLayout::ACN: return ALC_ACN_SOFT;
+    }
+    throw std::runtime_error{"Invalid DevAmbiLayout: "+std::to_string(int(layout))};
 }
 
-bool IsValidAmbiScaling(ALCenum scaling)
+al::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
 {
     switch(scaling)
     {
-    case ALC_N3D_SOFT:
-    case ALC_SN3D_SOFT:
-    case ALC_FUMA_SOFT:
-        return true;
+    case ALC_FUMA_SOFT: return al::make_optional(DevAmbiScaling::FuMa);
+    case ALC_SN3D_SOFT: return al::make_optional(DevAmbiScaling::SN3D);
+    case ALC_N3D_SOFT: return al::make_optional(DevAmbiScaling::N3D);
     }
-    return false;
+    WARN("Unsupported ambisonic scaling: 0x%04x\n", scaling);
+    return al::nullopt;
+}
+ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
+{
+    switch(scaling)
+    {
+    case DevAmbiScaling::FuMa: return ALC_FUMA_SOFT;
+    case DevAmbiScaling::SN3D: return ALC_SN3D_SOFT;
+    case DevAmbiScaling::N3D: return ALC_N3D_SOFT;
+    }
+    throw std::runtime_error{"Invalid DevAmbiScaling: "+std::to_string(int(scaling))};
 }
 
 
@@ -1677,8 +1725,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
-        ALCenum alayout{AL_NONE};
-        ALCenum ascale{AL_NONE};
+        ALCenum alayout{-1};
+        ALCenum ascale{-1};
         ALCenum schans{AL_NONE};
         ALCenum stype{AL_NONE};
         ALCsizei attrIdx{0};
@@ -1776,22 +1824,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         const bool loopback{device->Type == DeviceType::Loopback};
         if(loopback)
         {
-            if(!schans || !stype || !freq)
-            {
-                WARN("Missing format for loopback device\n");
+            if(!DevFmtChannelsFromEnum(schans).has_value()
+                || !DevFmtTypeFromEnum(stype).has_value())
                 return ALC_INVALID_VALUE;
-            }
-            if(!IsValidALCChannels(schans) || !IsValidALCType(stype) || freq < MIN_OUTPUT_RATE
-                || freq > MAX_OUTPUT_RATE)
+            if(freq < MIN_OUTPUT_RATE || freq > MAX_OUTPUT_RATE)
                 return ALC_INVALID_VALUE;
             if(schans == ALC_BFORMAT3D_SOFT)
             {
-                if(!alayout || !ascale || !aorder)
-                {
-                    WARN("Missing ambisonic info for loopback device\n");
-                    return ALC_INVALID_VALUE;
-                }
-                if(!IsValidAmbiLayout(alayout) || !IsValidAmbiScaling(ascale))
+                if(!DevAmbiLayoutFromEnum(alayout).has_value()
+                    || !DevAmbiScalingFromEnum(ascale).has_value())
                     return ALC_INVALID_VALUE;
                 if(aorder < 1 || aorder > MAX_AMBI_ORDER)
                     return ALC_INVALID_VALUE;
@@ -1844,13 +1885,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         else
         {
             device->Frequency = freq;
-            device->FmtChans = static_cast<DevFmtChannels>(schans);
-            device->FmtType = static_cast<DevFmtType>(stype);
+            device->FmtChans = DevFmtChannelsFromEnum(schans).value();
+            device->FmtType = DevFmtTypeFromEnum(stype).value();
             if(schans == ALC_BFORMAT3D_SOFT)
             {
                 device->mAmbiOrder = aorder;
-                device->mAmbiLayout = static_cast<DevAmbiLayout>(alayout);
-                device->mAmbiScale = static_cast<DevAmbiScaling>(ascale);
+                device->mAmbiLayout = DevAmbiLayoutFromEnum(alayout).value();
+                device->mAmbiScale = DevAmbiScalingFromEnum(ascale).value();
             }
         }
 
@@ -2872,20 +2913,20 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
                 if(device->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                    values[i++] = static_cast<int>(device->mAmbiLayout);
+                    values[i++] = EnumFromDevAmbi(device->mAmbiLayout);
 
                     values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                    values[i++] = static_cast<int>(device->mAmbiScale);
+                    values[i++] = EnumFromDevAmbi(device->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                     values[i++] = static_cast<int>(device->mAmbiOrder);
                 }
 
                 values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                values[i++] = device->FmtChans;
+                values[i++] = EnumFromDevFmt(device->FmtChans);
 
                 values[i++] = ALC_FORMAT_TYPE_SOFT;
-                values[i++] = device->FmtType;
+                values[i++] = EnumFromDevFmt(device->FmtType);
             }
 
             values[i++] = ALC_MONO_SOURCES;
@@ -2960,7 +3001,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = device->FmtChans;
+        values[0] = EnumFromDevFmt(device->FmtChans);
         return 1;
 
     case ALC_FORMAT_TYPE_SOFT:
@@ -2969,7 +3010,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = device->FmtType;
+        values[0] = EnumFromDevFmt(device->FmtType);
         return 1;
 
     case ALC_AMBISONIC_LAYOUT_SOFT:
@@ -2978,7 +3019,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = static_cast<int>(device->mAmbiLayout);
+        values[0] = EnumFromDevAmbi(device->mAmbiLayout);
         return 1;
 
     case ALC_AMBISONIC_SCALING_SOFT:
@@ -2987,7 +3028,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = static_cast<int>(device->mAmbiScale);
+        values[0] = EnumFromDevAmbi(device->mAmbiScale);
         return 1;
 
     case ALC_AMBISONIC_ORDER_SOFT:
@@ -3106,20 +3147,20 @@ START_API_FUNC
                 if(dev->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                    values[i++] = static_cast<int64_t>(dev->mAmbiLayout);
+                    values[i++] = EnumFromDevAmbi(dev->mAmbiLayout);
 
                     values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                    values[i++] = static_cast<int64_t>(dev->mAmbiScale);
+                    values[i++] = EnumFromDevAmbi(dev->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                     values[i++] = dev->mAmbiOrder;
                 }
 
                 values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                values[i++] = dev->FmtChans;
+                values[i++] = EnumFromDevFmt(dev->FmtChans);
 
                 values[i++] = ALC_FORMAT_TYPE_SOFT;
-                values[i++] = dev->FmtType;
+                values[i++] = EnumFromDevFmt(dev->FmtType);
             }
 
             values[i++] = ALC_MONO_SOURCES;
@@ -3979,8 +4020,8 @@ START_API_FUNC
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
     {
-        if(IsValidALCType(type) && IsValidALCChannels(channels) && freq >= MIN_OUTPUT_RATE
-            && freq <= MAX_OUTPUT_RATE)
+        if(DevFmtTypeFromEnum(type).has_value() && DevFmtChannelsFromEnum(channels).has_value()
+            && freq >= MIN_OUTPUT_RATE && freq <= MAX_OUTPUT_RATE)
             return ALC_TRUE;
     }
 

@@ -3,10 +3,6 @@
 
 #include <array>
 
-#include "AL/al.h"
-#include "AL/alext.h"
-
-#include "al/buffer.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "alu.h"
@@ -21,17 +17,19 @@ struct EffectSlot;
 struct BufferlistItem;
 enum class DistanceModel;
 
+using uint = unsigned int;
+
 
 enum class SpatializeMode : unsigned char {
-    Off = AL_FALSE,
-    On = AL_TRUE,
-    Auto = AL_AUTO_SOFT
+    Off,
+    On,
+    Auto
 };
 
 enum class DirectMode : unsigned char {
-    Off = AL_FALSE,
-    DropMismatch = AL_DROP_UNMATCHED_SOFT,
-    RemixMismatch = AL_REMIX_UNMATCHED_SOFT
+    Off,
+    DropMismatch,
+    RemixMismatch
 };
 
 enum class Resampler {
@@ -54,8 +52,8 @@ extern Resampler ResamplerDefault;
  */
 struct BsincState {
     float sf; /* Scale interpolation factor. */
-    ALuint m; /* Coefficient count. */
-    ALuint l; /* Left coefficient offset. */
+    uint m; /* Coefficient count. */
+    uint l; /* Left coefficient offset. */
     /* Filter coefficients, followed by the phase, scale, and scale-phase
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.
@@ -68,9 +66,9 @@ union InterpState {
 };
 
 using ResamplerFunc = const float*(*)(const InterpState *state, const float *RESTRICT src,
-    ALuint frac, ALuint increment, const al::span<float> dst);
+    uint frac, uint increment, const al::span<float> dst);
 
-ResamplerFunc PrepareResampler(Resampler resampler, ALuint increment, InterpState *state);
+ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state);
 
 
 enum {
@@ -83,7 +81,7 @@ enum {
 
 struct MixHrtfFilter {
     const HrirArray *Coeffs;
-    std::array<ALuint,2> Delay;
+    std::array<uint,2> Delay;
     float Gain;
     float GainStep;
 };
@@ -177,13 +175,13 @@ struct VoicePropsItem : public VoiceProps {
     DEF_NEWDEL(VoicePropsItem)
 };
 
-constexpr ALuint VoiceIsStatic{       1u<<0};
-constexpr ALuint VoiceIsCallback{     1u<<1};
-constexpr ALuint VoiceIsAmbisonic{    1u<<2}; /* Needs HF scaling for ambisonic upsampling. */
-constexpr ALuint VoiceCallbackStopped{1u<<3};
-constexpr ALuint VoiceIsFading{       1u<<4}; /* Use gain stepping for smooth transitions. */
-constexpr ALuint VoiceHasHrtf{        1u<<5};
-constexpr ALuint VoiceHasNfc{         1u<<6};
+constexpr uint VoiceIsStatic{       1u<<0};
+constexpr uint VoiceIsCallback{     1u<<1};
+constexpr uint VoiceIsAmbisonic{    1u<<2}; /* Needs HF scaling for ambisonic upsampling. */
+constexpr uint VoiceCallbackStopped{1u<<3};
+constexpr uint VoiceIsFading{       1u<<4}; /* Use gain stepping for smooth transitions. */
+constexpr uint VoiceHasHrtf{        1u<<5};
+constexpr uint VoiceHasNfc{         1u<<6};
 
 struct Voice {
     enum State {
@@ -197,7 +195,7 @@ struct Voice {
 
     VoiceProps mProps;
 
-    std::atomic<ALuint> mSourceID{0u};
+    std::atomic<uint> mSourceID{0u};
     std::atomic<State> mPlayState{Stopped};
     std::atomic<bool> mPendingChange{false};
 
@@ -205,9 +203,9 @@ struct Voice {
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue.
      */
-    std::atomic<ALuint> mPosition;
+    std::atomic<uint> mPosition;
     /** Fractional (fixed-point) offset to the next sample. */
-    std::atomic<ALuint> mPositionFrac;
+    std::atomic<uint> mPositionFrac;
 
     /* Current buffer queue item being played. */
     std::atomic<BufferlistItem*> mCurrentBuffer;
@@ -219,21 +217,21 @@ struct Voice {
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
-    ALuint mFrequency;
-    ALuint mSampleSize;
+    uint mFrequency;
+    uint mSampleSize;
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;
-    ALuint mAmbiOrder;
+    uint mAmbiOrder;
 
     /** Current target parameters used for mixing. */
-    ALuint mStep{0};
+    uint mStep{0};
 
     ResamplerFunc mResampler;
 
     InterpState mResampleState;
 
-    ALuint mFlags{};
-    ALuint mNumCallbackSamples{0};
+    uint mFlags{};
+    uint mNumCallbackSamples{0};
 
     struct TargetData {
         int FilterType;
@@ -258,7 +256,7 @@ struct Voice {
     ~Voice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
     Voice& operator=(const Voice&) = delete;
 
-    void mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo);
+    void mix(const State vstate, ALCcontext *Context, const uint SamplesToDo);
 
     DEF_NEWDEL(Voice)
 };

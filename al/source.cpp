@@ -819,6 +819,51 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 }
 
 
+al::optional<SpatializeMode> SpatializeModeFromEnum(ALenum mode)
+{
+    switch(mode)
+    {
+    case AL_FALSE: return al::make_optional(SpatializeMode::Off);
+    case AL_TRUE: return al::make_optional(SpatializeMode::On);
+    case AL_AUTO_SOFT: return al::make_optional(SpatializeMode::Auto);
+    }
+    WARN("Unsupported spatialize mode: 0x%04x\n", mode);
+    return al::nullopt;
+}
+ALenum EnumFromSpatializeMode(SpatializeMode mode)
+{
+    switch(mode)
+    {
+    case SpatializeMode::Off: return AL_FALSE;
+    case SpatializeMode::On: return AL_TRUE;
+    case SpatializeMode::Auto: return AL_AUTO_SOFT;
+    }
+    throw std::runtime_error{"Invalid SpatializeMode: "+std::to_string(int(mode))};
+}
+
+al::optional<DirectMode> DirectModeFromEnum(ALenum mode)
+{
+    switch(mode)
+    {
+    case AL_FALSE: return al::make_optional(DirectMode::Off);
+    case AL_DROP_UNMATCHED_SOFT: return al::make_optional(DirectMode::DropMismatch);
+    case AL_REMIX_UNMATCHED_SOFT: return al::make_optional(DirectMode::RemixMismatch);
+    }
+    WARN("Unsupported direct mode: 0x%04x\n", mode);
+    return al::nullopt;
+}
+ALenum EnumFromDirectMode(DirectMode mode)
+{
+    switch(mode)
+    {
+    case DirectMode::Off: return AL_FALSE;
+    case DirectMode::DropMismatch: return AL_DROP_UNMATCHED_SOFT;
+    case DirectMode::RemixMismatch: return AL_REMIX_UNMATCHED_SOFT;
+    }
+    throw std::runtime_error{"Invalid DirectMode: "+std::to_string(int(mode))};
+}
+
+
 enum SourceProp : ALenum {
     srcPitch = AL_PITCH,
     srcGain = AL_GAIN,
@@ -1431,11 +1476,13 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DIRECT_CHANNELS_SOFT:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] == AL_FALSE || values[0] == AL_DROP_UNMATCHED_SOFT /* aka AL_TRUE */
-            || values[0] == AL_REMIX_UNMATCHED_SOFT);
-
-        Source->DirectChannels = static_cast<DirectMode>(values[0]);
-        return UpdateSourceProps(Source, Context);
+        if(auto mode = DirectModeFromEnum(values[0]))
+        {
+            Source->DirectChannels = *mode;
+            return UpdateSourceProps(Source, Context);
+        }
+        Context->setError(AL_INVALID_VALUE, "Unsupported AL_DIRECT_CHANNELS_SOFT: 0x%04x\n",
+            values[0]);
 
     case AL_DISTANCE_MODEL:
         CHECKSIZE(values, 1);
@@ -1458,11 +1505,14 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_SOURCE_SPATIALIZE_SOFT:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] >= AL_FALSE && values[0] <= AL_AUTO_SOFT);
-
-        Source->mSpatialize = static_cast<SpatializeMode>(values[0]);
-        return UpdateSourceProps(Source, Context);
-
+        if(auto mode = SpatializeModeFromEnum(values[0]))
+        {
+            Source->mSpatialize = *mode;
+            return UpdateSourceProps(Source, Context);
+        }
+        Context->setError(AL_INVALID_VALUE, "Unsupported AL_SOURCE_SPATIALIZE_SOFT: 0x%04x\n",
+            values[0]);
+        return false;
 
     case AL_AUXILIARY_SEND_FILTER:
         CHECKSIZE(values, 3);
@@ -1982,7 +2032,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DIRECT_CHANNELS_SOFT:
         CHECKSIZE(values, 1);
-        values[0] = static_cast<int>(Source->DirectChannels);
+        values[0] = EnumFromDirectMode(Source->DirectChannels);
         return true;
 
     case AL_DISTANCE_MODEL:
@@ -1997,7 +2047,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_SOURCE_SPATIALIZE_SOFT:
         CHECKSIZE(values, 1);
-        values[0] = static_cast<int>(Source->mSpatialize);
+        values[0] = EnumFromSpatializeMode(Source->mSpatialize);
         return true;
 
     /* 1x float/double */

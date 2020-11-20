@@ -58,6 +58,7 @@
 #include "AL/efx.h"
 
 #include "al/auxeffectslot.h"
+#include "al/buffer.h"
 #include "al/effect.h"
 #include "al/event.h"
 #include "al/filter.h"

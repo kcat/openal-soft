@@ -184,7 +184,7 @@ void aluInitMixer()
 
 namespace {
 
-void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
+void SendSourceStoppedEvent(ALCcontext *context, uint id)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
@@ -445,7 +445,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
 
 } // namespace
 
-void Voice::mix(const State vstate, ALCcontext *Context, const ALuint SamplesToDo)
+void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
 {
     static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
 

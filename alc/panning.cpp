@@ -680,41 +680,44 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
 
 void InitHrtfPanning(ALCdevice *device)
 {
-    constexpr float PI{al::MathDefs<float>::Pi()};
-    constexpr float PI_2{PI / 2.0f};
-    constexpr float PI_4{PI_2 / 2.0f};
-    constexpr float PI3_4{PI_4 * 3.0f};
-    static const float CornerElev{static_cast<float>(std::atan2(1.0, std::sqrt(2.0)))};
+    constexpr float Deg180{al::MathDefs<float>::Pi()};
+    constexpr float Deg_90{Deg180 / 2.0f /* 90 degrees*/};
+    constexpr float Deg_45{Deg_90 / 2.0f /* 45 degrees*/};
+    constexpr float Deg135{Deg_45 * 3.0f /*135 degrees*/};
+    constexpr float Deg_35{6.154797086e-01f /* 35~ 36 degrees*/};
+    constexpr float Deg_69{1.205932499e+00f /* 69~ 70 degrees*/};
+    constexpr float Deg111{1.935660155e+00f /*110~111 degrees*/};
+    constexpr float Deg_21{3.648638281e-01f /* 20~ 21 degrees*/};
     static const AngularPoint AmbiPoints1O[]{
-        { EvRadians{ CornerElev}, AzRadians{ -PI_4} },
-        { EvRadians{ CornerElev}, AzRadians{-PI3_4} },
-        { EvRadians{ CornerElev}, AzRadians{  PI_4} },
-        { EvRadians{ CornerElev}, AzRadians{ PI3_4} },
-        { EvRadians{-CornerElev}, AzRadians{ -PI_4} },
-        { EvRadians{-CornerElev}, AzRadians{-PI3_4} },
-        { EvRadians{-CornerElev}, AzRadians{  PI_4} },
-        { EvRadians{-CornerElev}, AzRadians{ PI3_4} },
+        { EvRadians{ Deg_35}, AzRadians{-Deg_45} },
+        { EvRadians{ Deg_35}, AzRadians{-Deg135} },
+        { EvRadians{ Deg_35}, AzRadians{ Deg_45} },
+        { EvRadians{ Deg_35}, AzRadians{ Deg135} },
+        { EvRadians{-Deg_35}, AzRadians{-Deg_45} },
+        { EvRadians{-Deg_35}, AzRadians{-Deg135} },
+        { EvRadians{-Deg_35}, AzRadians{ Deg_45} },
+        { EvRadians{-Deg_35}, AzRadians{ Deg135} },
     }, AmbiPoints2O[]{
-        { EvRadians{      -CornerElev}, AzRadians{            -PI_4} },
-        { EvRadians{      -CornerElev}, AzRadians{           -PI3_4} },
-        { EvRadians{       CornerElev}, AzRadians{           -PI3_4} },
-        { EvRadians{       CornerElev}, AzRadians{            PI3_4} },
-        { EvRadians{       CornerElev}, AzRadians{             PI_4} },
-        { EvRadians{      -CornerElev}, AzRadians{             PI_4} },
-        { EvRadians{      -CornerElev}, AzRadians{            PI3_4} },
-        { EvRadians{       CornerElev}, AzRadians{            -PI_4} },
-        { EvRadians{-1.205932499e+00f}, AzRadians{            -PI_2} },
-        { EvRadians{ 1.205932499e+00f}, AzRadians{             PI_2} },
-        { EvRadians{-1.205932499e+00f}, AzRadians{             PI_2} },
-        { EvRadians{ 1.205932499e+00f}, AzRadians{            -PI_2} },
-        { EvRadians{             0.0f}, AzRadians{-1.205932499e+00f} },
-        { EvRadians{             0.0f}, AzRadians{-1.935660155e+00f} },
-        { EvRadians{             0.0f}, AzRadians{ 1.205932499e+00f} },
-        { EvRadians{             0.0f}, AzRadians{ 1.935660155e+00f} },
-        { EvRadians{-3.648638281e-01f}, AzRadians{               PI} },
-        { EvRadians{ 3.648638281e-01f}, AzRadians{               PI} },
-        { EvRadians{ 3.648638281e-01f}, AzRadians{             0.0f} },
-        { EvRadians{-3.648638281e-01f}, AzRadians{             0.0f} },
+        { EvRadians{-Deg_35}, AzRadians{-Deg_45} },
+        { EvRadians{-Deg_35}, AzRadians{-Deg135} },
+        { EvRadians{ Deg_35}, AzRadians{-Deg135} },
+        { EvRadians{ Deg_35}, AzRadians{ Deg135} },
+        { EvRadians{ Deg_35}, AzRadians{ Deg_45} },
+        { EvRadians{-Deg_35}, AzRadians{ Deg_45} },
+        { EvRadians{-Deg_35}, AzRadians{ Deg135} },
+        { EvRadians{ Deg_35}, AzRadians{-Deg_45} },
+        { EvRadians{-Deg_69}, AzRadians{-Deg_90} },
+        { EvRadians{ Deg_69}, AzRadians{ Deg_90} },
+        { EvRadians{-Deg_69}, AzRadians{ Deg_90} },
+        { EvRadians{ Deg_69}, AzRadians{-Deg_90} },
+        { EvRadians{   0.0f}, AzRadians{-Deg_69} },
+        { EvRadians{   0.0f}, AzRadians{-Deg111} },
+        { EvRadians{   0.0f}, AzRadians{ Deg_69} },
+        { EvRadians{   0.0f}, AzRadians{ Deg111} },
+        { EvRadians{-Deg_21}, AzRadians{ Deg180} },
+        { EvRadians{ Deg_21}, AzRadians{ Deg180} },
+        { EvRadians{ Deg_21}, AzRadians{   0.0f} },
+        { EvRadians{-Deg_21}, AzRadians{   0.0f} },
     };
     static const float AmbiMatrix1O[][MAX_AMBI_CHANNELS]{
         { 1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f },
@@ -1101,15 +1104,15 @@ std::array<float,MAX_AMBI_CHANNELS> CalcAmbiCoeffs(const float y, const float z,
     coeffs[2]  = 1.732050808f * z; /* ACN 2 = sqrt(3) * Z */
     coeffs[3]  = 1.732050808f * x; /* ACN 3 = sqrt(3) * X */
     /* Second-order */
-    const float xx{x*x}, yy{y*y}, zz{z*z};
-    coeffs[4]  = 3.872983346f * x * y;            /* ACN 4 = sqrt(15) * X * Y */
-    coeffs[5]  = 3.872983346f * y * z;            /* ACN 5 = sqrt(15) * Y * Z */
+    const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
+    coeffs[4]  = 3.872983346f * xy;               /* ACN 4 = sqrt(15) * X * Y */
+    coeffs[5]  = 3.872983346f * yz;               /* ACN 5 = sqrt(15) * Y * Z */
     coeffs[6]  = 1.118033989f * (3.0f*zz - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
-    coeffs[7]  = 3.872983346f * x * z;            /* ACN 7 = sqrt(15) * X * Z */
+    coeffs[7]  = 3.872983346f * xz;               /* ACN 7 = sqrt(15) * X * Z */
     coeffs[8]  = 1.936491673f * (xx - yy);        /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
     /* Third-order */
     coeffs[9]  =  2.091650066f * y * (3.0f*xx - yy);   /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
-    coeffs[10] = 10.246950766f * z * x * y;            /* ACN 10 = sqrt(105) * Z * X * Y */
+    coeffs[10] = 10.246950766f * z * xy;               /* ACN 10 = sqrt(105) * Z * X * Y */
     coeffs[11] =  1.620185175f * y * (5.0f*zz - 1.0f); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
     coeffs[12] =  1.322875656f * z * (5.0f*zz - 3.0f); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
     coeffs[13] =  1.620185175f * x * (5.0f*zz - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */

@@ -38,9 +38,7 @@ enum UserFmtChannels : unsigned char {
 };
 
 
-struct ALbuffer {
-    BufferStorage mBuffer;
-
+struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
     UserFmtType OriginalType{};
@@ -60,10 +58,6 @@ struct ALbuffer {
 
     /* Self ID */
     ALuint id{0};
-
-    inline ALuint bytesFromFmt() const noexcept { return mBuffer.bytesFromFmt(); }
-    inline ALuint channelsFromFmt() const noexcept { return mBuffer.channelsFromFmt(); }
-    inline ALuint frameSizeFromFmt() const noexcept { return mBuffer.frameSizeFromFmt(); }
 
     DISABLE_ALLOC()
 };

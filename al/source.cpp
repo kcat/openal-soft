@@ -173,17 +173,6 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     }
 }
 
-inline ALbuffer *BufferFromStorage(BufferStorage *storage)
-{
-    constexpr auto offset = offsetof(ALbuffer, mBuffer);
-    return reinterpret_cast<ALbuffer*>(reinterpret_cast<char*>(storage) - offset);
-}
-inline const ALbuffer *BufferFromStorage(const BufferStorage *storage)
-{
-    constexpr auto offset = offsetof(ALbuffer, mBuffer);
-    return reinterpret_cast<const ALbuffer*>(reinterpret_cast<const char*>(storage) - offset);
-}
-
 /* GetSourceSampleOffset
  *
  * Gets the current read offset for the given Source, in 32.32 fixed-point
@@ -305,10 +294,11 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         return 0.0;
 
     const BufferlistItem *BufferList{Source->queue};
-    const BufferStorage *BufferFmt{nullptr};
+    const ALbuffer *BufferFmt{nullptr};
     while(BufferList)
     {
-        if(!BufferFmt) BufferFmt = BufferList->mBuffer;
+        if(!BufferFmt)
+            BufferFmt = static_cast<const ALbuffer*>(BufferList->mBuffer);
         if(BufferList == Current) break;
 
         readPos += BufferList->mSampleLen;
@@ -317,7 +307,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     }
     while(BufferList && !BufferFmt)
     {
-        BufferFmt = BufferList->mBuffer;
+        BufferFmt = static_cast<const ALbuffer*>(BufferList->mBuffer);
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
     assert(BufferFmt != nullptr);
@@ -334,28 +324,27 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         break;
 
     case AL_BYTE_OFFSET:
-        const ALbuffer *origbuf{BufferFromStorage(BufferFmt)};
-        if(origbuf->OriginalType == UserFmtIMA4)
+        if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            ALuint FrameBlockSize{origbuf->OriginalAlign};
-            ALuint align{(origbuf->OriginalAlign-1)/2 + 4};
-            ALuint BlockSize{align * origbuf->channelsFromFmt()};
+            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
             offset = static_cast<double>(readPos / FrameBlockSize * BlockSize);
         }
-        else if(origbuf->OriginalType == UserFmtMSADPCM)
+        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
-            ALuint FrameBlockSize{origbuf->OriginalAlign};
+            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
             ALuint align{(FrameBlockSize-2)/2 + 7};
-            ALuint BlockSize{align * origbuf->channelsFromFmt()};
+            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
             offset = static_cast<double>(readPos / FrameBlockSize * BlockSize);
         }
         else
         {
-            const ALuint FrameSize{origbuf->frameSizeFromFmt()};
+            const ALuint FrameSize{BufferFmt->frameSizeFromFmt()};
             offset = static_cast<double>(readPos * FrameSize);
         }
         break;
@@ -379,17 +368,16 @@ struct VoicePos {
 al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum OffsetType,
     double Offset)
 {
-    al::optional<VoicePos> ret;
-
     /* Find the first valid Buffer in the Queue */
-    const BufferStorage *BufferFmt{nullptr};
+    const ALbuffer *BufferFmt{nullptr};
     while(BufferList)
     {
-        if((BufferFmt=BufferList->mBuffer) != nullptr) break;
+        BufferFmt = static_cast<const ALbuffer*>(BufferList->mBuffer);
+        if(BufferFmt != nullptr) break;
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
     if(!BufferList)
-        return ret;
+        return al::nullopt;
 
     /* Get sample frame offset */
     ALuint offset{0u}, frac{0u};
@@ -410,19 +398,18 @@ al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum Offset
 
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
-        const ALbuffer *origbuf{BufferFromStorage(BufferFmt)};
         offset = static_cast<ALuint>(Offset);
-        if(origbuf->OriginalType == UserFmtIMA4)
+        if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            const ALuint align{(origbuf->OriginalAlign-1)/2 + 4};
-            offset /= align * origbuf->channelsFromFmt();
-            offset *= origbuf->OriginalAlign;
+            const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            offset /= align * BufferFmt->channelsFromFmt();
+            offset *= BufferFmt->OriginalAlign;
         }
-        else if(origbuf->OriginalType == UserFmtMSADPCM)
+        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
-            const ALuint align{(origbuf->OriginalAlign-2)/2 + 7};
-            offset /= align * origbuf->channelsFromFmt();
-            offset *= origbuf->OriginalAlign;
+            const ALuint align{(BufferFmt->OriginalAlign-2)/2 + 7};
+            offset /= align * BufferFmt->channelsFromFmt();
+            offset *= BufferFmt->OriginalAlign;
         }
         else
             offset /= BufferFmt->frameSizeFromFmt();
@@ -437,8 +424,7 @@ al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum Offset
         if(BufferList->mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            ret = {offset-totalBufferLen, frac, BufferList};
-            return ret;
+            return al::make_optional(VoicePos{offset-totalBufferLen, frac, BufferList});
         }
         totalBufferLen += BufferList->mSampleLen;
 
@@ -446,7 +432,7 @@ al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum Offset
     }
 
     /* Offset is out of range of the queue */
-    return ret;
+    return al::nullopt;
 }
 
 
@@ -1375,14 +1361,14 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting non-persistently mapped buffer %u", buffer->id);
-            if(buffer->mBuffer.mCallback && ReadRef(buffer->ref) != 0)
+            if(buffer->mCallback && ReadRef(buffer->ref) != 0)
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting already-set callback buffer %u", buffer->id);
 
             /* Add the selected buffer to a one-item queue */
             auto newlist = new BufferlistItem{};
-            newlist->mSampleLen = buffer->mBuffer.mSampleLen;
-            newlist->mBuffer = &buffer->mBuffer;
+            newlist->mSampleLen = buffer->mSampleLen;
+            newlist->mBuffer = buffer;
             IncrementRef(buffer->ref);
 
             /* Source is now Static */
@@ -1399,11 +1385,11 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         /* Delete all elements in the previous queue */
         while(oldlist != nullptr)
         {
-            std::unique_ptr<BufferlistItem> temp{oldlist};
-            oldlist = temp->mNext.load(std::memory_order_relaxed);
+            std::unique_ptr<BufferlistItem> head{oldlist};
+            oldlist = head->mNext.load(std::memory_order_relaxed);
 
-            if(BufferStorage *buffer{temp->mBuffer})
-                DecrementRef(BufferFromStorage(buffer)->ref);
+            if(auto *buffer{static_cast<ALbuffer*>(head->mBuffer)})
+                DecrementRef(buffer->ref);
         }
         return true;
 
@@ -1952,11 +1938,9 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_BUFFER:
         CHECKSIZE(values, 1);
         {
-            BufferlistItem *BufferList{nullptr};
-            if(Source->SourceType == AL_STATIC) BufferList = Source->queue;
-            BufferStorage *buffer{nullptr};
-            if(BufferList) buffer = BufferList->mBuffer;
-            values[0] = buffer ? static_cast<int>(BufferFromStorage(buffer)->id) : 0;
+            BufferlistItem *BufferList{(Source->SourceType==AL_STATIC) ? Source->queue : nullptr};
+            ALbuffer *buffer{BufferList ? static_cast<ALbuffer*>(BufferList->mBuffer) : nullptr};
+            values[0] = buffer ? static_cast<int>(buffer->id) : 0;
         }
         return true;
 
@@ -3245,11 +3229,11 @@ START_API_FUNC
 
     /* Check for a valid Buffer, for its frequency and format */
     ALCdevice *device{context->mDevice.get()};
-    BufferStorage *BufferFmt{nullptr};
+    ALbuffer *BufferFmt{nullptr};
     BufferlistItem *BufferList{source->queue};
     while(BufferList && !BufferFmt)
     {
-        BufferFmt = BufferList->mBuffer;
+        BufferFmt = static_cast<ALbuffer*>(BufferList->mBuffer);
         BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
 
@@ -3265,7 +3249,7 @@ START_API_FUNC
             context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
             goto buffer_error;
         }
-        if(buffer && buffer->mBuffer.mCallback)
+        if(buffer && buffer->mCallback)
         {
             context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u", buffers[i]);
             goto buffer_error;
@@ -3283,8 +3267,8 @@ START_API_FUNC
             BufferList = item;
         }
         BufferList->mNext.store(nullptr, std::memory_order_relaxed);
-        BufferList->mSampleLen = buffer ? buffer->mBuffer.mSampleLen : 0;
-        BufferList->mBuffer = buffer ? &buffer->mBuffer : nullptr;
+        BufferList->mSampleLen = buffer ? buffer->mSampleLen : 0;
+        BufferList->mBuffer = buffer;
         if(!buffer) continue;
 
         IncrementRef(buffer->ref);
@@ -3297,18 +3281,18 @@ START_API_FUNC
         }
 
         if(BufferFmt == nullptr)
-            BufferFmt = buffer ? &buffer->mBuffer : nullptr;
+            BufferFmt = buffer;
         else
         {
-            fmt_mismatch |= BufferFmt->mSampleRate != buffer->mBuffer.mSampleRate;
-            fmt_mismatch |= BufferFmt->mChannels != buffer->mBuffer.mChannels;
+            fmt_mismatch |= BufferFmt->mSampleRate != buffer->mSampleRate;
+            fmt_mismatch |= BufferFmt->mChannels != buffer->mChannels;
             if(BufferFmt->isBFormat())
             {
-                fmt_mismatch |= BufferFmt->mAmbiLayout != buffer->mBuffer.mAmbiLayout;
-                fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mBuffer.mAmbiScaling;
+                fmt_mismatch |= BufferFmt->mAmbiLayout != buffer->mAmbiLayout;
+                fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mAmbiScaling;
             }
-            fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mBuffer.mAmbiOrder;
-            fmt_mismatch |= BufferFromStorage(BufferFmt)->OriginalType != buffer->OriginalType;
+            fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
+            fmt_mismatch |= BufferFmt->OriginalType != buffer->OriginalType;
         }
         if(fmt_mismatch)
         {
@@ -3321,8 +3305,8 @@ START_API_FUNC
             {
                 std::unique_ptr<BufferlistItem> head{BufferListStart};
                 BufferListStart = head->mNext.load(std::memory_order_relaxed);
-                if(BufferStorage *buf{head->mBuffer})
-                    DecrementRef(BufferFromStorage(buf)->ref);
+                if(auto *buf{static_cast<ALbuffer*>(head->mBuffer)})
+                    DecrementRef(buf->ref);
             }
             return;
         }
@@ -3398,11 +3382,10 @@ START_API_FUNC
         std::unique_ptr<BufferlistItem> head{source->queue};
         source->queue = head->mNext.load(std::memory_order_relaxed);
 
-        if(BufferStorage *buffer{head->mBuffer})
+        if(auto *buffer{static_cast<ALbuffer*>(head->mBuffer)})
         {
-            ALbuffer *origbuf{BufferFromStorage(buffer)};
-            *(buffers++) = origbuf->id;
-            DecrementRef(origbuf->ref);
+            *(buffers++) = buffer->id;
+            DecrementRef(buffer->ref);
         }
         else
             *(buffers++) = 0;
@@ -3438,8 +3421,8 @@ ALsource::~ALsource()
     {
         std::unique_ptr<BufferlistItem> head{BufferList};
         BufferList = head->mNext.load(std::memory_order_relaxed);
-        if(BufferStorage *buffer{head->mBuffer})
-            DecrementRef(BufferFromStorage(buffer)->ref);
+        if(auto *buffer{static_cast<ALbuffer*>(head->mBuffer)})
+            DecrementRef(buffer->ref);
     }
     queue = nullptr;
 

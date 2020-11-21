@@ -583,7 +583,7 @@ START_API_FUNC
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
                 if(!buffer) SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid buffer ID");
-                if(buffer->mBuffer.mCallback)
+                if(buffer->mCallback)
                     SETERR_RETURN(context, AL_INVALID_OPERATION,,
                         "Callback buffer not valid for effects");
 
@@ -596,7 +596,7 @@ START_API_FUNC
 
             FPUCtl mixer_mode{};
             auto *state = slot->Effect.State.get();
-            state->setBuffer(device, buffer ? &buffer->mBuffer : nullptr);
+            state->setBuffer(device, buffer);
         }
         break;
 
@@ -878,7 +878,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
             FPUCtl mixer_mode{};
             State->deviceUpdate(Device);
             if(Buffer)
-                State->setBuffer(Device, &Buffer->mBuffer);
+                State->setBuffer(Device, Buffer);
         }
 
         if(!effect)

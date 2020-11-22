@@ -1726,31 +1726,32 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
-        ALCenum alayout{-1};
-        ALCenum ascale{-1};
-        ALCenum schans{AL_NONE};
-        ALCenum stype{AL_NONE};
-        ALCsizei attrIdx{0};
-        ALCuint aorder{0};
-        ALCuint freq{0u};
-
         ALuint numMono{device->NumMonoSources};
         ALuint numStereo{device->NumStereoSources};
         ALuint numSends{device->NumAuxSends};
 
+        al::optional<DevFmtChannels> optchans;
+        al::optional<DevFmtType> opttype;
+        al::optional<DevAmbiLayout> optlayout;
+        al::optional<DevAmbiScaling> optscale;
+
+        ALCuint aorder{0u};
+        ALCuint freq{0u};
+
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
+        size_t attrIdx{0};
         while(attrList[attrIdx])
         {
             switch(attrList[attrIdx])
             {
             case ALC_FORMAT_CHANNELS_SOFT:
-                schans = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, schans);
+                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, attrList[attrIdx + 1]);
+                optchans = DevFmtChannelsFromEnum(attrList[attrIdx + 1]);
                 break;
 
             case ALC_FORMAT_TYPE_SOFT:
-                stype = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, stype);
+                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, attrList[attrIdx + 1]);
+                opttype = DevFmtTypeFromEnum(attrList[attrIdx + 1]);
                 break;
 
             case ALC_FREQUENCY:
@@ -1759,13 +1760,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 break;
 
             case ALC_AMBISONIC_LAYOUT_SOFT:
-                alayout = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, alayout);
+                TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, attrList[attrIdx + 1]);
+                optlayout = DevAmbiLayoutFromEnum(attrList[attrIdx + 1]);
                 break;
 
             case ALC_AMBISONIC_SCALING_SOFT:
-                ascale = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, ascale);
+                TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, attrList[attrIdx + 1]);
+                optscale = DevAmbiScalingFromEnum(attrList[attrIdx + 1]);
                 break;
 
             case ALC_AMBISONIC_ORDER_SOFT:
@@ -1825,19 +1826,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         const bool loopback{device->Type == DeviceType::Loopback};
         if(loopback)
         {
-            if(!DevFmtChannelsFromEnum(schans).has_value()
-                || !DevFmtTypeFromEnum(stype).has_value())
+            if(!optchans || !opttype)
                 return ALC_INVALID_VALUE;
             if(freq < MIN_OUTPUT_RATE || freq > MAX_OUTPUT_RATE)
                 return ALC_INVALID_VALUE;
-            if(schans == ALC_BFORMAT3D_SOFT)
+            if(*optchans == DevFmtAmbi3D)
             {
-                if(!DevAmbiLayoutFromEnum(alayout).has_value()
-                    || !DevAmbiScalingFromEnum(ascale).has_value())
+                if(!optlayout || !optscale)
                     return ALC_INVALID_VALUE;
                 if(aorder < 1 || aorder > MAX_AMBI_ORDER)
                     return ALC_INVALID_VALUE;
-                if((alayout == ALC_FUMA_SOFT || ascale == ALC_FUMA_SOFT) && aorder > 3)
+                if((*optlayout == DevAmbiLayout::FuMa || *optscale == DevAmbiScaling::FuMa)
+                    && aorder > 3)
                     return ALC_INVALID_VALUE;
             }
         }
@@ -1852,7 +1852,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         UpdateClockBase(device);
 
         const char *devname{nullptr};
-        if(!loopback)
+        if(loopback)
+        {
+            device->Frequency = freq;
+            device->FmtChans = *optchans;
+            device->FmtType = *opttype;
+            if(device->FmtChans == DevFmtAmbi3D)
+            {
+                device->mAmbiOrder = aorder;
+                device->mAmbiLayout = *optlayout;
+                device->mAmbiScale = *optscale;
+            }
+        }
+        else
         {
             devname = device->DeviceName.c_str();
 
@@ -1882,18 +1894,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 device->BufferSize = device->UpdateSize * clampu(*peropt, 2, 16);
             else
                 device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
-        }
-        else
-        {
-            device->Frequency = freq;
-            device->FmtChans = DevFmtChannelsFromEnum(schans).value();
-            device->FmtType = DevFmtTypeFromEnum(stype).value();
-            if(schans == ALC_BFORMAT3D_SOFT)
-            {
-                device->mAmbiOrder = aorder;
-                device->mAmbiLayout = DevAmbiLayoutFromEnum(alayout).value();
-                device->mAmbiScale = DevAmbiScalingFromEnum(ascale).value();
-            }
         }
 
         if(numMono > INT_MAX-numStereo)

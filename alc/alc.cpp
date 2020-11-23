@@ -157,6 +157,8 @@ using namespace std::placeholders;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
 
+using voidp = void*;
+
 
 /************************************************
  * Backends
@@ -897,8 +899,8 @@ public:
         if(ALCcontext *ctx{LocalContext})
         {
             const bool result{ctx->releaseIfNoDelete()};
-            ERR("Context %p current for thread being destroyed%s!\n",
-                decltype(std::declval<void*>()){ctx}, result ? "" : ", leak detected");
+            ERR("Context %p current for thread being destroyed%s!\n", voidp{ctx},
+                result ? "" : ", leak detected");
         }
     }
 
@@ -1647,8 +1649,7 @@ void ALCcontext::allocVoices(size_t addcount)
 /** Stores the latest ALC device error. */
 static void alcSetError(ALCdevice *device, ALCenum errorCode)
 {
-    WARN("Error generated on device %p, code 0x%04x\n", decltype(std::declval<void*>()){device},
-        errorCode);
+    WARN("Error generated on device %p, code 0x%04x\n", voidp{device}, errorCode);
     if(TrapALCError)
     {
 #ifdef _WIN32
@@ -2330,7 +2331,7 @@ ALCdevice::ALCdevice(DeviceType type) : Type{type}, mContexts{&EmptyContextArray
 
 ALCdevice::~ALCdevice()
 {
-    TRACE("Freeing device %p\n", decltype(std::declval<void*>()){this});
+    TRACE("Freeing device %p\n", voidp{this});
 
     Backend = nullptr;
 
@@ -2380,7 +2381,7 @@ ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device) : mDevice{std::move(
 
 ALCcontext::~ALCcontext()
 {
-    TRACE("Freeing context %p\n", decltype(std::declval<void*>()){this});
+    TRACE("Freeing context %p\n", voidp{this});
 
     size_t count{0};
     ALcontextProps *cprops{mUpdate.exchange(nullptr, std::memory_order_relaxed)};
@@ -2541,7 +2542,7 @@ bool ALCcontext::deinit()
 {
     if(LocalContext == this)
     {
-        WARN("%p released while current on thread\n", decltype(std::declval<void*>()){this});
+        WARN("%p released while current on thread\n", voidp{this});
         ThreadContext.set(nullptr);
         release();
     }
@@ -3396,7 +3397,7 @@ START_API_FUNC
             ERR("Failed to initialize the default effect\n");
     }
 
-    TRACE("Created context %p\n", decltype(std::declval<void*>()){context.get()});
+    TRACE("Created context %p\n", voidp{context.get()});
     return context.release();
 }
 END_API_FUNC
@@ -3704,8 +3705,7 @@ START_API_FUNC
         DeviceList.emplace(iter, device.get());
     }
 
-    TRACE("Created device %p, \"%s\"\n", decltype(std::declval<void*>()){device.get()},
-        device->DeviceName.c_str());
+    TRACE("Created device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
     return device.release();
 }
 END_API_FUNC
@@ -3747,7 +3747,7 @@ START_API_FUNC
 
     for(ContextRef &context : orphanctxs)
     {
-        WARN("Releasing orphaned context %p\n", decltype(std::declval<void*>()){context.get()});
+        WARN("Releasing orphaned context %p\n", voidp{context.get()});
         context->deinit();
     }
     orphanctxs.clear();
@@ -3827,8 +3827,7 @@ START_API_FUNC
         DeviceList.emplace(iter, device.get());
     }
 
-    TRACE("Created capture device %p, \"%s\"\n", decltype(std::declval<void*>()){device.get()},
-        device->DeviceName.c_str());
+    TRACE("Created capture device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
     return device.release();
 }
 END_API_FUNC
@@ -4003,7 +4002,7 @@ START_API_FUNC
         DeviceList.emplace(iter, device.get());
     }
 
-    TRACE("Created loopback device %p\n", decltype(std::declval<void*>()){device.get()});
+    TRACE("Created loopback device %p\n", voidp{device.get()});
     return device.release();
 }
 END_API_FUNC

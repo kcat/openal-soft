@@ -612,7 +612,7 @@ ALCenum CoreAudioCapture::captureSamples(al::byte *buffer, ALCuint samples)
     {
         const void *src1{rec_vec.second.buf};
         auto src1len = static_cast<ALuint>(rec_vec.second.len);
-        got += mConverter->convert(&src1, &src1len, buffer+got, samples-got);
+        got += mConverter->convert(&src1, &src1len, buffer + got*mFrameSize, samples-got);
         total_read += rec_vec.second.len - src1len;
     }
 

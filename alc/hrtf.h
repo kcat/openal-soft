@@ -6,8 +6,6 @@
 #include <memory>
 #include <string>
 
-#include "AL/al.h"
-
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
@@ -30,28 +28,30 @@
 
 using float2 = std::array<float,2>;
 using HrirArray = std::array<float2,HRIR_LENGTH>;
-using ubyte2 = std::array<ALubyte,2>;
-
+using ubyte = unsigned char;
+using ubyte2 = std::array<ubyte,2>;
+using ushort = unsigned short;
+using uint = unsigned int;
 
 struct HrtfStore {
     RefCount mRef;
 
-    ALuint sampleRate;
-    ALuint irSize;
+    uint sampleRate;
+    uint irSize;
 
     struct Field {
         float distance;
-        ALubyte evCount;
+        ubyte evCount;
     };
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
      * field[fdCount-1] is the nearest.
      */
-    ALuint fdCount;
+    uint fdCount;
     const Field *field;
 
     struct Elevation {
-        ALushort azCount;
-        ALushort irOffset;
+        ushort azCount;
+        ushort irOffset;
     };
     Elevation *elev;
     const HrirArray *coeffs;
@@ -67,7 +67,7 @@ using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
-    std::array<ALuint,2> Delay;
+    std::array<uint,2> Delay;
     float Gain;
 };
 
@@ -91,7 +91,7 @@ struct DirectHrtfState {
     std::array<float,HRTF_DIRECT_DELAY+BUFFERSIZE> mTemp;
 
     /* HRTF filter state for dry buffer content */
-    ALuint mIrSize{0};
+    uint mIrSize{0};
     al::FlexArray<ChannelData> mChannels;
 
     DirectHrtfState(size_t numchans) : mChannels{numchans} { }
@@ -112,9 +112,9 @@ struct DirectHrtfState {
 
 
 al::vector<std::string> EnumerateHrtf(const char *devname);
-HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const ALuint devrate);
+HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const uint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
-    float spread, HrirArray &coeffs, const al::span<ALuint,2> delays);
+    float spread, HrirArray &coeffs, const al::span<uint,2> delays);
 
 #endif /* ALC_HRTF_H */

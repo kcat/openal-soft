@@ -27,6 +27,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cmath>
+
 #include "alcmain.h"
 #include "alexcpt.h"
 #include "alu.h"
@@ -553,7 +555,7 @@ void CoreAudioCapture::open(const ALCchar *name)
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
     double srateScale{double{outputFormat.mSampleRate} / mDevice->Frequency};
-    auto FrameCount64 = maxu64(static_cast<uint64_t>(mDevice->BufferSize*srateScale + 0.5),
+    auto FrameCount64 = maxu64(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
         static_cast<UInt32>(outputFormat.mSampleRate)/10);
     FrameCount64 += MAX_RESAMPLER_PADDING;
     if(FrameCount64 > std::numeric_limits<int32_t>::max())

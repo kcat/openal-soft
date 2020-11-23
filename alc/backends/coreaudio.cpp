@@ -550,13 +550,13 @@ void CoreAudioCapture::open(const ALCchar *name)
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not set input format: %u", err};
 
     /* Calculate the minimum AudioUnit output format frame count for the pre-
-     * conversion ring buffer.
+     * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
-    uint64_t FrameCount64{mDevice->UpdateSize};
-    FrameCount64 = FrameCount64*static_cast<UInt32>(outputFormat.mSampleRate) + (mDevice->Frequency-1) /
-        mDevice->Frequency;
+    double srateScale{double{outputFormat.mSampleRate} / mDevice->Frequency};
+    auto FrameCount64 = maxu64(static_cast<uint64_t>(mDevice->BufferSize*srateScale + 0.5),
+        static_cast<UInt32>(outputFormat.mSampleRate)/10);
     FrameCount64 += MAX_RESAMPLER_PADDING;
-    if(FrameCount64 > std::numeric_limits<uint32_t>::max()/2)
+    if(FrameCount64 > std::numeric_limits<int32_t>::max())
         throw al::backend_exception{ALC_INVALID_VALUE,
             "Calculated frame count is too large: %" PRIu64, FrameCount64};
 

@@ -563,7 +563,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     UInt32 outputFrameCount{};
     propertySize = sizeof(outputFrameCount);
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
-        kAudioUnitScope_Input, 0, &outputFrameCount, &propertySize);
+        kAudioUnitScope_Global, 0, &outputFrameCount, &propertySize);
     if(err != noErr || propertySize != sizeof(outputFrameCount))
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not get input frame count: %u",
             err};

@@ -85,8 +85,12 @@ CoreAudioPlayback::~CoreAudioPlayback()
 OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32,
     UInt32, AudioBufferList *ioData) noexcept
 {
-    mDevice->renderSamples(ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize/mFrameSize,
-        ioData->mBuffers[0].mNumberChannels);
+    for(size_t i{0};i < ioData->mNumberBuffers;++i)
+    {
+        auto &buffer = ioData->mBuffers[i];
+        mDevice->renderSamples(buffer.mData, buffer.mDataByteSize/mFrameSize,
+            buffer.mNumberChannels);
+    }
     return noErr;
 }
 

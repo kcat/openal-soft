@@ -3435,15 +3435,18 @@ void UpdateAllSourceProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
     auto voicelist = context->getVoicesSpan();
-    std::for_each(voicelist.begin(), voicelist.end(),
-        [context](Voice *voice) -> void
+    ALuint vidx{0u};
+    for(Voice *voice : voicelist)
+    {
+        ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
+        ALsource *source = sid ? LookupSource(context, sid) : nullptr;
+        if(source && source->VoiceIdx == vidx)
         {
-            ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
-            ALsource *source = sid ? LookupSource(context, sid) : nullptr;
-            if(source && !source->PropsClean.test_and_set(std::memory_order_acq_rel))
+            if(!source->PropsClean.test_and_set(std::memory_order_acq_rel))
                 UpdateSourceProps(source, voice, context);
         }
-    );
+        ++vidx;
+    }
 }
 
 SourceSubList::~SourceSubList()

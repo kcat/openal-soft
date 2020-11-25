@@ -20,10 +20,6 @@
 
 #include "config.h"
 
-#ifdef HAVE_SSE_INTRINSICS
-#include <emmintrin.h>
-#endif
-
 #include <cmath>
 #include <cstdlib>
 #include <array>
@@ -249,84 +245,9 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 }
 
 
-void Pshifter_setParamf(EffectProps*, ALenum param, float)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param}; }
-void Pshifter_setParamfv(EffectProps*, ALenum param, const float*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float-vector property 0x%04x",
-        param};
-}
-
-void Pshifter_setParami(EffectProps *props, ALenum param, int val)
-{
-    switch(param)
-    {
-    case AL_PITCH_SHIFTER_COARSE_TUNE:
-        if(!(val >= AL_PITCH_SHIFTER_MIN_COARSE_TUNE && val <= AL_PITCH_SHIFTER_MAX_COARSE_TUNE))
-            throw effect_exception{AL_INVALID_VALUE, "Pitch shifter coarse tune out of range"};
-        props->Pshifter.CoarseTune = val;
-        break;
-
-    case AL_PITCH_SHIFTER_FINE_TUNE:
-        if(!(val >= AL_PITCH_SHIFTER_MIN_FINE_TUNE && val <= AL_PITCH_SHIFTER_MAX_FINE_TUNE))
-            throw effect_exception{AL_INVALID_VALUE, "Pitch shifter fine tune out of range"};
-        props->Pshifter.FineTune = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
-            param};
-    }
-}
-void Pshifter_setParamiv(EffectProps *props, ALenum param, const int *vals)
-{ Pshifter_setParami(props, param, vals[0]); }
-
-void Pshifter_getParami(const EffectProps *props, ALenum param, int *val)
-{
-    switch(param)
-    {
-    case AL_PITCH_SHIFTER_COARSE_TUNE:
-        *val = props->Pshifter.CoarseTune;
-        break;
-    case AL_PITCH_SHIFTER_FINE_TUNE:
-        *val = props->Pshifter.FineTune;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x%04x",
-            param};
-    }
-}
-void Pshifter_getParamiv(const EffectProps *props, ALenum param, int *vals)
-{ Pshifter_getParami(props, param, vals); }
-
-void Pshifter_getParamf(const EffectProps*, ALenum param, float*)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param}; }
-void Pshifter_getParamfv(const EffectProps*, ALenum param, float*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float vector-property 0x%04x",
-        param};
-}
-
-DEFINE_ALEFFECT_VTABLE(Pshifter);
-
-
 struct PshifterStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
-    EffectProps getDefaultProps() const noexcept override;
-    const EffectVtable *getEffectVtable() const noexcept override { return &Pshifter_vtable; }
+    EffectState *create() override { return new PshifterState{}; }
 };
-
-EffectState *PshifterStateFactory::create()
-{ return new PshifterState{}; }
-
-EffectProps PshifterStateFactory::getDefaultProps() const noexcept
-{
-    EffectProps props{};
-    props.Pshifter.CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;
-    props.Pshifter.FineTune   = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
-    return props;
-}
 
 } // namespace
 

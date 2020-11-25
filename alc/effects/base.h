@@ -4,7 +4,6 @@
 #include <cstddef>
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
@@ -127,34 +126,6 @@ union EffectProps {
 };
 
 
-class effect_exception final : public al::base_exception {
-public:
-    [[gnu::format(printf, 3, 4)]]
-    effect_exception(ALenum code, const char *msg, ...);
-};
-
-
-struct EffectVtable {
-    void (*const setParami)(EffectProps *props, ALenum param, int val);
-    void (*const setParamiv)(EffectProps *props, ALenum param, const int *vals);
-    void (*const setParamf)(EffectProps *props, ALenum param, float val);
-    void (*const setParamfv)(EffectProps *props, ALenum param, const float *vals);
-
-    void (*const getParami)(const EffectProps *props, ALenum param, int *val);
-    void (*const getParamiv)(const EffectProps *props, ALenum param, int *vals);
-    void (*const getParamf)(const EffectProps *props, ALenum param, float *val);
-    void (*const getParamfv)(const EffectProps *props, ALenum param, float *vals);
-};
-
-#define DEFINE_ALEFFECT_VTABLE(T)           \
-const EffectVtable T##_vtable = {           \
-    T##_setParami, T##_setParamiv,          \
-    T##_setParamf, T##_setParamfv,          \
-    T##_getParami, T##_getParamiv,          \
-    T##_getParamf, T##_getParamfv,          \
-}
-
-
 struct EffectTarget {
     MixParams *Main;
     RealMixParams *RealOut;
@@ -179,8 +150,6 @@ struct EffectStateFactory {
     virtual ~EffectStateFactory() = default;
 
     virtual EffectState *create() = 0;
-    virtual EffectProps getDefaultProps() const noexcept = 0;
-    virtual const EffectVtable *getEffectVtable() const noexcept = 0;
 };
 
 

@@ -599,6 +599,21 @@ set(OPENAL_OBJS
     al/buffer.h
     al/effect.cpp
     al/effect.h
+    al/effects/autowah.cpp
+    al/effects/chorus.cpp
+    al/effects/compressor.cpp
+    al/effects/convolution.cpp
+    al/effects/dedicated.cpp
+    al/effects/distortion.cpp
+    al/effects/echo.cpp
+    al/effects/effects.h
+    al/effects/equalizer.cpp
+    al/effects/fshifter.cpp
+    al/effects/modulator.cpp
+    al/effects/null.cpp
+    al/effects/pshifter.cpp
+    al/effects/reverb.cpp
+    al/effects/vmorpher.cpp
     al/error.cpp
     al/event.cpp
     al/event.h

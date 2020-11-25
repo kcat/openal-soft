@@ -65,101 +65,13 @@ void NullState::process(const size_t/*samplesToDo*/,
 }
 
 
-void NullEffect_setParami(EffectProps* /*props*/, ALenum param, int /*val*/)
-{
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x",
-            param};
-    }
-}
-void NullEffect_setParamiv(EffectProps *props, ALenum param, const int *vals)
-{
-    switch(param)
-    {
-    default:
-        NullEffect_setParami(props, param, vals[0]);
-    }
-}
-void NullEffect_setParamf(EffectProps* /*props*/, ALenum param, float /*val*/)
-{
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect float property 0x%04x",
-            param};
-    }
-}
-void NullEffect_setParamfv(EffectProps *props, ALenum param, const float *vals)
-{
-    switch(param)
-    {
-    default:
-        NullEffect_setParamf(props, param, vals[0]);
-    }
-}
-
-void NullEffect_getParami(const EffectProps* /*props*/, ALenum param, int* /*val*/)
-{
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x",
-            param};
-    }
-}
-void NullEffect_getParamiv(const EffectProps *props, ALenum param, int *vals)
-{
-    switch(param)
-    {
-    default:
-        NullEffect_getParami(props, param, vals);
-    }
-}
-void NullEffect_getParamf(const EffectProps* /*props*/, ALenum param, float* /*val*/)
-{
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect float property 0x%04x",
-            param};
-    }
-}
-void NullEffect_getParamfv(const EffectProps *props, ALenum param, float *vals)
-{
-    switch(param)
-    {
-    default:
-        NullEffect_getParamf(props, param, vals);
-    }
-}
-
-DEFINE_ALEFFECT_VTABLE(NullEffect);
-
-
 struct NullStateFactory final : public EffectStateFactory {
     EffectState *create() override;
-    EffectProps getDefaultProps() const noexcept override;
-    const EffectVtable *getEffectVtable() const noexcept override;
 };
 
 /* Creates EffectState objects of the appropriate type. */
 EffectState *NullStateFactory::create()
 { return new NullState{}; }
-
-/* Returns an ALeffectProps initialized with this effect type's default
- * property values.
- */
-EffectProps NullStateFactory::getDefaultProps() const noexcept
-{
-    EffectProps props{};
-    return props;
-}
-
-/* Returns a pointer to this effect type's global set/get vtable. */
-const EffectVtable *NullStateFactory::getEffectVtable() const noexcept
-{ return &NullEffect_vtable; }
 
 } // namespace
 

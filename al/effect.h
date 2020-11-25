@@ -5,6 +5,7 @@
 #include "AL/efx.h"
 
 #include "effects/base.h"
+#include "al/effects/effects.h"
 
 
 enum {

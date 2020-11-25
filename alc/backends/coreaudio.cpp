@@ -469,7 +469,7 @@ void CoreAudioCapture::open(const ALCchar *name)
         throw al::backend_exception{ALC_INVALID_VALUE, "Could not set capture callback: %u", err};
 
     // Disable buffer allocation for capture
-    Uint32 flag{0};
+    UInt32 flag{0};
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_ShouldAllocateBuffer,
         kAudioUnitScope_Output, 1, &flag, sizeof(flag));
     if(err != noErr)

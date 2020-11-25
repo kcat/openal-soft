@@ -218,7 +218,8 @@ ALuint SampleConverter::availableOut(ALuint srcframes) const
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
-    return static_cast<ALuint>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1, BUFFERSIZE));
+    return static_cast<ALuint>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1,
+        std::numeric_limits<int>::max()));
 }
 
 ALuint SampleConverter::convert(const void **src, ALuint *srcframes, void *dst, ALuint dstframes)

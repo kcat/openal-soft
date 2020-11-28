@@ -103,8 +103,8 @@ struct BSincTag;
 struct FastBSincTag;
 
 
-static_assert(MAX_RESAMPLER_PADDING >= BSincPointsMax, "MAX_RESAMPLER_PADDING is too small");
-static_assert(!(MAX_RESAMPLER_PADDING&1), "MAX_RESAMPLER_PADDING is not a multiple of two");
+static_assert(MaxResamplerPadding >= BSincPointsMax, "MaxResamplerPadding is too small");
+static_assert(!(MaxResamplerPadding&1), "MaxResamplerPadding is not a multiple of two");
 
 
 namespace {
@@ -1908,7 +1908,7 @@ void ALCdevice::renderSamples(void *outBuffer, const ALuint numSamples, const si
     FPUCtl mixer_mode{};
     for(ALuint written{0u};written < numSamples;)
     {
-        const ALuint samplesToDo{minu(numSamples-written, BUFFERSIZE)};
+        const ALuint samplesToDo{minu(numSamples-written, BufferLineSize)};
 
         /* Clear main mixing buffers. */
         for(FloatBufferLine &buffer : MixBuffer)

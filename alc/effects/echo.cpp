@@ -55,7 +55,7 @@ struct EchoState final : public EffectState {
     BiquadFilter mFilter;
     float mFeedGain{0.0f};
 
-    alignas(16) float mTempBuffer[2][BUFFERSIZE];
+    alignas(16) float mTempBuffer[2][BufferLineSize];
 
     void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,

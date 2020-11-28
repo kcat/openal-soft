@@ -562,12 +562,12 @@ void ReverbState::allocLines(const float frequency)
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
      * largest late tap width.  Finally, it must also be extended by the
-     * update size (BUFFERSIZE) for block processing.
+     * update size (BufferLineSize) for block processing.
      */
     float length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
         AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
         (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*multiplier};
-    totalSamples += mDelay.calcLineLength(length, totalSamples, frequency, BUFFERSIZE);
+    totalSamples += mDelay.calcLineLength(length, totalSamples, frequency, BufferLineSize);
 
     /* The early vector all-pass line. */
     length = EARLY_ALLPASS_LENGTHS.back() * multiplier;

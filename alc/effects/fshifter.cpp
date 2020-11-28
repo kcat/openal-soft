@@ -71,9 +71,9 @@ struct FshifterState final : public EffectState {
     complex_d mOutFIFO[HIL_STEP]{};
     complex_d mOutputAccum[HIL_SIZE]{};
     complex_d mAnalytic[HIL_SIZE]{};
-    complex_d mOutdata[BUFFERSIZE]{};
+    complex_d mOutdata[BufferLineSize]{};
 
-    alignas(16) float mBufferOut[BUFFERSIZE]{};
+    alignas(16) float mBufferOut[BufferLineSize]{};
 
     /* Effect gains for each output channel */
     struct {

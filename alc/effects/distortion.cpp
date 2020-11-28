@@ -43,7 +43,7 @@ struct DistortionState final : public EffectState {
     float mAttenuation{};
     float mEdgeCoeff{};
 
-    float mBuffer[2][BUFFERSIZE]{};
+    float mBuffer[2][BufferLineSize]{};
 
 
     void deviceUpdate(const ALCdevice *device) override;
@@ -101,7 +101,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
-        size_t todo{minz(BUFFERSIZE, (samplesToDo-base) * 4)};
+        size_t todo{minz(BufferLineSize, (samplesToDo-base) * 4)};
 
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.

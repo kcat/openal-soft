@@ -29,11 +29,11 @@ struct SampleConverter {
     InterpState mState{};
     ResamplerFunc mResample{};
 
-    alignas(16) float mSrcSamples[BUFFERSIZE]{};
-    alignas(16) float mDstSamples[BUFFERSIZE]{};
+    alignas(16) float mSrcSamples[BufferLineSize]{};
+    alignas(16) float mDstSamples[BufferLineSize]{};
 
     struct ChanSamples {
-        alignas(16) float PrevSamples[MAX_RESAMPLER_PADDING];
+        alignas(16) float PrevSamples[MaxResamplerPadding];
     };
     al::FlexArray<ChanSamples> mChan;
 

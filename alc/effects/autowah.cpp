@@ -52,7 +52,7 @@ struct AutowahState final : public EffectState {
     struct {
         float cos_w0;
         float alpha;
-    } mEnv[BUFFERSIZE];
+    } mEnv[BufferLineSize];
 
     struct {
         /* Effect filters' history. */
@@ -66,7 +66,7 @@ struct AutowahState final : public EffectState {
     } mChans[MAX_AMBI_CHANNELS];
 
     /* Effects buffers */
-    alignas(16) float mBufferOut[BUFFERSIZE];
+    alignas(16) float mBufferOut[BufferLineSize];
 
 
     void deviceUpdate(const ALCdevice *device) override;

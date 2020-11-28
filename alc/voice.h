@@ -242,7 +242,7 @@ struct Voice {
     std::array<TargetData,MAX_SENDS> mSend;
 
     struct ChannelData {
-        alignas(16) std::array<float,MAX_RESAMPLER_PADDING> mPrevSamples;
+        alignas(16) std::array<float,MaxResamplerPadding> mPrevSamples;
 
         float mAmbiScale;
         BandSplitter mAmbiSplitter;

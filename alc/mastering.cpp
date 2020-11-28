@@ -17,12 +17,12 @@
 #include "opthelpers.h"
 
 
-/* These structures assume BUFFERSIZE is a power of 2. */
-static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 2");
+/* These structures assume BufferLineSize is a power of 2. */
+static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not a power of 2");
 
 struct SlidingHold {
-    alignas(16) float mValues[BUFFERSIZE];
-    uint mExpiries[BUFFERSIZE];
+    alignas(16) float mValues[BufferLineSize];
+    uint mExpiries[BufferLineSize];
     uint mLowerIndex;
     uint mUpperIndex;
     uint mLength;
@@ -42,10 +42,10 @@ using namespace std::placeholders;
  */
 float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
 {
-    static constexpr uint mask{BUFFERSIZE - 1};
+    static constexpr uint mask{BufferLineSize - 1};
     const uint length{Hold->mLength};
-    float (&values)[BUFFERSIZE] = Hold->mValues;
-    uint (&expiries)[BUFFERSIZE] = Hold->mExpiries;
+    float (&values)[BufferLineSize] = Hold->mValues;
+    uint (&expiries)[BufferLineSize] = Hold->mExpiries;
     uint lowerIndex{Hold->mLowerIndex};
     uint upperIndex{Hold->mUpperIndex};
 
@@ -318,9 +318,9 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
     const float AttackTime, const float ReleaseTime)
 {
     const auto lookAhead = static_cast<uint>(
-        clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
+        clampf(std::round(LookAheadTime*SampleRate), 0.0f, BufferLineSize-1));
     const auto hold = static_cast<uint>(
-        clampf(std::round(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1));
+        clampf(std::round(HoldTime*SampleRate), 0.0f, BufferLineSize-1));
 
     size_t size{sizeof(Compressor)};
     if(lookAhead > 0)
@@ -426,7 +426,7 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
     if(mDelay)
         SignalDelay(this, SamplesToDo, OutBuffer);
 
-    const float (&sideChain)[BUFFERSIZE*2] = mSideChain;
+    const float (&sideChain)[BufferLineSize*2] = mSideChain;
     auto apply_comp = [SamplesToDo,&sideChain](FloatBufferLine &input) noexcept -> void
     {
         float *buffer{al::assume_aligned<16>(input.data())};

@@ -569,7 +569,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     double srateScale{double{outputFormat.mSampleRate} / mDevice->Frequency};
     auto FrameCount64 = maxu64(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
         static_cast<UInt32>(outputFormat.mSampleRate)/10);
-    FrameCount64 += MAX_RESAMPLER_PADDING;
+    FrameCount64 += MaxResamplerPadding;
     if(FrameCount64 > std::numeric_limits<int32_t>::max())
         throw al::backend_exception{ALC_INVALID_VALUE,
             "Calculated frame count is too large: %" PRIu64, FrameCount64};

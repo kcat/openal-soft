@@ -202,8 +202,8 @@ uint SampleConverter::availableOut(uint srcframes) const
         return 0;
     }
 
-    if(prepcount < MAX_RESAMPLER_PADDING
-        && static_cast<uint>(MAX_RESAMPLER_PADDING - prepcount) >= srcframes)
+    if(prepcount < MaxResamplerPadding
+        && static_cast<uint>(MaxResamplerPadding - prepcount) >= srcframes)
     {
         /* Not enough input samples to generate an output sample. */
         return 0;
@@ -211,7 +211,7 @@ uint SampleConverter::availableOut(uint srcframes) const
 
     auto DataSize64 = static_cast<uint64_t>(prepcount);
     DataSize64 += srcframes;
-    DataSize64 -= MAX_RESAMPLER_PADDING;
+    DataSize64 -= MaxResamplerPadding;
     DataSize64 <<= MixerFracBits;
     DataSize64 -= mFracOffset;
 
@@ -247,10 +247,10 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             mSrcPrepCount = 0;
             continue;
         }
-        uint toread{minu(NumSrcSamples, BUFFERSIZE - MAX_RESAMPLER_PADDING)};
+        const uint toread{minu(NumSrcSamples, BufferLineSize - MaxResamplerPadding)};
 
-        if(prepcount < MAX_RESAMPLER_PADDING
-            && static_cast<uint>(MAX_RESAMPLER_PADDING - prepcount) >= toread)
+        if(prepcount < MaxResamplerPadding
+            && static_cast<uint>(MaxResamplerPadding - prepcount) >= toread)
         {
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
@@ -269,13 +269,13 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         uint DataPosFrac{mFracOffset};
         auto DataSize64 = static_cast<uint64_t>(prepcount);
         DataSize64 += toread;
-        DataSize64 -= MAX_RESAMPLER_PADDING;
+        DataSize64 -= MaxResamplerPadding;
         DataSize64 <<= MixerFracBits;
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
         auto DstSize = static_cast<uint>(
-            clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE));
+            clampu64((DataSize64 + increment-1)/increment, 1, BufferLineSize));
         DstSize = minu(DstSize, dstframes-pos);
 
         for(size_t chan{0u};chan < mChan.size();chan++)
@@ -306,7 +306,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             }
 
             /* Now resample, and store the result in the output buffer. */
-            const float *ResampledData{mResample(&mState, SrcData+(MAX_RESAMPLER_PADDING>>1),
+            const float *ResampledData{mResample(&mState, SrcData+(MaxResamplerPadding>>1),
                 DataPosFrac, increment, {DstData, DstSize})};
 
             StoreSamples(DstSamples, ResampledData, mChan.size(), mDstType, DstSize);
@@ -317,7 +317,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
          */
         DataPosFrac += increment*DstSize;
         mSrcPrepCount = mini(prepcount + static_cast<int>(toread - (DataPosFrac>>MixerFracBits)),
-            MAX_RESAMPLER_PADDING);
+            MaxResamplerPadding);
         mFracOffset = DataPosFrac & MixerFracMask;
 
         /* Update the src and dst pointers in case there's still more to do. */

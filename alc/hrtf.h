@@ -88,7 +88,7 @@ struct DirectHrtfState {
         alignas(16) HrirArray mCoeffs{};
     };
 
-    std::array<float,HRTF_DIRECT_DELAY+BUFFERSIZE> mTemp;
+    std::array<float,HRTF_DIRECT_DELAY+BufferLineSize> mTemp;
 
     /* HRTF filter state for dry buffer content */
     uint mIrSize{0};

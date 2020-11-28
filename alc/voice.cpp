@@ -71,9 +71,9 @@ struct NEONTag;
 struct CopyTag;
 
 
-static_assert((BUFFERSIZE-1)/MAX_PITCH > 0, "MAX_PITCH is too large for BUFFERSIZE!");
-static_assert((INT_MAX>>MixerFracBits)/MAX_PITCH > BUFFERSIZE,
-    "MAX_PITCH and/or BUFFERSIZE are too large for MixerFracBits!");
+static_assert((BufferLineSize-1)/MAX_PITCH > 0, "MAX_PITCH is too large for BufferLineSize!");
+static_assert((INT_MAX>>MixerFracBits)/MAX_PITCH > BufferLineSize,
+    "MAX_PITCH and/or BufferLineSize are too large for MixerFracBits!");
 
 
 Resampler ResamplerDefault{Resampler::Linear};
@@ -515,9 +515,9 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             /* Calculate the last read src sample pos. */
             DataSize64 = (DataSize64*increment + DataPosFrac) >> MixerFracBits;
             /* +1 to get the src sample count, include padding. */
-            DataSize64 += 1 + MAX_RESAMPLER_PADDING;
+            DataSize64 += 1 + MaxResamplerPadding;
 
-            /* Result is guaranteed to be <= BUFFERSIZE+MAX_RESAMPLER_PADDING
+            /* Result is guaranteed to be <= BufferLineSize+MaxResamplerPadding
              * since we won't use more src samples than dst samples+padding.
              */
             SrcBufferSize = static_cast<uint>(DataSize64);
@@ -527,18 +527,18 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             uint64_t DataSize64{DstBufferSize};
             /* Calculate the end src sample pos, include padding. */
             DataSize64 = (DataSize64*increment + DataPosFrac) >> MixerFracBits;
-            DataSize64 += MAX_RESAMPLER_PADDING;
+            DataSize64 += MaxResamplerPadding;
 
-            if(DataSize64 <= BUFFERSIZE + MAX_RESAMPLER_PADDING)
+            if(DataSize64 <= BufferLineSize + MaxResamplerPadding)
                 SrcBufferSize = static_cast<uint>(DataSize64);
             else
             {
                 /* If the source size got saturated, we can't fill the desired
                  * dst size. Figure out how many samples we can actually mix.
                  */
-                SrcBufferSize = BUFFERSIZE + MAX_RESAMPLER_PADDING;
+                SrcBufferSize = BufferLineSize + MaxResamplerPadding;
 
-                DataSize64 = SrcBufferSize - MAX_RESAMPLER_PADDING;
+                DataSize64 = SrcBufferSize - MaxResamplerPadding;
                 DataSize64 = ((DataSize64<<MixerFracBits) - DataPosFrac) / increment;
                 if(DataSize64 < DstBufferSize)
                 {
@@ -555,7 +555,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             BufferStorage *buffer{BufferListItem->mBuffer};
 
             /* Exclude resampler pre-padding from the needed size. */
-            const uint toLoad{SrcBufferSize - (MAX_RESAMPLER_PADDING>>1)};
+            const uint toLoad{SrcBufferSize - (MaxResamplerPadding>>1)};
             if(toLoad > mNumCallbackSamples)
             {
                 const size_t byteOffset{mNumCallbackSamples*FrameSize};
@@ -587,11 +587,11 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             /* Load the previous samples into the source data first, then load
              * what we can from the buffer queue.
              */
-            auto srciter = std::copy_n(chandata.mPrevSamples.begin(), MAX_RESAMPLER_PADDING>>1,
+            auto srciter = std::copy_n(chandata.mPrevSamples.begin(), MaxResamplerPadding>>1,
                 SrcData.begin());
 
             if UNLIKELY(!BufferListItem)
-                srciter = std::copy(chandata.mPrevSamples.begin()+(MAX_RESAMPLER_PADDING>>1),
+                srciter = std::copy(chandata.mPrevSamples.begin()+(MaxResamplerPadding>>1),
                     chandata.mPrevSamples.end(), srciter);
             else if((mFlags&VoiceIsStatic))
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, num_chans,
@@ -620,7 +620,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
 
             /* Resample, then apply ambisonic upsampling as needed. */
             const float *ResampledData{Resample(&mResampleState,
-                &SrcData[MAX_RESAMPLER_PADDING>>1], DataPosFrac, increment,
+                &SrcData[MaxResamplerPadding>>1], DataPosFrac, increment,
                 {Device->ResampledData, DstBufferSize})};
             if((mFlags&VoiceIsAmbisonic))
             {
@@ -636,7 +636,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             }
 
             /* Now filter and mix to the appropriate outputs. */
-            float (&FilterBuf)[BUFFERSIZE] = Device->FilteredData;
+            float (&FilterBuf)[BufferLineSize] = Device->FilteredData;
             {
                 DirectParams &parms = chandata.mDryParams;
                 const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf,

@@ -14,11 +14,11 @@ struct FrontStablizer {
 
     FrontStablizer(size_t numchans) : DelayBuf{numchans} { }
 
-    alignas(16) std::array<float,BUFFERSIZE + DelayLength> Side{};
-    alignas(16) std::array<float,BUFFERSIZE + DelayLength> MidDirect{};
+    alignas(16) std::array<float,BufferLineSize + DelayLength> Side{};
+    alignas(16) std::array<float,BufferLineSize + DelayLength> MidDirect{};
     alignas(16) std::array<float,DelayLength> MidDelay{};
 
-    alignas(16) std::array<float,BUFFERSIZE + DelayLength> TempBuf{};
+    alignas(16) std::array<float,BufferLineSize + DelayLength> TempBuf{};
 
     BandSplitter MidFilter;
     alignas(16) FloatBufferLine MidLF{};

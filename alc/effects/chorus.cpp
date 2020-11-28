@@ -109,7 +109,7 @@ void ChorusState::deviceUpdate(const ALCdevice *Device)
 void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
     const EffectProps *props, const EffectTarget target)
 {
-    constexpr ALsizei mindelay{(MAX_RESAMPLER_PADDING>>1) << MixerFracBits};
+    constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
 
     switch(props->Chorus.Waveform)
     {

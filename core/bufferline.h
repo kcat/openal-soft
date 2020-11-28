@@ -7,8 +7,8 @@
  * more memory and are harder on cache, while smaller values may need more
  * iterations for mixing.
  */
-#define BUFFERSIZE 1024
+constexpr int BufferLineSize{1024};
 
-using FloatBufferLine = std::array<float,BUFFERSIZE>;
+using FloatBufferLine = std::array<float,BufferLineSize>;
 
 #endif /* CORE_BUFFERLINE_H */

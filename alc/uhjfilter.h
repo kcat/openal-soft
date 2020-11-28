@@ -3,8 +3,8 @@
 
 #include <array>
 
-#include "alcmain.h"
 #include "almalloc.h"
+#include "core/bufferline.h"
 
 
 struct Uhj2Encoder {
@@ -18,13 +18,13 @@ struct Uhj2Encoder {
     alignas(16) std::array<float,sFilterSize> mMidDelay{};
     alignas(16) std::array<float,sFilterSize> mSideDelay{};
 
-    alignas(16) std::array<float,BUFFERSIZE+sFilterSize> mMid{};
-    alignas(16) std::array<float,BUFFERSIZE+sFilterSize> mSide{};
+    alignas(16) std::array<float,BufferLineSize+sFilterSize> mMid{};
+    alignas(16) std::array<float,BufferLineSize+sFilterSize> mSide{};
 
     /* History for the FIR filter. */
     alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory{};
 
-    alignas(16) std::array<float,BUFFERSIZE + sFilterSize*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input

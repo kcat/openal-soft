@@ -44,8 +44,8 @@ struct Compressor {
     float mAttack{0.0f};
     float mRelease{0.0f};
 
-    alignas(16) float mSideChain[2*BUFFERSIZE]{};
-    alignas(16) float mCrestFactor[BUFFERSIZE]{};
+    alignas(16) float mSideChain[2*BufferLineSize]{};
+    alignas(16) float mCrestFactor[BufferLineSize]{};
 
     SlidingHold *mHold{nullptr};
     FloatBufferLine *mDelay{nullptr};

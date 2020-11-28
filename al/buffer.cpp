@@ -645,7 +645,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
         ALBuf->UnpackAmbiOrder : 0};
 
     al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, ambiorder) *
-        size_t{BUFFERSIZE + (MAX_RESAMPLER_PADDING>>1)}).swap(ALBuf->mData);
+        size_t{BufferLineSize + (MaxResamplerPadding>>1)}).swap(ALBuf->mData);
 
     ALBuf->mCallback = callback;
     ALBuf->mUserData = userptr;

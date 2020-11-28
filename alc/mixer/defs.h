@@ -23,7 +23,7 @@ constexpr int MixerFracMask{MixerFracOne - 1};
  * Note that the padding is symmetric (half at the beginning and half at the
  * end)!
  */
-#define MAX_RESAMPLER_PADDING 48
+constexpr int MaxResamplerPadding{48};
 
 
 template<typename TypeTag, typename InstTag>

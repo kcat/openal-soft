@@ -3,13 +3,12 @@
 
 #include <memory>
 
-#include "AL/al.h"
-
-/* For FloatBufferLine/BUFFERSIZE. */
-#include "alcmain.h"
 #include "almalloc.h"
+#include "core/bufferline.h"
 
 struct SlidingHold;
+
+using uint = unsigned int;
 
 
 /* General topology and basic automation was based on the following paper:
@@ -33,7 +32,7 @@ struct Compressor {
         bool Declip : 1;
     } mAuto{};
 
-    ALuint mLookAhead{0};
+    uint mLookAhead{0};
 
     float mPreGain{0.0f};
     float mPostGain{0.0f};
@@ -63,8 +62,8 @@ struct Compressor {
 
 
     ~Compressor();
-    void process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer);
-    ALsizei getLookAhead() const noexcept { return static_cast<ALsizei>(mLookAhead); }
+    void process(const uint SamplesToDo, FloatBufferLine *OutBuffer);
+    int getLookAhead() const noexcept { return static_cast<int>(mLookAhead); }
 
     DEF_PLACE_NEWDEL()
 

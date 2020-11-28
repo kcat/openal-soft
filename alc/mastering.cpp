@@ -11,8 +11,6 @@
 #include <limits>
 #include <new>
 
-#include "AL/al.h"
-
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
@@ -24,10 +22,10 @@ static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 
 
 struct SlidingHold {
     alignas(16) float mValues[BUFFERSIZE];
-    ALuint mExpiries[BUFFERSIZE];
-    ALuint mLowerIndex;
-    ALuint mUpperIndex;
-    ALuint mLength;
+    uint mExpiries[BUFFERSIZE];
+    uint mLowerIndex;
+    uint mUpperIndex;
+    uint mLength;
 };
 
 
@@ -42,14 +40,14 @@ using namespace std::placeholders;
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-float UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const float in)
+float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
 {
-    static constexpr ALuint mask{BUFFERSIZE - 1};
-    const ALuint length{Hold->mLength};
+    static constexpr uint mask{BUFFERSIZE - 1};
+    const uint length{Hold->mLength};
     float (&values)[BUFFERSIZE] = Hold->mValues;
-    ALuint (&expiries)[BUFFERSIZE] = Hold->mExpiries;
-    ALuint lowerIndex{Hold->mLowerIndex};
-    ALuint upperIndex{Hold->mUpperIndex};
+    uint (&expiries)[BUFFERSIZE] = Hold->mExpiries;
+    uint lowerIndex{Hold->mLowerIndex};
+    uint upperIndex{Hold->mUpperIndex};
 
     if(i >= expiries[upperIndex])
         upperIndex = (upperIndex + 1) & mask;
@@ -82,24 +80,24 @@ float UpdateSlidingHold(SlidingHold *Hold, const ALuint i, const float in)
     return values[upperIndex];
 }
 
-void ShiftSlidingHold(SlidingHold *Hold, const ALuint n)
+void ShiftSlidingHold(SlidingHold *Hold, const uint n)
 {
     auto exp_begin = std::begin(Hold->mExpiries) + Hold->mUpperIndex;
     auto exp_last = std::begin(Hold->mExpiries) + Hold->mLowerIndex;
     if(exp_last-exp_begin < 0)
     {
         std::transform(exp_begin, std::end(Hold->mExpiries), exp_begin,
-            std::bind(std::minus<ALuint>{}, _1, n));
+            std::bind(std::minus<>{}, _1, n));
         exp_begin = std::begin(Hold->mExpiries);
     }
-    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<ALuint>{}, _1, n));
+    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<>{}, _1, n));
 }
 
 
 /* Multichannel compression is linked via the absolute maximum of all
  * channels.
  */
-void LinkChannels(Compressor *Comp, const ALuint SamplesToDo, const FloatBufferLine *OutBuffer)
+void LinkChannels(Compressor *Comp, const uint SamplesToDo, const FloatBufferLine *OutBuffer)
 {
     const size_t numChans{Comp->mNumChans};
 
@@ -123,7 +121,7 @@ void LinkChannels(Compressor *Comp, const ALuint SamplesToDo, const FloatBufferL
  * it uses an instantaneous squared peak detector and a squared RMS detector
  * both with 200ms release times.
  */
-static void CrestDetector(Compressor *Comp, const ALuint SamplesToDo)
+static void CrestDetector(Compressor *Comp, const uint SamplesToDo)
 {
     const float a_crest{Comp->mCrestCoeff};
     float y2_peak{Comp->mLastPeakSq};
@@ -150,7 +148,7 @@ static void CrestDetector(Compressor *Comp, const ALuint SamplesToDo)
  * value of the incoming signal) and performs most of its operations in the
  * log domain.
  */
-void PeakDetector(Compressor *Comp, const ALuint SamplesToDo)
+void PeakDetector(Compressor *Comp, const uint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -164,12 +162,12 @@ void PeakDetector(Compressor *Comp, const ALuint SamplesToDo)
  * solidly detect fast transients.  This is best used when operating as a
  * limiter.
  */
-void PeakHoldDetector(Compressor *Comp, const ALuint SamplesToDo)
+void PeakHoldDetector(Compressor *Comp, const uint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
     SlidingHold *hold{Comp->mHold};
-    ALuint i{0};
+    uint i{0};
     auto detect_peak = [&i,hold](const float x_abs) -> float
     {
         const float x_G{std::log(maxf(0.000001f, x_abs))};
@@ -186,14 +184,14 @@ void PeakHoldDetector(Compressor *Comp, const ALuint SamplesToDo)
  * to knee width, attack/release times, make-up/post gain, and clipping
  * reduction.
  */
-void GainCompressor(Compressor *Comp, const ALuint SamplesToDo)
+void GainCompressor(Compressor *Comp, const uint SamplesToDo)
 {
     const bool autoKnee{Comp->mAuto.Knee};
     const bool autoAttack{Comp->mAuto.Attack};
     const bool autoRelease{Comp->mAuto.Release};
     const bool autoPostGain{Comp->mAuto.PostGain};
     const bool autoDeclip{Comp->mAuto.Declip};
-    const ALuint lookAhead{Comp->mLookAhead};
+    const uint lookAhead{Comp->mLookAhead};
     const float threshold{Comp->mThreshold};
     const float slope{Comp->mSlope};
     const float attack{Comp->mAttack};
@@ -282,10 +280,10 @@ void GainCompressor(Compressor *Comp, const ALuint SamplesToDo)
  * reaching the offending impulse.  This is best used when operating as a
  * limiter.
  */
-void SignalDelay(Compressor *Comp, const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
+void SignalDelay(Compressor *Comp, const uint SamplesToDo, FloatBufferLine *OutBuffer)
 {
     const size_t numChans{Comp->mNumChans};
-    const ALuint lookAhead{Comp->mLookAhead};
+    const uint lookAhead{Comp->mLookAhead};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
@@ -319,9 +317,9 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
     const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
     const float AttackTime, const float ReleaseTime)
 {
-    const auto lookAhead = static_cast<ALuint>(
+    const auto lookAhead = static_cast<uint>(
         clampf(std::round(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1));
-    const auto hold = static_cast<ALuint>(
+    const auto hold = static_cast<uint>(
         clampf(std::round(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1));
 
     size_t size{sizeof(Compressor)};
@@ -338,10 +336,10 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
 
     auto Comp = std::unique_ptr<Compressor>{new (al_calloc(16, size)) Compressor{}};
     Comp->mNumChans = NumChans;
-    Comp->mAuto.Knee = AutoKnee != AL_FALSE;
-    Comp->mAuto.Attack = AutoAttack != AL_FALSE;
-    Comp->mAuto.Release = AutoRelease != AL_FALSE;
-    Comp->mAuto.PostGain = AutoPostGain != AL_FALSE;
+    Comp->mAuto.Knee = AutoKnee;
+    Comp->mAuto.Attack = AutoAttack;
+    Comp->mAuto.Release = AutoRelease;
+    Comp->mAuto.PostGain = AutoPostGain;
     Comp->mAuto.Declip = AutoPostGain && AutoDeclip;
     Comp->mLookAhead = lookAhead;
     Comp->mPreGain = std::pow(10.0f, PreGainDb / 20.0f);
@@ -367,11 +365,11 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
             Comp->mHold->mValues[0] = -std::numeric_limits<float>::infinity();
             Comp->mHold->mExpiries[0] = hold;
             Comp->mHold->mLength = hold;
-            Comp->mDelay = ::new (static_cast<void*>(Comp->mHold + 1)) FloatBufferLine[NumChans];
+            Comp->mDelay = ::new(static_cast<void*>(Comp->mHold + 1)) FloatBufferLine[NumChans];
         }
         else
         {
-            Comp->mDelay = ::new (static_cast<void*>(Comp.get() + 1)) FloatBufferLine[NumChans];
+            Comp->mDelay = ::new(static_cast<void*>(Comp.get() + 1)) FloatBufferLine[NumChans];
         }
         std::fill_n(Comp->mDelay, NumChans, FloatBufferLine{});
     }
@@ -394,7 +392,7 @@ Compressor::~Compressor()
 }
 
 
-void Compressor::process(const ALuint SamplesToDo, FloatBufferLine *OutBuffer)
+void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
 {
     const size_t numChans{mNumChans};
 

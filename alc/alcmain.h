@@ -29,6 +29,7 @@
 #include "hrtf.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
+#include "mixer/defs.h"
 #include "vector.h"
 
 class BFormatDec;
@@ -153,12 +154,6 @@ struct BFChannelConfig {
     float Scale;
     ALuint Index;
 };
-
-/* Maximum number of samples to pad on the ends of a buffer for resampling.
- * Note that the padding is symmetric (half at the beginning and half at the
- * end)!
- */
-#define MAX_RESAMPLER_PADDING 48
 
 
 struct MixParams {

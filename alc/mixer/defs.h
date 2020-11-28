@@ -1,15 +1,29 @@
 #ifndef MIXER_DEFS_H
 #define MIXER_DEFS_H
 
-#include "alcmain.h"
-#include "alspan.h"
-#include "alu.h"
-#include "hrtf.h"
+#include <array>
 
+#include "alspan.h"
+#include "core/bufferline.h"
+
+struct DirectHrtfState;
+struct HrtfFilter;
 union InterpState;
 struct MixHrtfFilter;
 
 using uint = unsigned int;
+using float2 = std::array<float,2>;
+
+
+constexpr int MixerFracBits{12};
+constexpr int MixerFracOne{1 << MixerFracBits};
+constexpr int MixerFracMask{MixerFracOne - 1};
+
+/* Maximum number of samples to pad on the ends of a buffer for resampling.
+ * Note that the padding is symmetric (half at the beginning and half at the
+ * end)!
+ */
+#define MAX_RESAMPLER_PADDING 48
 
 
 template<typename TypeTag, typename InstTag>

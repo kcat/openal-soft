@@ -12,6 +12,7 @@
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "hrtf.h"
+#include "mixer/defs.h"
 
 struct EffectSlot;
 struct BufferlistItem;

@@ -6,13 +6,15 @@
 #include <cstddef>
 #include <type_traits>
 
-#include "AL/al.h"
-
-#include "alcmain.h"
 #include "alspan.h"
+#include "ambidefs.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
 
 struct ALCcontext;
+struct ALCdevice;
 struct ALeffectslot;
+struct MixParams;
 
 
 #define MAX_PITCH  10
@@ -35,11 +37,6 @@ constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 
 /** Target gain for the reverb decay feedback reaching the decay time. */
 constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
-
-
-constexpr int MixerFracBits{12};
-constexpr int MixerFracOne{1 << MixerFracBits};
-constexpr int MixerFracMask{MixerFracOne - 1};
 
 
 inline float lerp(float val1, float val2, float mu) noexcept

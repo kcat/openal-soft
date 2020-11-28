@@ -11,7 +11,7 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
-#include "devformat.h"
+#include "core/devformat.h"
 #include "filters/splitter.h"
 
 struct AmbDecConf;

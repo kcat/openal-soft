@@ -10,7 +10,7 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
-#include "bufferline.h"
+#include "core/bufferline.h"
 #include "filters/splitter.h"
 #include "intrusive_ptr.h"
 #include "vector.h"

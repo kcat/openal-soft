@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "almalloc.h"
-#include "bufferline.h"
+#include "core/bufferline.h"
 #include "filters/splitter.h"
 
 

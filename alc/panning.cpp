@@ -51,7 +51,7 @@
 #include "ambidefs.h"
 #include "bformatdec.h"
 #include "bs2b.h"
-#include "devformat.h"
+#include "core/devformat.h"
 #include "front_stablizer.h"
 #include "hrtf.h"
 #include "logging.h"

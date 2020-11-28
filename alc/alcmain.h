@@ -23,8 +23,8 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
-#include "bufferline.h"
-#include "devformat.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
 #include "filters/splitter.h"
 #include "hrtf.h"
 #include "inprogext.h"
@@ -365,9 +365,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
 extern int RTPrioLevel;
 void SetRTPriority(void);
-
-const ALCchar *DevFmtTypeString(DevFmtType type) noexcept;
-const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept;
 
 /**
  * Returns the index for the given channel name (e.g. FrontCenter), or

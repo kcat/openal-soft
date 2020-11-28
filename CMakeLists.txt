@@ -627,6 +627,10 @@ set(OPENAL_OBJS
     al/state.cpp
 )
 set(ALC_OBJS
+    core/bufferline.h
+    core/devformat.cpp
+    core/devformat.h
+
     alc/alc.cpp
     alc/alcmain.h
     alc/alu.cpp
@@ -644,7 +648,6 @@ set(ALC_OBJS
     alc/bsinc_defs.h
     alc/bsinc_tables.cpp
     alc/bsinc_tables.h
-    alc/bufferline.h
     alc/buffer_storage.cpp
     alc/buffer_storage.h
     alc/compat.h
@@ -652,7 +655,6 @@ set(ALC_OBJS
     alc/converter.h
     alc/cpu_caps.cpp
     alc/cpu_caps.h
-    alc/devformat.h
     alc/effectslot.cpp
     alc/effectslot.h
     alc/effects/base.h

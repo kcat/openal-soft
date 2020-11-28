@@ -1,5 +1,5 @@
-#ifndef ALC_DEVFORMAT_H
-#define ALC_DEVFORMAT_H
+#ifndef CORE_DEVFORMAT_H
+#define CORE_DEVFORMAT_H
 
 #include <cstdint>
 
@@ -82,6 +82,9 @@ uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept;
 inline uint FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, uint ambiorder) noexcept
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
+const char *DevFmtTypeString(DevFmtType type) noexcept;
+const char *DevFmtChannelsString(DevFmtChannels chans) noexcept;
+
 enum class DevAmbiLayout : bool {
     FuMa,
     ACN,
@@ -97,4 +100,4 @@ enum class DevAmbiScaling : unsigned char {
     Default = SN3D
 };
 
-#endif /* ALC_DEVFORMAT_H */
+#endif /* CORE_DEVFORMAT_H */

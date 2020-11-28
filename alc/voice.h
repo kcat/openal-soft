@@ -7,7 +7,7 @@
 #include "alspan.h"
 #include "alu.h"
 #include "buffer_storage.h"
-#include "devformat.h"
+#include "core/devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"

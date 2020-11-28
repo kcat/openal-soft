@@ -10,7 +10,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
-#include "devformat.h"
+#include "core/devformat.h"
 #include "voice.h"
 
 

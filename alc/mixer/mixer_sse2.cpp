@@ -23,6 +23,7 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
+#include "alnumeric.h"
 #include "alu.h"
 #include "defs.h"
 

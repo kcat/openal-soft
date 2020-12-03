@@ -24,6 +24,7 @@
 #include <emmintrin.h>
 #include <smmintrin.h>
 
+#include "alnumeric.h"
 #include "alu.h"
 #include "defs.h"
 

@@ -4,14 +4,9 @@
 
 #include <limits>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "alcmain.h"
 #include "alnumeric.h"
-#include "alu.h"
-#include "hrtf.h"
-#include "defs.h"
 #include "bsinc_defs.h"
+#include "defs.h"
 #include "hrtfbase.h"
 
 struct NEONTag;

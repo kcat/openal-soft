@@ -4,11 +4,7 @@
 
 #include <limits>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "alcmain.h"
-
-#include "alu.h"
+#include "alnumeric.h"
 #include "bsinc_defs.h"
 #include "defs.h"
 #include "hrtfbase.h"

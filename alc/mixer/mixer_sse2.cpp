@@ -24,7 +24,6 @@
 #include <emmintrin.h>
 
 #include "alnumeric.h"
-#include "alu.h"
 #include "defs.h"
 
 struct SSE2Tag;

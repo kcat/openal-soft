@@ -29,13 +29,12 @@
 #include <algorithm>
 #include <functional>
 
-#include "al/auxeffectslot.h"
-#include "al/listener.h"
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alu.h"
+#include "alnumeric.h"
 #include "bformatdec.h"
-#include "filters/biquad.h"
+#include "core/filters/biquad.h"
+#include "effectslot.h"
 #include "vector.h"
 #include "vecmat.h"
 

@@ -1,5 +1,5 @@
-#ifndef FILTER_NFC_H
-#define FILTER_NFC_H
+#ifndef CORE_FILTERS_NFC_H
+#define CORE_FILTERS_NFC_H
 
 #include <cstddef>
 
@@ -60,4 +60,4 @@ public:
     void process4(const al::span<const float> src, float *RESTRICT dst);
 };
 
-#endif /* FILTER_NFC_H */
+#endif /* CORE_FILTERS_NFC_H */

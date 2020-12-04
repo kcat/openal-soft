@@ -8,9 +8,9 @@
 #include "alu.h"
 #include "buffer_storage.h"
 #include "core/devformat.h"
-#include "filters/biquad.h"
-#include "filters/nfc.h"
-#include "filters/splitter.h"
+#include "core/filters/biquad.h"
+#include "core/filters/nfc.h"
+#include "core/filters/splitter.h"
 #include "hrtf.h"
 #include "mixer/defs.h"
 

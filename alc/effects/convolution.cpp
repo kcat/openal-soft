@@ -8,7 +8,6 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alcomplex.h"
 #include "alcontext.h"
@@ -17,8 +16,9 @@
 #include "ambidefs.h"
 #include "bformatdec.h"
 #include "buffer_storage.h"
+#include "core/filters/splitter.h"
 #include "effects/base.h"
-#include "filters/splitter.h"
+#include "effectslot.h"
 #include "fmt_traits.h"
 #include "logging.h"
 #include "polyphase_resampler.h"

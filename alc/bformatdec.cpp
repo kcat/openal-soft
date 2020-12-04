@@ -10,12 +10,10 @@
 #include <iterator>
 #include <numeric>
 
-#include "AL/al.h"
-
 #include "almalloc.h"
 #include "alu.h"
 #include "ambdec.h"
-#include "filters/splitter.h"
+#include "core/filters/splitter.h"
 #include "front_stablizer.h"
 #include "math_defs.h"
 #include "opthelpers.h"
@@ -33,7 +31,7 @@ constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale3O{{
     5.89792205e-01f, 8.79693856e-01f, 1.00000000e+00f, 1.00000000e+00f
 }};
 
-inline auto GetDecoderHFScales(ALuint order) noexcept -> const std::array<float,MAX_AMBI_ORDER+1>&
+inline auto GetDecoderHFScales(uint order) noexcept -> const std::array<float,MAX_AMBI_ORDER+1>&
 {
     if(order >= 3) return Ambi3DDecoderHFScale3O;
     if(order == 2) return Ambi3DDecoderHFScale2O;
@@ -52,7 +50,7 @@ inline auto GetAmbiScales(AmbDecScale scaletype) noexcept
 
 
 BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const size_t inchans,
-    const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS],
+    const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
     std::unique_ptr<FrontStablizer> stablizer)
     : mStablizer{std::move(stablizer)}, mDualBand{allow_2band && (conf->FreqBands == 2)}
     , mChannelDec{inchans}
@@ -269,7 +267,7 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
 }
 
 
-auto BFormatDec::GetHFOrderScales(const ALuint in_order, const ALuint out_order) noexcept
+auto BFormatDec::GetHFOrderScales(const uint in_order, const uint out_order) noexcept
     -> std::array<float,MAX_AMBI_ORDER+1>
 {
     std::array<float,MAX_AMBI_ORDER+1> ret{};
@@ -286,7 +284,7 @@ auto BFormatDec::GetHFOrderScales(const ALuint in_order, const ALuint out_order)
 }
 
 std::unique_ptr<BFormatDec> BFormatDec::Create(const AmbDecConf *conf, const bool allow_2band,
-    const size_t inchans, const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS],
+    const size_t inchans, const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
     std::unique_ptr<FrontStablizer> stablizer)
 {
     return std::unique_ptr<BFormatDec>{new(FamCount(inchans))

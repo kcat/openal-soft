@@ -47,7 +47,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
-#include "filters/splitter.h"
+#include "core/filters/splitter.h"
 #include "logging.h"
 #include "math_defs.h"
 #include "opthelpers.h"

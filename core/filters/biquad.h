@@ -1,5 +1,5 @@
-#ifndef FILTERS_BIQUAD_H
-#define FILTERS_BIQUAD_H
+#ifndef CORE_FILTERS_BIQUAD_H
+#define CORE_FILTERS_BIQUAD_H
 
 #include <algorithm>
 #include <cmath>
@@ -141,4 +141,4 @@ struct DualBiquadR {
 using BiquadFilter = BiquadFilterR<float>;
 using DualBiquad = DualBiquadR<float>;
 
-#endif /* FILTERS_BIQUAD_H */
+#endif /* CORE_FILTERS_BIQUAD_H */

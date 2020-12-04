@@ -5,14 +5,12 @@
 #include <cstddef>
 #include <memory>
 
-#include "AL/al.h"
-
-#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
+#include "core/bufferline.h"
 #include "core/devformat.h"
-#include "filters/splitter.h"
+#include "core/filters/splitter.h"
 
 struct AmbDecConf;
 struct FrontStablizer;
@@ -44,7 +42,7 @@ class BFormatDec {
 
 public:
     BFormatDec(const AmbDecConf *conf, const bool allow_2band, const size_t inchans,
-        const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS],
+        const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
         std::unique_ptr<FrontStablizer> stablizer);
     BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,
         const al::span<const ChannelDec> coeffslf, std::unique_ptr<FrontStablizer> stablizer);
@@ -61,11 +59,11 @@ public:
         const size_t SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<float,MAX_AMBI_ORDER+1> GetHFOrderScales(const ALuint in_order,
-        const ALuint out_order) noexcept;
+    static std::array<float,MAX_AMBI_ORDER+1> GetHFOrderScales(const uint in_order,
+        const uint out_order) noexcept;
 
     static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,
-        const size_t inchans, const ALuint srate, const ALuint (&chanmap)[MAX_OUTPUT_CHANNELS],
+        const size_t inchans, const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
         std::unique_ptr<FrontStablizer> stablizer);
     static std::unique_ptr<BFormatDec> Create(const size_t inchans,
         const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf,

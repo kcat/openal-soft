@@ -29,7 +29,7 @@
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
-#include "filters/biquad.h"
+#include "core/filters/biquad.h"
 #include "vecmat.h"
 
 namespace {

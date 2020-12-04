@@ -6,7 +6,7 @@
 
 #include "almalloc.h"
 #include "core/bufferline.h"
-#include "filters/splitter.h"
+#include "core/filters/splitter.h"
 
 
 struct FrontStablizer {

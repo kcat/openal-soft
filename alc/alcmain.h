@@ -25,7 +25,7 @@
 #include "atomic.h"
 #include "core/bufferline.h"
 #include "core/devformat.h"
-#include "filters/splitter.h"
+#include "core/filters/splitter.h"
 #include "hrtf.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"

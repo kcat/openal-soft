@@ -633,6 +633,12 @@ set(ALC_OBJS
     core/bufferline.h
     core/devformat.cpp
     core/devformat.h
+    core/filters/biquad.h
+    core/filters/biquad.cpp
+    core/filters/nfc.cpp
+    core/filters/nfc.h
+    core/filters/splitter.cpp
+    core/filters/splitter.h
     core/mastering.cpp
     core/mastering.h
 
@@ -674,12 +680,6 @@ set(ALC_OBJS
     alc/effects/pshifter.cpp
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
-    alc/filters/biquad.h
-    alc/filters/biquad.cpp
-    alc/filters/nfc.cpp
-    alc/filters/nfc.h
-    alc/filters/splitter.cpp
-    alc/filters/splitter.h
     alc/fmt_traits.cpp
     alc/fmt_traits.h
     alc/fpu_ctrl.cpp

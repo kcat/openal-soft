@@ -25,16 +25,18 @@
 
 #include <algorithm>
 
-#include "al/auxeffectslot.h"
-#include "al/filter.h"
+#include "AL/efx.h"
+
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alu.h"
-#include "filters/biquad.h"
+#include "core/filters/biquad.h"
+#include "effectslot.h"
 #include "vector.h"
 
 
 namespace {
+
+constexpr float LowpassFreqRef{5000.0f};
 
 struct EchoState final : public EffectState {
     al::vector<float,16> mSampleBuffer;
@@ -95,7 +97,7 @@ void EchoState::update(const ALCcontext *context, const EffectSlot *slot,
     mTap[1].delay = float2uint(props->Echo.LRDelay*frequency + 0.5f) + mTap[0].delay;
 
     const float gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
-    mFilter.setParamsFromSlope(BiquadType::HighShelf, LOWPASSFREQREF/frequency, gainhf, 1.0f);
+    mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);
 
     mFeedGain = props->Echo.Feedback;
 

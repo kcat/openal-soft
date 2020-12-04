@@ -11,7 +11,7 @@
 #include "ambidefs.h"
 #include "atomic.h"
 #include "core/bufferline.h"
-#include "filters/splitter.h"
+#include "core/filters/splitter.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 

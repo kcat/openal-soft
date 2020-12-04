@@ -1,5 +1,5 @@
-#ifndef FILTER_SPLITTER_H
-#define FILTER_SPLITTER_H
+#ifndef CORE_FILTERS_SPLITTER_H
+#define CORE_FILTERS_SPLITTER_H
 
 #include <cstddef>
 
@@ -33,4 +33,4 @@ public:
 };
 using BandSplitter = BandSplitterR<float>;
 
-#endif /* FILTER_SPLITTER_H */
+#endif /* CORE_FILTERS_SPLITTER_H */

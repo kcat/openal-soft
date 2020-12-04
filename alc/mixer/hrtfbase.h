@@ -3,7 +3,6 @@
 
 #include <algorithm>
 
-#include "alu.h"
 #include "../hrtf.h"
 #include "opthelpers.h"
 #include "voice.h"

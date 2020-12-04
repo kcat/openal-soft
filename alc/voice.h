@@ -33,44 +33,6 @@ enum class DirectMode : unsigned char {
     RemixMismatch
 };
 
-enum class Resampler {
-    Point,
-    Linear,
-    Cubic,
-    FastBSinc12,
-    BSinc12,
-    FastBSinc24,
-    BSinc24,
-
-    Max = BSinc24
-};
-extern Resampler ResamplerDefault;
-
-
-/* Interpolator state. Kind of a misnomer since the interpolator itself is
- * stateless. This just keeps it from having to recompute scale-related
- * mappings for every sample.
- */
-struct BsincState {
-    float sf; /* Scale interpolation factor. */
-    uint m; /* Coefficient count. */
-    uint l; /* Left coefficient offset. */
-    /* Filter coefficients, followed by the phase, scale, and scale-phase
-     * delta coefficients. Starting at phase index 0, each subsequent phase
-     * index follows contiguously.
-     */
-    const float *filter;
-};
-
-union InterpState {
-    BsincState bsinc;
-};
-
-using ResamplerFunc = const float*(*)(const InterpState *state, const float *RESTRICT src,
-    uint frac, uint increment, const al::span<float> dst);
-
-ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state);
-
 
 enum {
     AF_None = 0,
@@ -261,5 +223,7 @@ struct Voice {
 
     DEF_NEWDEL(Voice)
 };
+
+extern Resampler ResamplerDefault;
 
 #endif /* VOICE_H */

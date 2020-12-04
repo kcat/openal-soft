@@ -252,7 +252,7 @@ int OpenSLPlayback::mixerProc()
             }
             if(SL_RESULT_SUCCESS != result)
             {
-                mDevice->handleDisconnect("Failed to start platback: 0x%08x", result);
+                mDevice->handleDisconnect("Failed to start playback: 0x%08x", result);
                 break;
             }
 

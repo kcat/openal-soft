@@ -17,7 +17,6 @@ struct ALeffectslot;
 struct MixParams;
 
 
-#define MAX_PITCH  10
 #define MAX_SENDS  6
 
 

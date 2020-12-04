@@ -109,6 +109,12 @@ static_assert(!(MaxResamplerPadding&1), "MaxResamplerPadding is not a multiple o
 
 namespace {
 
+constexpr uint MaxPitch{10};
+
+static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for BufferLineSize!");
+static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
+    "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
+
 using namespace std::placeholders;
 
 float InitConeScale()
@@ -1217,8 +1223,8 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
     /* Calculate the stepping value */
     const auto Pitch = static_cast<float>(voice->mFrequency) /
         static_cast<float>(Device->Frequency) * props->Pitch;
-    if(Pitch > float{MAX_PITCH})
-        voice->mStep = MAX_PITCH<<MixerFracBits;
+    if(Pitch > float{MaxPitch})
+        voice->mStep = MaxPitch<<MixerFracBits;
     else
         voice->mStep = maxu(fastf2u(Pitch * MixerFracOne), 1);
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
@@ -1527,8 +1533,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
      * fixed-point stepping value.
      */
     Pitch *= static_cast<float>(voice->mFrequency) / static_cast<float>(Device->Frequency);
-    if(Pitch > float{MAX_PITCH})
-        voice->mStep = MAX_PITCH<<MixerFracBits;
+    if(Pitch > float{MaxPitch})
+        voice->mStep = MaxPitch<<MixerFracBits;
     else
         voice->mStep = maxu(fastf2u(Pitch * MixerFracOne), 1);
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);

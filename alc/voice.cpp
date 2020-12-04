@@ -71,11 +71,6 @@ struct NEONTag;
 struct CopyTag;
 
 
-static_assert((BufferLineSize-1)/MAX_PITCH > 0, "MAX_PITCH is too large for BufferLineSize!");
-static_assert((INT_MAX>>MixerFracBits)/MAX_PITCH > BufferLineSize,
-    "MAX_PITCH and/or BufferLineSize are too large for MixerFracBits!");
-
-
 Resampler ResamplerDefault{Resampler::Linear};
 
 MixerFunc MixSamples{Mix_<CTag>};

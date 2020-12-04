@@ -4,14 +4,9 @@
 #include <cstddef>
 #include <memory>
 
-#include "AL/al.h"
-
-#include "alcmain.h"
 #include "almalloc.h"
-#include "alnumeric.h"
-#include "alu.h"
 #include "core/devformat.h"
-#include "voice.h"
+#include "mixer/defs.h"
 
 using uint = unsigned int;
 

@@ -4,11 +4,13 @@
 #include "converter.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <iterator>
+#include <limits.h>
 
 #include "albyte.h"
-#include "alu.h"
+#include "alnumeric.h"
 #include "fpu_ctrl.h"
 #include "mixer/defs.h"
 
@@ -17,6 +19,12 @@ struct CopyTag;
 
 
 namespace {
+
+constexpr uint MaxPitch{10};
+
+static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for BufferLineSize!");
+static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
+    "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
 
 /* Base template left undefined. Should be marked =delete, but Clang 3.8.1
  * chokes on that given the inline specializations.
@@ -173,7 +181,7 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
     auto step = static_cast<uint>(
-        mind(srcRate*double{MixerFracOne}/dstRate + 0.5, MAX_PITCH*MixerFracOne));
+        mind(srcRate*double{MixerFracOne}/dstRate + 0.5, MaxPitch*MixerFracOne));
     converter->mIncrement = maxu(step, 1);
     if(converter->mIncrement == MixerFracOne)
         converter->mResample = Resample_<CopyTag,CTag>;

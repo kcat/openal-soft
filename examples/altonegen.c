@@ -44,9 +44,7 @@
 
 #include "common/alhelpers.h"
 
-#ifdef _WIN32
-# include "win_main_utf8.h"
-#endif
+#include "win_main_utf8.h"
 
 #ifndef M_PI
 #define M_PI    (3.14159265358979323846)
@@ -146,9 +144,11 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate, ALfloat 
             break;
     }
 
-    if (gain != 1.0)
-	for(i = 0;i < srate;i++)
-	    data[i] *= gain;
+    if(gain != 1.0f)
+    {
+        for(i = 0;i < srate;i++)
+            data[i] *= gain;
+    }
 
     /* Buffer the audio data into a new buffer object. */
     buffer = 0;
@@ -197,9 +197,8 @@ int main(int argc, char *argv[])
 
     for(i = 0;i < argc;i++)
     {
-        if (strcmp(argv[i], "-h") == 0
-	 || strcmp(argv[i], "-?") == 0
-	 || strcmp(argv[i], "--help") == 0)
+        if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-?") == 0
+            || strcmp(argv[i], "--help") == 0)
         {
             fprintf(stderr, "OpenAL Tone Generator\n"
 "\n"
@@ -254,8 +253,8 @@ int main(int argc, char *argv[])
         else if(i+1 < argc && (strcmp(argv[i], "--gain") == 0 || strcmp(argv[i], "-g") == 0))
         {
             i++;
-            gain = atof(argv[i]);
-            if (gain < 0.0f || gain > 1.0f)
+            gain = (ALfloat)atof(argv[i]);
+            if(gain < 0.0f || gain > 1.0f)
             {
                 fprintf(stderr, "Invalid gain: %s (min: 0.0, max 1.0)\n", argv[i]);
                 gain = 1.0f;

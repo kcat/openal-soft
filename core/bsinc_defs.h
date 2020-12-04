@@ -1,5 +1,5 @@
-#ifndef BSINC_DEFS_H
-#define BSINC_DEFS_H
+#ifndef CORE_BSINC_DEFS_H
+#define CORE_BSINC_DEFS_H
 
 /* The number of distinct scale and phase intervals within the filter table. */
 constexpr unsigned int BSincScaleBits{4};
@@ -13,4 +13,4 @@ constexpr unsigned int BSincPhaseCount{1 << BSincPhaseBits};
  */
 constexpr unsigned int BSincPointsMax{48};
 
-#endif /* BSINC_DEFS_H */
+#endif /* CORE_BSINC_DEFS_H */

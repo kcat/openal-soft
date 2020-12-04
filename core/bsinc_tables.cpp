@@ -10,7 +10,6 @@
 #include <stdexcept>
 
 #include "math_defs.h"
-#include "vector.h"
 
 
 namespace {

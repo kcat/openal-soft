@@ -5,8 +5,8 @@
 #include <limits>
 
 #include "alcmain.h"
-#include "alu.h"
-#include "bsinc_defs.h"
+#include "alnumeric.h"
+#include "core/bsinc_tables.h"
 #include "defs.h"
 #include "hrtfbase.h"
 

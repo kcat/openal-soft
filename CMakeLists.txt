@@ -627,6 +627,9 @@ set(OPENAL_OBJS
     al/state.cpp
 )
 set(ALC_OBJS
+    core/bsinc_defs.h
+    core/bsinc_tables.cpp
+    core/bsinc_tables.h
     core/bufferline.h
     core/devformat.cpp
     core/devformat.h
@@ -647,9 +650,6 @@ set(ALC_OBJS
     alc/bformatdec.h
     alc/bs2b.cpp
     alc/bs2b.h
-    alc/bsinc_defs.h
-    alc/bsinc_tables.cpp
-    alc/bsinc_tables.h
     alc/buffer_storage.cpp
     alc/buffer_storage.h
     alc/compat.h

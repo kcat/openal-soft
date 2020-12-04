@@ -5,7 +5,7 @@
 #include <limits>
 
 #include "alnumeric.h"
-#include "bsinc_defs.h"
+#include "core/bsinc_defs.h"
 #include "defs.h"
 #include "hrtfbase.h"
 

@@ -1,5 +1,5 @@
-#ifndef BSINC_TABLES_H
-#define BSINC_TABLES_H
+#ifndef CORE_BSINC_TABLES_H
+#define CORE_BSINC_TABLES_H
 
 #include "bsinc_defs.h"
 
@@ -14,4 +14,4 @@ struct BSincTable {
 extern const BSincTable bsinc12;
 extern const BSincTable bsinc24;
 
-#endif /* BSINC_TABLES_H */
+#endif /* CORE_BSINC_TABLES_H */

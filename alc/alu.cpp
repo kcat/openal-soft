@@ -59,6 +59,7 @@
 #include "atomic.h"
 #include "bformatdec.h"
 #include "bs2b.h"
+#include "core/bsinc_tables.h"
 #include "core/devformat.h"
 #include "core/mastering.h"
 #include "cpu_caps.h"
@@ -79,8 +80,6 @@
 #include "uhjfilter.h"
 #include "vecmat.h"
 #include "voice.h"
-
-#include "bsinc_tables.h"
 
 struct CTag;
 #ifdef HAVE_SSE

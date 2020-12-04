@@ -630,6 +630,8 @@ set(ALC_OBJS
     core/bufferline.h
     core/devformat.cpp
     core/devformat.h
+    core/mastering.cpp
+    core/mastering.h
 
     alc/alc.cpp
     alc/alcmain.h
@@ -688,8 +690,6 @@ set(ALC_OBJS
     alc/hrtf.h
     alc/inprogext.h
     alc/logging.h
-    alc/mastering.cpp
-    alc/mastering.h
     alc/panning.cpp
     alc/ringbuffer.cpp
     alc/ringbuffer.h

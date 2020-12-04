@@ -1,10 +1,10 @@
-#ifndef MASTERING_H
-#define MASTERING_H
+#ifndef CORE_MASTERING_H
+#define CORE_MASTERING_H
 
 #include <memory>
 
 #include "almalloc.h"
-#include "core/bufferline.h"
+#include "bufferline.h"
 
 struct SlidingHold;
 
@@ -101,4 +101,4 @@ struct Compressor {
         const float ReleaseTime);
 };
 
-#endif /* MASTERING_H */
+#endif /* CORE_MASTERING_H */

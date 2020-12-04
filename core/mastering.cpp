@@ -13,7 +13,7 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
+#include "alspan.h"
 #include "opthelpers.h"
 
 

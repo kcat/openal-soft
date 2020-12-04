@@ -50,14 +50,14 @@
 #include "ambdec.h"
 #include "ambidefs.h"
 #include "bformatdec.h"
-#include "bs2b.h"
+#include "core/bs2b.h"
 #include "core/devformat.h"
+#include "core/uhjfilter.h"
 #include "front_stablizer.h"
 #include "hrtf.h"
 #include "logging.h"
 #include "math_defs.h"
 #include "opthelpers.h"
-#include "uhjfilter.h"
 
 
 constexpr std::array<float,MAX_AMBI_CHANNELS> AmbiScale::FromN3D;

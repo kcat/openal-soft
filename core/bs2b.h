@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef BS2B_H
-#define BS2B_H
+#ifndef CORE_BS2B_H
+#define CORE_BS2B_H
 
 #include "almalloc.h"
 
@@ -86,4 +86,4 @@ void bs2b_clear(bs2b *bs2b);
 
 void bs2b_cross_feed(bs2b *bs2b, float *Left, float *Right, size_t SamplesToDo);
 
-#endif /* BS2B_H */
+#endif /* CORE_BS2B_H */

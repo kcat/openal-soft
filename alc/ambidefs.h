@@ -2,7 +2,8 @@
 #define AMBIDEFS_H
 
 #include <array>
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 /* The maximum number of Ambisonics channels. For a given order (o), the size
  * needed will be (o+1)**2, thus zero-order has 1, first-order has 4, second-

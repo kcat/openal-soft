@@ -627,6 +627,8 @@ set(OPENAL_OBJS
     al/state.cpp
 )
 set(ALC_OBJS
+    core/bs2b.cpp
+    core/bs2b.h
     core/bsinc_defs.h
     core/bsinc_tables.cpp
     core/bsinc_tables.h
@@ -641,6 +643,8 @@ set(ALC_OBJS
     core/filters/splitter.h
     core/mastering.cpp
     core/mastering.h
+    core/uhjfilter.cpp
+    core/uhjfilter.h
 
     alc/alc.cpp
     alc/alcmain.h
@@ -654,8 +658,6 @@ set(ALC_OBJS
     alc/ambidefs.h
     alc/bformatdec.cpp
     alc/bformatdec.h
-    alc/bs2b.cpp
-    alc/bs2b.h
     alc/buffer_storage.cpp
     alc/buffer_storage.h
     alc/compat.h
@@ -693,8 +695,6 @@ set(ALC_OBJS
     alc/panning.cpp
     alc/ringbuffer.cpp
     alc/ringbuffer.h
-    alc/uhjfilter.cpp
-    alc/uhjfilter.h
     alc/uiddefs.cpp
     alc/voice.cpp
     alc/voice.h

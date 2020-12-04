@@ -1,10 +1,10 @@
-#ifndef UHJFILTER_H
-#define UHJFILTER_H
+#ifndef CORE_UHJFILTER_H
+#define CORE_UHJFILTER_H
 
 #include <array>
 
 #include "almalloc.h"
-#include "core/bufferline.h"
+#include "bufferline.h"
 
 
 struct Uhj2Encoder {
@@ -36,4 +36,4 @@ struct Uhj2Encoder {
     DEF_NEWDEL(Uhj2Encoder)
 };
 
-#endif /* UHJFILTER_H */
+#endif /* CORE_UHJFILTER_H */

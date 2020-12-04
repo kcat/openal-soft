@@ -21,17 +21,17 @@
 
 namespace {
 
-constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale{{
+constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale{{
     1.00000000e+00f, 1.00000000e+00f
 }};
-constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale2O{{
+constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale2O{{
     7.45355990e-01f, 1.00000000e+00f, 1.00000000e+00f
 }};
-constexpr std::array<float,MAX_AMBI_ORDER+1> Ambi3DDecoderHFScale3O{{
+constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale3O{{
     5.89792205e-01f, 8.79693856e-01f, 1.00000000e+00f, 1.00000000e+00f
 }};
 
-inline auto GetDecoderHFScales(uint order) noexcept -> const std::array<float,MAX_AMBI_ORDER+1>&
+inline auto GetDecoderHFScales(uint order) noexcept -> const std::array<float,MaxAmbiOrder+1>&
 {
     if(order >= 3) return Ambi3DDecoderHFScale3O;
     if(order == 2) return Ambi3DDecoderHFScale2O;
@@ -39,7 +39,7 @@ inline auto GetDecoderHFScales(uint order) noexcept -> const std::array<float,MA
 }
 
 inline auto GetAmbiScales(AmbDecScale scaletype) noexcept
-    -> const std::array<float,MAX_AMBI_CHANNELS>&
+    -> const std::array<float,MaxAmbiChannels>&
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
@@ -55,8 +55,8 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
     : mStablizer{std::move(stablizer)}, mDualBand{allow_2band && (conf->FreqBands == 2)}
     , mChannelDec{inchans}
 {
-    const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
-    const std::array<float,MAX_AMBI_CHANNELS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
+    const bool periphonic{(conf->ChanMask&AmbiPeriphonicMask) != 0};
+    const std::array<float,MaxAmbiChannels> &coeff_scale = GetAmbiScales(conf->CoeffScale);
 
     if(!mDualBand)
     {
@@ -268,9 +268,9 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
 
 
 auto BFormatDec::GetHFOrderScales(const uint in_order, const uint out_order) noexcept
-    -> std::array<float,MAX_AMBI_ORDER+1>
+    -> std::array<float,MaxAmbiOrder+1>
 {
-    std::array<float,MAX_AMBI_ORDER+1> ret{};
+    std::array<float,MaxAmbiOrder+1> ret{};
 
     assert(out_order >= in_order);
 

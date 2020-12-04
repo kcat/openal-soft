@@ -124,7 +124,7 @@ struct VmorpherState final : public EffectState {
         /* Effect gains for each channel */
         float CurrentGains[MAX_OUTPUT_CHANNELS]{};
         float TargetGains[MAX_OUTPUT_CHANNELS]{};
-    } mChans[MAX_AMBI_CHANNELS];
+    } mChans[MaxAmbiChannels];
 
     void (*mGetSamples)(float*RESTRICT, ALuint, const ALuint, size_t){};
 
@@ -241,7 +241,7 @@ void VmorpherState::update(const ALCcontext *context, const EffectSlot *slot,
     }
 
     mOutTarget = target.Main->Buffer;
-    auto set_gains = [slot,target](auto &chan, al::span<const float,MAX_AMBI_CHANNELS> coeffs)
+    auto set_gains = [slot,target](auto &chan, al::span<const float,MaxAmbiChannels> coeffs)
     { ComputePanGains(target.Main, coeffs.data(), slot->Gain, chan.TargetGains); };
     SetAmbiPanIdentity(std::begin(mChans), slot->Wet.Buffer.size(), set_gains);
 }

@@ -278,8 +278,8 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 { return std::unique_ptr<DirectHrtfState>{new(FamCount(num_chans)) DirectHrtfState{num_chans}}; }
 
 void DirectHrtfState::build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
-    const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
-    const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain)
+    const float (*AmbiMatrix)[MaxAmbiChannels],
+    const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {

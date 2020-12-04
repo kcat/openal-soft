@@ -34,12 +34,12 @@ struct AmbDecConf {
     };
     al::vector<SpeakerConf> Speakers;
 
-    using CoeffArray = std::array<float,MAX_AMBI_CHANNELS>;
+    using CoeffArray = std::array<float,MaxAmbiChannels>;
     /* Unused when FreqBands == 1 */
-    float LFOrderGain[MAX_AMBI_ORDER+1]{};
+    float LFOrderGain[MaxAmbiOrder+1]{};
     al::vector<CoeffArray> LFMatrix;
 
-    float HFOrderGain[MAX_AMBI_ORDER+1]{};
+    float HFOrderGain[MaxAmbiOrder+1]{};
     al::vector<CoeffArray> HFMatrix;
 
     int load(const char *fname) noexcept;

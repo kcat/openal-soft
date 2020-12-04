@@ -347,20 +347,20 @@ inline ALuint dither_rng(ALuint *seed) noexcept
 }
 
 
-auto GetAmbiScales(AmbiScaling scaletype) noexcept -> const std::array<float,MAX_AMBI_CHANNELS>&
+auto GetAmbiScales(AmbiScaling scaletype) noexcept -> const std::array<float,MaxAmbiChannels>&
 {
     if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D;
     return AmbiScale::FromN3D;
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI_CHANNELS>&
+auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbiChannels>&
 {
     if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
     return AmbiIndex::FromACN;
 }
 
-auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MAX_AMBI2D_CHANNELS>&
+auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbi2DChannels>&
 {
     if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D;
     return AmbiIndex::From2D;
@@ -590,14 +590,14 @@ const auto RotatorCoeffArray = RotatorCoeffs::ConcatArrays(RotatorCoeffs::GenCoe
  * coefficients, this fills in the coefficients for the higher orders up to and
  * including the given order. The matrix is in ACN layout.
  */
-void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &matrix,
+void AmbiRotator(std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> &matrix,
     const int order)
 {
     /* Don't do anything for < 2nd order. */
     if(order < 2) return;
 
     auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
-        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+        const std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> &R)
     {
         const float ri1{ R[static_cast<ALuint>(i+2)][ 1+2]};
         const float rim1{R[static_cast<ALuint>(i+2)][-1+2]};
@@ -612,12 +612,12 @@ void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNEL
     };
 
     auto U = [P](const int l, const int m, const int n, const size_t last_band,
-        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+        const std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> &R)
     {
         return P(0, l, m, n, last_band, R);
     };
     auto V = [P](const int l, const int m, const int n, const size_t last_band,
-        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+        const std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> &R)
     {
         if(m > 0)
         {
@@ -632,7 +632,7 @@ void AmbiRotator(std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNEL
         return d ? p1*std::sqrt(2.0f) : (p0 + p1);
     };
     auto W = [P](const int l, const int m, const int n, const size_t last_band,
-        const std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> &R)
+        const std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> &R)
     {
         assert(m != 0);
         if(m > 0)
@@ -893,7 +893,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * order elements, then construct the rotation for the higher
              * orders.
              */
-            std::array<std::array<float,MAX_AMBI_CHANNELS>,MAX_AMBI_CHANNELS> shrot{};
+            std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> shrot{};
             shrot[0][0] = 1.0f;
             shrot[1][1] =  U[0]; shrot[1][2] = -V[0]; shrot[1][3] = -N[0];
             shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
@@ -907,8 +907,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 
-            static const uint8_t ChansPerOrder[MAX_AMBI_ORDER+1]{1, 3, 5, 7,};
-            static const uint8_t OrderOffset[MAX_AMBI_ORDER+1]{0, 1, 4, 9,};
+            static const uint8_t ChansPerOrder[MaxAmbiOrder+1]{1, 3, 5, 7,};
+            static const uint8_t OrderOffset[MaxAmbiOrder+1]{0, 1, 4, 9,};
             for(size_t c{1};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
@@ -918,7 +918,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 const float scale{scales[acn] * coverage};
                 auto in = shrot.cbegin() + offset;
 
-                coeffs = std::array<float,MAX_AMBI_CHANNELS>{};
+                coeffs = std::array<float,MaxAmbiChannels>{};
                 for(size_t x{0};x < tocopy;++x)
                     coeffs[offset+x] = in[x][acn] * scale;
 

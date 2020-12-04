@@ -1775,7 +1775,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             {
                 if(!optlayout || !optscale)
                     return ALC_INVALID_VALUE;
-                if(aorder < 1 || aorder > MAX_AMBI_ORDER)
+                if(aorder < 1 || aorder > MaxAmbiOrder)
                     return ALC_INVALID_VALUE;
                 if((*optlayout == DevAmbiLayout::FuMa || *optscale == DevAmbiScaling::FuMa)
                     && aorder > 3)
@@ -2890,7 +2890,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
 
             values[i++] = ALC_MAX_AMBISONIC_ORDER_SOFT;
-            values[i++] = MAX_AMBI_ORDER;
+            values[i++] = MaxAmbiOrder;
 
             values[i++] = 0;
         }
@@ -3023,7 +3023,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_MAX_AMBISONIC_ORDER_SOFT:
-        values[0] = MAX_AMBI_ORDER;
+        values[0] = MaxAmbiOrder;
         return 1;
 
     default:

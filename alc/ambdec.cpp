@@ -118,7 +118,7 @@ bool load_ambdec_speakers(al::vector<AmbDecConf::SpeakerConf> &spkrs, const std:
     return true;
 }
 
-bool load_ambdec_matrix(float (&gains)[MAX_AMBI_ORDER+1], al::vector<AmbDecConf::CoeffArray> &matrix, const std::size_t maxrow, std::istream &f, std::string &buffer)
+bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], al::vector<AmbDecConf::CoeffArray> &matrix, const std::size_t maxrow, std::istream &f, std::string &buffer)
 {
     bool gotgains{false};
     std::size_t cur{0u};

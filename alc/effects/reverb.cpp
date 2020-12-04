@@ -435,7 +435,7 @@ struct ReverbState final : public EffectState {
         const size_t counter, const size_t offset, const size_t todo);
 
     MixOutT mMixOut{&ReverbState::MixOutPlain};
-    std::array<float,MAX_AMBI_ORDER+1> mOrderScales{};
+    std::array<float,MaxAmbiOrder+1> mOrderScales{};
     std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
 
@@ -973,13 +973,13 @@ void ReverbState::update3DPanning(const float *ReflectionsPan, const float *Late
     mOutTarget = target.Main->Buffer;
     for(size_t i{0u};i < NUM_LINES;i++)
     {
-        const float coeffs[MAX_AMBI_CHANNELS]{earlymat[0][i], earlymat[1][i], earlymat[2][i],
+        const float coeffs[MaxAmbiChannels]{earlymat[0][i], earlymat[1][i], earlymat[2][i],
             earlymat[3][i]};
         ComputePanGains(target.Main, coeffs, earlyGain, mEarly.PanGain[i]);
     }
     for(size_t i{0u};i < NUM_LINES;i++)
     {
-        const float coeffs[MAX_AMBI_CHANNELS]{latemat[0][i], latemat[1][i], latemat[2][i],
+        const float coeffs[MaxAmbiChannels]{latemat[0][i], latemat[1][i], latemat[2][i],
             latemat[3][i]};
         ComputePanGains(target.Main, coeffs, lateGain, mLate.PanGain[i]);
     }

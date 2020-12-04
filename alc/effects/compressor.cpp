@@ -40,7 +40,7 @@ namespace {
 
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MAX_AMBI_CHANNELS][MAX_OUTPUT_CHANNELS]{};
+    float mGain[MaxAmbiChannels][MAX_OUTPUT_CHANNELS]{};
 
     /* Effect parameters */
     bool mEnabled{true};
@@ -79,7 +79,7 @@ void CompressorState::update(const ALCcontext*, const EffectSlot *slot,
     mEnabled = props->Compressor.OnOff;
 
     mOutTarget = target.Main->Buffer;
-    auto set_gains = [slot,target](auto &gains, al::span<const float,MAX_AMBI_CHANNELS> coeffs)
+    auto set_gains = [slot,target](auto &gains, al::span<const float,MaxAmbiChannels> coeffs)
     { ComputePanGains(target.Main, coeffs.data(), slot->Gain, gains); };
     SetAmbiPanIdentity(std::begin(mGain), slot->Wet.Buffer.size(), set_gains);
 }

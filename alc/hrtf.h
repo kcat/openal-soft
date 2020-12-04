@@ -102,8 +102,8 @@ struct DirectHrtfState {
      * are ordered and scaled according to the matrix input.
      */
     void build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
-        const float (*AmbiMatrix)[MAX_AMBI_CHANNELS],
-        const al::span<const float,MAX_AMBI_ORDER+1> AmbiOrderHFGain);
+        const float (*AmbiMatrix)[MaxAmbiChannels],
+        const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
 
     static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
 

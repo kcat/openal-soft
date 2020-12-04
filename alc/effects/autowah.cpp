@@ -63,7 +63,7 @@ struct AutowahState final : public EffectState {
         /* Effect gains for each output channel */
         float CurrentGains[MAX_OUTPUT_CHANNELS];
         float TargetGains[MAX_OUTPUT_CHANNELS];
-    } mChans[MAX_AMBI_CHANNELS];
+    } mChans[MaxAmbiChannels];
 
     /* Effects buffers */
     alignas(16) float mBufferOut[BufferLineSize];
@@ -121,7 +121,7 @@ void AutowahState::update(const ALCcontext *context, const EffectSlot *slot,
     mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / frequency;
 
     mOutTarget = target.Main->Buffer;
-    auto set_gains = [slot,target](auto &chan, al::span<const float,MAX_AMBI_CHANNELS> coeffs)
+    auto set_gains = [slot,target](auto &chan, al::span<const float,MaxAmbiChannels> coeffs)
     { ComputePanGains(target.Main, coeffs.data(), slot->Gain, chan.TargetGains); };
     SetAmbiPanIdentity(std::begin(mChans), slot->Wet.Buffer.size(), set_gains);
 }

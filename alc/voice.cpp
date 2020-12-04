@@ -412,7 +412,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
     const float *TargetGains, const uint Counter, const uint OutPos, ALCdevice *Device)
 {
     using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
-    static constexpr FilterProc NfcProcess[MAX_AMBI_ORDER+1]{
+    static constexpr FilterProc NfcProcess[MaxAmbiOrder+1]{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3};
 
     float *CurrentGains{parms.Gains.Current.data()};
@@ -430,7 +430,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
         OutBuffer += chancount;
         CurrentGains += chancount;
         TargetGains += chancount;
-        if(++order == MAX_AMBI_ORDER+1)
+        if(++order == MaxAmbiOrder+1)
             break;
     }
 }

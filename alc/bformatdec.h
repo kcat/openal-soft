@@ -16,7 +16,7 @@ struct AmbDecConf;
 struct FrontStablizer;
 
 
-using ChannelDec = std::array<float,MAX_AMBI_CHANNELS>;
+using ChannelDec = std::array<float,MaxAmbiChannels>;
 
 class BFormatDec {
     static constexpr size_t sHFBand{0};
@@ -59,7 +59,7 @@ public:
         const size_t SamplesToDo);
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<float,MAX_AMBI_ORDER+1> GetHFOrderScales(const uint in_order,
+    static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint in_order,
         const uint out_order) noexcept;
 
     static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,

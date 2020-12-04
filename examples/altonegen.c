@@ -146,9 +146,9 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate, ALfloat 
             break;
     }
 
-	if (gain != 1.0)
-		for(i = 0;i < srate;i++)
-			data[i] *= gain;
+    if (gain != 1.0)
+	for(i = 0;i < srate;i++)
+	    data[i] *= gain;
 
     /* Buffer the audio data into a new buffer object. */
     buffer = 0;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     ALint tone_freq = 1000;
     ALCint dev_rate;
     ALenum state;
-	ALfloat gain = 1.0f;
+    ALfloat gain = 1.0f;
     int i;
 
     argv++; argc--;
@@ -198,8 +198,8 @@ int main(int argc, char *argv[])
     for(i = 0;i < argc;i++)
     {
         if (strcmp(argv[i], "-h") == 0
-		 || strcmp(argv[i], "-?") == 0
-		 || strcmp(argv[i], "--help") == 0)
+	 || strcmp(argv[i], "-?") == 0
+	 || strcmp(argv[i], "--help") == 0)
         {
             fprintf(stderr, "OpenAL Tone Generator\n"
 "\n"
@@ -255,10 +255,10 @@ int main(int argc, char *argv[])
         {
             i++;
             gain = atof(argv[i]);
-            if(gain < 0.0 || gain > 1.0)
+            if (gain < 0.0f || gain > 1.0f)
             {
                 fprintf(stderr, "Invalid gain: %s (min: 0.0, max 1.0)\n", argv[i]);
-                tone_freq = 1;
+                gain = 1.0f;
             }
         }
         else if(i+1 < argc && (strcmp(argv[i], "--srate") == 0 || strcmp(argv[i], "-s") == 0))

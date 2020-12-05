@@ -19,8 +19,9 @@ namespace {
 
 using complex_d = std::complex<double>;
 
-std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
-{
+struct PhaseShifterT {
+    alignas(16) std::array<float,Uhj2Encoder::sFilterSize> Coeffs;
+
     /* Some notes on this filter construction.
      *
      * A wide-band phase-shift filter needs a delay to maintain linearity. A
@@ -39,37 +40,37 @@ std::array<float,Uhj2Encoder::sFilterSize> GenerateFilter()
      * The same filter can be applied regardless of the device's sample rate
      * and achieve the same effect.
      */
-    constexpr size_t fft_size{Uhj2Encoder::sFilterSize * 2};
-    constexpr size_t half_size{fft_size / 2};
-
-    /* Generate a frequency domain impulse with a +90 degree phase offset.
-     * Reconstruct the mirrored frequencies to convert to the time domain.
-     */
-    auto fftBuffer = std::make_unique<complex_d[]>(fft_size);
-    std::fill_n(fftBuffer.get(), fft_size, complex_d{});
-    fftBuffer[half_size] = 1.0;
-
-    forward_fft({fftBuffer.get(), fft_size});
-    for(size_t i{0};i < half_size+1;++i)
-        fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
-    for(size_t i{half_size+1};i < fft_size;++i)
-        fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-    inverse_fft({fftBuffer.get(), fft_size});
-
-    /* Reverse the filter for simpler processing, and store only the non-0
-     * coefficients.
-     */
-    auto ret = std::make_unique<std::array<float,Uhj2Encoder::sFilterSize>>();
-    auto fftiter = fftBuffer.get() + half_size + (Uhj2Encoder::sFilterSize-1);
-    for(float &coeff : *ret)
+    PhaseShifterT()
     {
-        coeff = static_cast<float>(fftiter->real() / double{fft_size});
-        fftiter -= 2;
-    }
-    return *ret;
-}
-alignas(16) const auto PShiftCoeffs = GenerateFilter();
+        constexpr size_t fft_size{Uhj2Encoder::sFilterSize * 2};
+        constexpr size_t half_size{fft_size / 2};
 
+        /* Generate a frequency domain impulse with a +90 degree phase offset.
+         * Reconstruct the mirrored frequencies to convert to the time domain.
+         */
+        auto fftBuffer = std::make_unique<complex_d[]>(fft_size);
+        std::fill_n(fftBuffer.get(), fft_size, complex_d{});
+        fftBuffer[half_size] = 1.0;
+
+        forward_fft({fftBuffer.get(), fft_size});
+        for(size_t i{0};i < half_size+1;++i)
+            fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
+        for(size_t i{half_size+1};i < fft_size;++i)
+            fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
+        inverse_fft({fftBuffer.get(), fft_size});
+
+        /* Reverse the filter for simpler processing, and store only the non-0
+         * coefficients.
+         */
+        auto fftiter = fftBuffer.get() + half_size + (Uhj2Encoder::sFilterSize-1);
+        for(float &coeff : Coeffs)
+        {
+            coeff = static_cast<float>(fftiter->real() / double{fft_size});
+            fftiter -= 2;
+        }
+    }
+};
+const PhaseShifterT PShift{};
 
 void allpass_process(al::span<float> dst, const float *RESTRICT src)
 {
@@ -80,9 +81,9 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
         do {
             __m128 r04{_mm_setzero_ps()};
             __m128 r14{_mm_setzero_ps()};
-            for(size_t j{0};j < PShiftCoeffs.size();j+=4)
+            for(size_t j{0};j < PShift.Coeffs.size();j+=4)
             {
-                const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[j])};
+                const __m128 coeffs{_mm_load_ps(&PShift.Coeffs[j])};
                 const __m128 s0{_mm_loadu_ps(&src[j*2])};
                 const __m128 s1{_mm_loadu_ps(&src[j*2 + 4])};
 
@@ -106,9 +107,9 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
     if((dst.size()&1))
     {
         __m128 r4{_mm_setzero_ps()};
-        for(size_t j{0};j < PShiftCoeffs.size();j+=4)
+        for(size_t j{0};j < PShift.Coeffs.size();j+=4)
         {
-            const __m128 coeffs{_mm_load_ps(&PShiftCoeffs[j])};
+            const __m128 coeffs{_mm_load_ps(&PShift.Coeffs[j])};
             /* NOTE: This could alternatively be done with two unaligned loads
              * and a shuffle. Which would be better?
              */
@@ -126,8 +127,8 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
     for(float &output : dst)
     {
         float ret{0.0f};
-        for(size_t j{0};j < PShiftCoeffs.size();++j)
-            ret += src[j*2] * PShiftCoeffs[j];
+        for(size_t j{0};j < PShift.Coeffs.size();++j)
+            ret += src[j*2] * PShift.Coeffs[j];
 
         output += ret;
         ++src;

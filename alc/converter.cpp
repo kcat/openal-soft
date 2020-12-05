@@ -30,22 +30,22 @@ static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
  * chokes on that given the inline specializations.
  */
 template<DevFmtType T>
-inline float LoadSample(typename DevFmtTypeTraits<T>::Type val) noexcept;
+inline float LoadSample(DevFmtType_t<T> val) noexcept;
 
-template<> inline float LoadSample<DevFmtByte>(DevFmtTypeTraits<DevFmtByte>::Type val) noexcept
+template<> inline float LoadSample<DevFmtByte>(DevFmtType_t<DevFmtByte> val) noexcept
 { return val * (1.0f/128.0f); }
-template<> inline float LoadSample<DevFmtShort>(DevFmtTypeTraits<DevFmtShort>::Type val) noexcept
+template<> inline float LoadSample<DevFmtShort>(DevFmtType_t<DevFmtShort> val) noexcept
 { return val * (1.0f/32768.0f); }
-template<> inline float LoadSample<DevFmtInt>(DevFmtTypeTraits<DevFmtInt>::Type val) noexcept
+template<> inline float LoadSample<DevFmtInt>(DevFmtType_t<DevFmtInt> val) noexcept
 { return static_cast<float>(val) * (1.0f/2147483648.0f); }
-template<> inline float LoadSample<DevFmtFloat>(DevFmtTypeTraits<DevFmtFloat>::Type val) noexcept
+template<> inline float LoadSample<DevFmtFloat>(DevFmtType_t<DevFmtFloat> val) noexcept
 { return val; }
 
-template<> inline float LoadSample<DevFmtUByte>(DevFmtTypeTraits<DevFmtUByte>::Type val) noexcept
+template<> inline float LoadSample<DevFmtUByte>(DevFmtType_t<DevFmtUByte> val) noexcept
 { return LoadSample<DevFmtByte>(static_cast<int8_t>(val - 128)); }
-template<> inline float LoadSample<DevFmtUShort>(DevFmtTypeTraits<DevFmtUShort>::Type val) noexcept
+template<> inline float LoadSample<DevFmtUShort>(DevFmtType_t<DevFmtUShort> val) noexcept
 { return LoadSample<DevFmtShort>(static_cast<int16_t>(val - 32768)); }
-template<> inline float LoadSample<DevFmtUInt>(DevFmtTypeTraits<DevFmtUInt>::Type val) noexcept
+template<> inline float LoadSample<DevFmtUInt>(DevFmtType_t<DevFmtUInt> val) noexcept
 { return LoadSample<DevFmtInt>(static_cast<int32_t>(val - 2147483648u)); }
 
 
@@ -53,9 +53,7 @@ template<DevFmtType T>
 inline void LoadSampleArray(float *RESTRICT dst, const void *src, const size_t srcstep,
     const size_t samples) noexcept
 {
-    using SampleType = typename DevFmtTypeTraits<T>::Type;
-
-    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    const DevFmtType_t<T> *ssrc = static_cast<const DevFmtType_t<T>*>(src);
     for(size_t i{0u};i < samples;i++)
         dst[i] = LoadSample<T>(ssrc[i*srcstep]);
 }
@@ -80,7 +78,7 @@ void LoadSamples(float *dst, const void *src, const size_t srcstep, const DevFmt
 
 
 template<DevFmtType T>
-inline typename DevFmtTypeTraits<T>::Type StoreSample(float) noexcept;
+inline DevFmtType_t<T> StoreSample(float) noexcept;
 
 template<> inline float StoreSample<DevFmtFloat>(float val) noexcept
 { return val; }
@@ -103,9 +101,7 @@ template<DevFmtType T>
 inline void StoreSampleArray(void *dst, const float *RESTRICT src, const size_t dststep,
     const size_t samples) noexcept
 {
-    using SampleType = typename DevFmtTypeTraits<T>::Type;
-
-    SampleType *sdst = static_cast<SampleType*>(dst);
+    DevFmtType_t<T> *sdst = static_cast<DevFmtType_t<T>*>(dst);
     for(size_t i{0u};i < samples;i++)
         sdst[i*dststep] = StoreSample<T>(src[i]);
 }
@@ -133,9 +129,7 @@ void StoreSamples(void *dst, const float *src, const size_t dststep, const DevFm
 template<DevFmtType T>
 void Mono2Stereo(float *RESTRICT dst, const void *src, const size_t frames) noexcept
 {
-    using SampleType = typename DevFmtTypeTraits<T>::Type;
-
-    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    const DevFmtType_t<T> *ssrc = static_cast<const DevFmtType_t<T>*>(src);
     for(size_t i{0u};i < frames;i++)
         dst[i*2 + 1] = dst[i*2 + 0] = LoadSample<T>(ssrc[i]) * 0.707106781187f;
 }
@@ -144,9 +138,7 @@ template<DevFmtType T>
 void Multi2Mono(uint chanmask, const size_t step, const float scale, float *RESTRICT dst,
     const void *src, const size_t frames) noexcept
 {
-    using SampleType = typename DevFmtTypeTraits<T>::Type;
-
-    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    const DevFmtType_t<T> *ssrc = static_cast<const DevFmtType_t<T>*>(src);
     std::fill_n(dst, frames, 0.0f);
     for(size_t c{0};chanmask;++c)
     {

@@ -1888,18 +1888,16 @@ template<DevFmtType T>
 void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
     const size_t SamplesToDo, const size_t FrameStep)
 {
-    using SampleType = typename DevFmtTypeTraits<T>::Type;
-
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
 
-    SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*FrameStep;
+    DevFmtType_t<T> *outbase = static_cast<DevFmtType_t<T>*>(OutBuffer) + Offset*FrameStep;
     for(const FloatBufferLine &inbuf : InBuffer)
     {
-        SampleType *out{outbase++};
+        DevFmtType_t<T> *out{outbase++};
         auto conv_sample = [FrameStep,&out](const float s) noexcept -> void
         {
-            *out = SampleConv<SampleType>(s);
+            *out = SampleConv<DevFmtType_t<T>>(s);
             out += FrameStep;
         };
         std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);

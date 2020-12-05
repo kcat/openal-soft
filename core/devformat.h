@@ -76,6 +76,9 @@ struct DevFmtTypeTraits<DevFmtUInt> { using Type = uint32_t; };
 template<>
 struct DevFmtTypeTraits<DevFmtFloat> { using Type = float; };
 
+template<DevFmtType T>
+using DevFmtType_t = typename DevFmtTypeTraits<T>::Type;
+
 
 uint BytesFromDevFmt(DevFmtType type) noexcept;
 uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept;

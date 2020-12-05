@@ -102,7 +102,7 @@ struct ChanMap {
 
 using complex_d = std::complex<double>;
 
-constexpr size_t ConvolveUpdateSize{1024};
+constexpr size_t ConvolveUpdateSize{256};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 
 
@@ -513,8 +513,8 @@ void ConvolutionState::process(const size_t samplesToDo,
             for(size_t i{m};i < ConvolveUpdateSize;++i)
                 mFftBuffer[i] = std::conj(mFftBuffer[ConvolveUpdateSize-i]);
 
-            /* Apply iFFT to get the 1024 (really 1023) samples for output. The
-             * 512 output samples are combined with the last output's 511
+            /* Apply iFFT to get the 256 (really 255) samples for output. The
+             * 128 output samples are combined with the last output's 127
              * second-half samples (and this output's second half is
              * subsequently saved for next time).
              */

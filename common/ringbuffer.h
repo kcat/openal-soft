@@ -1,10 +1,9 @@
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
 
-#include <stddef.h>
-
 #include <atomic>
 #include <memory>
+#include <stddef.h>
 #include <utility>
 
 #include "albyte.h"
@@ -75,7 +74,9 @@ public:
      */
     size_t peek(void *dest, size_t cnt) const noexcept;
     /** Advance the read pointer `cnt' places. */
-    void readAdvance(size_t cnt) noexcept;
+    void readAdvance(size_t cnt) noexcept
+    { mReadPtr.fetch_add(cnt, std::memory_order_acq_rel); }
+
 
     /**
      * Return the number of elements available for writing. This is the number
@@ -94,7 +95,8 @@ public:
      */
     size_t write(const void *src, size_t cnt) noexcept;
     /** Advance the write pointer `cnt' places. */
-    void writeAdvance(size_t cnt) noexcept;
+    void writeAdvance(size_t cnt) noexcept
+    { mWritePtr.fetch_add(cnt, std::memory_order_acq_rel); }
 
     /**
      * Create a new ringbuffer to hold at least `sz' elements of `elem_sz'

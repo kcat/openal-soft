@@ -585,6 +585,8 @@ set(COMMON_OBJS
     common/polyphase_resampler.cpp
     common/polyphase_resampler.h
     common/pragmadefs.h
+    common/ringbuffer.cpp
+    common/ringbuffer.h
     common/strutils.cpp
     common/strutils.h
     common/threads.cpp
@@ -693,8 +695,6 @@ set(ALC_OBJS
     alc/inprogext.h
     alc/logging.h
     alc/panning.cpp
-    alc/ringbuffer.cpp
-    alc/ringbuffer.h
     alc/uiddefs.cpp
     alc/voice.cpp
     alc/voice.h

@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <climits>
-#include <cstdint>
 #include <stdexcept>
 
 #include "almalloc.h"
@@ -158,17 +157,6 @@ size_t RingBuffer::write(const void *src, size_t cnt) noexcept
     }
     mWritePtr.store(write_ptr, std::memory_order_release);
     return to_write;
-}
-
-
-void RingBuffer::readAdvance(size_t cnt) noexcept
-{
-    mReadPtr.fetch_add(cnt, std::memory_order_acq_rel);
-}
-
-void RingBuffer::writeAdvance(size_t cnt) noexcept
-{
-    mWritePtr.fetch_add(cnt, std::memory_order_acq_rel);
 }
 
 

@@ -25,18 +25,18 @@
 
 #include <algorithm>
 
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alu.h"
 #include "core/filters/biquad.h"
+#include "effectslot.h"
 #include "vecmat.h"
 
 namespace {
 
-#define MIN_FREQ 20.0f
-#define MAX_FREQ 2500.0f
-#define Q_FACTOR 5.0f
+constexpr float GainScale{31621.0f};
+constexpr float MinFreq{20.0f};
+constexpr float MaxFreq{2500.0f};
+constexpr float QFactor{5.0f};
 
 struct AutowahState final : public EffectState {
     /* Effect parameters */
@@ -116,9 +116,9 @@ void AutowahState::update(const ALCcontext *context, const EffectSlot *slot,
     mReleaseRate   = std::exp(-1.0f / (ReleaseTime*frequency));
     /* 0-20dB Resonance Peak gain */
     mResonanceGain = std::sqrt(std::log10(props->Autowah.Resonance)*10.0f / 3.0f);
-    mPeakGain      = 1.0f - std::log10(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
-    mFreqMinNorm   = MIN_FREQ / frequency;
-    mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / frequency;
+    mPeakGain      = 1.0f - std::log10(props->Autowah.PeakGain / GainScale);
+    mFreqMinNorm   = MinFreq / frequency;
+    mBandwidthNorm = (MaxFreq-MinFreq) / frequency;
 
     mOutTarget = target.Main->Buffer;
     auto set_gains = [slot,target](auto &chan, al::span<const float,MaxAmbiChannels> coeffs)
@@ -151,7 +151,7 @@ void AutowahState::process(const size_t samplesToDo,
         /* Calculate the cos and alpha components for this sample's filter. */
         w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * al::MathDefs<float>::Tau();
         mEnv[i].cos_w0 = std::cos(w0);
-        mEnv[i].alpha = std::sin(w0)/(2.0f * Q_FACTOR);
+        mEnv[i].alpha = std::sin(w0)/(2.0f * QFactor);
     }
     mEnvDelay = env_delay;
 

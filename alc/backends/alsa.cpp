@@ -835,11 +835,24 @@ void AlsaPlayback::start()
 
 void AlsaPlayback::stop()
 {
+    char *name{};
+
     if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 
     mBuffer.clear();
+
+    if(mPcmHandle)
+    {
+	name = strdup(snd_pcm_name(mPcmHandle));
+	snd_pcm_nonblock(mPcmHandle, 0);
+        snd_pcm_drain(mPcmHandle);
+	snd_pcm_nonblock(mPcmHandle, 1);
+        snd_pcm_close(mPcmHandle);
+	snd_pcm_open(&mPcmHandle, name, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	free(name);
+    }
 }
 
 ClockLatency AlsaPlayback::getClockLatency()

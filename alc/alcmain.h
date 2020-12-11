@@ -42,6 +42,8 @@ struct EffectState;
 struct Uhj2Encoder;
 struct bs2b;
 
+using uint = unsigned int;
+
 
 #define MIN_OUTPUT_RATE      8000
 #define MAX_OUTPUT_RATE      192000
@@ -277,6 +279,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     /* HRTF state and info */
     std::unique_ptr<DirectHrtfState> mHrtfState;
     al::intrusive_ptr<HrtfStore> mHrtf;
+    uint mIrSize{0};
 
     /* Ambisonic-to-UHJ encoder */
     std::unique_ptr<Uhj2Encoder> Uhj_Encoder;

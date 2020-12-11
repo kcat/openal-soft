@@ -101,8 +101,8 @@ struct DirectHrtfState {
      * high-frequency gains for the decoder. The calculated impulse responses
      * are ordered and scaled according to the matrix input.
      */
-    void build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
-        const float (*AmbiMatrix)[MaxAmbiChannels],
+    void build(const HrtfStore *Hrtf, const uint irSize,
+        const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
         const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
 
     static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
@@ -112,7 +112,7 @@ struct DirectHrtfState {
 
 
 al::vector<std::string> EnumerateHrtf(const char *devname);
-HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const uint devrate);
+HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
     float spread, HrirArray &coeffs, const al::span<uint,2> delays);

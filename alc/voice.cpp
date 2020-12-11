@@ -467,7 +467,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
 
     ALCdevice *Device{Context->mDevice.get()};
     const uint NumSends{Device->NumAuxSends};
-    const uint IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
+    const uint IrSize{Device->mIrSize};
 
     ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
                            Resample_<CopyTag,CTag> : mResampler};

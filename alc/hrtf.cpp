@@ -277,8 +277,8 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
 std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 { return std::unique_ptr<DirectHrtfState>{new(FamCount(num_chans)) DirectHrtfState{num_chans}}; }
 
-void DirectHrtfState::build(const HrtfStore *Hrtf, const al::span<const AngularPoint> AmbiPoints,
-    const float (*AmbiMatrix)[MaxAmbiChannels],
+void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
+    const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
     const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
 {
     using double2 = std::array<double,2>;
@@ -367,7 +367,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const al::span<const AngularP
     tmpres.clear();
 
     max_delay = hrir_delay_round(max_delay - min_delay);
-    const uint max_length{minu(max_delay + Hrtf->irSize, HRIR_LENGTH)};
+    const uint max_length{minu(max_delay + irSize, HRIR_LENGTH)};
 
     TRACE("Skipped delay: %.2f, new max delay: %.2f, FIR length: %u\n",
         min_delay/double{HRIR_DELAY_FRACONE}, max_delay/double{HRIR_DELAY_FRACONE},
@@ -1277,7 +1277,7 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
     return list;
 }
 
-HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const uint devrate)
+HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
@@ -1430,12 +1430,6 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const char *devname, const u
         const float newIrSize{std::round(static_cast<float>(hrtf->irSize) * rate_scale)};
         hrtf->irSize = static_cast<uint>(minf(HRIR_LENGTH, newIrSize));
         hrtf->sampleRate = devrate;
-    }
-
-    if(auto hrtfsizeopt = ConfigValueUInt(devname, nullptr, "hrtf-size"))
-    {
-        if(*hrtfsizeopt > 0 && *hrtfsizeopt < hrtf->irSize)
-            hrtf->irSize = maxu(*hrtfsizeopt, MIN_IR_LENGTH);
     }
 
     TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),

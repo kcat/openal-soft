@@ -823,7 +823,7 @@ void InitHrtfPanning(ALCdevice *device)
 
     HrtfStore *Hrtf{device->mHrtf.get()};
     auto hrtfstate = DirectHrtfState::Create(count);
-    hrtfstate->build(Hrtf, AmbiPoints, AmbiMatrix, AmbiOrderHFGain);
+    hrtfstate->build(Hrtf, device->mIrSize, AmbiPoints, AmbiMatrix, AmbiOrderHFGain);
     device->mHrtfState = std::move(hrtfstate);
 
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, true);
@@ -849,11 +849,14 @@ void InitUhjPanning(ALCdevice *device)
 void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
     HrtfRequestMode hrtf_userreq)
 {
+    const char *devname{device->DeviceName.c_str()};
+
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
 
     device->mHrtfState = nullptr;
     device->mHrtf = nullptr;
+    device->mIrSize = 0;
     device->HrtfName.clear();
     device->mRenderMode = RenderMode::Normal;
 
@@ -878,7 +881,6 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
                 break;
         }
 
-        const char *devname{device->DeviceName.c_str()};
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
         AmbDecConf *pconf{nullptr};
         AmbDecConf conf{};
@@ -960,9 +962,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
 
     if(hrtf_id >= 0 && static_cast<ALuint>(hrtf_id) < device->HrtfList.size())
     {
-        const char *devname{device->DeviceName.c_str()};
         const std::string &hrtfname = device->HrtfList[static_cast<ALuint>(hrtf_id)];
-        if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
+        if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
         {
             device->mHrtf = std::move(hrtf);
             device->HrtfName = hrtfname;
@@ -971,10 +972,9 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
 
     if(!device->mHrtf)
     {
-        const char *devname{device->DeviceName.c_str()};
         for(const auto &hrtfname : device->HrtfList)
         {
-            if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, devname, device->Frequency)})
+            if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
             {
                 device->mHrtf = std::move(hrtf);
                 device->HrtfName = hrtfname;
@@ -986,6 +986,14 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     if(device->mHrtf)
     {
         old_hrtf = nullptr;
+
+        HrtfStore *hrtf{device->mHrtf.get()};
+        device->mIrSize = hrtf->irSize;
+        if(auto hrtfsizeopt = ConfigValueUInt(devname, nullptr, "hrtf-size"))
+        {
+            if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
+                device->mIrSize = maxu(*hrtfsizeopt, MIN_IR_LENGTH);
+        }
 
         InitHrtfPanning(device);
         device->PostProcess = &ALCdevice::ProcessHrtf;

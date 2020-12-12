@@ -840,6 +840,9 @@ void AlsaPlayback::stop()
     mThread.join();
 
     mBuffer.clear();
+    int err{snd_pcm_drop(mPcmHandle)};
+    if(err < 0)
+        ERR("snd_pcm_drop failed: %s\n", snd_strerror(err));
 }
 
 ClockLatency AlsaPlayback::getClockLatency()

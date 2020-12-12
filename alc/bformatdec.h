@@ -7,7 +7,7 @@
 
 #include "almalloc.h"
 #include "alspan.h"
-#include "ambidefs.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/filters/splitter.h"

@@ -7,7 +7,7 @@
 #include <type_traits>
 
 #include "alspan.h"
-#include "ambidefs.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/devformat.h"
 

@@ -8,8 +8,8 @@
 
 #include "almalloc.h"
 #include "alspan.h"
-#include "ambidefs.h"
 #include "atomic.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/filters/splitter.h"
 #include "intrusive_ptr.h"

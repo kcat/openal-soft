@@ -4,7 +4,7 @@
 #include <array>
 #include <string>
 
-#include "ambidefs.h"
+#include "core/ambidefs.h"
 #include "vector.h"
 
 /* Helpers to read .ambdec configuration files. */

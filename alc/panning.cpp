@@ -48,8 +48,8 @@
 #include "alstring.h"
 #include "alu.h"
 #include "ambdec.h"
-#include "ambidefs.h"
 #include "bformatdec.h"
+#include "core/ambidefs.h"
 #include "core/bs2b.h"
 #include "core/devformat.h"
 #include "core/uhjfilter.h"
@@ -58,17 +58,6 @@
 #include "logging.h"
 #include "math_defs.h"
 #include "opthelpers.h"
-
-
-constexpr std::array<float,MaxAmbiChannels> AmbiScale::FromN3D;
-constexpr std::array<float,MaxAmbiChannels> AmbiScale::FromSN3D;
-constexpr std::array<float,MaxAmbiChannels> AmbiScale::FromFuMa;
-constexpr std::array<uint8_t,MaxAmbiChannels> AmbiIndex::FromFuMa;
-constexpr std::array<uint8_t,MaxAmbi2DChannels> AmbiIndex::FromFuMa2D;
-constexpr std::array<uint8_t,MaxAmbiChannels> AmbiIndex::FromACN;
-constexpr std::array<uint8_t,MaxAmbi2DChannels> AmbiIndex::From2D;
-constexpr std::array<uint8_t,MaxAmbiChannels> AmbiIndex::OrderFromChannel;
-constexpr std::array<uint8_t,MaxAmbi2DChannels> AmbiIndex::OrderFrom2DChannel;
 
 
 namespace {

@@ -1,5 +1,5 @@
-#ifndef AMBIDEFS_H
-#define AMBIDEFS_H
+#ifndef CORE_AMBIDEFS_H
+#define CORE_AMBIDEFS_H
 
 #include <array>
 #include <stddef.h>
@@ -132,4 +132,4 @@ struct AmbiIndex {
     }};
 };
 
-#endif /* AMBIDEFS_H */
+#endif /* CORE_AMBIDEFS_H */

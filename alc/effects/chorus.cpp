@@ -37,7 +37,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alu.h"
-#include "ambidefs.h"
+#include "core/ambidefs.h"
 #include "effects/base.h"
 #include "math_defs.h"
 #include "opthelpers.h"

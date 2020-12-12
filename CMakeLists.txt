@@ -629,6 +629,8 @@ set(OPENAL_OBJS
     al/state.cpp
 )
 set(ALC_OBJS
+    core/ambidefs.cpp
+    core/ambidefs.h
     core/bs2b.cpp
     core/bs2b.h
     core/bsinc_defs.h
@@ -657,7 +659,6 @@ set(ALC_OBJS
     alc/alcontext.h
     alc/ambdec.cpp
     alc/ambdec.h
-    alc/ambidefs.h
     alc/bformatdec.cpp
     alc/bformatdec.h
     alc/buffer_storage.cpp

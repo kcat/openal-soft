@@ -1,5 +1,5 @@
-#ifndef MIXER_HRTFBASE_H
-#define MIXER_HRTFBASE_H
+#ifndef CORE_MIXER_HRTFBASE_H
+#define CORE_MIXER_HRTFBASE_H
 
 #include <algorithm>
 #include <cmath>
@@ -156,4 +156,4 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
     std::fill_n(accum_iter, BufferSize, float2{});
 }
 
-#endif /* MIXER_HRTFBASE_H */
+#endif /* CORE_MIXER_HRTFBASE_H */

@@ -12,8 +12,8 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/filters/splitter.h"
+#include "core/mixer/hrtfdefs.h"
 #include "intrusive_ptr.h"
-#include "mixer/hrtfdefs.h"
 #include "vector.h"
 
 

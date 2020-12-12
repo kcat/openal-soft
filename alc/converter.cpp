@@ -12,7 +12,6 @@
 #include "albyte.h"
 #include "alnumeric.h"
 #include "fpu_ctrl.h"
-#include "mixer/defs.h"
 
 struct CTag;
 struct CopyTag;

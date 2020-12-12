@@ -26,10 +26,10 @@
 #include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/filters/splitter.h"
+#include "core/mixer/defs.h"
 #include "hrtf.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "mixer/defs.h"
 #include "vector.h"
 
 class BFormatDec;

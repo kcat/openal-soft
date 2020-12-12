@@ -1,5 +1,5 @@
-#ifndef MIXER_DEFS_H
-#define MIXER_DEFS_H
+#ifndef CORE_MIXER_DEFS_H
+#define CORE_MIXER_DEFS_H
 
 #include <array>
 #include <stdlib.h>
@@ -97,4 +97,4 @@ inline void InitPosArrays(uint frac, uint increment, uint *frac_arr, uint *pos_a
     }
 }
 
-#endif /* MIXER_DEFS_H */
+#endif /* CORE_MIXER_DEFS_H */

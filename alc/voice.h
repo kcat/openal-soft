@@ -11,8 +11,8 @@
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
+#include "core/mixer/defs.h"
 #include "hrtf.h"
-#include "mixer/defs.h"
 
 struct EffectSlot;
 struct BufferlistItem;

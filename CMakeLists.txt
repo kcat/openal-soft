@@ -615,7 +615,11 @@ set(CORE_OBJS
     core/mastering.cpp
     core/mastering.h
     core/uhjfilter.cpp
-    core/uhjfilter.h)
+    core/uhjfilter.h
+    core/mixer/defs.h
+    core/mixer/hrtfbase.h
+    core/mixer/hrtfdefs.h
+    core/mixer/mixer_c.cpp)
 
 # AL and related routines
 set(OPENAL_OBJS
@@ -702,11 +706,7 @@ set(ALC_OBJS
     alc/panning.cpp
     alc/uiddefs.cpp
     alc/voice.cpp
-    alc/voice.h
-    alc/mixer/defs.h
-    alc/mixer/hrtfbase.h
-    alc/mixer/hrtfdefs.h
-    alc/mixer/mixer_c.cpp)
+    alc/voice.h)
 
 
 set(CPU_EXTS "Default")
@@ -725,9 +725,9 @@ if(HAVE_XMMINTRIN_H AND HAVE_EMMINTRIN_H)
     if(ALSOFT_CPUEXT_SSE AND ALSOFT_CPUEXT_SSE2)
         set(HAVE_SSE 1)
         set(HAVE_SSE2 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_sse.cpp alc/mixer/mixer_sse2.cpp)
+        set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse.cpp core/mixer/mixer_sse2.cpp)
         if(SSE2_SWITCH)
-            set_source_files_properties(alc/mixer/mixer_sse.cpp alc/mixer/mixer_sse2.cpp
+            set_source_files_properties(core/mixer/mixer_sse.cpp core/mixer/mixer_sse2.cpp
                 PROPERTIES COMPILE_FLAGS "${SSE2_SWITCH}")
         endif()
         set(CPU_EXTS "${CPU_EXTS}, SSE, SSE2")
@@ -745,9 +745,9 @@ if(HAVE_EMMINTRIN_H)
     option(ALSOFT_CPUEXT_SSE3 "Enable SSE3 support" ON)
     if(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE3)
         set(HAVE_SSE3 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_sse3.cpp)
+        set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse3.cpp)
         if(SSE2_SWITCH)
-            set_source_files_properties(alc/mixer/mixer_sse3.cpp PROPERTIES
+            set_source_files_properties(core/mixer/mixer_sse3.cpp PROPERTIES
                 COMPILE_FLAGS "${SSE3_SWITCH}")
         endif()
         set(CPU_EXTS "${CPU_EXTS}, SSE3")
@@ -762,9 +762,9 @@ if(HAVE_SMMINTRIN_H)
     option(ALSOFT_CPUEXT_SSE4_1 "Enable SSE4.1 support" ON)
     if(HAVE_SSE3 AND ALSOFT_CPUEXT_SSE4_1)
         set(HAVE_SSE4_1 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_sse41.cpp)
+        set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse41.cpp)
         if(SSE4_1_SWITCH)
-            set_source_files_properties(alc/mixer/mixer_sse41.cpp PROPERTIES
+            set_source_files_properties(core/mixer/mixer_sse41.cpp PROPERTIES
                 COMPILE_FLAGS "${SSE4_1_SWITCH}")
         endif()
         set(CPU_EXTS "${CPU_EXTS}, SSE4.1")
@@ -780,9 +780,9 @@ if(HAVE_ARM_NEON_H)
     option(ALSOFT_CPUEXT_NEON "Enable ARM Neon support" ON)
     if(ALSOFT_CPUEXT_NEON)
         set(HAVE_NEON 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/mixer/mixer_neon.cpp)
+        set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_neon.cpp)
         if(FPU_NEON_SWITCH)
-            set_source_files_properties(alc/mixer/mixer_neon.cpp PROPERTIES
+            set_source_files_properties(core/mixer/mixer_neon.cpp PROPERTIES
                 COMPILE_FLAGS "${FPU_NEON_SWITCH}")
         endif()
         set(CPU_EXTS "${CPU_EXTS}, Neon")

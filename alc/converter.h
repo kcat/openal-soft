@@ -6,7 +6,7 @@
 
 #include "almalloc.h"
 #include "core/devformat.h"
-#include "mixer/defs.h"
+#include "core/mixer/defs.h"
 
 using uint = unsigned int;
 

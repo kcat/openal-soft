@@ -1,5 +1,5 @@
-#ifndef MIXER_HRTFDEFS_H
-#define MIXER_HRTFDEFS_H
+#ifndef CORE_MIXER_HRTFDEFS_H
+#define CORE_MIXER_HRTFDEFS_H
 
 #include <array>
 
@@ -49,4 +49,4 @@ struct HrtfChannelState {
     alignas(16) HrirArray mCoeffs{};
 };
 
-#endif /* MIXER_HRTFDEFS_H */
+#endif /* CORE_MIXER_HRTFDEFS_H */

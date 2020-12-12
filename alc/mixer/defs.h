@@ -9,7 +9,6 @@
 
 struct HrtfChannelState;
 struct HrtfFilter;
-union InterpState;
 struct MixHrtfFilter;
 
 using uint = unsigned int;

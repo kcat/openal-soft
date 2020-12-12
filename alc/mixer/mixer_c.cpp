@@ -4,7 +4,6 @@
 #include <cmath>
 #include <limits>
 
-#include "alcmain.h"
 #include "alnumeric.h"
 #include "core/bsinc_tables.h"
 #include "defs.h"

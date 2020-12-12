@@ -558,8 +558,8 @@ endif()
 check_symbol_exists(getopt unistd.h HAVE_GETOPT)
 
 
-# Common sources used by both the OpenAL implementation library and potentially
-# the OpenAL router.
+# Common sources used by both the OpenAL implementation library, the OpenAL
+# router, and certain tools and examples.
 set(COMMON_OBJS
     common/albyte.h
     common/alcomplex.cpp
@@ -592,8 +592,32 @@ set(COMMON_OBJS
     common/threads.cpp
     common/threads.h
     common/vecmat.h
-    common/vector.h
-)
+    common/vector.h)
+
+# Core library routines
+set(CORE_OBJS
+    core/ambidefs.cpp
+    core/ambidefs.h
+    core/bs2b.cpp
+    core/bs2b.h
+    core/bsinc_defs.h
+    core/bsinc_tables.cpp
+    core/bsinc_tables.h
+    core/bufferline.h
+    core/devformat.cpp
+    core/devformat.h
+    core/filters/biquad.h
+    core/filters/biquad.cpp
+    core/filters/nfc.cpp
+    core/filters/nfc.h
+    core/filters/splitter.cpp
+    core/filters/splitter.h
+    core/mastering.cpp
+    core/mastering.h
+    core/uhjfilter.cpp
+    core/uhjfilter.h)
+
+# AL and related routines
 set(OPENAL_OBJS
     al/auxeffectslot.cpp
     al/auxeffectslot.h
@@ -626,30 +650,10 @@ set(OPENAL_OBJS
     al/listener.h
     al/source.cpp
     al/source.h
-    al/state.cpp
-)
-set(ALC_OBJS
-    core/ambidefs.cpp
-    core/ambidefs.h
-    core/bs2b.cpp
-    core/bs2b.h
-    core/bsinc_defs.h
-    core/bsinc_tables.cpp
-    core/bsinc_tables.h
-    core/bufferline.h
-    core/devformat.cpp
-    core/devformat.h
-    core/filters/biquad.h
-    core/filters/biquad.cpp
-    core/filters/nfc.cpp
-    core/filters/nfc.h
-    core/filters/splitter.cpp
-    core/filters/splitter.h
-    core/mastering.cpp
-    core/mastering.h
-    core/uhjfilter.cpp
-    core/uhjfilter.h
+    al/state.cpp)
 
+# ALC and related routines
+set(ALC_OBJS
     alc/alc.cpp
     alc/alcmain.h
     alc/alu.cpp
@@ -702,8 +706,7 @@ set(ALC_OBJS
     alc/mixer/defs.h
     alc/mixer/hrtfbase.h
     alc/mixer/hrtfdefs.h
-    alc/mixer/mixer_c.cpp
-)
+    alc/mixer/mixer_c.cpp)
 
 
 set(CPU_EXTS "Default")
@@ -1226,7 +1229,7 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")
-    add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
+    add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
     if(WIN32)
@@ -1275,7 +1278,7 @@ else()
     # !important: for osx framework public header works, the headers must be in
     # the project
     set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h)
-    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${RC_CONFIG}
+    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS} ${RC_CONFIG}
         ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")

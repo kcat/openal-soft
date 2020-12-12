@@ -2,6 +2,7 @@
 
 #include <arm_neon.h>
 
+#include <cmath>
 #include <limits>
 
 #include "alnumeric.h"
@@ -234,7 +235,7 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
         const float step{(*TargetGains-gain) * delta};
 
         size_t pos{0};
-        if(!(std::fabs(step) > std::numeric_limits<float>::epsilon()))
+        if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
@@ -283,7 +284,7 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
         ++CurrentGains;
         ++TargetGains;
 
-        if(!(std::fabs(gain) > GainSilenceThreshold))
+        if(!(std::abs(gain) > GainSilenceThreshold))
             continue;
         if(size_t todo{(InSamples.size()-pos) >> 2})
         {

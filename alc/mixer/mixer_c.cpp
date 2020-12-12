@@ -1,7 +1,7 @@
 #include "config.h"
 
 #include <cassert>
-
+#include <cmath>
 #include <limits>
 
 #include "alcmain.h"
@@ -172,7 +172,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
         const float step{(*TargetGains-gain) * delta};
 
         size_t pos{0};
-        if(!(std::fabs(step) > std::numeric_limits<float>::epsilon()))
+        if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
             gain = *TargetGains;
         else
         {
@@ -191,7 +191,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
         ++CurrentGains;
         ++TargetGains;
 
-        if(!(std::fabs(gain) > GainSilenceThreshold))
+        if(!(std::abs(gain) > GainSilenceThreshold))
             continue;
         for(;pos != InSamples.size();++pos)
             dst[pos] += InSamples[pos] * gain;

@@ -2,6 +2,7 @@
 #define MIXER_DEFS_H
 
 #include <array>
+#include <stdlib.h>
 
 #include "alspan.h"
 #include "core/bufferline.h"
@@ -24,6 +25,8 @@ constexpr int MixerFracMask{MixerFracOne - 1};
  * end)!
  */
 constexpr int MaxResamplerPadding{48};
+
+constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 
 
 enum class Resampler {

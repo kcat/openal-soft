@@ -2,10 +2,11 @@
 #define MIXER_HRTFBASE_H
 
 #include <algorithm>
+#include <cmath>
 
-#include "../hrtf.h"
+#include "almalloc.h"
+#include "hrtfdefs.h"
 #include "opthelpers.h"
-#include "voice.h"
 
 
 using uint = unsigned int;

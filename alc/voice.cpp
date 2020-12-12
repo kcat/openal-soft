@@ -56,6 +56,7 @@
 #include "inprogext.h"
 #include "logging.h"
 #include "mixer/defs.h"
+#include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"

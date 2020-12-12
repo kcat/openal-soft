@@ -701,6 +701,7 @@ set(ALC_OBJS
     alc/voice.h
     alc/mixer/defs.h
     alc/mixer/hrtfbase.h
+    alc/mixer/hrtfdefs.h
     alc/mixer/mixer_c.cpp
 )
 

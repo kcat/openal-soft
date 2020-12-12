@@ -42,14 +42,6 @@ enum {
 };
 
 
-struct MixHrtfFilter {
-    const HrirArray *Coeffs;
-    std::array<uint,2> Delay;
-    float Gain;
-    float GainStep;
-};
-
-
 struct DirectParams {
     BiquadFilter LowPass;
     BiquadFilter HighPass;

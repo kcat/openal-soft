@@ -29,8 +29,6 @@ extern MixerFunc MixSamples;
 
 constexpr float GainMixMax{1000.0f}; /* +60dB */
 
-constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
-
 constexpr float SpeedOfSoundMetersPerSec{343.3f};
 constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 

@@ -80,19 +80,18 @@ struct AngularPoint {
 };
 
 #define HRTF_DIRECT_DELAY 192
+struct HrtfChannelState {
+    std::array<float,HRTF_DIRECT_DELAY> mDelay{};
+    BandSplitter mSplitter;
+    float mHfScale{};
+    alignas(16) HrirArray mCoeffs{};
+};
 struct DirectHrtfState {
-    struct ChannelData {
-        std::array<float,HRTF_DIRECT_DELAY> mDelay{};
-        BandSplitter mSplitter;
-        float mHfScale{};
-        alignas(16) HrirArray mCoeffs{};
-    };
-
     std::array<float,HRTF_DIRECT_DELAY+BufferLineSize> mTemp;
 
     /* HRTF filter state for dry buffer content */
     uint mIrSize{0};
-    al::FlexArray<ChannelData> mChannels;
+    al::FlexArray<HrtfChannelState> mChannels;
 
     DirectHrtfState(size_t numchans) : mChannels{numchans} { }
     /**

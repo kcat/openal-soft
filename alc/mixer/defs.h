@@ -6,7 +6,7 @@
 #include "alspan.h"
 #include "core/bufferline.h"
 
-struct DirectHrtfState;
+struct HrtfChannelState;
 struct HrtfFilter;
 union InterpState;
 struct MixHrtfFilter;
@@ -79,8 +79,8 @@ void MixHrtfBlend_(const float *InSamples, float2 *AccumSamples, const uint IrSi
     const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize);
 template<typename InstTag>
 void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
-    const size_t BufferSize);
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
+    float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
 
 /* Vectorized resampler helpers */
 inline void InitPosArrays(uint frac, uint increment, uint *frac_arr, uint *pos_arr, size_t size)

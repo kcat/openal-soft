@@ -85,7 +85,7 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *RESTRICT AccumSamples,
-    DirectHrtfState *State, const size_t BufferSize)
+    float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
 
@@ -98,8 +98,6 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         AccumSamples[HRTF_DIRECT_DELAY+i][1] += RightOut[i];
     }
 
-    const uint_fast32_t IrSize{State->mIrSize};
-    auto chan_iter = State->mChannels.begin();
     for(const FloatBufferLine &input : InSamples)
     {
         /* For dual-band processing, the signal needs extra scaling applied to
@@ -112,19 +110,18 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
          * padding. The delay serves to reduce the error caused by the IIR
          * filter's phase shift on a partial input.
          */
-        al::span<float> tempbuf{al::assume_aligned<16>(State->mTemp.data()),
-            HRTF_DIRECT_DELAY+BufferSize};
+        al::span<float> tempbuf{al::assume_aligned<16>(TempBuf), HRTF_DIRECT_DELAY+BufferSize};
         auto tmpiter = std::reverse_copy(input.begin(), input.begin()+BufferSize, tempbuf.begin());
-        std::copy(chan_iter->mDelay.cbegin(), chan_iter->mDelay.cend(), tmpiter);
+        std::copy(ChanState->mDelay.cbegin(), ChanState->mDelay.cend(), tmpiter);
 
         /* Save the unfiltered newest input samples for next time. */
-        std::copy_n(tempbuf.begin(), chan_iter->mDelay.size(), chan_iter->mDelay.begin());
+        std::copy_n(tempbuf.begin(), ChanState->mDelay.size(), ChanState->mDelay.begin());
 
         /* Apply the all-pass on the reversed signal and reverse the resulting
          * sample array. This produces the forward response with a backwards
          * phase shift (+n degrees becomes -n degrees).
          */
-        chan_iter->mSplitter.applyAllpass(tempbuf);
+        ChanState->mSplitter.applyAllpass(tempbuf);
         tempbuf = tempbuf.subspan<HRTF_DIRECT_DELAY>();
         std::reverse(tempbuf.begin(), tempbuf.end());
 
@@ -132,17 +129,17 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
          * forward phase shift, which cancels out with the backwards phase
          * shift to get the original phase on the scaled signal.
          */
-        chan_iter->mSplitter.processHfScale(tempbuf, chan_iter->mHfScale);
+        ChanState->mSplitter.processHfScale(tempbuf, ChanState->mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
-        const auto &Coeffs = chan_iter->mCoeffs;
+        const auto &Coeffs = ChanState->mCoeffs;
         for(size_t i{0u};i < BufferSize;++i)
         {
             const float insample{tempbuf[i]};
             ApplyCoeffs(AccumSamples+i, IrSize, Coeffs, insample, insample);
         }
 
-        ++chan_iter;
+        ++ChanState;
     }
 
     for(size_t i{0u};i < BufferSize;++i)

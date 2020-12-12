@@ -157,8 +157,8 @@ struct ChanMap {
 };
 
 using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, DirectHrtfState *State,
-    const size_t BufferSize);
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
+    float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
 
 HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 
@@ -289,7 +289,7 @@ void ALCdevice::ProcessHrtf(const size_t SamplesToDo)
     const ALuint ridx{RealOut.ChannelIndex[FrontRight]};
 
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
-        mHrtfState.get(), SamplesToDo);
+        mHrtfState->mTemp.data(), mHrtfState->mChannels.data(), mHrtfState->mIrSize, SamplesToDo);
 }
 
 void ALCdevice::ProcessAmbiDec(const size_t SamplesToDo)

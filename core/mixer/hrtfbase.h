@@ -11,11 +11,11 @@
 
 using uint = unsigned int;
 
-using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const uint_fast32_t irSize,
+using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const size_t irSize,
     const HrirArray &Coeffs, const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const uint IrSize,
+inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const size_t IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
@@ -40,7 +40,7 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSamples,
-    const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
+    const size_t IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);

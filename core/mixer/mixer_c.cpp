@@ -83,8 +83,8 @@ const float *DoResample(const InterpState *state, const float *RESTRICT src, uin
     return dst.data();
 }
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
-    const HrirArray &Coeffs, const float left, const float right)
+inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
 {
     ASSUME(IrSize >= MIN_IR_LENGTH);
     for(size_t c{0};c < IrSize;++c)

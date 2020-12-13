@@ -22,8 +22,8 @@ constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
-    const HrirArray &Coeffs, const float left, const float right)
+inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
 
@@ -40,7 +40,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
-        uint_fast32_t td{((IrSize+1)>>1) - 1};
+        size_t td{((IrSize+1)>>1) - 1};
         size_t i{1};
         do {
             coeffs = _mm_load_ps(&Coeffs[i+1][0]);

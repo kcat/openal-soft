@@ -31,8 +31,8 @@ inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
 constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
 constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const uint_fast32_t IrSize,
-    const HrirArray &Coeffs, const float left, const float right)
+inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const HrirArray &Coeffs,
+    const float left, const float right)
 {
     float32x4_t leftright4;
     {

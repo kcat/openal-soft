@@ -31,6 +31,10 @@ struct SSE4Tag;
 struct LerpTag;
 
 
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE4_1__)
+#pragma GCC target("sse4.1")
+#endif
+
 template<>
 const float *Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *RESTRICT src, uint frac,
     uint increment, const al::span<float> dst)

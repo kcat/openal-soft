@@ -16,6 +16,10 @@ struct BSincTag;
 struct FastBSincTag;
 
 
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__ARM_NEON)
+#pragma GCC target("fpu=neon")
+#endif
+
 namespace {
 
 inline float32x4_t set_f4(float l0, float l1, float l2, float l3)

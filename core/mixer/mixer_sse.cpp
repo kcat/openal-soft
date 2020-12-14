@@ -15,6 +15,11 @@ struct BSincTag;
 struct FastBSincTag;
 
 
+/* SSE2 is required for any SSE support. */
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE2__)
+#pragma GCC target("sse2")
+#endif
+
 namespace {
 
 constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};

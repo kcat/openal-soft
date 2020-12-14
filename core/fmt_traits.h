@@ -1,8 +1,8 @@
-#ifndef ALC_FMT_TRAITS_H
-#define ALC_FMT_TRAITS_H
+#ifndef CORE_FMT_TRAITS_H
+#define CORE_FMT_TRAITS_H
 
-#include <cstddef>
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 #include "albyte.h"
 #include "buffer_storage.h"
@@ -78,4 +78,4 @@ inline void LoadSampleArray(DstT *RESTRICT dst, const al::byte *src, const size_
 
 } // namespace al
 
-#endif /* ALC_FMT_TRAITS_H */
+#endif /* CORE_FMT_TRAITS_H */

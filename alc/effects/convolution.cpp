@@ -17,9 +17,9 @@
 #include "buffer_storage.h"
 #include "core/ambidefs.h"
 #include "core/filters/splitter.h"
+#include "core/fmt_traits.h"
 #include "effects/base.h"
 #include "effectslot.h"
-#include "fmt_traits.h"
 #include "logging.h"
 #include "polyphase_resampler.h"
 

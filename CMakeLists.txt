@@ -602,6 +602,8 @@ set(CORE_OBJS
     core/filters/nfc.h
     core/filters/splitter.cpp
     core/filters/splitter.h
+    core/fmt_traits.cpp
+    core/fmt_traits.h
     core/mastering.cpp
     core/mastering.h
     core/uhjfilter.cpp
@@ -683,8 +685,6 @@ set(ALC_OBJS
     alc/effects/pshifter.cpp
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
-    alc/fmt_traits.cpp
-    alc/fmt_traits.h
     alc/fpu_ctrl.cpp
     alc/fpu_ctrl.h
     alc/front_stablizer.h

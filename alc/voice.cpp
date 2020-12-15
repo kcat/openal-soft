@@ -34,9 +34,7 @@
 #include <new>
 #include <utility>
 
-#include "al/buffer.h"
 #include "al/event.h"
-#include "al/source.h"
 #include "alcmain.h"
 #include "albyte.h"
 #include "alconfig.h"
@@ -46,6 +44,7 @@
 #include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
+#include "buffer_storage.h"
 #include "core/devformat.h"
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"

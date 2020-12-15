@@ -32,145 +32,156 @@ namespace {
 #if defined(HAVE_GCC_GET_CPUID) \
     && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
 using reg_type = unsigned int;
-inline void get_cpuid(unsigned int f, reg_type *regs)
-{ __get_cpuid(f, &regs[0], &regs[1], &regs[2], &regs[3]); }
+inline std::array<reg_type,4> get_cpuid(unsigned int f)
+{
+    std::array<reg_type,4> ret{};
+    __get_cpuid(f, &ret[0], &ret[1], &ret[2], &ret[3]);
+    return ret;
+}
 #define CAN_GET_CPUID
 #elif defined(HAVE_CPUID_INTRINSIC) \
     && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
 using reg_type = int;
-inline void get_cpuid(unsigned int f, reg_type *regs)
-{ (__cpuid)(regs, f); }
+inline std::array<reg_type,4> get_cpuid(unsigned int f)
+{
+    std::array<reg_type,4> ret{};
+    (__cpuid)(ret.data(), f);
+    return ret;
+}
 #define CAN_GET_CPUID
 #endif
 
 } // namespace
 
-
-void FillCPUCaps(int capfilter)
+al::optional<CPUInfo> GetCPUInfo()
 {
-    int caps{0};
+    CPUInfo ret;
 
-/* FIXME: We really should get this for all available CPUs in case different
- * CPUs have different caps (is that possible on one machine?).
- */
 #ifdef CAN_GET_CPUID
-    union {
-        reg_type regs[4];
-        char str[sizeof(reg_type[4])];
-    } cpuinf[3]{};
+    auto cpuregs = get_cpuid(0);
+    if(cpuregs[0] == 0)
+        return al::nullopt;
 
-    get_cpuid(0, cpuinf[0].regs);
-    if(cpuinf[0].regs[0] == 0)
-        ERR("Failed to get CPUID\n");
-    else
+    const reg_type maxfunc{cpuregs[0]};
+
+    cpuregs = get_cpuid(0x80000000);
+    const reg_type maxextfunc{cpuregs[0]};
+
+    ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[1]), 4);
+    ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[3]), 4);
+    ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[2]), 4);
+    auto iter_end = std::remove(ret.mVendor.begin(), ret.mVendor.end(), '\0');
+    while(iter_end != ret.mVendor.begin() && std::isspace(*iter_end))
+        --iter_end;
+    iter_end = std::unique(ret.mVendor.begin(), iter_end,
+        [](auto&& c0, auto&& c1) { return std::isspace(c0) && std::isspace(c1); });
+    ret.mVendor.erase(iter_end, ret.mVendor.end());
+    if(!ret.mVendor.empty() && std::isspace(ret.mVendor.front()))
+        ret.mVendor.erase(ret.mVendor.begin());
+
+    if(maxextfunc >= 0x80000004)
     {
-        const reg_type maxfunc{cpuinf[0].regs[0]};
-
-        get_cpuid(0x80000000, cpuinf[0].regs);
-        const reg_type maxextfunc{cpuinf[0].regs[0]};
-
-        TRACE("Detected max CPUID function: 0x%x (ext. 0x%x)\n", maxfunc, maxextfunc);
-
-        TRACE("Vendor ID: \"%.4s%.4s%.4s\"\n", cpuinf[0].str+4, cpuinf[0].str+12, cpuinf[0].str+8);
-        if(maxextfunc >= 0x80000004)
-        {
-            get_cpuid(0x80000002, cpuinf[0].regs);
-            get_cpuid(0x80000003, cpuinf[1].regs);
-            get_cpuid(0x80000004, cpuinf[2].regs);
-            TRACE("Name: \"%.16s%.16s%.16s\"\n", cpuinf[0].str, cpuinf[1].str, cpuinf[2].str);
-        }
-
-        if(maxfunc >= 1)
-        {
-            get_cpuid(1, cpuinf[0].regs);
-            if((cpuinf[0].regs[3]&(1<<25)))
-                caps |= CPU_CAP_SSE;
-            if((caps&CPU_CAP_SSE) && (cpuinf[0].regs[3]&(1<<26)))
-                caps |= CPU_CAP_SSE2;
-            if((caps&CPU_CAP_SSE2) && (cpuinf[0].regs[2]&(1<<0)))
-                caps |= CPU_CAP_SSE3;
-            if((caps&CPU_CAP_SSE3) && (cpuinf[0].regs[2]&(1<<19)))
-                caps |= CPU_CAP_SSE4_1;
-        }
+        cpuregs = get_cpuid(0x80000002);
+        ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
+        cpuregs = get_cpuid(0x80000003);
+        ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
+        cpuregs = get_cpuid(0x80000004);
+        ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
+        iter_end = std::remove(ret.mName.begin(), ret.mName.end(), '\0');
+        while(iter_end != ret.mName.begin() && std::isspace(*iter_end))
+            --iter_end;
+        iter_end = std::unique(ret.mName.begin(), iter_end,
+            [](auto&& c0, auto&& c1) { return std::isspace(c0) && std::isspace(c1); });
+        ret.mName.erase(iter_end, ret.mName.end());
+        if(!ret.mName.empty() && std::isspace(ret.mName.front()))
+            ret.mName.erase(ret.mName.begin());
     }
+
+    if(maxfunc >= 1)
+    {
+        cpuregs = get_cpuid(1);
+        if((cpuregs[3]&(1<<25)))
+            ret.mCaps |= CPU_CAP_SSE;
+        if((ret.mCaps&CPU_CAP_SSE) && (cpuregs[3]&(1<<26)))
+            ret.mCaps |= CPU_CAP_SSE2;
+        if((ret.mCaps&CPU_CAP_SSE2) && (cpuregs[2]&(1<<0)))
+            ret.mCaps |= CPU_CAP_SSE3;
+        if((ret.mCaps&CPU_CAP_SSE3) && (cpuregs[2]&(1<<19)))
+            ret.mCaps |= CPU_CAP_SSE4_1;
+    }
+
 #else
+
     /* Assume support for whatever's supported if we can't check for it */
 #if defined(HAVE_SSE4_1)
 #warning "Assuming SSE 4.1 run-time support!"
-    caps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
+    ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
 #elif defined(HAVE_SSE3)
 #warning "Assuming SSE 3 run-time support!"
-    caps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
+    ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
 #elif defined(HAVE_SSE2)
 #warning "Assuming SSE 2 run-time support!"
-    caps |= CPU_CAP_SSE | CPU_CAP_SSE2;
+    ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2;
 #elif defined(HAVE_SSE)
 #warning "Assuming SSE run-time support!"
-    caps |= CPU_CAP_SSE;
+    ret.mCaps |= CPU_CAP_SSE;
 #endif
-#endif
+#endif /* CAN_GET_CPUID */
 
 #ifdef HAVE_NEON
 #ifdef __ARM_NEON
-    caps |= CPU_CAP_NEON;
+    ret.mCaps |= CPU_CAP_NEON;
+
 #elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+
     if(IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
-        caps |= CPU_CAP_NEON;
+        ret.mCaps |= CPU_CAP_NEON;
+
 #else
+
     al::ifstream file{"/proc/cpuinfo"};
     if(!file.is_open())
-        ERR("Failed to open /proc/cpuinfo, cannot check for NEON support\n");
-    else
+        return al::nullopt;
+
+    auto getline = [](std::istream &f, std::string &output) -> bool
     {
-        std::string features;
+        while(f.good() && f.peek() == '\n')
+            f.ignore();
+        return std::getline(f, output) && !output.empty();
+    };
+    std::string features;
+    while(getline(file, features))
+    {
+        if(features.compare(0, 10, "Features\t:", 10) == 0)
+            break;
+    }
+    file.close();
 
-        auto getline = [](std::istream &f, std::string &output) -> bool
+    size_t extpos{9};
+    while((extpos=features.find("neon", extpos+1)) != std::string::npos)
+    {
+        if(std::isspace(features[extpos-1])
+            && (extpos+4 == features.length() || std::isspace(features[extpos+4])))
         {
-            while(f.good() && f.peek() == '\n')
-                f.ignore();
-            return std::getline(f, output) && !output.empty();
-        };
-        while(getline(file, features))
-        {
-            if(features.compare(0, 10, "Features\t:", 10) == 0)
-                break;
+            ret.mCaps |= CPU_CAP_NEON;
+            break;
         }
-        file.close();
-
-        size_t extpos{9};
-        while((extpos=features.find("neon", extpos+1)) != std::string::npos)
+    }
+    if(!(ret.mCaps&CPU_CAP_NEON))
+    {
+        extpos = 9;
+        while((extpos=features.find("asimd", extpos+1)) != std::string::npos)
         {
             if(std::isspace(features[extpos-1])
-                && (extpos+4 == features.length() || std::isspace(features[extpos+4])))
+                && (extpos+5 == features.length() || std::isspace(features[extpos+5])))
             {
-                caps |= CPU_CAP_NEON;
+                ret.mCaps |= CPU_CAP_NEON;
                 break;
-            }
-        }
-        if(!(caps&CPU_CAP_NEON))
-        {
-            extpos = 9;
-            while((extpos=features.find("asimd", extpos+1)) != std::string::npos)
-            {
-                if(std::isspace(features[extpos-1])
-                    && (extpos+5 == features.length() || std::isspace(features[extpos+5])))
-                {
-                    caps |= CPU_CAP_NEON;
-                    break;
-                }
             }
         }
     }
 #endif
 #endif
 
-    TRACE("Extensions:%s%s%s%s%s%s\n",
-        ((capfilter&CPU_CAP_SSE)    ? ((caps&CPU_CAP_SSE)    ? " +SSE"    : " -SSE")    : ""),
-        ((capfilter&CPU_CAP_SSE2)   ? ((caps&CPU_CAP_SSE2)   ? " +SSE2"   : " -SSE2")   : ""),
-        ((capfilter&CPU_CAP_SSE3)   ? ((caps&CPU_CAP_SSE3)   ? " +SSE3"   : " -SSE3")   : ""),
-        ((capfilter&CPU_CAP_SSE4_1) ? ((caps&CPU_CAP_SSE4_1) ? " +SSE4.1" : " -SSE4.1") : ""),
-        ((capfilter&CPU_CAP_NEON)   ? ((caps&CPU_CAP_NEON)   ? " +NEON"   : " -NEON")   : ""),
-        ((!capfilter) ? " -none-" : "")
-    );
-    CPUCapFlags = caps & capfilter;
+    return al::make_optional(ret);
 }

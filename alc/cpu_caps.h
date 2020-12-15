@@ -1,6 +1,10 @@
 #ifndef CPU_CAPS_H
 #define CPU_CAPS_H
 
+#include <string>
+
+#include "aloptional.h"
+
 
 extern int CPUCapFlags;
 enum {
@@ -11,6 +15,12 @@ enum {
     CPU_CAP_NEON   = 1<<4,
 };
 
-void FillCPUCaps(int capfilter);
+struct CPUInfo {
+    std::string mVendor;
+    std::string mName;
+    int mCaps{0};
+};
+
+al::optional<CPUInfo> GetCPUInfo();
 
 #endif /* CPU_CAPS_H */

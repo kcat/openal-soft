@@ -1090,7 +1090,23 @@ void alc_initconfig(void)
             } while(next++);
         }
     }
-    FillCPUCaps(capfilter);
+    if(auto cpuopt = GetCPUInfo())
+    {
+        if(!cpuopt->mVendor.empty() || !cpuopt->mName.empty())
+        {
+            TRACE("Vendor ID: \"%s\"\n", cpuopt->mVendor.c_str());
+            TRACE("Name: \"%s\"\n", cpuopt->mName.c_str());
+        }
+        const int caps{cpuopt->mCaps};
+        TRACE("Extensions:%s%s%s%s%s%s\n",
+            ((capfilter&CPU_CAP_SSE)    ? ((caps&CPU_CAP_SSE)    ? " +SSE"    : " -SSE")    : ""),
+            ((capfilter&CPU_CAP_SSE2)   ? ((caps&CPU_CAP_SSE2)   ? " +SSE2"   : " -SSE2")   : ""),
+            ((capfilter&CPU_CAP_SSE3)   ? ((caps&CPU_CAP_SSE3)   ? " +SSE3"   : " -SSE3")   : ""),
+            ((capfilter&CPU_CAP_SSE4_1) ? ((caps&CPU_CAP_SSE4_1) ? " +SSE4.1" : " -SSE4.1") : ""),
+            ((capfilter&CPU_CAP_NEON)   ? ((caps&CPU_CAP_NEON)   ? " +NEON"   : " -NEON")   : ""),
+            ((!capfilter) ? " -none-" : ""));
+        CPUCapFlags = caps & capfilter;
+    }
 
     if(auto priopt = ConfigValueInt(nullptr, nullptr, "rt-prio"))
         RTPrioLevel = *priopt;

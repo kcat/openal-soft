@@ -1594,14 +1594,17 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             {
                 voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-                voice->mSourceID.store(0u, std::memory_order_relaxed);
+                /* A source ID indicates the voice was playing or paused, which
+                 * gets a reset/stop event.
+                 */
+                sendevt = voice->mSourceID.exchange(0u, std::memory_order_relaxed) != 0u;
                 Voice::State oldvstate{Voice::Playing};
-                sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
+                voice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
                     std::memory_order_relaxed, std::memory_order_acquire);
                 voice->mPendingChange.store(false, std::memory_order_release);
             }
-            /* AL_INITIAL state change events are always sent, even if the
-             * voice is already stopped or even if there is no voice.
+            /* Reset state change events are always sent, even if the voice is
+             * already stopped or even if there is no voice.
              */
             sendevt |= (cur->mState == VChangeState::Reset);
         }
@@ -1638,7 +1641,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
         }
         else if(cur->mState == VChangeState::Restart)
         {
-            /* Changing a voice offset never sends a source change event. */
+            /* Restarting a voice never sends a source change event. */
             Voice *oldvoice{cur->mOldVoice};
             oldvoice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
             oldvoice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);

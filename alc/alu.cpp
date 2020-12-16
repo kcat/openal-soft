@@ -1974,17 +1974,14 @@ void ALCdevice::handleDisconnect(const char *msg, ...)
         return;
 
     AsyncEvent evt{EventType_Disconnected};
-    evt.u.user.type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
-    evt.u.user.id = 0;
-    evt.u.user.param = 0;
 
     va_list args;
     va_start(args, msg);
-    int msglen{vsnprintf(evt.u.user.msg, sizeof(evt.u.user.msg), msg, args)};
+    int msglen{vsnprintf(evt.u.disconnect.msg, sizeof(evt.u.disconnect.msg), msg, args)};
     va_end(args);
 
-    if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.user.msg))
-        evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
+    if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.disconnect.msg))
+        evt.u.disconnect.msg[sizeof(evt.u.disconnect.msg)-1] = 0;
 
     IncrementRef(MixCount);
     for(ALCcontext *ctx : *mContexts.load())

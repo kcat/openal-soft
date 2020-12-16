@@ -89,10 +89,14 @@ static int EventThread(ALCcontext *context)
                     evt.u.bufcomp.count, static_cast<ALsizei>(msg.length()), msg.c_str(),
                     context->mEventParam);
             }
-            else if((enabledevts&evt.EnumType) == evt.EnumType)
-                context->mEventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
-                    static_cast<ALsizei>(strlen(evt.u.user.msg)), evt.u.user.msg,
+            else if(evt.EnumType == EventType_Disconnected)
+            {
+                if(!(enabledevts&EventType_Disconnected))
+                    continue;
+                context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
+                    static_cast<ALsizei>(strlen(evt.u.disconnect.msg)), evt.u.disconnect.msg,
                     context->mEventParam);
+            }
         } while(evt_data.len != 0);
     }
     return 0;

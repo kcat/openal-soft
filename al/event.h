@@ -35,11 +35,8 @@ struct AsyncEvent {
             ALuint count;
         } bufcomp;
         struct {
-            ALenum type;
-            ALuint id;
-            ALuint param;
-            ALchar msg[232];
-        } user;
+            ALchar msg[244];
+        } disconnect;
         EffectState *mEffectState;
     } u{};
 

@@ -419,12 +419,12 @@ END_API_FUNC
 void UpdateListenerProps(ALCcontext *context)
 {
     /* Get an unused proprty container, or allocate a new one as needed. */
-    ALlistenerProps *props{context->mFreeListenerProps.load(std::memory_order_acquire)};
+    ListenerProps *props{context->mFreeListenerProps.load(std::memory_order_acquire)};
     if(!props)
-        props = new ALlistenerProps{};
+        props = new ListenerProps{};
     else
     {
-        ALlistenerProps *next;
+        ListenerProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
         } while(context->mFreeListenerProps.compare_exchange_weak(props, next,
@@ -441,7 +441,7 @@ void UpdateListenerProps(ALCcontext *context)
     props->MetersPerUnit = listener.mMetersPerUnit;
 
     /* Set the new container for updating internal parameters. */
-    props = listener.Params.Update.exchange(props, std::memory_order_acq_rel);
+    props = context->mParams.ListenerUpdate.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

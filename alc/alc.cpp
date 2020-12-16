@@ -2340,7 +2340,7 @@ ALCcontext::~ALCcontext()
     TRACE("Freeing context %p\n", voidp{this});
 
     size_t count{0};
-    ALcontextProps *cprops{mUpdate.exchange(nullptr, std::memory_order_relaxed)};
+    ContextProps *cprops{mParams.ContextUpdate.exchange(nullptr, std::memory_order_relaxed)};
     if(cprops)
     {
         ++count;
@@ -2349,9 +2349,8 @@ ALCcontext::~ALCcontext()
     cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
     while(cprops)
     {
-        ALcontextProps *next{cprops->next.load(std::memory_order_relaxed)};
-        delete cprops;
-        cprops = next;
+        std::unique_ptr<ContextProps> old{cprops};
+        cprops = old->next.load(std::memory_order_relaxed);
         ++count;
     }
     TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
@@ -2368,9 +2367,8 @@ ALCcontext::~ALCcontext()
     EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
     while(eprops)
     {
-        EffectSlotProps *next{eprops->next.load(std::memory_order_relaxed)};
-        delete eprops;
-        eprops = next;
+        std::unique_ptr<EffectSlotProps> old{eprops};
+        eprops = old->next.load(std::memory_order_relaxed);
         ++count;
     }
     TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
@@ -2394,9 +2392,8 @@ ALCcontext::~ALCcontext()
     VoicePropsItem *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
     while(vprops)
     {
-        VoicePropsItem *next{vprops->next.load(std::memory_order_relaxed)};
-        delete vprops;
-        vprops = next;
+        std::unique_ptr<VoicePropsItem> old{vprops};
+        vprops = old->next.load(std::memory_order_relaxed);
         ++count;
     }
     TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
@@ -2404,7 +2401,7 @@ ALCcontext::~ALCcontext()
     delete mVoices.exchange(nullptr, std::memory_order_relaxed);
 
     count = 0;
-    ALlistenerProps *lprops{mListener.Params.Update.exchange(nullptr, std::memory_order_relaxed)};
+    ListenerProps *lprops{mParams.ListenerUpdate.exchange(nullptr, std::memory_order_relaxed)};
     if(lprops)
     {
         ++count;
@@ -2413,9 +2410,8 @@ ALCcontext::~ALCcontext()
     lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
     while(lprops)
     {
-        ALlistenerProps *next{lprops->next.load(std::memory_order_relaxed)};
-        delete lprops;
-        lprops = next;
+        std::unique_ptr<ListenerProps> old{lprops};
+        lprops = old->next.load(std::memory_order_relaxed);
         ++count;
     }
     TRACE("Freed %zu listener property object%s\n", count, (count==1)?"":"s");
@@ -2476,14 +2472,14 @@ void ALCcontext::init()
     mExtensionList = alExtList;
 
 
-    mListener.Params.Matrix = alu::Matrix::Identity();
-    mListener.Params.Velocity = alu::Vector{};
-    mListener.Params.Gain = mListener.Gain;
-    mListener.Params.MetersPerUnit = mListener.mMetersPerUnit;
-    mListener.Params.DopplerFactor = mDopplerFactor;
-    mListener.Params.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
-    mListener.Params.SourceDistanceModel = mSourceDistanceModel;
-    mListener.Params.mDistanceModel = mDistanceModel;
+    mParams.Matrix = alu::Matrix::Identity();
+    mParams.Velocity = alu::Vector{};
+    mParams.Gain = mListener.Gain;
+    mParams.MetersPerUnit = mListener.mMetersPerUnit;
+    mParams.DopplerFactor = mDopplerFactor;
+    mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
+    mParams.SourceDistanceModel = mSourceDistanceModel;
+    mParams.mDistanceModel = mDistanceModel;
 
 
     mAsyncEvents = RingBuffer::Create(511, sizeof(AsyncEvent), false);

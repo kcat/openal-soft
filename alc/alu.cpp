@@ -44,11 +44,7 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "al/auxeffectslot.h"
-#include "al/buffer.h"
-#include "al/effect.h"
 #include "al/event.h"
-#include "al/listener.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
@@ -69,6 +65,7 @@
 #include "core/uhjfilter.h"
 #include "cpu_caps.h"
 #include "effects/base.h"
+#include "effectslot.h"
 #include "fpu_ctrl.h"
 #include "front_stablizer.h"
 #include "hrtf.h"
@@ -367,27 +364,25 @@ auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t
 }
 
 
-bool CalcContextParams(ALCcontext *Context)
+bool CalcContextParams(ALCcontext *ctx)
 {
-    ALcontextProps *props{Context->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
+    ContextProps *props{ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
-    ALlistener &Listener = Context->mListener;
-    Listener.Params.DopplerFactor = props->DopplerFactor;
-    Listener.Params.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
+    ctx->mParams.DopplerFactor = props->DopplerFactor;
+    ctx->mParams.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
 
-    Listener.Params.SourceDistanceModel = props->SourceDistanceModel;
-    Listener.Params.mDistanceModel = props->mDistanceModel;
+    ctx->mParams.SourceDistanceModel = props->SourceDistanceModel;
+    ctx->mParams.mDistanceModel = props->mDistanceModel;
 
-    AtomicReplaceHead(Context->mFreeContextProps, props);
+    AtomicReplaceHead(ctx->mFreeContextProps, props);
     return true;
 }
 
-bool CalcListenerParams(ALCcontext *Context)
+bool CalcListenerParams(ALCcontext *ctx)
 {
-    ALlistener &Listener = Context->mListener;
-
-    ALlistenerProps *props{Listener.Params.Update.exchange(nullptr, std::memory_order_acq_rel)};
+    ListenerProps *props{ctx->mParams.ListenerUpdate.exchange(nullptr,
+        std::memory_order_acq_rel)};
     if(!props) return false;
 
     /* AT then UP */
@@ -405,21 +400,20 @@ bool CalcListenerParams(ALCcontext *Context)
         U[2], V[2], -N[2], 0.0,
          0.0,  0.0,   0.0, 1.0};
     const alu::VectorR<double> pos{props->Position[0],props->Position[1],props->Position[2],1.0};
+    const alu::VectorR<double> vel{props->Velocity[0],props->Velocity[1],props->Velocity[2],0.0};
     const alu::Vector P{alu::cast_to<float>(rot * pos)};
 
-    Listener.Params.Matrix = alu::Matrix{
+    ctx->mParams.Matrix = alu::Matrix{
          U[0],  V[0], -N[0], 0.0f,
          U[1],  V[1], -N[1], 0.0f,
          U[2],  V[2], -N[2], 0.0f,
         -P[0], -P[1], -P[2], 1.0f};
+    ctx->mParams.Velocity = alu::cast_to<float>(rot * vel);
 
-    const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
-    Listener.Params.Velocity = Listener.Params.Matrix * vel;
+    ctx->mParams.Gain = props->Gain * ctx->mGainBoost;
+    ctx->mParams.MetersPerUnit = props->MetersPerUnit;
 
-    Listener.Params.Gain = props->Gain * Context->mGainBoost;
-    Listener.Params.MetersPerUnit = props->MetersPerUnit;
-
-    AtomicReplaceHead(Context->mFreeListenerProps, props);
+    AtomicReplaceHead(ctx->mFreeListenerProps, props);
     return true;
 }
 
@@ -438,7 +432,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ALCcontex
     slot->Target = props->Target;
     slot->EffectType = props->Type;
     slot->mEffectProps = props->Props;
-    if(IsReverbEffect(props->Type))
+    if(props->Type == AL_EFFECT_REVERB || props->Type == AL_EFFECT_EAXREVERB)
     {
         slot->RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
         slot->DecayTime = props->Props.Reverb.DecayTime;
@@ -683,7 +677,7 @@ struct GainTriplet { float Base, HF, LF; };
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
     const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
-    const VoiceProps *props, const ALlistener &Listener, const ALCdevice *Device)
+    const VoiceProps *props, const ContextParams &Context, const ALCdevice *Device)
 {
     static const ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
@@ -882,8 +876,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             V.normalize();
             if(!props->HeadRelative)
             {
-                N = Listener.Params.Matrix * N;
-                V = Listener.Params.Matrix * V;
+                N = Context.Matrix * N;
+                V = Context.Matrix * V;
             }
             /* Build and normalize right-vector */
             alu::Vector U{N.cross_product(V)};
@@ -1201,9 +1195,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 }
 
-void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *ALContext)
+void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *context)
 {
-    const ALCdevice *Device{ALContext->mDevice.get()};
+    const ALCdevice *Device{context->mDevice.get()};
     EffectSlot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -1229,30 +1223,28 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
-    const ALlistener &Listener = ALContext->mListener;
     GainTriplet DryGain;
     DryGain.Base  = minf(clampf(props->Gain, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        Listener.Params.Gain, GainMixMax);
+        context->mParams.Gain, GainMixMax);
     DryGain.HF = props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
     GainTriplet WetGain[MAX_SENDS];
     for(ALuint i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i].Base = minf(clampf(props->Gain, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * Listener.Params.Gain, GainMixMax);
+            props->Send[i].Gain * context->mParams.Gain, GainMixMax);
         WetGain[i].HF = props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
     }
 
     CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, WetGain, SendSlots, props,
-        Listener, Device);
+        context->mParams, Device);
 }
 
-void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *ALContext)
+void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *context)
 {
-    const ALCdevice *Device{ALContext->mDevice.get()};
+    const ALCdevice *Device{context->mDevice.get()};
     const ALuint NumSends{Device->NumAuxSends};
-    const ALlistener &Listener = ALContext->mListener;
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -1318,14 +1310,14 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     if(!props->HeadRelative)
     {
         /* Transform source vectors */
-        Position = Listener.Params.Matrix * Position;
-        Velocity = Listener.Params.Matrix * Velocity;
-        Direction = Listener.Params.Matrix * Direction;
+        Position = context->mParams.Matrix * Position;
+        Velocity = context->mParams.Matrix * Velocity;
+        Direction = context->mParams.Matrix * Direction;
     }
     else
     {
         /* Offset the source velocity to be relative of the listener velocity */
-        Velocity += Listener.Params.Velocity;
+        Velocity += context->mParams.Velocity;
     }
 
     const bool directional{Direction.normalize() > 0.0f};
@@ -1341,8 +1333,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     /* Calculate distance attenuation */
     float ClampedDist{Distance};
 
-    switch(Listener.Params.SourceDistanceModel ?
-           props->mDistanceModel : Listener.Params.mDistanceModel)
+    switch(context->mParams.SourceDistanceModel ? props->mDistanceModel
+        : context->mParams.mDistanceModel)
     {
         case DistanceModel::InverseClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
@@ -1441,13 +1433,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
 
     /* Apply gain and frequency filters */
     DryGain.Base = minf(clampf(DryGain.Base, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        Listener.Params.Gain, GainMixMax);
+        context->mParams.Gain, GainMixMax);
     DryGain.HF *= props->Direct.GainHF;
     DryGain.LF *= props->Direct.GainLF;
     for(ALuint i{0};i < NumSends;i++)
     {
         WetGain[i].Base = minf(clampf(WetGain[i].Base, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * Listener.Params.Gain, GainMixMax);
+            props->Send[i].Gain * context->mParams.Gain, GainMixMax);
         WetGain[i].HF *= props->Send[i].GainHF;
         WetGain[i].LF *= props->Send[i].GainLF;
     }
@@ -1456,7 +1448,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     if(ClampedDist > props->RefDistance && props->RolloffFactor > 0.0f)
     {
         const float meters_base{(ClampedDist-props->RefDistance) * props->RolloffFactor *
-            Listener.Params.MetersPerUnit};
+            context->mParams.MetersPerUnit};
         if(props->AirAbsorptionFactor > 0.0f)
         {
             const float hfattn{std::pow(AirAbsorbGainHF, meters_base*props->AirAbsorptionFactor)};
@@ -1497,14 +1489,14 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     float Pitch{props->Pitch};
 
     /* Calculate velocity-based doppler effect */
-    float DopplerFactor{props->DopplerFactor * Listener.Params.DopplerFactor};
+    float DopplerFactor{props->DopplerFactor * context->mParams.DopplerFactor};
     if(DopplerFactor > 0.0f)
     {
-        const alu::Vector &lvelocity = Listener.Params.Velocity;
+        const alu::Vector &lvelocity = context->mParams.Velocity;
         float vss{Velocity.dot_product(ToSource) * -DopplerFactor};
         float vls{lvelocity.dot_product(ToSource) * -DopplerFactor};
 
-        const float SpeedOfSound{Listener.Params.SpeedOfSound};
+        const float SpeedOfSound{context->mParams.SpeedOfSound};
         if(!(vls < SpeedOfSound))
         {
             /* Listener moving away from the source at the speed of sound.
@@ -1545,8 +1537,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
     CalcPanningAndFilters(voice, ToSource[0], ToSource[1], ToSource[2]*ZScale,
-        Distance*Listener.Params.MetersPerUnit, spread, DryGain, WetGain, SendSlots, props,
-        Listener, Device);
+        Distance*context->mParams.MetersPerUnit, spread, DryGain, WetGain, SendSlots, props,
+        context->mParams, Device);
 }
 
 void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)

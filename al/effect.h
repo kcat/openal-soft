@@ -4,8 +4,8 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "effects/base.h"
 #include "al/effects/effects.h"
+#include "alc/effects/base.h"
 
 
 enum {
@@ -52,9 +52,6 @@ struct ALeffect {
 
     DISABLE_ALLOC()
 };
-
-inline bool IsReverbEffect(const ALenum type) noexcept
-{ return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
 
 EffectStateFactory *getFactoryByType(ALenum type);
 

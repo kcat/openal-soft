@@ -1,6 +1,7 @@
 #ifndef ALCONTEXT_H
 #define ALCONTEXT_H
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -20,6 +21,7 @@
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "threads.h"
+#include "vecmat.h"
 #include "vector.h"
 #include "voice.h"
 
@@ -54,16 +56,47 @@ struct WetBuffer {
 using WetBufferPtr = std::unique_ptr<WetBuffer>;
 
 
-struct ALcontextProps {
+struct ContextProps {
     float DopplerFactor;
     float DopplerVelocity;
     float SpeedOfSound;
     bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 
-    std::atomic<ALcontextProps*> next;
+    std::atomic<ContextProps*> next;
 
-    DEF_NEWDEL(ALcontextProps)
+    DEF_NEWDEL(ContextProps)
+};
+
+struct ListenerProps {
+    std::array<float,3> Position;
+    std::array<float,3> Velocity;
+    std::array<float,3> OrientAt;
+    std::array<float,3> OrientUp;
+    float Gain;
+    float MetersPerUnit;
+
+    std::atomic<ListenerProps*> next;
+
+    DEF_NEWDEL(ListenerProps)
+};
+
+struct ContextParams {
+    /* Pointer to the most recent property values that are awaiting an update. */
+    std::atomic<ContextProps*> ContextUpdate{nullptr};
+    std::atomic<ListenerProps*> ListenerUpdate{nullptr};
+
+    alu::Matrix Matrix{alu::Matrix::Identity()};
+    alu::Vector Velocity{};
+
+    float Gain{1.0f};
+    float MetersPerUnit{1.0f};
+
+    float DopplerFactor{1.0f};
+    float SpeedOfSound{343.3f}; /* in units per sec! */
+
+    bool SourceDistanceModel{false};
+    DistanceModel mDistanceModel{};
 };
 
 
@@ -141,13 +174,11 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
 
     float mGainBoost{1.0f};
 
-    std::atomic<ALcontextProps*> mUpdate{nullptr};
-
     /* Linked lists of unused property containers, free to use for future
      * updates.
      */
-    std::atomic<ALcontextProps*> mFreeContextProps{nullptr};
-    std::atomic<ALlistenerProps*> mFreeListenerProps{nullptr};
+    std::atomic<ContextProps*> mFreeContextProps{nullptr};
+    std::atomic<ListenerProps*> mFreeListenerProps{nullptr};
     std::atomic<VoicePropsItem*> mFreeVoiceProps{nullptr};
     std::atomic<EffectSlotProps*> mFreeEffectslotProps{nullptr};
 
@@ -211,6 +242,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     const char *mExtensionList{nullptr};
 
     ALlistener mListener{};
+
+    ContextParams mParams;
 
 
     ALCcontext(al::intrusive_ptr<ALCdevice> device);

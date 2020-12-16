@@ -34,13 +34,10 @@ struct VoiceChange;
 
 
 enum class DistanceModel {
-    InverseClamped  = AL_INVERSE_DISTANCE_CLAMPED,
-    LinearClamped   = AL_LINEAR_DISTANCE_CLAMPED,
-    ExponentClamped = AL_EXPONENT_DISTANCE_CLAMPED,
-    Inverse  = AL_INVERSE_DISTANCE,
-    Linear   = AL_LINEAR_DISTANCE,
-    Exponent = AL_EXPONENT_DISTANCE,
-    Disable  = AL_NONE,
+    Disable,
+    Inverse, InverseClamped,
+    Linear, LinearClamped,
+    Exponent, ExponentClamped,
 
     Default = InverseClamped
 };

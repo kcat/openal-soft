@@ -850,6 +850,34 @@ ALenum EnumFromDirectMode(DirectMode mode)
     throw std::runtime_error{"Invalid DirectMode: "+std::to_string(int(mode))};
 }
 
+al::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
+{
+    switch(model)
+    {
+    case AL_NONE: return al::make_optional(DistanceModel::Disable);
+    case AL_INVERSE_DISTANCE: return al::make_optional(DistanceModel::Inverse);
+    case AL_INVERSE_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::InverseClamped);
+    case AL_LINEAR_DISTANCE: return al::make_optional(DistanceModel::Linear);
+    case AL_LINEAR_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::LinearClamped);
+    case AL_EXPONENT_DISTANCE: return al::make_optional(DistanceModel::Exponent);
+    case AL_EXPONENT_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::ExponentClamped);
+    }
+    return al::nullopt;
+}
+ALenum ALenumFromDistanceModel(DistanceModel model)
+{
+    switch(model)
+    {
+    case DistanceModel::Disable: return AL_NONE;
+    case DistanceModel::Inverse: return AL_INVERSE_DISTANCE;
+    case DistanceModel::InverseClamped: return AL_INVERSE_DISTANCE_CLAMPED;
+    case DistanceModel::Linear: return AL_LINEAR_DISTANCE;
+    case DistanceModel::LinearClamped: return AL_LINEAR_DISTANCE_CLAMPED;
+    case DistanceModel::Exponent: return AL_EXPONENT_DISTANCE;
+    case DistanceModel::ExponentClamped: return AL_EXPONENT_DISTANCE_CLAMPED;
+    }
+    throw std::runtime_error{"Unexpected distance model "+std::to_string(static_cast<int>(model))};
+}
 
 enum SourceProp : ALenum {
     srcPitch = AL_PITCH,
@@ -1470,18 +1498,19 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         }
         Context->setError(AL_INVALID_VALUE, "Unsupported AL_DIRECT_CHANNELS_SOFT: 0x%04x\n",
             values[0]);
+        return false;
 
     case AL_DISTANCE_MODEL:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] == AL_NONE ||
-            values[0] == AL_INVERSE_DISTANCE || values[0] == AL_INVERSE_DISTANCE_CLAMPED ||
-            values[0] == AL_LINEAR_DISTANCE || values[0] == AL_LINEAR_DISTANCE_CLAMPED ||
-            values[0] == AL_EXPONENT_DISTANCE || values[0] == AL_EXPONENT_DISTANCE_CLAMPED);
-
-        Source->mDistanceModel = static_cast<DistanceModel>(values[0]);
-        if(Context->mSourceDistanceModel)
-            return UpdateSourceProps(Source, Context);
-        return true;
+        if(auto model = DistanceModelFromALenum(values[0]))
+        {
+            Source->mDistanceModel = *model;
+            if(Context->mSourceDistanceModel)
+                return UpdateSourceProps(Source, Context);
+            return true;
+        }
+        Context->setError(AL_INVALID_VALUE, "Distance model out of range: 0x%04x", values[0]);
+        return false;
 
     case AL_SOURCE_RESAMPLER_SOFT:
         CHECKSIZE(values, 1);
@@ -2022,7 +2051,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_DISTANCE_MODEL:
         CHECKSIZE(values, 1);
-        values[0] = static_cast<int>(Source->mDistanceModel);
+        values[0] = ALenumFromDistanceModel(Source->mDistanceModel);
         return true;
 
     case AL_SOURCE_RESAMPLER_SOFT:

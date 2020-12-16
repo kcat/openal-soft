@@ -128,7 +128,7 @@ class DistanceComp {
 public:
     struct DistData {
         float Gain{1.0f};
-        ALuint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
+        uint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
         float *Buffer{nullptr};
     };
 
@@ -154,7 +154,7 @@ public:
 
 struct BFChannelConfig {
     float Scale;
-    ALuint Index;
+    uint Index;
 };
 
 
@@ -167,7 +167,7 @@ struct MixParams {
 
 struct RealMixParams {
     al::span<const InputRemixMap> RemixMap;
-    std::array<ALuint,MaxChannels> ChannelIndex{};
+    std::array<uint,MaxChannels> ChannelIndex{};
 
     al::span<FloatBufferLine> Buffer;
 };
@@ -192,14 +192,14 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 
-    ALuint Frequency{};
-    ALuint UpdateSize{};
-    ALuint BufferSize{};
+    uint Frequency{};
+    uint UpdateSize{};
+    uint BufferSize{};
 
     DevFmtChannels FmtChans{};
     DevFmtType FmtType{};
     bool IsHeadphones{false};
-    ALuint mAmbiOrder{0};
+    uint mAmbiOrder{0};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
@@ -220,9 +220,9 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 
     // Maximum number of sources that can be created
-    ALuint SourcesMax{};
+    uint SourcesMax{};
     // Maximum number of slots that can be created
-    ALuint AuxiliaryEffectSlotMax{};
+    uint AuxiliaryEffectSlotMax{};
 
     ALCuint NumMonoSources{};
     ALCuint NumStereoSources{};
@@ -248,7 +248,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
      */
     float AvgSpeakerDist{0.0f};
 
-    ALuint SamplesDone{0u};
+    uint SamplesDone{0u};
     std::chrono::nanoseconds ClockBase{0};
     std::chrono::nanoseconds FixedLatency{0};
 
@@ -269,7 +269,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;
-    ALuint NumChannelsPerOrder[MaxAmbiOrder+1]{};
+    uint NumChannelsPerOrder[MaxAmbiOrder+1]{};
 
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.
@@ -300,7 +300,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
     /* Dithering control. */
     float DitherDepth{0.0f};
-    ALuint DitherSeed{0u};
+    uint DitherSeed{0u};
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
@@ -325,13 +325,13 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALCdevice& operator=(const ALCdevice&) = delete;
     ~ALCdevice();
 
-    ALuint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
-    ALuint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
-    ALuint frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
+    uint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
+    uint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
+    uint frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
 
-    ALuint waitForMix() const noexcept
+    uint waitForMix() const noexcept
     {
-        ALuint refcount;
+        uint refcount;
         while((refcount=MixCount.load(std::memory_order_acquire))&1) {
         }
         return refcount;
@@ -346,7 +346,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     inline void postProcess(const size_t SamplesToDo)
     { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
 
-    void renderSamples(void *outBuffer, const ALuint numSamples, const size_t frameStep);
+    void renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
     [[gnu::format(printf,2,3)]] void handleDisconnect(const char *msg, ...);
@@ -368,7 +368,7 @@ void SetRTPriority(void);
  * Returns the index for the given channel name (e.g. FrontCenter), or
  * INVALID_CHANNEL_INDEX if it doesn't exist.
  */
-inline ALuint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
+inline uint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
 { return real.ChannelIndex[chan]; }
 #define INVALID_CHANNEL_INDEX ~0u
 

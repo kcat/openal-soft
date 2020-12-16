@@ -1,12 +1,13 @@
 #ifndef AL_EVENT_H
 #define AL_EVENT_H
 
-#include "AL/al.h"
-#include "AL/alc.h"
-
 #include "almalloc.h"
 
+struct ALCcontext;
 struct EffectState;
+enum class VChangeState;
+
+using uint = unsigned int;
 
 
 enum {
@@ -23,25 +24,25 @@ enum {
 };
 
 struct AsyncEvent {
-    unsigned int EnumType{0u};
+    uint EnumType{0u};
     union {
         char dummy;
         struct {
-            ALuint id;
-            ALenum state;
+            uint id;
+            VChangeState state;
         } srcstate;
         struct {
-            ALuint id;
-            ALuint count;
+            uint id;
+            uint count;
         } bufcomp;
         struct {
-            ALchar msg[244];
+            char msg[244];
         } disconnect;
         EffectState *mEffectState;
     } u{};
 
     AsyncEvent() noexcept = default;
-    constexpr AsyncEvent(unsigned int type) noexcept : EnumType{type} { }
+    constexpr AsyncEvent(uint type) noexcept : EnumType{type} { }
 
     DISABLE_ALLOC()
 };

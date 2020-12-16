@@ -27,6 +27,7 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
+#include "voice_change.h"
 
 
 static int EventThread(ALCcontext *context)
@@ -68,15 +69,33 @@ static int EventThread(ALCcontext *context)
             {
                 if(!(enabledevts&EventType_SourceStateChange))
                     continue;
+                ALuint state{};
                 std::string msg{"Source ID " + std::to_string(evt.u.srcstate.id)};
                 msg += " state has changed to ";
-                msg += (evt.u.srcstate.state==AL_INITIAL) ? "AL_INITIAL" :
-                    (evt.u.srcstate.state==AL_PLAYING) ? "AL_PLAYING" :
-                    (evt.u.srcstate.state==AL_PAUSED) ? "AL_PAUSED" :
-                    (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>";
+                switch(evt.u.srcstate.state)
+                {
+                case VChangeState::Reset:
+                    msg += "AL_INITIAL";
+                    state = AL_INITIAL;
+                    break;
+                case VChangeState::Stop:
+                    msg += "AL_STOPPED";
+                    state = AL_STOPPED;
+                    break;
+                case VChangeState::Play:
+                    msg += "AL_PLAYING";
+                    state = AL_PLAYING;
+                    break;
+                case VChangeState::Pause:
+                    msg += "AL_PAUSED";
+                    state = AL_PAUSED;
+                    break;
+                /* Shouldn't happen */
+                case VChangeState::Restart:
+                    break;
+                }
                 context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
-                    static_cast<ALuint>(evt.u.srcstate.state), static_cast<ALsizei>(msg.length()),
-                    msg.c_str(), context->mEventParam);
+                    state, static_cast<ALsizei>(msg.length()), msg.c_str(), context->mEventParam);
             }
             else if(evt.EnumType == EventType_BufferCompleted)
             {

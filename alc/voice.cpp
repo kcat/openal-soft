@@ -60,6 +60,7 @@
 #include "ringbuffer.h"
 #include "threads.h"
 #include "vector.h"
+#include "voice_change.h"
 
 struct CTag;
 #ifdef HAVE_SSE
@@ -184,7 +185,7 @@ void SendSourceStoppedEvent(ALCcontext *context, uint id)
 
     AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
-    evt->u.srcstate.state = AL_STOPPED;
+    evt->u.srcstate.state = VChangeState::Stop;
 
     ring->writeAdvance(1);
 }

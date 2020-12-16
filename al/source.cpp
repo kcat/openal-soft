@@ -619,7 +619,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     vchg->mOldVoice = oldvoice;
     vchg->mVoice = newvoice;
     vchg->mSourceID = source->id;
-    vchg->mState = AL_SAMPLE_OFFSET;
+    vchg->mState = VChangeState::Restart;
     SendVoiceChanges(context, vchg);
 
     /* If the old voice still has a sourceID, it's still active and the change-
@@ -740,7 +740,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
             voice->mPendingChange.store(true, std::memory_order_relaxed);
             vchg->mVoice = voice;
             vchg->mSourceID = source->id;
-            vchg->mState = AL_STOPPED;
+            vchg->mState = VChangeState::Stop;
 
             SendVoiceChanges(context, vchg);
         }
@@ -2935,7 +2935,7 @@ START_API_FUNC
             if(!voice) break;
             cur->mVoice = voice;
             cur->mSourceID = source->id;
-            cur->mState = AL_PLAYING;
+            cur->mState = VChangeState::Play;
             source->state = AL_PLAYING;
             continue;
 
@@ -2997,7 +2997,7 @@ START_API_FUNC
 
         cur->mVoice = voice;
         cur->mSourceID = source->id;
-        cur->mState = AL_PLAYING;
+        cur->mState = VChangeState::Play;
     }
     if LIKELY(tail)
         SendVoiceChanges(context.get(), tail);
@@ -3059,7 +3059,7 @@ START_API_FUNC
             }
             cur->mVoice = voice;
             cur->mSourceID = source->id;
-            cur->mState = AL_PAUSED;
+            cur->mState = VChangeState::Pause;
         }
     }
     if LIKELY(tail)
@@ -3131,7 +3131,7 @@ START_API_FUNC
             voice->mPendingChange.store(true, std::memory_order_relaxed);
             cur->mVoice = voice;
             cur->mSourceID = source->id;
-            cur->mState = AL_STOPPED;
+            cur->mState = VChangeState::Stop;
             source->state = AL_STOPPED;
         }
         source->Offset = 0.0;
@@ -3196,7 +3196,7 @@ START_API_FUNC
                 voice->mPendingChange.store(true, std::memory_order_relaxed);
             cur->mVoice = voice;
             cur->mSourceID = source->id;
-            cur->mState = AL_INITIAL;
+            cur->mState = VChangeState::Reset;
             source->state = AL_INITIAL;
         }
         source->Offset = 0.0;

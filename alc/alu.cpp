@@ -1564,7 +1564,7 @@ void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
 }
 
 
-void SendSourceStateEvent(ALCcontext *context, ALuint id, ALenum state)
+void SendSourceStateEvent(ALCcontext *context, uint id, VChangeState state)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
@@ -1588,7 +1588,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
         cur = next;
 
         bool sendevt{false};
-        if(cur->mState == AL_INITIAL || cur->mState == AL_STOPPED)
+        if(cur->mState == VChangeState::Reset || cur->mState == VChangeState::Stop)
         {
             if(Voice *voice{cur->mVoice})
             {
@@ -1603,16 +1603,16 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             /* AL_INITIAL state change events are always sent, even if the
              * voice is already stopped or even if there is no voice.
              */
-            sendevt |= (cur->mState == AL_INITIAL);
+            sendevt |= (cur->mState == VChangeState::Reset);
         }
-        else if(cur->mState == AL_PAUSED)
+        else if(cur->mState == VChangeState::Pause)
         {
             Voice *voice{cur->mVoice};
             Voice::State oldvstate{Voice::Playing};
             sendevt = voice->mPlayState.compare_exchange_strong(oldvstate, Voice::Stopping,
                 std::memory_order_release, std::memory_order_acquire);
         }
-        else if(cur->mState == AL_PLAYING)
+        else if(cur->mState == VChangeState::Play)
         {
             /* NOTE: When playing a voice, sending a source state change event
              * depends if there's an old voice to stop and if that stop is
@@ -1636,7 +1636,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
             Voice *voice{cur->mVoice};
             voice->mPlayState.store(Voice::Playing, std::memory_order_release);
         }
-        else if(cur->mState == AL_SAMPLE_OFFSET)
+        else if(cur->mState == VChangeState::Restart)
         {
             /* Changing a voice offset never sends a source change event. */
             Voice *oldvoice{cur->mOldVoice};

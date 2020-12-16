@@ -75,6 +75,7 @@
 #include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
+#include "async_event.h"
 #include "atomic.h"
 #include "bformatdec.h"
 #include "compat.h"

@@ -659,6 +659,7 @@ set(ALC_OBJS
     alc/alcontext.h
     alc/ambdec.cpp
     alc/ambdec.h
+    alc/async_event.h
     alc/bformatdec.cpp
     alc/bformatdec.h
     alc/buffer_storage.cpp

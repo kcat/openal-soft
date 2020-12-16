@@ -21,6 +21,7 @@
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
+#include "async_event.h"
 #include "effects/base.h"
 #include "inprogext.h"
 #include "logging.h"

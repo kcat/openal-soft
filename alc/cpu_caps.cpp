@@ -18,11 +18,11 @@
 #include <cpuid.h>
 #endif
 
+#include <array>
 #include <cctype>
 #include <string>
 
 #include "alfstream.h"
-#include "logging.h"
 
 
 int CPUCapFlags{0};

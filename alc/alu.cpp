@@ -77,6 +77,7 @@
 #include "threads.h"
 #include "vecmat.h"
 #include "voice.h"
+#include "voice_change.h"
 
 struct CTag;
 #ifdef HAVE_SSE

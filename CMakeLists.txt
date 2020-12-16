@@ -696,7 +696,8 @@ set(ALC_OBJS
     alc/panning.cpp
     alc/uiddefs.cpp
     alc/voice.cpp
-    alc/voice.h)
+    alc/voice.h
+    alc/voice_change.h)
 
 
 set(CPU_EXTS "Default")

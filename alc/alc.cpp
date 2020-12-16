@@ -100,6 +100,7 @@
 #include "threads.h"
 #include "vecmat.h"
 #include "vector.h"
+#include "voice_change.h"
 
 #include "backends/base.h"
 #include "backends/null.h"

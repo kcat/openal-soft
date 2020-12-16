@@ -30,6 +30,7 @@ struct ALsource;
 struct EffectSlot;
 struct EffectSlotProps;
 struct RingBuffer;
+struct VoiceChange;
 
 
 enum class DistanceModel {
@@ -97,18 +98,6 @@ struct ContextParams {
 
     bool SourceDistanceModel{false};
     DistanceModel mDistanceModel{};
-};
-
-
-struct VoiceChange {
-    Voice *mOldVoice{nullptr};
-    Voice *mVoice{nullptr};
-    ALuint mSourceID{0};
-    ALenum mState{0};
-
-    std::atomic<VoiceChange*> mNext{nullptr};
-
-    DEF_NEWDEL(VoiceChange)
 };
 
 

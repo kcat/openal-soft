@@ -69,6 +69,7 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
+#include "voice_change.h"
 
 
 namespace {

@@ -11,8 +11,9 @@
 
 namespace alu {
 
-template<typename T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
+template<typename T>
 class VectorR {
+    static_assert(std::is_floating_point<T>::value, "Must use floating-point types");
     alignas(16) std::array<T,4> mVals;
 
 public:
@@ -63,8 +64,9 @@ public:
 };
 using Vector = VectorR<float>;
 
-template<typename T, std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
+template<typename T>
 class MatrixR {
+    static_assert(std::is_floating_point<T>::value, "Must use floating-point types");
     alignas(16) std::array<T,16> mVals;
 
 public:

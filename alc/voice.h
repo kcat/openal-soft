@@ -2,20 +2,23 @@
 #define VOICE_H
 
 #include <array>
+#include <atomic>
 
 #include "almalloc.h"
 #include "alspan.h"
 #include "alu.h"
 #include "buffer_storage.h"
+#include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
 #include "core/mixer/defs.h"
-#include "hrtf.h"
+#include "core/mixer/hrtfdefs.h"
+#include "vector.h"
 
+struct ALCcontext;
 struct EffectSlot;
-struct BufferlistItem;
 enum class DistanceModel;
 
 using uint = unsigned int;

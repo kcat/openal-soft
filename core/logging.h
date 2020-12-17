@@ -1,5 +1,5 @@
-#ifndef LOGGING_H
-#define LOGGING_H
+#ifndef CORE_LOGGING_H
+#define CORE_LOGGING_H
 
 #include <stdio.h>
 
@@ -44,4 +44,4 @@ extern FILE *gLogFile;
 #define ERR(...) al_print(LogLevel::Error, gLogFile, "[ALSOFT] (EE) " __VA_ARGS__)
 #endif
 
-#endif /* LOGGING_H */
+#endif /* CORE_LOGGING_H */

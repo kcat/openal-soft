@@ -40,8 +40,8 @@
 #include "alconfig.h"
 #include "alexcpt.h"
 #include "compat.h"
+#include "core/logging.h"
 #include "dynload.h"
-#include "logging.h"
 #include "strutils.h"
 
 #include <pulse/pulseaudio.h>

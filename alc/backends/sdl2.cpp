@@ -33,7 +33,7 @@
 #include "alexcpt.h"
 #include "almalloc.h"
 #include "alu.h"
-#include "logging.h"
+#include "core/logging.h"
 
 #include <SDL2/SDL.h>
 

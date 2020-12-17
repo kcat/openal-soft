@@ -44,8 +44,8 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "core/logging.h"
 #include "effects/base.h"
-#include "logging.h"
 #include "opthelpers.h"
 #include "vector.h"
 

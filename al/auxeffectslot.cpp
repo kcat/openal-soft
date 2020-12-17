@@ -42,10 +42,10 @@
 #include "alspan.h"
 #include "alu.h"
 #include "buffer.h"
+#include "core/logging.h"
 #include "effect.h"
 #include "fpu_ctrl.h"
 #include "inprogext.h"
-#include "logging.h"
 #include "opthelpers.h"
 
 

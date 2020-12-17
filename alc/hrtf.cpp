@@ -48,7 +48,7 @@
 #include "aloptional.h"
 #include "alspan.h"
 #include "core/filters/splitter.h"
-#include "logging.h"
+#include "core/logging.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 #include "polyphase_resampler.h"

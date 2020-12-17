@@ -30,9 +30,9 @@
 #include "alexcpt.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"
-#include "logging.h"
 
 #include <portaudio.h>
 

@@ -50,7 +50,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alu.h"
-#include "logging.h"
+#include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
 #include "vector.h"

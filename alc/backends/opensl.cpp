@@ -36,8 +36,8 @@
 #include "alexcpt.h"
 #include "alu.h"
 #include "compat.h"
+#include "core/logging.h"
 #include "endiantest.h"
-#include "logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
 

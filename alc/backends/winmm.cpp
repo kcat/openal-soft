@@ -42,7 +42,7 @@
 #include "alexcpt.h"
 #include "alu.h"
 #include "compat.h"
-#include "logging.h"
+#include "core/logging.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 #include "threads.h"

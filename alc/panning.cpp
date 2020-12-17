@@ -52,10 +52,10 @@
 #include "core/ambidefs.h"
 #include "core/bs2b.h"
 #include "core/devformat.h"
+#include "core/logging.h"
 #include "core/uhjfilter.h"
 #include "front_stablizer.h"
 #include "hrtf.h"
-#include "logging.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 

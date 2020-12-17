@@ -11,7 +11,7 @@
 #include <string>
 
 #include "alfstream.h"
-#include "logging.h"
+#include "core/logging.h"
 
 
 namespace {

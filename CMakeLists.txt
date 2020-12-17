@@ -604,6 +604,8 @@ set(CORE_OBJS
     core/filters/splitter.h
     core/fmt_traits.cpp
     core/fmt_traits.h
+    core/logging.cpp
+    core/logging.h
     core/mastering.cpp
     core/mastering.h
     core/uhjfilter.cpp
@@ -693,7 +695,6 @@ set(ALC_OBJS
     alc/hrtf.cpp
     alc/hrtf.h
     alc/inprogext.h
-    alc/logging.h
     alc/panning.cpp
     alc/uiddefs.cpp
     alc/voice.cpp

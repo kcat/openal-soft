@@ -32,10 +32,10 @@
 #include "alcmain.h"
 #include "alexcpt.h"
 #include "alu.h"
+#include "core/logging.h"
+#include "ringbuffer.h"
 #include "threads.h"
 #include "vector.h"
-#include "ringbuffer.h"
-#include "logging.h"
 
 #include <sndio.h>
 

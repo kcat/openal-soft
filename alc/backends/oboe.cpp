@@ -7,7 +7,7 @@
 #include <cstring>
 
 #include "alu.h"
-#include "logging.h"
+#include "core/logging.h"
 
 #include "oboe/Oboe.h"
 

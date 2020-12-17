@@ -43,7 +43,7 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "compat.h"
-#include "logging.h"
+#include "core/logging.h"
 #include "threads.h"
 #include "vector.h"
 

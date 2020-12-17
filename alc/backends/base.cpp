@@ -19,7 +19,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "atomic.h"
-#include "logging.h"
+#include "core/logging.h"
 
 
 bool BackendBase::reset()

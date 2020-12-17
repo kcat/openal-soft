@@ -38,7 +38,7 @@
 #include "alcontext.h"
 #include "alexcpt.h"
 #include "almalloc.h"
-#include "logging.h"
+#include "core/logging.h"
 #include "opthelpers.h"
 #include "vector.h"
 

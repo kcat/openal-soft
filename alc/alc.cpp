@@ -3880,16 +3880,14 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{dev->StateLock};
     BackendBase *backend{dev->Backend.get()};
 
-    const auto usamples = static_cast<ALCuint>(samples);
+    const auto usamples = static_cast<uint>(samples);
     if(usamples > backend->availableSamples())
     {
         alcSetError(dev.get(), ALC_INVALID_VALUE);
         return;
     }
 
-    auto *bbuffer = static_cast<al::byte*>(buffer);
-    if(ALCenum err{backend->captureSamples(bbuffer, usamples)})
-        alcSetError(dev.get(), err);
+    backend->captureSamples(static_cast<al::byte*>(buffer), usamples);
 }
 END_API_FUNC
 

@@ -872,8 +872,8 @@ struct AlsaCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
     ClockLatency getClockLatency() override;
 
     snd_pcm_t *mPcmHandle{nullptr};
@@ -1031,12 +1031,12 @@ void AlsaCapture::stop()
     mDoCapture = false;
 }
 
-ALCenum AlsaCapture::captureSamples(al::byte *buffer, ALCuint samples)
+void AlsaCapture::captureSamples(al::byte *buffer, uint samples)
 {
     if(mRing)
     {
         mRing->read(buffer, samples);
-        return ALC_NO_ERROR;
+        return;
     }
 
     mLastAvail -= samples;
@@ -1090,11 +1090,9 @@ ALCenum AlsaCapture::captureSamples(al::byte *buffer, ALCuint samples)
     if(samples > 0)
         std::fill_n(buffer, snd_pcm_frames_to_bytes(mPcmHandle, samples),
             al::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
-
-    return ALC_NO_ERROR;
 }
 
-ALCuint AlsaCapture::availableSamples()
+uint AlsaCapture::availableSamples()
 {
     snd_pcm_sframes_t avail{0};
     if(mDevice->Connected.load(std::memory_order_acquire) && mDoCapture)
@@ -1123,7 +1121,7 @@ ALCuint AlsaCapture::availableSamples()
         if(avail < 0) avail = 0;
         avail += snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         if(avail > mLastAvail) mLastAvail = avail;
-        return static_cast<ALCuint>(mLastAvail);
+        return static_cast<uint>(mLastAvail);
     }
 
     while(avail > 0)
@@ -1161,7 +1159,7 @@ ALCuint AlsaCapture::availableSamples()
         avail -= amt;
     }
 
-    return static_cast<ALCuint>(mRing->readSpace());
+    return static_cast<uint>(mRing->readSpace());
 }
 
 ClockLatency AlsaCapture::getClockLatency()

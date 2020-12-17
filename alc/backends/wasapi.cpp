@@ -1233,8 +1233,8 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     void stop() override;
     void stopProxy() override;
 
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     std::wstring mDevId;
 
@@ -1771,14 +1771,11 @@ void WasapiCapture::stopProxy()
 }
 
 
-ALCuint WasapiCapture::availableSamples()
-{ return static_cast<ALCuint>(mRing->readSpace()); }
+void WasapiCapture::captureSamples(al::byte *buffer, uint samples)
+{ mRing->read(buffer, samples); }
 
-ALCenum WasapiCapture::captureSamples(al::byte *buffer, ALCuint samples)
-{
-    mRing->read(buffer, samples);
-    return ALC_NO_ERROR;
-}
+uint WasapiCapture::availableSamples()
+{ return static_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

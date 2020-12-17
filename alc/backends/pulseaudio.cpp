@@ -1149,15 +1149,15 @@ struct PulseCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
     ClockLatency getClockLatency() override;
 
     PulseMainloop mMainloop;
 
     std::string mDeviceName;
 
-    ALCuint mLastReadable{0u};
+    uint mLastReadable{0u};
     al::byte mSilentVal{};
 
     al::span<const al::byte> mCapBuffer;
@@ -1329,13 +1329,13 @@ void PulseCapture::stop()
     mMainloop.waitForOperation(op, plock);
 }
 
-ALCenum PulseCapture::captureSamples(al::byte *buffer, ALCuint samples)
+void PulseCapture::captureSamples(al::byte *buffer, uint samples)
 {
     al::span<al::byte> dstbuf{buffer, samples * pa_frame_size(&mSpec)};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
-    mLastReadable -= static_cast<ALCuint>(dstbuf.size());
+    mLastReadable -= static_cast<uint>(dstbuf.size());
     while(!dstbuf.empty())
     {
         if(!mCapBuffer.empty())
@@ -1386,11 +1386,9 @@ ALCenum PulseCapture::captureSamples(al::byte *buffer, ALCuint samples)
     }
     if(!dstbuf.empty())
         std::fill(dstbuf.begin(), dstbuf.end(), mSilentVal);
-
-    return ALC_NO_ERROR;
 }
 
-ALCuint PulseCapture::availableSamples()
+uint PulseCapture::availableSamples()
 {
     size_t readable{mCapBuffer.size()};
 
@@ -1411,9 +1409,9 @@ ALCuint PulseCapture::availableSamples()
         }
     }
 
-    readable = std::min<size_t>(readable, std::numeric_limits<ALCuint>::max());
-    mLastReadable = std::max(mLastReadable, static_cast<ALCuint>(readable));
-    return mLastReadable / static_cast<ALCuint>(pa_frame_size(&mSpec));
+    readable = std::min<size_t>(readable, std::numeric_limits<uint>::max());
+    mLastReadable = std::max(mLastReadable, static_cast<uint>(readable));
+    return mLastReadable / static_cast<uint>(pa_frame_size(&mSpec));
 }
 
 

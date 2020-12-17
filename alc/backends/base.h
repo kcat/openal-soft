@@ -6,12 +6,12 @@
 #include <mutex>
 #include <string>
 
-#include "AL/alc.h"
-
 #include "albyte.h"
 #include "alcmain.h"
 #include "alexcpt.h"
 
+
+using uint = unsigned int;
 
 struct ClockLatency {
     std::chrono::nanoseconds ClockTime;
@@ -25,8 +25,8 @@ struct BackendBase {
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual ALCenum captureSamples(al::byte *buffer, ALCuint samples);
-    virtual ALCuint availableSamples();
+    virtual void captureSamples(al::byte *buffer, uint samples);
+    virtual uint availableSamples();
 
     virtual ClockLatency getClockLatency();
 

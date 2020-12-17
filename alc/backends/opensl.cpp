@@ -174,7 +174,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     std::mutex mMutex;
 
-    ALuint mFrameSize{0};
+    uint mFrameSize{0};
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -632,8 +632,8 @@ struct OpenSLCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     /* engine interfaces */
     SLObjectItf mEngineObj{nullptr};
@@ -643,9 +643,9 @@ struct OpenSLCapture final : public BackendBase {
     SLObjectItf mRecordObj{nullptr};
 
     RingBufferPtr mRing{nullptr};
-    ALCuint mSplOffset{0u};
+    uint mSplOffset{0u};
 
-    ALuint mFrameSize{0};
+    uint mFrameSize{0};
 
     DEF_NEWDEL(OpenSLCapture)
 };
@@ -864,7 +864,7 @@ void OpenSLCapture::stop()
     }
 }
 
-ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
+void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 {
     SLAndroidSimpleBufferQueueItf bufferQueue{};
     if LIKELY(mDevice->Connected.load(std::memory_order_acquire))
@@ -918,12 +918,10 @@ ALCenum OpenSLCapture::captureSamples(al::byte *buffer, ALCuint samples)
 
         i += rem;
     }
-
-    return ALC_NO_ERROR;
 }
 
-ALCuint OpenSLCapture::availableSamples()
-{ return static_cast<ALuint>(mRing->readSpace()*mDevice->UpdateSize - mSplOffset); }
+uint OpenSLCapture::availableSamples()
+{ return static_cast<uint>(mRing->readSpace()*mDevice->UpdateSize - mSplOffset); }
 
 } // namespace
 

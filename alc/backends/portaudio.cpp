@@ -242,8 +242,8 @@ struct PortCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     PaStream *mStream{nullptr};
     PaStreamParameters mParams;
@@ -339,14 +339,11 @@ void PortCapture::stop()
 }
 
 
-ALCuint PortCapture::availableSamples()
-{ return static_cast<ALCuint>(mRing->readSpace()); }
+uint PortCapture::availableSamples()
+{ return static_cast<uint>(mRing->readSpace()); }
 
-ALCenum PortCapture::captureSamples(al::byte *buffer, ALCuint samples)
-{
-    mRing->read(buffer, samples);
-    return ALC_NO_ERROR;
-}
+void PortCapture::captureSamples(al::byte *buffer, uint samples)
+{ mRing->read(buffer, samples); }
 
 } // namespace
 

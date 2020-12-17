@@ -378,8 +378,8 @@ struct WinMMCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     std::atomic<ALuint> mReadable{0u};
     al::semaphore mSem;
@@ -575,14 +575,11 @@ void WinMMCapture::stop()
     mIdx = 0;
 }
 
-ALCenum WinMMCapture::captureSamples(al::byte *buffer, ALCuint samples)
-{
-    mRing->read(buffer, samples);
-    return ALC_NO_ERROR;
-}
+void WinMMCapture::captureSamples(al::byte *buffer, uint samples)
+{ mRing->read(buffer, samples); }
 
-ALCuint WinMMCapture::availableSamples()
-{ return static_cast<ALCuint>(mRing->readSpace()); }
+uint WinMMCapture::availableSamples()
+{ return static_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

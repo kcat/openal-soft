@@ -447,8 +447,8 @@ struct OSScapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     int mFd{-1};
 
@@ -615,14 +615,11 @@ void OSScapture::stop()
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 
-ALCenum OSScapture::captureSamples(al::byte *buffer, ALCuint samples)
-{
-    mRing->read(buffer, samples);
-    return ALC_NO_ERROR;
-}
+void OSScapture::captureSamples(al::byte *buffer, uint samples)
+{ mRing->read(buffer, samples); }
 
-ALCuint OSScapture::availableSamples()
-{ return static_cast<ALCuint>(mRing->readSpace()); }
+uint OSScapture::availableSamples()
+{ return static_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

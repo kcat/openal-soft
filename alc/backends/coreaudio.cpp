@@ -309,8 +309,8 @@ struct CoreAudioCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     AudioUnit mAudioUnit{0};
 
@@ -609,18 +609,18 @@ void CoreAudioCapture::stop()
         ERR("AudioOutputUnitStop failed\n");
 }
 
-ALCenum CoreAudioCapture::captureSamples(al::byte *buffer, ALCuint samples)
+void CoreAudioCapture::captureSamples(al::byte *buffer, uint samples)
 {
     if(!mConverter)
     {
         mRing->read(buffer, samples);
-        return ALC_NO_ERROR;
+        return;
     }
 
     auto rec_vec = mRing->getReadVector();
     const void *src0{rec_vec.first.buf};
     auto src0len = static_cast<ALuint>(rec_vec.first.len);
-    ALuint got{mConverter->convert(&src0, &src0len, buffer, samples)};
+    uint got{mConverter->convert(&src0, &src0len, buffer, samples)};
     size_t total_read{rec_vec.first.len - src0len};
     if(got < samples && !src0len && rec_vec.second.len > 0)
     {
@@ -631,13 +631,12 @@ ALCenum CoreAudioCapture::captureSamples(al::byte *buffer, ALCuint samples)
     }
 
     mRing->readAdvance(total_read);
-    return ALC_NO_ERROR;
 }
 
-ALCuint CoreAudioCapture::availableSamples()
+uint CoreAudioCapture::availableSamples()
 {
-    if(!mConverter) return static_cast<ALCuint>(mRing->readSpace());
-    return mConverter->availableOut(static_cast<ALCuint>(mRing->readSpace()));
+    if(!mConverter) return static_cast<uint>(mRing->readSpace());
+    return mConverter->availableOut(static_cast<uint>(mRing->readSpace()));
 }
 
 } // namespace

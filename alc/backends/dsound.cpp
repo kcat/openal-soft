@@ -564,8 +564,8 @@ struct DSoundCapture final : public BackendBase {
     void open(const ALCchar *name) override;
     void start() override;
     void stop() override;
-    ALCenum captureSamples(al::byte *buffer, ALCuint samples) override;
-    ALCuint availableSamples() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
 
     IDirectSoundCapture *mDSC{nullptr};
     IDirectSoundCaptureBuffer *mDSCbuffer{nullptr};
@@ -735,18 +735,15 @@ void DSoundCapture::stop()
     }
 }
 
-ALCenum DSoundCapture::captureSamples(al::byte *buffer, ALCuint samples)
-{
-    mRing->read(buffer, samples);
-    return ALC_NO_ERROR;
-}
+void DSoundCapture::captureSamples(al::byte *buffer, uint samples)
+{ mRing->read(buffer, samples); }
 
-ALCuint DSoundCapture::availableSamples()
+uint DSoundCapture::availableSamples()
 {
     if(!mDevice->Connected.load(std::memory_order_acquire))
-        return static_cast<ALCuint>(mRing->readSpace());
+        return static_cast<uint>(mRing->readSpace());
 
-    const ALuint FrameSize{mDevice->frameSizeFromFmt()};
+    const uint FrameSize{mDevice->frameSizeFromFmt()};
     const DWORD BufferBytes{mBufferBytes};
     const DWORD LastCursor{mCursor};
 
@@ -757,7 +754,7 @@ ALCuint DSoundCapture::availableSamples()
     if(SUCCEEDED(hr))
     {
         const DWORD NumBytes{(BufferBytes+ReadCursor-LastCursor) % BufferBytes};
-        if(!NumBytes) return static_cast<ALCuint>(mRing->readSpace());
+        if(!NumBytes) return static_cast<uint>(mRing->readSpace());
         hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))
@@ -775,7 +772,7 @@ ALCuint DSoundCapture::availableSamples()
         mDevice->handleDisconnect("Failure retrieving capture data: 0x%lx", hr);
     }
 
-    return static_cast<ALCuint>(mRing->readSpace());
+    return static_cast<uint>(mRing->readSpace());
 }
 
 } // namespace

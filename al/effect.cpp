@@ -72,7 +72,7 @@ const EffectList gEffectList[16]{
 bool DisabledEffects[MAX_EFFECTS];
 
 
-effect_exception::effect_exception(ALenum code, const char *msg, ...) : base_exception{code}
+effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
 {
     std::va_list args;
     va_start(args, msg);

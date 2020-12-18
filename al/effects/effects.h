@@ -9,9 +9,13 @@ union EffectProps;
 
 
 class effect_exception final : public al::base_exception {
+    ALenum mErrorCode;
+
 public:
     [[gnu::format(printf, 3, 4)]]
     effect_exception(ALenum code, const char *msg, ...);
+
+    ALenum errorCode() const noexcept { return mErrorCode; }
 };
 
 

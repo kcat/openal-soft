@@ -48,15 +48,18 @@
 namespace {
 
 class filter_exception final : public al::base_exception {
+    ALenum mErrorCode;
+
 public:
     [[gnu::format(printf, 3, 4)]]
-    filter_exception(ALenum code, const char *msg, ...) : base_exception{code}
+    filter_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
     {
         std::va_list args;
         va_start(args, msg);
         setMessage(msg, args);
         va_end(args);
     }
+    ALenum errorCode() const noexcept { return mErrorCode; }
 };
 
 #define FILTER_MIN_GAIN 0.0f

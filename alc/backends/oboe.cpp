@@ -25,7 +25,7 @@ struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *oboeStream, void *audioData,
         int32_t numFrames) override;
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -55,7 +55,7 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
 }
 
 
-void OboePlayback::open(const ALCchar *name)
+void OboePlayback::open(const char *name)
 {
     if(!name)
         name = device_name;

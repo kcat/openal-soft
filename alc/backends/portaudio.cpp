@@ -39,7 +39,7 @@
 
 namespace {
 
-constexpr ALCchar pa_device[] = "PortAudio Default";
+constexpr char pa_device[] = "PortAudio Default";
 
 
 #ifdef HAVE_DYNLOAD
@@ -86,14 +86,14 @@ struct PortPlayback final : public BackendBase {
             framesPerBuffer, timeInfo, statusFlags);
     }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
 
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
-    ALuint mUpdateSize{0u};
+    uint mUpdateSize{0u};
 
     DEF_NEWDEL(PortPlayback)
 };
@@ -110,13 +110,13 @@ PortPlayback::~PortPlayback()
 int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long framesPerBuffer,
     const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
 {
-    mDevice->renderSamples(outputBuffer, static_cast<ALuint>(framesPerBuffer),
-        static_cast<ALuint>(mParams.channelCount));
+    mDevice->renderSamples(outputBuffer, static_cast<uint>(framesPerBuffer),
+        static_cast<uint>(mParams.channelCount));
     return 0;
 }
 
 
-void PortPlayback::open(const ALCchar *name)
+void PortPlayback::open(const char *name)
 {
     if(!name)
         name = pa_device;
@@ -177,7 +177,7 @@ retry_open:
 bool PortPlayback::reset()
 {
     const PaStreamInfo *streamInfo{Pa_GetStreamInfo(mStream)};
-    mDevice->Frequency = static_cast<ALuint>(streamInfo->sampleRate);
+    mDevice->Frequency = static_cast<uint>(streamInfo->sampleRate);
     mDevice->UpdateSize = mUpdateSize;
 
     if(mParams.sampleFormat == paInt8)
@@ -240,7 +240,7 @@ struct PortCapture final : public BackendBase {
             framesPerBuffer, timeInfo, statusFlags);
     }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -271,7 +271,7 @@ int PortCapture::readCallback(const void *inputBuffer, void*, unsigned long fram
 }
 
 
-void PortCapture::open(const ALCchar *name)
+void PortCapture::open(const char *name)
 {
     if(!name)
         name = pa_device;
@@ -279,9 +279,9 @@ void PortCapture::open(const ALCchar *name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
 
-    ALuint samples{mDevice->BufferSize};
+    uint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
-    ALuint frame_size{mDevice->frameSizeFromFmt()};
+    uint frame_size{mDevice->frameSizeFromFmt()};
 
     mRing = RingBuffer::Create(samples, frame_size, false);
 

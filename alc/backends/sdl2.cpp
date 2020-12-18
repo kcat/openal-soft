@@ -46,7 +46,7 @@ namespace {
 #define DEVNAME_PREFIX ""
 #endif
 
-constexpr ALCchar defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
+constexpr char defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
 
 struct Sdl2Backend final : public BackendBase {
     Sdl2Backend(ALCdevice *device) noexcept : BackendBase{device} { }
@@ -56,7 +56,7 @@ struct Sdl2Backend final : public BackendBase {
     static void audioCallbackC(void *ptr, Uint8 *stream, int len) noexcept
     { static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -86,7 +86,7 @@ void Sdl2Backend::audioCallback(Uint8 *stream, int len) noexcept
     mDevice->renderSamples(stream, ulen / mFrameSize, mDevice->channelsFromFmt());
 }
 
-void Sdl2Backend::open(const ALCchar *name)
+void Sdl2Backend::open(const char *name)
 {
     SDL_AudioSpec want{}, have{};
 

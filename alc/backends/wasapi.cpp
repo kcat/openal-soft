@@ -122,10 +122,10 @@ constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 
 
 /* Scales the given reftime value, rounding the result. */
-inline ALuint RefTime2Samples(const ReferenceTime &val, ALuint srate)
+inline uint RefTime2Samples(const ReferenceTime &val, uint srate)
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return static_cast<ALuint>(mini64(retval, std::numeric_limits<ALuint>::max()));
+    return static_cast<uint>(mini64(retval, std::numeric_limits<uint>::max()));
 }
 
 
@@ -596,12 +596,12 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     promise = nullptr;
 
     TRACE("Starting message loop\n");
-    ALuint deviceCount{0};
+    uint deviceCount{0};
     Msg msg;
     while(popMessage(msg))
     {
         TRACE("Got message \"%s\" (0x%04x, this=%p)\n",
-            MessageStr[static_cast<size_t>(msg.mType)], static_cast<int>(msg.mType),
+            MessageStr[static_cast<size_t>(msg.mType)], static_cast<uint>(msg.mType),
             decltype(std::declval<void*>()){msg.mProxy});
 
         switch(msg.mType)
@@ -670,7 +670,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
             continue;
 
         default:
-            ERR("Unexpected message: %u\n", static_cast<unsigned int>(msg.mType));
+            ERR("Unexpected message: %u\n", static_cast<uint>(msg.mType));
             msg.mPromise.set_value(E_FAIL);
             continue;
         }
@@ -687,7 +687,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     HRESULT openProxy() override;
     void closeProxy() override;
 
@@ -744,7 +744,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const ALuint update_size{mDevice->UpdateSize};
+    const uint update_size{mDevice->UpdateSize};
     const UINT32 buffer_len{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_relaxed))
     {
@@ -758,7 +758,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         }
         mPadding.store(written, std::memory_order_relaxed);
 
-        ALuint len{buffer_len - written};
+        uint len{buffer_len - written};
         if(len < update_size)
         {
             DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
@@ -792,7 +792,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
 }
 
 
-void WasapiPlayback::open(const ALCchar *name)
+void WasapiPlayback::open(const char *name)
 {
     HRESULT hr{S_OK};
 
@@ -1225,7 +1225,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 
     int recordProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     HRESULT openProxy() override;
     void closeProxy() override;
 
@@ -1311,10 +1311,10 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                 if(mSampleConv)
                 {
                     const void *srcdata{rdata};
-                    ALuint srcframes{numsamples};
+                    uint srcframes{numsamples};
 
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data.first.buf,
-                        static_cast<ALuint>(minz(data.first.len, INT_MAX)));
+                        static_cast<uint>(minz(data.first.len, INT_MAX)));
                     if(srcframes > 0 && dstframes == data.first.len && data.second.len > 0)
                     {
                         /* If some source samples remain, all of the first dest
@@ -1322,12 +1322,12 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                          * dest block, do another run for the second block.
                          */
                         dstframes += mSampleConv->convert(&srcdata, &srcframes, data.second.buf,
-                            static_cast<ALuint>(minz(data.second.len, INT_MAX)));
+                            static_cast<uint>(minz(data.second.len, INT_MAX)));
                     }
                 }
                 else
                 {
-                    const auto framesize = static_cast<ALuint>(mDevice->frameSizeFromFmt());
+                    const uint framesize{mDevice->frameSizeFromFmt()};
                     size_t len1{minz(data.first.len, numsamples)};
                     size_t len2{minz(data.second.len, numsamples-len1)};
 
@@ -1360,7 +1360,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 }
 
 
-void WasapiCapture::open(const ALCchar *name)
+void WasapiCapture::open(const char *name)
 {
     HRESULT hr{S_OK};
 
@@ -1639,7 +1639,7 @@ HRESULT WasapiCapture::resetProxy()
 
     if(mDevice->FmtChans == DevFmtMono && InputType.Format.nChannels != 1)
     {
-        ALuint chanmask{(1u<<InputType.Format.nChannels) - 1u};
+        uint chanmask{(1u<<InputType.Format.nChannels) - 1u};
         /* Exclude LFE from the downmix. */
         if((InputType.dwChannelMask&SPEAKER_LOW_FREQUENCY))
         {
@@ -1799,7 +1799,7 @@ bool WasapiBackendFactory::init()
     catch(...) {
     }
 
-    return SUCCEEDED(InitResult) ? ALC_TRUE : ALC_FALSE;
+    return SUCCEEDED(InitResult);
 }
 
 bool WasapiBackendFactory::querySupport(BackendType type)

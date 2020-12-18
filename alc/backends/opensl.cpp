@@ -54,7 +54,7 @@ namespace {
 #define VCALL0(obj, func)  ((*(obj))->func((obj) EXTRACT_VCALL_ARGS
 
 
-constexpr ALCchar opensl_device[] = "OpenSL";
+constexpr char opensl_device[] = "OpenSL";
 
 
 SLuint32 GetChannelMask(DevFmtChannels chans)
@@ -153,7 +153,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -266,10 +266,10 @@ int OpenSLPlayback::mixerProc()
         std::unique_lock<std::mutex> dlock{mMutex};
         auto data = mRing->getWriteVector();
         mDevice->renderSamples(data.first.buf,
-            static_cast<ALuint>(data.first.len*mDevice->UpdateSize), frame_step);
+            static_cast<uint>(data.first.len)*mDevice->UpdateSize, frame_step);
         if(data.second.len > 0)
             mDevice->renderSamples(data.second.buf,
-                static_cast<ALuint>(data.second.len*mDevice->UpdateSize), frame_step);
+                static_cast<uint>(data.second.len)*mDevice->UpdateSize, frame_step);
 
         size_t todo{data.first.len + data.second.len};
         mRing->writeAdvance(todo);
@@ -301,7 +301,7 @@ int OpenSLPlayback::mixerProc()
 }
 
 
-void OpenSLPlayback::open(const ALCchar *name)
+void OpenSLPlayback::open(const char *name)
 {
     if(!name)
         name = opensl_device;
@@ -525,7 +525,7 @@ bool OpenSLPlayback::reset()
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        const ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+        const uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
         mRing = RingBuffer::Create(num_updates, mFrameSize*mDevice->UpdateSize, true);
     }
 
@@ -630,7 +630,7 @@ struct OpenSLCapture final : public BackendBase {
     static void processC(SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
     { static_cast<OpenSLCapture*>(context)->process(bq); }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -671,7 +671,7 @@ void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf) noexcept
 }
 
 
-void OpenSLCapture::open(const ALCchar* name)
+void OpenSLCapture::open(const char* name)
 {
     if(!name)
         name = opensl_device;
@@ -695,16 +695,16 @@ void OpenSLCapture::open(const ALCchar* name)
     {
         mFrameSize = mDevice->frameSizeFromFmt();
         /* Ensure the total length is at least 100ms */
-        ALuint length{maxu(mDevice->BufferSize, mDevice->Frequency/10)};
+        uint length{maxu(mDevice->BufferSize, mDevice->Frequency/10)};
         /* Ensure the per-chunk length is at least 10ms, and no more than 50ms. */
-        ALuint update_len{clampu(mDevice->BufferSize/3, mDevice->Frequency/100,
+        uint update_len{clampu(mDevice->BufferSize/3, mDevice->Frequency/100,
             mDevice->Frequency/100*5)};
-        ALuint num_updates{(length+update_len-1) / update_len};
+        uint num_updates{(length+update_len-1) / update_len};
 
         mRing = RingBuffer::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->UpdateSize = update_len;
-        mDevice->BufferSize = static_cast<ALuint>(mRing->writeSpace() * update_len);
+        mDevice->BufferSize = static_cast<uint>(mRing->writeSpace() * update_len);
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -805,7 +805,7 @@ void OpenSLCapture::open(const ALCchar* name)
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        const ALuint chunk_size{mDevice->UpdateSize * mFrameSize};
+        const uint chunk_size{mDevice->UpdateSize * mFrameSize};
 
         auto data = mRing->getWriteVector();
         for(size_t i{0u};i < data.first.len && SL_RESULT_SUCCESS == result;i++)
@@ -882,16 +882,16 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
         }
     }
 
-    const ALuint update_size{mDevice->UpdateSize};
-    const ALuint chunk_size{update_size * mFrameSize};
+    const uint update_size{mDevice->UpdateSize};
+    const uint chunk_size{update_size * mFrameSize};
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
     auto data = mRing->getReadVector();
-    for(ALCuint i{0};i < samples;)
+    for(uint i{0};i < samples;)
     {
-        const ALCuint rem{minu(samples - i, update_size - mSplOffset)};
+        const uint rem{minu(samples - i, update_size - mSplOffset)};
         std::copy_n(data.first.buf + mSplOffset*mFrameSize, rem*mFrameSize, buffer + i*mFrameSize);
 
         mSplOffset += rem;

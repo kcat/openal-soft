@@ -39,6 +39,7 @@
 #include <functional>
 
 #include "alcmain.h"
+#include "albyte.h"
 #include "alexcpt.h"
 #include "alu.h"
 #include "alconfig.h"
@@ -52,7 +53,7 @@
 
 namespace {
 
-constexpr ALCchar solaris_device[] = "Solaris Default";
+constexpr char solaris_device[] = "Solaris Default";
 
 std::string solaris_driver{"/dev/audio"};
 
@@ -63,14 +64,14 @@ struct SolarisBackend final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
 
     int mFd{-1};
 
-    al::vector<ALubyte> mBuffer;
+    al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -91,10 +92,10 @@ int SolarisBackend::mixerProc()
     althrd_setname(MIXER_THREAD_NAME);
 
     const size_t frame_step{mDevice->channelsFromFmt()};
-    const ALuint frame_size{mDevice->frameSizeFromFmt()};
+    const uint frame_size{mDevice->frameSizeFromFmt()};
 
-    while(!mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
         pollfd pollitem{};
         pollitem.fd = mFd;
@@ -115,9 +116,9 @@ int SolarisBackend::mixerProc()
             continue;
         }
 
-        ALubyte *write_ptr{mBuffer.data()};
+        al::byte *write_ptr{mBuffer.data()};
         size_t to_write{mBuffer.size()};
-        mDevice->renderSamples(write_ptr, static_cast<ALuint>(to_write/frame_size), frame_step);
+        mDevice->renderSamples(write_ptr, static_cast<uint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             ssize_t wrote{write(mFd, write_ptr, to_write)};
@@ -139,7 +140,7 @@ int SolarisBackend::mixerProc()
 }
 
 
-void SolarisBackend::open(const ALCchar *name)
+void SolarisBackend::open(const char *name)
 {
     if(!name)
         name = solaris_device;
@@ -164,32 +165,32 @@ bool SolarisBackend::reset()
 
     if(mDevice->FmtChans != DevFmtMono)
         mDevice->FmtChans = DevFmtStereo;
-    ALuint numChannels{mDevice->channelsFromFmt()};
+    uint numChannels{mDevice->channelsFromFmt()};
     info.play.channels = numChannels;
 
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            info.play.precision = 8;
-            info.play.encoding = AUDIO_ENCODING_LINEAR;
-            break;
-        case DevFmtUByte:
-            info.play.precision = 8;
-            info.play.encoding = AUDIO_ENCODING_LINEAR8;
-            break;
-        case DevFmtUShort:
-        case DevFmtInt:
-        case DevFmtUInt:
-        case DevFmtFloat:
-            mDevice->FmtType = DevFmtShort;
-            /* fall-through */
-        case DevFmtShort:
-            info.play.precision = 16;
-            info.play.encoding = AUDIO_ENCODING_LINEAR;
-            break;
+    case DevFmtByte:
+        info.play.precision = 8;
+        info.play.encoding = AUDIO_ENCODING_LINEAR;
+        break;
+    case DevFmtUByte:
+        info.play.precision = 8;
+        info.play.encoding = AUDIO_ENCODING_LINEAR8;
+        break;
+    case DevFmtUShort:
+    case DevFmtInt:
+    case DevFmtUInt:
+    case DevFmtFloat:
+        mDevice->FmtType = DevFmtShort;
+        /* fall-through */
+    case DevFmtShort:
+        info.play.precision = 16;
+        info.play.encoding = AUDIO_ENCODING_LINEAR;
+        break;
     }
 
-    ALuint frameSize{numChannels * mDevice->bytesFromFmt()};
+    uint frameSize{numChannels * mDevice->bytesFromFmt()};
     info.play.buffer_size = mDevice->BufferSize * frameSize;
 
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
@@ -222,7 +223,7 @@ bool SolarisBackend::reset()
     setDefaultChannelOrder();
 
     mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
-    std::fill(mBuffer.begin(), mBuffer.end(), 0);
+    std::fill(mBuffer.begin(), mBuffer.end(), al::byte{});
 
     return true;
 }

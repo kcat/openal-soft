@@ -44,7 +44,7 @@
 
 namespace {
 
-static const ALCchar ca_device[] = "CoreAudio Default";
+static const char ca_device[] = "CoreAudio Default";
 
 
 struct CoreAudioPlayback final : public BackendBase {
@@ -62,14 +62,14 @@ struct CoreAudioPlayback final : public BackendBase {
             inBusNumber, inNumberFrames, ioData);
     }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
 
     AudioUnit mAudioUnit{};
 
-    ALuint mFrameSize{0u};
+    uint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{}; // This is the OpenAL format as a CoreAudio ASBD
 
     DEF_NEWDEL(CoreAudioPlayback)
@@ -95,7 +95,7 @@ OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTi
 }
 
 
-void CoreAudioPlayback::open(const ALCchar *name)
+void CoreAudioPlayback::open(const char *name)
 {
     if(!name)
         name = ca_device;
@@ -171,9 +171,9 @@ bool CoreAudioPlayback::reset()
 
     if(mDevice->Frequency != streamFormat.mSampleRate)
     {
-        mDevice->BufferSize = static_cast<ALuint>(uint64_t{mDevice->BufferSize} *
+        mDevice->BufferSize = static_cast<uint>(uint64_t{mDevice->BufferSize} *
             streamFormat.mSampleRate / mDevice->Frequency);
-        mDevice->Frequency = static_cast<ALuint>(streamFormat.mSampleRate);
+        mDevice->Frequency = static_cast<uint>(streamFormat.mSampleRate);
     }
 
     /* FIXME: How to tell what channels are what in the output device, and how
@@ -309,7 +309,7 @@ struct CoreAudioCapture final : public BackendBase {
             inBusNumber, inNumberFrames, ioData);
     }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -317,7 +317,7 @@ struct CoreAudioCapture final : public BackendBase {
 
     AudioUnit mAudioUnit{0};
 
-    ALuint mFrameSize{0u};
+    uint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{};  // This is the OpenAL format as a CoreAudio ASBD
 
     SampleConverterPtr mConverter;
@@ -359,7 +359,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
     }
     else
     {
-        const auto remaining = static_cast<ALuint>(inNumberFrames - rec_vec.first.len);
+        const auto remaining = static_cast<uint>(inNumberFrames - rec_vec.first.len);
         audiobuf.list.mNumberBuffers = 2;
         audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
         audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
@@ -382,7 +382,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
 }
 
 
-void CoreAudioCapture::open(const ALCchar *name)
+void CoreAudioCapture::open(const char *name)
 {
     AudioStreamBasicDescription requestedFormat;  // The application requested format
     AudioStreamBasicDescription hardwareFormat;   // The hardware format
@@ -424,7 +424,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     // Turn off AudioUnit output
     enableIO = 0;
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Output, 0, &enableIO, sizeof(ALuint));
+        kAudioUnitScope_Output, 0, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not disable audio unit output property: %u", err};
@@ -432,7 +432,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     // Turn on AudioUnit input
     enableIO = 1;
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Input, 1, &enableIO, sizeof(ALuint));
+        kAudioUnitScope_Input, 1, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not enable audio unit input property: %u", err};
@@ -598,7 +598,7 @@ void CoreAudioCapture::open(const ALCchar *name)
     /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->Frequency)
         mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
-            mFormat.mChannelsPerFrame, static_cast<ALuint>(hardwareFormat.mSampleRate),
+            mFormat.mChannelsPerFrame, static_cast<uint>(hardwareFormat.mSampleRate),
             mDevice->Frequency, Resampler::FastBSinc24);
 
     mDevice->DeviceName = name;
@@ -630,13 +630,13 @@ void CoreAudioCapture::captureSamples(al::byte *buffer, uint samples)
 
     auto rec_vec = mRing->getReadVector();
     const void *src0{rec_vec.first.buf};
-    auto src0len = static_cast<ALuint>(rec_vec.first.len);
+    auto src0len = static_cast<uint>(rec_vec.first.len);
     uint got{mConverter->convert(&src0, &src0len, buffer, samples)};
     size_t total_read{rec_vec.first.len - src0len};
     if(got < samples && !src0len && rec_vec.second.len > 0)
     {
         const void *src1{rec_vec.second.buf};
-        auto src1len = static_cast<ALuint>(rec_vec.second.len);
+        auto src1len = static_cast<uint>(rec_vec.second.len);
         got += mConverter->convert(&src1, &src1len, buffer + got*mFrameSize, samples-got);
         total_read += rec_vec.second.len - src1len;
     }

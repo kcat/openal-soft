@@ -286,7 +286,7 @@ al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
 void SetChannelOrderFromMap(ALCdevice *device, const pa_channel_map &chanmap)
 {
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
-    for(ALuint i{0};i < chanmap.channels;++i)
+    for(uint i{0};i < chanmap.channels;++i)
     {
         if(auto label = ChannelFromPulse(chanmap.map[i]))
             device->RealOut.ChannelIndex[*label] = i;
@@ -719,7 +719,7 @@ struct PulsePlayback final : public BackendBase {
     static void streamMovedCallbackC(pa_stream *stream, void *pdata) noexcept
     { static_cast<PulsePlayback*>(pdata)->streamMovedCallback(stream); }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -735,7 +735,7 @@ struct PulsePlayback final : public BackendBase {
     pa_stream *mStream{nullptr};
     pa_context *mContext{nullptr};
 
-    ALuint mFrameSize{0u};
+    uint mFrameSize{0u};
 
     DEF_NEWDEL(PulsePlayback)
 };
@@ -788,7 +788,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexce
             buflen = minz(buflen, nbytes);
         nbytes -= buflen;
 
-        mDevice->renderSamples(buf, static_cast<ALuint>(buflen/mFrameSize), mSpec.channels);
+        mDevice->renderSamples(buf, static_cast<uint>(buflen/mFrameSize), mSpec.channels);
 
         int ret{pa_stream_write(stream, buf, buflen, free_func, 0, PA_SEEK_RELATIVE)};
         if UNLIKELY(ret != PA_OK)
@@ -857,7 +857,7 @@ void PulsePlayback::streamMovedCallback(pa_stream *stream) noexcept
 }
 
 
-void PulsePlayback::open(const ALCchar *name)
+void PulsePlayback::open(const char *name)
 {
     const char *pulse_name{nullptr};
     const char *dev_name{nullptr};
@@ -899,7 +899,7 @@ void PulsePlayback::open(const ALCchar *name)
         BackendType::Playback);
 
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
-    mFrameSize = static_cast<ALuint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
+    mFrameSize = static_cast<uint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
 
     mDeviceName = pa_stream_get_device_name(mStream);
     if(!dev_name)
@@ -1007,7 +1007,7 @@ bool PulsePlayback::reset()
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample spec"};
 
-    const ALuint frame_size{static_cast<ALuint>(pa_frame_size(&mSpec))};
+    const auto frame_size = static_cast<uint>(pa_frame_size(&mSpec));
     mAttr.maxlength = ~0u;
     mAttr.tlength = mDevice->BufferSize * frame_size;
     mAttr.prebuf = 0u;
@@ -1021,7 +1021,7 @@ bool PulsePlayback::reset()
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
 
     mSpec = *(pa_stream_get_sample_spec(mStream));
-    mFrameSize = static_cast<ALuint>(pa_frame_size(&mSpec));
+    mFrameSize = static_cast<uint>(pa_frame_size(&mSpec));
 
     if(mDevice->Frequency != mSpec.rate)
     {
@@ -1029,10 +1029,10 @@ bool PulsePlayback::reset()
          * accordingly.
          */
         const auto scale = static_cast<double>(mSpec.rate) / mDevice->Frequency;
-        const ALuint perlen{static_cast<ALuint>(clampd(scale*mDevice->UpdateSize + 0.5, 64.0,
-            8192.0))};
-        const ALuint buflen{static_cast<ALuint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2,
-            std::numeric_limits<int>::max()/mFrameSize))};
+        const auto perlen = static_cast<uint>(clampd(scale*mDevice->UpdateSize + 0.5, 64.0,
+            8192.0));
+        const auto buflen = static_cast<uint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2,
+            std::numeric_limits<int>::max()/mFrameSize));
 
         mAttr.maxlength = ~0u;
         mAttr.tlength = buflen * mFrameSize;
@@ -1148,7 +1148,7 @@ struct PulseCapture final : public BackendBase {
     static void streamMovedCallbackC(pa_stream *stream, void *pdata) noexcept
     { static_cast<PulseCapture*>(pdata)->streamMovedCallback(stream); }
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -1212,7 +1212,7 @@ void PulseCapture::streamMovedCallback(pa_stream *stream) noexcept
 }
 
 
-void PulseCapture::open(const ALCchar *name)
+void PulseCapture::open(const char *name)
 {
     const char *pulse_name{nullptr};
     if(name)
@@ -1288,8 +1288,8 @@ void PulseCapture::open(const ALCchar *name)
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample format"};
 
-    const ALuint frame_size{static_cast<ALuint>(pa_frame_size(&mSpec))};
-    const ALuint samples{maxu(mDevice->BufferSize, 100 * mDevice->Frequency / 1000)};
+    const auto frame_size = static_cast<uint>(pa_frame_size(&mSpec));
+    const uint samples{maxu(mDevice->BufferSize, 100 * mDevice->Frequency / 1000)};
     mAttr.minreq = ~0u;
     mAttr.prebuf = ~0u;
     mAttr.maxlength = samples * frame_size;

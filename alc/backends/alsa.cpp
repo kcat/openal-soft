@@ -56,7 +56,7 @@
 
 namespace {
 
-constexpr ALCchar alsaDevice[] = "ALSA Default";
+constexpr char alsaDevice[] = "ALSA Default";
 
 
 #ifdef HAVE_DYNLOAD
@@ -325,7 +325,7 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
                 ERR("snd_ctl_pcm_next_device failed\n");
             if(dev < 0) break;
 
-            snd_pcm_info_set_device(pcminfo, static_cast<ALuint>(dev));
+            snd_pcm_info_set_device(pcminfo, static_cast<uint>(dev));
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, stream);
             if((err=snd_ctl_pcm_info(handle, pcminfo)) < 0)
@@ -416,7 +416,7 @@ struct AlsaPlayback final : public BackendBase {
     int mixerProc();
     int mixerNoMMapProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -510,7 +510,7 @@ int AlsaPlayback::mixerProc()
             }
 
             char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
-            mDevice->renderSamples(WritePtr, static_cast<ALuint>(frames), areas->step/samplebits);
+            mDevice->renderSamples(WritePtr, static_cast<uint>(frames), areas->step/samplebits);
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
             if(commitres < 0 || static_cast<snd_pcm_uframes_t>(commitres) != frames)
@@ -578,7 +578,7 @@ int AlsaPlayback::mixerNoMMapProc()
         al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         std::lock_guard<std::mutex> _{mMutex};
-        mDevice->renderSamples(WritePtr, static_cast<ALuint>(avail), frame_step);
+        mDevice->renderSamples(WritePtr, static_cast<uint>(avail), frame_step);
         while(avail > 0)
         {
             snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr,
@@ -616,7 +616,7 @@ int AlsaPlayback::mixerNoMMapProc()
 }
 
 
-void AlsaPlayback::open(const ALCchar *name)
+void AlsaPlayback::open(const char *name)
 {
     const char *driver{};
     if(name)
@@ -680,9 +680,9 @@ bool AlsaPlayback::reset()
     }
 
     bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", 1)};
-    ALuint periodLen{static_cast<ALuint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
-    ALuint bufferLen{static_cast<ALuint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
-    ALuint rate{mDevice->Frequency};
+    uint periodLen{static_cast<uint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
+    uint bufferLen{static_cast<uint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
+    uint rate{mDevice->Frequency};
 
     int err{};
     HwParamsPtr hp{CreateHwParams()};
@@ -785,8 +785,8 @@ bool AlsaPlayback::reset()
 #undef CHECK
     sp = nullptr;
 
-    mDevice->BufferSize = static_cast<ALuint>(bufferSizeInFrames);
-    mDevice->UpdateSize = static_cast<ALuint>(periodSizeInFrames);
+    mDevice->BufferSize = static_cast<uint>(bufferSizeInFrames);
+    mDevice->UpdateSize = static_cast<uint>(periodSizeInFrames);
     mDevice->Frequency = rate;
 
     setDefaultChannelOrder();
@@ -869,7 +869,7 @@ struct AlsaCapture final : public BackendBase {
     AlsaCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -896,7 +896,7 @@ AlsaCapture::~AlsaCapture()
 }
 
 
-void AlsaCapture::open(const ALCchar *name)
+void AlsaCapture::open(const char *name)
 {
     const char *driver{};
     if(name)
@@ -1017,7 +1017,7 @@ void AlsaCapture::stop()
      * snd_pcm_drain is unreliable and snd_pcm_drop drops it. Capture what's
      * available now so it'll be available later after the drop.
      */
-    ALCuint avail{availableSamples()};
+    uint avail{availableSamples()};
     if(!mRing && avail > 0)
     {
         /* The ring buffer implicitly captures when checking availability.
@@ -1088,7 +1088,7 @@ void AlsaCapture::captureSamples(al::byte *buffer, uint samples)
         }
 
         buffer = buffer + amt;
-        samples -= static_cast<ALCuint>(amt);
+        samples -= static_cast<uint>(amt);
     }
     if(samples > 0)
         std::fill_n(buffer, snd_pcm_frames_to_bytes(mPcmHandle, samples),
@@ -1199,10 +1199,10 @@ bool AlsaBackendFactory::init()
         if(!alsa_handle)
         {
             WARN("Failed to load %s\n", "libasound.so.2");
-            return ALC_FALSE;
+            return false;
         }
 
-        error = ALC_FALSE;
+        error = false;
 #define LOAD_FUNC(f) do {                                                     \
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
     if(p##f == nullptr) {                                                     \

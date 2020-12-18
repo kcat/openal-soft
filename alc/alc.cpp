@@ -2130,7 +2130,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                const ALsizei idx{CountTrailingZeros(usemask)};
+                const int idx{CountTrailingZeros(usemask)};
                 ALeffectslot *slot{sublist.EffectSlots + idx};
                 usemask &= ~(1_u64 << idx);
 
@@ -2153,7 +2153,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                const ALsizei idx{CountTrailingZeros(usemask)};
+                const int idx{CountTrailingZeros(usemask)};
                 ALsource *source{sublist.Sources + idx};
                 usemask &= ~(1_u64 << idx);
 
@@ -2724,7 +2724,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
+static inline int NumAttrsForDevice(ALCdevice *device)
 {
     if(device->Type == DeviceType::Capture) return 9;
     if(device->Type != DeviceType::Loopback) return 29;

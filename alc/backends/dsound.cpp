@@ -229,7 +229,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     }
 
     const size_t FrameStep{mDevice->channelsFromFmt()};
-    ALuint FrameSize{mDevice->frameSizeFromFmt()};
+    uint FrameSize{mDevice->frameSizeFromFmt()};
     DWORD FragSize{mDevice->UpdateSize * FrameSize};
 
     bool Playing{false};
@@ -306,7 +306,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     return 0;
 }
 
-void DSoundPlayback::open(const ALCchar *name)
+void DSoundPlayback::open(const char *name)
 {
     HRESULT hr;
     if(PlaybackDevices.empty())
@@ -474,7 +474,7 @@ retry_open:
 
     if(SUCCEEDED(hr))
     {
-        ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+        uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
         if(num_updates > MAX_UPDATES)
             num_updates = MAX_UPDATES;
         mDevice->BufferSize = mDevice->UpdateSize * num_updates;
@@ -502,11 +502,11 @@ retry_open:
         {
             mNotifies = static_cast<IDirectSoundNotify*>(ptr);
 
-            ALuint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+            uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
             assert(num_updates <= MAX_UPDATES);
 
             std::array<DSBPOSITIONNOTIFY,MAX_UPDATES> nots;
-            for(ALuint i{0};i < num_updates;++i)
+            for(uint i{0};i < num_updates;++i)
             {
                 nots[i].dwOffset = i * mDevice->UpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;
@@ -562,7 +562,7 @@ struct DSoundCapture final : public BackendBase {
     DSoundCapture(ALCdevice *device) noexcept : BackendBase{device} { }
     ~DSoundCapture() override;
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -593,7 +593,7 @@ DSoundCapture::~DSoundCapture()
 }
 
 
-void DSoundCapture::open(const ALCchar *name)
+void DSoundCapture::open(const char *name)
 {
     HRESULT hr;
     if(CaptureDevices.empty())
@@ -684,7 +684,7 @@ void DSoundCapture::open(const ALCchar *name)
         InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     }
 
-    ALuint samples{mDevice->BufferSize};
+    uint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
 
     DSCBUFFERDESC DSCBDescription{};

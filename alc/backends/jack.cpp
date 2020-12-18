@@ -46,7 +46,7 @@
 
 namespace {
 
-constexpr ALCchar jackDevice[] = "JACK Default";
+constexpr char jackDevice[] = "JACK Default";
 
 
 #ifdef HAVE_DYNLOAD
@@ -214,7 +214,7 @@ struct JackPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -266,7 +266,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     if LIKELY(mPlaying.load(std::memory_order_acquire))
     {
         auto data = mRing->getReadVector();
-        jack_nframes_t todo{minu(numframes, static_cast<ALuint>(data.first.len))};
+        jack_nframes_t todo{minu(numframes, static_cast<uint>(data.first.len))};
         auto write_first = [&data,numchans,todo](float *outbuf) -> float*
         {
             const float *RESTRICT in = reinterpret_cast<float*>(data.first.buf);
@@ -283,7 +283,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         std::transform(out.begin(), out.begin()+numchans, out.begin(), write_first);
         total += todo;
 
-        todo = minu(numframes-total, static_cast<ALuint>(data.second.len));
+        todo = minu(numframes-total, static_cast<uint>(data.second.len));
         if(todo > 0)
         {
             auto write_second = [&data,numchans,todo](float *outbuf) -> float*
@@ -334,11 +334,11 @@ int JackPlayback::mixerProc()
         }
 
         auto data = mRing->getWriteVector();
-        auto todo = static_cast<ALuint>(data.first.len + data.second.len);
+        size_t todo{data.first.len + data.second.len};
         todo -= todo%mDevice->UpdateSize;
 
-        ALuint len1{minu(static_cast<ALuint>(data.first.len), todo)};
-        ALuint len2{minu(static_cast<ALuint>(data.second.len), todo-len1)};
+        const auto len1 = static_cast<uint>(minz(data.first.len, todo));
+        const auto len2 = static_cast<uint>(minz(data.second.len, todo-len1));
 
         std::lock_guard<std::mutex> _{mMutex};
         mDevice->renderSamples(data.first.buf, len1, frame_step);
@@ -351,7 +351,7 @@ int JackPlayback::mixerProc()
 }
 
 
-void JackPlayback::open(const ALCchar *name)
+void JackPlayback::open(const char *name)
 {
     mPortPattern.clear();
 
@@ -406,7 +406,7 @@ bool JackPlayback::reset()
     mDevice->BufferSize = mDevice->UpdateSize * 2;
 
     const char *devname{mDevice->DeviceName.c_str()};
-    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+    uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
     bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
     mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 
@@ -487,7 +487,7 @@ void JackPlayback::start()
     mDevice->UpdateSize = jack_get_buffer_size(mClient);
     mDevice->BufferSize = mDevice->UpdateSize * 2;
 
-    ALuint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+    uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
     bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
     mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 

@@ -56,37 +56,40 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
-constexpr ALCchar waveDevice[] = "Wave File Writer";
+using ubyte = unsigned char;
+using ushort = unsigned short;
 
-constexpr ALubyte SUBTYPE_PCM[]{
+constexpr char waveDevice[] = "Wave File Writer";
+
+constexpr ubyte SUBTYPE_PCM[]{
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
     0x00, 0x38, 0x9b, 0x71
 };
-constexpr ALubyte SUBTYPE_FLOAT[]{
+constexpr ubyte SUBTYPE_FLOAT[]{
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
     0x00, 0x38, 0x9b, 0x71
 };
 
-constexpr ALubyte SUBTYPE_BFORMAT_PCM[]{
+constexpr ubyte SUBTYPE_BFORMAT_PCM[]{
     0x01, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
 };
 
-constexpr ALubyte SUBTYPE_BFORMAT_FLOAT[]{
+constexpr ubyte SUBTYPE_BFORMAT_FLOAT[]{
     0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
 };
 
-void fwrite16le(ALushort val, FILE *f)
+void fwrite16le(ushort val, FILE *f)
 {
-    ALubyte data[2]{ static_cast<ALubyte>(val&0xff), static_cast<ALubyte>((val>>8)&0xff) };
+    ubyte data[2]{ static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff) };
     fwrite(data, 1, 2, f);
 }
 
-void fwrite32le(ALuint val, FILE *f)
+void fwrite32le(uint val, FILE *f)
 {
-    ALubyte data[4]{ static_cast<ALubyte>(val&0xff), static_cast<ALubyte>((val>>8)&0xff),
-        static_cast<ALubyte>((val>>16)&0xff), static_cast<ALubyte>((val>>24)&0xff) };
+    ubyte data[4]{ static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
+        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff) };
     fwrite(data, 1, 4, f);
 }
 
@@ -97,7 +100,7 @@ struct WaveBackend final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -127,7 +130,7 @@ int WaveBackend::mixerProc()
     althrd_setname(MIXER_THREAD_NAME);
 
     const size_t frameStep{mDevice->channelsFromFmt()};
-    const ALuint frameSize{mDevice->frameSizeFromFmt()};
+    const size_t frameSize{mDevice->frameSizeFromFmt()};
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
@@ -151,25 +154,25 @@ int WaveBackend::mixerProc()
 
             if /*constexpr*/(!IS_LITTLE_ENDIAN)
             {
-                const ALuint bytesize{mDevice->bytesFromFmt()};
+                const uint bytesize{mDevice->bytesFromFmt()};
 
                 if(bytesize == 2)
                 {
-                    ALushort *samples = reinterpret_cast<ALushort*>(mBuffer.data());
+                    ushort *samples = reinterpret_cast<ushort*>(mBuffer.data());
                     const size_t len{mBuffer.size() / 2};
                     for(size_t i{0};i < len;i++)
                     {
-                        const ALushort samp{samples[i]};
-                        samples[i] = static_cast<ALushort>((samp>>8) | (samp<<8));
+                        const ushort samp{samples[i]};
+                        samples[i] = static_cast<ushort>((samp>>8) | (samp<<8));
                     }
                 }
                 else if(bytesize == 4)
                 {
-                    ALuint *samples = reinterpret_cast<ALuint*>(mBuffer.data());
+                    uint *samples = reinterpret_cast<uint*>(mBuffer.data());
                     const size_t len{mBuffer.size() / 4};
                     for(size_t i{0};i < len;i++)
                     {
-                        const ALuint samp{samples[i]};
+                        const uint samp{samples[i]};
                         samples[i] = (samp>>24) | ((samp>>8)&0x0000ff00) |
                                      ((samp<<8)&0x00ff0000) | (samp<<24);
                     }
@@ -202,7 +205,7 @@ int WaveBackend::mixerProc()
     return 0;
 }
 
-void WaveBackend::open(const ALCchar *name)
+void WaveBackend::open(const char *name)
 {
     const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
     if(!fname[0]) throw al::backend_exception{al::backend_error::NoDevice,
@@ -231,8 +234,8 @@ void WaveBackend::open(const ALCchar *name)
 
 bool WaveBackend::reset()
 {
-    ALuint channels=0, bytes=0, chanmask=0;
-    int isbformat = 0;
+    uint channels{0}, bytes{0}, chanmask{0};
+    bool isbformat{false};
     size_t val;
 
     fseek(mFile, 0, SEEK_SET);
@@ -246,38 +249,38 @@ bool WaveBackend::reset()
 
     switch(mDevice->FmtType)
     {
-        case DevFmtByte:
-            mDevice->FmtType = DevFmtUByte;
-            break;
-        case DevFmtUShort:
-            mDevice->FmtType = DevFmtShort;
-            break;
-        case DevFmtUInt:
-            mDevice->FmtType = DevFmtInt;
-            break;
-        case DevFmtUByte:
-        case DevFmtShort:
-        case DevFmtInt:
-        case DevFmtFloat:
-            break;
+    case DevFmtByte:
+        mDevice->FmtType = DevFmtUByte;
+        break;
+    case DevFmtUShort:
+        mDevice->FmtType = DevFmtShort;
+        break;
+    case DevFmtUInt:
+        mDevice->FmtType = DevFmtInt;
+        break;
+    case DevFmtUByte:
+    case DevFmtShort:
+    case DevFmtInt:
+    case DevFmtFloat:
+        break;
     }
     switch(mDevice->FmtChans)
     {
-        case DevFmtMono:   chanmask = 0x04; break;
-        case DevFmtStereo: chanmask = 0x01 | 0x02; break;
-        case DevFmtQuad:   chanmask = 0x01 | 0x02 | 0x10 | 0x20; break;
-        case DevFmtX51: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x200 | 0x400; break;
-        case DevFmtX51Rear: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020; break;
-        case DevFmtX61: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x100 | 0x200 | 0x400; break;
-        case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
-        case DevFmtAmbi3D:
-            /* .amb output requires FuMa */
-            mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);
-            mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
-            mDevice->mAmbiScale = DevAmbiScaling::FuMa;
-            isbformat = 1;
-            chanmask = 0;
-            break;
+    case DevFmtMono:   chanmask = 0x04; break;
+    case DevFmtStereo: chanmask = 0x01 | 0x02; break;
+    case DevFmtQuad:   chanmask = 0x01 | 0x02 | 0x10 | 0x20; break;
+    case DevFmtX51: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x200 | 0x400; break;
+    case DevFmtX51Rear: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020; break;
+    case DevFmtX61: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x100 | 0x200 | 0x400; break;
+    case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
+    case DevFmtAmbi3D:
+        /* .amb output requires FuMa */
+        mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);
+        mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
+        mDevice->mAmbiScale = DevAmbiScaling::FuMa;
+        isbformat = true;
+        chanmask = 0;
+        break;
     }
     bytes = mDevice->bytesFromFmt();
     channels = mDevice->channelsFromFmt();
@@ -295,19 +298,19 @@ bool WaveBackend::reset()
     // 16-bit val, format type id (extensible: 0xFFFE)
     fwrite16le(0xFFFE, mFile);
     // 16-bit val, channel count
-    fwrite16le(static_cast<ALushort>(channels), mFile);
+    fwrite16le(static_cast<ushort>(channels), mFile);
     // 32-bit val, frequency
     fwrite32le(mDevice->Frequency, mFile);
     // 32-bit val, bytes per second
     fwrite32le(mDevice->Frequency * channels * bytes, mFile);
     // 16-bit val, frame size
-    fwrite16le(static_cast<ALushort>(channels * bytes), mFile);
+    fwrite16le(static_cast<ushort>(channels * bytes), mFile);
     // 16-bit val, bits per sample
-    fwrite16le(static_cast<ALushort>(bytes * 8), mFile);
+    fwrite16le(static_cast<ushort>(bytes * 8), mFile);
     // 16-bit val, extra byte count
     fwrite16le(22, mFile);
     // 16-bit val, valid bits per sample
-    fwrite16le(static_cast<ALushort>(bytes * 8), mFile);
+    fwrite16le(static_cast<ushort>(bytes * 8), mFile);
     // 32-bit val, channel mask
     fwrite32le(chanmask, mFile);
     // 16 byte GUID, sub-type format
@@ -328,7 +331,7 @@ bool WaveBackend::reset()
 
     setDefaultWFXChannelOrder();
 
-    const ALuint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
+    const uint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
     mBuffer.resize(bufsize);
 
     return true;
@@ -357,9 +360,9 @@ void WaveBackend::stop()
     {
         long dataLen{size - mDataStart};
         if(fseek(mFile, mDataStart-4, SEEK_SET) == 0)
-            fwrite32le(static_cast<ALuint>(dataLen), mFile); // 'data' header len
+            fwrite32le(static_cast<uint>(dataLen), mFile); // 'data' header len
         if(fseek(mFile, 4, SEEK_SET) == 0)
-            fwrite32le(static_cast<ALuint>(size-8), mFile); // 'WAVE' header len
+            fwrite32le(static_cast<uint>(size-8), mFile); // 'WAVE' header len
     }
 }
 

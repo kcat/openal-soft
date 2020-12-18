@@ -12,8 +12,6 @@
 #include <mmreg.h>
 #endif
 
-#include "AL/alc.h"
-
 #include "alcmain.h"
 #include "alexcpt.h"
 #include "alnumeric.h"

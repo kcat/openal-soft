@@ -43,7 +43,7 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
-constexpr ALCchar nullDevice[] = "No Output";
+constexpr char nullDevice[] = "No Output";
 
 
 struct NullBackend final : public BackendBase {
@@ -51,7 +51,7 @@ struct NullBackend final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -106,7 +106,7 @@ int NullBackend::mixerProc()
 }
 
 
-void NullBackend::open(const ALCchar *name)
+void NullBackend::open(const char *name)
 {
     if(!name)
         name = nullDevice;

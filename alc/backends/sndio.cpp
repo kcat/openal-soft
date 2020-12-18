@@ -42,7 +42,7 @@
 
 namespace {
 
-static const ALCchar sndio_device[] = "SndIO Default";
+static const char sndio_device[] = "SndIO Default";
 
 
 struct SndioPlayback final : public BackendBase {
@@ -51,7 +51,7 @@ struct SndioPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -95,7 +95,7 @@ int SndioPlayback::mixerProc()
         al::byte *WritePtr{mBuffer.data()};
         size_t len{mBuffer.size()};
 
-        mDevice->renderSamples(WritePtr, static_cast<ALuint>(len)/frameSize, frameStep);
+        mDevice->renderSamples(WritePtr, static_cast<uint>(len/frameSize), frameStep);
         while(len > 0 && !mKillNow.load(std::memory_order_acquire))
         {
             size_t wrote{sio_write(mSndHandle, WritePtr, len)};
@@ -115,7 +115,7 @@ int SndioPlayback::mixerProc()
 }
 
 
-void SndioPlayback::open(const ALCchar *name)
+void SndioPlayback::open(const char *name)
 {
     if(!name)
         name = sndio_device;
@@ -294,7 +294,7 @@ struct SndioCapture final : public BackendBase {
 
     int recordProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     void start() override;
     void stop() override;
     void captureSamples(al::byte *buffer, uint samples) override;
@@ -322,10 +322,10 @@ int SndioCapture::recordProc()
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    const ALuint frameSize{mDevice->frameSizeFromFmt()};
+    const uint frameSize{mDevice->frameSizeFromFmt()};
 
-    while(!mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
         auto data = mRing->getWriteVector();
         size_t todo{data.first.len + data.second.len};
@@ -364,7 +364,7 @@ int SndioCapture::recordProc()
 }
 
 
-void SndioCapture::open(const ALCchar *name)
+void SndioCapture::open(const char *name)
 {
     if(!name)
         name = sndio_device;

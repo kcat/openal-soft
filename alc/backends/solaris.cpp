@@ -144,11 +144,12 @@ void SolarisBackend::open(const ALCchar *name)
     if(!name)
         name = solaris_device;
     else if(strcmp(name, solaris_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     mFd = ::open(solaris_driver.c_str(), O_WRONLY);
     if(mFd == -1)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s",
+        throw al::backend_exception{al::backend_error::NoDevice, "Could not open %s: %s",
             solaris_driver.c_str(), strerror(errno)};
 
     mDevice->DeviceName = name;
@@ -233,8 +234,8 @@ void SolarisBackend::start()
         mThread = std::thread{std::mem_fn(&SolarisBackend::mixerProc), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 

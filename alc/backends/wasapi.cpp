@@ -844,7 +844,8 @@ void WasapiPlayback::open(const ALCchar *name)
 
         mDevId.clear();
 
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
+            hr};
     }
 }
 
@@ -887,7 +888,7 @@ bool WasapiPlayback::reset()
 {
     HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
     if(FAILED(hr))
-        throw al::backend_exception{ALC_INVALID_VALUE, "0x%08lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError, "0x%08lx", hr};
     return true;
 }
 
@@ -1151,7 +1152,8 @@ void WasapiPlayback::start()
 {
     const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
     if(FAILED(hr))
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start playback: 0x%lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start playback: 0x%lx", hr};
 }
 
 HRESULT WasapiPlayback::startProxy()
@@ -1410,15 +1412,16 @@ void WasapiCapture::open(const ALCchar *name)
 
         mDevId.clear();
 
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
+            hr};
     }
 
     hr = pushMessage(MsgType::ResetDevice).get();
     if(FAILED(hr))
     {
         if(hr == E_OUTOFMEMORY)
-            throw al::backend_exception{ALC_OUT_OF_MEMORY, "Out of memory"};
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device reset failed"};
+            throw al::backend_exception{al::backend_error::OutOfMemory, "Out of memory"};
+        throw al::backend_exception{al::backend_error::DeviceError, "Device reset failed"};
     }
 }
 
@@ -1714,7 +1717,8 @@ void WasapiCapture::start()
 {
     const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
     if(FAILED(hr))
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording: 0x%lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start recording: 0x%lx", hr};
 }
 
 HRESULT WasapiCapture::startProxy()

@@ -338,8 +338,8 @@ void DSoundPlayback::open(const ALCchar *name)
                 iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
                     [&id](const DevMap &entry) -> bool { return entry.guid == id; });
             if(iter == PlaybackDevices.cend())
-                throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found",
-                    name};
+                throw al::backend_exception{al::backend_error::NoDevice,
+                    "Device name \"%s\" not found", name};
         }
         guid = &iter->guid;
     }
@@ -354,7 +354,8 @@ void DSoundPlayback::open(const ALCchar *name)
     if(SUCCEEDED(hr))
         hr = mDS->SetCooperativeLevel(GetForegroundWindow(), DSSCL_PRIORITY);
     if(FAILED(hr))
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
+            hr};
 
     mDevice->DeviceName = name;
 }
@@ -542,8 +543,8 @@ void DSoundPlayback::start()
         mThread = std::thread{std::mem_fn(&DSoundPlayback::mixerProc), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 
@@ -624,8 +625,8 @@ void DSoundCapture::open(const ALCchar *name)
                 iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
                     [&id](const DevMap &entry) -> bool { return entry.guid == id; });
             if(iter == CaptureDevices.cend())
-                throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found",
-                    name};
+                throw al::backend_exception{al::backend_error::NoDevice,
+                    "Device name \"%s\" not found", name};
         }
         guid = &iter->guid;
     }
@@ -636,8 +637,8 @@ void DSoundCapture::open(const ALCchar *name)
     case DevFmtUShort:
     case DevFmtUInt:
         WARN("%s capture samples not supported\n", DevFmtTypeString(mDevice->FmtType));
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
-            DevFmtTypeString(mDevice->FmtType)};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "%s capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
 
     case DevFmtUByte:
     case DevFmtShort:
@@ -658,7 +659,7 @@ void DSoundCapture::open(const ALCchar *name)
     case DevFmtX71: InputType.dwChannelMask = X7DOT1; break;
     case DevFmtAmbi3D:
         WARN("%s capture not supported\n", DevFmtChannelsString(mDevice->FmtChans));
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture not supported",
+        throw al::backend_exception{al::backend_error::DeviceError, "%s capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
 
@@ -709,7 +710,8 @@ void DSoundCapture::open(const ALCchar *name)
             mDSC->Release();
         mDSC = nullptr;
 
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device init failed: 0x%08lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
+            hr};
     }
 
     mBufferBytes = DSCBDescription.dwBufferBytes;
@@ -722,7 +724,8 @@ void DSoundCapture::start()
 {
     const HRESULT hr{mDSCbuffer->Start(DSCBSTART_LOOPING)};
     if(FAILED(hr))
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failure starting capture: 0x%lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failure starting capture: 0x%lx", hr};
 }
 
 void DSoundCapture::stop()

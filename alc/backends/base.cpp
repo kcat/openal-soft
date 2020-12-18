@@ -23,7 +23,7 @@
 
 
 bool BackendBase::reset()
-{ throw al::backend_exception{ALC_INVALID_DEVICE, "Invalid BackendBase call"}; }
+{ throw al::backend_exception{al::backend_error::DeviceError, "Invalid BackendBase call"}; }
 
 void BackendBase::captureSamples(al::byte*, uint)
 { }
@@ -150,7 +150,7 @@ void BackendBase::setDefaultChannelOrder()
 }
 
 #ifdef _WIN32
-void BackendBase::setChannelOrderFromWFXMask(ALuint chanmask)
+void BackendBase::setChannelOrderFromWFXMask(uint chanmask)
 {
     auto get_channel = [](const DWORD chanbit) noexcept -> al::optional<Channel>
     {

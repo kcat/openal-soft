@@ -1944,7 +1944,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     try {
         auto backend = device->Backend.get();
         if(!backend->reset())
-            throw al::backend_exception{ALC_INVALID_DEVICE, "Device reset failure"};
+            throw al::backend_exception{al::backend_error::DeviceError, "Device reset failure"};
     }
     catch(std::exception &e) {
         device->handleDisconnect("%s", e.what());
@@ -3518,7 +3518,8 @@ START_API_FUNC
     }
     catch(al::backend_exception &e) {
         WARN("Failed to open playback device: %s\n", e.what());
-        alcSetError(nullptr, e.errorCode());
+        alcSetError(nullptr, (e.errorCode() == al::backend_error::OutOfMemory)
+            ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
         return nullptr;
     }
 
@@ -3771,7 +3772,8 @@ START_API_FUNC
     }
     catch(al::backend_exception &e) {
         WARN("Failed to open capture device: %s\n", e.what());
-        alcSetError(nullptr, e.errorCode());
+        alcSetError(nullptr, (e.errorCode() == al::backend_error::OutOfMemory)
+            ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
         return nullptr;
     }
 
@@ -3944,7 +3946,8 @@ START_API_FUNC
     }
     catch(al::backend_exception &e) {
         WARN("Failed to open loopback device: %s\n", e.what());
-        alcSetError(nullptr, e.errorCode());
+        alcSetError(nullptr, (e.errorCode() == al::backend_error::OutOfMemory)
+            ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
         return nullptr;
     }
 

@@ -60,14 +60,15 @@ void OboePlayback::open(const ALCchar *name)
     if(!name)
         name = device_name;
     else if(std::strcmp(name, device_name) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     /* Open a basic output stream, just to ensure it can work. */
     oboe::Result result{oboe::AudioStreamBuilder{}.setDirection(oboe::Direction::Output)
         ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
         ->openManagedStream(mStream)};
     if(result != oboe::Result::OK)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to create stream: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: %s",
             oboe::convertToText(result)};
 
     mDevice->DeviceName = name;
@@ -132,7 +133,7 @@ bool OboePlayback::reset()
         result = builder.openManagedStream(mStream);
     }
     if(result != oboe::Result::OK)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to create stream: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: %s",
             oboe::convertToText(result)};
     TRACE("Got stream with properties:\n%s", oboe::convertToText(mStream.get()));
 
@@ -161,8 +162,8 @@ bool OboePlayback::reset()
         break;
     default:
         if(mStream->getChannelCount() < 1)
-            throw al::backend_exception{ALC_INVALID_DEVICE, "Got unhandled channel count: %d",
-                mStream->getChannelCount()};
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Got unhandled channel count: %d", mStream->getChannelCount()};
         /* Assume first two channels are front left/right. We can do a stereo
          * mix and keep the other channels silent.
          */
@@ -181,8 +182,8 @@ bool OboePlayback::reset()
         break;
     case oboe::AudioFormat::Unspecified:
     case oboe::AudioFormat::Invalid:
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Got unhandled sample type: %s",
-            oboe::convertToText(mStream->getFormat())};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Got unhandled sample type: %s", oboe::convertToText(mStream->getFormat())};
     }
     mDevice->Frequency = static_cast<uint32_t>(mStream->getSampleRate());
 
@@ -203,7 +204,7 @@ void OboePlayback::start()
 {
     const oboe::Result result{mStream->start()};
     if(result != oboe::Result::OK)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start stream: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to start stream: %s",
             oboe::convertToText(result)};
 }
 
@@ -211,7 +212,7 @@ void OboePlayback::stop()
 {
     oboe::Result result{mStream->stop()};
     if(result != oboe::Result::OK)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to stop stream: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to stop stream: %s",
             oboe::convertToText(result)};
 }
 

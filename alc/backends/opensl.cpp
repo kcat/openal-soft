@@ -306,7 +306,8 @@ void OpenSLPlayback::open(const ALCchar *name)
     if(!name)
         name = opensl_device;
     else if(strcmp(name, opensl_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     // create engine
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
@@ -343,7 +344,7 @@ void OpenSLPlayback::open(const ALCchar *name)
         mEngineObj = nullptr;
         mEngine = nullptr;
 
-        throw al::backend_exception{ALC_INVALID_VALUE,
+        throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to initialize OpenSL device: 0x%08x", result};
     }
 
@@ -554,16 +555,16 @@ void OpenSLPlayback::start()
         PRINTERR(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS != result)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to register callback: 0x%08x",
-            result};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to register callback: 0x%08x", result};
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread(std::mem_fn(&OpenSLPlayback::mixerProc), this);
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 
@@ -675,7 +676,8 @@ void OpenSLCapture::open(const ALCchar* name)
     if(!name)
         name = opensl_device;
     else if(strcmp(name, opensl_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
     PRINTERR(result, "slCreateEngine");
@@ -829,7 +831,7 @@ void OpenSLCapture::open(const ALCchar* name)
         mEngineObj = nullptr;
         mEngine = nullptr;
 
-        throw al::backend_exception{ALC_INVALID_VALUE,
+        throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to initialize OpenSL device: 0x%08x", result};
     }
 
@@ -848,7 +850,8 @@ void OpenSLCapture::start()
         PRINTERR(result, "record->SetRecordState");
     }
     if(SL_RESULT_SUCCESS != result)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start capture: 0x%08x", result};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start capture: 0x%08x", result};
 }
 
 void OpenSLCapture::stop()

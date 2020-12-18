@@ -19,7 +19,7 @@ struct ClockLatency {
 };
 
 struct BackendBase {
-    virtual void open(const ALCchar *name) = 0;
+    virtual void open(const char *name) = 0;
 
     virtual bool reset();
     virtual void start() = 0;
@@ -43,7 +43,7 @@ protected:
 
 #ifdef _WIN32
     /** Sets the channel order given the WaveFormatEx mask. */
-    void setChannelOrderFromWFXMask(ALuint chanmask);
+    void setChannelOrderFromWFXMask(uint chanmask);
 #endif
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
@@ -93,19 +93,25 @@ protected:
 
 namespace al {
 
+enum class backend_error {
+    NoDevice,
+    DeviceError,
+    OutOfMemory
+};
+
 class backend_exception final : public base_exception {
-    ALCenum mErrorCode;
+    backend_error mErrorCode;
 
 public:
     [[gnu::format(printf, 3, 4)]]
-    backend_exception(ALCenum code, const char *msg, ...) : mErrorCode{code}
+    backend_exception(backend_error code, const char *msg, ...) : mErrorCode{code}
     {
         std::va_list args;
         va_start(args, msg);
         setMessage(msg, args);
         va_end(args);
     }
-    ALCenum errorCode() const noexcept { return mErrorCode; }
+    backend_error errorCode() const noexcept { return mErrorCode; }
 };
 
 } // namespace al

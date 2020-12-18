@@ -121,7 +121,8 @@ void PortPlayback::open(const ALCchar *name)
     if(!name)
         name = pa_device;
     else if(strcmp(name, pa_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     mUpdateSize = mDevice->UpdateSize;
 
@@ -166,7 +167,7 @@ retry_open:
             mParams.sampleFormat = paInt16;
             goto retry_open;
         }
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open stream: %s",
+        throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
             Pa_GetErrorText(err)};
     }
 
@@ -213,7 +214,7 @@ void PortPlayback::start()
 {
     const PaError err{Pa_StartStream(mStream)};
     if(err == paNoError)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start playback: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to start playback: %s",
             Pa_GetErrorText(err)};
 }
 
@@ -275,7 +276,8 @@ void PortCapture::open(const ALCchar *name)
     if(!name)
         name = pa_device;
     else if(strcmp(name, pa_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     ALuint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);
@@ -308,7 +310,7 @@ void PortCapture::open(const ALCchar *name)
         break;
     case DevFmtUInt:
     case DevFmtUShort:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s samples not supported",
+        throw al::backend_exception{al::backend_error::DeviceError, "%s samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
     mParams.channelCount = static_cast<int>(mDevice->channelsFromFmt());
@@ -316,7 +318,7 @@ void PortCapture::open(const ALCchar *name)
     PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->Frequency,
         paFramesPerBufferUnspecified, paNoFlag, &PortCapture::readCallbackC, this)};
     if(err != paNoError)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open stream: %s",
+        throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
             Pa_GetErrorText(err)};
 
     mDevice->DeviceName = name;
@@ -327,8 +329,8 @@ void PortCapture::start()
 {
     const PaError err{Pa_StartStream(mStream)};
     if(err != paNoError)
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording: %s",
-            Pa_GetErrorText(err)};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start recording: %s", Pa_GetErrorText(err)};
 }
 
 void PortCapture::stop()

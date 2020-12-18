@@ -325,13 +325,14 @@ void OSSPlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
         devname = iter->device_name.c_str();
     }
 
     mFd = ::open(devname, O_WRONLY);
     if(mFd == -1)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
+        throw al::backend_exception{al::backend_error::NoDevice, "Could not open %s: %s", devname,
             strerror(errno)};
 
     mDevice->DeviceName = name;
@@ -422,8 +423,8 @@ void OSSPlayback::start()
         mThread = std::thread{std::mem_fn(&OSSPlayback::mixerProc), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 
@@ -528,13 +529,14 @@ void OSScapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
         devname = iter->device_name.c_str();
     }
 
     mFd = ::open(devname, O_RDONLY);
     if(mFd == -1)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open %s: %s", devname,
+        throw al::backend_exception{al::backend_error::NoDevice, "Could not open %s: %s", devname,
             strerror(errno)};
 
     int ossFormat{};
@@ -553,8 +555,8 @@ void OSScapture::open(const ALCchar *name)
     case DevFmtInt:
     case DevFmtUInt:
     case DevFmtFloat:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
-            DevFmtTypeString(mDevice->FmtType)};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "%s capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
     }
 
     ALuint periods{4};
@@ -567,7 +569,8 @@ void OSScapture::open(const ALCchar *name)
 
     audio_buf_info info{};
 #define CHECKERR(func) if((func) < 0) {                                       \
-    throw al::backend_exception{ALC_INVALID_VALUE, #func " failed: %s", strerror(errno)}; \
+    throw al::backend_exception{al::backend_error::DeviceError, #func " failed: %s", \
+        strerror(errno)};                                                     \
 }
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
@@ -577,14 +580,14 @@ void OSScapture::open(const ALCchar *name)
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
-        throw al::backend_exception{ALC_INVALID_VALUE,
+        throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set %s, got %d channels instead", DevFmtChannelsString(mDevice->FmtChans),
             numChannels};
 
     if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte)
         || (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte)
         || (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
-        throw al::backend_exception{ALC_INVALID_VALUE,
+        throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set %s samples, got OSS format %#x", DevFmtTypeString(mDevice->FmtType),
             ossFormat};
 
@@ -600,8 +603,8 @@ void OSScapture::start()
         mThread = std::thread{std::mem_fn(&OSScapture::recordProc), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start recording thread: %s", e.what()};
     }
 }
 

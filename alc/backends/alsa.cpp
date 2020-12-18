@@ -629,7 +629,8 @@ void AlsaPlayback::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == PlaybackDevices.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
         driver = iter->device_name.c_str();
     }
     else
@@ -641,8 +642,8 @@ void AlsaPlayback::open(const ALCchar *name)
     TRACE("Opening device \"%s\"\n", driver);
     int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
     if(err < 0)
-        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA device \"%s\"",
-            driver};
+        throw al::backend_exception{al::backend_error::NoDevice,
+            "Could not open ALSA device \"%s\"", driver};
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
@@ -687,7 +688,8 @@ bool AlsaPlayback::reset()
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
     if((err=(x)) < 0)                                                         \
-        throw al::backend_exception{ALC_INVALID_VALUE, #x " failed: %s", snd_strerror(err)}; \
+        throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
+            snd_strerror(err)};                                               \
 } while(0)
     CHECK(snd_pcm_hw_params_any(mPcmHandle, hp.get()));
     /* set interleaved access */
@@ -799,12 +801,12 @@ void AlsaPlayback::start()
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
     if((err=(x)) < 0)                                                         \
-        throw al::backend_exception{ALC_INVALID_VALUE, #x " failed: %s", snd_strerror(err)}; \
+        throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
+            snd_strerror(err)};                                               \
 } while(0)
     CHECK(snd_pcm_hw_params_current(mPcmHandle, hp.get()));
     /* retrieve configuration info */
     CHECK(snd_pcm_hw_params_get_access(hp.get(), &access));
-#undef CHECK
     hp = nullptr;
 
     int (AlsaPlayback::*thread_func)(){};
@@ -816,20 +818,18 @@ void AlsaPlayback::start()
     }
     else
     {
-        err = snd_pcm_prepare(mPcmHandle);
-        if(err < 0)
-            throw al::backend_exception{ALC_INVALID_DEVICE,
-                "snd_pcm_prepare(data->mPcmHandle) failed: %s", snd_strerror(err)};
+        CHECK(snd_pcm_prepare(mPcmHandle));
         thread_func = &AlsaPlayback::mixerProc;
     }
+#undef CHECK
 
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(thread_func), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 
@@ -909,7 +909,8 @@ void AlsaCapture::open(const ALCchar *name)
             { return entry.name == name; }
         );
         if(iter == CaptureDevices.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
         driver = iter->device_name.c_str();
     }
     else
@@ -921,8 +922,8 @@ void AlsaCapture::open(const ALCchar *name)
     TRACE("Opening device \"%s\"\n", driver);
     int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
     if(err < 0)
-        throw al::backend_exception{ALC_OUT_OF_MEMORY, "Could not open ALSA device \"%s\"",
-            driver};
+        throw al::backend_exception{al::backend_error::NoDevice,
+            "Could not open ALSA device \"%s\"", driver};
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
@@ -960,7 +961,8 @@ void AlsaCapture::open(const ALCchar *name)
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
     if((err=(x)) < 0)                                                         \
-        throw al::backend_exception{ALC_INVALID_VALUE, #x " failed: %s", snd_strerror(err)}; \
+        throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
+            snd_strerror(err)};                                               \
 } while(0)
     CHECK(snd_pcm_hw_params_any(mPcmHandle, hp.get()));
     /* set interleaved access */
@@ -998,12 +1000,12 @@ void AlsaCapture::start()
 {
     int err{snd_pcm_prepare(mPcmHandle)};
     if(err < 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "snd_pcm_prepare failed: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "snd_pcm_prepare failed: %s",
             snd_strerror(err)};
 
     err = snd_pcm_start(mPcmHandle);
     if(err < 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "snd_pcm_start failed: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "snd_pcm_start failed: %s",
             snd_strerror(err)};
 
     mDoCapture = true;
@@ -1019,7 +1021,8 @@ void AlsaCapture::stop()
     if(!mRing && avail > 0)
     {
         /* The ring buffer implicitly captures when checking availability.
-         * Direct access needs to explicitly capture it into temp storage. */
+         * Direct access needs to explicitly capture it into temp storage.
+         */
         auto temp = al::vector<al::byte>(
             static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
         captureSamples(temp.data(), avail);

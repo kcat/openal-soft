@@ -123,7 +123,7 @@ void Sdl2Backend::open(const ALCchar *name)
                 SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
     if(mDeviceID == 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s", SDL_GetError()};
+        throw al::backend_exception{al::backend_error::NoDevice, "%s", SDL_GetError()};
 
     mDevice->Frequency = static_cast<ALuint>(have.freq);
 
@@ -132,8 +132,8 @@ void Sdl2Backend::open(const ALCchar *name)
     else if(have.channels == 2)
         mDevice->FmtChans = DevFmtStereo;
     else
-        throw al::backend_exception{ALC_INVALID_VALUE, "Unhandled SDL channel count: %d",
-            int{have.channels}};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Unhandled SDL channel count: %d", int{have.channels}};
 
     switch(have.format)
     {
@@ -144,7 +144,7 @@ void Sdl2Backend::open(const ALCchar *name)
     case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
     case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
     default:
-        throw al::backend_exception{ALC_INVALID_VALUE, "Unhandled SDL format: 0x%04x",
+        throw al::backend_exception{al::backend_error::DeviceError, "Unhandled SDL format: 0x%04x",
             have.format};
     }
     mDevice->UpdateSize = have.samples;

@@ -205,12 +205,14 @@ int WaveBackend::mixerProc()
 void WaveBackend::open(const ALCchar *name)
 {
     const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
-    if(!fname[0]) throw al::backend_exception{ALC_INVALID_VALUE, "No wave output filename"};
+    if(!fname[0]) throw al::backend_exception{al::backend_error::NoDevice,
+        "No wave output filename"};
 
     if(!name)
         name = waveDevice;
     else if(strcmp(name, waveDevice) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
 #ifdef _WIN32
     {
@@ -221,8 +223,8 @@ void WaveBackend::open(const ALCchar *name)
     mFile = fopen(fname, "wb");
 #endif
     if(!mFile)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open file '%s': %s", fname,
-            strerror(errno)};
+        throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",
+            fname, strerror(errno)};
 
     mDevice->DeviceName = name;
 }
@@ -339,8 +341,8 @@ void WaveBackend::start()
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 

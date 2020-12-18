@@ -220,7 +220,8 @@ void WinMMPlayback::open(const ALCchar *name)
         std::find(PlaybackDevices.cbegin(), PlaybackDevices.cend(), name) :
         PlaybackDevices.cbegin();
     if(iter == PlaybackDevices.cend())
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
 retry_open:
@@ -254,7 +255,7 @@ retry_open:
             mDevice->FmtType = DevFmtShort;
             goto retry_open;
         }
-        throw al::backend_exception{ALC_INVALID_VALUE, "waveOutOpen failed: %u", res};
+        throw al::backend_exception{al::backend_error::DeviceError, "waveOutOpen failed: %u", res};
     }
 
     mDevice->DeviceName = PlaybackDevices[DeviceID];
@@ -344,8 +345,8 @@ void WinMMPlayback::start()
         mThread = std::thread{std::mem_fn(&WinMMPlayback::mixerProc), this};
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 
@@ -461,7 +462,8 @@ void WinMMCapture::open(const ALCchar *name)
         std::find(CaptureDevices.cbegin(), CaptureDevices.cend(), name) :
         CaptureDevices.cbegin();
     if(iter == CaptureDevices.cend())
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
     auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter));
 
     switch(mDevice->FmtChans)
@@ -476,7 +478,7 @@ void WinMMCapture::open(const ALCchar *name)
     case DevFmtX61:
     case DevFmtX71:
     case DevFmtAmbi3D:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture not supported",
+        throw al::backend_exception{al::backend_error::DeviceError, "%s capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
 
@@ -491,7 +493,7 @@ void WinMMCapture::open(const ALCchar *name)
     case DevFmtByte:
     case DevFmtUShort:
     case DevFmtUInt:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s samples not supported",
+        throw al::backend_exception{al::backend_error::DeviceError, "%s samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
 
@@ -509,7 +511,7 @@ void WinMMCapture::open(const ALCchar *name)
         reinterpret_cast<DWORD_PTR>(&WinMMCapture::waveInProcC),
         reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
     if(res != MMSYSERR_NOERROR)
-        throw al::backend_exception{ALC_INVALID_VALUE, "waveInOpen failed: %u", res};
+        throw al::backend_exception{al::backend_error::DeviceError, "waveInOpen failed: %u", res};
 
     // Ensure each buffer is 50ms each
     DWORD BufferSize{mFormat.nAvgBytesPerSec / 20u};
@@ -551,8 +553,8 @@ void WinMMCapture::start()
         waveInStart(mInHdl);
     }
     catch(std::exception& e) {
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start recording thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start recording thread: %s", e.what()};
     }
 }
 

@@ -366,7 +366,8 @@ void JackPlayback::open(const ALCchar *name)
         { return entry.mName == name; };
         auto iter = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), check_name);
         if(iter == PlaybackList.cend())
-            throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
         mPortPattern = iter->mPattern;
     }
 
@@ -374,8 +375,8 @@ void JackPlayback::open(const ALCchar *name)
     jack_status_t status;
     mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
     if(mClient == nullptr)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to open client connection: 0x%02x",
-            status};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to open client connection: 0x%02x", status};
 
     if((status&JackServerStarted))
         TRACE("JACK server started\n");
@@ -448,7 +449,7 @@ bool JackPlayback::reset()
 void JackPlayback::start()
 {
     if(jack_activate(mClient))
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to activate client"};
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to activate client"};
 
     const char *devname{mDevice->DeviceName.c_str()};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
@@ -458,7 +459,8 @@ void JackPlayback::start()
         if(ports == nullptr)
         {
             jack_deactivate(mClient);
-            throw al::backend_exception{ALC_INVALID_DEVICE, "No physical playback ports found"};
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "No physical playback ports found"};
         }
         auto connect_port = [this](const jack_port_t *port, const char *pname) -> bool
         {
@@ -500,8 +502,8 @@ void JackPlayback::start()
     catch(std::exception& e) {
         jack_deactivate(mClient);
         mPlaying.store(false, std::memory_order_release);
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 

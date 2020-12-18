@@ -120,11 +120,12 @@ void SndioPlayback::open(const ALCchar *name)
     if(!name)
         name = sndio_device;
     else if(strcmp(name, sndio_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     mSndHandle = sio_open(nullptr, SIO_PLAY, 0);
     if(mSndHandle == nullptr)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open backend device"};
+        throw al::backend_exception{al::backend_error::NoDevice, "Could not open backend device"};
 
     mDevice->DeviceName = name;
 }
@@ -263,7 +264,7 @@ bool SndioPlayback::reset()
 void SndioPlayback::start()
 {
     if(!sio_start(mSndHandle))
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Error starting playback"};
+        throw al::backend_exception{al::backend_error::DeviceError, "Error starting playback"};
 
     try {
         mKillNow.store(false, std::memory_order_release);
@@ -271,8 +272,8 @@ void SndioPlayback::start()
     }
     catch(std::exception& e) {
         sio_stop(mSndHandle);
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start mixing thread: %s", e.what()};
     }
 }
 
@@ -368,11 +369,12 @@ void SndioCapture::open(const ALCchar *name)
     if(!name)
         name = sndio_device;
     else if(strcmp(name, sndio_device) != 0)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Device name \"%s\" not found", name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 
     mSndHandle = sio_open(nullptr, SIO_REC, 0);
     if(mSndHandle == nullptr)
-        throw al::backend_exception{ALC_INVALID_VALUE, "Could not open backend device"};
+        throw al::backend_exception{al::backend_error::NoDevice, "Could not open backend device"};
 
     sio_par par;
     sio_initpar(&par);
@@ -404,8 +406,8 @@ void SndioCapture::open(const ALCchar *name)
         par.sig = 0;
         break;
     case DevFmtFloat:
-        throw al::backend_exception{ALC_INVALID_VALUE, "%s capture samples not supported",
-            DevFmtTypeString(mDevice->FmtType)};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "%s capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
     }
     par.bits = par.bps * 8;
     par.le = SIO_LE_NATIVE;
@@ -420,10 +422,11 @@ void SndioCapture::open(const ALCchar *name)
     mDevice->BufferSize = par.appbufsz;
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
-        throw al::backend_exception{ALC_INVALID_VALUE, "Failed to set device praameters"};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to set device praameters"};
 
     if(par.bits != par.bps*8)
-        throw al::backend_exception{ALC_INVALID_VALUE,
+        throw al::backend_exception{al::backend_error::DeviceError,
             "Padded samples not supported (got %u of %u bits)", par.bits, par.bps*8};
 
     if(!((mDevice->FmtType == DevFmtByte && par.bits == 8 && par.sig != 0)
@@ -433,7 +436,7 @@ void SndioCapture::open(const ALCchar *name)
         || (mDevice->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0)
         || (mDevice->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0))
         || mDevice->channelsFromFmt() != par.rchan || mDevice->Frequency != par.rate)
-        throw al::backend_exception{ALC_INVALID_VALUE,
+        throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead",
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->Frequency, par.sig?'s':'u', par.bits, par.rchan, par.rate};
@@ -448,7 +451,7 @@ void SndioCapture::open(const ALCchar *name)
 void SndioCapture::start()
 {
     if(!sio_start(mSndHandle))
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Error starting capture"};
+        throw al::backend_exception{al::backend_error::DeviceError, "Error starting capture"};
 
     try {
         mKillNow.store(false, std::memory_order_release);
@@ -456,8 +459,8 @@ void SndioCapture::start()
     }
     catch(std::exception& e) {
         sio_stop(mSndHandle);
-        throw al::backend_exception{ALC_INVALID_DEVICE, "Failed to start mixing thread: %s",
-            e.what()};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start capture thread: %s", e.what()};
     }
 }
 

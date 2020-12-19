@@ -928,7 +928,7 @@ ALeffect DefaultEffect;
 bool SuspendDefers{true};
 
 /* Initial seed for dithering. */
-constexpr ALuint DitherRNGSeed{22222u};
+constexpr uint DitherRNGSeed{22222u};
 
 
 /************************************************
@@ -1670,11 +1670,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     HrtfRequestMode hrtf_userreq{Hrtf_Default};
     HrtfRequestMode hrtf_appreq{Hrtf_Default};
     ALCenum gainLimiter{device->LimiterState};
-    ALCuint new_sends{device->NumAuxSends};
+    uint new_sends{device->NumAuxSends};
     DevFmtChannels oldChans;
     DevFmtType oldType;
-    ALCsizei hrtf_id{-1};
-    ALCuint oldFreq;
+    int hrtf_id{-1};
+    uint oldFreq;
 
     if((!attrList || !attrList[0]) && device->Type == DeviceType::Loopback)
     {
@@ -1685,17 +1685,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     // Check for attributes
     if(attrList && attrList[0])
     {
-        ALuint numMono{device->NumMonoSources};
-        ALuint numStereo{device->NumStereoSources};
-        ALuint numSends{device->NumAuxSends};
+        uint numMono{device->NumMonoSources};
+        uint numStereo{device->NumStereoSources};
+        uint numSends{device->NumAuxSends};
 
         al::optional<DevFmtChannels> optchans;
         al::optional<DevFmtType> opttype;
         al::optional<DevAmbiLayout> optlayout;
         al::optional<DevAmbiScaling> optscale;
 
-        ALCuint aorder{0u};
-        ALCuint freq{0u};
+        uint aorder{0u};
+        uint freq{0u};
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         size_t attrIdx{0};
@@ -1714,7 +1714,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 break;
 
             case ALC_FREQUENCY:
-                freq = static_cast<ALuint>(attrList[attrIdx + 1]);
+                freq = static_cast<uint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_FREQUENCY, freq);
                 break;
 
@@ -1729,24 +1729,24 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 break;
 
             case ALC_AMBISONIC_ORDER_SOFT:
-                aorder = static_cast<ALuint>(attrList[attrIdx + 1]);
+                aorder = static_cast<uint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
                 break;
 
             case ALC_MONO_SOURCES:
-                numMono = static_cast<ALuint>(attrList[attrIdx + 1]);
+                numMono = static_cast<uint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_MONO_SOURCES, numMono);
                 if(numMono > INT_MAX) numMono = 0;
                 break;
 
             case ALC_STEREO_SOURCES:
-                numStereo = static_cast<ALuint>(attrList[attrIdx + 1]);
+                numStereo = static_cast<uint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
                 if(numStereo > INT_MAX) numStereo = 0;
                 break;
 
             case ALC_MAX_AUXILIARY_SENDS:
-                numSends = static_cast<ALuint>(attrList[attrIdx + 1]);
+                numSends = static_cast<uint>(attrList[attrIdx + 1]);
                 TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
                 if(numSends > INT_MAX) numSends = 0;
                 else numSends = minu(numSends, MAX_SENDS);
@@ -1839,8 +1839,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 freq = clampu(freq, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
 
                 const double scale{static_cast<double>(freq) / device->Frequency};
-                device->UpdateSize = static_cast<ALuint>(device->UpdateSize*scale + 0.5);
-                device->BufferSize = static_cast<ALuint>(device->BufferSize*scale + 0.5);
+                device->UpdateSize = static_cast<uint>(device->UpdateSize*scale + 0.5);
+                device->BufferSize = static_cast<uint>(device->BufferSize*scale + 0.5);
 
                 device->Frequency = freq;
                 device->Flags.set<FrequencyRequest>();
@@ -1873,7 +1873,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->NumStereoSources = numStereo;
 
         if(auto sendsopt = ConfigValueInt(devname, nullptr, "sends"))
-            new_sends = minu(numSends, static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
+            new_sends = minu(numSends, static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
         else
             new_sends = numSends;
     }
@@ -2146,7 +2146,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         }
         slotlock.unlock();
 
-        const ALuint num_sends{device->NumAuxSends};
+        const uint num_sends{device->NumAuxSends};
         std::unique_lock<std::mutex> srclock{context->mSourceLock};
         for(auto &sublist : context->mSourceList)
         {
@@ -2295,19 +2295,19 @@ ALCdevice::~ALCdevice()
 
     size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), size_t{0u},
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); })};
+        { return cur + static_cast<uint>(PopCount(~sublist.FreeMask)); })};
     if(count > 0)
         WARN("%zu Buffer%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), size_t{0u},
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Effect%s not deleted\n", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), size_t{0u},
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
 
@@ -2359,7 +2359,7 @@ ALCcontext::~ALCcontext()
 
     count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -2384,7 +2384,7 @@ ALCcontext::~ALCcontext()
 
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(PopCount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(PopCount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     mEffectSlotList.clear();
@@ -3053,7 +3053,7 @@ START_API_FUNC
     if(size <= 0 || values == nullptr)
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
-        GetIntegerv(dev.get(), param, {values, static_cast<ALuint>(size)});
+        GetIntegerv(dev.get(), param, {values, static_cast<uint>(size)});
 }
 END_API_FUNC
 
@@ -3068,7 +3068,7 @@ START_API_FUNC
     }
     if(!dev || dev->Type == DeviceType::Capture)
     {
-        auto ivals = al::vector<int>(static_cast<ALuint>(size));
+        auto ivals = al::vector<int>(static_cast<uint>(size));
         size_t got{GetIntegerv(dev.get(), pname, ivals)};
         std::copy_n(ivals.begin(), got, values);
         return;
@@ -3151,7 +3151,7 @@ START_API_FUNC
     case ALC_DEVICE_CLOCK_SOFT:
         {
             std::lock_guard<std::mutex> _{dev->StateLock};
-            ALuint samplecount, refcount;
+            uint samplecount, refcount;
             nanoseconds basecount;
             do {
                 refcount = dev->waitForMix();
@@ -3184,7 +3184,7 @@ START_API_FUNC
         break;
 
     default:
-        auto ivals = al::vector<int>(static_cast<ALuint>(size));
+        auto ivals = al::vector<int>(static_cast<uint>(size));
         size_t got{GetIntegerv(dev.get(), pname, ivals)};
         std::copy_n(ivals.begin(), got, values);
         break;
@@ -3529,7 +3529,7 @@ START_API_FUNC
         static const struct ChannelMap {
             const char name[16];
             DevFmtChannels chans;
-            ALuint order;
+            uint order;
         } chanlist[] = {
             { "mono",       DevFmtMono,   0 },
             { "stereo",     DevFmtStereo, 0 },
@@ -3586,17 +3586,17 @@ START_API_FUNC
         }
     }
 
-    if(ALuint freq{ConfigValueUInt(deviceName, nullptr, "frequency").value_or(0)})
+    if(uint freq{ConfigValueUInt(deviceName, nullptr, "frequency").value_or(0u)})
     {
         if(freq < MIN_OUTPUT_RATE || freq > MAX_OUTPUT_RATE)
         {
-            const ALuint newfreq{clampu(freq, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE)};
+            const uint newfreq{clampu(freq, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE)};
             ERR("%uhz request clamped to %uhz\n", freq, newfreq);
             freq = newfreq;
         }
         const double scale{static_cast<double>(freq) / device->Frequency};
-        device->UpdateSize = static_cast<ALuint>(device->UpdateSize*scale + 0.5);
-        device->BufferSize = static_cast<ALuint>(device->BufferSize*scale + 0.5);
+        device->UpdateSize = static_cast<uint>(device->UpdateSize*scale + 0.5);
+        device->BufferSize = static_cast<uint>(device->BufferSize*scale + 0.5);
         device->Frequency = freq;
         device->Flags.set<FrequencyRequest>();
     }
@@ -3617,7 +3617,7 @@ START_API_FUNC
 
     if(auto sendsopt = ConfigValueInt(deviceName, nullptr, "sends"))
         device->NumAuxSends = minu(DEFAULT_SENDS,
-            static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
+            static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -3757,8 +3757,8 @@ START_API_FUNC
     device->FmtType = decompfmt->type;
     device->Flags.set<FrequencyRequest, ChannelsRequest, SampleTypeRequest>();
 
-    device->UpdateSize = static_cast<ALuint>(samples);
-    device->BufferSize = static_cast<ALuint>(samples);
+    device->UpdateSize = static_cast<uint>(samples);
+    device->BufferSize = static_cast<uint>(samples);
 
     try {
         TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
@@ -3933,7 +3933,7 @@ START_API_FUNC
 
     if(auto sendsopt = ConfigValueInt(nullptr, nullptr, "sends"))
         device->NumAuxSends = minu(DEFAULT_SENDS,
-            static_cast<ALuint>(clampi(*sendsopt, 0, MAX_SENDS)));
+            static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -3997,7 +3997,7 @@ START_API_FUNC
     else if(samples < 0 || (samples > 0 && buffer == nullptr))
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else
-        dev->renderSamples(buffer, static_cast<ALuint>(samples), dev->channelsFromFmt());
+        dev->renderSamples(buffer, static_cast<uint>(samples), dev->channelsFromFmt());
 }
 END_API_FUNC
 
@@ -4069,8 +4069,8 @@ START_API_FUNC
     else switch(paramName)
     {
         case ALC_HRTF_SPECIFIER_SOFT:
-            if(index >= 0 && static_cast<size_t>(index) < dev->HrtfList.size())
-                return dev->HrtfList[static_cast<ALuint>(index)].c_str();
+            if(index >= 0 && static_cast<uint>(index) < dev->HrtfList.size())
+                return dev->HrtfList[static_cast<uint>(index)].c_str();
             alcSetError(dev.get(), ALC_INVALID_VALUE);
             break;
 

@@ -62,12 +62,12 @@ struct Sdl2Backend final : public BackendBase {
     void stop() override;
 
     SDL_AudioDeviceID mDeviceID{0u};
-    ALuint mFrameSize{0};
+    uint mFrameSize{0};
 
-    ALuint mFrequency{0u};
+    uint mFrequency{0u};
     DevFmtChannels mFmtChans{};
     DevFmtType     mFmtType{};
-    ALuint mUpdateSize{0u};
+    uint mUpdateSize{0u};
 
     DEF_NEWDEL(Sdl2Backend)
 };
@@ -125,7 +125,7 @@ void Sdl2Backend::open(const char *name)
     if(mDeviceID == 0)
         throw al::backend_exception{al::backend_error::NoDevice, "%s", SDL_GetError()};
 
-    mDevice->Frequency = static_cast<ALuint>(have.freq);
+    mDevice->Frequency = static_cast<uint>(have.freq);
 
     if(have.channels == 1)
         mDevice->FmtChans = DevFmtMono;

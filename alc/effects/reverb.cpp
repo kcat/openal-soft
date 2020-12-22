@@ -245,13 +245,13 @@ struct DelayLineI {
     { Line = sampleBuffer + LineOffset; }
 
     /* Calculate the length of a delay line and store its mask and offset. */
-    ALuint calcLineLength(const float length, const uintptr_t offset, const float frequency,
-        const ALuint extra)
+    uint calcLineLength(const float length, const uintptr_t offset, const float frequency,
+        const uint extra)
     {
         /* All line lengths are powers of 2, calculated from their lengths in
          * seconds, rounded up.
          */
-        ALuint samples{float2uint(std::ceil(length*frequency))};
+        uint samples{float2uint(std::ceil(length*frequency))};
         samples = NextPowerOf2(samples + extra);
 
         /* All lines share a single sample buffer. */
@@ -329,7 +329,7 @@ struct Modulation {
     /* The vibrato time is tracked with an index over a (MOD_FRACONE)
      * normalized range.
      */
-    ALuint Index, Step;
+    uint Index, Step;
 
     /* The depth of frequency change, in samples. */
     float Depth[2];
@@ -1409,8 +1409,8 @@ void ReverbState::earlyFaded(const size_t offset, const size_t todo, const float
 void Modulation::calcDelays(size_t todo)
 {
     constexpr float inv_scale{MOD_FRACONE / al::MathDefs<float>::Tau()};
-    ALuint idx{Index};
-    const ALuint step{Step};
+    uint idx{Index};
+    const uint step{Step};
     const float depth{Depth[0]};
     for(size_t i{0};i < todo;++i)
     {
@@ -1424,8 +1424,8 @@ void Modulation::calcDelays(size_t todo)
 void Modulation::calcFadedDelays(size_t todo, float fadeCount, float fadeStep)
 {
     constexpr float inv_scale{MOD_FRACONE / al::MathDefs<float>::Tau()};
-    ALuint idx{Index};
-    const ALuint step{Step};
+    uint idx{Index};
+    const uint step{Step};
     const float depth{Depth[0]};
     const float depthStep{(Depth[1]-depth) * fadeStep};
     for(size_t i{0};i < todo;++i)

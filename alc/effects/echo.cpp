@@ -25,8 +25,6 @@
 
 #include <algorithm>
 
-#include "AL/efx.h"
-
 #include "alcmain.h"
 #include "alcontext.h"
 #include "core/filters/biquad.h"
@@ -74,8 +72,8 @@ void EchoState::deviceUpdate(const ALCdevice *Device)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    const ALuint maxlen{NextPowerOf2(float2uint(AL_ECHO_MAX_DELAY*frequency + 0.5f) +
-        float2uint(AL_ECHO_MAX_LRDELAY*frequency + 0.5f))};
+    const uint maxlen{NextPowerOf2(float2uint(EchoMaxDelay*frequency + 0.5f) +
+        float2uint(EchoMaxLRDelay*frequency + 0.5f))};
     if(maxlen != mSampleBuffer.size())
         al::vector<float,16>(maxlen).swap(mSampleBuffer);
 

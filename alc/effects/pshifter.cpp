@@ -26,12 +26,12 @@
 #include <complex>
 #include <algorithm>
 
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alcomplex.h"
 #include "alcontext.h"
 #include "alnumeric.h"
 #include "alu.h"
+#include "effectslot.h"
 
 
 namespace {
@@ -70,7 +70,7 @@ struct FrequencyBin {
 struct PshifterState final : public EffectState {
     /* Effect parameters */
     size_t mCount;
-    ALuint mPitchShiftI;
+    uint mPitchShiftI;
     double mPitchShift;
 
     /* Effects buffers */

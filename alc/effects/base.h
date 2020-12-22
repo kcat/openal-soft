@@ -13,6 +13,38 @@ struct EffectSlot;
 struct BufferStorage;
 
 
+enum class ChorusWaveform {
+    Sinusoid,
+    Triangle
+};
+
+constexpr float EchoMaxDelay{0.207f};
+constexpr float EchoMaxLRDelay{0.404f};
+
+enum class FShifterDirection {
+    Down,
+    Up,
+    Off
+};
+
+enum class ModulatorWaveform {
+    Sinusoid,
+    Sawtooth,
+    Square
+};
+
+enum class VMorpherPhenome {
+    A, E, I, O, U,
+    AA, AE, AH, AO, EH, ER, IH, IY, UH, UW,
+    B, D, F, G, J, K, L, M, N, P, R, S, T, V, Z
+};
+
+enum class VMorpherWaveform {
+    Sinusoid,
+    Triangle,
+    Sawtooth
+};
+
 union EffectProps {
     struct {
         // Shared Reverb Properties
@@ -51,7 +83,7 @@ union EffectProps {
     } Autowah;
 
     struct {
-        int Waveform;
+        ChorusWaveform Waveform;
         int Phase;
         float Rate;
         float Depth;
@@ -96,14 +128,14 @@ union EffectProps {
 
     struct {
         float Frequency;
-        int LeftDirection;
-        int RightDirection;
+        FShifterDirection LeftDirection;
+        FShifterDirection RightDirection;
     } Fshifter;
 
     struct {
         float Frequency;
         float HighPassCutoff;
-        int Waveform;
+        ModulatorWaveform Waveform;
     } Modulator;
 
     struct {
@@ -113,11 +145,11 @@ union EffectProps {
 
     struct {
         float Rate;
-        int PhonemeA;
-        int PhonemeB;
+        VMorpherPhenome PhonemeA;
+        VMorpherPhenome PhonemeB;
         int PhonemeACoarseTuning;
         int PhonemeBCoarseTuning;
-        int Waveform;
+        VMorpherWaveform Waveform;
     } Vmorpher;
 
     struct {

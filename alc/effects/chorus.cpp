@@ -26,11 +26,6 @@
 #include <cstdlib>
 #include <iterator>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/efx.h"
-
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
@@ -39,6 +34,7 @@
 #include "alu.h"
 #include "core/ambidefs.h"
 #include "effects/base.h"
+#include "effectslot.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 #include "vector.h"
@@ -46,24 +42,16 @@
 
 namespace {
 
-static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
-static_assert(AL_CHORUS_WAVEFORM_TRIANGLE == AL_FLANGER_WAVEFORM_TRIANGLE, "Chorus/Flanger waveform value mismatch");
-
-enum class WaveForm {
-    Sinusoid,
-    Triangle
-};
-
 #define MAX_UPDATE_SAMPLES 256
 
 struct ChorusState final : public EffectState {
     al::vector<float,16> mSampleBuffer;
-    ALuint mOffset{0};
+    uint mOffset{0};
 
-    ALuint mLfoOffset{0};
-    ALuint mLfoRange{1};
+    uint mLfoOffset{0};
+    uint mLfoRange{1};
     float mLfoScale{0.0f};
-    ALuint mLfoDisp{0};
+    uint mLfoDisp{0};
 
     /* Gains for left and right sides */
     struct {
@@ -72,13 +60,13 @@ struct ChorusState final : public EffectState {
     } mGains[2];
 
     /* effect parameters */
-    WaveForm mWaveform{};
+    ChorusWaveform mWaveform{};
     int mDelay{0};
     float mDepth{0.0f};
     float mFeedback{0.0f};
 
-    void getTriangleDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
-    void getSinusoidDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
+    void getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
+    void getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
 
     void deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
@@ -111,21 +99,13 @@ void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
 {
     constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
 
-    switch(props->Chorus.Waveform)
-    {
-    case AL_CHORUS_WAVEFORM_TRIANGLE:
-        mWaveform = WaveForm::Triangle;
-        break;
-    case AL_CHORUS_WAVEFORM_SINUSOID:
-        mWaveform = WaveForm::Sinusoid;
-        break;
-    }
-
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
      */
     const ALCdevice *device{Context->mDevice.get()};
     const auto frequency = static_cast<float>(device->Frequency);
+
+    mWaveform = props->Chorus.Waveform;
 
     mDelay = maxi(float2int(props->Chorus.Delay*frequency*MixerFracOne + 0.5f), mindelay);
     mDepth = minf(props->Chorus.Depth * static_cast<float>(mDelay),
@@ -154,16 +134,16 @@ void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        ALuint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
+        uint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;
         switch(mWaveform)
         {
-        case WaveForm::Triangle:
+        case ChorusWaveform::Triangle:
             mLfoScale = 4.0f / static_cast<float>(mLfoRange);
             break;
-        case WaveForm::Sinusoid:
+        case ChorusWaveform::Sinusoid:
             mLfoScale = al::MathDefs<float>::Tau() / static_cast<float>(mLfoRange);
             break;
         }
@@ -171,14 +151,14 @@ void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
         /* Calculate lfo phase displacement */
         int phase{props->Chorus.Phase};
         if(phase < 0) phase = 360 + phase;
-        mLfoDisp = (mLfoRange*static_cast<ALuint>(phase) + 180) / 360;
+        mLfoDisp = (mLfoRange*static_cast<uint>(phase) + 180) / 360;
     }
 }
 
 
-void ChorusState::getTriangleDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo)
+void ChorusState::getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo)
 {
-    const ALuint lfo_range{mLfoRange};
+    const uint lfo_range{mLfoRange};
     const float lfo_scale{mLfoScale};
     const float depth{mDepth};
     const int delay{mDelay};
@@ -186,24 +166,24 @@ void ChorusState::getTriangleDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const 
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
 
-    ALuint offset{mLfoOffset};
-    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALuint
+    uint offset{mLfoOffset};
+    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> uint
     {
         offset = (offset+1)%lfo_range;
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
-        return static_cast<ALuint>(fastf2i((1.0f-std::abs(2.0f-offset_norm)) * depth) + delay);
+        return static_cast<uint>(fastf2i((1.0f-std::abs(2.0f-offset_norm)) * depth) + delay);
     };
     std::generate_n(delays[0], todo, gen_lfo);
 
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
     std::generate_n(delays[1], todo, gen_lfo);
 
-    mLfoOffset = static_cast<ALuint>(mLfoOffset+todo) % lfo_range;
+    mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
 }
 
-void ChorusState::getSinusoidDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo)
+void ChorusState::getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo)
 {
-    const ALuint lfo_range{mLfoRange};
+    const uint lfo_range{mLfoRange};
     const float lfo_scale{mLfoScale};
     const float depth{mDepth};
     const int delay{mDelay};
@@ -211,37 +191,37 @@ void ChorusState::getSinusoidDelays(ALuint (*delays)[MAX_UPDATE_SAMPLES], const 
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
 
-    ALuint offset{mLfoOffset};
-    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> ALuint
+    uint offset{mLfoOffset};
+    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> uint
     {
         offset = (offset+1)%lfo_range;
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
-        return static_cast<ALuint>(fastf2i(std::sin(offset_norm)*depth) + delay);
+        return static_cast<uint>(fastf2i(std::sin(offset_norm)*depth) + delay);
     };
     std::generate_n(delays[0], todo, gen_lfo);
 
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
     std::generate_n(delays[1], todo, gen_lfo);
 
-    mLfoOffset = static_cast<ALuint>(mLfoOffset+todo) % lfo_range;
+    mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
 }
 
 void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const size_t bufmask{mSampleBuffer.size()-1};
     const float feedback{mFeedback};
-    const ALuint avgdelay{(static_cast<ALuint>(mDelay) + (MixerFracOne>>1)) >> MixerFracBits};
+    const uint avgdelay{(static_cast<uint>(mDelay) + (MixerFracOne>>1)) >> MixerFracBits};
     float *RESTRICT delaybuf{mSampleBuffer.data()};
-    ALuint offset{mOffset};
+    uint offset{mOffset};
 
     for(size_t base{0u};base < samplesToDo;)
     {
         const size_t todo{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
 
-        ALuint moddelays[2][MAX_UPDATE_SAMPLES];
-        if(mWaveform == WaveForm::Sinusoid)
+        uint moddelays[2][MAX_UPDATE_SAMPLES];
+        if(mWaveform == ChorusWaveform::Sinusoid)
             getSinusoidDelays(moddelays, todo);
-        else /*if(mWaveform == WaveForm::Triangle)*/
+        else /*if(mWaveform == ChorusWaveform::Triangle)*/
             getTriangleDelays(moddelays, todo);
 
         alignas(16) float temps[2][MAX_UPDATE_SAMPLES];
@@ -251,7 +231,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
             delaybuf[offset&bufmask] = samplesIn[0][base+i];
 
             // Tap for the left output.
-            ALuint delay{offset - (moddelays[0][i]>>MixerFracBits)};
+            uint delay{offset - (moddelays[0][i]>>MixerFracBits)};
             float mu{static_cast<float>(moddelays[0][i]&MixerFracMask) * (1.0f/MixerFracOne)};
             temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
                 delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);

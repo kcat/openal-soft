@@ -22,10 +22,10 @@
 
 #include <cstdlib>
 
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
+#include "effectslot.h"
 #include "vecmat.h"
 
 

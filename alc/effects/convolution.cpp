@@ -1,12 +1,11 @@
 
 #include "config.h"
 
+#include <stdint.h>
+
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
 #endif
-
-#include "AL/al.h"
-#include "AL/alc.h"
 
 #include "alcmain.h"
 #include "alcomplex.h"
@@ -143,7 +142,7 @@ struct ConvolutionState final : public EffectState {
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
-    ALuint mAmbiOrder{};
+    uint mAmbiOrder{};
 
     size_t mFifoPos{0};
     std::array<float,ConvolveUpdateSamples*2> mInput{};
@@ -211,7 +210,7 @@ void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
 
 void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *buffer)
 {
-    constexpr ALuint MaxConvolveAmbiOrder{1u};
+    constexpr uint MaxConvolveAmbiOrder{1u};
 
     mFifoPos = 0;
     mInput.fill(0.0f);

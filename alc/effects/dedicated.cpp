@@ -24,10 +24,10 @@
 #include <cmath>
 #include <algorithm>
 
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alu.h"
+#include "effectslot.h"
 
 
 namespace {
@@ -60,7 +60,7 @@ void DedicatedState::update(const ALCcontext*, const EffectSlot *slot,
 
     if(slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
-        const ALuint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
+        const uint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
             GetChannelIdxByName(*target.RealOut, LFE)};
         if(idx != INVALID_CHANNEL_INDEX)
         {
@@ -72,7 +72,7 @@ void DedicatedState::update(const ALCcontext*, const EffectSlot *slot,
     {
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        const ALuint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
+        const uint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
             GetChannelIdxByName(*target.RealOut, FrontCenter)};
         if(idx != INVALID_CHANNEL_INDEX)
         {

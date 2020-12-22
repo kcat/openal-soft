@@ -26,12 +26,11 @@
 #include <complex>
 #include <algorithm>
 
-#include "al/auxeffectslot.h"
 #include "alcmain.h"
+#include "alcomplex.h"
 #include "alcontext.h"
 #include "alu.h"
-
-#include "alcomplex.h"
+#include "effectslot.h"
 
 namespace {
 
@@ -62,8 +61,8 @@ alignas(16) const std::array<double,HIL_SIZE> HannWindow = InitHannWindow();
 struct FshifterState final : public EffectState {
     /* Effect parameters */
     size_t mCount{};
-    ALuint mPhaseStep[2]{};
-    ALuint mPhase[2]{};
+    uint mPhaseStep[2]{};
+    uint mPhase[2]{};
     double mSign[2]{};
 
     /* Effects buffers */
@@ -121,15 +120,13 @@ void FshifterState::update(const ALCcontext *context, const EffectSlot *slot,
 
     switch(props->Fshifter.LeftDirection)
     {
-    case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
+    case FShifterDirection::Down:
         mSign[0] = -1.0;
         break;
-
-    case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
+    case FShifterDirection::Up:
         mSign[0] = 1.0;
         break;
-
-    case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
+    case FShifterDirection::Off:
         mPhase[0]     = 0;
         mPhaseStep[0] = 0;
         break;
@@ -137,15 +134,13 @@ void FshifterState::update(const ALCcontext *context, const EffectSlot *slot,
 
     switch(props->Fshifter.RightDirection)
     {
-    case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
+    case FShifterDirection::Down:
         mSign[1] = -1.0;
         break;
-
-    case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
+    case FShifterDirection::Up:
         mSign[1] = 1.0;
         break;
-
-    case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
+    case FShifterDirection::Off:
         mPhase[1]     = 0;
         mPhaseStep[1] = 0;
         break;
@@ -199,10 +194,10 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
 
     /* Process frequency shifter using the analytic signal obtained. */
     float *RESTRICT BufferOut{mBufferOut};
-    for(ALsizei c{0};c < 2;++c)
+    for(int c{0};c < 2;++c)
     {
-        const ALuint phase_step{mPhaseStep[c]};
-        ALuint phase_idx{mPhase[c]};
+        const uint phase_step{mPhaseStep[c]};
+        uint phase_idx{mPhase[c]};
         for(size_t k{0};k < samplesToDo;++k)
         {
             const double phase{phase_idx * ((1.0/MixerFracOne) * al::MathDefs<double>::Tau())};

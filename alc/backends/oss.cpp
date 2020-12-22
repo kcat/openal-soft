@@ -41,8 +41,6 @@
 #include <thread>
 #include <utility>
 
-#include "AL/al.h"
-
 #include "alcmain.h"
 #include "alconfig.h"
 #include "albyte.h"

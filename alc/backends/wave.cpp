@@ -33,8 +33,6 @@
 #include <functional>
 #include <thread>
 
-#include "AL/al.h"
-
 #include "albyte.h"
 #include "alcmain.h"
 #include "alconfig.h"

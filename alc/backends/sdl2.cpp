@@ -27,8 +27,6 @@
 #include <cstring>
 #include <string>
 
-#include "AL/al.h"
-
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alu.h"

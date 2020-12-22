@@ -40,7 +40,6 @@
 
 #include "alcmain.h"
 #include "albyte.h"
-#include "alexcpt.h"
 #include "alu.h"
 #include "alconfig.h"
 #include "compat.h"

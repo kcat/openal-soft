@@ -1,5 +1,5 @@
-#ifndef ALEXCPT_H
-#define ALEXCPT_H
+#ifndef CORE_EXCEPT_H
+#define CORE_EXCEPT_H
 
 #include <cstdarg>
 #include <exception>
@@ -28,4 +28,4 @@ public:
 
 #define END_API_FUNC catch(...) { std::terminate(); }
 
-#endif /* ALEXCPT_H */
+#endif /* CORE_EXCEPT_H */

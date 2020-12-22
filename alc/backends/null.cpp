@@ -31,7 +31,6 @@
 #include <thread>
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alu.h"
 #include "threads.h"

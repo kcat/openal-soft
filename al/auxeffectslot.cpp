@@ -36,12 +36,12 @@
 
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alu.h"
 #include "buffer.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "effect.h"
 #include "fpu_ctrl.h"

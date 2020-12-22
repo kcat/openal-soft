@@ -39,7 +39,6 @@
 #include <functional>
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "alu.h"
 #include "compat.h"
 #include "core/logging.h"

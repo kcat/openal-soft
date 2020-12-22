@@ -40,10 +40,10 @@
 
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "effects/base.h"
 #include "opthelpers.h"

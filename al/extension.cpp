@@ -28,8 +28,8 @@
 #include "AL/alc.h"
 
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "alstring.h"
+#include "core/except.h"
 #include "opthelpers.h"
 
 

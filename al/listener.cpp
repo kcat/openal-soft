@@ -30,9 +30,9 @@
 #include "AL/efx.h"
 
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "atomic.h"
+#include "core/except.h"
 #include "opthelpers.h"
 
 

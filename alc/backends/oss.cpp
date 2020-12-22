@@ -46,7 +46,6 @@
 #include "alcmain.h"
 #include "alconfig.h"
 #include "albyte.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"

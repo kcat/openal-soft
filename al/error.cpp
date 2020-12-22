@@ -36,8 +36,8 @@
 #include "AL/alc.h"
 
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "vector.h"

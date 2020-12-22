@@ -13,7 +13,6 @@
 #endif
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "atomic.h"

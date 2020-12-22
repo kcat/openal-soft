@@ -44,11 +44,11 @@
 #include "albyte.h"
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "atomic.h"
+#include "core/except.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 

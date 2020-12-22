@@ -38,9 +38,9 @@
 
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "core/except.h"
 #include "opthelpers.h"
 #include "vector.h"
 

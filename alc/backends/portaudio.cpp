@@ -27,7 +27,6 @@
 #include <cstring>
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "alu.h"
 #include "alconfig.h"
 #include "core/logging.h"

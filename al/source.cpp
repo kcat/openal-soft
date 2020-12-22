@@ -47,7 +47,6 @@
 
 #include "alcmain.h"
 #include "alcontext.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -59,6 +58,7 @@
 #include "bformatdec.h"
 #include "buffer.h"
 #include "core/ambidefs.h"
+#include "core/except.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
 #include "core/logging.h"

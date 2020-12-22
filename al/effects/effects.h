@@ -3,7 +3,7 @@
 
 #include "AL/al.h"
 
-#include "alexcpt.h"
+#include "core/except.h"
 
 union EffectProps;
 

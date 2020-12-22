@@ -56,7 +56,6 @@
 #include <vector>
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "alu.h"
 #include "compat.h"
 #include "converter.h"

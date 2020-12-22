@@ -554,8 +554,6 @@ set(COMMON_OBJS
     common/albyte.h
     common/alcomplex.cpp
     common/alcomplex.h
-    common/alexcpt.cpp
-    common/alexcpt.h
     common/alfstream.cpp
     common/alfstream.h
     common/almalloc.cpp
@@ -596,6 +594,8 @@ set(CORE_OBJS
     core/bufferline.h
     core/devformat.cpp
     core/devformat.h
+    core/except.cpp
+    core/except.h
     core/filters/biquad.h
     core/filters/biquad.cpp
     core/filters/nfc.cpp

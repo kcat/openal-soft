@@ -30,7 +30,6 @@
 #include <cmath>
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "alu.h"
 #include "ringbuffer.h"
 #include "converter.h"

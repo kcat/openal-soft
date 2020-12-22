@@ -30,7 +30,6 @@
 #include "AL/al.h"
 
 #include "alcmain.h"
-#include "alexcpt.h"
 #include "almalloc.h"
 #include "alu.h"
 #include "core/logging.h"

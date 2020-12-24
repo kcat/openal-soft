@@ -1,10 +1,9 @@
 # - Find OpenSL
 # Find the OpenSL libraries
 #
-#  This module defines the following variables:
-#     OPENSL_FOUND        - True if OPENSL_INCLUDE_DIR & OPENSL_LIBRARY are set
-#     OPENSL_INCLUDE_DIRS - where to find SLES/OpenSLES.h, etc.
-#     OPENSL_LIBRARIES    - the OpenSL library
+#  This module defines the following variables and targets:
+#     OPENSL_FOUND     - True if OPENSL was found
+#     OpenSL::OpenSLES - The OpenSLES target
 #
 
 #=============================================================================
@@ -40,15 +39,12 @@
 #=============================================================================
 
 find_path(OPENSL_INCLUDE_DIR NAMES SLES/OpenSLES.h
-          DOC "The OpenSL include directory"
-)
+    DOC "The OpenSL include directory")
 find_path(OPENSL_ANDROID_INCLUDE_DIR NAMES SLES/OpenSLES_Android.h
-          DOC "The OpenSL Android include directory"
-)
+    DOC "The OpenSL Android include directory")
 
 find_library(OPENSL_LIBRARY NAMES OpenSLES
-             DOC "The OpenSL library"
-)
+    DOC "The OpenSL library")
 
 # handle the QUIETLY and REQUIRED arguments and set OPENSL_FOUND to TRUE if
 # all listed variables are TRUE
@@ -57,8 +53,11 @@ find_package_handle_standard_args(OpenSL REQUIRED_VARS OPENSL_LIBRARY OPENSL_INC
     OPENSL_ANDROID_INCLUDE_DIR)
 
 if(OPENSL_FOUND)
-    set(OPENSL_LIBRARIES ${OPENSL_LIBRARY})
-    set(OPENSL_INCLUDE_DIRS ${OPENSL_INCLUDE_DIR} ${OPENSL_ANDROID_INCLUDE_DIR})
+    add_library(OpenSL::OpenSLES UNKNOWN IMPORTED)
+    set_target_properties(OpenSL::OpenSLES PROPERTIES
+        IMPORTED_LOCATION ${OPENSL_LIBRARY}
+        INTERFACE_INCLUDE_DIRECTORIES ${OPENSL_INCLUDE_DIR}
+        INTERFACE_INCLUDE_DIRECTORIES ${OPENSL_ANDROID_INCLUDE_DIR})
 endif()
 
 mark_as_advanced(OPENSL_INCLUDE_DIR OPENSL_ANDROID_INCLUDE_DIR OPENSL_LIBRARY)

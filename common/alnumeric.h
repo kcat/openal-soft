@@ -329,6 +329,12 @@ inline float fast_roundf(float f) noexcept
     __asm__ __volatile__("frndint" : "=t"(out) : "0"(f));
     return out;
 
+#elif (defined(__GNUC__) || defined(__clang__)) && defined(__aarch64__)
+
+    float out;
+    __asm__ volatile("frintx %s0, %s1" : "=w"(out) : "w"(f));
+    return out;
+
 #else
 
     /* Integral limit, where sub-integral precision is not available for

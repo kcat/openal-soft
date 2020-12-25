@@ -18,7 +18,7 @@
 
 #define MIN_IR_LENGTH 8
 
-#define HRTF_DIRECT_DELAY 192
+#define HRTF_DIRECT_DELAY 256
 
 using float2 = std::array<float,2>;
 using HrirArray = std::array<float2,HRIR_LENGTH>;

@@ -584,6 +584,8 @@ set(COMMON_OBJS
 
 # Core library routines
 set(CORE_OBJS
+    core/ambdec.cpp
+    core/ambdec.h
     core/ambidefs.cpp
     core/ambidefs.h
     core/bs2b.cpp
@@ -659,8 +661,6 @@ set(ALC_OBJS
     alc/alconfig.cpp
     alc/alconfig.h
     alc/alcontext.h
-    alc/ambdec.cpp
-    alc/ambdec.h
     alc/async_event.h
     alc/bformatdec.cpp
     alc/bformatdec.h

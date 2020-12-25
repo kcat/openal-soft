@@ -1,5 +1,5 @@
-#ifndef AMBDEC_H
-#define AMBDEC_H
+#ifndef CORE_AMBDEC_H
+#define CORE_AMBDEC_H
 
 #include <array>
 #include <string>
@@ -45,4 +45,4 @@ struct AmbDecConf {
     int load(const char *fname) noexcept;
 };
 
-#endif /* AMBDEC_H */
+#endif /* CORE_AMBDEC_H */

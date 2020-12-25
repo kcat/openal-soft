@@ -12,7 +12,7 @@
 
 #include "almalloc.h"
 #include "alu.h"
-#include "ambdec.h"
+#include "core/ambdec.h"
 #include "core/filters/splitter.h"
 #include "front_stablizer.h"
 #include "math_defs.h"

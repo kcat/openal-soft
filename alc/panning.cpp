@@ -878,13 +878,16 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         {
             if(auto decopt = ConfigValueStr(devname, "decoder", layout))
             {
-                if(!conf.load(decopt->c_str()))
+                if(auto err = conf.load(decopt->c_str()))
+                {
                     ERR("Failed to load layout file %s\n", decopt->c_str());
+                    ERR("  %s\n", err->c_str());
+                }
                 else if(conf.NumSpeakers > MAX_OUTPUT_CHANNELS)
-                    ERR("Unsupported speaker count %zu (max %d)\n", conf.NumSpeakers,
+                    ERR("Unsupported decoder speaker count %zu (max %d)\n", conf.NumSpeakers,
                         MAX_OUTPUT_CHANNELS);
                 else if(conf.ChanMask > Ambi3OrderMask)
-                    ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
+                    ERR("Unsupported decoder channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
                         Ambi3OrderMask);
                 else if(MakeSpeakerMap(device, &conf, speakermap))
                     pconf = &conf;

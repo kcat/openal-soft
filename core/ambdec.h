@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "aloptional.h"
 #include "core/ambidefs.h"
 
 /* Helpers to read .ambdec configuration files. */
@@ -45,7 +46,7 @@ struct AmbDecConf {
     float HFOrderGain[MaxAmbiOrder+1]{};
     CoeffArray *HFMatrix;
 
-    int load(const char *fname) noexcept;
+    al::optional<std::string> load(const char *fname) noexcept;
 };
 
 #endif /* CORE_AMBDEC_H */

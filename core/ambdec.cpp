@@ -65,8 +65,8 @@ bool is_at_end(const std::string &buffer, std::size_t endpos)
 }
 
 
-bool load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs, const std::size_t num_speakers,
-    std::istream &f, std::string &buffer)
+al::optional<std::string> load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs,
+    const std::size_t num_speakers, std::istream &f, std::string &buffer)
 {
     size_t cur_speaker{0};
     while(cur_speaker < num_speakers)
@@ -77,10 +77,7 @@ bool load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs, const std::size_t num_
         if(cmd.empty())
         {
             if(!read_clipped_line(f, buffer))
-            {
-                ERR("Unexpected end of file\n");
-                return false;
-            }
+                return al::make_optional<std::string>("Unexpected end of file");
             continue;
         }
 
@@ -101,26 +98,20 @@ bool load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs, const std::size_t num_
             if(istr.fail()) TRACE("Connection not specified for speaker %zu\n", spkr_num);
         }
         else
-        {
-            ERR("Unexpected speakers command: %s\n", cmd.c_str());
-            return false;
-        }
+            return al::make_optional("Unexpected speakers command: "+cmd);
 
         istr.clear();
         const auto endpos = static_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
-        {
-            ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
-            return false;
-        }
+            return al::make_optional("Extra junk on line: " + buffer.substr(endpos));
         buffer.clear();
     }
 
-    return true;
+    return al::nullopt;
 }
 
-bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], AmbDecConf::CoeffArray *matrix,
-    const std::size_t maxrow, std::istream &f, std::string &buffer)
+al::optional<std::string> load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1],
+    AmbDecConf::CoeffArray *matrix, const std::size_t maxrow, std::istream &f, std::string &buffer)
 {
     bool gotgains{false};
     std::size_t cur{0u};
@@ -132,10 +123,7 @@ bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], AmbDecConf::CoeffArray *
         if(cmd.empty())
         {
             if(!read_clipped_line(f, buffer))
-            {
-                ERR("Unexpected end of file\n");
-                return false;
-            }
+                return al::make_optional<std::string>("Unexpected end of file");
             continue;
         }
 
@@ -148,11 +136,8 @@ bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], AmbDecConf::CoeffArray *
                 istr >> value;
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
-                {
-                    ERR("Extra junk on gain %zu: %s\n", curgain+1,
-                        buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                    return false;
-                }
+                    return al::make_optional("Extra junk on gain "+std::to_string(curgain+1)+": "+
+                        buffer.substr(static_cast<std::size_t>(istr.tellg())));
                 if(curgain < size(gains))
                     gains[curgain++] = value;
             }
@@ -169,56 +154,40 @@ bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], AmbDecConf::CoeffArray *
                 istr >> value;
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
-                {
-                    ERR("Extra junk on matrix element %zux%zu: %s\n", curidx,
-                        cur, buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                    return false;
-                }
+                    return al::make_optional("Extra junk on matrix element "+
+                        std::to_string(curidx)+"x"+std::to_string(cur-1)+": "+
+                        buffer.substr(static_cast<std::size_t>(istr.tellg())));
                 if(curidx < mtxrow.size())
                     mtxrow[curidx++] = value;
             }
             std::fill(mtxrow.begin()+curidx, mtxrow.end(), 0.0f);
         }
         else
-        {
-            ERR("Unexpected matrix command: %s\n", cmd.c_str());
-            return false;
-        }
+            return al::make_optional("Unexpected matrix command: "+cmd);
 
         istr.clear();
         const auto endpos = static_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
-        {
-            ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
-            return false;
-        }
+            return al::make_optional("Extra junk on line: " + buffer.substr(endpos));
         buffer.clear();
     }
 
     if(!gotgains)
-    {
-        ERR("Matrix order_gain not specified\n");
-        return false;
-    }
-
-    return true;
+        return al::make_optional<std::string>("Matrix order_gain not specified");
+    return al::nullopt;
 }
 
 } // namespace
 
-int AmbDecConf::load(const char *fname) noexcept
+al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
     al::ifstream f{fname};
     if(!f.is_open())
-    {
-        ERR("Failed to open: %s\n", fname);
-        return 0;
-    }
+        return al::make_optional<std::string>("Failed to open file");
 
     bool speakers_loaded{false};
     bool matrix_loaded{false};
     bool lfmatrix_loaded{false};
-    std::size_t num_speakers{0u};
     std::string buffer;
     while(read_clipped_line(f, buffer))
     {
@@ -226,10 +195,7 @@ int AmbDecConf::load(const char *fname) noexcept
 
         std::string command{read_word(istr)};
         if(command.empty())
-        {
-            ERR("Malformed line: %s\n", buffer.c_str());
-            return 0;
-        }
+            return al::make_optional("Malformed line: "+buffer);
 
         if(command == "/description")
             istr >> Description;
@@ -237,78 +203,50 @@ int AmbDecConf::load(const char *fname) noexcept
         {
             istr >> Version;
             if(!istr.eof() && !std::isspace(istr.peek()))
-            {
-                ERR("Extra junk after version: %s\n",
-                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                return 0;
-            }
+                return al::make_optional("Extra junk after version: " +
+                    buffer.substr(static_cast<std::size_t>(istr.tellg())));
             if(Version != 3)
-            {
-                ERR("Unsupported version: %u\n", Version);
-                return 0;
-            }
+                return al::make_optional("Unsupported version: "+std::to_string(Version));
         }
         else if(command == "/dec/chan_mask")
         {
             if(ChanMask)
-            {
-                ERR("Duplicate chan_mask\n");
-                return 0;
-            }
+                return al::make_optional<std::string>("Duplicate chan_mask definition");
+
             istr >> std::hex >> ChanMask >> std::dec;
             if(!istr.eof() && !std::isspace(istr.peek()))
-            {
-                ERR("Extra junk after mask: %s\n",
-                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                return 0;
-            }
+                return al::make_optional("Extra junk after mask: " +
+                    buffer.substr(static_cast<std::size_t>(istr.tellg())));
+
             if(!ChanMask)
-            {
-                ERR("Invalid chan_mask: 0x%08x\n", ChanMask);
-                return 0;
-            }
+                return al::make_optional("Invalid chan_mask: "+std::to_string(ChanMask));
         }
         else if(command == "/dec/freq_bands")
         {
             if(FreqBands)
-            {
-                ERR("Duplicate freq_bands\n");
-                return 0;
-            }
+                return al::make_optional<std::string>("Duplicate freq_bands");
+
             istr >> FreqBands;
             if(!istr.eof() && !std::isspace(istr.peek()))
-            {
-                ERR("Extra junk after freq_bands: %s\n",
-                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                return 0;
-            }
+                return al::make_optional("Extra junk after freq_bands: " +
+                    buffer.substr(static_cast<std::size_t>(istr.tellg())));
+
             if(FreqBands != 1 && FreqBands != 2)
-            {
-                ERR("Invalid freq_bands value: %u\n", FreqBands);
-                return 0;
-            }
+                return al::make_optional("Invalid freq_bands: "+std::to_string(FreqBands));
         }
         else if(command == "/dec/speakers")
         {
-            if(num_speakers)
-            {
-                ERR("Duplicate speakers\n");
-                return 0;
-            }
-            istr >> num_speakers;
+            if(NumSpeakers)
+                return al::make_optional<std::string>("Duplicate speakers");
+
+            istr >> NumSpeakers;
             if(!istr.eof() && !std::isspace(istr.peek()))
-            {
-                ERR("Extra junk after speakers: %s\n",
-                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                return 0;
-            }
-            if(!num_speakers)
-            {
-                ERR("Invalid speakers: %zu\n", num_speakers);
-                return 0;
-            }
-            NumSpeakers = num_speakers;
-            Speakers = std::make_unique<SpeakerConf[]>(num_speakers);
+                return al::make_optional("Extra junk after speakers: " +
+                    buffer.substr(static_cast<std::size_t>(istr.tellg())));
+
+            if(!NumSpeakers)
+                return al::make_optional("Invalid speakers: "+std::to_string(NumSpeakers));
+            Speakers = std::make_unique<SpeakerConf[]>(NumSpeakers);
         }
         else if(command == "/dec/coeff_scale")
         {
@@ -317,30 +255,21 @@ int AmbDecConf::load(const char *fname) noexcept
             else if(scale == "sn3d") CoeffScale = AmbDecScale::SN3D;
             else if(scale == "fuma") CoeffScale = AmbDecScale::FuMa;
             else
-            {
-                ERR("Unsupported coeff scale: %s\n", scale.c_str());
-                return 0;
-            }
+                return al::make_optional("Unexpected coeff_scale: "+scale);
         }
         else if(command == "/opt/xover_freq")
         {
             istr >> XOverFreq;
             if(!istr.eof() && !std::isspace(istr.peek()))
-            {
-                ERR("Extra junk after xover_freq: %s\n",
-                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                return 0;
-            }
+                return al::make_optional("Extra junk after xover_freq: " +
+                    buffer.substr(static_cast<std::size_t>(istr.tellg())));
         }
         else if(command == "/opt/xover_ratio")
         {
             istr >> XOverRatio;
             if(!istr.eof() && !std::isspace(istr.peek()))
-            {
-                ERR("Extra junk after xover_ratio: %s\n",
-                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                return 0;
-            }
+                return al::make_optional("Extra junk after xover_ratio: " +
+                    buffer.substr(static_cast<std::size_t>(istr.tellg())));
         }
         else if(command == "/opt/input_scale" || command == "/opt/nfeff_comp" ||
                 command == "/opt/delay_comp" || command == "/opt/level_comp")
@@ -350,50 +279,33 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/speakers/{")
         {
-            if(!num_speakers)
-            {
-                ERR("AmbDec speakers defined without a count\n");
-                return 0;
-            }
+            if(!NumSpeakers)
+                return al::make_optional<std::string>("Speakers defined without a count");
+
             const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
-            {
-                ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
-                return 0;
-            }
+                return al::make_optional("Extra junk on line: " + buffer.substr(endpos));
             buffer.clear();
 
-            if(!load_ambdec_speakers(Speakers.get(), num_speakers, f, buffer))
-                return 0;
+            if(auto err = load_ambdec_speakers(Speakers.get(), NumSpeakers, f, buffer))
+                return err;
             speakers_loaded = true;
 
             if(!read_clipped_line(f, buffer))
-            {
-                ERR("Unexpected end of file\n");
-                return 0;
-            }
+                return al::make_optional<std::string>("Unexpected end of file");
             std::istringstream istr2{buffer};
             std::string endmark{read_word(istr2)};
             if(endmark != "/}")
-            {
-                ERR("Expected /} after speaker definitions, got %s\n", endmark.c_str());
-                return 0;
-            }
+                return al::make_optional("Expected /} after speaker definitions, got "+endmark);
             istr.swap(istr2);
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
             if(!NumSpeakers)
-            {
-                ERR("AmbDec matrix defined without a count\n");
-                return 0;
-            }
+                return al::make_optional<std::string>("Matrix defined without a count");
             const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
-            {
-                ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
-                return 0;
-            }
+                return al::make_optional("Extra junk on line: " + buffer.substr(endpos));
             buffer.clear();
 
             if(!Matrix)
@@ -406,82 +318,58 @@ int AmbDecConf::load(const char *fname) noexcept
             if(FreqBands == 1)
             {
                 if(command != "/matrix/{")
-                {
-                    ERR("Unexpected \"%s\" type for a single-band decoder\n", command.c_str());
-                    return 0;
-                }
-                if(!load_ambdec_matrix(HFOrderGain, HFMatrix, num_speakers, f, buffer))
-                    return 0;
+                    return al::make_optional(
+                        "Unexpected \""+command+"\" type for a single-band decoder");
+                if(auto err = load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer))
+                    return err;
                 matrix_loaded = true;
             }
             else
             {
                 if(command == "/lfmatrix/{")
                 {
-                    if(!load_ambdec_matrix(LFOrderGain, LFMatrix, num_speakers, f, buffer))
-                        return 0;
+                    if(auto err=load_ambdec_matrix(LFOrderGain, LFMatrix, NumSpeakers, f, buffer))
+                        return err;
                     lfmatrix_loaded = true;
                 }
                 else if(command == "/hfmatrix/{")
                 {
-                    if(!load_ambdec_matrix(HFOrderGain, HFMatrix, num_speakers, f, buffer))
-                        return 0;
+                    if(auto err=load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer))
+                        return err;
                     matrix_loaded = true;
                 }
                 else
-                {
-                    ERR("Unexpected \"%s\" type for a dual-band decoder\n", command.c_str());
-                    return 0;
-                }
+                    return al::make_optional(
+                        "Unexpected \""+command+"\" type for a dual-band decoder");
             }
 
             if(!read_clipped_line(f, buffer))
-            {
-                ERR("Unexpected end of file\n");
-                return 0;
-            }
+                return al::make_optional<std::string>("Unexpected end of file");
             std::istringstream istr2{buffer};
             std::string endmark{read_word(istr2)};
             if(endmark != "/}")
-            {
-                ERR("Expected /} after matrix definitions, got %s\n", endmark.c_str());
-                return 0;
-            }
+                return al::make_optional("Expected /} after matrix definitions, got "+endmark);
             istr.swap(istr2);
         }
         else if(command == "/end")
         {
             const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
-            {
-                ERR("Unexpected junk on end: %s\n", buffer.c_str()+endpos);
-                return 0;
-            }
+                return al::make_optional("Extra junk on end: " + buffer.substr(endpos));
 
             if(!speakers_loaded || !matrix_loaded || (FreqBands == 2 && !lfmatrix_loaded))
-            {
-                ERR("No decoder defined\n");
-                return 0;
-            }
+                return al::make_optional<std::string>("No decoder defined");
 
-            return 1;
+            return al::nullopt;
         }
         else
-        {
-            ERR("Unexpected command: %s\n", command.c_str());
-            return 0;
-        }
+            return al::make_optional("Unexpected command: " + command);
 
         istr.clear();
         const auto endpos = static_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
-        {
-            ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
-            return 0;
-        }
+            return al::make_optional("Extra junk on line: " + buffer.substr(endpos));
         buffer.clear();
     }
-    ERR("Unexpected end of file\n");
-
-    return 0;
+    return al::make_optional<std::string>("Unexpected end of file");
 }

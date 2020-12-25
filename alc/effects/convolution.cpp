@@ -89,7 +89,7 @@ auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,M
 auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbi2DChannels>&
 {
     if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D;
-    return AmbiIndex::From2D;
+    return AmbiIndex::FromACN2D;
 }
 
 

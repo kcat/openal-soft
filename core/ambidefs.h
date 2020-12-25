@@ -120,7 +120,7 @@ struct AmbiIndex {
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
     }};
-    static constexpr std::array<uint8_t,MaxAmbi2DChannels> From2D{{
+    static constexpr std::array<uint8_t,MaxAmbi2DChannels> FromACN2D{{
         0, 1,3, 4,8, 9,15
     }};
 

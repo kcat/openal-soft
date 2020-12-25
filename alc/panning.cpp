@@ -547,7 +547,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
         /* Built-in speaker decoders are always 2D. */
         const size_t ambicount{Ambi2DChannelsFromOrder(decoder.mOrder)};
-        std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+ambicount,
+        std::transform(AmbiIndex::FromACN2D.begin(), AmbiIndex::FromACN2D.begin()+ambicount,
             std::begin(device->Dry.AmbiMap),
             [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -611,7 +611,7 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
     else
     {
         count = Ambi2DChannelsFromOrder(order);
-        std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
+        std::transform(AmbiIndex::FromACN2D.begin(), AmbiIndex::FromACN2D.begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );

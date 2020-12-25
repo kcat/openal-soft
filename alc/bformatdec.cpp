@@ -62,7 +62,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
     {
         for(size_t j{0},k{0};j < mChannelDec.size();++j)
         {
-            const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
+            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D[j]};
             if(!(conf->ChanMask&(1u<<acn))) continue;
             const size_t order{AmbiIndex::OrderFromChannel[acn]};
             const float gain{conf->HFOrderGain[order] / coeff_scale[acn]};
@@ -83,7 +83,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(size_t j{0},k{0};j < mChannelDec.size();++j)
         {
-            const size_t acn{periphonic ? j : AmbiIndex::From2D[j]};
+            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D[j]};
             if(!(conf->ChanMask&(1u<<acn))) continue;
             const size_t order{AmbiIndex::OrderFromChannel[acn]};
             const float hfGain{conf->HFOrderGain[order] * ratio / coeff_scale[acn]};

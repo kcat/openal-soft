@@ -65,9 +65,11 @@ bool is_at_end(const std::string &buffer, std::size_t endpos)
 }
 
 
-bool load_ambdec_speakers(al::vector<AmbDecConf::SpeakerConf> &spkrs, const std::size_t num_speakers, std::istream &f, std::string &buffer)
+bool load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs, const std::size_t num_speakers,
+    std::istream &f, std::string &buffer)
 {
-    while(spkrs.size() < num_speakers)
+    size_t cur_speaker{0};
+    while(cur_speaker < num_speakers)
     {
         std::istringstream istr{buffer};
 
@@ -84,9 +86,8 @@ bool load_ambdec_speakers(al::vector<AmbDecConf::SpeakerConf> &spkrs, const std:
 
         if(cmd == "add_spkr")
         {
-            spkrs.emplace_back();
-            AmbDecConf::SpeakerConf &spkr = spkrs.back();
-            const size_t spkr_num{spkrs.size()};
+            AmbDecConf::SpeakerConf &spkr = spkrs[cur_speaker++];
+            const size_t spkr_num{cur_speaker};
 
             istr >> spkr.Name;
             if(istr.fail()) WARN("Name not specified for speaker %zu\n", spkr_num);
@@ -118,7 +119,8 @@ bool load_ambdec_speakers(al::vector<AmbDecConf::SpeakerConf> &spkrs, const std:
     return true;
 }
 
-bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], al::vector<AmbDecConf::CoeffArray> &matrix, const std::size_t maxrow, std::istream &f, std::string &buffer)
+bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], AmbDecConf::CoeffArray *matrix,
+    const std::size_t maxrow, std::istream &f, std::string &buffer)
 {
     bool gotgains{false};
     std::size_t cur{0u};
@@ -159,8 +161,7 @@ bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], al::vector<AmbDecConf::C
         }
         else if(cmd == "add_row")
         {
-            matrix.emplace_back();
-            AmbDecConf::CoeffArray &mtxrow = matrix.back();
+            AmbDecConf::CoeffArray &mtxrow = matrix[cur++];
             std::size_t curidx{0u};
             float value{};
             while(istr.good())
@@ -170,15 +171,13 @@ bool load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1], al::vector<AmbDecConf::C
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
                     ERR("Extra junk on matrix element %zux%zu: %s\n", curidx,
-                        matrix.size(), buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
-                    matrix.pop_back();
+                        cur, buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     return false;
                 }
                 if(curidx < mtxrow.size())
                     mtxrow[curidx++] = value;
             }
             std::fill(mtxrow.begin()+curidx, mtxrow.end(), 0.0f);
-            cur++;
         }
         else
         {
@@ -216,6 +215,9 @@ int AmbDecConf::load(const char *fname) noexcept
         return 0;
     }
 
+    bool speakers_loaded{false};
+    bool matrix_loaded{false};
+    bool lfmatrix_loaded{false};
     std::size_t num_speakers{0u};
     std::string buffer;
     while(read_clipped_line(f, buffer))
@@ -248,6 +250,11 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/dec/chan_mask")
         {
+            if(ChanMask)
+            {
+                ERR("Duplicate chan_mask\n");
+                return 0;
+            }
             istr >> std::hex >> ChanMask >> std::dec;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
@@ -255,9 +262,19 @@ int AmbDecConf::load(const char *fname) noexcept
                     buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
+            if(!ChanMask)
+            {
+                ERR("Invalid chan_mask: 0x%08x\n", ChanMask);
+                return 0;
+            }
         }
         else if(command == "/dec/freq_bands")
         {
+            if(FreqBands)
+            {
+                ERR("Duplicate freq_bands\n");
+                return 0;
+            }
             istr >> FreqBands;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
@@ -273,6 +290,11 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/dec/speakers")
         {
+            if(num_speakers)
+            {
+                ERR("Duplicate speakers\n");
+                return 0;
+            }
             istr >> num_speakers;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
@@ -280,9 +302,13 @@ int AmbDecConf::load(const char *fname) noexcept
                     buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
-            Speakers.reserve(num_speakers);
-            LFMatrix.reserve(num_speakers);
-            HFMatrix.reserve(num_speakers);
+            if(!num_speakers)
+            {
+                ERR("Invalid speakers: %zu\n", num_speakers);
+                return 0;
+            }
+            NumSpeakers = num_speakers;
+            Speakers = std::make_unique<SpeakerConf[]>(num_speakers);
         }
         else if(command == "/dec/coeff_scale")
         {
@@ -324,6 +350,11 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/speakers/{")
         {
+            if(!num_speakers)
+            {
+                ERR("AmbDec speakers defined without a count\n");
+                return 0;
+            }
             const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
             {
@@ -332,8 +363,9 @@ int AmbDecConf::load(const char *fname) noexcept
             }
             buffer.clear();
 
-            if(!load_ambdec_speakers(Speakers, num_speakers, f, buffer))
+            if(!load_ambdec_speakers(Speakers.get(), num_speakers, f, buffer))
                 return 0;
+            speakers_loaded = true;
 
             if(!read_clipped_line(f, buffer))
             {
@@ -351,6 +383,11 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
+            if(!NumSpeakers)
+            {
+                ERR("AmbDec matrix defined without a count\n");
+                return 0;
+            }
             const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
             {
@@ -358,6 +395,13 @@ int AmbDecConf::load(const char *fname) noexcept
                 return 0;
             }
             buffer.clear();
+
+            if(!Matrix)
+            {
+                Matrix = std::make_unique<CoeffArray[]>(NumSpeakers * FreqBands);
+                LFMatrix = Matrix.get();
+                HFMatrix = LFMatrix + NumSpeakers*(FreqBands-1);
+            }
 
             if(FreqBands == 1)
             {
@@ -368,6 +412,7 @@ int AmbDecConf::load(const char *fname) noexcept
                 }
                 if(!load_ambdec_matrix(HFOrderGain, HFMatrix, num_speakers, f, buffer))
                     return 0;
+                matrix_loaded = true;
             }
             else
             {
@@ -375,11 +420,13 @@ int AmbDecConf::load(const char *fname) noexcept
                 {
                     if(!load_ambdec_matrix(LFOrderGain, LFMatrix, num_speakers, f, buffer))
                         return 0;
+                    lfmatrix_loaded = true;
                 }
                 else if(command == "/hfmatrix/{")
                 {
                     if(!load_ambdec_matrix(HFOrderGain, HFMatrix, num_speakers, f, buffer))
                         return 0;
+                    matrix_loaded = true;
                 }
                 else
                 {
@@ -408,6 +455,12 @@ int AmbDecConf::load(const char *fname) noexcept
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on end: %s\n", buffer.c_str()+endpos);
+                return 0;
+            }
+
+            if(!speakers_loaded || !matrix_loaded || (FreqBands == 2 && !lfmatrix_loaded))
+            {
+                ERR("No decoder defined\n");
                 return 0;
             }
 

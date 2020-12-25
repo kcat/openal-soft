@@ -2,10 +2,10 @@
 #define CORE_AMBDEC_H
 
 #include <array>
+#include <memory>
 #include <string>
 
 #include "core/ambidefs.h"
-#include "vector.h"
 
 /* Helpers to read .ambdec configuration files. */
 
@@ -32,15 +32,18 @@ struct AmbDecConf {
         float Elevation{0.0f};
         std::string Connection;
     };
-    al::vector<SpeakerConf> Speakers;
+    size_t NumSpeakers{0};
+    std::unique_ptr<SpeakerConf[]> Speakers;
 
     using CoeffArray = std::array<float,MaxAmbiChannels>;
+    std::unique_ptr<CoeffArray[]> Matrix;
+
     /* Unused when FreqBands == 1 */
     float LFOrderGain[MaxAmbiOrder+1]{};
-    al::vector<CoeffArray> LFMatrix;
+    CoeffArray *LFMatrix;
 
     float HFOrderGain[MaxAmbiOrder+1]{};
-    al::vector<CoeffArray> HFMatrix;
+    CoeffArray *HFMatrix;
 
     int load(const char *fname) noexcept;
 };

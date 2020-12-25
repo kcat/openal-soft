@@ -208,9 +208,10 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint (&speakerm
             ERR("Failed to lookup AmbDec speaker label %s\n", speaker.Name.c_str());
         return chidx;
     };
-    std::transform(conf->Speakers.begin(), conf->Speakers.end(), std::begin(speakermap), map_spkr);
+    std::transform(conf->Speakers.get(), conf->Speakers.get()+conf->NumSpeakers,
+        std::begin(speakermap), map_spkr);
     /* Return success if no invalid entries are found. */
-    auto spkrmap_end = std::begin(speakermap) + conf->Speakers.size();
+    auto spkrmap_end = std::begin(speakermap) + conf->NumSpeakers;
     return std::find(std::begin(speakermap), spkrmap_end, INVALID_CHANNEL_INDEX) == spkrmap_end;
 }
 
@@ -238,8 +239,8 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
 {
     auto get_max = std::bind(maxf, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
-    const float maxdist{std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), 0.0f,
-        get_max)};
+    const float maxdist{std::accumulate(conf->Speakers.get(),
+        conf->Speakers.get()+conf->NumSpeakers, 0.0f, get_max)};
 
     const char *devname{device->DeviceName.c_str()};
     if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
@@ -248,7 +249,7 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
     const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
     const auto ChanDelay = device->ChannelDelay.as_span();
     size_t total{0u};
-    for(size_t i{0u};i < conf->Speakers.size();i++)
+    for(size_t i{0u};i < conf->NumSpeakers;i++)
     {
         const AmbDecConf::SpeakerConf &speaker = conf->Speakers[i];
         const ALuint chan{speakermap[i]};
@@ -625,18 +626,18 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
          * front-center channel.
          */
         size_t cidx{0};
-        for(;cidx < conf->Speakers.size();++cidx)
+        for(;cidx < conf->NumSpeakers;++cidx)
         {
             if(speakermap[cidx] == FrontCenter)
                 break;
         }
         bool hasfc{false};
-        if(cidx < conf->LFMatrix.size())
+        if(cidx < conf->NumSpeakers && conf->FreqBands != 1)
         {
             for(const auto &coeff : conf->LFMatrix[cidx])
                 hasfc |= coeff != 0.0f;
         }
-        if(!hasfc && cidx < conf->HFMatrix.size())
+        if(!hasfc && cidx < conf->NumSpeakers)
         {
             for(const auto &coeff : conf->HFMatrix[cidx])
                 hasfc |= coeff != 0.0f;
@@ -659,10 +660,10 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
 
     auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
         std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
-    const float avg_dist{
-        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), 0.0f, accum_spkr_dist) /
-        static_cast<float>(conf->Speakers.size())};
-    InitNearFieldCtrl(device, avg_dist, order, !!(conf->ChanMask&AmbiPeriphonicMask));
+    const float accum_dist{std::accumulate(conf->Speakers.get(),
+        conf->Speakers.get()+conf->NumSpeakers, 0.0f, accum_spkr_dist)};
+    InitNearFieldCtrl(device, accum_dist / static_cast<float>(conf->NumSpeakers), order,
+        !!(conf->ChanMask&AmbiPeriphonicMask));
 
     InitDistanceComp(device, conf, speakermap);
 }
@@ -879,8 +880,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
             {
                 if(!conf.load(decopt->c_str()))
                     ERR("Failed to load layout file %s\n", decopt->c_str());
-                else if(conf.Speakers.size() > MAX_OUTPUT_CHANNELS)
-                    ERR("Unsupported speaker count %zu (max %d)\n", conf.Speakers.size(),
+                else if(conf.NumSpeakers > MAX_OUTPUT_CHANNELS)
+                    ERR("Unsupported speaker count %zu (max %d)\n", conf.NumSpeakers,
                         MAX_OUTPUT_CHANNELS);
                 else if(conf.ChanMask > Ambi3OrderMask)
                     ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,

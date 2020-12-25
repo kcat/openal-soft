@@ -66,10 +66,10 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
             if(!(conf->ChanMask&(1u<<acn))) continue;
             const size_t order{AmbiIndex::OrderFromChannel[acn]};
             const float gain{conf->HFOrderGain[order] / coeff_scale[acn]};
-            for(size_t i{0u};i < conf->Speakers.size();++i)
+            for(size_t i{0u};i < conf->NumSpeakers;++i)
             {
                 const size_t chanidx{chanmap[i]};
-                mChannelDec[j].mGains.Single[chanidx] = conf->HFMatrix[i][k] * gain;
+                mChannelDec[j].mGains.Single[chanidx] = conf->Matrix[i][k] * gain;
             }
             ++k;
         }
@@ -88,7 +88,7 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
             const size_t order{AmbiIndex::OrderFromChannel[acn]};
             const float hfGain{conf->HFOrderGain[order] * ratio / coeff_scale[acn]};
             const float lfGain{conf->LFOrderGain[order] / ratio / coeff_scale[acn]};
-            for(size_t i{0u};i < conf->Speakers.size();++i)
+            for(size_t i{0u};i < conf->NumSpeakers;++i)
             {
                 const size_t chanidx{chanmap[i]};
                 mChannelDec[j].mGains.Dual[sHFBand][chanidx] = conf->HFMatrix[i][k] * hfGain;

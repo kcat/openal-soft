@@ -26,24 +26,24 @@
 namespace {
 
 /* Convolution reverb is implemented using a segmented overlap-add method. The
- * impulse response is broken up into multiple segments of 512 samples, and
- * each segment has an FFT applied with a 1024-sample buffer (the latter half
+ * impulse response is broken up into multiple segments of 128 samples, and
+ * each segment has an FFT applied with a 256-sample buffer (the latter half
  * left silent) to get its frequency-domain response. The resulting response
- * has its positive/non-mirrored frequencies saved (513 bins) in each segment.
+ * has its positive/non-mirrored frequencies saved (129 bins) in each segment.
  *
- * Input samples are similarly broken up into 512-sample segments, with an FFT
- * applied to each new incoming segment to get its 513 bins. A history of FFT'd
+ * Input samples are similarly broken up into 128-sample segments, with an FFT
+ * applied to each new incoming segment to get its 129 bins. A history of FFT'd
  * input segments is maintained, equal to the length of the impulse response.
  *
  * To apply the reverberation, each impulse response segment is convolved with
  * its paired input segment (using complex multiplies, far cheaper than FIRs),
- * accumulating into a 1024-bin FFT buffer. The input history is then shifted
- * to align with later impulse response segments for next time.
+ * accumulating into a 256-bin FFT buffer. The input history is then shifted to
+ * align with later impulse response segments for next time.
  *
- * An inverse FFT is then applied to the accumulated FFT buffer to get a 1024-
+ * An inverse FFT is then applied to the accumulated FFT buffer to get a 256-
  * sample time-domain response for output, which is split in two halves. The
- * first half is the 512-sample output, and the second half is a 512-sample
- * (really, 511) delayed extension, which gets added to the output next time.
+ * first half is the 128-sample output, and the second half is a 128-sample
+ * (really, 127) delayed extension, which gets added to the output next time.
  * Convolving two time-domain responses of lengths N and M results in a time-
  * domain signal of length N+M-1, and this holds true regardless of the
  * convolution being applied in the frequency domain, so these "overflow"
@@ -243,7 +243,7 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
     PPhaseResampler resampler;
     if(device->Frequency != buffer->mSampleRate)
         resampler.init(buffer->mSampleRate, device->Frequency);
-    const auto resampledCount = static_cast<ALuint>(
+    const auto resampledCount = static_cast<uint>(
         (uint64_t{buffer->mSampleLen}*device->Frequency + (buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 

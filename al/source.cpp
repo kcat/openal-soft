@@ -475,7 +475,7 @@ void InitVoice(Voice *voice, ALsource *source, BufferlistItem *BufferList, ALCco
             AmbiIndex::OrderFromChannel.data()};
         const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder, device->mAmbiOrder);
 
-        const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
+        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
 
         for(auto &chandata : voice->mChans)
         {

@@ -279,7 +279,7 @@ std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 
 void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
-    const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
+    const float XOverFreq, const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {
@@ -287,7 +287,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
         uint ldelay, rdelay;
     };
 
-    const double xover_norm{400.0 / Hrtf->sampleRate};
+    const double xover_norm{double{XOverFreq} / Hrtf->sampleRate};
     for(size_t i{0};i < mChannels.size();++i)
     {
         const size_t order{AmbiIndex::OrderFromChannel[i]};

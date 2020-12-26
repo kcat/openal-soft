@@ -73,7 +73,7 @@ struct DirectHrtfState {
      */
     void build(const HrtfStore *Hrtf, const uint irSize,
         const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
-        const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
+        const float XOverFreq, const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
 
     static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
 

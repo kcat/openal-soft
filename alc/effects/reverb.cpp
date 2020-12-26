@@ -672,7 +672,7 @@ void ReverbState::deviceUpdate(const ALCdevice *device)
         mMixOut = &ReverbState::MixOutPlain;
         mOrderScales.fill(1.0f);
     }
-    mAmbiSplitter[0][0].init(400.0f / frequency);
+    mAmbiSplitter[0][0].init(device->mXOverFreq / frequency);
     std::fill(mAmbiSplitter[0].begin()+1, mAmbiSplitter[0].end(), mAmbiSplitter[0][0]);
     std::fill(mAmbiSplitter[1].begin(), mAmbiSplitter[1].end(), mAmbiSplitter[0][0]);
 }

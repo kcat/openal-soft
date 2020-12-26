@@ -205,6 +205,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
      */
     DevAmbiLayout mAmbiLayout{DevAmbiLayout::Default};
     DevAmbiScaling mAmbiScale{DevAmbiScaling::Default};
+    float mXOverFreq{400.0f};
 
     ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 

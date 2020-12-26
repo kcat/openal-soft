@@ -247,7 +247,7 @@ void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *b
         (uint64_t{buffer->mSampleLen}*device->Frequency + (buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 
-    const BandSplitter splitter{400.0f / static_cast<float>(device->Frequency)};
+    const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
     for(auto &e : *mChans)
         e.mFilter = splitter;
 

@@ -595,6 +595,7 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
     if(!hqdec && conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
+    device->mXOverFreq = conf->XOverFreq;
 
     const ALuint order{(conf->ChanMask > Ambi2OrderMask) ? 3u :
         (conf->ChanMask > Ambi1OrderMask) ? 2u : 1u};
@@ -813,7 +814,8 @@ void InitHrtfPanning(ALCdevice *device)
 
     HrtfStore *Hrtf{device->mHrtf.get()};
     auto hrtfstate = DirectHrtfState::Create(count);
-    hrtfstate->build(Hrtf, device->mIrSize, AmbiPoints, AmbiMatrix, AmbiOrderHFGain);
+    hrtfstate->build(Hrtf, device->mIrSize, AmbiPoints, AmbiMatrix, device->mXOverFreq,
+        AmbiOrderHFGain);
     device->mHrtfState = std::move(hrtfstate);
 
     InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, true);
@@ -848,6 +850,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     device->mHrtf = nullptr;
     device->mIrSize = 0;
     device->HrtfName.clear();
+    device->mXOverFreq = 400.0f;
     device->mRenderMode = RenderMode::Normal;
 
     if(device->FmtChans != DevFmtStereo)

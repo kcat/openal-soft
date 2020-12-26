@@ -69,7 +69,7 @@ struct AutowahState final : public EffectState {
     alignas(16) float mBufferOut[BufferLineSize];
 
 
-    void deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -78,7 +78,7 @@ struct AutowahState final : public EffectState {
     DEF_NEWDEL(AutowahState)
 };
 
-void AutowahState::deviceUpdate(const ALCdevice*)
+void AutowahState::deviceUpdate(const ALCdevice*, const BufferStorage* /*buffer*/)
 {
     /* (Re-)initializing parameters and clear the buffers. */
 

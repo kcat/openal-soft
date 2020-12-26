@@ -49,7 +49,7 @@ struct CompressorState final : public EffectState {
     float mEnvFollower{1.0f};
 
 
-    void deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -58,7 +58,7 @@ struct CompressorState final : public EffectState {
     DEF_NEWDEL(CompressorState)
 };
 
-void CompressorState::deviceUpdate(const ALCdevice *device)
+void CompressorState::deviceUpdate(const ALCdevice *device, const BufferStorage* /*buffer*/)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).

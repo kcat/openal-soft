@@ -90,7 +90,7 @@ struct EqualizerState final : public EffectState {
     FloatBufferLine mSampleBuffer{};
 
 
-    void deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -99,7 +99,7 @@ struct EqualizerState final : public EffectState {
     DEF_NEWDEL(EqualizerState)
 };
 
-void EqualizerState::deviceUpdate(const ALCdevice*)
+void EqualizerState::deviceUpdate(const ALCdevice*, const BufferStorage*)
 {
     for(auto &e : mChans)
     {

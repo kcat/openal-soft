@@ -174,8 +174,7 @@ struct ConvolutionState final : public EffectState {
     void (ConvolutionState::*mMix)(const al::span<FloatBufferLine>,const size_t)
     {&ConvolutionState::NormalMix};
 
-    void deviceUpdate(const ALCdevice *device) override;
-    void setBuffer(const ALCdevice *device, const BufferStorage *buffer) override;
+    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -204,11 +203,7 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
 }
 
 
-void ConvolutionState::deviceUpdate(const ALCdevice* /*device*/)
-{
-}
-
-void ConvolutionState::setBuffer(const ALCdevice *device, const BufferStorage *buffer)
+void ConvolutionState::deviceUpdate(const ALCdevice *device, const BufferStorage *buffer)
 {
     constexpr uint MaxConvolveAmbiOrder{1u};
 

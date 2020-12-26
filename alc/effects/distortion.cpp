@@ -45,7 +45,7 @@ struct DistortionState final : public EffectState {
     float mBuffer[2][BufferLineSize]{};
 
 
-    void deviceUpdate(const ALCdevice *device) override;
+    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -54,7 +54,7 @@ struct DistortionState final : public EffectState {
     DEF_NEWDEL(DistortionState)
 };
 
-void DistortionState::deviceUpdate(const ALCdevice*)
+void DistortionState::deviceUpdate(const ALCdevice*, const BufferStorage*)
 {
     mLowpass.clear();
     mBandpass.clear();

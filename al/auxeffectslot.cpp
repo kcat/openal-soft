@@ -655,7 +655,7 @@ START_API_FUNC
 
             FPUCtl mixer_mode{};
             auto *state = slot->Effect.State.get();
-            state->setBuffer(device, buffer);
+            state->deviceUpdate(device, buffer);
         }
         break;
 
@@ -935,9 +935,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         State->mOutTarget = Device->Dry.Buffer;
         {
             FPUCtl mixer_mode{};
-            State->deviceUpdate(Device);
-            if(Buffer)
-                State->setBuffer(Device, Buffer);
+            State->deviceUpdate(Device, Buffer);
         }
 
         Effect.Type = newtype;

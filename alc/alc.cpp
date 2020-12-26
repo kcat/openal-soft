@@ -1996,7 +1996,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     if(device->Uhj_Encoder)
         sample_delay += Uhj2Encoder::sFilterSize;
     if(device->mHrtfState)
-        sample_delay += HRTF_DIRECT_DELAY;
+        sample_delay += HrtfDirectDelay;
     if(auto *ambidec = device->AmbiDecoder.get())
     {
         if(ambidec->hasStablizer())

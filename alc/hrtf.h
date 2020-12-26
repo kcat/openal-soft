@@ -58,7 +58,7 @@ struct AngularPoint {
 
 
 struct DirectHrtfState {
-    std::array<float,HRTF_DIRECT_DELAY+BufferLineSize> mTemp;
+    std::array<float,HrtfDirectDelay+BufferLineSize> mTemp;
 
     /* HRTF filter state for dry buffer content */
     uint mIrSize{0};

@@ -985,7 +985,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         if(auto hrtfsizeopt = ConfigValueUInt(devname, nullptr, "hrtf-size"))
         {
             if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
-                device->mIrSize = maxu(*hrtfsizeopt, MIN_IR_LENGTH);
+                device->mIrSize = maxu(*hrtfsizeopt, MinIrLength);
         }
 
         InitHrtfPanning(device);

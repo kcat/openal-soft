@@ -8,42 +8,43 @@
 #include "core/filters/splitter.h"
 
 
-#define HRTF_HISTORY_BITS   6
-#define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
-#define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
-
-#define HRIR_BITS   7
-#define HRIR_LENGTH (1<<HRIR_BITS)
-#define HRIR_MASK   (HRIR_LENGTH-1)
-
-#define MIN_IR_LENGTH 8
-
-#define HRTF_DIRECT_DELAY 256
-
 using float2 = std::array<float,2>;
-using HrirArray = std::array<float2,HRIR_LENGTH>;
 using ubyte = unsigned char;
 using ubyte2 = std::array<ubyte,2>;
 using ushort = unsigned short;
 using uint = unsigned int;
+using uint2 = std::array<uint,2>;
 
+constexpr uint HrtfHistoryBits{6};
+constexpr uint HrtfHistoryLength{1 << HrtfHistoryBits};
+constexpr uint HrtfHistoryMask{HrtfHistoryLength - 1};
+
+constexpr uint HrirBits{7};
+constexpr uint HrirLength{1 << HrirBits};
+constexpr uint HrirMask{HrirLength - 1};
+
+constexpr uint MinIrLength{8};
+
+constexpr uint HrtfDirectDelay{256};
+
+using HrirArray = std::array<float2,HrirLength>;
 
 struct MixHrtfFilter {
     const HrirArray *Coeffs;
-    std::array<uint,2> Delay;
+    uint2 Delay;
     float Gain;
     float GainStep;
 };
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
-    std::array<uint,2> Delay;
+    uint2 Delay;
     float Gain;
 };
 
 
 struct HrtfChannelState {
-    std::array<float,HRTF_DIRECT_DELAY> mDelay{};
+    std::array<float,HrtfDirectDelay> mDelay{};
     BandSplitter mSplitter;
     float mHfScale{};
     alignas(16) HrirArray mCoeffs{};

@@ -24,8 +24,8 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
     const float gainstep{hrtfparams->GainStep};
     const float gain{hrtfparams->Gain};
 
-    size_t ldelay{HRTF_HISTORY_LENGTH - hrtfparams->Delay[0]};
-    size_t rdelay{HRTF_HISTORY_LENGTH - hrtfparams->Delay[1]};
+    size_t ldelay{HrtfHistoryLength - hrtfparams->Delay[0]};
+    size_t rdelay{HrtfHistoryLength - hrtfparams->Delay[1]};
     float stepcount{0.0f};
     for(size_t i{0u};i < BufferSize;++i)
     {
@@ -52,8 +52,8 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
     if LIKELY(oldparams->Gain > GainSilenceThreshold)
     {
-        size_t ldelay{HRTF_HISTORY_LENGTH - oldparams->Delay[0]};
-        size_t rdelay{HRTF_HISTORY_LENGTH - oldparams->Delay[1]};
+        size_t ldelay{HrtfHistoryLength - oldparams->Delay[0]};
+        size_t rdelay{HrtfHistoryLength - oldparams->Delay[1]};
         auto stepcount = static_cast<float>(BufferSize);
         for(size_t i{0u};i < BufferSize;++i)
         {
@@ -68,8 +68,8 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
     if LIKELY(newGainStep*static_cast<float>(BufferSize) > GainSilenceThreshold)
     {
-        size_t ldelay{HRTF_HISTORY_LENGTH+1 - newparams->Delay[0]};
-        size_t rdelay{HRTF_HISTORY_LENGTH+1 - newparams->Delay[1]};
+        size_t ldelay{HrtfHistoryLength+1 - newparams->Delay[0]};
+        size_t rdelay{HrtfHistoryLength+1 - newparams->Delay[1]};
         float stepcount{1.0f};
         for(size_t i{1u};i < BufferSize;++i)
         {
@@ -95,8 +95,8 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
      */
     for(size_t i{0};i < BufferSize;++i)
     {
-        AccumSamples[HRTF_DIRECT_DELAY+i][0] += LeftOut[i];
-        AccumSamples[HRTF_DIRECT_DELAY+i][1] += RightOut[i];
+        AccumSamples[HrtfDirectDelay+i][0] += LeftOut[i];
+        AccumSamples[HrtfDirectDelay+i][1] += RightOut[i];
     }
 
     for(const FloatBufferLine &input : InSamples)
@@ -111,7 +111,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
          * padding. The delay serves to reduce the error caused by the IIR
          * filter's phase shift on a partial input.
          */
-        al::span<float> tempbuf{al::assume_aligned<16>(TempBuf), HRTF_DIRECT_DELAY+BufferSize};
+        al::span<float> tempbuf{al::assume_aligned<16>(TempBuf), HrtfDirectDelay+BufferSize};
         auto tmpiter = std::reverse_copy(input.begin(), input.begin()+BufferSize, tempbuf.begin());
         std::copy(ChanState->mDelay.cbegin(), ChanState->mDelay.cend(), tmpiter);
 
@@ -123,7 +123,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
          * phase shift (+n degrees becomes -n degrees).
          */
         ChanState->mSplitter.applyAllpass(tempbuf);
-        tempbuf = tempbuf.subspan<HRTF_DIRECT_DELAY>();
+        tempbuf = tempbuf.subspan<HrtfDirectDelay>();
         std::reverse(tempbuf.begin(), tempbuf.end());
 
         /* Now apply the HF scale with the band-splitter. This applies the
@@ -151,7 +151,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
     /* Copy the new in-progress accumulation values to the front and clear the
      * following samples for the next mix.
      */
-    auto accum_iter = std::copy_n(AccumSamples+BufferSize, HRIR_LENGTH+HRTF_DIRECT_DELAY,
+    auto accum_iter = std::copy_n(AccumSamples+BufferSize, HrirLength+HrtfDirectDelay,
         AccumSamples);
     std::fill_n(accum_iter, BufferSize, float2{});
 }

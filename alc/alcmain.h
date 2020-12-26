@@ -257,12 +257,12 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     alignas(16) float ResampledData[BufferLineSize];
     alignas(16) float FilteredData[BufferLineSize];
     union {
-        alignas(16) float HrtfSourceData[BufferLineSize + HRTF_HISTORY_LENGTH];
+        alignas(16) float HrtfSourceData[BufferLineSize + HrtfHistoryLength];
         alignas(16) float NfcSampleData[BufferLineSize];
     };
 
     /* Persistent storage for HRTF mixing. */
-    alignas(16) float2 HrtfAccumData[BufferLineSize + HRIR_LENGTH + HRTF_DIRECT_DELAY];
+    alignas(16) float2 HrtfAccumData[BufferLineSize + HrirLength + HrtfDirectDelay];
 
     /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<FloatBufferLine, 16> MixBuffer;

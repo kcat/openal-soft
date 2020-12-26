@@ -54,7 +54,7 @@ struct DirectParams {
     struct {
         HrtfFilter Old;
         HrtfFilter Target;
-        alignas(16) std::array<float,HRTF_HISTORY_LENGTH> History;
+        alignas(16) std::array<float,HrtfHistoryLength> History;
     } Hrtf;
 
     struct {

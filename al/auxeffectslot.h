@@ -34,7 +34,7 @@ struct ALeffectslot {
     ALbuffer *Buffer{nullptr};
 
     struct {
-        ALenum Type{AL_EFFECT_NULL};
+        EffectSlotType Type{EffectSlotType::None};
         EffectProps Props{};
 
         al::intrusive_ptr<EffectState> State;

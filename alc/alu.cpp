@@ -433,7 +433,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ALCcontex
     slot->Target = props->Target;
     slot->EffectType = props->Type;
     slot->mEffectProps = props->Props;
-    if(props->Type == AL_EFFECT_REVERB || props->Type == AL_EFFECT_EAXREVERB)
+    if(props->Type == EffectSlotType::Reverb || props->Type == EffectSlotType::EAXReverb)
     {
         slot->RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
         slot->DecayTime = props->Props.Reverb.DecayTime;
@@ -1205,7 +1205,7 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
     for(uint i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
-        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
         {
             SendSlots[i] = nullptr;
             voice->mSend[i].Buffer = {};
@@ -1255,7 +1255,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
     for(uint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
-        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
         {
             SendSlots[i] = nullptr;
             RoomRolloff[i] = 0.0f;

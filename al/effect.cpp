@@ -82,30 +82,29 @@ effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCo
 
 namespace {
 
-struct FactoryItem {
+struct EffectPropsItem {
     ALenum Type;
-    EffectStateFactory* (&GetFactory)(void);
     const EffectProps &DefaultProps;
     const EffectVtable &Vtable;
 };
-constexpr FactoryItem FactoryList[] = {
-    { AL_EFFECT_NULL, NullStateFactory_getFactory, NullEffectProps, NullEffectVtable },
-    { AL_EFFECT_EAXREVERB, ReverbStateFactory_getFactory, ReverbEffectProps, ReverbEffectVtable },
-    { AL_EFFECT_REVERB, StdReverbStateFactory_getFactory, StdReverbEffectProps, StdReverbEffectVtable },
-    { AL_EFFECT_AUTOWAH, AutowahStateFactory_getFactory, AutowahEffectProps, AutowahEffectVtable },
-    { AL_EFFECT_CHORUS, ChorusStateFactory_getFactory, ChorusEffectProps, ChorusEffectVtable },
-    { AL_EFFECT_COMPRESSOR, CompressorStateFactory_getFactory, CompressorEffectProps, CompressorEffectVtable },
-    { AL_EFFECT_DISTORTION, DistortionStateFactory_getFactory, DistortionEffectProps, DistortionEffectVtable },
-    { AL_EFFECT_ECHO, EchoStateFactory_getFactory, EchoEffectProps, EchoEffectVtable },
-    { AL_EFFECT_EQUALIZER, EqualizerStateFactory_getFactory, EqualizerEffectProps, EqualizerEffectVtable },
-    { AL_EFFECT_FLANGER, FlangerStateFactory_getFactory, FlangerEffectProps, FlangerEffectVtable },
-    { AL_EFFECT_FREQUENCY_SHIFTER, FshifterStateFactory_getFactory, FshifterEffectProps, FshifterEffectVtable },
-    { AL_EFFECT_RING_MODULATOR, ModulatorStateFactory_getFactory, ModulatorEffectProps, ModulatorEffectVtable },
-    { AL_EFFECT_PITCH_SHIFTER, PshifterStateFactory_getFactory, PshifterEffectProps, PshifterEffectVtable },
-    { AL_EFFECT_VOCAL_MORPHER, VmorpherStateFactory_getFactory, VmorpherEffectProps, VmorpherEffectVtable },
-    { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedStateFactory_getFactory, DedicatedEffectProps, DedicatedEffectVtable },
-    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory, DedicatedEffectProps, DedicatedEffectVtable },
-    { AL_EFFECT_CONVOLUTION_REVERB_SOFT, ConvolutionStateFactory_getFactory, ConvolutionEffectProps, ConvolutionEffectVtable },
+constexpr EffectPropsItem EffectPropsList[] = {
+    { AL_EFFECT_NULL, NullEffectProps, NullEffectVtable },
+    { AL_EFFECT_EAXREVERB, ReverbEffectProps, ReverbEffectVtable },
+    { AL_EFFECT_REVERB, StdReverbEffectProps, StdReverbEffectVtable },
+    { AL_EFFECT_AUTOWAH, AutowahEffectProps, AutowahEffectVtable },
+    { AL_EFFECT_CHORUS, ChorusEffectProps, ChorusEffectVtable },
+    { AL_EFFECT_COMPRESSOR, CompressorEffectProps, CompressorEffectVtable },
+    { AL_EFFECT_DISTORTION, DistortionEffectProps, DistortionEffectVtable },
+    { AL_EFFECT_ECHO, EchoEffectProps, EchoEffectVtable },
+    { AL_EFFECT_EQUALIZER, EqualizerEffectProps, EqualizerEffectVtable },
+    { AL_EFFECT_FLANGER, FlangerEffectProps, FlangerEffectVtable },
+    { AL_EFFECT_FREQUENCY_SHIFTER, FshifterEffectProps, FshifterEffectVtable },
+    { AL_EFFECT_RING_MODULATOR, ModulatorEffectProps, ModulatorEffectVtable },
+    { AL_EFFECT_PITCH_SHIFTER, PshifterEffectProps, PshifterEffectVtable },
+    { AL_EFFECT_VOCAL_MORPHER, VmorpherEffectProps, VmorpherEffectVtable },
+    { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedEffectProps, DedicatedEffectVtable },
+    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedEffectProps, DedicatedEffectVtable },
+    { AL_EFFECT_CONVOLUTION_REVERB_SOFT, ConvolutionEffectProps, ConvolutionEffectVtable },
 };
 
 
@@ -128,17 +127,17 @@ void ALeffect_getParamfv(const ALeffect *effect, ALenum param, float *values)
 { effect->vtab->getParamfv(&effect->Props, param, values); }
 
 
-const FactoryItem *getFactoryItemByType(ALenum type)
+const EffectPropsItem *getEffectPropsItemByType(ALenum type)
 {
-    auto iter = std::find_if(std::begin(FactoryList), std::end(FactoryList),
-        [type](const FactoryItem &item) noexcept -> bool
+    auto iter = std::find_if(std::begin(EffectPropsList), std::end(EffectPropsList),
+        [type](const EffectPropsItem &item) noexcept -> bool
         { return item.Type == type; });
-    return (iter != std::end(FactoryList)) ? std::addressof(*iter) : nullptr;
+    return (iter != std::end(EffectPropsList)) ? std::addressof(*iter) : nullptr;
 }
 
 void InitEffectParams(ALeffect *effect, ALenum type)
 {
-    const FactoryItem *item{getFactoryItemByType(type)};
+    const EffectPropsItem *item{getEffectPropsItemByType(type)};
     if(item)
     {
         effect->Props = item->DefaultProps;
@@ -551,16 +550,6 @@ EffectSubList::~EffectSubList()
     FreeMask = ~usemask;
     al_free(Effects);
     Effects = nullptr;
-}
-
-
-EffectStateFactory *getFactoryByType(ALenum type)
-{
-    auto iter = std::find_if(std::begin(FactoryList), std::end(FactoryList),
-        [type](const FactoryItem &item) noexcept -> bool
-        { return item.Type == type; }
-    );
-    return (iter != std::end(FactoryList)) ? iter->GetFactory() : nullptr;
 }
 
 

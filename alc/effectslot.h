@@ -14,12 +14,32 @@ struct EffectSlot;
 using EffectSlotArray = al::FlexArray<EffectSlot*>;
 
 
+enum class EffectSlotType : unsigned char {
+    None,
+    Reverb,
+    Chorus,
+    Distortion,
+    Echo,
+    Flanger,
+    FrequencyShifter,
+    VocalMorpher,
+    PitchShifter,
+    RingModulator,
+    Autowah,
+    Compressor,
+    Equalizer,
+    EAXReverb,
+    DedicatedLFE,
+    DedicatedDialog,
+    Convolution
+};
+
 struct EffectSlotProps {
     float Gain;
     bool  AuxSendAuto;
     EffectSlot *Target;
 
-    ALenum Type;
+    EffectSlotType Type;
     EffectProps Props;
 
     al::intrusive_ptr<EffectState> State;
@@ -44,7 +64,7 @@ struct EffectSlot {
     bool  AuxSendAuto{true};
     EffectSlot *Target{nullptr};
 
-    ALenum EffectType{};
+    EffectSlotType EffectType{EffectSlotType::None};
     EffectProps mEffectProps{};
     EffectState *mEffectState{nullptr};
 

@@ -53,8 +53,6 @@ struct ALeffect {
     DISABLE_ALLOC()
 };
 
-EffectStateFactory *getFactoryByType(ALenum type);
-
 void InitEffect(ALeffect *effect);
 
 void LoadReverbPreset(const char *name, ALeffect *effect);

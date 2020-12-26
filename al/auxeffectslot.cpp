@@ -51,6 +51,39 @@
 
 namespace {
 
+struct FactoryItem {
+    EffectSlotType Type;
+    EffectStateFactory* (&GetFactory)(void);
+};
+constexpr FactoryItem FactoryList[] = {
+    { EffectSlotType::None, NullStateFactory_getFactory },
+    { EffectSlotType::EAXReverb, ReverbStateFactory_getFactory },
+    { EffectSlotType::Reverb, StdReverbStateFactory_getFactory },
+    { EffectSlotType::Autowah, AutowahStateFactory_getFactory },
+    { EffectSlotType::Chorus, ChorusStateFactory_getFactory },
+    { EffectSlotType::Compressor, CompressorStateFactory_getFactory },
+    { EffectSlotType::Distortion, DistortionStateFactory_getFactory },
+    { EffectSlotType::Echo, EchoStateFactory_getFactory },
+    { EffectSlotType::Equalizer, EqualizerStateFactory_getFactory },
+    { EffectSlotType::Flanger, FlangerStateFactory_getFactory },
+    { EffectSlotType::FrequencyShifter, FshifterStateFactory_getFactory },
+    { EffectSlotType::RingModulator, ModulatorStateFactory_getFactory },
+    { EffectSlotType::PitchShifter, PshifterStateFactory_getFactory },
+    { EffectSlotType::VocalMorpher, VmorpherStateFactory_getFactory },
+    { EffectSlotType::DedicatedDialog, DedicatedStateFactory_getFactory },
+    { EffectSlotType::DedicatedLFE, DedicatedStateFactory_getFactory },
+    { EffectSlotType::Convolution, ConvolutionStateFactory_getFactory },
+};
+
+EffectStateFactory *getFactoryByType(EffectSlotType type)
+{
+    auto iter = std::find_if(std::begin(FactoryList), std::end(FactoryList),
+        [type](const FactoryItem &item) noexcept -> bool
+        { return item.Type == type; });
+    return (iter != std::end(FactoryList)) ? iter->GetFactory() : nullptr;
+}
+
+
 inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 {
     const size_t lidx{(id-1) >> 6};
@@ -174,6 +207,32 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
     delete curarray;
 }
 
+
+constexpr EffectSlotType EffectSlotTypeFromEnum(ALenum type)
+{
+    switch(type)
+    {
+    case AL_EFFECT_NULL: return EffectSlotType::None;
+    case AL_EFFECT_REVERB: return EffectSlotType::Reverb;
+    case AL_EFFECT_CHORUS: return EffectSlotType::Chorus;
+    case AL_EFFECT_DISTORTION: return EffectSlotType::Distortion;
+    case AL_EFFECT_ECHO: return EffectSlotType::Echo;
+    case AL_EFFECT_FLANGER: return EffectSlotType::Flanger;
+    case AL_EFFECT_FREQUENCY_SHIFTER: return EffectSlotType::FrequencyShifter;
+    case AL_EFFECT_VOCAL_MORPHER: return EffectSlotType::VocalMorpher;
+    case AL_EFFECT_PITCH_SHIFTER: return EffectSlotType::PitchShifter;
+    case AL_EFFECT_RING_MODULATOR: return EffectSlotType::RingModulator;
+    case AL_EFFECT_AUTOWAH: return EffectSlotType::Autowah;
+    case AL_EFFECT_COMPRESSOR: return EffectSlotType::Compressor;
+    case AL_EFFECT_EQUALIZER: return EffectSlotType::Equalizer;
+    case AL_EFFECT_EAXREVERB: return EffectSlotType::EAXReverb;
+    case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT: return EffectSlotType::DedicatedLFE;
+    case AL_EFFECT_DEDICATED_DIALOGUE: return EffectSlotType::DedicatedDialog;
+    case AL_EFFECT_CONVOLUTION_REVERB_SOFT: return EffectSlotType::Convolution;
+    }
+    ERR("Unhandled effect enum: 0x%04x\n", type);
+    return EffectSlotType::None;
+}
 
 bool EnsureEffectSlots(ALCcontext *context, size_t needed)
 {
@@ -859,13 +918,13 @@ ALenum ALeffectslot::init()
 
 ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
 {
-    ALenum newtype{effect ? effect->type : AL_EFFECT_NULL};
+    EffectSlotType newtype{EffectSlotTypeFromEnum(effect ? effect->type : AL_EFFECT_NULL)};
     if(newtype != Effect.Type)
     {
         EffectStateFactory *factory{getFactoryByType(newtype)};
         if(!factory)
         {
-            ERR("Failed to find factory for effect type 0x%04x\n", newtype);
+            ERR("Failed to find factory for effect slot type %d\n", static_cast<int>(newtype));
             return AL_INVALID_ENUM;
         }
         al::intrusive_ptr<EffectState> State{factory->create()};
@@ -881,16 +940,11 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
                 State->setBuffer(Device, Buffer);
         }
 
+        Effect.Type = newtype;
         if(!effect)
-        {
-            Effect.Type = AL_EFFECT_NULL;
             Effect.Props = EffectProps{};
-        }
         else
-        {
-            Effect.Type = effect->type;
             Effect.Props = effect->Props;
-        }
 
         Effect.State = std::move(State);
     }

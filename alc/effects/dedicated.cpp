@@ -58,7 +58,7 @@ void DedicatedState::update(const ALCcontext*, const EffectSlot *slot,
 
     const float Gain{slot->Gain * props->Dedicated.Gain};
 
-    if(slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    if(slot->EffectType == EffectSlotType::DedicatedLFE)
     {
         const uint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
             GetChannelIdxByName(*target.RealOut, LFE)};
@@ -68,7 +68,7 @@ void DedicatedState::update(const ALCcontext*, const EffectSlot *slot,
             mTargetGains[idx] = Gain;
         }
     }
-    else if(slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
+    else if(slot->EffectType == EffectSlotType::DedicatedDialog)
     {
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */

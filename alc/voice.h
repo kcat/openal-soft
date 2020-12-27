@@ -19,7 +19,7 @@
 
 struct ALCcontext;
 struct EffectSlot;
-enum class DistanceModel;
+enum class DistanceModel : unsigned char;
 
 using uint = unsigned int;
 

@@ -53,14 +53,14 @@ using uint = unsigned int;
 #define DEFAULT_NUM_UPDATES  3
 
 
-enum class DeviceType {
+enum class DeviceType : unsigned char {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum class RenderMode {
+enum class RenderMode : unsigned char {
     Normal,
     Pairwise,
     Hrtf

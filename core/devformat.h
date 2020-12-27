@@ -6,7 +6,7 @@
 
 using uint = unsigned int;
 
-enum Channel {
+enum Channel : unsigned char {
     FrontLeft = 0,
     FrontRight,
     FrontCenter,

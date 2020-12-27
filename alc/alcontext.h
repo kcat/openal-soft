@@ -33,7 +33,7 @@ struct RingBuffer;
 struct VoiceChange;
 
 
-enum class DistanceModel {
+enum class DistanceModel : unsigned char {
     Disable,
     Inverse, InverseClamped,
     Linear, LinearClamped,

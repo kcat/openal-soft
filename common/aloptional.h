@@ -45,27 +45,11 @@ public:
     explicit optional(in_place_t, Args&& ...args) : mHasValue{true}
       , mValue{std::forward<Args>(args)...}
     { }
-    template<typename U, typename... Args, REQUIRES(std::is_constructible<T, std::initializer_list<U>&, Args...>::value)>
-    explicit optional(in_place_t, std::initializer_list<U> il, Args&& ...args)
-      : mHasValue{true}, mValue{il, std::forward<Args>(args)...}
-    { }
-    template<typename U=value_type, REQUIRES(std::is_constructible<T, U&&>::value &&
-        !std::is_same<typename std::decay<U>::type, in_place_t>::value &&
-        !std::is_same<typename std::decay<U>::type, optional<T>>::value &&
-        std::is_constructible<U&&, T>::value)>
-    constexpr explicit optional(U&& value) : mHasValue{true}, mValue{std::forward<U>(value)}
-    { }
-    template<typename U=value_type, REQUIRES(std::is_constructible<T, U&&>::value &&
-        !std::is_same<typename std::decay<U>::type, in_place_t>::value &&
-        !std::is_same<typename std::decay<U>::type, optional<T>>::value &&
-        !std::is_constructible<U&&, T>::value)>
-    constexpr optional(U&& value) : mHasValue{true}, mValue{std::forward<U>(value)}
-    { }
     ~optional() { if(mHasValue) al::destroy_at(std::addressof(mValue)); }
 
     optional& operator=(nullopt_t) noexcept { reset(); return *this; }
-    template<REQUIRES(std::is_copy_constructible<T>::value && std::is_copy_assignable<T>::value)>
-    optional& operator=(const optional &rhs)
+    std::enable_if_t<std::is_copy_constructible<T>::value && std::is_copy_assignable<T>::value,
+    optional&> operator=(const optional &rhs)
     {
         if(!rhs)
             reset();
@@ -75,8 +59,8 @@ public:
             DoConstruct(*rhs);
         return *this;
     }
-    template<REQUIRES(std::is_move_constructible<T>::value && std::is_move_assignable<T>::value)>
-    optional& operator=(optional&& rhs)
+    std::enable_if_t<std::is_move_constructible<T>::value && std::is_move_assignable<T>::value,
+    optional&> operator=(optional&& rhs)
     {
         if(!rhs)
             reset();
@@ -86,12 +70,13 @@ public:
             DoConstruct(std::move(*rhs));
         return *this;
     }
-    template<typename U=T, REQUIRES(std::is_constructible<T, U>::value &&
+    template<typename U=T>
+    std::enable_if_t<std::is_constructible<T, U>::value &&
         std::is_assignable<T&, U>::value &&
         !std::is_same<typename std::decay<U>::type, optional<T>>::value &&
         (!std::is_same<typename std::decay<U>::type, T>::value ||
-        !std::is_scalar<U>::value))>
-    optional& operator=(U&& rhs)
+        !std::is_scalar<U>::value),
+    optional&> operator=(U&& rhs)
     {
         if(*this)
             mValue = std::forward<U>(rhs);

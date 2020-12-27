@@ -46,7 +46,8 @@ namespace al {
 al::optional<std::string> getenv(const char *envname)
 {
     const char *str{std::getenv(envname)};
-    if(str && str[0] != '\0') return str;
+    if(str && str[0] != '\0')
+        return al::make_optional<std::string>(str);
     return al::nullopt;
 }
 
@@ -54,7 +55,8 @@ al::optional<std::string> getenv(const char *envname)
 al::optional<std::wstring> getenv(const WCHAR *envname)
 {
     const WCHAR *str{_wgetenv(envname)};
-    if(str && str[0] != L'\0') return str;
+    if(str && str[0] != L'\0')
+        return al::make_optional<std::wstring>(str);
     return al::nullopt;
 }
 #endif

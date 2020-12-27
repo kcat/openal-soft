@@ -194,46 +194,22 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     DevFmtType FmtType{};
     bool IsHeadphones{false};
     uint mAmbiOrder{0};
+    float mXOverFreq{400.0f};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
     DevAmbiLayout mAmbiLayout{DevAmbiLayout::Default};
     DevAmbiScaling mAmbiScale{DevAmbiScaling::Default};
-    float mXOverFreq{400.0f};
-
-    ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 
     std::string DeviceName;
 
     // Device flags
     al::bitfield<DeviceFlagsCount> Flags{};
 
-    std::string HrtfName;
-    al::vector<std::string> HrtfList;
-    ALCenum HrtfStatus{ALC_FALSE};
-
-    std::atomic<ALCenum> LastError{ALC_NO_ERROR};
-
     // Maximum number of sources that can be created
     uint SourcesMax{};
     // Maximum number of slots that can be created
     uint AuxiliaryEffectSlotMax{};
-
-    ALCuint NumMonoSources{};
-    ALCuint NumStereoSources{};
-    ALCuint NumAuxSends{};
-
-    // Map of Buffers for this device
-    std::mutex BufferLock;
-    al::vector<BufferSubList> BufferList;
-
-    // Map of Effects for this device
-    std::mutex EffectLock;
-    al::vector<EffectSubList> EffectList;
-
-    // Map of Filters for this device
-    std::mutex FilterLock;
-    al::vector<FilterSubList> FilterList;
 
     /* Rendering mode. */
     RenderMode mRenderMode{RenderMode::Normal};
@@ -313,6 +289,31 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
      */
     std::mutex StateLock;
     std::unique_ptr<BackendBase> Backend;
+
+
+    ALCuint NumMonoSources{};
+    ALCuint NumStereoSources{};
+    ALCuint NumAuxSends{};
+
+    std::string HrtfName;
+    al::vector<std::string> HrtfList;
+    ALCenum HrtfStatus{ALC_FALSE};
+
+    ALCenum LimiterState{ALC_DONT_CARE_SOFT};
+
+    std::atomic<ALCenum> LastError{ALC_NO_ERROR};
+
+    // Map of Buffers for this device
+    std::mutex BufferLock;
+    al::vector<BufferSubList> BufferList;
+
+    // Map of Effects for this device
+    std::mutex EffectLock;
+    al::vector<EffectSubList> EffectList;
+
+    // Map of Filters for this device
+    std::mutex FilterLock;
+    al::vector<FilterSubList> FilterList;
 
 
     ALCdevice(DeviceType type);

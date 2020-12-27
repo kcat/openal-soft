@@ -1888,7 +1888,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->PostProcess = nullptr;
 
     device->Limiter = nullptr;
-    device->ChannelDelay.clear();
+    device->ChannelDelays = nullptr;
 
     std::fill(std::begin(device->HrtfAccumData), std::end(device->HrtfAccumData), float2{});
 

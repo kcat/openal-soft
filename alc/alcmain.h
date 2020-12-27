@@ -124,31 +124,25 @@ struct FilterSubList {
 /* Maximum delay in samples for speaker distance compensation. */
 #define MAX_DELAY_LENGTH 1024
 
-class DistanceComp {
-public:
-    struct DistData {
+struct DistanceComp {
+    struct ChanData {
         float Gain{1.0f};
         uint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
         float *Buffer{nullptr};
     };
 
-private:
-    using FloatArray = al::FlexArray<float,16>;
-    std::array<DistData,MAX_OUTPUT_CHANNELS> mChannels;
-    std::unique_ptr<FloatArray> mSamples;
+    std::array<ChanData,MAX_OUTPUT_CHANNELS> mChannels;
+    al::FlexArray<float,16> mSamples;
 
-public:
-    void setSampleCount(size_t new_size)
-    { mSamples = FloatArray::Create(new_size); }
-    void clear() noexcept
+    DistanceComp(size_t count) : mSamples{count} { }
+
+    static std::unique_ptr<DistanceComp> Create(size_t numsamples)
     {
-        mChannels.fill(DistData{});
-        mSamples = nullptr;
+        return std::unique_ptr<DistanceComp>{
+            new(FamCount(numsamples)) DistanceComp{numsamples}};
     }
 
-    float *getSamples() noexcept { return mSamples->data(); }
-
-    al::span<DistData,MAX_OUTPUT_CHANNELS> as_span() { return mChannels; }
+    DEF_FAM_NEWDEL(DistanceComp, mSamples);
 };
 
 
@@ -297,7 +291,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::unique_ptr<Compressor> Limiter;
 
     /* Delay buffers used to compensate for speaker distances. */
-    DistanceComp ChannelDelay;
+    std::unique_ptr<DistanceComp> ChannelDelays;
 
     /* Dithering control. */
     float DitherDepth{0.0f};

@@ -1795,7 +1795,7 @@ void ProcessContexts(ALCdevice *device, const uint SamplesToDo)
 
 
 void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t SamplesToDo,
-    const DistanceComp::DistData *distcomp)
+    const DistanceComp::ChanData *distcomp)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -1940,7 +1940,8 @@ void ALCdevice::renderSamples(void *outBuffer, const uint numSamples, const size
         if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer.data());
 
         /* Apply delays and attenuation for mismatched speaker distances. */
-        ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelay.as_span().cbegin());
+        if(ChannelDelays)
+            ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelays->mChannels.data());
 
         /* Apply dithering. The compressor should have left enough headroom for
          * the dither noise to not saturate.

@@ -130,27 +130,7 @@ struct EffectSlotSubList {
 };
 
 struct ALCcontext : public al::intrusive_ref<ALCcontext> {
-    al::vector<SourceSubList> mSourceList;
-    ALuint mNumSources{0};
-    std::mutex mSourceLock;
-
-    al::vector<EffectSlotSubList> mEffectSlotList;
-    ALuint mNumEffectSlots{0u};
-    std::mutex mEffectSlotLock;
-
-    std::atomic<ALenum> mLastError{AL_NO_ERROR};
-
-    DistanceModel mDistanceModel{DistanceModel::Default};
-    bool mSourceDistanceModel{false};
-
-    float mDopplerFactor{1.0f};
-    float mDopplerVelocity{1.0f};
-    float mSpeedOfSound{SpeedOfSoundMetersPerSec};
-
-    std::atomic_flag mPropsClean;
-    std::atomic<bool> mDeferUpdates{false};
-
-    std::mutex mPropLock;
+    const al::intrusive_ptr<ALCdevice> mDevice;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
@@ -168,14 +148,6 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::atomic<VoicePropsItem*> mFreeVoiceProps{nullptr};
     std::atomic<EffectSlotProps*> mFreeEffectslotProps{nullptr};
 
-    /* Asynchronous voice change actions are processed as a linked list of
-     * VoiceChange objects by the mixer, which is atomically appended to.
-     * However, to avoid allocating each object individually, they're allocated
-     * in clusters that are stored in a vector for easy automatic cleanup.
-     */
-    using VoiceChangeCluster = std::unique_ptr<VoiceChange[]>;
-    al::vector<VoiceChangeCluster> mVoiceChangeClusters;
-
     /* The voice change tail is the beginning of the "free" elements, up to and
      * *excluding* the current. If tail==current, there's no free elements and
      * new ones need to be allocated. The current voice change is the element
@@ -187,8 +159,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     void allocVoiceChanges(size_t addcount);
 
 
-    using VoiceCluster = std::unique_ptr<Voice[]>;
-    al::vector<VoiceCluster> mVoiceClusters;
+    ContextParams mParams;
 
     using VoiceArray = al::FlexArray<Voice*>;
     std::atomic<VoiceArray*> mVoices{};
@@ -207,9 +178,6 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     }
 
 
-    /* Wet buffers used by effect slots. */
-    al::vector<WetBufferPtr> mWetBuffers;
-
     using EffectSlotArray = al::FlexArray<EffectSlot*>;
     std::atomic<EffectSlotArray*> mActiveAuxSlots{nullptr};
 
@@ -217,19 +185,54 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     al::semaphore mEventSem;
     std::unique_ptr<RingBuffer> mAsyncEvents;
     std::atomic<uint> mEnabledEvts{0u};
+
+    /* Asynchronous voice change actions are processed as a linked list of
+     * VoiceChange objects by the mixer, which is atomically appended to.
+     * However, to avoid allocating each object individually, they're allocated
+     * in clusters that are stored in a vector for easy automatic cleanup.
+     */
+    using VoiceChangeCluster = std::unique_ptr<VoiceChange[]>;
+    al::vector<VoiceChangeCluster> mVoiceChangeClusters;
+
+    using VoiceCluster = std::unique_ptr<Voice[]>;
+    al::vector<VoiceCluster> mVoiceClusters;
+
+    /* Wet buffers used by effect slots. */
+    al::vector<WetBufferPtr> mWetBuffers;
+
+
+    std::atomic_flag mPropsClean;
+    std::atomic<bool> mDeferUpdates{false};
+
+    std::mutex mPropLock;
+
+    std::atomic<ALenum> mLastError{AL_NO_ERROR};
+
+    DistanceModel mDistanceModel{DistanceModel::Default};
+    bool mSourceDistanceModel{false};
+
+    float mDopplerFactor{1.0f};
+    float mDopplerVelocity{1.0f};
+    float mSpeedOfSound{SpeedOfSoundMetersPerSec};
+
     std::mutex mEventCbLock;
     ALEVENTPROCSOFT mEventCb{};
     void *mEventParam{nullptr};
 
+    ALlistener mListener{};
+
+    al::vector<SourceSubList> mSourceList;
+    ALuint mNumSources{0};
+    std::mutex mSourceLock;
+
+    al::vector<EffectSlotSubList> mEffectSlotList;
+    ALuint mNumEffectSlots{0u};
+    std::mutex mEffectSlotLock;
+
     /* Default effect slot */
     std::unique_ptr<ALeffectslot> mDefaultSlot;
 
-    const al::intrusive_ptr<ALCdevice> mDevice;
     const char *mExtensionList{nullptr};
-
-    ALlistener mListener{};
-
-    ContextParams mParams;
 
 
     ALCcontext(al::intrusive_ptr<ALCdevice> device);

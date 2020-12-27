@@ -1042,7 +1042,7 @@ no_hrtf:
 }
 
 
-void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
+void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
 {
     ALCdevice *device{context->mDevice.get()};
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
@@ -1059,7 +1059,7 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
             if(wetbuffer_iter->get() == slot->mWetBuffer)
             {
                 slot->mWetBuffer = nullptr;
-                slot->mSlot.Wet.Buffer = {};
+                slot->Wet.Buffer = {};
 
                 *wetbuffer_iter = WetBufferPtr{new(FamCount(count)) WetBuffer{count}};
 
@@ -1087,12 +1087,11 @@ void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context)
     wetbuffer->mInUse = true;
 
     auto acnmap_end = AmbiIndex::FromACN.begin() + count;
-    auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end,
-        slot->mSlot.Wet.AmbiMap.begin(),
+    auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; });
-    std::fill(iter, slot->mSlot.Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->mSlot.Wet.Buffer = wetbuffer->mBuffer;
+    std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
+    slot->Wet.Buffer = wetbuffer->mBuffer;
 }
 
 

@@ -13,7 +13,7 @@
 
 struct ALCcontext;
 struct ALCdevice;
-struct ALeffectslot;
+struct EffectSlot;
 struct MixParams;
 
 
@@ -54,7 +54,7 @@ void aluInitMixer(void);
 void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
     HrtfRequestMode hrtf_userreq);
 
-void aluInitEffectPanning(ALeffectslot *slot, ALCcontext *context);
+void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context);
 
 /**
  * Calculates ambisonic encoder coefficients using the X, Y, and Z direction

@@ -51,9 +51,6 @@ struct ALeffectslot {
     /* Self ID */
     ALuint id{};
 
-    /* Mixing buffer used by the Wet mix. */
-    WetBuffer *mWetBuffer{nullptr};
-
     ALeffectslot() { PropsClean.test_and_set(std::memory_order_relaxed); }
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;

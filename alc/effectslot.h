@@ -10,6 +10,7 @@
 
 
 struct EffectSlot;
+struct WetBuffer;
 
 using EffectSlotArray = al::FlexArray<EffectSlot*>;
 
@@ -74,6 +75,11 @@ struct EffectSlot {
     float DecayHFRatio{0.0f};
     bool DecayHFLimit{false};
     float AirAbsorptionGainHF{1.0f};
+
+    /* Mixing buffer used by the Wet mix. */
+    WetBuffer *mWetBuffer{nullptr};
+
+    ~EffectSlot();
 
     static EffectSlotArray *CreatePtrArray(size_t count) noexcept;
 

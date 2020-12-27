@@ -1583,7 +1583,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
     VoiceChange *next{cur->mNext.load(std::memory_order_acquire)};
     if(!next) return;
 
-    const ALbitfieldSOFT enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
+    const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
     do {
         cur = next;
 
@@ -1990,7 +1990,7 @@ void ALCdevice::handleDisconnect(const char *msg, ...)
     IncrementRef(MixCount);
     for(ALCcontext *ctx : *mContexts.load())
     {
-        const ALbitfieldSOFT enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
+        const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))
         {
             RingBuffer *ring{ctx->mAsyncEvents.get()};

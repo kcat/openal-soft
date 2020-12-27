@@ -216,7 +216,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     std::thread mEventThread;
     al::semaphore mEventSem;
     std::unique_ptr<RingBuffer> mAsyncEvents;
-    std::atomic<ALbitfieldSOFT> mEnabledEvts{0u};
+    std::atomic<uint> mEnabledEvts{0u};
     std::mutex mEventCbLock;
     ALEVENTPROCSOFT mEventCb{};
     void *mEventParam{nullptr};

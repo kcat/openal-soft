@@ -63,7 +63,7 @@ static int EventThread(ALCcontext *context)
                 continue;
             }
 
-            ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_acquire)};
+            uint enabledevts{context->mEnabledEvts.load(std::memory_order_acquire)};
             if(!context->mEventCb) continue;
 
             if(evt.EnumType == EventType_SourceStateChange)
@@ -164,7 +164,7 @@ START_API_FUNC
     if(count <= 0) return;
     if(!types) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
 
-    ALbitfieldSOFT flags{0};
+    uint flags{0};
     const ALenum *types_end = types+count;
     auto bad_type = std::find_if_not(types, types_end,
         [&flags](ALenum type) noexcept -> bool
@@ -185,7 +185,7 @@ START_API_FUNC
 
     if(enable)
     {
-        ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
+        uint enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
         while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
             std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {
@@ -196,7 +196,7 @@ START_API_FUNC
     }
     else
     {
-        ALbitfieldSOFT enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
+        uint enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
         while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
             std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {

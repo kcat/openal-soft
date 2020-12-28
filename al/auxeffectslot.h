@@ -51,12 +51,11 @@ struct ALeffectslot {
     /* Self ID */
     ALuint id{};
 
-    ALeffectslot() { PropsClean.test_and_set(std::memory_order_relaxed); }
+    ALeffectslot();
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
 
-    ALenum init();
     ALenum initEffect(ALeffect *effect, ALCcontext *context);
     void updateProps(ALCcontext *context);
 

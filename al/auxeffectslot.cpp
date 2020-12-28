@@ -23,6 +23,7 @@
 #include "auxeffectslot.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -270,18 +271,11 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
 {
     auto sublist = std::find_if(context->mEffectSlotList.begin(), context->mEffectSlotList.end(),
         [](const EffectSlotSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; }
-    );
+        { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
     auto slidx = static_cast<ALuint>(CountTrailingZeros(sublist->FreeMask));
 
-    ALeffectslot *slot{::new (sublist->EffectSlots + slidx) ALeffectslot{}};
-    if(ALenum err{slot->init()})
-    {
-        al::destroy_at(slot);
-        context->setError(err, "Effect slot object initialization failed");
-        return nullptr;
-    }
+    ALeffectslot *slot{::new(sublist->EffectSlots + slidx) ALeffectslot{}};
     aluInitEffectPanning(&slot->mSlot, context);
 
     /* Add 1 to avoid source ID 0. */
@@ -885,6 +879,18 @@ START_API_FUNC
 END_API_FUNC
 
 
+ALeffectslot::ALeffectslot()
+{
+    PropsClean.test_and_set(std::memory_order_relaxed);
+
+    EffectStateFactory *factory{getFactoryByType(EffectSlotType::None)};
+    assert(factory != nullptr);
+
+    al::intrusive_ptr<EffectState> state{factory->create()};
+    Effect.State = state;
+    mSlot.mEffectState = state.release();
+}
+
 ALeffectslot::~ALeffectslot()
 {
     if(Target)
@@ -906,18 +912,6 @@ ALeffectslot::~ALeffectslot()
         mSlot.mEffectState->release();
 }
 
-ALenum ALeffectslot::init()
-{
-    EffectStateFactory *factory{getFactoryByType(Effect.Type)};
-    if(!factory) return AL_INVALID_VALUE;
-
-    Effect.State = factory->create();
-
-    Effect.State->add_ref();
-    mSlot.mEffectState = Effect.State.get();
-    return AL_NO_ERROR;
-}
-
 ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
 {
     EffectSlotType newtype{EffectSlotTypeFromEnum(effect ? effect->type : AL_EFFECT_NULL)};
@@ -929,24 +923,20 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
             ERR("Failed to find factory for effect slot type %d\n", static_cast<int>(newtype));
             return AL_INVALID_ENUM;
         }
-        al::intrusive_ptr<EffectState> State{factory->create()};
-        if(!State) return AL_OUT_OF_MEMORY;
+        al::intrusive_ptr<EffectState> state{factory->create()};
 
-        ALCdevice *Device{context->mDevice.get()};
-        std::unique_lock<std::mutex> statelock{Device->StateLock};
-        State->mOutTarget = Device->Dry.Buffer;
+        ALCdevice *device{context->mDevice.get()};
+        std::unique_lock<std::mutex> statelock{device->StateLock};
+        state->mOutTarget = device->Dry.Buffer;
         {
             FPUCtl mixer_mode{};
-            State->deviceUpdate(Device, Buffer);
+            state->deviceUpdate(device, Buffer);
         }
 
         Effect.Type = newtype;
-        if(!effect)
-            Effect.Props = EffectProps{};
-        else
-            Effect.Props = effect->Props;
+        Effect.Props = effect ? effect->Props : EffectProps{};
 
-        Effect.State = std::move(State);
+        Effect.State = std::move(state);
     }
     else if(effect)
         Effect.Props = effect->Props;

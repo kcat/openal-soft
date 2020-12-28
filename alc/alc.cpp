@@ -2439,14 +2439,8 @@ void ALCcontext::init()
 {
     if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
     {
-        mDefaultSlot = std::unique_ptr<ALeffectslot>{new ALeffectslot{}};
-        if(mDefaultSlot->init() == AL_NO_ERROR)
-            aluInitEffectPanning(&mDefaultSlot->mSlot, this);
-        else
-        {
-            mDefaultSlot = nullptr;
-            ERR("Failed to initialize the default effect slot\n");
-        }
+        mDefaultSlot = std::make_unique<ALeffectslot>();
+        aluInitEffectPanning(&mDefaultSlot->mSlot, this);
     }
 
     EffectSlotArray *auxslots;

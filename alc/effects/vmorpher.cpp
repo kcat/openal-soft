@@ -29,6 +29,8 @@
 #include "alcontext.h"
 #include "alu.h"
 #include "effectslot.h"
+#include "math_defs.h"
+
 
 namespace {
 

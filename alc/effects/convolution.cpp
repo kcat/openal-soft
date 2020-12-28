@@ -20,6 +20,7 @@
 #include "core/logging.h"
 #include "effects/base.h"
 #include "effectslot.h"
+#include "math_defs.h"
 #include "polyphase_resampler.h"
 
 

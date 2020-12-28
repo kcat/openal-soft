@@ -16,6 +16,7 @@
 #include "alu.h"
 #include "math_defs.h"
 #include "vector.h"
+#include "voice.h"
 
 struct ALbuffer;
 struct ALeffectslot;

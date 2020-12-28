@@ -43,6 +43,7 @@
 #include "inprogext.h"
 #include "opthelpers.h"
 #include "strutils.h"
+#include "voice.h"
 
 
 namespace {

@@ -23,14 +23,15 @@
 #include "threads.h"
 #include "vecmat.h"
 #include "vector.h"
-#include "voice.h"
 
 struct ALeffectslot;
 struct ALsource;
 struct EffectSlot;
 struct EffectSlotProps;
 struct RingBuffer;
+struct Voice;
 struct VoiceChange;
+struct VoicePropsItem;
 
 
 enum class DistanceModel : unsigned char {

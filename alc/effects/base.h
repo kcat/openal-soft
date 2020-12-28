@@ -180,7 +180,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 struct EffectStateFactory {
     virtual ~EffectStateFactory() = default;
 
-    virtual EffectState *create() = 0;
+    virtual al::intrusive_ptr<EffectState> create() = 0;
 };
 
 

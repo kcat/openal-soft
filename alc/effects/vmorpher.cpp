@@ -301,7 +301,8 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
 
 
 struct VmorpherStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new VmorpherState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new VmorpherState{}}; }
 };
 
 } // namespace

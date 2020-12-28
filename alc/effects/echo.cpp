@@ -155,7 +155,8 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
 
 
 struct EchoStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new EchoState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new EchoState{}}; }
 };
 
 } // namespace

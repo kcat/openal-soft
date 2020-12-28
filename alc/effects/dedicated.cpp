@@ -97,7 +97,8 @@ void DedicatedState::process(const size_t samplesToDo, const al::span<const Floa
 
 
 struct DedicatedStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new DedicatedState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new DedicatedState{}}; }
 };
 
 } // namespace

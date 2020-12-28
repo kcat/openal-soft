@@ -63,12 +63,12 @@ void NullState::process(const size_t/*samplesToDo*/,
 
 
 struct NullStateFactory final : public EffectStateFactory {
-    EffectState *create() override;
+    al::intrusive_ptr<EffectState> create() override;
 };
 
 /* Creates EffectState objects of the appropriate type. */
-EffectState *NullStateFactory::create()
-{ return new NullState{}; }
+al::intrusive_ptr<EffectState> NullStateFactory::create()
+{ return al::intrusive_ptr<EffectState>{new NullState{}}; }
 
 } // namespace
 

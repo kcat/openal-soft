@@ -160,7 +160,8 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
 
 
 struct ModulatorStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ModulatorState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new ModulatorState{}}; }
 };
 
 } // namespace

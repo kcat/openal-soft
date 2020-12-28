@@ -154,7 +154,8 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
 
 
 struct DistortionStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new DistortionState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new DistortionState{}}; }
 };
 
 } // namespace

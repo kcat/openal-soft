@@ -539,7 +539,8 @@ void ConvolutionState::process(const size_t samplesToDo,
 
 
 struct ConvolutionStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ConvolutionState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new ConvolutionState{}}; }
 };
 
 } // namespace

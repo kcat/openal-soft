@@ -155,7 +155,8 @@ void CompressorState::process(const size_t samplesToDo,
 
 
 struct CompressorStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new CompressorState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new CompressorState{}}; }
 };
 
 } // namespace

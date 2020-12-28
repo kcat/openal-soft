@@ -171,7 +171,8 @@ void EqualizerState::process(const size_t samplesToDo, const al::span<const Floa
 
 
 struct EqualizerStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new EqualizerState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new EqualizerState{}}; }
 };
 
 } // namespace

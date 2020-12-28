@@ -1680,11 +1680,13 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
 
 
 struct ReverbStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ReverbState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new ReverbState{}}; }
 };
 
 struct StdReverbStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ReverbState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new ReverbState{}}; }
 };
 
 } // namespace

@@ -259,7 +259,8 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 
 
 struct ChorusStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ChorusState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new ChorusState{}}; }
 };
 
 
@@ -267,7 +268,8 @@ struct ChorusStateFactory final : public EffectStateFactory {
  * the same processing functions, so piggyback flanger on the chorus functions.
  */
 struct FlangerStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new ChorusState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new ChorusState{}}; }
 };
 
 } // namespace

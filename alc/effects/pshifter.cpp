@@ -247,7 +247,8 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
 
 
 struct PshifterStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new PshifterState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new PshifterState{}}; }
 };
 
 } // namespace

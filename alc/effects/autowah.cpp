@@ -199,7 +199,8 @@ void AutowahState::process(const size_t samplesToDo,
 
 
 struct AutowahStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new AutowahState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new AutowahState{}}; }
 };
 
 } // namespace

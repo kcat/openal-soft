@@ -911,8 +911,7 @@ ALenum ALeffectslot::init()
     EffectStateFactory *factory{getFactoryByType(Effect.Type)};
     if(!factory) return AL_INVALID_VALUE;
 
-    Effect.State.reset(factory->create());
-    if(!Effect.State) return AL_OUT_OF_MEMORY;
+    Effect.State = factory->create();
 
     Effect.State->add_ref();
     mSlot.mEffectState = Effect.State.get();

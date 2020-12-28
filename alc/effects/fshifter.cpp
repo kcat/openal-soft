@@ -219,7 +219,8 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
 
 
 struct FshifterStateFactory final : public EffectStateFactory {
-    EffectState *create() override { return new FshifterState{}; }
+    al::intrusive_ptr<EffectState> create() override
+    { return al::intrusive_ptr<EffectState>{new FshifterState{}}; }
 };
 
 } // namespace

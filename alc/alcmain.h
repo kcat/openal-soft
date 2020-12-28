@@ -139,7 +139,7 @@ struct DistanceComp {
     static std::unique_ptr<DistanceComp> Create(size_t numsamples)
     { return std::unique_ptr<DistanceComp>{new(FamCount(numsamples)) DistanceComp{numsamples}}; }
 
-    DEF_FAM_NEWDEL(DistanceComp, mSamples);
+    DEF_FAM_NEWDEL(DistanceComp, mSamples)
 };
 
 

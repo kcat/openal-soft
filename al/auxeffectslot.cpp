@@ -991,13 +991,19 @@ void ALeffectslot::updateProps(ALCcontext *context)
 void UpdateAllEffectSlotProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
-    EffectSlotArray *slots{context->mActiveAuxSlots.load(std::memory_order_acquire)};
-    for(EffectSlot *slot : *slots)
+    for(auto &sublist : context->mEffectSlotList)
     {
-        ALeffectslot *auxslot{reinterpret_cast<ALeffectslot*>(
-            reinterpret_cast<al::byte*>(slot) - offsetof(ALeffectslot,mSlot))};
-        if(!auxslot->PropsClean.test_and_set(std::memory_order_acq_rel))
-            auxslot->updateProps(context);
+        uint64_t usemask{~sublist.FreeMask};
+        while(usemask)
+        {
+            const int idx{CountTrailingZeros(usemask)};
+            ALeffectslot *slot{sublist.EffectSlots + idx};
+            usemask &= ~(1_u64 << idx);
+
+            if(slot->mState != SlotState::Stopped
+                && slot->PropsClean.test_and_set(std::memory_order_acq_rel))
+                slot->updateProps(context);
+        }
     }
 }
 

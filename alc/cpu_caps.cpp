@@ -131,55 +131,12 @@ al::optional<CPUInfo> GetCPUInfo()
 #ifdef HAVE_NEON
 #ifdef __ARM_NEON
     ret.mCaps |= CPU_CAP_NEON;
-
 #elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
-
     if(IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
         ret.mCaps |= CPU_CAP_NEON;
-
 #else
-
-    al::ifstream file{"/proc/cpuinfo"};
-    if(!file.is_open())
-        return al::nullopt;
-
-    auto getline = [](std::istream &f, std::string &output) -> bool
-    {
-        while(f.good() && f.peek() == '\n')
-            f.ignore();
-        return std::getline(f, output) && !output.empty();
-    };
-    std::string features;
-    while(getline(file, features))
-    {
-        if(features.compare(0, 10, "Features\t:", 10) == 0)
-            break;
-    }
-    file.close();
-
-    size_t extpos{9};
-    while((extpos=features.find("neon", extpos+1)) != std::string::npos)
-    {
-        if(std::isspace(features[extpos-1])
-            && (extpos+4 == features.length() || std::isspace(features[extpos+4])))
-        {
-            ret.mCaps |= CPU_CAP_NEON;
-            break;
-        }
-    }
-    if(!(ret.mCaps&CPU_CAP_NEON))
-    {
-        extpos = 9;
-        while((extpos=features.find("asimd", extpos+1)) != std::string::npos)
-        {
-            if(std::isspace(features[extpos-1])
-                && (extpos+5 == features.length() || std::isspace(features[extpos+5])))
-            {
-                ret.mCaps |= CPU_CAP_NEON;
-                break;
-            }
-        }
-    }
+#warning "Assuming NEON run-time support!"
+    ret.mCaps |= CPU_CAP_NEON;
 #endif
 #endif
 

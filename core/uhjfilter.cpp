@@ -5,6 +5,8 @@
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
+#elif defined(HAVE_NEON)
+#include <arm_neon.h>
 #endif
 
 #include <algorithm>
@@ -120,6 +122,72 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
 
         dst[pos] += _mm_cvtss_f32(r4);
+    }
+
+#elif defined(HAVE_NEON)
+
+    size_t pos{0};
+    if(size_t todo{dst.size()>>1})
+    {
+        /* There doesn't seem to be NEON intrinsics to do this kind of stipple
+         * shuffling, so there's two custom methods for it.
+         */
+        auto shuffle_2020 = [](float32x4_t a, float32x4_t b)
+        {
+            float32x4_t ret{vmovq_n_f32(vgetq_lane_f32(a, 0))};
+            ret = vsetq_lane_f32(vgetq_lane_f32(a, 2), ret, 1);
+            ret = vsetq_lane_f32(vgetq_lane_f32(b, 0), ret, 2);
+            ret = vsetq_lane_f32(vgetq_lane_f32(b, 2), ret, 3);
+            return ret;
+        };
+        auto shuffle_3131 = [](float32x4_t a, float32x4_t b)
+        {
+            float32x4_t ret{vmovq_n_f32(vgetq_lane_f32(a, 1))};
+            ret = vsetq_lane_f32(vgetq_lane_f32(a, 3), ret, 1);
+            ret = vsetq_lane_f32(vgetq_lane_f32(b, 1), ret, 2);
+            ret = vsetq_lane_f32(vgetq_lane_f32(b, 3), ret, 3);
+            return ret;
+        };
+        do {
+            float32x4_t r04{vdupq_n_f32(0.0f)};
+            float32x4_t r14{vdupq_n_f32(0.0f)};
+            for(size_t j{0};j < PShift.Coeffs.size();j+=4)
+            {
+                const float32x4_t coeffs{vld1q_f32(&PShift.Coeffs[j])};
+                const float32x4_t s0{vld1q_f32(&src[j*2])};
+                const float32x4_t s1{vld1q_f32(&src[j*2 + 4])};
+
+                r04 = vmlaq_f32(r04, shuffle_2020(s0, s1), coeffs);
+                r14 = vmlaq_f32(r14, shuffle_3131(s0, s1), coeffs);
+            }
+            r04 = vaddq_f32(r04, vrev64q_f32(r04));
+            dst[pos++] = vget_lane_f32(vadd_f32(vget_low_f32(r04), vget_high_f32(r04)), 0);
+
+            r14 = vaddq_f32(r14, vrev64q_f32(r14));
+            dst[pos++] = vget_lane_f32(vadd_f32(vget_low_f32(r14), vget_high_f32(r14)), 0);
+
+            src += 2;
+        } while(--todo);
+    }
+    if((dst.size()&1))
+    {
+        auto load4 = [](float32_t a, float32_t b, float32_t c, float32_t d)
+        {
+            float32x4_t ret{vmovq_n_f32(a)};
+            ret = vsetq_lane_f32(b, ret, 1);
+            ret = vsetq_lane_f32(c, ret, 2);
+            ret = vsetq_lane_f32(d, ret, 3);
+            return ret;
+        };
+        float32x4_t r4{vdupq_n_f32(0.0f)};
+        for(size_t j{0};j < PShift.Coeffs.size();j+=4)
+        {
+            const float32x4_t coeffs{vld1q_f32(&PShift.Coeffs[j])};
+            const float32x4_t s{load4(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
+            r4 = vmlaq_f32(r4, s, coeffs);
+        }
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
+        dst[pos] = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
     }
 
 #else

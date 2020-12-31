@@ -5,6 +5,8 @@
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
+#elif defined(HAVE_NEON)
+#include <arm_neon.h>
 #endif
 
 #include "alcmain.h"
@@ -122,6 +124,19 @@ void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *REST
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
         output = _mm_cvtss_f32(r4);
+
+        ++src;
+    }
+
+#elif defined(HAVE_NEON)
+
+    for(float &output : dst)
+    {
+        float32x4_t r4{vdupq_n_f32(0.0f)};
+        for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
+            r4 = vmlaq_f32(r4, vld1q_f32(&src[j]), vld1q_f32(&filter[j]));
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
+        output = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
 
         ++src;
     }

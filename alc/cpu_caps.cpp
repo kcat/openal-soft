@@ -22,8 +22,6 @@
 #include <cctype>
 #include <string>
 
-#include "alfstream.h"
-
 
 int CPUCapFlags{0};
 

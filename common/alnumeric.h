@@ -107,28 +107,17 @@ inline size_t RoundUp(size_t value, size_t r) noexcept
  * and PopCount (population count/count 1 bits) methods, for 32- and 64-bit
  * integers. The CountTrailingZeros results are *UNDEFINED* if the value is 0.
  */
-template<typename T>
-inline int PopCount(T val) = delete;
-template<typename T>
-inline int CountTrailingZeros(T val) = delete;
-
 #ifdef __GNUC__
 
 /* Define variations for unsigned (long (long)) int, since we don't know what
  * uint32/64_t are typedef'd to.
  */
-template<>
 inline int PopCount(unsigned long long val) { return __builtin_popcountll(val); }
-template<>
 inline int PopCount(unsigned long val) { return __builtin_popcountl(val); }
-template<>
 inline int PopCount(unsigned int val) { return __builtin_popcount(val); }
 
-template<>
 inline int CountTrailingZeros(unsigned long long val) { return __builtin_ctzll(val); }
-template<>
 inline int CountTrailingZeros(unsigned long val) { return __builtin_ctzl(val); }
-template<>
 inline int CountTrailingZeros(unsigned int val) { return __builtin_ctz(val); }
 
 #else
@@ -140,7 +129,6 @@ inline int CountTrailingZeros(unsigned int val) { return __builtin_ctz(val); }
  * as the ntz2 variant. These likely aren't the most efficient methods, but
  * they're good enough if the GCC built-ins aren't available.
  */
-template<>
 inline int PopCount(uint32_t v)
 {
     v = v - ((v >> 1) & 0x55555555u);
@@ -148,7 +136,6 @@ inline int PopCount(uint32_t v)
     v = (v + (v >> 4)) & 0x0f0f0f0fu;
     return static_cast<int>((v * 0x01010101u) >> 24);
 }
-template<>
 inline int PopCount(uint64_t v)
 {
     v = v - ((v >> 1) & 0x5555555555555555_u64);
@@ -159,14 +146,12 @@ inline int PopCount(uint64_t v)
 
 #if defined(_WIN64)
 
-template<>
 inline int CountTrailingZeros(uint32_t v)
 {
     unsigned long idx = 32;
     _BitScanForward(&idx, v);
     return static_cast<int>(idx);
 }
-template<>
 inline int CountTrailingZeros(uint64_t v)
 {
     unsigned long idx = 64;
@@ -176,14 +161,12 @@ inline int CountTrailingZeros(uint64_t v)
 
 #elif defined(_WIN32)
 
-template<>
 inline int CountTrailingZeros(uint32_t v)
 {
     unsigned long idx = 32;
     _BitScanForward(&idx, v);
     return static_cast<int>(idx);
 }
-template<>
 inline int CountTrailingZeros(uint64_t v)
 {
     unsigned long idx = 64;
@@ -197,10 +180,8 @@ inline int CountTrailingZeros(uint64_t v)
 
 #else
 
-template<>
 inline int CountTrailingZeros(uint32_t value)
 { return PopCount(~value & (value - 1)); }
-template<>
 inline int CountTrailingZeros(uint64_t value)
 { return PopCount(~value & (value - 1)); }
 

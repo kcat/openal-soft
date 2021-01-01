@@ -1,5 +1,5 @@
-#ifndef CPU_CAPS_H
-#define CPU_CAPS_H
+#ifndef CORE_CPU_CAPS_H
+#define CORE_CPU_CAPS_H
 
 #include <string>
 
@@ -23,4 +23,4 @@ struct CPUInfo {
 
 al::optional<CPUInfo> GetCPUInfo();
 
-#endif /* CPU_CAPS_H */
+#endif /* CORE_CPU_CAPS_H */

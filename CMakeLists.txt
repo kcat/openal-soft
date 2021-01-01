@@ -656,6 +656,8 @@ set(CORE_OBJS
     core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
+    core/cpu_caps.cpp
+    core/cpu_caps.h
     core/devformat.cpp
     core/devformat.h
     core/except.cpp
@@ -668,6 +670,8 @@ set(CORE_OBJS
     core/filters/splitter.h
     core/fmt_traits.cpp
     core/fmt_traits.h
+    core/fpu_ctrl.cpp
+    core/fpu_ctrl.h
     core/logging.cpp
     core/logging.h
     core/mastering.cpp
@@ -731,8 +735,6 @@ set(ALC_OBJS
     alc/compat.h
     alc/converter.cpp
     alc/converter.h
-    alc/cpu_caps.cpp
-    alc/cpu_caps.h
     alc/effectslot.cpp
     alc/effectslot.h
     alc/effects/base.h
@@ -750,8 +752,6 @@ set(ALC_OBJS
     alc/effects/pshifter.cpp
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
-    alc/fpu_ctrl.cpp
-    alc/fpu_ctrl.h
     alc/front_stablizer.h
     alc/helpers.cpp
     alc/hrtf.cpp

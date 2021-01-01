@@ -43,9 +43,9 @@
 #include "alu.h"
 #include "buffer.h"
 #include "core/except.h"
+#include "core/fpu_ctrl.h"
 #include "core/logging.h"
 #include "effect.h"
-#include "fpu_ctrl.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 

@@ -13,11 +13,13 @@
 #include "cpu_caps.h"
 
 
-FPUCtl::FPUCtl()
+void FPUCtl::enter() noexcept
 {
+    if(this->in_mode) return;
+
 #if defined(HAVE_SSE_INTRINSICS)
     this->sse_state = _mm_getcsr();
-    unsigned int sseState = this->sse_state;
+    unsigned int sseState{this->sse_state};
     sseState |= 0x8000; /* set flush-to-zero */
     sseState |= 0x0040; /* set denormals-are-zero */
     _mm_setcsr(sseState);
@@ -27,7 +29,7 @@ FPUCtl::FPUCtl()
     if((CPUCapFlags&CPU_CAP_SSE))
     {
         __asm__ __volatile__("stmxcsr %0" : "=m" (*&this->sse_state));
-        unsigned int sseState = this->sse_state;
+        unsigned int sseState{this->sse_state};
         sseState |= 0x8000; /* set flush-to-zero */
         if((CPUCapFlags&CPU_CAP_SSE2))
             sseState |= 0x0040; /* set denormals-are-zero */
@@ -38,7 +40,7 @@ FPUCtl::FPUCtl()
     this->in_mode = true;
 }
 
-void FPUCtl::leave()
+void FPUCtl::leave() noexcept
 {
     if(!this->in_mode) return;
 

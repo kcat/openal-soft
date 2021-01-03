@@ -77,8 +77,8 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Hrir
 } // namespace
 
 template<>
-const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *RESTRICT src,
-    uint frac, uint increment, const al::span<float> dst)
+float *Resample_<BSincTag,SSETag>(const InterpState *state, float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
@@ -124,8 +124,8 @@ const float *Resample_<BSincTag,SSETag>(const InterpState *state, const float *R
 }
 
 template<>
-const float *Resample_<FastBSincTag,SSETag>(const InterpState *state, const float *RESTRICT src,
-    uint frac, uint increment, const al::span<float> dst)
+float *Resample_<FastBSincTag,SSETag>(const InterpState *state, float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};

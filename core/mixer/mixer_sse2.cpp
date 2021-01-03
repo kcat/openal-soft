@@ -35,7 +35,7 @@ struct LerpTag;
 #endif
 
 template<>
-const float *Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *RESTRICT src, uint frac,
+float *Resample_<LerpTag,SSE2Tag>(const InterpState*, float *RESTRICT src, uint frac,
     uint increment, const al::span<float> dst)
 {
     const __m128i increment4{_mm_set1_epi32(static_cast<int>(increment*4))};
@@ -43,7 +43,7 @@ const float *Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *RESTRIC
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
 
     alignas(16) uint pos_[4], frac_[4];
-    InitPosArrays(frac, increment, frac_, pos_, 4);
+    InitPosArrays(frac, increment, frac_, pos_);
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),

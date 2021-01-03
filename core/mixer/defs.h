@@ -59,15 +59,15 @@ union InterpState {
     BsincState bsinc;
 };
 
-using ResamplerFunc = const float*(*)(const InterpState *state, const float *RESTRICT src,
-    uint frac, uint increment, const al::span<float> dst);
+using ResamplerFunc = float*(*)(const InterpState *state, float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst);
 
 ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state);
 
 
 template<typename TypeTag, typename InstTag>
-const float *Resample_(const InterpState *state, const float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst);
+float *Resample_(const InterpState *state, float *RESTRICT src, uint frac, uint increment,
+    const al::span<float> dst);
 
 template<typename InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
@@ -85,11 +85,12 @@ void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
     float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
 
 /* Vectorized resampler helpers */
-inline void InitPosArrays(uint frac, uint increment, uint *frac_arr, uint *pos_arr, size_t size)
+template<size_t N>
+inline void InitPosArrays(uint frac, uint increment, uint (&frac_arr)[N], uint (&pos_arr)[N])
 {
     pos_arr[0] = 0;
     frac_arr[0] = frac;
-    for(size_t i{1};i < size;i++)
+    for(size_t i{1};i < N;i++)
     {
         const uint frac_tmp{frac_arr[i-1] + increment};
         pos_arr[i] = pos_arr[i-1] + (frac_tmp>>MixerFracBits);

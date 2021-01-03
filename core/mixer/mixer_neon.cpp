@@ -24,8 +24,7 @@ namespace {
 
 inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
 {
-    float32x4_t ret{};
-    ret = vsetq_lane_f32(l0, ret, 0);
+    float32x4_t ret{vmovq_n_f32(l0)};
     ret = vsetq_lane_f32(l1, ret, 1);
     ret = vsetq_lane_f32(l2, ret, 2);
     ret = vsetq_lane_f32(l3, ret, 3);
@@ -40,8 +39,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Hrir
 {
     float32x4_t leftright4;
     {
-        float32x2_t leftright2 = vdup_n_f32(0.0);
-        leftright2 = vset_lane_f32(left, leftright2, 0);
+        float32x2_t leftright2{vmov_n_f32(left)};
         leftright2 = vset_lane_f32(right, leftright2, 1);
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
@@ -61,7 +59,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Hrir
 } // namespace
 
 template<>
-const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, uint frac,
+float *Resample_<LerpTag,NEONTag>(const InterpState*, float *RESTRICT src, uint frac,
     uint increment, const al::span<float> dst)
 {
     const int32x4_t increment4 = vdupq_n_s32(static_cast<int>(increment*4));
@@ -70,7 +68,7 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
     alignas(16) uint pos_[4], frac_[4];
     int32x4_t pos4, frac4;
 
-    InitPosArrays(frac, increment, frac_, pos_, 4);
+    InitPosArrays(frac, increment, frac_, pos_);
     frac4 = vld1q_s32(reinterpret_cast<int*>(frac_));
     pos4 = vld1q_s32(reinterpret_cast<int*>(pos_));
 
@@ -114,8 +112,8 @@ const float *Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRIC
 }
 
 template<>
-const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *RESTRICT src,
-    uint frac, uint increment, const al::span<float> dst)
+float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
@@ -160,8 +158,8 @@ const float *Resample_<BSincTag,NEONTag>(const InterpState *state, const float *
 }
 
 template<>
-const float *Resample_<FastBSincTag,NEONTag>(const InterpState *state,
-    const float *RESTRICT src, uint frac, uint increment, const al::span<float> dst)
+float *Resample_<FastBSincTag,NEONTag>(const InterpState *state, float *RESTRICT src, uint frac,
+    uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};

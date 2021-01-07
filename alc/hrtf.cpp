@@ -367,8 +367,8 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     }
     tmpres.clear();
 
-    max_delay = hrir_delay_round(max_delay - min_delay);
-    const uint max_length{minu(max_delay + irSize, HrirLength)};
+    max_delay -= min_delay;
+    const uint max_length{minu(hrir_delay_round(max_delay) + irSize, HrirLength)};
 
     TRACE("Skipped delay: %.2f, new max delay: %.2f, FIR length: %u\n",
         min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne},

@@ -4,11 +4,12 @@
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
 #define IS_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #else
-static const union {
-    unsigned int u;
-    unsigned char b[sizeof(unsigned int)];
-} EndianTest = { 1 };
-#define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
+constexpr inline bool EndianTest() noexcept
+{
+    constexpr int test_val{1};
+    return static_cast<const char&>(test_val);
+}
+#define IS_LITTLE_ENDIAN (EndianTest())
 #endif
 
 #endif /* AL_ENDIANTEST_H */

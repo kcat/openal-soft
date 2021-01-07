@@ -465,11 +465,9 @@ void MirrorLeftHrirs(const al::span<const HrtfStore::Elevation> elevs, HrirArray
 
 
 template<typename T, size_t num_bits=sizeof(T)*8>
-inline std::enable_if_t<std::is_signed<T>::value,T>
-readle(std::istream &data)
+inline T readle(std::istream &data)
 {
     static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
-    constexpr auto signbit = static_cast<T>(1 << (num_bits-1));
 
     al::byte b[num_bits/8];
     if(!data.read(reinterpret_cast<char*>(b), sizeof(b)))
@@ -482,25 +480,10 @@ readle(std::istream &data)
         for(size_t i{0};i < sizeof(b);++i)
             ret |= al::to_integer<T>(b[i]) << (i*8);
     }
-    return (ret^signbit) - signbit;
-}
-
-template<typename T, size_t num_bits=sizeof(T)*8>
-inline std::enable_if_t<!std::is_signed<T>::value,T>
-readle(std::istream &data)
-{
-    static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
-
-    al::byte b[num_bits/8];
-    if(!data.read(reinterpret_cast<char*>(b), sizeof(b)))
-        return static_cast<T>(EOF);
-    T ret{};
-    if(IS_LITTLE_ENDIAN)
-        std::memcpy(&ret, b, sizeof(b));
-    else
+    if /*constexpr*/(std::is_signed<T>::value)
     {
-        for(size_t i{0};i < sizeof(b);++i)
-            ret |= al::to_integer<T>(b[i]) << (i*8);
+        constexpr auto signbit = static_cast<T>(1u << (num_bits-1));
+        return (ret^signbit) - signbit;
     }
     return ret;
 }

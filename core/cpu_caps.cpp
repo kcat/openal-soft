@@ -69,11 +69,11 @@ al::optional<CPUInfo> GetCPUInfo()
     ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[3]), 4);
     ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[2]), 4);
     auto iter_end = std::remove(ret.mVendor.begin(), ret.mVendor.end(), '\0');
-    while(iter_end != ret.mVendor.begin() && std::isspace(*iter_end))
-        --iter_end;
     iter_end = std::unique(ret.mVendor.begin(), iter_end,
         [](auto&& c0, auto&& c1) { return std::isspace(c0) && std::isspace(c1); });
     ret.mVendor.erase(iter_end, ret.mVendor.end());
+    if(!ret.mVendor.empty() && std::isspace(ret.mVendor.back()))
+        ret.mVendor.pop_back();
     if(!ret.mVendor.empty() && std::isspace(ret.mVendor.front()))
         ret.mVendor.erase(ret.mVendor.begin());
 
@@ -86,11 +86,11 @@ al::optional<CPUInfo> GetCPUInfo()
         cpuregs = get_cpuid(0x80000004);
         ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
         iter_end = std::remove(ret.mName.begin(), ret.mName.end(), '\0');
-        while(iter_end != ret.mName.begin() && std::isspace(*iter_end))
-            --iter_end;
         iter_end = std::unique(ret.mName.begin(), iter_end,
             [](auto&& c0, auto&& c1) { return std::isspace(c0) && std::isspace(c1); });
         ret.mName.erase(iter_end, ret.mName.end());
+        if(!ret.mName.empty() && std::isspace(ret.mName.back()))
+            ret.mName.pop_back();
         if(!ret.mName.empty() && std::isspace(ret.mName.front()))
             ret.mName.erase(ret.mName.begin());
     }

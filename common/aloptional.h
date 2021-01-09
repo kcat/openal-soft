@@ -67,7 +67,7 @@ class optional {
 public:
     using value_type = T;
 
-    optional() noexcept = default;
+    optional() = default;
     optional(nullopt_t) noexcept { }
     optional(const optional &rhs) { if(rhs) doConstruct(*rhs); }
     optional(optional&& rhs) { if(rhs) doConstruct(std::move(*rhs)); }

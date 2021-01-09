@@ -497,6 +497,15 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         }
     }
 
+    float fadeCoeff{1.0f}, fadeGain{1.0f};
+    if UNLIKELY(vstate == Stopping)
+    {
+        /* Calculate the multiplier for fading the resampled signal by -60dB
+         * over 1ms.
+         */
+        fadeCoeff = std::pow(0.001f, 1000.0f/static_cast<float>(Device->Frequency));
+    }
+
     uint buffers_done{0u};
     uint OutPos{0u};
     do {
@@ -572,6 +581,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             }
         }
 
+        const float fadeVal{fadeGain};
         ASSUME(DstBufferSize > 0);
         for(auto &chandata : mChans)
         {
@@ -620,6 +630,16 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             if((mFlags&VoiceIsAmbisonic))
                 chandata.mAmbiSplitter.processHfScale({ResampledData, DstBufferSize},
                     chandata.mAmbiScale);
+
+            if UNLIKELY(vstate == Stopping)
+            {
+                fadeGain = fadeVal;
+                for(float &sample : al::span<float>{ResampledData, DstBufferSize})
+                {
+                    fadeGain *= fadeCoeff;
+                    sample *= fadeGain;
+                }
+            }
 
             /* Now filter and mix to the appropriate outputs. */
             float (&FilterBuf)[BufferLineSize] = Device->FilteredData;

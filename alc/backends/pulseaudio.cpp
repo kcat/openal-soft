@@ -611,24 +611,9 @@ void PulseMainloop::probePlaybackDevices()
         std::unique_lock<std::mutex> plock{mMutex};
 
         context = connectContext(plock);
-
-        constexpr pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
-            PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE | PA_STREAM_START_CORKED};
-
-        pa_sample_spec spec{};
-        spec.format = PA_SAMPLE_S16NE;
-        spec.rate = 44100;
-        spec.channels = 2;
-
-        stream = connectStream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
-            BackendType::Playback);
         pa_operation *op{pa_context_get_sink_info_by_name(context,
-            pa_stream_get_device_name(stream), &deviceSinkCallbackC, this)};
+            nullptr, &deviceSinkCallbackC, this)};
         waitForOperation(op, plock);
-
-        pa_stream_disconnect(stream);
-        pa_stream_unref(stream);
-        stream = nullptr;
 
         op = pa_context_get_sink_info_list(context, &deviceSinkCallbackC, this);
         waitForOperation(op, plock);
@@ -653,24 +638,9 @@ void PulseMainloop::probeCaptureDevices()
         std::unique_lock<std::mutex> plock{mMutex};
 
         context = connectContext(plock);
-
-        constexpr pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
-            PA_STREAM_FIX_CHANNELS | PA_STREAM_DONT_MOVE | PA_STREAM_START_CORKED};
-
-        pa_sample_spec spec{};
-        spec.format = PA_SAMPLE_S16NE;
-        spec.rate = 44100;
-        spec.channels = 1;
-
-        stream = connectStream(nullptr, plock, context, flags, nullptr, &spec, nullptr,
-            BackendType::Capture);
         pa_operation *op{pa_context_get_source_info_by_name(context,
-            pa_stream_get_device_name(stream), &deviceSourceCallbackC, this)};
+            nullptr, &deviceSourceCallbackC, this)};
         waitForOperation(op, plock);
-
-        pa_stream_disconnect(stream);
-        pa_stream_unref(stream);
-        stream = nullptr;
 
         op = pa_context_get_source_info_list(context, &deviceSourceCallbackC, this);
         waitForOperation(op, plock);
@@ -726,7 +696,7 @@ struct PulsePlayback final : public BackendBase {
 
     PulseMainloop mMainloop;
 
-    std::string mDeviceName;
+    al::optional<std::string> mDeviceName{al::nullopt};
 
     pa_buffer_attr mAttr;
     pa_sample_spec mSpec;
@@ -852,7 +822,7 @@ void PulsePlayback::sinkNameCallback(pa_context*, const pa_sink_info *info, int 
 void PulsePlayback::streamMovedCallback(pa_stream *stream) noexcept
 {
     mDeviceName = pa_stream_get_device_name(stream);
-    TRACE("Stream moved to %s\n", mDeviceName.c_str());
+    TRACE("Stream moved to %s\n", mDeviceName->c_str());
 }
 
 
@@ -900,10 +870,10 @@ void PulsePlayback::open(const char *name)
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
     mFrameSize = static_cast<uint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
 
-    mDeviceName = pa_stream_get_device_name(mStream);
+    mDeviceName = pulse_name ? al::make_optional<std::string>(pulse_name) : al::nullopt;
     if(!dev_name)
     {
-        pa_operation *op{pa_context_get_sink_info_by_name(mContext, mDeviceName.c_str(),
+        pa_operation *op{pa_context_get_sink_info_by_name(mContext, pulse_name,
             &PulsePlayback::sinkNameCallbackC, this)};
         mMainloop.waitForOperation(op, plock);
     }
@@ -913,6 +883,7 @@ void PulsePlayback::open(const char *name)
 
 bool PulsePlayback::reset()
 {
+    const auto deviceName = mDeviceName ? mDeviceName->c_str() : nullptr;
     auto plock = mMainloop.getUniqueLock();
 
     if(mStream)
@@ -926,7 +897,7 @@ bool PulsePlayback::reset()
         mStream = nullptr;
     }
 
-    pa_operation *op{pa_context_get_sink_info_by_name(mContext, mDeviceName.c_str(),
+    pa_operation *op{pa_context_get_sink_info_by_name(mContext, deviceName,
         &PulsePlayback::sinkInfoCallbackC, this)};
     mMainloop.waitForOperation(op, plock);
 
@@ -1013,7 +984,7 @@ bool PulsePlayback::reset()
     mAttr.minreq = mDevice->UpdateSize * frame_size;
     mAttr.fragsize = ~0u;
 
-    mStream = mMainloop.connectStream(mDeviceName.c_str(), plock, mContext, flags, &mAttr, &mSpec,
+    mStream = mMainloop.connectStream(deviceName, plock, mContext, flags, &mAttr, &mSpec,
         &chanmap, BackendType::Playback);
 
     pa_stream_set_state_callback(mStream, &PulsePlayback::streamStateCallbackC, this);
@@ -1156,7 +1127,7 @@ struct PulseCapture final : public BackendBase {
 
     PulseMainloop mMainloop;
 
-    std::string mDeviceName;
+    al::optional<std::string> mDeviceName{al::nullopt};
 
     uint mLastReadable{0u};
     al::byte mSilentVal{};
@@ -1207,7 +1178,7 @@ void PulseCapture::sourceNameCallback(pa_context*, const pa_source_info *info, i
 void PulseCapture::streamMovedCallback(pa_stream *stream) noexcept
 {
     mDeviceName = pa_stream_get_device_name(stream);
-    TRACE("Stream moved to %s\n", mDeviceName.c_str());
+    TRACE("Stream moved to %s\n", mDeviceName->c_str());
 }
 
 
@@ -1306,10 +1277,10 @@ void PulseCapture::open(const char *name)
     pa_stream_set_moved_callback(mStream, &PulseCapture::streamMovedCallbackC, this);
     pa_stream_set_state_callback(mStream, &PulseCapture::streamStateCallbackC, this);
 
-    mDeviceName = pa_stream_get_device_name(mStream);
+    mDeviceName = pulse_name ? al::make_optional<std::string>(pulse_name) : al::nullopt;
     if(mDevice->DeviceName.empty())
     {
-        pa_operation *op{pa_context_get_source_info_by_name(mContext, mDeviceName.c_str(),
+        pa_operation *op{pa_context_get_source_info_by_name(mContext, pulse_name,
             &PulseCapture::sourceNameCallbackC, this)};
         mMainloop.waitForOperation(op, plock);
     }

@@ -873,8 +873,8 @@ void PulsePlayback::open(const char *name)
     mDeviceName = pulse_name ? al::make_optional<std::string>(pulse_name) : al::nullopt;
     if(!dev_name)
     {
-        pa_operation *op{pa_context_get_sink_info_by_name(mContext, pulse_name,
-            &PulsePlayback::sinkNameCallbackC, this)};
+        pa_operation *op{pa_context_get_sink_info_by_name(mContext,
+            pa_stream_get_device_name(mStream), &PulsePlayback::sinkNameCallbackC, this)};
         mMainloop.waitForOperation(op, plock);
     }
     else
@@ -883,8 +883,8 @@ void PulsePlayback::open(const char *name)
 
 bool PulsePlayback::reset()
 {
-    const auto deviceName = mDeviceName ? mDeviceName->c_str() : nullptr;
     auto plock = mMainloop.getUniqueLock();
+    const auto deviceName = mDeviceName ? mDeviceName->c_str() : nullptr;
 
     if(mStream)
     {
@@ -1280,8 +1280,8 @@ void PulseCapture::open(const char *name)
     mDeviceName = pulse_name ? al::make_optional<std::string>(pulse_name) : al::nullopt;
     if(mDevice->DeviceName.empty())
     {
-        pa_operation *op{pa_context_get_source_info_by_name(mContext, pulse_name,
-            &PulseCapture::sourceNameCallbackC, this)};
+        pa_operation *op{pa_context_get_source_info_by_name(mContext,
+            pa_stream_get_device_name(mStream), &PulseCapture::sourceNameCallbackC, this)};
         mMainloop.waitForOperation(op, plock);
     }
 }

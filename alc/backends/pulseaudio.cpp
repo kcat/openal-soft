@@ -319,7 +319,7 @@ struct DevMap {
     std::string device_name;
 };
 
-bool checkName(const al::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::span<const DevMap> list, const std::string &name)
 {
     auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
     return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
@@ -611,8 +611,8 @@ void PulseMainloop::probePlaybackDevices()
         std::unique_lock<std::mutex> plock{mMutex};
 
         context = connectContext(plock);
-        pa_operation *op{pa_context_get_sink_info_by_name(context,
-            nullptr, &deviceSinkCallbackC, this)};
+        pa_operation *op{pa_context_get_sink_info_by_name(context, nullptr,
+            &deviceSinkCallbackC, this)};
         waitForOperation(op, plock);
 
         op = pa_context_get_sink_info_list(context, &deviceSinkCallbackC, this);
@@ -638,8 +638,8 @@ void PulseMainloop::probeCaptureDevices()
         std::unique_lock<std::mutex> plock{mMutex};
 
         context = connectContext(plock);
-        pa_operation *op{pa_context_get_source_info_by_name(context,
-            nullptr, &deviceSourceCallbackC, this)};
+        pa_operation *op{pa_context_get_source_info_by_name(context, nullptr,
+            &deviceSourceCallbackC, this)};
         waitForOperation(op, plock);
 
         op = pa_context_get_source_info_list(context, &deviceSourceCallbackC, this);

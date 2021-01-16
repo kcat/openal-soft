@@ -868,6 +868,36 @@ void OpenSLCapture::stop()
 
 void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 {
+    const uint update_size{mDevice->UpdateSize};
+    const uint chunk_size{update_size * mFrameSize};
+
+    /* Read the desired samples from the ring buffer then advance its read
+     * pointer.
+     */
+    auto rdata = mRing->getReadVector();
+    for(uint i{0};i < samples;)
+    {
+        const uint rem{minu(samples - i, update_size - mSplOffset)};
+        std::copy_n(rdata.first.buf + mSplOffset*mFrameSize, rem*mFrameSize,
+            buffer + i*mFrameSize);
+
+        mSplOffset += rem;
+        if(mSplOffset == update_size)
+        {
+            /* Finished a chunk, reset the offset and advance the read pointer. */
+            mSplOffset = 0;
+            mRing->readAdvance(1);
+
+            rdata.first.len -= 1;
+            if(!rdata.first.len)
+                rdata.first = rdata.second;
+            else
+                rdata.first.buf += chunk_size;
+        }
+
+        i += rem;
+    }
+
     SLAndroidSimpleBufferQueueItf bufferQueue{};
     if LIKELY(mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -881,44 +911,20 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
         }
     }
 
-    const uint update_size{mDevice->UpdateSize};
-    const uint chunk_size{update_size * mFrameSize};
-
-    /* Read the desired samples from the ring buffer then advance its read
-     * pointer.
-     */
-    auto data = mRing->getReadVector();
-    for(uint i{0};i < samples;)
+    if LIKELY(bufferQueue)
     {
-        const uint rem{minu(samples - i, update_size - mSplOffset)};
-        std::copy_n(data.first.buf + mSplOffset*mFrameSize, rem*mFrameSize, buffer + i*mFrameSize);
-
-        mSplOffset += rem;
-        if(mSplOffset == update_size)
+        SLresult result{SL_RESULT_SUCCESS};
+        auto wdata = mRing->getWriteVector();
+        for(size_t i{0u};i < wdata.first.len && SL_RESULT_SUCCESS == result;i++)
         {
-            /* Finished a chunk, reset the offset and advance the read pointer. */
-            mSplOffset = 0;
-            mRing->readAdvance(1);
-
-            if LIKELY(bufferQueue)
-            {
-                const SLresult result{VCALL(bufferQueue,Enqueue)(data.first.buf, chunk_size)};
-                PRINTERR(result, "bufferQueue->Enqueue");
-                if UNLIKELY(SL_RESULT_SUCCESS != result)
-                {
-                    mDevice->handleDisconnect("Failed to update capture buffer: 0x%08x", result);
-                    bufferQueue = nullptr;
-                }
-            }
-
-            data.first.len--;
-            if(!data.first.len)
-                data.first = data.second;
-            else
-                data.first.buf += chunk_size;
+            result = VCALL(bufferQueue,Enqueue)(wdata.first.buf + chunk_size*i, chunk_size);
+            PRINTERR(result, "bufferQueue->Enqueue");
         }
-
-        i += rem;
+        for(size_t i{0u};i < wdata.second.len && SL_RESULT_SUCCESS == result;i++)
+        {
+            result = VCALL(bufferQueue,Enqueue)(wdata.second.buf + chunk_size*i, chunk_size);
+            PRINTERR(result, "bufferQueue->Enqueue");
+        }
     }
 }
 

@@ -874,20 +874,21 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
+    size_t adv_count{0};
     auto rdata = mRing->getReadVector();
     for(uint i{0};i < samples;)
     {
         const uint rem{minu(samples - i, update_size - mSplOffset)};
-        std::copy_n(rdata.first.buf + mSplOffset*mFrameSize, rem*mFrameSize,
-            buffer + i*mFrameSize);
+        std::copy_n(rdata.first.buf + mSplOffset*size_t{mFrameSize}, rem*size_t{mFrameSize},
+            buffer + i*size_t{mFrameSize});
 
         mSplOffset += rem;
         if(mSplOffset == update_size)
         {
             /* Finished a chunk, reset the offset and advance the read pointer. */
             mSplOffset = 0;
-            mRing->readAdvance(1);
 
+            ++adv_count;
             rdata.first.len -= 1;
             if(!rdata.first.len)
                 rdata.first = rdata.second;
@@ -897,6 +898,7 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 
         i += rem;
     }
+    mRing->readAdvance(adv_count);
 
     SLAndroidSimpleBufferQueueItf bufferQueue{};
     if LIKELY(mDevice->Connected.load(std::memory_order_acquire))

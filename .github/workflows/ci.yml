@@ -1,0 +1,63 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    name: ${{matrix.config.name}}
+    runs-on: ${{matrix.config.os}}
+    strategy:
+      matrix:
+        config:
+        - {
+            name: "Visual Studio 64-bit",
+            os: windows-latest,
+            cmake_opts: "-A x64 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Release"
+          }
+        - {
+            name: "macOS",
+            os: macos-latest,
+            cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON",
+            build_type: "Release"
+          }
+        - {
+            name: "Linux",
+            os: ubuntu-latest,
+            cmake_opts: "-DALSOFT_REQUIRE_ALSA=ON \
+              -DALSOFT_REQUIRE_OSS=ON \
+              -DALSOFT_REQUIRE_PORTAUDIO=ON \
+              -DALSOFT_REQUIRE_PULSEAUDIO=ON \
+              -DALSOFT_REQUIRE_JACK=ON",
+            deps_cmdline: "sudo apt-get install -qq \
+              libpulse-dev \
+              portaudio19-dev \
+              libasound2-dev \
+              libjack-dev \
+              qtbase5-dev",
+            build_type: "Release"
+          }
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        if [[ ! -z "${{matrix.config.deps_cmdline}}" ]]; then
+          eval ${{matrix.config.deps_cmdline}}
+        fi
+
+    - name: Configure
+      shell: bash
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} ${{matrix.config.cmake_opts}} .
+
+    - name: Build
+      shell: bash
+      run: |
+        cmake --build build --config ${{matrix.config.build_type}}

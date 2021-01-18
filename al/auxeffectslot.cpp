@@ -209,7 +209,7 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
 }
 
 
-constexpr EffectSlotType EffectSlotTypeFromEnum(ALenum type)
+EffectSlotType EffectSlotTypeFromEnum(ALenum type)
 {
     switch(type)
     {
@@ -231,12 +231,7 @@ constexpr EffectSlotType EffectSlotTypeFromEnum(ALenum type)
     case AL_EFFECT_DEDICATED_DIALOGUE: return EffectSlotType::DedicatedDialog;
     case AL_EFFECT_CONVOLUTION_REVERB_SOFT: return EffectSlotType::Convolution;
     }
-    /* GCC 5 doesn't like this in a constexpr function. Clang reports itself as
-     * GCC 4 or 5, so explicitly allow that.
-     */
-#if !defined(__GNUC__) || (__GNUC__ > 5) || defined(__clang__)
     ERR("Unhandled effect enum: 0x%04x\n", type);
-#endif
     return EffectSlotType::None;
 }
 

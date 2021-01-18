@@ -894,38 +894,36 @@ option(ALSOFT_REQUIRE_WINMM "Require Windows Multimedia backend" OFF)
 option(ALSOFT_REQUIRE_DSOUND "Require DirectSound backend" OFF)
 option(ALSOFT_REQUIRE_WASAPI "Require WASAPI backend" OFF)
 if(WIN32)
-    set(WINSDK_LIB_DIRS )
-    set(WINSDK_INCLUDE_DIRS )
-    find_package(WindowsSDK)
-    if(WINDOWSSDK_FOUND)
-        get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
-        get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
-    endif()
-
     # Check MMSystem backend
-    check_include_files("windows.h;mmsystem.h" HAVE_MMSYSTEM_H)
-    find_library(WINMM_LIBRARY NAMES winmm
-        PATHS ${WINSDK_LIB_DIRS})
-    if(HAVE_MMSYSTEM_H AND WINMM_LIBRARY)
-        option(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
-        if(ALSOFT_BACKEND_WINMM)
-            set(HAVE_WINMM 1)
-            set(BACKENDS  "${BACKENDS} WinMM,")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
-            set(EXTRA_LIBS ${WINMM_LIBRARY} ${EXTRA_LIBS})
-        endif()
+    option(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
+    if(ALSOFT_BACKEND_WINMM)
+        set(HAVE_WINMM 1)
+        set(BACKENDS "${BACKENDS} WinMM,")
+        set(ALC_OBJS ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
+        # There doesn't seem to be good way to search for winmm.lib for MSVC.
+        # find_library doesn't find it without being told to look in a specific
+        # place in the WindowsSDK, but it links anyway. If there ends up being
+        # Windows targets without this, another means to detect it is needed.
+        set(EXTRA_LIBS winmm ${EXTRA_LIBS})
     endif()
 
     # Check DSound backend
-    find_package(DSound)
-    if(DSOUND_FOUND)
+    check_include_file(dsound.h HAVE_DSOUND_H)
+    if(DXSDK_DIR)
+        find_path(DSOUND_INCLUDE_DIR NAMES "dsound.h"
+            PATHS "${DXSDK_DIR}" PATH_SUFFIXES include
+            DOC "The DirectSound include directory")
+    endif()
+    if(HAVE_DSOUND_H OR DSOUND_INCLUDE_DIR)
         option(ALSOFT_BACKEND_DSOUND "Enable DirectSound backend" ON)
         if(ALSOFT_BACKEND_DSOUND)
             set(HAVE_DSOUND 1)
-            set(BACKENDS  "${BACKENDS} DirectSound${IS_LINKED},")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/dsound.cpp alc/backends/dsound.h)
-            add_backend_libs(${DSOUND_LIBRARIES})
-            set(INC_PATHS ${INC_PATHS} ${DSOUND_INCLUDE_DIRS})
+            set(BACKENDS "${BACKENDS} DirectSound,")
+            set(ALC_OBJS ${ALC_OBJS} alc/backends/dsound.cpp alc/backends/dsound.h)
+
+            if(NOT HAVE_DSOUND_H)
+                set(INC_PATHS ${INC_PATHS} ${DSOUND_INCLUDE_DIR})
+            endif()
         endif()
     endif()
 

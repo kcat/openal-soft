@@ -468,22 +468,26 @@ template<typename T, size_t num_bits=sizeof(T)*8>
 inline T readle(std::istream &data)
 {
     static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
+    static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
 
-    al::byte b[num_bits/8];
-    if(!data.read(reinterpret_cast<char*>(b), sizeof(b)))
-        return static_cast<T>(EOF);
     T ret{};
     if(IS_LITTLE_ENDIAN)
-        std::memcpy(&ret, b, sizeof(b));
+    {
+        if(!data.read(reinterpret_cast<char*>(&ret), num_bits/8))
+            return static_cast<T>(EOF);
+    }
     else
     {
-        for(size_t i{0};i < sizeof(b);++i)
-            ret |= al::to_integer<T>(b[i]) << (i*8);
+        al::byte b[sizeof(T)]{};
+        if(!data.read(reinterpret_cast<char*>(b), num_bits/8))
+            return static_cast<T>(EOF);
+        std::reverse_copy(std::begin(b), std::end(b), reinterpret_cast<al::byte*>(&ret));
     }
-    if /*constexpr*/(std::is_signed<T>::value)
+
+    if /*constexpr*/(std::is_signed<T>::value && num_bits < sizeof(T)*8)
     {
         constexpr auto signbit = static_cast<T>(1u << (num_bits-1));
-        return (ret^signbit) - signbit;
+        return static_cast<T>((ret^signbit) - signbit);
     }
     return ret;
 }

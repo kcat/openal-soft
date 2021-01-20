@@ -61,9 +61,3 @@ jobs:
       shell: bash
       run: |
         cmake --build build --config ${{matrix.config.build_type}}
-
-    - name: Build Results
-      shell: bash
-      run: |
-        git status
-        ls -lR build

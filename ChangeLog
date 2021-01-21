@@ -12,6 +12,8 @@ openal-soft-1.21.1:
     Fixed CoreAudio capture when the requested sample rate doesn't match the
     system configuration.
 
+    Fixed OpenSL capture desyncing from the internal capture buffer.
+
     Fixed sources missing a batch update when applied after quickly restarting
     the source.
 

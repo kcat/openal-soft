@@ -33,7 +33,7 @@ jobs:
               -DALSOFT_REQUIRE_PORTAUDIO=ON \
               -DALSOFT_REQUIRE_PULSEAUDIO=ON \
               -DALSOFT_REQUIRE_JACK=ON",
-            deps_cmdline: "sudo apt-get install -qq \
+            deps_cmdline: "sudo apt update && sudo apt-get install -qq \
               libpulse-dev \
               portaudio19-dev \
               libasound2-dev \

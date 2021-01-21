@@ -345,23 +345,23 @@ inline uint dither_rng(uint *seed) noexcept
 }
 
 
-auto GetAmbiScales(AmbiScaling scaletype) noexcept -> const std::array<float,MaxAmbiChannels>&
+inline auto& GetAmbiScales(AmbiScaling scaletype) noexcept
 {
-    if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa;
-    if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D;
-    return AmbiScale::FromN3D;
+    if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa();
+    if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D();
+    return AmbiScale::FromN3D();
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbiChannels>&
+inline auto& GetAmbiLayout(AmbiLayout layouttype) noexcept
 {
-    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
-    return AmbiIndex::FromACN;
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa();
+    return AmbiIndex::FromACN();
 }
 
-auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbi2DChannels>&
+inline auto& GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 {
-    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D;
-    return AmbiIndex::FromACN2D;
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D();
+    return AmbiIndex::FromACN2D();
 }
 
 
@@ -855,7 +855,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             std::bind(std::multiplies<float>{}, _1, 1.0f-coverage));
 
         /* NOTE: W needs to be scaled according to channel scaling. */
-        const auto &scales = GetAmbiScales(voice->mAmbiScaling);
+        auto&& scales = GetAmbiScales(voice->mAmbiScaling);
         ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base*scales[0],
             voice->mChans[0].mDryParams.Gains.Target);
         for(uint i{0};i < NumSends;i++)
@@ -907,7 +907,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             for(size_t c{1};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
-                const size_t order{AmbiIndex::OrderFromChannel[acn]};
+                const size_t order{AmbiIndex::OrderFromChannel()[acn]};
                 const size_t tocopy{ChansPerOrder[order]};
                 const size_t offset{OrderOffset[order]};
                 const float scale{scales[acn] * coverage};

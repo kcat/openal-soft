@@ -76,23 +76,23 @@ void LoadSamples(double *RESTRICT dst, const al::byte *src, const size_t srcstep
 }
 
 
-auto GetAmbiScales(AmbiScaling scaletype) noexcept -> const std::array<float,MaxAmbiChannels>&
+inline auto& GetAmbiScales(AmbiScaling scaletype) noexcept
 {
-    if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa;
-    if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D;
-    return AmbiScale::FromN3D;
+    if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa();
+    if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D();
+    return AmbiScale::FromN3D();
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbiChannels>&
+inline auto& GetAmbiLayout(AmbiLayout layouttype) noexcept
 {
-    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
-    return AmbiIndex::FromACN;
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa();
+    return AmbiIndex::FromACN();
 }
 
-auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbi2DChannels>&
+inline auto& GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 {
-    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D;
-    return AmbiIndex::FromACN2D;
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa2D();
+    return AmbiIndex::FromACN2D();
 }
 
 
@@ -387,7 +387,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
         }
         mOutTarget = target.Main->Buffer;
 
-        const auto &scales = GetAmbiScales(mAmbiScaling);
+        auto&& scales = GetAmbiScales(mAmbiScaling);
         const uint8_t *index_map{(mChannels == FmtBFormat2D) ?
             GetAmbi2DLayout(mAmbiLayout).data() :
             GetAmbiLayout(mAmbiLayout).data()};

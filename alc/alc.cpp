@@ -2212,8 +2212,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
             {
                 const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
-                    AmbiIndex::OrderFrom2DChannel.data() :
-                    AmbiIndex::OrderFromChannel.data()};
+                    AmbiIndex::OrderFrom2DChannel().data() :
+                    AmbiIndex::OrderFromChannel().data()};
 
                 const BandSplitter splitter{device->mXOverFreq /
                     static_cast<float>(device->Frequency)};

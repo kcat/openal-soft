@@ -471,8 +471,8 @@ void InitVoice(Voice *voice, ALsource *source, BufferlistItem *BufferList, ALCco
     if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
     {
         const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
-            AmbiIndex::OrderFrom2DChannel.data() :
-            AmbiIndex::OrderFromChannel.data()};
+            AmbiIndex::OrderFrom2DChannel().data() :
+            AmbiIndex::OrderFromChannel().data()};
         const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder, device->mAmbiOrder);
 
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};

@@ -300,17 +300,17 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
 }
 
 
-auto GetAmbiScales(DevAmbiScaling scaletype) noexcept -> const std::array<float,MaxAmbiChannels>&
+inline auto& GetAmbiScales(DevAmbiScaling scaletype) noexcept
 {
-    if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa;
-    if(scaletype == DevAmbiScaling::SN3D) return AmbiScale::FromSN3D;
-    return AmbiScale::FromN3D;
+    if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa();
+    if(scaletype == DevAmbiScaling::SN3D) return AmbiScale::FromSN3D();
+    return AmbiScale::FromN3D();
 }
 
-auto GetAmbiLayout(DevAmbiLayout layouttype) noexcept -> const std::array<uint8_t,MaxAmbiChannels>&
+inline auto& GetAmbiLayout(DevAmbiLayout layouttype) noexcept
 {
-    if(layouttype == DevAmbiLayout::FuMa) return AmbiIndex::FromFuMa;
-    return AmbiIndex::FromACN;
+    if(layouttype == DevAmbiLayout::FuMa) return AmbiIndex::FromFuMa();
+    return AmbiIndex::FromACN();
 }
 
 
@@ -492,8 +492,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname{device->DeviceName.c_str()};
-        const std::array<uint8_t,MaxAmbiChannels> &acnmap = GetAmbiLayout(device->mAmbiLayout);
-        const std::array<float,MaxAmbiChannels> &n3dscale = GetAmbiScales(device->mAmbiScale);
+        auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
+        auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
 
         /* For DevFmtAmbi3D, the ambisonic order is already set. */
         const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
@@ -554,7 +554,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
         /* Built-in speaker decoders are always 2D. */
         const size_t ambicount{Ambi2DChannelsFromOrder(decoder.mOrder)};
-        std::transform(AmbiIndex::FromACN2D.begin(), AmbiIndex::FromACN2D.begin()+ambicount,
+        std::transform(AmbiIndex::FromACN2D().begin(), AmbiIndex::FromACN2D().begin()+ambicount,
             std::begin(device->Dry.AmbiMap),
             [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -611,7 +611,7 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
     if((conf->ChanMask&AmbiPeriphonicMask))
     {
         count = AmbiChannelsFromOrder(order);
-        std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+count,
+        std::transform(AmbiIndex::FromACN().begin(), AmbiIndex::FromACN().begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -619,7 +619,7 @@ void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
     else
     {
         count = Ambi2DChannelsFromOrder(order);
-        std::transform(AmbiIndex::FromACN2D.begin(), AmbiIndex::FromACN2D.begin()+count,
+        std::transform(AmbiIndex::FromACN2D().begin(), AmbiIndex::FromACN2D().begin()+count,
             std::begin(device->Dry.AmbiMap),
             [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -812,7 +812,7 @@ void InitHrtfPanning(ALCdevice *device)
     device->mAmbiOrder = ambi_order;
 
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
-    std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+count,
+    std::transform(AmbiIndex::FromACN().begin(), AmbiIndex::FromACN().begin()+count,
         std::begin(device->Dry.AmbiMap),
         [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
@@ -834,11 +834,10 @@ void InitUhjPanning(ALCdevice *device)
 
     device->mAmbiOrder = 1;
 
-    auto acnmap_end = AmbiIndex::FromFuMa.begin() + count;
-    std::transform(AmbiIndex::FromFuMa.begin(), acnmap_end, std::begin(device->Dry.AmbiMap),
+    auto acnmap_begin = AmbiIndex::FromFuMa().begin();
+    std::transform(acnmap_begin, acnmap_begin + count, std::begin(device->Dry.AmbiMap),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f/AmbiScale::FromFuMa[acn], acn}; }
-    );
+        { return BFChannelConfig{1.0f/AmbiScale::FromFuMa()[acn], acn}; });
     AllocChannels(device, count, device->channelsFromFmt());
 }
 
@@ -1092,8 +1091,8 @@ void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
     WetBuffer *wetbuffer{slot->mWetBuffer = wetbuffer_iter->get()};
     wetbuffer->mInUse = true;
 
-    auto acnmap_end = AmbiIndex::FromACN.begin() + count;
-    auto iter = std::transform(AmbiIndex::FromACN.begin(), acnmap_end, slot->Wet.AmbiMap.begin(),
+    auto acnmap_begin = AmbiIndex::FromACN().begin();
+    auto iter = std::transform(acnmap_begin, acnmap_begin + count, slot->Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; });
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});

@@ -31,19 +31,18 @@ constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale3O{{
     5.89792205e-01f, 8.79693856e-01f, 1.00000000e+00f, 1.00000000e+00f
 }};
 
-inline auto GetDecoderHFScales(uint order) noexcept -> const std::array<float,MaxAmbiOrder+1>&
+inline auto& GetDecoderHFScales(uint order) noexcept
 {
     if(order >= 3) return Ambi3DDecoderHFScale3O;
     if(order == 2) return Ambi3DDecoderHFScale2O;
     return Ambi3DDecoderHFScale;
 }
 
-inline auto GetAmbiScales(AmbDecScale scaletype) noexcept
-    -> const std::array<float,MaxAmbiChannels>&
+inline auto& GetAmbiScales(AmbDecScale scaletype) noexcept
 {
-    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
-    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
-    return AmbiScale::FromN3D;
+    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa();
+    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D();
+    return AmbiScale::FromN3D();
 }
 
 } // namespace
@@ -56,15 +55,15 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
     , mChannelDec{inchans}
 {
     const bool periphonic{(conf->ChanMask&AmbiPeriphonicMask) != 0};
-    const std::array<float,MaxAmbiChannels> &coeff_scale = GetAmbiScales(conf->CoeffScale);
+    auto&& coeff_scale = GetAmbiScales(conf->CoeffScale);
 
     if(!mDualBand)
     {
         for(size_t j{0},k{0};j < mChannelDec.size();++j)
         {
-            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D[j]};
+            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D()[j]};
             if(!(conf->ChanMask&(1u<<acn))) continue;
-            const size_t order{AmbiIndex::OrderFromChannel[acn]};
+            const size_t order{AmbiIndex::OrderFromChannel()[acn]};
             const float gain{conf->HFOrderGain[order] / coeff_scale[acn]};
             for(size_t i{0u};i < conf->NumSpeakers;++i)
             {
@@ -83,9 +82,9 @@ BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const siz
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(size_t j{0},k{0};j < mChannelDec.size();++j)
         {
-            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D[j]};
+            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D()[j]};
             if(!(conf->ChanMask&(1u<<acn))) continue;
-            const size_t order{AmbiIndex::OrderFromChannel[acn]};
+            const size_t order{AmbiIndex::OrderFromChannel()[acn]};
             const float hfGain{conf->HFOrderGain[order] * ratio / coeff_scale[acn]};
             const float lfGain{conf->LFOrderGain[order] / ratio / coeff_scale[acn]};
             for(size_t i{0u};i < conf->NumSpeakers;++i)

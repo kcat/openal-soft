@@ -176,9 +176,8 @@ int WaveBackend::mixerProc()
                 }
             }
 
-            size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile)};
-            (void)fs;
-            if(ferror(mFile))
+            const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile)};
+            if(fs < mDevice->UpdateSize || ferror(mFile))
             {
                 ERR("Error writing to file\n");
                 mDevice->handleDisconnect("Failed to write playback samples");
@@ -336,6 +335,8 @@ bool WaveBackend::reset()
 
 void WaveBackend::start()
 {
+    if(mDataStart > 0 && fseek(mFile, 0, SEEK_END) != 0)
+        WARN("Failed to seek on output file\n");
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
@@ -352,14 +353,17 @@ void WaveBackend::stop()
         return;
     mThread.join();
 
-    long size{ftell(mFile)};
-    if(size > 0)
+    if(mDataStart > 0)
     {
-        long dataLen{size - mDataStart};
-        if(fseek(mFile, mDataStart-4, SEEK_SET) == 0)
-            fwrite32le(static_cast<uint>(dataLen), mFile); // 'data' header len
-        if(fseek(mFile, 4, SEEK_SET) == 0)
-            fwrite32le(static_cast<uint>(size-8), mFile); // 'WAVE' header len
+        long size{ftell(mFile)};
+        if(size > 0)
+        {
+            long dataLen{size - mDataStart};
+            if(fseek(mFile, 4, SEEK_SET) == 0)
+                fwrite32le(static_cast<uint>(size-8), mFile); // 'WAVE' header len
+            if(fseek(mFile, mDataStart-4, SEEK_SET) == 0)
+                fwrite32le(static_cast<uint>(dataLen), mFile); // 'data' header len
+        }
     }
 }
 

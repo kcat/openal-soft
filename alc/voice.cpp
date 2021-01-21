@@ -582,12 +582,11 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         }
 
         const float fadeVal{fadeGain};
+        const size_t num_chans{mChans.size()};
+        size_t chan_idx{0};
         ASSUME(DstBufferSize > 0);
         for(auto &chandata : mChans)
         {
-            const size_t num_chans{mChans.size()};
-            const auto chan = static_cast<size_t>(std::distance(mChans.data(),
-                std::addressof(chandata)));
             const al::span<float> SrcData{Device->SourceData, SrcBufferSize};
 
             /* Load the previous samples into the source data first, then load
@@ -601,13 +600,13 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                     chandata.mPrevSamples.end(), srciter);
             else if((mFlags&VoiceIsStatic))
                 srciter = LoadBufferStatic(BufferListItem, BufferLoopItem, num_chans,
-                    SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
+                    SampleSize, chan_idx, DataPosInt, {srciter, SrcData.end()});
             else if((mFlags&VoiceIsCallback))
-                srciter = LoadBufferCallback(BufferListItem, num_chans, SampleSize, chan,
+                srciter = LoadBufferCallback(BufferListItem, num_chans, SampleSize, chan_idx,
                     mNumCallbackSamples, {srciter, SrcData.end()});
             else
                 srciter = LoadBufferQueue(BufferListItem, BufferLoopItem, num_chans,
-                    SampleSize, chan, DataPosInt, {srciter, SrcData.end()});
+                    SampleSize, chan_idx, DataPosInt, {srciter, SrcData.end()});
 
             if UNLIKELY(srciter != SrcData.end())
             {
@@ -685,6 +684,8 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                 MixSamples({samples, DstBufferSize}, mSend[send].Buffer,
                     parms.Gains.Current.data(), TargetGains, Counter, OutPos);
             }
+
+            ++chan_idx;
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;

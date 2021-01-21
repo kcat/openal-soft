@@ -194,8 +194,8 @@ int WaveBackend::mixerProc()
         if(done >= mDevice->Frequency)
         {
             seconds s{done/mDevice->Frequency};
+            done %= mDevice->Frequency;
             start += s;
-            done -= mDevice->Frequency*s.count();
         }
     }
 

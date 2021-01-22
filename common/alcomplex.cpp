@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "albit.h"
 #include "alnumeric.h"
 #include "math_defs.h"
 
@@ -18,7 +19,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
      * the main loop count.
      */
-    const size_t log2_size{static_cast<size_t>(CountTrailingZeros(fftsize))};
+    const size_t log2_size{static_cast<size_t>(al::countr_zero(fftsize))};
 
     /* Bit-reversal permutation applied to a sequence of fftsize items. */
     for(size_t idx{1u};idx < fftsize-1;++idx)

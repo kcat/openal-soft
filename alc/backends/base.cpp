@@ -12,6 +12,7 @@
 #include <mmreg.h>
 #endif
 
+#include "albit.h"
 #include "alcmain.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -180,7 +181,7 @@ void BackendBase::setChannelOrderFromWFXMask(uint chanmask)
     uint idx{0};
     while(chanmask)
     {
-        const int bit{CountTrailingZeros(chanmask)};
+        const int bit{al::countr_zero(chanmask)};
         const uint mask{1u << bit};
         chanmask &= ~mask;
 

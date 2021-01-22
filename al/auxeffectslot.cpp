@@ -35,6 +35,7 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
+#include "albit.h"
 #include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
@@ -240,7 +241,7 @@ bool EnsureEffectSlots(ALCcontext *context, size_t needed)
     size_t count{std::accumulate(context->mEffectSlotList.cbegin(),
         context->mEffectSlotList.cend(), size_t{0},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(PopCount(sublist.FreeMask)); })};
+        { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -268,7 +269,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
         [](const EffectSlotSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(CountTrailingZeros(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
 
     ALeffectslot *slot{::new(sublist->EffectSlots + slidx) ALeffectslot{}};
     aluInitEffectPanning(&slot->mSlot, context);
@@ -991,7 +992,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
-            const int idx{CountTrailingZeros(usemask)};
+            const int idx{al::countr_zero(usemask)};
             ALeffectslot *slot{sublist.EffectSlots + idx};
             usemask &= ~(1_u64 << idx);
 
@@ -1007,7 +1008,7 @@ EffectSlotSubList::~EffectSlotSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        const ALsizei idx{CountTrailingZeros(usemask)};
+        const int idx{al::countr_zero(usemask)};
         al::destroy_at(EffectSlots+idx);
         usemask &= ~(1_u64 << idx);
     }

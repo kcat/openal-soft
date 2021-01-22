@@ -9,6 +9,7 @@
 #include <iterator>
 #include <limits.h>
 
+#include "albit.h"
 #include "albyte.h"
 #include "alnumeric.h"
 #include "core/fpu_ctrl.h"
@@ -338,7 +339,7 @@ void ChannelConverter::convert(const void *src, float *dst, uint frames) const
 {
     if(mDstChans == DevFmtMono)
     {
-        const float scale{std::sqrt(1.0f / static_cast<float>(PopCount(mChanMask)))};
+        const float scale{std::sqrt(1.0f / static_cast<float>(al::popcount(mChanMask)))};
         switch(mSrcType)
         {
 #define HANDLE_FMT(T) case T: Multi2Mono<T>(mChanMask, mSrcStep, scale, dst, src, frames); break

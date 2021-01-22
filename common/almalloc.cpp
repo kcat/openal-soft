@@ -18,10 +18,7 @@ void *al_malloc(size_t alignment, size_t size)
     assert((alignment & (alignment-1)) == 0);
     alignment = std::max(alignment, alignof(std::max_align_t));
 
-#if defined(HAVE_STD_ALIGNED_ALLOC)
-    size = (size+(alignment-1))&~(alignment-1);
-    return std::aligned_alloc(alignment, size);
-#elif defined(HAVE_POSIX_MEMALIGN)
+#if defined(HAVE_POSIX_MEMALIGN)
     void *ret{};
     if(posix_memalign(&ret, alignment, size) == 0)
         return ret;
@@ -53,7 +50,7 @@ void *al_calloc(size_t alignment, size_t size)
 
 void al_free(void *ptr) noexcept
 {
-#if defined(HAVE_STD_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN)
+#if defined(HAVE_POSIX_MEMALIGN)
     std::free(ptr);
 #elif defined(HAVE__ALIGNED_MALLOC)
     _aligned_free(ptr);

@@ -153,19 +153,9 @@ set(EXPORT_DECL "")
 # Require C++14
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-if(CMAKE_CXX14_EXTENSION_COMPILE_OPTION)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX14_EXTENSION_COMPILE_OPTION}")
-elseif(CMAKE_CXX14_STANDARD_COMPILE_OPTION)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX14_STANDARD_COMPILE_OPTION}")
-endif()
 
 # Prefer C11, but support C99 and C90 too.
 set(CMAKE_C_STANDARD 11)
-if(CMAKE_C11_EXTENSION_COMPILE_OPTION)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C11_EXTENSION_COMPILE_OPTION}")
-elseif(CMAKE_C11_STANDARD_COMPILE_OPTION)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C11_STANDARD_COMPILE_OPTION}")
-endif()
 
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions
@@ -534,13 +524,6 @@ if(HAVE_INTRIN_H)
         }" HAVE_CPUID_INTRINSIC)
 endif()
 
-check_cxx_source_compiles("#include <cstdlib>
-int main()
-{
-    void *ptr{std::aligned_alloc(alignof(int), sizeof(int))};
-    std::free(ptr);
-    return 0;
-}" HAVE_STD_ALIGNED_ALLOC)
 check_symbol_exists(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 check_symbol_exists(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 check_symbol_exists(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)

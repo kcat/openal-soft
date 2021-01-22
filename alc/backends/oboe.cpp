@@ -87,9 +87,9 @@ bool OboePlayback::reset()
     builder.setFormatConversionAllowed(false);
     builder.setCallback(this);
 
-    if(mDevice->Flags.get<FrequencyRequest>())
+    if(mDevice->Flags.test(FrequencyRequest))
         builder.setSampleRate(static_cast<int32_t>(mDevice->Frequency));
-    if(mDevice->Flags.get<ChannelsRequest>())
+    if(mDevice->Flags.test(ChannelsRequest))
     {
         /* Only use mono or stereo at user request. There's no telling what
          * other counts may be inferred as.
@@ -98,7 +98,7 @@ bool OboePlayback::reset()
             : (mDevice->FmtChans==DevFmtStereo) ? oboe::ChannelCount::Stereo
             : oboe::ChannelCount::Unspecified);
     }
-    if(mDevice->Flags.get<SampleTypeRequest>())
+    if(mDevice->Flags.test(SampleTypeRequest))
     {
         oboe::AudioFormat format{oboe::AudioFormat::Unspecified};
         switch(mDevice->FmtType)

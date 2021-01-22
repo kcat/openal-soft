@@ -793,7 +793,7 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
     );
     if(chaniter != chanmaps.cend())
     {
-        if(!mDevice->Flags.get<ChannelsRequest>())
+        if(!mDevice->Flags.test(ChannelsRequest))
             mDevice->FmtChans = chaniter->fmt;
     }
     else
@@ -914,8 +914,8 @@ bool PulsePlayback::reset()
         flags &= ~PA_STREAM_EARLY_REQUESTS;
         flags |= PA_STREAM_ADJUST_LATENCY;
     }
-    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "fix-rate", 0) ||
-       !mDevice->Flags.get<FrequencyRequest>())
+    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "fix-rate", 0)
+        || !mDevice->Flags.test(FrequencyRequest))
         flags |= PA_STREAM_FIX_RATE;
 
     pa_channel_map chanmap{};

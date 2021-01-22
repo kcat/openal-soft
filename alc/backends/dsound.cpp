@@ -377,7 +377,7 @@ bool DSoundPlayback::reset()
         mDevice->FmtType = DevFmtUByte;
         break;
     case DevFmtFloat:
-        if(mDevice->Flags.get<SampleTypeRequest>())
+        if(mDevice->Flags.test(SampleTypeRequest))
             break;
         /* fall-through */
     case DevFmtUShort:
@@ -398,7 +398,7 @@ bool DSoundPlayback::reset()
     if(SUCCEEDED(hr))
     {
         speakers = DSSPEAKER_CONFIG(speakers);
-        if(!mDevice->Flags.get<ChannelsRequest>())
+        if(!mDevice->Flags.test(ChannelsRequest))
         {
             if(speakers == DSSPEAKER_MONO)
                 mDevice->FmtChans = DevFmtMono;

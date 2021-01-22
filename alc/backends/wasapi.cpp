@@ -924,9 +924,9 @@ HRESULT WasapiPlayback::resetProxy()
     const ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
     const ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
 
-    if(!mDevice->Flags.get<FrequencyRequest>())
+    if(!mDevice->Flags.test(FrequencyRequest))
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
-    if(!mDevice->Flags.get<ChannelsRequest>())
+    if(!mDevice->Flags.test(ChannelsRequest))
     {
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};

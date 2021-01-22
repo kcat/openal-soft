@@ -41,6 +41,7 @@
 #include <utility>
 
 #include "albit.h"
+#include "albyte.h"
 #include "alcmain.h"
 #include "alconfig.h"
 #include "alfstream.h"

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <chrono>
 #include <cstdint>
 #include <cstddef>
@@ -17,7 +18,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "albyte.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -201,7 +201,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::string DeviceName;
 
     // Device flags
-    al::bitfield<DeviceFlagsCount> Flags{};
+    std::bitset<DeviceFlagsCount> Flags{};
 
     // Maximum number of sources that can be created
     uint SourcesMax{};

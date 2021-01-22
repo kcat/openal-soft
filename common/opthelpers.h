@@ -36,7 +36,7 @@
 #define ASSUME(x) ((void)0)
 #endif
 
-#if __cplusplus >= 201709L || defined(__cpp_if_constexpr)
+#if __cplusplus >= 201703L || defined(__cpp_if_constexpr)
 #define if_constexpr if constexpr
 #else
 #define if_constexpr if

@@ -40,6 +40,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "albit.h"
 #include "alcmain.h"
 #include "alconfig.h"
 #include "alfstream.h"
@@ -49,7 +50,6 @@
 #include "alspan.h"
 #include "core/filters/splitter.h"
 #include "core/logging.h"
-#include "endiantest.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 #include "polyphase_resampler.h"
@@ -471,7 +471,7 @@ inline T readle(std::istream &data)
     static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
 
     T ret{};
-    if(IS_LITTLE_ENDIAN)
+    if /*constexpr*/(al::endian::native == al::endian::little)
     {
         if(!data.read(reinterpret_cast<char*>(&ret), num_bits/8))
             return static_cast<T>(EOF);

@@ -32,11 +32,11 @@
 #include <thread>
 #include <functional>
 
+#include "albit.h"
 #include "alcmain.h"
 #include "alu.h"
 #include "compat.h"
 #include "core/logging.h"
-#include "endiantest.h"
 #include "ringbuffer.h"
 #include "threads.h"
 
@@ -56,7 +56,7 @@ namespace {
 constexpr char opensl_device[] = "OpenSL";
 
 
-SLuint32 GetChannelMask(DevFmtChannels chans)
+constexpr SLuint32 GetChannelMask(DevFmtChannels chans) noexcept
 {
     switch(chans)
     {
@@ -83,7 +83,7 @@ SLuint32 GetChannelMask(DevFmtChannels chans)
 }
 
 #ifdef SL_ANDROID_DATAFORMAT_PCM_EX
-SLuint32 GetTypeRepresentation(DevFmtType type)
+constexpr SLuint32 GetTypeRepresentation(DevFmtType type) noexcept
 {
     switch(type)
     {
@@ -102,7 +102,14 @@ SLuint32 GetTypeRepresentation(DevFmtType type)
 }
 #endif
 
-const char *res_str(SLresult result)
+constexpr SLuint32 GetByteOrderEndianness() noexcept
+{
+    if /*constexpr*/(al::endian::native == al::endian::little)
+        return SL_BYTEORDER_LITTLEENDIAN;
+    return SL_BYTEORDER_BIGENDIAN;
+}
+
+const char *res_str(SLresult result) noexcept
 {
     switch(result)
     {
@@ -459,7 +466,7 @@ bool OpenSLPlayback::reset()
     format_pcm_ex.bitsPerSample = mDevice->bytesFromFmt() * 8;
     format_pcm_ex.containerSize = format_pcm_ex.bitsPerSample;
     format_pcm_ex.channelMask = GetChannelMask(mDevice->FmtChans);
-    format_pcm_ex.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN : SL_BYTEORDER_BIGENDIAN;
+    format_pcm_ex.endianness = GetByteOrderEndianness();
     format_pcm_ex.representation = GetTypeRepresentation(mDevice->FmtType);
 
     audioSrc.pLocator = &loc_bufq;
@@ -490,8 +497,7 @@ bool OpenSLPlayback::reset()
         format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
         format_pcm.containerSize = format_pcm.bitsPerSample;
         format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
-        format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
-            SL_BYTEORDER_BIGENDIAN;
+        format_pcm.endianness = GetByteOrderEndianness();
 
         audioSrc.pLocator = &loc_bufq;
         audioSrc.pFormat = &format_pcm;
@@ -733,8 +739,7 @@ void OpenSLCapture::open(const char* name)
         format_pcm_ex.bitsPerSample = mDevice->bytesFromFmt() * 8;
         format_pcm_ex.containerSize = format_pcm_ex.bitsPerSample;
         format_pcm_ex.channelMask = GetChannelMask(mDevice->FmtChans);
-        format_pcm_ex.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
-            SL_BYTEORDER_BIGENDIAN;
+        format_pcm_ex.endianness = GetByteOrderEndianness();
         format_pcm_ex.representation = GetTypeRepresentation(mDevice->FmtType);
 
         audioSnk.pLocator = &loc_bq;
@@ -757,8 +762,7 @@ void OpenSLCapture::open(const char* name)
                 format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
                 format_pcm.containerSize = format_pcm.bitsPerSample;
                 format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
-                format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
-                    SL_BYTEORDER_BIGENDIAN;
+                format_pcm.endianness = GetByteOrderEndianness();
 
                 audioSnk.pLocator = &loc_bq;
                 audioSnk.pFormat = &format_pcm;

@@ -613,6 +613,7 @@ check_symbol_exists(getopt unistd.h HAVE_GETOPT)
 # Common sources used by both the OpenAL implementation library, the OpenAL
 # router, and certain tools and examples.
 set(COMMON_OBJS
+    common/albit.h
     common/albyte.h
     common/alcomplex.cpp
     common/alcomplex.h
@@ -628,7 +629,6 @@ set(COMMON_OBJS
     common/atomic.h
     common/dynload.cpp
     common/dynload.h
-    common/endiantest.h
     common/intrusive_ptr.h
     common/math_defs.h
     common/opthelpers.h

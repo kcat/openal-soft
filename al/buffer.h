@@ -41,7 +41,7 @@ enum UserFmtChannels : unsigned char {
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
-    UserFmtType OriginalType{};
+    UserFmtType OriginalType{UserFmtShort};
     ALuint OriginalSize{0};
     ALuint OriginalAlign{0};
 

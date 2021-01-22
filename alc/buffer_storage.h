@@ -56,8 +56,8 @@ struct BufferStorage {
     void *mUserData{nullptr};
 
     uint mSampleRate{0u};
-    FmtChannels mChannels{};
-    FmtType mType{};
+    FmtChannels mChannels{FmtMono};
+    FmtType mType{FmtShort};
     uint mSampleLen{0u};
 
     AmbiLayout mAmbiLayout{AmbiLayout::FuMa};

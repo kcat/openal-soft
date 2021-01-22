@@ -72,7 +72,7 @@ constexpr char jackDevice[] = "JACK Default";
 
 void *jack_handle;
 #define MAKE_FUNC(f) decltype(f) * p##f
-JACK_FUNCS(MAKE_FUNC);
+JACK_FUNCS(MAKE_FUNC)
 decltype(jack_error_callback) * pjack_error_callback;
 #undef MAKE_FUNC
 

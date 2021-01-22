@@ -42,6 +42,7 @@
 #include "alu.h"
 #include "compat.h"
 #include "core/logging.h"
+#include "opthelpers.h"
 #include "strutils.h"
 #include "threads.h"
 #include "vector.h"
@@ -149,7 +150,7 @@ int WaveBackend::mixerProc()
             mDevice->renderSamples(mBuffer.data(), mDevice->UpdateSize, frameStep);
             done += mDevice->UpdateSize;
 
-            if /*constexpr*/(al::endian::native != al::endian::little)
+            if_constexpr(al::endian::native != al::endian::little)
             {
                 const uint bytesize{mDevice->bytesFromFmt()};
 

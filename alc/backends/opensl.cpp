@@ -37,6 +37,7 @@
 #include "alu.h"
 #include "compat.h"
 #include "core/logging.h"
+#include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
 
@@ -104,7 +105,7 @@ constexpr SLuint32 GetTypeRepresentation(DevFmtType type) noexcept
 
 constexpr SLuint32 GetByteOrderEndianness() noexcept
 {
-    if /*constexpr*/(al::endian::native == al::endian::little)
+    if_constexpr(al::endian::native == al::endian::little)
         return SL_BYTEORDER_LITTLEENDIAN;
     return SL_BYTEORDER_BIGENDIAN;
 }

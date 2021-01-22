@@ -5,6 +5,7 @@
 #include <type_traits>
 #if !defined(__GNUC__) && (defined(_WIN32) || defined(_WIN64))
 #include <intrin.h>
+#include "opthelpers.h"
 #endif
 
 namespace al {
@@ -104,7 +105,7 @@ inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
 int> countr_zero(T v)
 {
     unsigned long idx{std::numeric_limits<T>::digits};
-    if /*constexpr*/(std::numeric_limits<T>::digits <= 32)
+    if_constexpr(std::numeric_limits<T>::digits <= 32)
         _BitScanForward(&idx, static_cast<uint32_t>(v));
     else // std::numeric_limits<T>::digits > 32
         _BitScanForward64(&idx, v);
@@ -118,7 +119,7 @@ inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
 int> countr_zero(T v)
 {
     unsigned long idx{std::numeric_limits<T>::digits};
-    if /*constexpr*/(std::numeric_limits<T>::digits <= 32)
+    if_constexpr(std::numeric_limits<T>::digits <= 32)
         _BitScanForward(&idx, static_cast<uint32_t>(v));
     else if(!_BitScanForward(&idx, static_cast<uint32_t>(v)))
     {

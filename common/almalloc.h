@@ -82,14 +82,14 @@ struct allocator {
         using other = allocator<U, (alignment<alignof(U))?alignof(U):alignment>;
     };
 
-    allocator() noexcept = default;
+    constexpr explicit allocator() noexcept = default;
     template<typename U, std::size_t N>
-    constexpr allocator(const allocator<U,N>&) noexcept { }
+    constexpr explicit allocator(const allocator<U,N>&) noexcept { }
 
-    [[gnu::assume_aligned(alignment), gnu::alloc_size(2)]] T *allocate(std::size_t n)
+    T *allocate(std::size_t n)
     {
         if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
-        if(auto p = static_cast<T*>(al_malloc(alignment, n*sizeof(T)))) return p;
+        if(auto p = al_malloc(alignment, n*sizeof(T))) return static_cast<T*>(p);
         throw std::bad_alloc();
     }
     void deallocate(T *p, std::size_t) noexcept { al_free(p); }

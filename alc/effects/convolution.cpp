@@ -190,7 +190,7 @@ struct ConvolutionState final : public EffectState {
     void (ConvolutionState::*mMix)(const al::span<FloatBufferLine>,const size_t)
     {&ConvolutionState::NormalMix};
 
-    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
+    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -219,7 +219,7 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
 }
 
 
-void ConvolutionState::deviceUpdate(const ALCdevice *device, const BufferStorage *buffer)
+void ConvolutionState::deviceUpdate(const ALCdevice *device, const Buffer &buffer)
 {
     constexpr uint MaxConvolveAmbiOrder{1u};
 
@@ -236,13 +236,13 @@ void ConvolutionState::deviceUpdate(const ALCdevice *device, const BufferStorage
     mComplexData = nullptr;
 
     /* An empty buffer doesn't need a convolution filter. */
-    if(!buffer || buffer->mSampleLen < 1) return;
+    if(!buffer.storage || buffer.storage->mSampleLen < 1) return;
 
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
-    auto bytesPerSample = BytesFromFmt(buffer->mType);
-    auto realChannels = ChannelsFromFmt(buffer->mChannels, buffer->mAmbiOrder);
-    auto numChannels = ChannelsFromFmt(buffer->mChannels,
-        minu(buffer->mAmbiOrder, MaxConvolveAmbiOrder));
+    auto bytesPerSample = BytesFromFmt(buffer.storage->mType);
+    auto realChannels = ChannelsFromFmt(buffer.storage->mChannels, buffer.storage->mAmbiOrder);
+    auto numChannels = ChannelsFromFmt(buffer.storage->mChannels,
+        minu(buffer.storage->mAmbiOrder, MaxConvolveAmbiOrder));
 
     mChans = ChannelDataArray::Create(numChannels);
 
@@ -252,11 +252,11 @@ void ConvolutionState::deviceUpdate(const ALCdevice *device, const BufferStorage
      * called very infrequently, go ahead and use the polyphase resampler.
      */
     PPhaseResampler resampler;
-    if(device->Frequency != buffer->mSampleRate)
-        resampler.init(buffer->mSampleRate, device->Frequency);
+    if(device->Frequency != buffer.storage->mSampleRate)
+        resampler.init(buffer.storage->mSampleRate, device->Frequency);
     const auto resampledCount = static_cast<uint>(
-        (uint64_t{buffer->mSampleLen}*device->Frequency + (buffer->mSampleRate-1)) /
-        buffer->mSampleRate);
+        (uint64_t{buffer.storage->mSampleLen}*device->Frequency+(buffer.storage->mSampleRate-1)) /
+        buffer.storage->mSampleRate);
 
     const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
     for(auto &e : *mChans)
@@ -277,20 +277,20 @@ void ConvolutionState::deviceUpdate(const ALCdevice *device, const BufferStorage
     mComplexData = std::make_unique<complex_d[]>(complex_length);
     std::fill_n(mComplexData.get(), complex_length, complex_d{});
 
-    mChannels = buffer->mChannels;
-    mAmbiLayout = buffer->mAmbiLayout;
-    mAmbiScaling = buffer->mAmbiScaling;
-    mAmbiOrder = minu(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
+    mChannels = buffer.storage->mChannels;
+    mAmbiLayout = buffer.storage->mAmbiLayout;
+    mAmbiScaling = buffer.storage->mAmbiScaling;
+    mAmbiOrder = minu(buffer.storage->mAmbiOrder, MaxConvolveAmbiOrder);
 
-    auto srcsamples = std::make_unique<double[]>(maxz(buffer->mSampleLen, resampledCount));
+    auto srcsamples = std::make_unique<double[]>(maxz(buffer.storage->mSampleLen, resampledCount));
     complex_d *filteriter = mComplexData.get() + mNumConvolveSegs*m;
     for(size_t c{0};c < numChannels;++c)
     {
         /* Load the samples from the buffer, and resample to match the device. */
-        LoadSamples(srcsamples.get(), buffer->mData.data() + bytesPerSample*c, realChannels,
-            buffer->mType, buffer->mSampleLen);
-        if(device->Frequency != buffer->mSampleRate)
-            resampler.process(buffer->mSampleLen, srcsamples.get(), resampledCount,
+        LoadSamples(srcsamples.get(), buffer.samples.data() + bytesPerSample*c, realChannels,
+            buffer.storage->mType, buffer.storage->mSampleLen);
+        if(device->Frequency != buffer.storage->mSampleRate)
+            resampler.process(buffer.storage->mSampleLen, srcsamples.get(), resampledCount,
                 srcsamples.get());
 
         /* Store the first segment's samples in reverse in the time-domain, to

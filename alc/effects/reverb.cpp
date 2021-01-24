@@ -527,7 +527,7 @@ struct ReverbState final : public EffectState {
     void lateFaded(const size_t offset, const size_t todo, const float fade,
         const float fadeStep);
 
-    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
+    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -607,7 +607,7 @@ void ReverbState::allocLines(const float frequency)
     mLate.Delay.realizeLineOffset(mSampleBuffer.data());
 }
 
-void ReverbState::deviceUpdate(const ALCdevice *device, const BufferStorage* /*buffer*/)
+void ReverbState::deviceUpdate(const ALCdevice *device, const Buffer&)
 {
     const auto frequency = static_cast<float>(device->Frequency);
 

@@ -1398,6 +1398,9 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             /* Add the selected buffer to a one-item queue */
             auto newlist = new BufferlistItem{};
             newlist->mSampleLen = buffer->mSampleLen;
+            newlist->mLoopStart = buffer->mLoopStart;
+            newlist->mLoopEnd = buffer->mLoopEnd;
+            newlist->mSamples = buffer->mData;
             newlist->mBuffer = buffer;
             IncrementRef(buffer->ref);
 
@@ -3297,10 +3300,12 @@ START_API_FUNC
             BufferList->mNext.store(item, std::memory_order_relaxed);
             BufferList = item;
         }
-        BufferList->mNext.store(nullptr, std::memory_order_relaxed);
-        BufferList->mSampleLen = buffer ? buffer->mSampleLen : 0;
-        BufferList->mBuffer = buffer;
         if(!buffer) continue;
+        BufferList->mSampleLen = buffer->mSampleLen;
+        BufferList->mLoopStart = 0;
+        BufferList->mLoopEnd = buffer->mSampleLen;
+        BufferList->mSamples = buffer->mData;
+        BufferList->mBuffer = buffer;
 
         IncrementRef(buffer->ref);
 

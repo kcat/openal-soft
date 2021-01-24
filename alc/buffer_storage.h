@@ -5,7 +5,7 @@
 
 #include "albyte.h"
 #include "almalloc.h"
-#include "vector.h"
+#include "alspan.h"
 
 
 using uint = unsigned int;
@@ -50,8 +50,6 @@ inline uint FrameSizeFromFmt(FmtChannels chans, FmtType type, uint ambiorder) no
 using CallbackType = int(*)(void*, void*, int);
 
 struct BufferStorage {
-    al::vector<al::byte,16> mData;
-
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
@@ -63,9 +61,6 @@ struct BufferStorage {
     AmbiLayout mAmbiLayout{AmbiLayout::FuMa};
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
     uint mAmbiOrder{0u};
-
-    uint mLoopStart{0u};
-    uint mLoopEnd{0u};
 
     inline uint bytesFromFmt() const noexcept { return BytesFromFmt(mType); }
     inline uint channelsFromFmt() const noexcept
@@ -80,6 +75,10 @@ struct BufferStorage {
 struct BufferlistItem {
     std::atomic<BufferlistItem*> mNext{nullptr};
     uint mSampleLen{0u};
+    uint mLoopStart{0u};
+    uint mLoopEnd{0u};
+    al::span<al::byte> mSamples;
+
     BufferStorage *mBuffer{nullptr};
 
     DEF_NEWDEL(BufferlistItem)

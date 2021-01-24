@@ -126,6 +126,13 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
 }
 
 
+inline auto GetEffectBuffer(ALbuffer *buffer) noexcept -> EffectState::Buffer
+{
+    if(!buffer) return EffectState::Buffer{};
+    return EffectState::Buffer{buffer, buffer->mData};
+}
+
+
 void AddActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *context)
 {
     if(auxslots.empty()) return;
@@ -650,7 +657,7 @@ START_API_FUNC
 
             FPUCtl mixer_mode{};
             auto *state = slot->Effect.State.get();
-            state->deviceUpdate(device, buffer);
+            state->deviceUpdate(device, GetEffectBuffer(buffer));
         }
         break;
 
@@ -926,7 +933,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         state->mOutTarget = device->Dry.Buffer;
         {
             FPUCtl mixer_mode{};
-            state->deviceUpdate(device, Buffer);
+            state->deviceUpdate(device, GetEffectBuffer(Buffer));
         }
 
         Effect.Type = newtype;

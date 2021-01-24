@@ -83,7 +83,7 @@ struct FshifterState final : public EffectState {
     } mGains[2];
 
 
-    void deviceUpdate(const ALCdevice *device, const BufferStorage *buffer) override;
+    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
     void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -92,7 +92,7 @@ struct FshifterState final : public EffectState {
     DEF_NEWDEL(FshifterState)
 };
 
-void FshifterState::deviceUpdate(const ALCdevice*, const BufferStorage*)
+void FshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount = FIFO_LATENCY;

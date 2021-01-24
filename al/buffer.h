@@ -41,6 +41,8 @@ enum UserFmtChannels : unsigned char {
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
+    al::vector<al::byte,16> mData;
+
     UserFmtType OriginalType{UserFmtShort};
     ALuint OriginalSize{0};
     ALuint OriginalAlign{0};
@@ -52,6 +54,9 @@ struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT MappedAccess{0u};
     ALsizei MappedOffset{0};
     ALsizei MappedSize{0};
+
+    ALuint mLoopStart{0u};
+    ALuint mLoopEnd{0u};
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
     RefCount ref{0u};

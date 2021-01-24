@@ -2102,6 +2102,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     FPUCtl mixer_mode{};
     for(ALCcontext *context : *device->mContexts.load())
     {
+        auto GetEffectBuffer = [](ALbuffer *buffer) noexcept -> EffectState::Buffer
+        {
+            if(!buffer) return EffectState::Buffer{};
+            return EffectState::Buffer{buffer, buffer->mData};
+        };
         std::unique_lock<std::mutex> proplock{context->mPropLock};
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
 
@@ -2118,7 +2123,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
-            state->deviceUpdate(device, slot->Buffer);
+            state->deviceUpdate(device, GetEffectBuffer(slot->Buffer));
             slot->updateProps(context);
         }
 
@@ -2137,7 +2142,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
                 EffectState *state{slot->Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
-                state->deviceUpdate(device, slot->Buffer);
+                state->deviceUpdate(device, GetEffectBuffer(slot->Buffer));
                 slot->updateProps(context);
             }
         }

@@ -74,9 +74,14 @@ struct BufferStorage {
 
 struct BufferlistItem {
     std::atomic<BufferlistItem*> mNext{nullptr};
+
+    CallbackType mCallback{nullptr};
+    void *mUserData{nullptr};
+
     uint mSampleLen{0u};
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
+
     al::span<al::byte> mSamples;
 
     BufferStorage *mBuffer{nullptr};

@@ -175,6 +175,7 @@ struct Voice {
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
+    FmtType mFmtType;
     uint mFrequency;
     uint mSampleSize;
     AmbiLayout mAmbiLayout;

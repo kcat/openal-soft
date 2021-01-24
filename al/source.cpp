@@ -447,6 +447,7 @@ void InitVoice(Voice *voice, ALsource *source, BufferlistItem *BufferList, ALCco
     ALuint num_channels{buffer->channelsFromFmt()};
     voice->mFrequency = buffer->mSampleRate;
     voice->mFmtChannels = buffer->mChannels;
+    voice->mFmtType = buffer->mType;
     voice->mSampleSize  = buffer->bytesFromFmt();
     voice->mAmbiLayout = buffer->mAmbiLayout;
     voice->mAmbiScaling = buffer->mAmbiScaling;
@@ -1397,6 +1398,8 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
             /* Add the selected buffer to a one-item queue */
             auto newlist = new BufferlistItem{};
+            newlist->mCallback = buffer->mCallback;
+            newlist->mUserData = buffer->mUserData;
             newlist->mSampleLen = buffer->mSampleLen;
             newlist->mLoopStart = buffer->mLoopStart;
             newlist->mLoopEnd = buffer->mLoopEnd;
@@ -3302,7 +3305,6 @@ START_API_FUNC
         }
         if(!buffer) continue;
         BufferList->mSampleLen = buffer->mSampleLen;
-        BufferList->mLoopStart = 0;
         BufferList->mLoopEnd = buffer->mSampleLen;
         BufferList->mSamples = buffer->mData;
         BufferList->mBuffer = buffer;

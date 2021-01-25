@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <iterator>
 #include <limits>
+#include <deque>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -21,6 +22,13 @@
 struct ALbuffer;
 struct ALeffectslot;
 struct BufferlistItem;
+
+namespace al {
+
+template<typename T>
+using deque = std::deque<T, al::allocator<T>>;
+
+} // namespace al
 
 
 #define DEFAULT_SENDS  2
@@ -100,7 +108,7 @@ struct ALsource {
     ALenum state{AL_INITIAL};
 
     /** Source Buffer Queue head. */
-    BufferlistItem *queue{nullptr};
+    al::deque<BufferlistItem> mQueue;
 
     std::atomic_flag PropsClean;
 

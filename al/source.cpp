@@ -207,11 +207,10 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
     if(!voice)
         return 0;
 
-    const BufferlistItem *BufferList{Source->queue};
-    while(BufferList && BufferList != Current)
+    for(auto &item : Source->mQueue)
     {
-        readPos += uint64_t{BufferList->mSampleLen} << 32;
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        if(&item == Current) break;
+        readPos += uint64_t{item.mSampleLen} << 32;
     }
     return static_cast<int64_t>(minu64(readPos, 0x7fffffffffffffff_u64));
 }
@@ -246,18 +245,18 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     if(!voice)
         return 0.0f;
 
-    const BufferlistItem *BufferList{Source->queue};
     const BufferStorage *BufferFmt{nullptr};
-    while(BufferList && BufferList != Current)
+    auto BufferList = Source->mQueue.cbegin();
+    while(BufferList != Source->mQueue.cend() && std::addressof(*BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += uint64_t{BufferList->mSampleLen} << MixerFracBits;
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        ++BufferList;
     }
-    while(BufferList && !BufferFmt)
+    while(BufferList != Source->mQueue.cend() && !BufferFmt)
     {
         BufferFmt = BufferList->mBuffer;
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        ++BufferList;
     }
     assert(BufferFmt != nullptr);
 
@@ -295,22 +294,21 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     if(!voice)
         return 0.0;
 
-    const BufferlistItem *BufferList{Source->queue};
+    auto BufferList = Source->mQueue.cbegin();
     const ALbuffer *BufferFmt{nullptr};
-    while(BufferList)
+    while(BufferList != Source->mQueue.cend() && std::addressof(*BufferList) != Current)
     {
         if(!BufferFmt)
             BufferFmt = static_cast<const ALbuffer*>(BufferList->mBuffer);
-        if(BufferList == Current) break;
 
         readPos += BufferList->mSampleLen;
 
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        ++BufferList;
     }
-    while(BufferList && !BufferFmt)
+    while(BufferList != Source->mQueue.cend() && !BufferFmt)
     {
         BufferFmt = static_cast<const ALbuffer*>(BufferList->mBuffer);
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        ++BufferList;
     }
     assert(BufferFmt != nullptr);
 
@@ -367,18 +365,17 @@ struct VoicePos {
  * using the givem offset type and offset. If the offset is out of range,
  * returns an empty optional.
  */
-al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum OffsetType,
+al::optional<VoicePos> GetSampleOffset(al::deque<BufferlistItem> &BufferList, ALenum OffsetType,
     double Offset)
 {
     /* Find the first valid Buffer in the Queue */
     const ALbuffer *BufferFmt{nullptr};
-    while(BufferList)
+    for(auto &item : BufferList)
     {
-        BufferFmt = static_cast<const ALbuffer*>(BufferList->mBuffer);
+        BufferFmt = static_cast<const ALbuffer*>(item.mBuffer);
         if(BufferFmt != nullptr) break;
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
     }
-    if(!BufferList)
+    if(!BufferFmt)
         return al::nullopt;
 
     /* Get sample frame offset */
@@ -421,16 +418,16 @@ al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum Offset
 
     /* Find the bufferlist item this offset belongs to. */
     ALuint totalBufferLen{0u};
-    while(BufferList && totalBufferLen <= offset)
+    for(auto &item : BufferList)
     {
-        if(BufferList->mSampleLen > offset-totalBufferLen)
+        if(totalBufferLen > offset)
+            break;
+        if(item.mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            return al::make_optional(VoicePos{offset-totalBufferLen, frac, BufferList});
+            return al::make_optional(VoicePos{offset-totalBufferLen, frac, &item});
         }
-        totalBufferLen += BufferList->mSampleLen;
-
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        totalBufferLen += item.mSampleLen;
     }
 
     /* Offset is out of range of the queue */
@@ -441,7 +438,8 @@ al::optional<VoicePos> GetSampleOffset(BufferlistItem *BufferList, ALenum Offset
 void InitVoice(Voice *voice, ALsource *source, BufferlistItem *BufferList, ALCcontext *context,
     ALCdevice *device)
 {
-    voice->mLoopBuffer.store(source->Looping ? source->queue : nullptr, std::memory_order_relaxed);
+    voice->mLoopBuffer.store(source->Looping ? &source->mQueue.front() : nullptr,
+        std::memory_order_relaxed);
 
     BufferStorage *buffer{BufferList->mBuffer};
     ALuint num_channels{buffer->channelsFromFmt()};
@@ -607,9 +605,10 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
-    newvoice->mFlags = (vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != source->queue) ?
-        VoiceIsFading : 0u;
-    InitVoice(newvoice, source, source->queue, context, device);
+    newvoice->mFlags = 0u;
+    if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != &source->mQueue.front())
+        newvoice->mFlags |= VoiceIsFading;
+    InitVoice(newvoice, source, &source->mQueue.front(), context, device);
     source->VoiceIdx = vidx;
 
     /* Set the old voice as having a pending change, and send it off with the
@@ -1224,7 +1223,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if((voice->mFlags&VoiceIsCallback))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                     "Source offset for callback is invalid");
-            auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
+            auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
             if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mDevice.get()))
@@ -1329,7 +1328,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 {
     ALCdevice *device{Context->mDevice.get()};
     ALeffectslot *slot{nullptr};
-    BufferlistItem *oldlist{nullptr};
+    al::deque<BufferlistItem> oldlist{};
     std::unique_lock<std::mutex> slotlock;
     float fvals[6];
 
@@ -1360,7 +1359,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(Voice *voice{GetSourceVoice(Source, Context)})
             {
                 if(Source->Looping)
-                    voice->mLoopBuffer.store(Source->queue, std::memory_order_release);
+                    voice->mLoopBuffer.store(&Source->mQueue.front(), std::memory_order_release);
                 else
                     voice->mLoopBuffer.store(nullptr, std::memory_order_release);
 
@@ -1381,7 +1380,6 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                 SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
                     "Setting buffer on playing or paused source %u", Source->id);
         }
-        oldlist = Source->queue;
         if(values[0])
         {
             std::lock_guard<std::mutex> _{device->BufferLock};
@@ -1397,34 +1395,33 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                     "Setting already-set callback buffer %u", buffer->id);
 
             /* Add the selected buffer to a one-item queue */
-            auto newlist = new BufferlistItem{};
-            newlist->mCallback = buffer->mCallback;
-            newlist->mUserData = buffer->mUserData;
-            newlist->mSampleLen = buffer->mSampleLen;
-            newlist->mLoopStart = buffer->mLoopStart;
-            newlist->mLoopEnd = buffer->mLoopEnd;
-            newlist->mSamples = buffer->mData;
-            newlist->mBuffer = buffer;
+            al::deque<BufferlistItem> newlist;
+            newlist.emplace_back();
+            newlist.back().mCallback = buffer->mCallback;
+            newlist.back().mUserData = buffer->mUserData;
+            newlist.back().mSampleLen = buffer->mSampleLen;
+            newlist.back().mLoopStart = buffer->mLoopStart;
+            newlist.back().mLoopEnd = buffer->mLoopEnd;
+            newlist.back().mSamples = buffer->mData;
+            newlist.back().mBuffer = buffer;
             IncrementRef(buffer->ref);
 
             /* Source is now Static */
             Source->SourceType = AL_STATIC;
-            Source->queue = newlist;
+            oldlist = std::move(Source->mQueue);
+            Source->mQueue = std::move(newlist);
         }
         else
         {
             /* Source is now Undetermined */
             Source->SourceType = AL_UNDETERMINED;
-            Source->queue = nullptr;
+            Source->mQueue.swap(oldlist);
         }
 
         /* Delete all elements in the previous queue */
-        while(oldlist != nullptr)
+        for(auto &item : oldlist)
         {
-            std::unique_ptr<BufferlistItem> head{oldlist};
-            oldlist = head->mNext.load(std::memory_order_relaxed);
-
-            if(auto *buffer{static_cast<ALbuffer*>(head->mBuffer)})
+            if(auto *buffer{static_cast<ALbuffer*>(item.mBuffer)})
                 DecrementRef(buffer->ref);
         }
         return true;
@@ -1440,7 +1437,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if((voice->mFlags&VoiceIsCallback))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, false,
                     "Source offset for callback is invalid");
-            auto vpos = GetSampleOffset(Source->queue, prop, values[0]);
+            auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
             if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, device))
@@ -1975,7 +1972,8 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_BUFFER:
         CHECKSIZE(values, 1);
         {
-            BufferlistItem *BufferList{(Source->SourceType==AL_STATIC) ? Source->queue : nullptr};
+            BufferlistItem *BufferList{(Source->SourceType == AL_STATIC)
+                ? &Source->mQueue.front() : nullptr};
             ALbuffer *buffer{BufferList ? static_cast<ALbuffer*>(BufferList->mBuffer) : nullptr};
             values[0] = buffer ? static_cast<int>(buffer->id) : 0;
         }
@@ -1988,17 +1986,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     case AL_BUFFERS_QUEUED:
         CHECKSIZE(values, 1);
-        if(BufferlistItem *BufferList{Source->queue})
-        {
-            ALsizei count{0};
-            do {
-                ++count;
-                BufferList = BufferList->mNext.load(std::memory_order_relaxed);
-            } while(BufferList != nullptr);
-            values[0] = count;
-        }
-        else
-            values[0] = 0;
+        values[0] = static_cast<int>(Source->mQueue.size());
         return true;
 
     case AL_BUFFERS_PROCESSED:
@@ -2012,20 +2000,18 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         }
         else
         {
-            const BufferlistItem *BufferList{Source->queue};
-            const BufferlistItem *Current{nullptr};
-            ALsizei played{0};
-
-            Voice *voice{GetSourceVoice(Source, Context)};
-            if(voice != nullptr)
-                Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-            else if(Source->state == AL_INITIAL)
-                Current = BufferList;
-
-            while(BufferList && BufferList != Current)
+            int played{0};
+            if(Source->state != AL_INITIAL)
             {
-                ++played;
-                BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+                const BufferlistItem *Current{nullptr};
+                if(Voice *voice{GetSourceVoice(Source, Context)})
+                    Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+                for(auto &item : Source->mQueue)
+                {
+                    if(&item == Current)
+                        break;
+                    ++played;
+                }
             }
             values[0] = played;
         }
@@ -2932,16 +2918,16 @@ START_API_FUNC
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */
-        BufferlistItem *BufferList{source->queue};
-        while(BufferList && BufferList->mSampleLen == 0)
+        auto BufferList = source->mQueue.begin();
+        for(;BufferList != source->mQueue.end();++BufferList)
         {
+            if(BufferList->mSampleLen != 0) break;
             BufferStorage *buffer{BufferList->mBuffer};
             if(buffer && buffer->mCallback) break;
-            BufferList = BufferList->mNext.load(std::memory_order_relaxed);
         }
 
         /* If there's nothing to play, go right to stopped. */
-        if UNLIKELY(!BufferList)
+        if UNLIKELY(BufferList == source->mQueue.end())
         {
             /* NOTE: A source without any playable buffers should not have a
              * Voice since it shouldn't be in a playing or paused state. So
@@ -3007,7 +2993,7 @@ START_API_FUNC
 
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
-        voice->mCurrentBuffer.store(source->queue, std::memory_order_relaxed);
+        voice->mCurrentBuffer.store(&source->mQueue.front(), std::memory_order_relaxed);
         voice->mFlags = 0;
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.
@@ -3017,16 +3003,16 @@ START_API_FUNC
             const double offset{source->Offset};
             source->OffsetType = AL_NONE;
             source->Offset = 0.0;
-            if(auto vpos = GetSampleOffset(BufferList, offsettype, offset))
+            if(auto vpos = GetSampleOffset(source->mQueue, offsettype, offset))
             {
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
                 voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
-                if(vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != source->queue)
+                if(vpos->pos != 0 || vpos->frac != 0 || vpos->bufferitem != &source->mQueue.front())
                     voice->mFlags |= VoiceIsFading;
             }
         }
-        InitVoice(voice, source, BufferList, context.get(), device);
+        InitVoice(voice, source, std::addressof(*BufferList), context.get(), device);
 
         source->VoiceIdx = vidx;
         source->state = AL_PLAYING;
@@ -3267,16 +3253,15 @@ START_API_FUNC
     /* Check for a valid Buffer, for its frequency and format */
     ALCdevice *device{context->mDevice.get()};
     ALbuffer *BufferFmt{nullptr};
-    BufferlistItem *BufferList{source->queue};
-    while(BufferList && !BufferFmt)
+    for(auto &item : source->mQueue)
     {
-        BufferFmt = static_cast<ALbuffer*>(BufferList->mBuffer);
-        BufferList = BufferList->mNext.load(std::memory_order_relaxed);
+        BufferFmt = static_cast<ALbuffer*>(item.mBuffer);
+        if(BufferFmt) break;
     }
 
     std::unique_lock<std::mutex> buflock{device->BufferLock};
-    BufferlistItem *BufferListStart{nullptr};
-    BufferList = nullptr;
+    const size_t NewListStart{source->mQueue.size()};
+    BufferlistItem *BufferList{nullptr};
     for(ALsizei i{0};i < nb;i++)
     {
         bool fmt_mismatch{false};
@@ -3292,23 +3277,20 @@ START_API_FUNC
             goto buffer_error;
         }
 
-        if(!BufferListStart)
-        {
-            BufferListStart = new BufferlistItem{};
-            BufferList = BufferListStart;
-        }
+        source->mQueue.emplace_back();
+        if(!BufferList)
+            BufferList = &source->mQueue.back();
         else
         {
-            auto item = new BufferlistItem{};
-            BufferList->mNext.store(item, std::memory_order_relaxed);
-            BufferList = item;
+            auto &item = source->mQueue.back();
+            BufferList->mNext.store(&item, std::memory_order_relaxed);
+            BufferList = &item;
         }
         if(!buffer) continue;
         BufferList->mSampleLen = buffer->mSampleLen;
         BufferList->mLoopEnd = buffer->mSampleLen;
         BufferList->mSamples = buffer->mData;
         BufferList->mBuffer = buffer;
-
         IncrementRef(buffer->ref);
 
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
@@ -3332,20 +3314,21 @@ START_API_FUNC
             fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
             fmt_mismatch |= BufferFmt->OriginalType != buffer->OriginalType;
         }
-        if(fmt_mismatch)
+        if UNLIKELY(fmt_mismatch)
         {
             context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
-             * each buffer we had. */
-            while(BufferListStart)
+             * each buffer we had.
+             */
+            auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
+            for(;iter != source->mQueue.end();++iter)
             {
-                std::unique_ptr<BufferlistItem> head{BufferListStart};
-                BufferListStart = head->mNext.load(std::memory_order_relaxed);
-                if(auto *buf{static_cast<ALbuffer*>(head->mBuffer)})
+                if(auto *buf{static_cast<ALbuffer*>(iter->mBuffer)})
                     DecrementRef(buf->ref);
             }
+            source->mQueue.resize(NewListStart);
             return;
         }
     }
@@ -3355,15 +3338,10 @@ START_API_FUNC
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
 
-    BufferList = source->queue;
-    if(!BufferList)
-        source->queue = BufferListStart;
-    else
+    if(NewListStart != 0)
     {
-        BufferlistItem *next;
-        while((next=BufferList->mNext.load(std::memory_order_relaxed)) != nullptr)
-            BufferList = next;
-        BufferList->mNext.store(BufferListStart, std::memory_order_release);
+        auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
+        (iter-1)->mNext.store(std::addressof(*iter), std::memory_order_release);
     }
 }
 END_API_FUNC
@@ -3383,50 +3361,40 @@ START_API_FUNC
     if UNLIKELY(!source)
         SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
 
-    if UNLIKELY(source->Looping)
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
     if UNLIKELY(source->SourceType != AL_STREAMING)
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from a non-streaming source %u",
             src);
+    if UNLIKELY(source->Looping)
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
 
     /* Make sure enough buffers have been processed to unqueue. */
-    BufferlistItem *BufferList{source->queue};
-    Voice *voice{GetSourceVoice(source, context.get())};
-    BufferlistItem *Current{nullptr};
-    if(voice)
-        Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-    else if(source->state == AL_INITIAL)
-        Current = BufferList;
-    if UNLIKELY(BufferList == Current)
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffer%s (none processed)", nb,
-            (nb==1) ? "" : "s");
-
-    ALuint i{1u};
-    while(i < static_cast<ALuint>(nb))
+    uint processed{0u};
+    if LIKELY(source->state != AL_INITIAL)
     {
-        /* If the next bufferlist to check is NULL or is the current one, it's
-         * trying to unqueue more buffers than are processed.
-         */
-        BufferlistItem *next{BufferList->mNext.load(std::memory_order_relaxed)};
-        if UNLIKELY(!next || next == Current)
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffers (only %u processed)",
-                nb, i);
-        BufferList = next;
-
-        ++i;
+        BufferlistItem *Current{nullptr};
+        if(Voice *voice{GetSourceVoice(source, context.get())})
+            Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        for(auto &item : source->mQueue)
+        {
+            if(&item == Current)
+                break;
+            ++processed;
+        }
     }
+    if UNLIKELY(processed < static_cast<ALuint>(nb))
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffer%s (only %u processed)",
+            nb, (nb==1)?"":"s", processed);
 
     do {
-        std::unique_ptr<BufferlistItem> head{source->queue};
-        source->queue = head->mNext.load(std::memory_order_relaxed);
-
-        if(auto *buffer{static_cast<ALbuffer*>(head->mBuffer)})
+        auto &head = source->mQueue.front();
+        if(auto *buffer{static_cast<ALbuffer*>(head.mBuffer)})
         {
             *(buffers++) = buffer->id;
             DecrementRef(buffer->ref);
         }
         else
             *(buffers++) = 0;
+        source->mQueue.pop_front();
     } while(--nb);
 }
 END_API_FUNC
@@ -3454,15 +3422,11 @@ ALsource::ALsource()
 
 ALsource::~ALsource()
 {
-    BufferlistItem *BufferList{queue};
-    while(BufferList != nullptr)
+    for(auto &item : mQueue)
     {
-        std::unique_ptr<BufferlistItem> head{BufferList};
-        BufferList = head->mNext.load(std::memory_order_relaxed);
-        if(auto *buffer{static_cast<ALbuffer*>(head->mBuffer)})
+        if(auto *buffer{static_cast<ALbuffer*>(item.mBuffer)})
             DecrementRef(buffer->ref);
     }
-    queue = nullptr;
 
     auto clear_send = [](ALsource::SendData &send) -> void
     { if(send.Slot) DecrementRef(send.Slot->ref); };

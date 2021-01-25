@@ -610,6 +610,7 @@ set(COMMON_OBJS
     common/albyte.h
     common/alcomplex.cpp
     common/alcomplex.h
+    common/aldeque.h
     common/alfstream.cpp
     common/alfstream.h
     common/almalloc.cpp

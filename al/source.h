@@ -12,6 +12,7 @@
 #include "AL/alc.h"
 
 #include "alcontext.h"
+#include "aldeque.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
@@ -21,13 +22,6 @@
 
 struct ALbuffer;
 struct ALeffectslot;
-
-namespace al {
-
-template<typename T>
-using deque = std::deque<T, al::allocator<T>>;
-
-} // namespace al
 
 
 #define DEFAULT_SENDS  2

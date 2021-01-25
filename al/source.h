@@ -21,7 +21,6 @@
 
 struct ALbuffer;
 struct ALeffectslot;
-struct BufferlistItem;
 
 namespace al {
 
@@ -34,6 +33,12 @@ using deque = std::deque<T, al::allocator<T>>;
 #define DEFAULT_SENDS  2
 
 #define INVALID_VOICE_IDX static_cast<ALuint>(-1)
+
+struct ALbufferQueueItem : public VoiceBufferItem {
+    ALbuffer *mBuffer{nullptr};
+
+    DISABLE_ALLOC()
+};
 
 
 struct ALsource {
@@ -108,7 +113,7 @@ struct ALsource {
     ALenum state{AL_INITIAL};
 
     /** Source Buffer Queue head. */
-    al::deque<BufferlistItem> mQueue;
+    al::deque<ALbufferQueueItem> mQueue;
 
     std::atomic_flag PropsClean;
 

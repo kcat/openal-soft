@@ -234,7 +234,7 @@ void LoadSamples(float *RESTRICT dst, const al::byte *src, const size_t srcstep,
 #undef HANDLE_FMT
 }
 
-float *LoadBufferStatic(BufferlistItem *buffer, BufferlistItem *&bufferLoopItem,
+float *LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *&bufferLoopItem,
     const size_t numChannels, const FmtType sampleType, const size_t sampleSize, const size_t chan,
     size_t dataPosInt, al::span<float> srcBuffer)
 {
@@ -250,9 +250,7 @@ float *LoadBufferStatic(BufferlistItem *buffer, BufferlistItem *&bufferLoopItem,
         /* Load what's left to play from the buffer */
         const size_t DataRem{minz(srcBuffer.size(), buffer->mSampleLen-dataPosInt)};
 
-        const al::byte *Data{buffer->mSamples.data()};
-        Data += (dataPosInt*numChannels + chan)*sampleSize;
-
+        const al::byte *Data{buffer->mSamples + (dataPosInt*numChannels + chan)*sampleSize};
         LoadSamples(srcBuffer.data(), Data, numChannels, sampleType, DataRem);
         srcBuffer = srcBuffer.subspan(DataRem);
     }
@@ -261,9 +259,7 @@ float *LoadBufferStatic(BufferlistItem *buffer, BufferlistItem *&bufferLoopItem,
         /* Load what's left of this loop iteration */
         const size_t DataRem{minz(srcBuffer.size(), LoopEnd-dataPosInt)};
 
-        const al::byte *Data{buffer->mSamples.data()};
-        Data += (dataPosInt*numChannels + chan)*sampleSize;
-
+        const al::byte *Data{buffer->mSamples + (dataPosInt*numChannels + chan)*sampleSize};
         LoadSamples(srcBuffer.data(), Data, numChannels, sampleType, DataRem);
         srcBuffer = srcBuffer.subspan(DataRem);
 
@@ -273,7 +269,7 @@ float *LoadBufferStatic(BufferlistItem *buffer, BufferlistItem *&bufferLoopItem,
         {
             const size_t DataSize{minz(srcBuffer.size(), LoopSize)};
 
-            Data = buffer->mSamples.data() + (LoopStart*numChannels + chan)*sampleSize;
+            Data = buffer->mSamples + (LoopStart*numChannels + chan)*sampleSize;
 
             LoadSamples(srcBuffer.data(), Data, numChannels, sampleType, DataSize);
             srcBuffer = srcBuffer.subspan(DataSize);
@@ -282,22 +278,21 @@ float *LoadBufferStatic(BufferlistItem *buffer, BufferlistItem *&bufferLoopItem,
     return srcBuffer.begin();
 }
 
-float *LoadBufferCallback(BufferlistItem *buffer, const size_t numChannels,
+float *LoadBufferCallback(VoiceBufferItem *buffer, const size_t numChannels,
     const FmtType sampleType, const size_t sampleSize, const size_t chan,
     size_t numCallbackSamples, al::span<float> srcBuffer)
 {
     /* Load what's left to play from the buffer */
     const size_t DataRem{minz(srcBuffer.size(), numCallbackSamples)};
 
-    const al::byte *Data{buffer->mSamples.data() + chan*sampleSize};
-
+    const al::byte *Data{buffer->mSamples + chan*sampleSize};
     LoadSamples(srcBuffer.data(), Data, numChannels, sampleType, DataRem);
     srcBuffer = srcBuffer.subspan(DataRem);
 
     return srcBuffer.begin();
 }
 
-float *LoadBufferQueue(BufferlistItem *buffer, BufferlistItem *bufferLoopItem,
+float *LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     const size_t numChannels, const FmtType sampleType, const size_t sampleSize, const size_t chan,
     size_t dataPosInt, al::span<float> srcBuffer)
 {
@@ -314,9 +309,7 @@ float *LoadBufferQueue(BufferlistItem *buffer, BufferlistItem *bufferLoopItem,
 
         const size_t DataSize{minz(srcBuffer.size(), buffer->mSampleLen-dataPosInt)};
 
-        const al::byte *Data{buffer->mSamples.data()};
-        Data += (dataPosInt*numChannels + chan)*sampleSize;
-
+        const al::byte *Data{buffer->mSamples + (dataPosInt*numChannels + chan)*sampleSize};
         LoadSamples(srcBuffer.data(), Data, numChannels, sampleType, DataSize);
         srcBuffer = srcBuffer.subspan(DataSize);
         if(srcBuffer.empty()) break;
@@ -443,8 +436,8 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
     /* Get voice info */
     uint DataPosInt{mPosition.load(std::memory_order_relaxed)};
     uint DataPosFrac{mPositionFrac.load(std::memory_order_relaxed)};
-    BufferlistItem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
-    BufferlistItem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
+    VoiceBufferItem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
+    VoiceBufferItem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
     const FmtType SampleType{mFmtType};
     const uint SampleSize{mSampleSize};
     const uint increment{mStep};
@@ -724,7 +717,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             {
                 const size_t byteOffset{SrcSamplesDone*FrameSize};
                 const size_t byteEnd{mNumCallbackSamples*FrameSize};
-                al::byte *data{BufferListItem->mSamples.data()};
+                al::byte *data{BufferListItem->mSamples};
                 std::copy(data+byteOffset, data+byteEnd, data);
                 mNumCallbackSamples -= SrcSamplesDone;
             }

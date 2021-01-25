@@ -74,6 +74,20 @@ struct SendParams {
 };
 
 
+struct VoiceBufferItem {
+    std::atomic<VoiceBufferItem*> mNext{nullptr};
+
+    CallbackType mCallback{nullptr};
+    void *mUserData{nullptr};
+
+    uint mSampleLen{0u};
+    uint mLoopStart{0u};
+    uint mLoopEnd{0u};
+
+    al::byte *mSamples{nullptr};
+};
+
+
 struct VoiceProps {
     float Pitch;
     float Gain;
@@ -166,12 +180,12 @@ struct Voice {
     std::atomic<uint> mPositionFrac;
 
     /* Current buffer queue item being played. */
-    std::atomic<BufferlistItem*> mCurrentBuffer;
+    std::atomic<VoiceBufferItem*> mCurrentBuffer;
 
     /* Buffer queue item to loop to at end of queue (will be NULL for non-
      * looping voices).
      */
-    std::atomic<BufferlistItem*> mLoopBuffer;
+    std::atomic<VoiceBufferItem*> mLoopBuffer;
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
@@ -211,8 +225,9 @@ struct Voice {
     al::vector<ChannelData> mChans{2};
 
     Voice() = default;
-    Voice(const Voice&) = delete;
     ~Voice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
+
+    Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;
 
     void mix(const State vstate, ALCcontext *Context, const uint SamplesToDo);

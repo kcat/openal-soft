@@ -4,8 +4,6 @@
 #include <atomic>
 
 #include "albyte.h"
-#include "almalloc.h"
-#include "alspan.h"
 
 
 using uint = unsigned int;
@@ -69,24 +67,6 @@ struct BufferStorage {
 
     inline bool isBFormat() const noexcept
     { return mChannels == FmtBFormat2D || mChannels == FmtBFormat3D; }
-};
-
-
-struct BufferlistItem {
-    std::atomic<BufferlistItem*> mNext{nullptr};
-
-    CallbackType mCallback{nullptr};
-    void *mUserData{nullptr};
-
-    uint mSampleLen{0u};
-    uint mLoopStart{0u};
-    uint mLoopEnd{0u};
-
-    al::span<al::byte> mSamples;
-
-    BufferStorage *mBuffer{nullptr};
-
-    DEF_NEWDEL(BufferlistItem)
 };
 
 #endif /* ALC_BUFFER_STORAGE_H */

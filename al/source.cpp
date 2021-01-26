@@ -352,7 +352,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
 struct VoicePos {
     ALuint pos, frac;
-    VoiceBufferItem *bufferitem;
+    ALbufferQueueItem *bufferitem;
 };
 
 /**
@@ -605,7 +605,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mFlags = 0u;
     if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != &source->mQueue.front())
         newvoice->mFlags |= VoiceIsFading;
-    InitVoice(newvoice, source, &source->mQueue.front(), context, device);
+    InitVoice(newvoice, source, vpos.bufferitem, context, device);
     source->VoiceIdx = vidx;
 
     /* Set the old voice as having a pending change, and send it off with the

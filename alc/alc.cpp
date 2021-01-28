@@ -3490,6 +3490,11 @@ START_API_FUNC
             || al::strcasecmp(deviceName, "DirectSound") == 0
             || al::strcasecmp(deviceName, "MMSYSTEM") == 0
 #endif
+            /* Some old Linux apps hardcode configuration strings that were
+             * supported by the OpenAL SI. We can't really do anything useful
+             * with them, so just ignore.
+             */
+            || (deviceName[0] == '\'' && deviceName[1] == '(')
             || al::strcasecmp(deviceName, "openal-soft") == 0)
             deviceName = nullptr;
     }

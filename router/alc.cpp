@@ -20,7 +20,7 @@ struct FuncExportEntry {
     const char *funcName;
     void *address;
 };
-static const std::array<FuncExportEntry,95> alcFunctions{{
+static const std::array<FuncExportEntry,128> alcFunctions{{
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -118,6 +118,40 @@ static const std::array<FuncExportEntry,95> alcFunctions{{
     DECL(alDopplerVelocity),
     DECL(alSpeedOfSound),
     DECL(alDistanceModel),
+
+    DECL(alGenFilters),
+    DECL(alDeleteFilters),
+    DECL(alIsFilter),
+    DECL(alFilterf),
+    DECL(alFilterfv),
+    DECL(alFilteri),
+    DECL(alFilteriv),
+    DECL(alGetFilterf),
+    DECL(alGetFilterfv),
+    DECL(alGetFilteri),
+    DECL(alGetFilteriv),
+    DECL(alGenEffects),
+    DECL(alDeleteEffects),
+    DECL(alIsEffect),
+    DECL(alEffectf),
+    DECL(alEffectfv),
+    DECL(alEffecti),
+    DECL(alEffectiv),
+    DECL(alGetEffectf),
+    DECL(alGetEffectfv),
+    DECL(alGetEffecti),
+    DECL(alGetEffectiv),
+    DECL(alGenAuxiliaryEffectSlots),
+    DECL(alDeleteAuxiliaryEffectSlots),
+    DECL(alIsAuxiliaryEffectSlot),
+    DECL(alAuxiliaryEffectSlotf),
+    DECL(alAuxiliaryEffectSlotfv),
+    DECL(alAuxiliaryEffectSloti),
+    DECL(alAuxiliaryEffectSlotiv),
+    DECL(alGetAuxiliaryEffectSlotf),
+    DECL(alGetAuxiliaryEffectSlotfv),
+    DECL(alGetAuxiliaryEffectSloti),
+    DECL(alGetAuxiliaryEffectSlotiv),
 }};
 #undef DECL
 

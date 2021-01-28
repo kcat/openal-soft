@@ -1323,7 +1323,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
 
     const bool directional{Direction.normalize() > 0.0f};
     alu::Vector ToSource{Position[0], Position[1], Position[2], 0.0f};
-    const float Distance{ToSource.normalize()};
+    const float Distance{ToSource.normalize(props->RefDistance / 1024.0f)};
 
     /* Initial source gain */
     GainTriplet DryGain{props->Gain, 1.0f, 1.0f};

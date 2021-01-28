@@ -35,10 +35,11 @@ public:
         return *this;
     }
 
-    T normalize()
+    T normalize(T lim = std::numeric_limits<T>::epsilon())
     {
+        lim = std::max(lim, std::numeric_limits<T>::epsilon());
         const T length{std::sqrt(mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2])};
-        if(length > std::numeric_limits<T>::epsilon())
+        if(length > lim)
         {
             T inv_length{T{1}/length};
             mVals[0] *= inv_length;

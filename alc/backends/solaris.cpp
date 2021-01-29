@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <math.h>
+#include <string.h>
 
 #include <thread>
 #include <functional>

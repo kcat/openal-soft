@@ -206,13 +206,17 @@ bool SolarisBackend::reset()
         return false;
     }
 
-    if(!((info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8 && mDevice->FmtType == DevFmtUByte) ||
-         (info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR && mDevice->FmtType == DevFmtByte) ||
-         (info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR && mDevice->FmtType == DevFmtShort) ||
-         (info.play.precision == 32 && info.play.encoding == AUDIO_ENCODING_LINEAR && mDevice->FmtType == DevFmtInt)))
+    if(info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8)
+        mDevice->FmtType = DevFmtUByte;
+    else if(info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR)
+        mDevice->FmtType = DevFmtByte;
+    else if(info.play.precision == 16 && info.play.encoding == AUDIO_ENCODING_LINEAR)
+        mDevice->FmtType = DevFmtShort;
+    else if(info.play.precision == 32 && info.play.encoding == AUDIO_ENCODING_LINEAR)
+        mDevice->FmtType = DevFmtInt;
+    else
     {
-        ERR("Could not set %s samples, got %d (0x%x)\n", DevFmtTypeString(mDevice->FmtType),
-            info.play.precision, info.play.encoding);
+        ERR("Got unhandled sample type: %d (0x%x)\n", info.play.precision, info.play.encoding);
         return false;
     }
 

@@ -35,12 +35,13 @@ public:
         return *this;
     }
 
-    T normalize(T lim = std::numeric_limits<T>::epsilon())
+    T normalize(T limit = std::numeric_limits<T>::epsilon())
     {
-        lim = std::max(lim, std::numeric_limits<T>::epsilon());
-        const T length{std::sqrt(mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2])};
-        if(length > lim)
+        limit = std::max(limit, std::numeric_limits<T>::epsilon());
+        const T length_sqr{mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2]};
+        if(length_sqr > limit*limit)
         {
+            const T length{std::sqrt(length_sqr)};
             T inv_length{T{1}/length};
             mVals[0] *= inv_length;
             mVals[1] *= inv_length;

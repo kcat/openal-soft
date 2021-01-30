@@ -5,6 +5,8 @@ openal-soft-1.21.1:
     Improved slightly the local source position when the listener and source
     are near each other.
 
+    Improved click/pop prevention for sounds that stop prematurely.
+
     Fixed compilation for Windows ARM targets with MSVC.
 
     Fixed ARM NEON detection on Windows.

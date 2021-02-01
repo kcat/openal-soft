@@ -135,6 +135,8 @@ bool OboePlayback::reset()
     if(result != oboe::Result::OK)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: %s",
             oboe::convertToText(result)};
+    mStream->setBufferSizeInFrames(mini(static_cast<int32_t>(mDevice->BufferSize),
+        mStream->getBufferCapacityInFrames()));
     TRACE("Got stream with properties:\n%s", oboe::convertToText(mStream.get()));
 
     switch(mStream->getChannelCount())

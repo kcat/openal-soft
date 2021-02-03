@@ -21,6 +21,8 @@ openal-soft-1.21.1:
 
     Fixed missing source stop events when stopping a paused source.
 
+    Added capture support to the experimental Oboe backend.
+
 openal-soft-1.21.0:
 
     Updated library codebase to C++14.

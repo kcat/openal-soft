@@ -321,9 +321,9 @@ void OboeCapture::start()
 
 void OboeCapture::stop()
 {
-    const oboe::Result result{mStream->pause()};
+    const oboe::Result result{mStream->stop()};
     if(result != oboe::Result::OK)
-        throw al::backend_exception{al::backend_error::DeviceError, "Failed to pause stream: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to stop stream: %s",
             oboe::convertToText(result)};
 }
 

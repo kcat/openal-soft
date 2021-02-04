@@ -3396,6 +3396,17 @@ START_API_FUNC
 END_API_FUNC
 
 
+AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*)
+START_API_FUNC
+{
+    ContextRef context{GetContextRef()};
+    if UNLIKELY(!context) return;
+
+    context->setError(AL_INVALID_OPERATION, "alSourceQueueBufferLayersSOFT not supported");
+}
+END_API_FUNC
+
+
 ALsource::ALsource()
 {
     Direct.Gain = 1.0f;

@@ -83,7 +83,7 @@ float *DoResample(const InterpState *state, float *RESTRICT src, uint frac, uint
     return dst.data();
 }
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const HrirArray &Coeffs,
+inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
 {
     ASSUME(IrSize >= MinIrLength);
@@ -149,7 +149,7 @@ void MixHrtfBlend_<CTag>(const float *InSamples, float2 *AccumSamples, const uin
 }
 
 template<>
-void MixDirectHrtf_<CTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+void MixDirectHrtf_<CTag>(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
     float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize)
 {

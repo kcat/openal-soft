@@ -30,7 +30,7 @@ struct Uhj2Encoder {
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
      * signal. The input must use FuMa channel ordering and scaling.
      */
-    void encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+    void encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
         const FloatBufferLine *InSamples, const size_t SamplesToDo);
 
     DEF_NEWDEL(Uhj2Encoder)

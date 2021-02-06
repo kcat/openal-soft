@@ -12,7 +12,7 @@
 using uint = unsigned int;
 
 using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const size_t irSize,
-    const HrirArray &Coeffs, const float left, const float right);
+    const ConstHrirSpan Coeffs, const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const size_t IrSize,
@@ -20,7 +20,7 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
 {
     ASSUME(BufferSize > 0);
 
-    const HrirArray &Coeffs = *hrtfparams->Coeffs;
+    const ConstHrirSpan Coeffs{hrtfparams->Coeffs};
     const float gainstep{hrtfparams->GainStep};
     const float gain{hrtfparams->Gain};
 
@@ -45,9 +45,9 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 {
     ASSUME(BufferSize > 0);
 
-    const auto &OldCoeffs = oldparams->Coeffs;
+    const ConstHrirSpan OldCoeffs{oldparams->Coeffs};
     const float oldGainStep{oldparams->Gain / static_cast<float>(BufferSize)};
-    const auto &NewCoeffs = *newparams->Coeffs;
+    const ConstHrirSpan NewCoeffs{newparams->Coeffs};
     const float newGainStep{newparams->GainStep};
 
     if LIKELY(oldparams->Gain > GainSilenceThreshold)
@@ -84,7 +84,7 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *RESTRICT AccumSamples,
     float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize)
 {
@@ -133,7 +133,7 @@ inline void MixDirectHrtfBase(FloatBufferLine &LeftOut, FloatBufferLine &RightOu
         ChanState->mSplitter.processHfScale(tempbuf, ChanState->mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
-        const auto &Coeffs = ChanState->mCoeffs;
+        const ConstHrirSpan Coeffs{ChanState->mCoeffs};
         for(size_t i{0u};i < BufferSize;++i)
         {
             const float insample{tempbuf[i]};

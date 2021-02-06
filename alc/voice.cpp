@@ -359,14 +359,14 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
             const float a{static_cast<float>(fademix) / static_cast<float>(Counter)};
             gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
         }
-        MixHrtfFilter hrtfparams;
-        hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
-        hrtfparams.Delay = parms.Hrtf.Target.Delay;
-        hrtfparams.Gain = 0.0f;
-        hrtfparams.GainStep = gain / static_cast<float>(fademix);
 
+        MixHrtfFilter hrtfparams{
+            parms.Hrtf.Target.Coeffs,
+            parms.Hrtf.Target.Delay,
+            0.0f, gain / static_cast<float>(fademix)};
         MixHrtfBlendSamples(HrtfSamples, AccumSamples+OutPos, IrSize, &parms.Hrtf.Old, &hrtfparams,
             fademix);
+
         /* Update the old parameters with the result. */
         parms.Hrtf.Old = parms.Hrtf.Target;
         parms.Hrtf.Old.Gain = gain;
@@ -387,12 +387,13 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
             gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
-        MixHrtfFilter hrtfparams;
-        hrtfparams.Coeffs = &parms.Hrtf.Target.Coeffs;
-        hrtfparams.Delay = parms.Hrtf.Target.Delay;
-        hrtfparams.Gain = parms.Hrtf.Old.Gain;
-        hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo);
+        MixHrtfFilter hrtfparams{
+            parms.Hrtf.Target.Coeffs,
+            parms.Hrtf.Target.Delay,
+            parms.Hrtf.Old.Gain,
+            (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo)};
         MixHrtfSamples(HrtfSamples+fademix, AccumSamples+OutPos, IrSize, &hrtfparams, todo);
+
         /* Store the now-current gain for next time. */
         parms.Hrtf.Old.Gain = gain;
     }

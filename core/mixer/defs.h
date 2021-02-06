@@ -80,7 +80,7 @@ template<typename InstTag>
 void MixHrtfBlend_(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize);
 template<typename InstTag>
-void MixDirectHrtf_(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+void MixDirectHrtf_(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
     float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
 

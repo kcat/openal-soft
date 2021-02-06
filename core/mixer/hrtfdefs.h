@@ -3,6 +3,7 @@
 
 #include <array>
 
+#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/filters/splitter.h"
@@ -28,9 +29,11 @@ constexpr uint MinIrLength{8};
 constexpr uint HrtfDirectDelay{256};
 
 using HrirArray = std::array<float2,HrirLength>;
+using HrirSpan = al::span<float2,HrirLength>;
+using ConstHrirSpan = al::span<const float2,HrirLength>;
 
 struct MixHrtfFilter {
-    const HrirArray *Coeffs;
+    const ConstHrirSpan Coeffs;
     uint2 Delay;
     float Gain;
     float GainStep;

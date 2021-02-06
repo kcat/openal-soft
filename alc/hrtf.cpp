@@ -285,7 +285,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
 {
     using double2 = std::array<double,2>;
     struct ImpulseResponse {
-        const HrirArray &hrir;
+        const ConstHrirSpan hrir;
         uint ldelay, rdelay;
     };
 
@@ -341,7 +341,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     auto tmpres = al::vector<std::array<double2,HrirLength>>(mChannels.size());
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
-        const HrirArray &hrir{impres[c].hrir};
+        const ConstHrirSpan hrir{impres[c].hrir};
         const uint ldelay{hrir_delay_round(impres[c].ldelay - min_delay)};
         const uint rdelay{hrir_delay_round(impres[c].rdelay - min_delay)};
 

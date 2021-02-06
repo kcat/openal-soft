@@ -34,7 +34,7 @@ inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
 constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
 constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const HrirArray &Coeffs,
+inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
 {
     float32x4_t leftright4;
@@ -213,7 +213,7 @@ void MixHrtfBlend_<NEONTag>(const float *InSamples, float2 *AccumSamples, const 
 }
 
 template<>
-void MixDirectHrtf_<NEONTag>(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+void MixDirectHrtf_<NEONTag>(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
     float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize)
 {

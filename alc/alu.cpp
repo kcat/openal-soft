@@ -154,9 +154,9 @@ struct ChanMap {
     float elevation;
 };
 
-using HrtfDirectMixerFunc = void(*)(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
-    float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
+using HrtfDirectMixerFunc = void(*)(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, float *TempBuf,
+    HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
 
 HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 

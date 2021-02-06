@@ -221,7 +221,7 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  * with the desired shift.
  */
 
-void Uhj2Encoder::encode(FloatBufferLine &LeftOut, FloatBufferLine &RightOut,
+void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);

@@ -161,10 +161,10 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
                 r14 = vmlaq_f32(r14, shuffle_3131(s0, s1), coeffs);
             }
             r04 = vaddq_f32(r04, vrev64q_f32(r04));
-            dst[pos++] = vget_lane_f32(vadd_f32(vget_low_f32(r04), vget_high_f32(r04)), 0);
+            dst[pos++] += vget_lane_f32(vadd_f32(vget_low_f32(r04), vget_high_f32(r04)), 0);
 
             r14 = vaddq_f32(r14, vrev64q_f32(r14));
-            dst[pos++] = vget_lane_f32(vadd_f32(vget_low_f32(r14), vget_high_f32(r14)), 0);
+            dst[pos++] += vget_lane_f32(vadd_f32(vget_low_f32(r14), vget_high_f32(r14)), 0);
 
             src += 2;
         } while(--todo);
@@ -187,7 +187,7 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
             r4 = vmlaq_f32(r4, s, coeffs);
         }
         r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        dst[pos] = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+        dst[pos] += vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
     }
 
 #else

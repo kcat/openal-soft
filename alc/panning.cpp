@@ -486,11 +486,6 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         decoder = X71Config;
         break;
     case DevFmtAmbi3D:
-        break;
-    }
-
-    if(device->FmtChans == DevFmtAmbi3D)
-    {
         const char *devname{device->DeviceName.c_str()};
         auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
         auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
@@ -499,100 +494,95 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
         std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
             [&n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
-            { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
-        );
+            { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
         AllocChannels(device, count, 0);
 
         float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
         if(nfc_delay > 0.0f)
             InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
                 true);
+        return;
     }
-    else
+
+    const bool dual_band{hqdec && !decoder.mCoeffsLF.empty()};
+    al::vector<ChannelDec> chancoeffs, chancoeffslf;
+    for(size_t i{0u};i < decoder.mChannels.size();++i)
     {
-        const bool dual_band{hqdec && !decoder.mCoeffsLF.empty()};
-        al::vector<ChannelDec> chancoeffs, chancoeffslf;
-        for(size_t i{0u};i < decoder.mChannels.size();++i)
+        const uint idx{GetChannelIdxByName(device->RealOut, decoder.mChannels[i])};
+        if(idx == INVALID_CHANNEL_INDEX)
         {
-            const uint idx{GetChannelIdxByName(device->RealOut, decoder.mChannels[i])};
-            if(idx == INVALID_CHANNEL_INDEX)
-            {
-                ERR("Failed to find %s channel in device\n",
-                    GetLabelFromChannel(decoder.mChannels[i]));
-                continue;
-            }
-
-            chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
-            al::span<float,MaxAmbiChannels> coeffs{chancoeffs[idx]};
-            size_t start{0};
-            for(uint o{0};o <= decoder.mOrder;++o)
-            {
-                size_t count{o ? 2u : 1u};
-                do {
-                    coeffs[start] = decoder.mCoeffs[i][start] * decoder.mOrderGain[o];
-                    ++start;
-                } while(--count);
-            }
-            if(!dual_band)
-                continue;
-
-            chancoeffslf.resize(maxz(chancoeffslf.size(), idx+1u), ChannelDec{});
-            coeffs = chancoeffslf[idx];
-            start = 0;
-            for(uint o{0};o <= decoder.mOrder;++o)
-            {
-                size_t count{o ? 2u : 1u};
-                do {
-                    coeffs[start] = decoder.mCoeffsLF[i][start] * decoder.mOrderGainLF[o];
-                    ++start;
-                } while(--count);
-            }
+            ERR("Failed to find %s channel in device\n",
+                GetLabelFromChannel(decoder.mChannels[i]));
+            continue;
         }
 
-        /* For non-DevFmtAmbi3D, set the ambisonic order. */
-        device->mAmbiOrder = decoder.mOrder;
-
-        /* Built-in speaker decoders are always 2D. */
-        const size_t ambicount{Ambi2DChannelsFromOrder(decoder.mOrder)};
-        std::transform(AmbiIndex::FromACN2D().begin(), AmbiIndex::FromACN2D().begin()+ambicount,
-            std::begin(device->Dry.AmbiMap),
-            [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
-        );
-        AllocChannels(device, ambicount, device->channelsFromFmt());
-
-        std::unique_ptr<FrontStablizer> stablizer;
-        if(stablize)
+        chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
+        al::span<float,MaxAmbiChannels> coeffs{chancoeffs[idx]};
+        size_t ambichan{0};
+        for(uint o{0};o < decoder.mOrder+1;++o)
         {
-            /* Only enable the stablizer if the decoder does not output to the
-             * front-center channel.
-             */
-            const auto cidx = device->RealOut.ChannelIndex[FrontCenter];
-            bool hasfc{false};
-            if(cidx < chancoeffs.size())
-            {
-                for(const auto &coeff : chancoeffs[cidx])
-                    hasfc |= coeff != 0.0f;
-            }
-            if(!hasfc && cidx < chancoeffslf.size())
-            {
-                for(const auto &coeff : chancoeffslf[cidx])
-                    hasfc |= coeff != 0.0f;
-            }
-            if(!hasfc)
-            {
-                stablizer = CreateStablizer(device->channelsFromFmt(), device->Frequency);
-                TRACE("Front stablizer enabled\n");
-            }
+            const float order_gain{decoder.mOrderGain[o]};
+            const size_t order_max{Ambi2DChannelsFromOrder(o)};
+            for(;ambichan < order_max;++ambichan)
+                coeffs[ambichan] = decoder.mCoeffs[i][ambichan] * order_gain;
         }
+        if(!dual_band)
+            continue;
 
-        TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
-            !dual_band ? "single" : "dual",
-            (decoder.mOrder > 2) ? "third" :
-            (decoder.mOrder > 1) ? "second" : "first",
-            "");
-        device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
-            std::move(stablizer));
+        chancoeffslf.resize(maxz(chancoeffslf.size(), idx+1u), ChannelDec{});
+        coeffs = chancoeffslf[idx];
+        ambichan = 0;
+        for(uint o{0};o < decoder.mOrder+1;++o)
+        {
+            const float order_gain{decoder.mOrderGainLF[o]};
+            const size_t order_max{Ambi2DChannelsFromOrder(o)};
+            for(;ambichan < order_max;++ambichan)
+                coeffs[ambichan] = decoder.mCoeffsLF[i][ambichan] * order_gain;
+        }
     }
+
+    /* For non-DevFmtAmbi3D, set the ambisonic order. */
+    device->mAmbiOrder = decoder.mOrder;
+
+    /* Built-in speaker decoders are always 2D. */
+    const size_t ambicount{Ambi2DChannelsFromOrder(decoder.mOrder)};
+    std::transform(AmbiIndex::FromACN2D().begin(), AmbiIndex::FromACN2D().begin()+ambicount,
+        std::begin(device->Dry.AmbiMap),
+        [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; });
+    AllocChannels(device, ambicount, device->channelsFromFmt());
+
+    std::unique_ptr<FrontStablizer> stablizer;
+    if(stablize)
+    {
+        /* Only enable the stablizer if the decoder does not output to the
+         * front-center channel.
+         */
+        const auto cidx = device->RealOut.ChannelIndex[FrontCenter];
+        bool hasfc{false};
+        if(cidx < chancoeffs.size())
+        {
+            for(const auto &coeff : chancoeffs[cidx])
+                hasfc |= coeff != 0.0f;
+        }
+        if(!hasfc && cidx < chancoeffslf.size())
+        {
+            for(const auto &coeff : chancoeffslf[cidx])
+                hasfc |= coeff != 0.0f;
+        }
+        if(!hasfc)
+        {
+            stablizer = CreateStablizer(device->channelsFromFmt(), device->Frequency);
+            TRACE("Front stablizer enabled\n");
+        }
+    }
+
+    TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
+        !dual_band ? "single" : "dual",
+        (decoder.mOrder > 2) ? "third" :
+        (decoder.mOrder > 1) ? "second" : "first",
+        "");
+    device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
+        std::move(stablizer));
 }
 
 void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,

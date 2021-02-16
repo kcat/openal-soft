@@ -34,6 +34,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "makemhr.h"

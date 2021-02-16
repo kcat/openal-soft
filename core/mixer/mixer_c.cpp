@@ -32,15 +32,16 @@ inline float do_cubic(const InterpState&, const float *RESTRICT vals, const uint
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
 {
     const size_t m{istate.bsinc.m};
+    ASSUME(m > 0);
 
     // Calculate the phase index and factor.
     const uint pi{frac >> FracPhaseBitDiff};
     const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
-    const float *fil{istate.bsinc.filter + m*pi*4};
-    const float *phd{fil + m};
-    const float *scd{phd + m};
-    const float *spd{scd + m};
+    const float *RESTRICT fil{istate.bsinc.filter + m*pi*4};
+    const float *RESTRICT phd{fil + m};
+    const float *RESTRICT scd{phd + m};
+    const float *RESTRICT spd{scd + m};
 
     // Apply the scale and phase interpolated filter.
     float r{0.0f};
@@ -51,13 +52,14 @@ inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, con
 inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
 {
     const size_t m{istate.bsinc.m};
+    ASSUME(m > 0);
 
     // Calculate the phase index and factor.
     const uint pi{frac >> FracPhaseBitDiff};
     const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
-    const float *fil{istate.bsinc.filter + m*pi*4};
-    const float *phd{fil + m};
+    const float *RESTRICT fil{istate.bsinc.filter + m*pi*4};
+    const float *RESTRICT phd{fil + m};
 
     // Apply the phase interpolated filter.
     float r{0.0f};

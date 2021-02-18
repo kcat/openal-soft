@@ -5,6 +5,7 @@
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
+#include <emmintrin.h>
 #elif defined(HAVE_NEON)
 #include <arm_neon.h>
 #endif
@@ -77,9 +78,9 @@ const PhaseShifterT PShift{};
 void allpass_process(al::span<float> dst, const float *RESTRICT src)
 {
 #ifdef HAVE_SSE_INTRINSICS
-    size_t pos{0};
     if(size_t todo{dst.size()>>1})
     {
+        auto *out = reinterpret_cast<__m64*>(dst.data());
         do {
             __m128 r04{_mm_setzero_ps()};
             __m128 r14{_mm_setzero_ps()};
@@ -95,15 +96,13 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
                 s = _mm_shuffle_ps(s0, s1, _MM_SHUFFLE(3, 1, 3, 1));
                 r14 = _mm_add_ps(r14, _mm_mul_ps(s, coeffs));
             }
-            r04 = _mm_add_ps(r04, _mm_shuffle_ps(r04, r04, _MM_SHUFFLE(0, 1, 2, 3)));
-            r04 = _mm_add_ps(r04, _mm_movehl_ps(r04, r04));
-            dst[pos++] += _mm_cvtss_f32(r04);
-
-            r14 = _mm_add_ps(r14, _mm_shuffle_ps(r14, r14, _MM_SHUFFLE(0, 1, 2, 3)));
-            r14 = _mm_add_ps(r14, _mm_movehl_ps(r14, r14));
-            dst[pos++] += _mm_cvtss_f32(r14);
-
             src += 2;
+
+            __m128 r4{_mm_add_ps(_mm_unpackhi_ps(r04, r14), _mm_unpacklo_ps(r04, r14))};
+            r4 = _mm_add_ps(r4, _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(r4), 8)));
+
+            _mm_storel_pi(out, _mm_add_ps(_mm_loadl_pi(_mm_undefined_ps(), out), r4));
+            ++out;
         } while(--todo);
     }
     if((dst.size()&1))
@@ -121,7 +120,7 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
 
-        dst[pos] += _mm_cvtss_f32(r4);
+        dst.back() += _mm_cvtss_f32(r4);
     }
 
 #elif defined(HAVE_NEON)
@@ -148,6 +147,16 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
             ret = vsetq_lane_f32(vgetq_lane_f32(b, 3), ret, 3);
             return ret;
         };
+        auto unpacklo = [](float32x4_t a, float32x4_t b)
+        {
+            float32x2x2_t result{vzip_f32(vget_low_f32(a), vget_low_f32(b))};
+            return vcombine_f32(result.val[0], result.val[1]);
+        };
+        auto unpackhi = [](float32x4_t a, float32x4_t b)
+        {
+            float32x2x2_t result{vzip_f32(vget_high_f32(a), vget_high_f32(b))};
+            return vcombine_f32(result.val[0], result.val[1]);
+        };
         do {
             float32x4_t r04{vdupq_n_f32(0.0f)};
             float32x4_t r14{vdupq_n_f32(0.0f)};
@@ -160,13 +169,13 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
                 r04 = vmlaq_f32(r04, shuffle_2020(s0, s1), coeffs);
                 r14 = vmlaq_f32(r14, shuffle_3131(s0, s1), coeffs);
             }
-            r04 = vaddq_f32(r04, vrev64q_f32(r04));
-            dst[pos++] += vget_lane_f32(vadd_f32(vget_low_f32(r04), vget_high_f32(r04)), 0);
-
-            r14 = vaddq_f32(r14, vrev64q_f32(r14));
-            dst[pos++] += vget_lane_f32(vadd_f32(vget_low_f32(r14), vget_high_f32(r14)), 0);
-
             src += 2;
+
+            float32x4_t r4{vaddq_f32(unpackhi(r04, r14), unpacklo(r04, r14))};
+            float32x2_t r2{vadd_f32(vget_low_f32(r4), vget_high_f32(r4))};
+
+            vst1_f32(&dst[pos], vadd_f32(vld1_f32(&dst[pos]), r2));
+            pos += 2;
         } while(--todo);
     }
     if((dst.size()&1))

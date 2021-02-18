@@ -52,10 +52,10 @@ float *Resample_<LerpTag,SSE2Tag>(const InterpState*, float *RESTRICT src, uint 
     auto dst_iter = dst.begin();
     for(size_t todo{dst.size()>>2};todo;--todo)
     {
-        const int pos0{_mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(0, 0, 0, 0)))};
-        const int pos1{_mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(1, 1, 1, 1)))};
-        const int pos2{_mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(2, 2, 2, 2)))};
-        const int pos3{_mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(3, 3, 3, 3)))};
+        const int pos0{_mm_cvtsi128_si32(pos4)};
+        const int pos1{_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4))};
+        const int pos2{_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8))};
+        const int pos3{_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12))};
         const __m128 val1{_mm_setr_ps(src[pos0  ], src[pos1  ], src[pos2  ], src[pos3  ])};
         const __m128 val2{_mm_setr_ps(src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1])};
 

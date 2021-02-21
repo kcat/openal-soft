@@ -5,7 +5,6 @@
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
-#include <emmintrin.h>
 #elif defined(HAVE_NEON)
 #include <arm_neon.h>
 #endif
@@ -99,7 +98,7 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
             src += 2;
 
             __m128 r4{_mm_add_ps(_mm_unpackhi_ps(r04, r14), _mm_unpacklo_ps(r04, r14))};
-            r4 = _mm_add_ps(r4, _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(r4), 8)));
+            r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
 
             _mm_storel_pi(out, _mm_add_ps(_mm_loadl_pi(_mm_undefined_ps(), out), r4));
             ++out;

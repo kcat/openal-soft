@@ -189,16 +189,16 @@ struct BSincFilterArray {
         }
 
         size_t idx{0};
-        for(size_t si{0};si < BSincScaleCount-1;++si)
+        for(size_t si{0};si < BSincScaleCount;++si)
         {
             const size_t m{((hdr.a[si]*2) + 3) & ~3u};
             const size_t o{(BSincPointsMax-m) / 2};
 
+            /* Write out each phase index's filter and phase delta for this
+             * quality scale.
+             */
             for(size_t pi{0};pi < BSincPhaseCount;++pi)
             {
-                /* Write out the filter. Also calculate and write out the phase
-                 * and scale deltas.
-                 */
                 for(size_t i{0};i < m;++i)
                     mTable[idx++] = static_cast<float>(filter[si][pi][o+i]);
 
@@ -210,11 +210,22 @@ struct BSincFilterArray {
                     const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
                     mTable[idx++] = static_cast<float>(phDelta);
                 }
-
+            }
+            /* Calculate and write out each phase index's filter quality scale
+             * deltas. The last scale index doesn't have any scale or scale-
+             * phase deltas.
+             */
+            if(si == BSincScaleCount-1)
+            {
+                for(size_t i{0};i < BSincPhaseCount*m*2;++i)
+                    mTable[idx++] = 0.0f;
+            }
+            else for(size_t pi{0};pi < BSincPhaseCount;++pi)
+            {
                 /* Linear interpolation between scales is also simplified.
                  *
-                 * Given a difference in points between scales, the destination
-                 * points will be 0, thus: x = a + f (-a)
+                 * Given a difference in the number of points between scales,
+                 * the destination points will be 0, thus: x = a + f (-a)
                  */
                 for(size_t i{0};i < m;++i)
                 {
@@ -223,37 +234,14 @@ struct BSincFilterArray {
                 }
 
                 /* This last simplification is done to complete the bilinear
-                 * equation for the combination of phase and scale.
-                 */
+                * equation for the combination of phase and scale.
+                */
                 for(size_t i{0};i < m;++i)
                 {
                     const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -
                         (filter[si][pi+1][o+i] - filter[si][pi][o+i])};
                     mTable[idx++] = static_cast<float>(spDelta);
                 }
-            }
-        }
-        {
-            /* The last scale index doesn't have any scale or scale-phase
-             * deltas.
-             */
-            constexpr size_t si{BSincScaleCount-1};
-            const size_t m{((hdr.a[si]*2) + 3) & ~3u};
-            const size_t o{(BSincPointsMax-m) / 2};
-
-            for(size_t pi{0};pi < BSincPhaseCount;++pi)
-            {
-                for(size_t i{0};i < m;++i)
-                    mTable[idx++] = static_cast<float>(filter[si][pi][o+i]);
-                for(size_t i{0};i < m;++i)
-                {
-                    const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
-                    mTable[idx++] = static_cast<float>(phDelta);
-                }
-                for(size_t i{0};i < m;++i)
-                    mTable[idx++] = 0.0f;
-                for(size_t i{0};i < m;++i)
-                    mTable[idx++] = 0.0f;
             }
         }
         assert(idx == hdr.total_size);

@@ -161,9 +161,10 @@ struct BSincFilterArray {
         auto filter = std::make_unique<filter_type>(BSincScaleCount);
 
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
-         * scale and phase index.
+         * scale and phase index. The output of scale index 0 is all 0s, so
+         * start at 1.
          */
-        for(uint si{0};si < BSincScaleCount;++si)
+        for(uint si{1};si < BSincScaleCount;++si)
         {
             const uint m{hdr.a[si] * 2};
             const size_t o{(BSincPointsMax-m) / 2};

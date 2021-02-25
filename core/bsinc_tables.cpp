@@ -24,7 +24,8 @@ using uint = unsigned int;
  */
 constexpr double Sinc(const double x)
 {
-    if(!(x > 1e-15 || x < -1e-15))
+    constexpr double epsilon{std::numeric_limits<double>::epsilon()};
+    if(!(x > epsilon || x < -epsilon))
         return 1.0;
     return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
 }

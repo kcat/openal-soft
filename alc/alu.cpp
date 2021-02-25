@@ -182,8 +182,8 @@ inline void BsincPrepare(const uint increment, BsincState *state, const BSincTab
 
     if(increment > MixerFracOne)
     {
-        sf = MixerFracOne / static_cast<float>(increment);
-        sf = maxf(0.0f, (BSincScaleCount-1) * (sf-table->scaleBase) * table->scaleRange);
+        sf = MixerFracOne/static_cast<float>(increment) - table->scaleBase;
+        sf = maxf(0.0f, BSincScaleCount*sf*table->scaleRange - 1.0f);
         si = float2uint(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different

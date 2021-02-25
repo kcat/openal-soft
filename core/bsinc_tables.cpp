@@ -123,7 +123,7 @@ struct BSincHeader {
         uint num_points{Order+1};
         for(uint si{0};si < BSincScaleCount;++si)
         {
-            const double scale{scaleBase + (scaleRange * si / (BSincScaleCount-1))};
+            const double scale{scaleBase + (scaleRange * (si+1) / BSincScaleCount)};
             const uint a_{std::min(static_cast<uint>(num_points / 2.0 / scale), num_points)};
             const uint m{2 * a_};
 
@@ -162,14 +162,13 @@ struct BSincFilterArray {
         auto filter = std::make_unique<filter_type>(BSincScaleCount);
 
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
-         * scale and phase index. The output of scale index 0 is all 0s, so
-         * start at 1.
+         * scale and phase index.
          */
-        for(uint si{1};si < BSincScaleCount;++si)
+        for(uint si{0};si < BSincScaleCount;++si)
         {
             const uint m{hdr.a[si] * 2};
             const size_t o{(BSincPointsMax-m) / 2};
-            const double scale{hdr.scaleBase + (hdr.scaleRange * si / (BSincScaleCount-1))};
+            const double scale{hdr.scaleBase + (hdr.scaleRange * (si+1) / BSincScaleCount)};
             const double cutoff{scale - (hdr.scaleBase * std::max(0.5, scale) * 2.0)};
             const auto a = static_cast<double>(hdr.a[si]);
             const double l{a - 1.0};
@@ -236,8 +235,8 @@ struct BSincFilterArray {
                 }
 
                 /* This last simplification is done to complete the bilinear
-                * equation for the combination of phase and scale.
-                */
+                 * equation for the combination of phase and scale.
+                 */
                 for(size_t i{0};i < m;++i)
                 {
                     const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -

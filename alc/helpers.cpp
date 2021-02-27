@@ -205,9 +205,8 @@ void SetRTPriority(void)
 
 const PathNamePair &GetProcBinary()
 {
-    static PathNamePair ret;
-    if(!ret.fname.empty() || !ret.path.empty())
-        return ret;
+    static al::optional<PathNamePair> procbin;
+    if(procbin) return *procbin;
 
     al::vector<char> pathname;
 #ifdef __FreeBSD__
@@ -241,6 +240,7 @@ const PathNamePair &GetProcBinary()
             pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
     }
 #endif
+#ifndef __SWITCH__
     if(pathname.empty())
     {
         static const char SelfLinkNames[][32]{
@@ -269,25 +269,25 @@ const PathNamePair &GetProcBinary()
         if(len <= 0)
         {
             WARN("Failed to readlink %s: %s\n", selfname, strerror(errno));
-            return ret;
+            len = 0;
         }
 
         pathname.resize(static_cast<size_t>(len));
     }
+#endif
     while(!pathname.empty() && pathname.back() == 0)
         pathname.pop_back();
 
     auto sep = std::find(pathname.crbegin(), pathname.crend(), '/');
     if(sep != pathname.crend())
-    {
-        ret.path = std::string(pathname.cbegin(), sep.base()-1);
-        ret.fname = std::string(sep.base(), pathname.cend());
-    }
+        procbin = al::make_optional<PathNamePair>(std::string(pathname.cbegin(), sep.base()-1),
+            std::string(sep.base(), pathname.cend()));
     else
-        ret.fname = std::string(pathname.cbegin(), pathname.cend());
+        procbin = al::make_optional<PathNamePair>(std::string{},
+            std::string(pathname.cbegin(), pathname.cend()));
 
-    TRACE("Got binary: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
-    return ret;
+    TRACE("Got binary: \"%s\", \"%s\"\n", procbin->path.c_str(), procbin->fname.c_str());
+    return *procbin;
 }
 
 namespace {

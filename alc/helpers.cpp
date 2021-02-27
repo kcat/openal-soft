@@ -257,14 +257,20 @@ const PathNamePair &GetProcBinary()
         for(const char *name : SelfLinkNames)
         {
             selfname = name;
+#ifndef __SWITCH__
             len = readlink(selfname, pathname.data(), pathname.size());
             if(len >= 0 || errno != ENOENT) break;
+#endif
         }
 
         while(len > 0 && static_cast<size_t>(len) == pathname.size())
         {
             pathname.resize(pathname.size() << 1);
+#ifndef __SWITCH__
+	    len = 0;
+#else
             len = readlink(selfname, pathname.data(), pathname.size());
+#endif
         }
         if(len <= 0)
         {

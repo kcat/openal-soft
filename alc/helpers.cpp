@@ -32,6 +32,7 @@
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alfstream.h"
+#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "compat.h"
@@ -46,9 +47,8 @@
 
 const PathNamePair &GetProcBinary()
 {
-    static PathNamePair ret;
-    if(!ret.fname.empty() || !ret.path.empty())
-        return ret;
+    static al::optional<PathNamePair> procbin;
+    if(procbin) return *procbin;
 
     auto fullpath = al::vector<WCHAR>(256);
     DWORD len;
@@ -57,7 +57,8 @@ const PathNamePair &GetProcBinary()
     if(len == 0)
     {
         ERR("Failed to get process name: error %lu\n", GetLastError());
-        return ret;
+        procbin = al::make_optional<PathNamePair>();
+        return *procbin;
     }
 
     fullpath.resize(len);
@@ -69,14 +70,14 @@ const PathNamePair &GetProcBinary()
     if(sep != fullpath.rend())
     {
         *sep = 0;
-        ret.fname = wstr_to_utf8(&*sep + 1);
-        ret.path = wstr_to_utf8(fullpath.data());
+        procbin = al::make_optional<PathNamePair>(wstr_to_utf8(fullpath.data()),
+            wstr_to_utf8(&*sep + 1));
     }
     else
-        ret.fname = wstr_to_utf8(fullpath.data());
+        procbin = al::make_optional<PathNamePair>(std::string{}, wstr_to_utf8(fullpath.data()));
 
-    TRACE("Got binary: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
-    return ret;
+    TRACE("Got binary: %s, %s\n", procbin->path.c_str(), procbin->fname.c_str());
+    return *procbin;
 }
 
 namespace {

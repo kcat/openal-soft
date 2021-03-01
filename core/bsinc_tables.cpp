@@ -171,19 +171,19 @@ struct BSincFilterArray {
             const double scale{hdr.scaleBase + (hdr.scaleRange * (si+1) / BSincScaleCount)};
             const double cutoff{scale - (hdr.scaleBase * std::max(0.5, scale) * 2.0)};
             const auto a = static_cast<double>(hdr.a[si]);
-            const double l{a - 1.0};
+            const double l{a - 1.0/BSincPhaseCount};
 
             /* Do one extra phase index so that the phase delta has a proper
              * target for its last index.
              */
             for(uint pi{0};pi <= BSincPhaseCount;++pi)
             {
-                const double phase{l + (pi/double{BSincPhaseCount})};
+                const double phase{std::floor(l) + (pi/double{BSincPhaseCount})};
 
                 for(uint i{0};i < m;++i)
                 {
                     const double x{i - phase};
-                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, hdr.besseli_0_beta) * cutoff *
+                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/l, hdr.besseli_0_beta) * cutoff *
                         Sinc(cutoff*x);
                 }
             }

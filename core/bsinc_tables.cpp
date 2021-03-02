@@ -9,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "core/mixer/defs.h"
 #include "math_defs.h"
 
 
@@ -36,7 +37,7 @@ constexpr double Sinc(const double x)
  *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
  *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
  */
-constexpr double BesselI_0(const double x)
+constexpr double BesselI_0(const double x) noexcept
 {
     /* Start at k=1 since k=0 is trivial. */
     const double x2{x / 2.0};
@@ -83,7 +84,7 @@ constexpr double Kaiser(const double beta, const double k, const double besseli_
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
  * Rejection is in dB.
  */
-constexpr double CalcKaiserWidth(const double rejection, const uint order)
+constexpr double CalcKaiserWidth(const double rejection, const uint order) noexcept
 {
     if(rejection > 21.19)
         return (rejection - 7.95) / (order * 2.285 * al::MathDefs<double>::Tau());
@@ -145,21 +146,33 @@ constexpr BSincHeader bsinc24_hdr{60, 23};
  * namespace while also being used as non-type template parameters.
  */
 #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
+
+/* The number of sample points is double the a value (rounded up to a multiple
+ * of 4), and scale index 0 includes the doubling for downsampling. bsinc24 is
+ * currently the highest quality filter, and will use the most sample points.
+ */
+constexpr uint BSincPointsMax{(bsinc24_hdr.a[0]*2 + 3) & ~3u};
+static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
+
 template<size_t total_size>
 struct BSincFilterArray {
     alignas(16) std::array<float, total_size> mTable;
+    const BSincHeader &hdr;
 
-    BSincFilterArray(const BSincHeader &hdr)
+    BSincFilterArray(const BSincHeader &hdr_) : hdr{hdr_}
+    {
 #else
 template<const BSincHeader &hdr>
 struct BSincFilterArray {
-    alignas(16) std::array<float, hdr.total_size> mTable;
+    alignas(16) std::array<float, hdr.total_size> mTable{};
 
     BSincFilterArray()
-#endif
     {
-        using filter_type = double[][BSincPhaseCount+1][BSincPointsMax];
-        auto filter = std::make_unique<filter_type>(BSincScaleCount);
+        constexpr uint BSincPointsMax{(hdr.a[0]*2 + 3) & ~3u};
+        static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
+#endif
+        using filter_type = double[BSincPhaseCount+1][BSincPointsMax];
+        auto filter = std::make_unique<filter_type[]>(BSincScaleCount);
 
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
          * scale and phase index.
@@ -169,7 +182,7 @@ struct BSincFilterArray {
             const uint m{hdr.a[si] * 2};
             const size_t o{(BSincPointsMax-m) / 2};
             const double scale{hdr.scaleBase + (hdr.scaleRange * (si+1) / BSincScaleCount)};
-            const double cutoff{scale - (hdr.scaleBase * std::max(0.5, scale) * 2.0)};
+            const double cutoff{scale - (hdr.scaleBase * std::max(1.0, scale*2.0))};
             const auto a = static_cast<double>(hdr.a[si]);
             const double l{a - 1.0/BSincPhaseCount};
 
@@ -247,6 +260,9 @@ struct BSincFilterArray {
         }
         assert(idx == hdr.total_size);
     }
+
+    constexpr const BSincHeader &getHeader() const noexcept { return hdr; }
+    constexpr const float *getTable() const noexcept { return &mTable.front(); }
 };
 
 #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
@@ -257,9 +273,11 @@ const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};
 const BSincFilterArray<bsinc24_hdr> bsinc24_filter{};
 #endif
 
-constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab)
+template<typename T>
+constexpr BSincTable GenerateBSincTable(const T &filter)
 {
     BSincTable ret{};
+    const BSincHeader &hdr = filter.getHeader();
     ret.scaleBase = static_cast<float>(hdr.scaleBase);
     ret.scaleRange = static_cast<float>(1.0 / hdr.scaleRange);
     for(size_t i{0};i < BSincScaleCount;++i)
@@ -267,11 +285,11 @@ constexpr BSincTable GenerateBSincTable(const BSincHeader &hdr, const float *tab
     ret.filterOffset[0] = 0;
     for(size_t i{1};i < BSincScaleCount;++i)
         ret.filterOffset[i] = ret.filterOffset[i-1] + ret.m[i-1]*4*BSincPhaseCount;
-    ret.Tab = tab;
+    ret.Tab = filter.getTable();
     return ret;
 }
 
 } // namespace
 
-const BSincTable bsinc12{GenerateBSincTable(bsinc12_hdr, &bsinc12_filter.mTable.front())};
-const BSincTable bsinc24{GenerateBSincTable(bsinc24_hdr, &bsinc24_filter.mTable.front())};
+const BSincTable bsinc12{GenerateBSincTable(bsinc12_filter)};
+const BSincTable bsinc24{GenerateBSincTable(bsinc24_filter)};

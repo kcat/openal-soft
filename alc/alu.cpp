@@ -100,7 +100,6 @@ struct BSincTag;
 struct FastBSincTag;
 
 
-static_assert(MaxResamplerPadding >= BSincPointsMax, "MaxResamplerPadding is too small");
 static_assert(!(MaxResamplerPadding&1), "MaxResamplerPadding is not a multiple of two");
 
 

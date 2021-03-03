@@ -405,7 +405,7 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     ALCdevice *device{context->mDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->FilterLock};
     if(!EnsureFilters(device, static_cast<ALuint>(n)))
     {
         context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d filter%s", n, (n==1)?"":"s");

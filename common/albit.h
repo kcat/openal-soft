@@ -1,6 +1,7 @@
 #ifndef AL_BIT_H
 #define AL_BIT_H
 
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 #if !defined(__GNUC__) && (defined(_WIN32) || defined(_WIN64))
@@ -73,6 +74,17 @@ int> countr_zero(T val) noexcept
  * they're good enough if the GCC built-ins aren't available.
  */
 namespace detail_ {
+    template<typename T, size_t = std::numeric_limits<T>::digits>
+    struct fast_utype { };
+    template<typename T>
+    struct fast_utype<T,8> { using type = std::uint_fast8_t; };
+    template<typename T>
+    struct fast_utype<T,16> { using type = std::uint_fast16_t; };
+    template<typename T>
+    struct fast_utype<T,32> { using type = std::uint_fast32_t; };
+    template<typename T>
+    struct fast_utype<T,64> { using type = std::uint_fast64_t; };
+
     template<typename T>
     constexpr T repbits(unsigned char bits) noexcept
     {
@@ -85,17 +97,18 @@ namespace detail_ {
 
 template<typename T>
 constexpr std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value,
-int> popcount(T v) noexcept
+int> popcount(T val) noexcept
 {
-    constexpr T m55{detail_::repbits<T>(0x55)};
-    constexpr T m33{detail_::repbits<T>(0x33)};
-    constexpr T m0f{detail_::repbits<T>(0x0f)};
-    constexpr T m01{detail_::repbits<T>(0x01)};
+    using fast_type = typename detail_::fast_utype<T>::type;
+    constexpr fast_type m55{detail_::repbits<fast_type>(0x55)};
+    constexpr fast_type m33{detail_::repbits<fast_type>(0x33)};
+    constexpr fast_type m0f{detail_::repbits<fast_type>(0x0f)};
+    constexpr fast_type m01{detail_::repbits<fast_type>(0x01)};
 
-    v = v - ((v >> 1) & m55);
+    auto v = val - ((fast_type{val} >> 1) & m55);
     v = (v & m33) + ((v >> 2) & m33);
     v = (v + (v >> 4)) & m0f;
-    return static_cast<int>((v * m01) >> ((sizeof(T)-1)*8));
+    return static_cast<int>(((v * m01) >> ((sizeof(T)-1)*8)) & 0xff);
 }
 
 #if defined(_WIN64)

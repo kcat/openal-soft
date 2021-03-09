@@ -316,6 +316,9 @@ void OpenSLPlayback::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
 
+    /* There's only one device, so if it's already open, there's nothing to do. */
+    if(mEngineObj) return;
+
     // create engine
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
     PRINTERR(result, "slCreateEngine");

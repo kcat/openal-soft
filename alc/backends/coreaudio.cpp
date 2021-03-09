@@ -118,10 +118,20 @@ void CoreAudioPlayback::open(const char *name)
     if(comp == nullptr)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not find audio component"};
 
-    OSStatus err{AudioComponentInstanceNew(comp, &mAudioUnit)};
+    AudioUnit audioUnit{};
+    OSStatus err{AudioComponentInstanceNew(comp, &audioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not create component instance: %u", err};
+    /* WARNING: I don't know if "valid" audio unit values are guaranteed to be
+     * non-0. If not, this logic is broken.
+     */
+    if(mAudioUnit)
+    {
+        AudioUnitUninitialize(mAudioUnit);
+        AudioComponentInstanceDispose(mAudioUnit);
+    }
+    mAudioUnit = audioUnit;
 
     /* init and start the default audio unit... */
     err = AudioUnitInitialize(mAudioUnit);

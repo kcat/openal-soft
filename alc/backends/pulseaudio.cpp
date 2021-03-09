@@ -846,7 +846,8 @@ void PulsePlayback::open(const char *name)
     }
 
     auto plock = mMainloop.getUniqueLock();
-    mContext = mMainloop.connectContext(plock);
+    if(!mContext)
+        mContext = mMainloop.connectContext(plock);
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
         PA_STREAM_FIX_CHANNELS};
@@ -864,8 +865,18 @@ void PulsePlayback::open(const char *name)
         if(defname) pulse_name = defname->c_str();
     }
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
-    mStream = mMainloop.connectStream(pulse_name, plock, mContext, flags, nullptr, &spec, nullptr,
-        BackendType::Playback);
+    pa_stream *stream{mMainloop.connectStream(pulse_name, plock, mContext, flags, nullptr, &spec,
+        nullptr, BackendType::Playback)};
+    if(mStream)
+    {
+        pa_stream_set_state_callback(mStream, nullptr, nullptr);
+        pa_stream_set_moved_callback(mStream, nullptr, nullptr);
+        pa_stream_set_write_callback(mStream, nullptr, nullptr);
+        pa_stream_set_buffer_attr_callback(mStream, nullptr, nullptr);
+        pa_stream_disconnect(mStream);
+        pa_stream_unref(mStream);
+    }
+    mStream = stream;
 
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
     mFrameSize = static_cast<uint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));

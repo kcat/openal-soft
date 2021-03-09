@@ -249,7 +249,7 @@ struct OSSPlayback final : public BackendBase {
 OSSPlayback::~OSSPlayback()
 {
     if(mFd != -1)
-        close(mFd);
+        ::close(mFd);
     mFd = -1;
 }
 
@@ -328,10 +328,14 @@ void OSSPlayback::open(const char *name)
         devname = iter->device_name.c_str();
     }
 
-    mFd = ::open(devname, O_WRONLY);
-    if(mFd == -1)
+    int fd{::open(devname, O_WRONLY)};
+    if(fd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open %s: %s", devname,
             strerror(errno)};
+
+    if(mFd != -1)
+        ::close(mFd);
+    mFd = fd;
 
     mDevice->DeviceName = name;
 }

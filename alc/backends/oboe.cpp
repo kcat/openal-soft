@@ -64,9 +64,10 @@ void OboePlayback::open(const char *name)
             name};
 
     /* Open a basic output stream, just to ensure it can work. */
+    oboe::ManagedStream stream;
     oboe::Result result{oboe::AudioStreamBuilder{}.setDirection(oboe::Direction::Output)
         ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
-        ->openManagedStream(mStream)};
+        ->openManagedStream(stream)};
     if(result != oboe::Result::OK)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: %s",
             oboe::convertToText(result)};

@@ -224,27 +224,28 @@ void WinMMPlayback::open(const char *name)
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
 retry_open:
-    mFormat = WAVEFORMATEX{};
+    WAVEFORMATEX format{};
     if(mDevice->FmtType == DevFmtFloat)
     {
-        mFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-        mFormat.wBitsPerSample = 32;
+        format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+        format.wBitsPerSample = 32;
     }
     else
     {
-        mFormat.wFormatTag = WAVE_FORMAT_PCM;
+        format.wFormatTag = WAVE_FORMAT_PCM;
         if(mDevice->FmtType == DevFmtUByte || mDevice->FmtType == DevFmtByte)
-            mFormat.wBitsPerSample = 8;
+            format.wBitsPerSample = 8;
         else
-            mFormat.wBitsPerSample = 16;
+            format.wBitsPerSample = 16;
     }
-    mFormat.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
-    mFormat.nBlockAlign = static_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
-    mFormat.nSamplesPerSec = mDevice->Frequency;
-    mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
-    mFormat.cbSize = 0;
+    format.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
+    format.nBlockAlign = static_cast<WORD>(format.wBitsPerSample * format.nChannels / 8);
+    format.nSamplesPerSec = mDevice->Frequency;
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+    format.cbSize = 0;
 
-    MMRESULT res{waveOutOpen(&mOutHdl, DeviceID, &mFormat,
+    HWAVEOUT outHandle{};
+    MMRESULT res{waveOutOpen(&outHandle, DeviceID, &format,
         reinterpret_cast<DWORD_PTR>(&WinMMPlayback::waveOutProcC),
         reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
     if(res != MMSYSERR_NOERROR)
@@ -256,6 +257,11 @@ retry_open:
         }
         throw al::backend_exception{al::backend_error::DeviceError, "waveOutOpen failed: %u", res};
     }
+
+    if(mOutHdl)
+        waveOutClose(mOutHdl);
+    mOutHdl = outHandle;
+    mFormat = format;
 
     mDevice->DeviceName = PlaybackDevices[DeviceID];
 }

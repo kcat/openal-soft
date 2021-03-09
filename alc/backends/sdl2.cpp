@@ -106,32 +106,34 @@ void Sdl2Backend::open(const char *name)
     /* Passing nullptr to SDL_OpenAudioDevice opens a default, which isn't
      * necessarily the first in the list.
      */
+    SDL_AudioDeviceID devid;
     if(!name || strcmp(name, defaultDeviceName) == 0)
-        mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
-            SDL_AUDIO_ALLOW_ANY_CHANGE);
+        devid = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
     else
     {
         const size_t prefix_len = strlen(DEVNAME_PREFIX);
         if(strncmp(name, DEVNAME_PREFIX, prefix_len) == 0)
-            mDeviceID = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
+            devid = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
                 SDL_AUDIO_ALLOW_ANY_CHANGE);
         else
-            mDeviceID = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have,
-                SDL_AUDIO_ALLOW_ANY_CHANGE);
+            devid = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
-    if(mDeviceID == 0)
+    if(!devid)
         throw al::backend_exception{al::backend_error::NoDevice, "%s", SDL_GetError()};
 
-    mDevice->Frequency = static_cast<uint>(have.freq);
-
+    DevFmtChannels devchans{};
     if(have.channels == 1)
-        mDevice->FmtChans = DevFmtMono;
+        devchans = DevFmtMono;
     else if(have.channels == 2)
-        mDevice->FmtChans = DevFmtStereo;
+        devchans = DevFmtStereo;
     else
+    {
+        SDL_CloseAudioDevice(devid);
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL channel count: %d", int{have.channels}};
+    }
 
+    DevFmtType devtype{};
     switch(have.format)
     {
     case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
@@ -141,17 +143,20 @@ void Sdl2Backend::open(const char *name)
     case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
     case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
     default:
+        SDL_CloseAudioDevice(devid);
         throw al::backend_exception{al::backend_error::DeviceError, "Unhandled SDL format: 0x%04x",
             have.format};
     }
-    mDevice->UpdateSize = have.samples;
-    mDevice->BufferSize = have.samples * 2; /* SDL always (tries to) use two periods. */
 
-    mFrameSize = mDevice->frameSizeFromFmt();
-    mFrequency = mDevice->Frequency;
-    mFmtChans = mDevice->FmtChans;
-    mFmtType = mDevice->FmtType;
-    mUpdateSize = mDevice->UpdateSize;
+    if(mDeviceID)
+        SDL_CloseAudioDevice(mDeviceID);
+    mDeviceID = devid;
+
+    mFrameSize = FrameSizeFromDevFmt(devchans, devtype, 0);
+    mFrequency = static_cast<uint>(have.freq);
+    mFmtChans = devchans;
+    mFmtType = devtype;
+    mUpdateSize = have.samples;
 
     mDevice->DeviceName = name ? name : defaultDeviceName;
 }
@@ -162,7 +167,7 @@ bool Sdl2Backend::reset()
     mDevice->FmtChans = mFmtChans;
     mDevice->FmtType = mFmtType;
     mDevice->UpdateSize = mUpdateSize;
-    mDevice->BufferSize = mUpdateSize * 2;
+    mDevice->BufferSize = mUpdateSize * 2; /* SDL always (tries to) use two periods. */
     setDefaultWFXChannelOrder();
     return true;
 }

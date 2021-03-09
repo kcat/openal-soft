@@ -384,22 +384,23 @@ int JackPlayback::mixerProc()
 
 void JackPlayback::open(const char *name)
 {
-    mPortPattern.clear();
-
-    const PathNamePair &binname = GetProcBinary();
-    const char *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
-
-    jack_status_t status;
-    mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
-    if(mClient == nullptr)
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to open client connection: 0x%02x", status};
-    if((status&JackServerStarted))
-        TRACE("JACK server started\n");
-    if((status&JackNameNotUnique))
+    if(!mClient)
     {
-        client_name = jack_get_client_name(mClient);
-        TRACE("Client name not unique, got '%s' instead\n", client_name);
+        const PathNamePair &binname = GetProcBinary();
+        const char *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
+
+        jack_status_t status;
+        mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
+        if(mClient == nullptr)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to open client connection: 0x%02x", status};
+        if((status&JackServerStarted))
+            TRACE("JACK server started\n");
+        if((status&JackNameNotUnique))
+        {
+            client_name = jack_get_client_name(mClient);
+            TRACE("Client name not unique, got '%s' instead\n", client_name);
+        }
     }
 
     if(PlaybackList.empty())

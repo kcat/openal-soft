@@ -122,9 +122,13 @@ void SndioPlayback::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
 
-    mSndHandle = sio_open(nullptr, SIO_PLAY, 0);
-    if(mSndHandle == nullptr)
+    sio_hdl *sndHandle{sio_open(nullptr, SIO_PLAY, 0)};
+    if(!sndHandle)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open backend device"};
+
+    if(mSndHandle)
+        sio_close(mSndHandle);
+    mSndHandle = sndHandle;
 
     mDevice->DeviceName = name;
 }

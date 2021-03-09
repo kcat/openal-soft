@@ -132,8 +132,8 @@ int WaveBackend::mixerProc()
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
-    while(!mKillNow.load(std::memory_order_acquire) &&
-          mDevice->Connected.load(std::memory_order_acquire))
+    while(!mKillNow.load(std::memory_order_acquire)
+        && mDevice->Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 
@@ -214,9 +214,12 @@ void WaveBackend::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
 
+    /* There's only one "device", so if it's already open, we're done. */
+    if(mFile) return;
+
 #ifdef _WIN32
     {
-        std::wstring wname = utf8_to_wstr(fname);
+        std::wstring wname{utf8_to_wstr(fname)};
         mFile = _wfopen(wname.c_str(), L"wb");
     }
 #else

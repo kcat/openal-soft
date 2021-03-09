@@ -123,52 +123,57 @@ void PortPlayback::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
 
-    mUpdateSize = mDevice->UpdateSize;
-
+    PaStreamParameters params{};
     auto devidopt = ConfigValueInt(nullptr, "port", "device");
-    if(devidopt && *devidopt >= 0) mParams.device = *devidopt;
-    else mParams.device = Pa_GetDefaultOutputDevice();
-    mParams.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
-    mParams.hostApiSpecificStreamInfo = nullptr;
+    if(devidopt && *devidopt >= 0) params.device = *devidopt;
+    else params.device = Pa_GetDefaultOutputDevice();
+    params.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
+    params.hostApiSpecificStreamInfo = nullptr;
 
-    mParams.channelCount = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
+    params.channelCount = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
 
     switch(mDevice->FmtType)
     {
     case DevFmtByte:
-        mParams.sampleFormat = paInt8;
+        params.sampleFormat = paInt8;
         break;
     case DevFmtUByte:
-        mParams.sampleFormat = paUInt8;
+        params.sampleFormat = paUInt8;
         break;
     case DevFmtUShort:
         /* fall-through */
     case DevFmtShort:
-        mParams.sampleFormat = paInt16;
+        params.sampleFormat = paInt16;
         break;
     case DevFmtUInt:
         /* fall-through */
     case DevFmtInt:
-        mParams.sampleFormat = paInt32;
+        params.sampleFormat = paInt32;
         break;
     case DevFmtFloat:
-        mParams.sampleFormat = paFloat32;
+        params.sampleFormat = paFloat32;
         break;
     }
 
 retry_open:
-    PaError err{Pa_OpenStream(&mStream, nullptr, &mParams, mDevice->Frequency, mDevice->UpdateSize,
+    PaStream *stream{};
+    PaError err{Pa_OpenStream(&stream, nullptr, &params, mDevice->Frequency, mDevice->UpdateSize,
         paNoFlag, &PortPlayback::writeCallbackC, this)};
     if(err != paNoError)
     {
-        if(mParams.sampleFormat == paFloat32)
+        if(params.sampleFormat == paFloat32)
         {
-            mParams.sampleFormat = paInt16;
+            params.sampleFormat = paInt16;
             goto retry_open;
         }
         throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
             Pa_GetErrorText(err)};
     }
+
+    Pa_CloseStream(mStream);
+    mStream = stream;
+    mParams = params;
+    mUpdateSize = mDevice->UpdateSize;
 
     mDevice->DeviceName = name;
 }

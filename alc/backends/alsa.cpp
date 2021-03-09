@@ -635,12 +635,16 @@ void AlsaPlayback::open(const char *name)
         name = alsaDevice;
         driver = GetConfigValue(nullptr, "alsa", "device", "default");
     }
-
     TRACE("Opening device \"%s\"\n", driver);
-    int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
+
+    snd_pcm_t *pcmHandle{};
+    int err{snd_pcm_open(&pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
     if(err < 0)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not open ALSA device \"%s\"", driver};
+    if(mPcmHandle)
+        snd_pcm_close(mPcmHandle);
+    mPcmHandle = pcmHandle;
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();

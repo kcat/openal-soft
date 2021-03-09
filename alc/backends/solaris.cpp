@@ -148,10 +148,14 @@ void SolarisBackend::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
 
-    mFd = ::open(solaris_driver.c_str(), O_WRONLY);
-    if(mFd == -1)
+    int fd{::open(solaris_driver.c_str(), O_WRONLY)};
+    if(fd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open %s: %s",
             solaris_driver.c_str(), strerror(errno)};
+
+    if(mFd != -1)
+        ::close(mFd);
+    mFd = fd;
 
     mDevice->DeviceName = name;
 }

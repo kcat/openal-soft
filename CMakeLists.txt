@@ -621,6 +621,7 @@ set(COMMON_OBJS
     common/alstring.cpp
     common/alstring.h
     common/atomic.h
+    common/comptr.h
     common/dynload.cpp
     common/dynload.h
     common/intrusive_ptr.h

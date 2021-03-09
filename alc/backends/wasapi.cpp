@@ -59,6 +59,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "compat.h"
+#include "comptr.h"
 #include "converter.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
@@ -127,69 +128,6 @@ inline uint RefTime2Samples(const ReferenceTime &val, uint srate)
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
     return static_cast<uint>(mini64(retval, std::numeric_limits<uint>::max()));
 }
-
-
-template<typename T>
-class ComPtr {
-    T *mPtr{nullptr};
-
-public:
-    ComPtr() noexcept = default;
-    ComPtr(const ComPtr &rhs) : mPtr{rhs.mPtr} { if(mPtr) mPtr->AddRef(); }
-    ComPtr(ComPtr&& rhs) noexcept : mPtr{rhs.mPtr} { rhs.mPtr = nullptr; }
-    ComPtr(std::nullptr_t) noexcept { }
-    explicit ComPtr(T *ptr) noexcept : mPtr{ptr} { }
-    ~ComPtr() { if(mPtr) mPtr->Release(); }
-
-    ComPtr& operator=(const ComPtr &rhs)
-    {
-        if(!rhs.mPtr)
-        {
-            if(mPtr)
-                mPtr->Release();
-            mPtr = nullptr;
-        }
-        else
-        {
-            rhs.mPtr->AddRef();
-            try {
-                if(mPtr)
-                    mPtr->Release();
-                mPtr = rhs.mPtr;
-            }
-            catch(...) {
-                rhs.mPtr->Release();
-                throw;
-            }
-        }
-        return *this;
-    }
-    ComPtr& operator=(ComPtr&& rhs)
-    {
-        if(mPtr)
-            mPtr->Release();
-        mPtr = rhs.mPtr;
-        rhs.mPtr = nullptr;
-        return *this;
-    }
-
-    operator bool() const noexcept { return mPtr != nullptr; }
-
-    T& operator*() const noexcept { return *mPtr; }
-    T* operator->() const noexcept { return mPtr; }
-    T* get() const noexcept { return mPtr; }
-    T** getPtr() noexcept { return &mPtr; }
-
-    T* release() noexcept
-    {
-        T *ret{mPtr};
-        mPtr = nullptr;
-        return ret;
-    }
-
-    void swap(ComPtr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
-    void swap(ComPtr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
-};
 
 
 class GuidPrinter {

@@ -123,6 +123,12 @@ void CoreAudioPlayback::open(const char *name)
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not create component instance: %u", err};
+
+    err = AudioUnitInitialize(audioUnit);
+    if(err != noErr)
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Could not initialize audio unit: %u", err};
+
     /* WARNING: I don't know if "valid" audio unit values are guaranteed to be
      * non-0. If not, this logic is broken.
      */
@@ -132,12 +138,6 @@ void CoreAudioPlayback::open(const char *name)
         AudioComponentInstanceDispose(mAudioUnit);
     }
     mAudioUnit = audioUnit;
-
-    /* init and start the default audio unit... */
-    err = AudioUnitInitialize(mAudioUnit);
-    if(err != noErr)
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not initialize audio unit: %u", err};
 
     mDevice->DeviceName = name;
 }

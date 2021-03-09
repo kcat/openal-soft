@@ -4051,13 +4051,12 @@ END_API_FUNC
 FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 START_API_FUNC
 {
-    DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type != DeviceType::Loopback)
-        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+    if(!device || device->Type != DeviceType::Loopback)
+        alcSetError(device, ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == nullptr))
-        alcSetError(dev.get(), ALC_INVALID_VALUE);
+        alcSetError(device, ALC_INVALID_VALUE);
     else
-        dev->renderSamples(buffer, static_cast<uint>(samples), dev->channelsFromFmt());
+        device->renderSamples(buffer, static_cast<uint>(samples), device->channelsFromFmt());
 }
 END_API_FUNC
 

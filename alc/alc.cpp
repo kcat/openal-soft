@@ -269,6 +269,8 @@ const struct {
 
     DECL(alcGetInteger64vSOFT),
 
+    DECL(alcReopenDeviceSOFT),
+
     DECL(alEnable),
     DECL(alDisable),
     DECL(alIsEnabled),
@@ -942,7 +944,8 @@ constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_EXT_EFX "
     "ALC_EXT_thread_local_context "
     "ALC_SOFT_loopback "
-    "ALC_SOFT_loopback_bformat";
+    "ALC_SOFT_loopback_bformat "
+    "ALC_SOFTX_reopen_device";
 constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
@@ -956,7 +959,8 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_loopback "
     "ALC_SOFT_loopback_bformat "
     "ALC_SOFT_output_limiter "
-    "ALC_SOFT_pause_device";
+    "ALC_SOFT_pause_device "
+    "ALC_SOFTX_reopen_device";
 constexpr int alcMajorVersion{1};
 constexpr int alcMinorVersion{1};
 
@@ -2286,6 +2290,44 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     return ALC_NO_ERROR;
 }
 
+/**
+ * Updates device parameters as above, and also first clears the disconnected
+ * status, if set.
+ */
+static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
+{
+    /* If the device was disconnected, reset it since we're opened anew. */
+    if UNLIKELY(!device->Connected.load(std::memory_order_relaxed))
+    {
+        /* Make sure disconnection is finished before continuing on. */
+        device->waitForMix();
+
+        for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
+        {
+            /* Clear any pending voice changes and reallocate voices to get a
+             * clean restart.
+             */
+            std::lock_guard<std::mutex> __{ctx->mSourceLock};
+            auto *vchg = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
+            while(auto *next = vchg->mNext.load(std::memory_order_acquire))
+                vchg = next;
+            ctx->mCurrentVoiceChange.store(vchg, std::memory_order_release);
+
+            ctx->mVoiceClusters.clear();
+            ctx->allocVoices(std::max<size_t>(256,
+                ctx->mActiveVoiceCount.load(std::memory_order_relaxed)));
+        }
+
+        device->Connected.store(true);
+    }
+
+    ALCenum err{UpdateDeviceParams(device, attrList)};
+    if LIKELY(err == ALC_NO_ERROR) return ALC_TRUE;
+
+    alcSetError(device, err);
+    return ALC_FALSE;
+}
+
 
 ALCdevice::ALCdevice(DeviceType type) : Type{type}, mContexts{&EmptyContextArray}
 {
@@ -2654,7 +2696,10 @@ START_API_FUNC
 
     case ALC_ALL_DEVICES_SPECIFIER:
         if(DeviceRef dev{VerifyDevice(Device)})
+        {
+            std::lock_guard<std::mutex> _{dev->StateLock};
             value = dev->DeviceName.c_str();
+        }
         else
         {
             ProbeAllDevicesList();
@@ -4119,34 +4164,66 @@ START_API_FUNC
     if(dev->Flags.test(DeviceRunning))
         dev->Backend->stop();
     dev->Flags.reset(DeviceRunning);
-    if(!dev->Connected.load(std::memory_order_relaxed))
+
+    return ResetDeviceParams(dev.get(), attribs) ? ALC_TRUE : ALC_FALSE;
+}
+END_API_FUNC
+
+
+/************************************************
+ * ALC device reopen functions
+ ************************************************/
+
+/** Reopens the given device output, using the specified name and attribute list. */
+FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
+    const ALCchar *deviceName, const ALCint *attribs)
+START_API_FUNC
+{
+    if(deviceName)
     {
-        /* Make sure disconnection is finished before continuing on. */
-        dev->waitForMix();
-
-        for(ALCcontext *ctx : *dev->mContexts.load(std::memory_order_acquire))
-        {
-            /* Clear any pending voice changes and reallocate voices to get a
-             * clean restart.
-             */
-            std::lock_guard<std::mutex> __{ctx->mSourceLock};
-            auto *vchg = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
-            while(auto *next = vchg->mNext.load(std::memory_order_acquire))
-                vchg = next;
-            ctx->mCurrentVoiceChange.store(vchg, std::memory_order_release);
-
-            ctx->mVoiceClusters.clear();
-            ctx->allocVoices(std::max<size_t>(256,
-                ctx->mActiveVoiceCount.load(std::memory_order_relaxed)));
-        }
-
-        dev->Connected.store(true);
+        if(!deviceName[0] || al::strcasecmp(deviceName, alcDefaultName) == 0)
+            deviceName = nullptr;
     }
 
-    ALCenum err{UpdateDeviceParams(dev.get(), attribs)};
-    if LIKELY(err == ALC_NO_ERROR) return ALC_TRUE;
+    std::unique_lock<std::recursive_mutex> listlock{ListLock};
+    DeviceRef dev{VerifyDevice(device)};
+    if(!dev || dev->Type != DeviceType::Playback)
+    {
+        listlock.unlock();
+        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    std::lock_guard<std::mutex> _{dev->StateLock};
+    auto backend = dev->Backend.get();
 
-    alcSetError(dev.get(), err);
-    return ALC_FALSE;
+    /* Force the backend to stop mixing first since we're reopening. */
+    if(dev->Flags.test(DeviceRunning))
+        backend->stop();
+    dev->Flags.reset(DeviceRunning);
+
+    try {
+        backend->open(deviceName);
+    }
+    catch(al::backend_exception &e) {
+        WARN("Failed to reopen playback device: %s\n", e.what());
+        alcSetError(dev.get(), (e.errorCode() == al::backend_error::OutOfMemory)
+            ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
+        if(dev->Connected.load(std::memory_order_relaxed) && !dev->Flags.test(DevicePaused)
+            && !dev->mContexts.load(std::memory_order_relaxed)->empty())
+        {
+            try {
+                backend->start();
+                dev->Flags.set(DeviceRunning);
+            }
+            catch(al::backend_exception& e) {
+                dev->handleDisconnect("%s", e.what());
+            }
+        }
+        return ALC_FALSE;
+    }
+    listlock.unlock();
+    TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->DeviceName.c_str());
+
+    return ResetDeviceParams(dev.get(), attribs) ? ALC_TRUE : ALC_FALSE;
 }
 END_API_FUNC

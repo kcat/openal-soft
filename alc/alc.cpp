@@ -2697,8 +2697,13 @@ START_API_FUNC
     case ALC_ALL_DEVICES_SPECIFIER:
         if(DeviceRef dev{VerifyDevice(Device)})
         {
-            std::lock_guard<std::mutex> _{dev->StateLock};
-            value = dev->DeviceName.c_str();
+            if(dev->Type != DeviceType::Playback)
+                alcSetError(dev.get(), ALC_INVALID_ENUM);
+            else
+            {
+                std::lock_guard<std::mutex> _{dev->StateLock};
+                value = dev->DeviceName.c_str();
+            }
         }
         else
         {
@@ -2709,7 +2714,15 @@ START_API_FUNC
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(DeviceRef dev{VerifyDevice(Device)})
-            value = dev->DeviceName.c_str();
+        {
+            if(dev->Type != DeviceType::Capture)
+                alcSetError(dev.get(), ALC_INVALID_ENUM);
+            else
+            {
+                std::lock_guard<std::mutex> _{dev->StateLock};
+                value = dev->DeviceName.c_str();
+            }
+        }
         else
         {
             ProbeCaptureDeviceList();

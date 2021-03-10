@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <cctype>
 #include <chrono>
 #include <cinttypes>
@@ -2780,15 +2781,6 @@ START_API_FUNC
 END_API_FUNC
 
 
-static inline int NumAttrsForDevice(ALCdevice *device)
-{
-    if(device->Type == DeviceType::Capture) return 9;
-    if(device->Type != DeviceType::Loopback) return 29;
-    if(device->FmtChans == DevFmtAmbi3D)
-        return 35;
-    return 29;
-}
-
 static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> values)
 {
     size_t i;
@@ -2845,15 +2837,15 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
 
     if(device->Type == DeviceType::Capture)
     {
+        constexpr int MaxCaptureAttributes{9};
         switch(param)
         {
         case ALC_ATTRIBUTES_SIZE:
-            values[0] = NumAttrsForDevice(device);
+            values[0] = MaxCaptureAttributes;
             return 1;
-
         case ALC_ALL_ATTRIBUTES:
             i = 0;
-            if(values.size() < static_cast<size_t>(NumAttrsForDevice(device)))
+            if(values.size() < MaxCaptureAttributes)
                 alcSetError(device, ALC_INVALID_VALUE);
             else
             {
@@ -2867,6 +2859,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
                 values[i++] = ALC_CONNECTED;
                 values[i++] = device->Connected.load(std::memory_order_relaxed);
                 values[i++] = 0;
+                assert(i == MaxCaptureAttributes);
             }
             return i;
 
@@ -2898,6 +2891,12 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     }
 
     /* render device */
+    auto NumAttrsForDevice = [](ALCdevice *device) noexcept
+    {
+        if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
+            return 35;
+        return 29;
+    };
     switch(param)
     {
     case ALC_ATTRIBUTES_SIZE:
@@ -3135,24 +3134,30 @@ START_API_FUNC
     if(!dev || dev->Type == DeviceType::Capture)
     {
         auto ivals = al::vector<int>(static_cast<uint>(size));
-        size_t got{GetIntegerv(dev.get(), pname, ivals)};
-        std::copy_n(ivals.begin(), got, values);
+        if(size_t got{GetIntegerv(dev.get(), pname, ivals)})
+            std::copy_n(ivals.begin(), got, values);
         return;
     }
     /* render device */
+    auto NumAttrsForDevice = [](ALCdevice *device) noexcept
+    {
+        if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
+            return 39;
+        return 33;
+    };
     switch(pname)
     {
     case ALC_ATTRIBUTES_SIZE:
-        *values = NumAttrsForDevice(dev.get())+4;
+        *values = NumAttrsForDevice(dev.get());
         break;
 
     case ALC_ALL_ATTRIBUTES:
-        if(size < NumAttrsForDevice(dev.get())+4)
+        if(size < NumAttrsForDevice(dev.get()))
             alcSetError(dev.get(), ALC_INVALID_VALUE);
         else
         {
-            size_t i{0};
             std::lock_guard<std::mutex> _{dev->StateLock};
+            size_t i{0};
             values[i++] = ALC_FREQUENCY;
             values[i++] = dev->Frequency;
 
@@ -3166,6 +3171,12 @@ START_API_FUNC
             }
             else
             {
+                values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                values[i++] = EnumFromDevFmt(dev->FmtChans);
+
+                values[i++] = ALC_FORMAT_TYPE_SOFT;
+                values[i++] = EnumFromDevFmt(dev->FmtType);
+
                 if(dev->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
@@ -3177,12 +3188,6 @@ START_API_FUNC
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                     values[i++] = dev->mAmbiOrder;
                 }
-
-                values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                values[i++] = EnumFromDevFmt(dev->FmtChans);
-
-                values[i++] = ALC_FORMAT_TYPE_SOFT;
-                values[i++] = EnumFromDevFmt(dev->FmtType);
             }
 
             values[i++] = ALC_MONO_SOURCES;
@@ -3251,8 +3256,8 @@ START_API_FUNC
 
     default:
         auto ivals = al::vector<int>(static_cast<uint>(size));
-        size_t got{GetIntegerv(dev.get(), pname, ivals)};
-        std::copy_n(ivals.begin(), got, values);
+        if(size_t got{GetIntegerv(dev.get(), pname, ivals)})
+            std::copy_n(ivals.begin(), got, values);
         break;
     }
 }

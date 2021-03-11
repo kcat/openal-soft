@@ -2891,9 +2891,9 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     }
 
     /* render device */
-    auto NumAttrsForDevice = [](ALCdevice *device) noexcept
+    auto NumAttrsForDevice = [](ALCdevice *aldev) noexcept
     {
-        if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
+        if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
             return 35;
         return 29;
     };
@@ -3139,9 +3139,9 @@ START_API_FUNC
         return;
     }
     /* render device */
-    auto NumAttrsForDevice = [](ALCdevice *device) noexcept
+    auto NumAttrsForDevice = [](ALCdevice *aldev) noexcept
     {
-        if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
+        if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
             return 39;
         return 33;
     };
@@ -4232,8 +4232,8 @@ START_API_FUNC
                 backend->start();
                 dev->Flags.set(DeviceRunning);
             }
-            catch(al::backend_exception& e) {
-                dev->handleDisconnect("%s", e.what());
+            catch(al::backend_exception &be) {
+                dev->handleDisconnect("%s", be.what());
             }
         }
         return ALC_FALSE;

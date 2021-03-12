@@ -35,7 +35,12 @@ extern FILE *gLogFile;
 
 #else
 
-[[gnu::format(printf,3,4)]] void al_print(LogLevel level, FILE *logfile, const char *fmt, ...);
+#ifdef __USE_MINGW_ANSI_STDIO
+[[gnu::format(gnu_printf,3,4)]]
+#else
+[[gnu::format(printf,3,4)]]
+#endif
+void al_print(LogLevel level, FILE *logfile, const char *fmt, ...);
 
 #define TRACE(...) al_print(LogLevel::Trace, gLogFile, "[ALSOFT] (II) " __VA_ARGS__)
 

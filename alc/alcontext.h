@@ -259,7 +259,12 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     /** Resumes update processing after being deferred. */
     void processUpdates();
 
-    [[gnu::format(printf,3,4)]] void setError(ALenum errorCode, const char *msg, ...);
+#ifdef __USE_MINGW_ANSI_STDIO
+    [[gnu::format(gnu_printf, 3, 4)]]
+#else
+    [[gnu::format(printf, 3, 4)]]
+#endif
+    void setError(ALenum errorCode, const char *msg, ...);
 
     DEF_NEWDEL(ALCcontext)
 };

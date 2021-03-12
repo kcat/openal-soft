@@ -103,7 +103,11 @@ class backend_exception final : public base_exception {
     backend_error mErrorCode;
 
 public:
+#ifdef __USE_MINGW_ANSI_STDIO
+    [[gnu::format(gnu_printf, 3, 4)]]
+#else
     [[gnu::format(printf, 3, 4)]]
+#endif
     backend_exception(backend_error code, const char *msg, ...) : mErrorCode{code}
     {
         std::va_list args;

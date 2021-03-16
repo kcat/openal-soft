@@ -22,7 +22,7 @@ struct Uhj2Encoder {
     alignas(16) std::array<float,BufferLineSize+sFilterSize> mSide{};
 
     /* History for the FIR filter. */
-    alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory{};
+    alignas(16) std::array<float,sFilterSize*2> mSideHistory{};
 
     alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
 

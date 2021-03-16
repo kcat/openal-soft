@@ -793,15 +793,17 @@ HRESULT WasapiPlayback::openProxy(const char *name)
     }
 
     void *ptr;
+    ComPtr<IMMDevice> mmdev;
     HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
         IID_IMMDeviceEnumerator, &ptr)};
-    ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
-    ComPtr<IMMDevice> mmdev;
-    if(!devid)
-        hr = enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, mmdev.getPtr());
-    else
-        hr = enumerator->GetDevice(devid, mmdev.getPtr());
-    enumerator = nullptr;
+    if(SUCCEEDED(hr))
+    {
+        ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
+        if(!devid)
+            hr = enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, mmdev.getPtr());
+        else
+            hr = enumerator->GetDevice(devid, mmdev.getPtr());
+    }
     if(FAILED(hr))
     {
         WARN("Failed to open device \"%s\"\n", name?name:"(default)");
@@ -1362,12 +1364,14 @@ HRESULT WasapiCapture::openProxy(const char *name)
     void *ptr;
     HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
         IID_IMMDeviceEnumerator, &ptr)};
-    ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
-    if(!devid)
-        hr = enumerator->GetDefaultAudioEndpoint(eCapture, eMultimedia, mMMDev.getPtr());
-    else
-        hr = enumerator->GetDevice(devid, mMMDev.getPtr());
-    enumerator = nullptr;
+    if(SUCCEEDED(hr))
+    {
+        ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
+        if(!devid)
+            hr = enumerator->GetDefaultAudioEndpoint(eCapture, eMultimedia, mMMDev.getPtr());
+        else
+            hr = enumerator->GetDevice(devid, mMMDev.getPtr());
+    }
     if(FAILED(hr))
     {
         WARN("Failed to open device \"%s\"\n", name?name:"(default)");

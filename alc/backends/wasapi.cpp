@@ -428,9 +428,9 @@ enum class MsgType {
     CloseDevice,
     EnumeratePlayback,
     EnumerateCapture,
-    QuitThread,
 
-    Count
+    Count,
+    QuitThread = Count
 };
 
 constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][20]{
@@ -441,8 +441,7 @@ constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][20]{
     "Stop Device",
     "Close Device",
     "Enumerate Playback",
-    "Enumerate Capture",
-    "Quit"
+    "Enumerate Capture"
 };
 
 
@@ -462,6 +461,8 @@ struct WasapiProxy {
         WasapiProxy *mProxy;
         const char *mParam;
         std::promise<HRESULT> mPromise;
+
+        operator bool() const noexcept { return mType != MsgType::QuitThread; }
     };
     static std::deque<Msg> mMsgQueue;
     static std::mutex mMsgQueueLock;
@@ -491,13 +492,13 @@ struct WasapiProxy {
         return future;
     }
 
-    static bool popMessage(Msg &msg)
+    static Msg popMessage()
     {
         std::unique_lock<std::mutex> lock{mMsgQueueLock};
         mMsgQueueCond.wait(lock, []{return !mMsgQueue.empty();});
-        msg = std::move(mMsgQueue.front());
+        Msg msg{std::move(mMsgQueue.front())};
         mMsgQueue.pop_front();
-        return msg.mType != MsgType::QuitThread;
+        return msg;
     }
 
     static int messageHandler(std::promise<HRESULT> *promise);
@@ -537,8 +538,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 
     TRACE("Starting message loop\n");
     uint deviceCount{0};
-    Msg msg;
-    while(popMessage(msg))
+    while(Msg msg{popMessage()})
     {
         TRACE("Got message \"%s\" (0x%04x, this=%p, param=%p)\n",
             MessageStr[static_cast<size_t>(msg.mType)], static_cast<uint>(msg.mType),
@@ -614,11 +614,11 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
                 CoUninitialize();
             continue;
 
-        default:
-            ERR("Unexpected message: %u\n", static_cast<uint>(msg.mType));
-            msg.mPromise.set_value(E_FAIL);
-            continue;
+        case MsgType::QuitThread:
+            break;
         }
+        ERR("Unexpected message: %u\n", static_cast<uint>(msg.mType));
+        msg.mPromise.set_value(E_FAIL);
     }
     TRACE("Message loop finished\n");
 

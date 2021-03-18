@@ -810,14 +810,7 @@ HRESULT WasapiPlayback::openProxy(const char *name)
         return hr;
     }
 
-    hr = mmdev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
-    if(FAILED(hr))
-    {
-        WARN("Failed to activate device \"%s\"\n", name?name:"(default)");
-        return hr;
-    }
-
-    mClient = ComPtr<IAudioClient>{static_cast<IAudioClient*>(ptr)};
+    mClient = nullptr;
     mMMDev = std::move(mmdev);
     if(name) mDevice->DeviceName = name;
     else mDevice->DeviceName = get_device_name_and_guid(mMMDev.get()).first;
@@ -1378,15 +1371,7 @@ HRESULT WasapiCapture::openProxy(const char *name)
         return hr;
     }
 
-    hr = mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
-    if(FAILED(hr))
-    {
-        WARN("Failed to activate device \"%s\"\n", name?name:"(default)");
-        mMMDev = nullptr;
-        return hr;
-    }
-
-    mClient = ComPtr<IAudioClient>{static_cast<IAudioClient*>(ptr)};
+    mClient = nullptr;
     if(name) mDevice->DeviceName = name;
     else mDevice->DeviceName = get_device_name_and_guid(mMMDev.get()).first;
 

@@ -38,7 +38,6 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
-#include "compat.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "strutils.h"
@@ -497,19 +496,13 @@ public:
 
 pa_context *PulseMainloop::connectContext(std::unique_lock<std::mutex> &plock)
 {
-    const char *name{"OpenAL Soft"};
-
-    const PathNamePair &binname = GetProcBinary();
-    if(!binname.fname.empty())
-        name = binname.fname.c_str();
-
     if(!mMainloop)
     {
         mThread = std::thread{std::mem_fn(&PulseMainloop::mainloop_proc), this};
         mCondVar.wait(plock, [this]() noexcept { return mMainloop; });
     }
 
-    pa_context *context{pa_context_new(pa_mainloop_get_api(mMainloop), name)};
+    pa_context *context{pa_context_new(pa_mainloop_get_api(mMainloop), nullptr)};
     if(!context) throw al::backend_exception{al::backend_error::OutOfMemory,
         "pa_context_new() failed"};
 

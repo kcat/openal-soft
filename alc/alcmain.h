@@ -221,7 +221,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
-    alignas(16) float SourceData[BufferLineSize + MaxResamplerPadding];
     alignas(16) float ResampledData[BufferLineSize];
     alignas(16) float FilteredData[BufferLineSize];
     union {

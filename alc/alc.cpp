@@ -2221,6 +2221,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             voice->mStep = 0;
             voice->mFlags |= VoiceIsFading;
 
+            /* Clear previous samples. */
+            std::fill(voice->mVoiceSamples.begin(), voice->mVoiceSamples.end(),
+                Voice::BufferLine{});
+
             if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
             {
                 const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
@@ -2234,7 +2238,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     device->mAmbiOrder);
                 for(auto &chandata : voice->mChans)
                 {
-                    chandata.mPrevSamples.fill(0.0f);
                     chandata.mAmbiScale = scales[*(OrderFromChan++)];
                     chandata.mAmbiSplitter = splitter;
                     chandata.mDryParams = DirectParams{};
@@ -2245,10 +2248,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             }
             else
             {
-                /* Clear previous samples. */
+                /* Clear previous params. */
                 for(auto &chandata : voice->mChans)
                 {
-                    chandata.mPrevSamples.fill(0.0f);
                     chandata.mDryParams = DirectParams{};
                     std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
                 }

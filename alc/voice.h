@@ -213,9 +213,15 @@ struct Voice {
     TargetData mDirect;
     std::array<TargetData,MAX_SENDS> mSend;
 
-    struct ChannelData {
-        alignas(16) std::array<float,MaxResamplerPadding> mPrevSamples;
+    /* The first MaxResamplerPadding/2 elements are the sample history from the
+     * previous mix, with an additional MaxResamplerPadding/2 elements that are
+     * now current (which may be overwritten if the buffer data is still
+     * available).
+     */
+    using BufferLine = std::array<float,BufferLineSize+MaxResamplerPadding>;
+    al::vector<BufferLine,16> mVoiceSamples{2};
 
+    struct ChannelData {
         float mAmbiScale;
         BandSplitter mAmbiSplitter;
 

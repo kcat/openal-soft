@@ -458,9 +458,15 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     voice->mStep = 0;
 
     if(voice->mChans.capacity() > 2 && num_channels < voice->mChans.capacity())
-        al::vector<Voice::ChannelData>{}.swap(voice->mChans);
+    {
+        decltype(voice->mChans){}.swap(voice->mChans);
+        decltype(voice->mVoiceSamples){}.swap(voice->mVoiceSamples);
+    }
     voice->mChans.reserve(maxu(2, num_channels));
     voice->mChans.resize(num_channels);
+    voice->mVoiceSamples.reserve(maxu(2, num_channels));
+    voice->mVoiceSamples.resize(num_channels);
+    std::fill_n(voice->mVoiceSamples.begin(), num_channels, Voice::BufferLine{});
 
     /* Don't need to set the VOICE_IS_AMBISONIC flag if the device is not
      * higher order than the voice. No HF scaling is necessary to mix it.
@@ -468,15 +474,12 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
     {
         const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
-            AmbiIndex::OrderFrom2DChannel().data() :
-            AmbiIndex::OrderFromChannel().data()};
+            AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
         const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder, device->mAmbiOrder);
 
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
-
         for(auto &chandata : voice->mChans)
         {
-            chandata.mPrevSamples.fill(0.0f);
             chandata.mAmbiScale = scales[*(OrderFromChan++)];
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};
@@ -487,10 +490,8 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     }
     else
     {
-        /* Clear previous samples. */
         for(auto &chandata : voice->mChans)
         {
-            chandata.mPrevSamples.fill(0.0f);
             chandata.mDryParams = DirectParams{};
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }

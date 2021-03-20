@@ -244,13 +244,13 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
     /* Combine the previously delayed mid/side signal with the input. */
 
     /* S = 0.9396926*W + 0.1855740*X */
-    auto miditer = std::copy(mMidDelay.cbegin(), mMidDelay.cend(), mMid.begin());
+    auto miditer = mMid.begin() + sFilterSize;
     std::transform(winput, winput+SamplesToDo, xinput, miditer,
         [](const float w, const float x) noexcept -> float
         { return 0.9396926f*w + 0.1855740f*x; });
 
     /* D = 0.6554516*Y */
-    auto sideiter = std::copy(mSideDelay.cbegin(), mSideDelay.cend(), mSide.begin());
+    auto sideiter = mSide.begin() + sFilterSize;
     std::transform(yinput, yinput+SamplesToDo, sideiter,
         [](const float y) noexcept -> float { return 0.6554516f*y; });
 
@@ -259,10 +259,6 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
         *miditer += left[i] + right[i];
     for(size_t i{0};i < SamplesToDo;++i,++sideiter)
         *sideiter += left[i] - right[i];
-
-    /* Copy the future samples back to the delay buffers for next time. */
-    std::copy_n(mMid.cbegin()+SamplesToDo, mMidDelay.size(), mMidDelay.begin());
-    std::copy_n(mSide.cbegin()+SamplesToDo, mSideDelay.size(), mSideDelay.begin());
 
     /* Now add the all-passed signal into the side signal. */
 
@@ -280,4 +276,8 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
     /* Right = (S - D)/2.0 */
     for(size_t i{0};i < SamplesToDo;i++)
         right[i] = (mMid[i] - mSide[i]) * 0.5f;
+
+    /* Copy the future samples to the front for next time. */
+    std::copy(mMid.cbegin()+SamplesToDo, mMid.cbegin()+SamplesToDo+sFilterSize, mMid.begin());
+    std::copy(mSide.cbegin()+SamplesToDo, mSide.cbegin()+SamplesToDo+sFilterSize, mSide.begin());
 }

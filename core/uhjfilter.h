@@ -14,15 +14,12 @@ struct Uhj2Encoder {
      */
     constexpr static size_t sFilterSize{128};
 
-    /* Delays for the unfiltered signal. */
-    alignas(16) std::array<float,sFilterSize> mMidDelay{};
-    alignas(16) std::array<float,sFilterSize> mSideDelay{};
-
+    /* Delays and processing storage for the unfiltered signal. */
     alignas(16) std::array<float,BufferLineSize+sFilterSize> mMid{};
     alignas(16) std::array<float,BufferLineSize+sFilterSize> mSide{};
 
     /* History for the FIR filter. */
-    alignas(16) std::array<float,sFilterSize*2> mSideHistory{};
+    alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory{};
 
     alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
 

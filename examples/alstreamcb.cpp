@@ -130,18 +130,18 @@ struct StreamPlayer {
 
         mFormat = AL_NONE;
         if(mSfInfo.channels == 1)
-            mFormat = AL_FORMAT_MONO16;
+            mFormat = AL_FORMAT_MONO_FLOAT32;
         else if(mSfInfo.channels == 2)
-            mFormat = AL_FORMAT_STEREO16;
+            mFormat = AL_FORMAT_STEREO_FLOAT32;
         else if(mSfInfo.channels == 3)
         {
             if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
-                mFormat = AL_FORMAT_BFORMAT2D_16;
+                mFormat = AL_FORMAT_BFORMAT2D_FLOAT32;
         }
         else if(mSfInfo.channels == 4)
         {
             if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
-                mFormat = AL_FORMAT_BFORMAT3D_16;
+                mFormat = AL_FORMAT_BFORMAT3D_FLOAT32;
         }
         if(!mFormat)
         {
@@ -153,7 +153,7 @@ struct StreamPlayer {
         }
 
         /* Set a 1s ring buffer size. */
-        mBufferDataSize = static_cast<ALuint>(mSfInfo.samplerate*mSfInfo.channels) * sizeof(short);
+        mBufferDataSize = static_cast<ALuint>(mSfInfo.samplerate*mSfInfo.channels) * sizeof(float);
         mBufferData.reset(new ALbyte[mBufferDataSize]);
         mReadPos.store(0, std::memory_order_relaxed);
         mWritePos.store(0, std::memory_order_relaxed);
@@ -236,7 +236,7 @@ struct StreamPlayer {
         alGetSourcei(mSource, AL_SAMPLE_OFFSET, &pos);
         alGetSourcei(mSource, AL_SOURCE_STATE, &state);
 
-        const size_t frame_size{static_cast<ALuint>(mSfInfo.channels) * sizeof(short)};
+        const size_t frame_size{static_cast<ALuint>(mSfInfo.channels) * sizeof(float)};
         size_t woffset{mWritePos.load(std::memory_order_acquire)};
         if(state != AL_INITIAL)
         {
@@ -271,8 +271,8 @@ struct StreamPlayer {
                 const size_t writable{roffset-woffset-1};
                 if(writable < frame_size) break;
 
-                sf_count_t num_frames{sf_readf_short(mSndfile,
-                    reinterpret_cast<short*>(&mBufferData[woffset]),
+                sf_count_t num_frames{sf_readf_float(mSndfile,
+                    reinterpret_cast<float*>(&mBufferData[woffset]),
                     static_cast<sf_count_t>(writable/frame_size))};
                 if(num_frames < 1) break;
 
@@ -290,8 +290,8 @@ struct StreamPlayer {
                     (mBufferDataSize-woffset)};
                 if(writable < frame_size) break;
 
-                sf_count_t num_frames{sf_readf_short(mSndfile,
-                    reinterpret_cast<short*>(&mBufferData[woffset]),
+                sf_count_t num_frames{sf_readf_float(mSndfile,
+                    reinterpret_cast<float*>(&mBufferData[woffset]),
                     static_cast<sf_count_t>(writable/frame_size))};
                 if(num_frames < 1) break;
 

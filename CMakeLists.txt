@@ -1149,10 +1149,13 @@ if(ALSOFT_EMBED_HRTF_DATA)
 endif()
 
 
-if(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
-    find_package(Qt5Widgets)
+if(ALSOFT_UTILS)
+    find_package(MySOFA)
+    if(NOT ALSOFT_NO_CONFIG_UTIL)
+        find_package(Qt5Widgets)
+    endif()
 endif()
-if(ALSOFT_EXAMPLES)
+if(ALSOFT_UTILS OR ALSOFT_EXAMPLES)
     find_package(SndFile)
     find_package(SDL2)
     if(SDL2_FOUND)
@@ -1430,7 +1433,16 @@ if(ALSOFT_UTILS)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
     endif()
 
-    find_package(MySOFA)
+    if(SNDFILE_FOUND)
+        add_executable(uhjdecoder utils/uhjdecoder.cpp)
+        target_compile_definitions(uhjdecoder PRIVATE ${CPP_DEFS})
+        target_include_directories(uhjdecoder
+            PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
+        target_compile_options(uhjdecoder PRIVATE ${C_FLAGS})
+        target_link_libraries(uhjdecoder PUBLIC common
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
+    endif()
+
     if(MYSOFA_FOUND)
         set(SOFA_SUPPORT_SRCS
             utils/sofa-support.cpp

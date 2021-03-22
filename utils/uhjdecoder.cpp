@@ -44,6 +44,7 @@
 #include "alcomplex.h"
 #include "almalloc.h"
 #include "alspan.h"
+#include "vector.h"
 #include "opthelpers.h"
 
 #include "sndfile.h"
@@ -120,6 +121,8 @@ struct UhjDecoder {
 
     alignas(16) std::array<float,BufferLineSize+sFilterSize> mS{};
     alignas(16) std::array<float,BufferLineSize+sFilterSize> mD{};
+    alignas(16) std::array<float,BufferLineSize+sFilterSize> mT{};
+    alignas(16) std::array<float,BufferLineSize+sFilterSize> mQ{};
 
     /* History for the FIR filter. */
     alignas(16) std::array<float,sFilterSize-1> mDTHistory{};
@@ -127,7 +130,9 @@ struct UhjDecoder {
 
     alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
 
-    void decode2(const float *RESTRICT InSamples, FloatBufferLine *OutSamples,
+    void decode(const float *RESTRICT InSamples, const al::span<FloatBufferLine> OutSamples,
+        const size_t SamplesToDo);
+    void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine,3> OutSamples,
         const size_t SamplesToDo);
 
     DEF_NEWDEL(UhjDecoder)
@@ -302,12 +307,149 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
 }
 
 
+/* Decoding 3- and 4-channel UHJ is done as:
+ *
+ * S = (Left + Right)/2.0
+ * D = (Left - Right)/2.0
+ *
+ * W = 0.982*S + j*0.197(0.828*D + 0.768*T)
+ * X = 0.419*S - j(0.828*D + 0.768*T)
+ * Y = 0.796*D - 0.676*T + j*0.187*S
+ * Z = 1.023*Q
+ *
+ * where j is a +90 degree phase shift. 3-channel UHJ excludes Q/Z.
+ *
+ * NOTE: It appears S and D are incorrect. It's halving Left and Right even
+ * though they were already halved during encoding, causing S and D to be half
+ * what they initially were at the encoding stage. Taking Y for example:
+ *
+ * Y = 0.796*D - 0.676*T + j*0.187*S
+ *
+ * * Plug in the encoding parameters, using ? as a placeholder for whether S
+ *   and D should receive an extra 0.5 factor
+ * Y = 0.796*(j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y)*? -
+ *     0.676*(j(-0.1432*W + 0.6512*X) - 0.7071*Y) +
+ *     j*0.187*(0.9396926*W + 0.1855740*X)*?
+ *
+ * * Move common factors in
+ * Y = (j(-0.3420201*0.796*?*W + 0.5098604*0.796*?*X) + 0.6554516*0.796*?*Y) -
+ *     (j(-0.1432*0.676*W + 0.6512*0.676*X) - 0.7071*0.676*Y) +
+ *     j(0.9396926*0.187*?*W + 0.1855740*0.187*?*X)
+ *
+ * * Clean up extraneous groupings
+ * Y = j(-0.3420201*0.796*?*W + 0.5098604*0.796*?*X) + 0.6554516*0.796*?*Y -
+ *     j(-0.1432*0.676*W + 0.6512*0.676*X) + 0.7071*0.676*Y +
+ *     j*(0.9396926*0.187*?*W + 0.1855740*0.187*?*X)
+ *
+ * * Move phase shifts together and combine them
+ * Y = j(-0.3420201*0.796*?*W + 0.5098604*0.796*?*X - -0.1432*0.676*W -
+ *        0.6512*0.676*X + 0.9396926*0.187*?*W + 0.1855740*0.187*?*X) +
+ *     0.6554516*0.796*?*Y + 0.7071*0.676*Y
+ *
+ * * Reorder terms
+ * Y = j(-0.3420201*0.796*?*W +  0.1432*0.676*W + 0.9396926*0.187*?*W +
+ *        0.5098604*0.796*?*X + -0.6512*0.676*X + 0.1855740*0.187*?*X) +
+ *     0.7071*0.676*Y + 0.6554516*0.796*?*Y
+ *
+ * * Move common factors out
+ * Y = j((-0.3420201*0.796*? +  0.1432*0.676 + 0.9396926*0.187*?)*W +
+ *       ( 0.5098604*0.796*? + -0.6512*0.676 + 0.1855740*0.187*?)*X) +
+ *     (0.7071*0.676 + 0.6554516*0.796*?)*Y
+ *
+ * * Result w/ 0.5 factor:
+ * -0.3420201*0.796*0.5 + 0.1432*0.676 + 0.9396926*0.187*0.5 = 0.0485*W
+ * 0.5098604*0.796*0.5 + -0.6512*0.676 + 0.1855740*0.187*0.5 = -0.2199*X
+ * 0.7071*0.676 + 0.6554516*0.796*0.5 = 0.7389*Y
+ * -> Y = j(0.0485*W + -0.2199*X) + 0.7389*Y
+ *
+ * * Result w/o 0.5 factor:
+ * -0.3420201*0.796 + 0.1432*0.676 + 0.9396926*0.187 = 0.0003*W
+ * 0.5098604*0.796 + -0.6512*0.676 + 0.1855740*0.187 = 0.0003*X
+ * 0.7071*0.676 + 0.6554516*0.796 = 0.9997*Y
+ * -> Y = j(0.0003*W + 0.0003*X) + 0.9997*Y
+ *
+ * Not halving produces a result closer to the original input.
+ */
+void UhjDecoder::decode(const float *RESTRICT InSamples,
+    const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo)
+{
+    ASSUME(SamplesToDo > 0);
+
+    const size_t Channels{OutSamples.size()};
+
+    float *woutput{OutSamples[0].data()};
+    float *xoutput{OutSamples[1].data()};
+    float *youtput{OutSamples[2].data()};
+
+    /* Add a delay to the input channels, to align it with the all-passed
+     * signal.
+     */
+
+    /* S = Left + Right */
+    for(size_t i{0};i < SamplesToDo;++i)
+        mS[sFilterSize+i] = InSamples[i*Channels + 0] + InSamples[i*Channels + 1];
+
+    /* D = Left - Right */
+    for(size_t i{0};i < SamplesToDo;++i)
+        mD[sFilterSize+i] = InSamples[i*Channels + 0] - InSamples[i*Channels + 1];
+
+    /* T */
+    for(size_t i{0};i < SamplesToDo;++i)
+        mT[sFilterSize+i] = InSamples[i*Channels + 2];
+
+    if(Channels > 3)
+    {
+        /* Q */
+        for(size_t i{0};i < SamplesToDo;++i)
+            mQ[sFilterSize+i] = InSamples[i*Channels + 3];
+    }
+
+    /* Precompute j(0.828*D + 0.768*T) and store in xoutput. */
+    auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
+    std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterSize, mT.cbegin(), tmpiter,
+        [](const float D, const float T) noexcept { return 0.828f*D + 0.768f*T; });
+    std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
+    allpass_process({xoutput, SamplesToDo}, mTemp.data());
+
+    for(size_t i{0};i < SamplesToDo;++i)
+    {
+        /* W = 0.982*S + j*0.197(0.828*D + 0.768*T) */
+        woutput[i] = 0.982f*mS[i] + 0.197f*xoutput[i];
+        /* X = 0.419*S - j(0.828*D + 0.768*T) */
+        xoutput[i] = 0.419f*mS[i] - xoutput[i];
+    }
+
+    /* Precompute j*S and store in youtput. */
+    tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
+    std::copy_n(mS.cbegin(), SamplesToDo+sFilterSize, tmpiter);
+    std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
+    allpass_process({youtput, SamplesToDo}, mTemp.data());
+
+    for(size_t i{0};i < SamplesToDo;++i)
+    {
+        /* Y = 0.796*D - 0.676*T + j*0.187*S */
+        youtput[i] = 0.796f*mD[i] - 0.676f*mT[i] + 0.187f*youtput[i];
+    }
+
+    if(Channels > 3)
+    {
+        float *zoutput{OutSamples[3].data()};
+        /* Z = 1.023*Q */
+        for(size_t i{0};i < SamplesToDo;++i)
+            zoutput[i] = 1.023f*mQ[i];
+    }
+
+    std::copy(mS.begin()+SamplesToDo, mS.begin()+SamplesToDo+sFilterSize, mS.begin());
+    std::copy(mD.begin()+SamplesToDo, mD.begin()+SamplesToDo+sFilterSize, mD.begin());
+    std::copy(mT.begin()+SamplesToDo, mT.begin()+SamplesToDo+sFilterSize, mT.begin());
+    std::copy(mQ.begin()+SamplesToDo, mQ.begin()+SamplesToDo+sFilterSize, mQ.begin());
+}
+
 /* There is a difference with decoding 2-channel UHJ compared to 3-channel, due
- * to 2-channel having lost some of the original signal (which can be recovered
- * with 3-channel). The B-Format signal reconstructed from 2-channel UHJ should
- * not be run through a normal B-Format decoder, as it needs different shelf
- * filters (none? if I understand right, it should do an energy-optimized
- * decode only).
+ * to 2-channel having lost some of the original signal. The B-Format signal
+ * reconstructed from 2-channel UHJ should not be run through a normal B-Format
+ * decoder, as it needs different shelf filters (none? if I understand right,
+ * it should do an energy-optimized decode only).
  *
  * 2-channel UHJ decoding is done as:
  *
@@ -319,9 +461,12 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  * Y = 0.763*D + j*0.385*S
  *
  * where j is a +90 degree phase shift.
+ *
+ * NOTE: As above, S and D should not be halved. The only consequence of
+ * halving here is merely a -6dB reduction in output, but it's still incorrect.
  */
-void UhjDecoder::decode2(const float *RESTRICT InSamples, FloatBufferLine *OutSamples,
-    const size_t SamplesToDo)
+void UhjDecoder::decode2(const float *RESTRICT InSamples,
+    const al::span<FloatBufferLine,3> OutSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -329,17 +474,13 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples, FloatBufferLine *OutSa
     float *xoutput{OutSamples[1].data()};
     float *youtput{OutSamples[2].data()};
 
-    /* Add a delay to the input mid/side channels, to align it with the
-     * all-passed signal.
-     */
-
-    /* S = (Left + Right)/2.0 */
+    /* S = Left + Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mS[sFilterSize+i] = (InSamples[i*2 + 0] + InSamples[i*2 + 1]) * 0.5f;
+        mS[sFilterSize+i] = InSamples[i*2 + 0] + InSamples[i*2 + 1];
 
-    /* D = (Left - Right)/2.0 */
+    /* D = Left - Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[sFilterSize+i] = (InSamples[i*2 + 0] - InSamples[i*2 + 1]) * 0.5f;
+        mD[sFilterSize+i] = InSamples[i*2 + 0] - InSamples[i*2 + 1];
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -376,7 +517,7 @@ int main(int argc, char **argv)
 {
     if(argc < 2 || std::strcmp(argv[1], "-h") == 0 || std::strcmp(argv[1], "--help") == 0)
     {
-        printf("Usage: %s <filename.wav>\n", argv[0]);
+        printf("Usage: %s <filename.wav...>\n", argv[0]);
         return 1;
     }
 
@@ -391,12 +532,22 @@ int main(int argc, char **argv)
             fprintf(stderr, "Failed to open %s\n", argv[fidx]);
             continue;
         }
-        if(ininfo.channels != 2)
+        if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
         {
-            fprintf(stderr, "%s is not a stereo file\n", argv[fidx]);
+            fprintf(stderr, "%s is already B-Format\n", argv[fidx]);
             continue;
         }
-        printf("Converting %s...\n", argv[fidx]);
+        uint outchans{};
+        if(ininfo.channels == 2)
+            outchans = 3;
+        else if(ininfo.channels == 3 || ininfo.channels == 4)
+            outchans = static_cast<uint>(ininfo.channels);
+        else
+        {
+            fprintf(stderr, "%s is not a 2-, 3-, or 4-channel file\n", argv[fidx]);
+            continue;
+        }
+        printf("Converting %s from %d-channel UHJ...\n", argv[fidx], ininfo.channels);
 
         std::string outname{argv[fidx]};
         auto lastslash = outname.find_last_of('/');
@@ -425,19 +576,19 @@ int main(int argc, char **argv)
         // 16-bit val, format type id (extensible: 0xFFFE)
         fwrite16le(0xFFFE, outfile.get());
         // 16-bit val, channel count
-        fwrite16le(static_cast<ushort>(3), outfile.get());
+        fwrite16le(static_cast<ushort>(outchans), outfile.get());
         // 32-bit val, frequency
         fwrite32le(static_cast<uint>(ininfo.samplerate), outfile.get());
         // 32-bit val, bytes per second
-        fwrite32le(static_cast<uint>(ininfo.samplerate) * sizeof(float) * 3, outfile.get());
+        fwrite32le(static_cast<uint>(ininfo.samplerate)*sizeof(float)*outchans, outfile.get());
         // 16-bit val, frame size
-        fwrite16le(static_cast<ushort>(sizeof(float) * 3), outfile.get());
+        fwrite16le(static_cast<ushort>(sizeof(float)*outchans), outfile.get());
         // 16-bit val, bits per sample
-        fwrite16le(static_cast<ushort>(sizeof(float) * 8), outfile.get());
+        fwrite16le(static_cast<ushort>(sizeof(float)*8), outfile.get());
         // 16-bit val, extra byte count
         fwrite16le(22, outfile.get());
         // 16-bit val, valid bits per sample
-        fwrite16le(static_cast<ushort>(sizeof(float) * 8), outfile.get());
+        fwrite16le(static_cast<ushort>(sizeof(float)*8), outfile.get());
         // 32-bit val, channel mask
         fwrite32le(0, outfile.get());
         // 16 byte GUID, sub-type format
@@ -455,8 +606,8 @@ int main(int argc, char **argv)
 
         auto decoder = std::make_unique<UhjDecoder>();
         auto inmem = std::make_unique<float[]>(BufferLineSize*static_cast<uint>(ininfo.channels));
-        auto decmem = std::make_unique<std::array<float,BufferLineSize>[]>(3);
-        auto outmem = std::make_unique<byte4[]>(BufferLineSize*3);
+        auto decmem = al::vector<std::array<float,BufferLineSize>, 16>(outchans);
+        auto outmem = std::make_unique<byte4[]>(BufferLineSize*outchans);
 
         /* The all-pass filter has a lead-in of 127 samples, and a lead-out of
          * 128 samples. So after reading the last samples from the input, an
@@ -477,15 +628,17 @@ int main(int argc, char **argv)
             }
 
             auto got = static_cast<size_t>(sgot);
-            decoder->decode2(inmem.get(), decmem.get(), got);
+            if(ininfo.channels == 2)
+                decoder->decode2(inmem.get(), decmem, got);
+            else if(ininfo.channels == 3 || ininfo.channels == 4)
+                decoder->decode(inmem.get(), decmem, got);
             for(size_t i{0};i < got;++i)
             {
-                outmem[i*3 + 0] = f32AsLEBytes(decmem[0][i]);
-                outmem[i*3 + 1] = f32AsLEBytes(decmem[1][i]);
-                outmem[i*3 + 2] = f32AsLEBytes(decmem[2][i]);
+                for(size_t j{0};j < outchans;++j)
+                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][i]);
             }
 
-            size_t wrote{fwrite(outmem.get(), sizeof(byte4)*3, got, outfile.get())};
+            size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)
             {
                 fprintf(stderr, "Error writing wave data: %s (%d)\n", strerror(errno), errno);

@@ -215,15 +215,18 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
 } // namespace
 
 
-/* Encoding 2-channel UHJ from B-Format is done as:
+/* Encoding UHJ from B-Format is done as:
  *
  * S = 0.9396926*W + 0.1855740*X
  * D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y
  *
  * Left = (S + D)/2.0
  * Right = (S - D)/2.0
+ * T = j(-0.1432*W + 0.6511746*X) - 0.7071068*Y
+ * Q = 0.9772*Z
  *
- * where j is a wide-band +90 degree phase shift.
+ * where j is a wide-band +90 degree phase shift. T is excluded from 2-channel
+ * output, and Q is excluded from 2- and 3-channel output.
  *
  * The phase shift is done using a FIR filter derived from an FFT'd impulse
  * with the desired shift.

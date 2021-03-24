@@ -319,7 +319,7 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  *
  * where j is a +90 degree phase shift. 3-channel UHJ excludes Q/Z.
  *
- * NOTE: Some souces specify
+ * NOTE: Some sources specify
  *
  * S = (Left + Right)/2
  * D = (Left - Right)/2
@@ -422,7 +422,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
     {
         /* W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T) */
         woutput[i] = 0.981530f*mS[i] + 0.197484f*xoutput[i];
-        /* 0.418504*S - j(0.828347*D + 0.767835*T) */
+        /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
         xoutput[i] = 0.418504f*mS[i] - xoutput[i];
     }
 

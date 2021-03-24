@@ -530,9 +530,9 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             /* Calculate the last read src sample pos. */
             DataSize64 = (DataSize64*increment + DataPosFrac) >> MixerFracBits;
             /* +1 to get the src sample count, include padding. */
-            DataSize64 += 1 + MaxResamplerPadding;
+            DataSize64 += 1 + ResamplerPrePadding;
 
-            /* Result is guaranteed to be <= BufferLineSize+MaxResamplerPadding
+            /* Result is guaranteed to be <= BufferLineSize+ResamplerPrePadding
              * since we won't use more src samples than dst samples+padding.
              */
             SrcBufferSize = static_cast<uint>(DataSize64);
@@ -542,18 +542,18 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
             uint64_t DataSize64{DstBufferSize};
             /* Calculate the end src sample pos, include padding. */
             DataSize64 = (DataSize64*increment + DataPosFrac) >> MixerFracBits;
-            DataSize64 += MaxResamplerPadding;
+            DataSize64 += ResamplerPrePadding;
 
-            if(DataSize64 <= BufferLineSize + MaxResamplerPadding)
+            if(DataSize64 <= BufferLineSize + ResamplerPrePadding)
                 SrcBufferSize = static_cast<uint>(DataSize64);
             else
             {
                 /* If the source size got saturated, we can't fill the desired
                  * dst size. Figure out how many samples we can actually mix.
                  */
-                SrcBufferSize = BufferLineSize + MaxResamplerPadding;
+                SrcBufferSize = BufferLineSize + ResamplerPrePadding;
 
-                DataSize64 = SrcBufferSize - MaxResamplerPadding;
+                DataSize64 = SrcBufferSize - ResamplerPrePadding;
                 DataSize64 = ((DataSize64<<MixerFracBits) - DataPosFrac) / increment;
                 if(DataSize64 < DstBufferSize)
                 {
@@ -567,15 +567,13 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
 
         if((mFlags&(VoiceIsCallback|VoiceCallbackStopped)) == VoiceIsCallback && BufferListItem)
         {
-            /* Exclude resampler pre-padding from the needed size. */
-            const uint toLoad{SrcBufferSize - ResamplerPrePadding};
-            if(toLoad > mNumCallbackSamples)
+            if(SrcBufferSize > mNumCallbackSamples)
             {
                 const size_t FrameSize{mChans.size() * mSampleSize};
                 ASSUME(FrameSize > 0);
 
                 const size_t byteOffset{mNumCallbackSamples*FrameSize};
-                const size_t needBytes{toLoad*FrameSize - byteOffset};
+                const size_t needBytes{SrcBufferSize*FrameSize - byteOffset};
 
                 const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
                     &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
@@ -588,7 +586,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                         FrameSize);
                 }
                 else
-                    mNumCallbackSamples = toLoad;
+                    mNumCallbackSamples = SrcBufferSize;
             }
         }
 
@@ -606,18 +604,19 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
                 { return std::abs(lhs) < std::abs(rhs); };
                 srciter = std::min_element(srciter, srciter+(MaxResamplerPadding>>1), abs_lt);
 
-                std::fill(srciter+1, chanbuffer.data() + SrcBufferSize, *srciter);
+                std::fill(srciter+1, chanbuffer.data() + ResamplerPrePadding + SrcBufferSize,
+                    *srciter);
             }
         }
         else if((mFlags&VoiceIsStatic))
-            LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType,
-                SrcBufferSize-ResamplerPrePadding, mVoiceSamples);
+            LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, SrcBufferSize,
+                mVoiceSamples);
         else if((mFlags&VoiceIsCallback))
-            LoadBufferCallback(BufferListItem, mNumCallbackSamples, mFmtType,
-                SrcBufferSize-ResamplerPrePadding, mVoiceSamples);
+            LoadBufferCallback(BufferListItem, mNumCallbackSamples, mFmtType, SrcBufferSize,
+                mVoiceSamples);
         else
-            LoadBufferQueue(BufferListItem, BufferLoopItem, DataPosInt, mFmtType,
-                SrcBufferSize-ResamplerPrePadding, mVoiceSamples);
+            LoadBufferQueue(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, SrcBufferSize,
+                mVoiceSamples);
 
         ASSUME(DstBufferSize > 0);
         auto voiceSamples = mVoiceSamples.begin();

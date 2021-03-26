@@ -130,8 +130,8 @@ struct UhjDecoder {
 
     alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
 
-    void decode(const float *RESTRICT InSamples, const al::span<FloatBufferLine> OutSamples,
-        const size_t SamplesToDo);
+    void decode(const float *RESTRICT InSamples, const size_t InChannels,
+        const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo);
     void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine,3> OutSamples,
         const size_t SamplesToDo);
 
@@ -307,7 +307,7 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
 }
 
 
-/* Decoding 3- and 4-channel UHJ is done as:
+/* Decoding UHJ is done as:
  *
  * S = Left + Right
  * D = Left - Right
@@ -317,7 +317,10 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  * Y = 0.795954*D - 0.676406*T + j(0.186626*S)
  * Z = 1.023332*Q
  *
- * where j is a +90 degree phase shift. 3-channel UHJ excludes Q/Z.
+ * where j is a +90 degree phase shift. 3-channel UHJ excludes Q, while 2-
+ * channel excludes Q and T. The B-Format signal reconstructed from 2-channel
+ * UHJ should not be run through a normal B-Format decoder, as it needs
+ * different shelf filters.
  *
  * NOTE: Some sources specify
  *
@@ -377,12 +380,10 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  *
  * Not halving produces a result matching the original input.
  */
-void UhjDecoder::decode(const float *RESTRICT InSamples,
+void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels,
     const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
-
-    const size_t Channels{OutSamples.size()};
 
     float *woutput{OutSamples[0].data()};
     float *xoutput{OutSamples[1].data()};
@@ -394,27 +395,29 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
 
     /* S = Left + Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mS[sFilterSize+i] = InSamples[i*Channels + 0] + InSamples[i*Channels + 1];
+        mS[sFilterSize+i] = InSamples[i*InChannels + 0] + InSamples[i*InChannels + 1];
 
     /* D = Left - Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[sFilterSize+i] = InSamples[i*Channels + 0] - InSamples[i*Channels + 1];
+        mD[sFilterSize+i] = InSamples[i*InChannels + 0] - InSamples[i*InChannels + 1];
 
-    /* T */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mT[sFilterSize+i] = InSamples[i*Channels + 2];
-
-    if(Channels > 3)
+    if(InChannels > 2)
+    {
+        /* T */
+        for(size_t i{0};i < SamplesToDo;++i)
+            mT[sFilterSize+i] = InSamples[i*InChannels + 2];
+    }
+    if(InChannels > 3)
     {
         /* Q */
         for(size_t i{0};i < SamplesToDo;++i)
-            mQ[sFilterSize+i] = InSamples[i*Channels + 3];
+            mQ[sFilterSize+i] = InSamples[i*InChannels + 3];
     }
 
     /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterSize, mT.cbegin(), tmpiter,
-        [](const float D, const float T) noexcept { return 0.828347f*D + 0.767835f*T; });
+        [](const float d, const float t) noexcept { return 0.828347f*d + 0.767835f*t; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
     allpass_process({xoutput, SamplesToDo}, mTemp.data());
 
@@ -438,7 +441,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
         youtput[i] = 0.795954f*mD[i] - 0.676406f*mT[i] + 0.186626f*youtput[i];
     }
 
-    if(Channels > 3)
+    if(OutSamples.size() > 3)
     {
         float *zoutput{OutSamples[3].data()};
         /* Z = 1.023332*Q */
@@ -452,12 +455,12 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
     std::copy(mQ.begin()+SamplesToDo, mQ.begin()+SamplesToDo+sFilterSize, mQ.begin());
 }
 
-/* There is a difference with decoding 2-channel UHJ compared to 3-channel, due
- * to 2-channel having lost some of the original signal. The B-Format signal
- * reconstructed from 2-channel UHJ should not be run through a normal B-Format
- * decoder, as it needs different shelf filters.
+/* This is an alternative equation for decoding 2-channel UHJ. Not sure what
+ * the intended benefit is over the above equation as this slightly reduces the
+ * amount of the original left response and has more of the phase-shifted
+ * forward response on the left response.
  *
- * 2-channel UHJ decoding is done as:
+ * This decoding is done as:
  *
  * S = Left + Right
  * D = Left - Right
@@ -523,13 +526,32 @@ int main(int argc, char **argv)
 {
     if(argc < 2 || std::strcmp(argv[1], "-h") == 0 || std::strcmp(argv[1], "--help") == 0)
     {
-        printf("Usage: %s <filename.wav...>\n", argv[0]);
+        printf("Usage: %s <[options] filename.wav...>\n\n"
+            "  Options:\n"
+            "    --general      Use the general equations for 2-channel UHJ (default).\n"
+            "    --alternative  Use the alternative equations for 2-channel UHJ.\n"
+            "\n"
+            "Note: When decoding 2-channel UHJ to an .amb file, the result should not use\n"
+            "the normal B-Format shelf filters! Only 3- and 4-channel UHJ can accurately\n"
+            "reconstruct the original B-Format signal.",
+            argv[0]);
         return 1;
     }
 
     size_t num_files{0}, num_decoded{0};
+    bool use_general{true};
     for(int fidx{1};fidx < argc;++fidx)
     {
+        if(std::strcmp(argv[fidx], "--general") == 0)
+        {
+            use_general = true;
+            continue;
+        }
+        if(std::strcmp(argv[fidx], "--alternative") == 0)
+        {
+            use_general = false;
+            continue;
+        }
         ++num_files;
         SF_INFO ininfo{};
         SndFilePtr infile{sf_open(argv[fidx], SFM_READ, &ininfo)};
@@ -553,7 +575,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "%s is not a 2-, 3-, or 4-channel file\n", argv[fidx]);
             continue;
         }
-        printf("Converting %s from %d-channel UHJ...\n", argv[fidx], ininfo.channels);
+        printf("Converting %s from %d-channel UHJ%s...\n", argv[fidx], ininfo.channels,
+            (ininfo.channels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
         std::string outname{argv[fidx]};
         auto lastslash = outname.find_last_of('/');
@@ -634,10 +657,10 @@ int main(int argc, char **argv)
             }
 
             auto got = static_cast<size_t>(sgot);
-            if(ininfo.channels == 2)
+            if(ininfo.channels > 2 || use_general)
+                decoder->decode(inmem.get(), static_cast<uint>(ininfo.channels), decmem, got);
+            else
                 decoder->decode2(inmem.get(), decmem, got);
-            else if(ininfo.channels == 3 || ininfo.channels == 4)
-                decoder->decode(inmem.get(), decmem, got);
             for(size_t i{0};i < got;++i)
             {
                 for(size_t j{0};j < outchans;++j)

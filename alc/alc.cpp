@@ -2001,7 +2001,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
     nanoseconds::rep sample_delay{0};
     if(device->Uhj_Encoder)
-        sample_delay += Uhj2Encoder::sFilterSize;
+        sample_delay += Uhj2Encoder::sFilterDelay;
     if(device->mHrtfState)
         sample_delay += HrtfDirectDelay;
     if(auto *ambidec = device->AmbiDecoder.get())

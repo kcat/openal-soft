@@ -8,20 +8,19 @@
 
 
 struct Uhj2Encoder {
-    /* A particular property of the filter allows it to cover nearly twice its
-     * length, so the filter size is also the effective delay (despite being
-     * center-aligned).
+    /* The filter delay is half it's effective size, so a delay of 128 has a
+     * FIR length of 256.
      */
-    constexpr static size_t sFilterSize{128};
+    constexpr static size_t sFilterDelay{128};
 
     /* Delays and processing storage for the unfiltered signal. */
-    alignas(16) std::array<float,BufferLineSize+sFilterSize> mMid{};
-    alignas(16) std::array<float,BufferLineSize+sFilterSize> mSide{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mMid{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mSide{};
 
     /* History for the FIR filter. */
-    alignas(16) std::array<float,sFilterSize*2 - 1> mSideHistory{};
+    alignas(16) std::array<float,sFilterDelay*2 - 1> mSideHistory{};
 
-    alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input

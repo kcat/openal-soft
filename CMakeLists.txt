@@ -1236,7 +1236,8 @@ else()
             router/al.cpp
         )
         target_compile_definitions(OpenAL
-            PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
+            PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}"
+            "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
         target_compile_options(OpenAL PRIVATE ${C_FLAGS})
         target_link_libraries(OpenAL PRIVATE common ${LINKER_FLAGS})
         target_include_directories(OpenAL
@@ -1321,7 +1322,8 @@ set_target_properties(${IMPL_TARGET} PROPERTIES OUTPUT_NAME ${LIBNAME}
     SOVERSION ${LIB_MAJOR_VERSION}
 )
 target_compile_definitions(${IMPL_TARGET}
-    PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
+    PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
+    ${CPP_DEFS})
 target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
 
 if(TARGET build_version)

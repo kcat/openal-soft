@@ -1,7 +1,3 @@
-/* API declaration export attribute */
-#define AL_API  ${EXPORT_DECL}
-#define ALC_API ${EXPORT_DECL}
-
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 

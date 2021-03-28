@@ -24,12 +24,6 @@
 
 #include "config.h"
 
-#ifdef HAVE_SSE_INTRINSICS
-#include <xmmintrin.h>
-#elif defined(HAVE_NEON)
-#include <arm_neon.h>
-#endif
-
 #include <array>
 #include <complex>
 #include <cstring>

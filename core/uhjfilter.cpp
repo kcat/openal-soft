@@ -53,13 +53,13 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
     /* Combine the previously delayed mid/side signal with the input. */
 
     /* S = 0.9396926*W + 0.1855740*X */
-    auto miditer = mMid.begin() + sFilterDelay;
+    auto miditer = mS.begin() + sFilterDelay;
     std::transform(winput, winput+SamplesToDo, xinput, miditer,
         [](const float w, const float x) noexcept -> float
         { return 0.9396926f*w + 0.1855740f*x; });
 
     /* D = 0.6554516*Y */
-    auto sideiter = mSide.begin() + sFilterDelay;
+    auto sideiter = mD.begin() + sFilterDelay;
     std::transform(yinput, yinput+SamplesToDo, sideiter,
         [](const float y) noexcept -> float { return 0.6554516f*y; });
 
@@ -72,21 +72,21 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
     /* Now add the all-passed signal into the side signal. */
 
     /* D += j(-0.3420201*W + 0.5098604*X) */
-    auto tmpiter = std::copy(mSideHistory.cbegin(), mSideHistory.cend(), mTemp.begin());
+    auto tmpiter = std::copy(mWXHistory.cbegin(), mWXHistory.cend(), mTemp.begin());
     std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
-    std::copy_n(mTemp.cbegin()+SamplesToDo, mSideHistory.size(), mSideHistory.begin());
-    PShift.processAccum({mSide.data(), SamplesToDo}, mTemp.data());
+    std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory.size(), mWXHistory.begin());
+    PShift.processAccum({mD.data(), SamplesToDo}, mTemp.data());
 
     /* Left = (S + D)/2.0 */
     for(size_t i{0};i < SamplesToDo;i++)
-        left[i] = (mMid[i] + mSide[i]) * 0.5f;
+        left[i] = (mS[i] + mD[i]) * 0.5f;
     /* Right = (S - D)/2.0 */
     for(size_t i{0};i < SamplesToDo;i++)
-        right[i] = (mMid[i] - mSide[i]) * 0.5f;
+        right[i] = (mS[i] - mD[i]) * 0.5f;
 
     /* Copy the future samples to the front for next time. */
-    std::copy(mMid.cbegin()+SamplesToDo, mMid.cbegin()+SamplesToDo+sFilterDelay, mMid.begin());
-    std::copy(mSide.cbegin()+SamplesToDo, mSide.cbegin()+SamplesToDo+sFilterDelay, mSide.begin());
+    std::copy(mS.cbegin()+SamplesToDo, mS.cbegin()+SamplesToDo+sFilterDelay, mS.begin());
+    std::copy(mD.cbegin()+SamplesToDo, mD.cbegin()+SamplesToDo+sFilterDelay, mD.begin());
 }

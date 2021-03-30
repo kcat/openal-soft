@@ -44,6 +44,7 @@
 #include "alstring.h"
 #include "alu.h"
 #include "async_event.h"
+#include "bformatdec.h"
 #include "buffer_storage.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
@@ -796,5 +797,53 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         mPlayState.store(Stopping, std::memory_order_release);
         if((enabledevt&EventType_SourceStateChange))
             SendSourceStoppedEvent(Context, SourceID);
+    }
+}
+
+void Voice::prepare(ALCdevice *device)
+{
+    /* Clear the stepping value explicitly so the mixer knows not to mix this
+     * until the update gets applied.
+     */
+    mStep = 0;
+
+    /* Make sure the sample history is cleared. */
+    std::fill(mVoiceSamples.begin(), mVoiceSamples.end(), BufferLine{});
+
+    /* Don't need to set the VoiceIsAmbisonic flag if the device is not higher
+     * order than the voice. No HF scaling is necessary to mix it.
+     */
+    if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
+    {
+        const uint8_t *OrderFromChan{(mFmtChannels == FmtBFormat2D) ?
+            AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
+        const auto scales = BFormatDec::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
+
+        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
+        for(auto &chandata : mChans)
+        {
+            chandata.mAmbiScale = scales[*(OrderFromChan++)];
+            chandata.mAmbiSplitter = splitter;
+            chandata.mDryParams = DirectParams{};
+            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+        }
+        mFlags |= VoiceIsAmbisonic;
+    }
+    else
+    {
+        for(auto &chandata : mChans)
+        {
+            chandata.mDryParams = DirectParams{};
+            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+        }
+        mFlags &= ~VoiceIsAmbisonic;
+    }
+
+    if(device->AvgSpeakerDist > 0.0f)
+    {
+        const float w1{SpeedOfSoundMetersPerSec /
+            (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
+        for(auto &chandata : mChans)
+            chandata.mDryParams.NFCtrlFilter.init(w1);
     }
 }

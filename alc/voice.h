@@ -238,6 +238,8 @@ struct Voice {
 
     void mix(const State vstate, ALCcontext *Context, const uint SamplesToDo);
 
+    void prepare(ALCdevice *device);
+
     DEF_NEWDEL(Voice)
 };
 

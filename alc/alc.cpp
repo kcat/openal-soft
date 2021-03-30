@@ -2218,54 +2218,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
                 continue;
 
-            voice->mStep = 0;
-            voice->mFlags |= VoiceIsFading;
-
-            /* Clear previous samples. */
-            std::fill(voice->mVoiceSamples.begin(), voice->mVoiceSamples.end(),
-                Voice::BufferLine{});
-
-            if(voice->mAmbiOrder && device->mAmbiOrder > voice->mAmbiOrder)
-            {
-                const uint8_t *OrderFromChan{(voice->mFmtChannels == FmtBFormat2D) ?
-                    AmbiIndex::OrderFrom2DChannel().data() :
-                    AmbiIndex::OrderFromChannel().data()};
-
-                const BandSplitter splitter{device->mXOverFreq /
-                    static_cast<float>(device->Frequency)};
-
-                const auto scales = BFormatDec::GetHFOrderScales(voice->mAmbiOrder,
-                    device->mAmbiOrder);
-                for(auto &chandata : voice->mChans)
-                {
-                    chandata.mAmbiScale = scales[*(OrderFromChan++)];
-                    chandata.mAmbiSplitter = splitter;
-                    chandata.mDryParams = DirectParams{};
-                    std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
-                }
-
-                voice->mFlags |= VoiceIsAmbisonic;
-            }
-            else
-            {
-                /* Clear previous params. */
-                for(auto &chandata : voice->mChans)
-                {
-                    chandata.mDryParams = DirectParams{};
-                    std::fill_n(chandata.mWetParams.begin(), num_sends, SendParams{});
-                }
-
-                voice->mFlags &= ~VoiceIsAmbisonic;
-            }
-
-            if(device->AvgSpeakerDist > 0.0f)
-            {
-                /* Reinitialize the NFC filters for new parameters. */
-                const float w1{SpeedOfSoundMetersPerSec /
-                    (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
-                for(auto &chandata : voice->mChans)
-                    chandata.mDryParams.NFCtrlFilter.init(w1);
-            }
+            voice->prepare(device);
         }
         srclock.unlock();
 

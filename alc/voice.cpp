@@ -529,7 +529,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         Counter = std::min(Counter, 64u);
 
     const uint PostPadding{MaxResamplerEdge +
-        ((mFmtChannels==FmtUHJ2) ? uint{UhjDecoder::sFilterDelay} : 0u)};
+        ((mFmtChannels==FmtUHJ2 || mFmtChannels==FmtUHJ3) ? uint{UhjDecoder::sFilterDelay} : 0u)};
     uint buffers_done{0u};
     uint OutPos{0u};
     do {
@@ -823,9 +823,9 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
 
 void Voice::prepare(ALCdevice *device)
 {
-    if(mFmtChannels == FmtUHJ2 && !mDecoder)
+    if((mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3) && !mDecoder)
         mDecoder = std::make_unique<UhjDecoder>();
-    else if(mFmtChannels != FmtUHJ2)
+    else if(mFmtChannels != FmtUHJ2 && mFmtChannels != FmtUHJ3)
         mDecoder = nullptr;
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this

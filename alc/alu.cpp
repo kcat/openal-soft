@@ -790,13 +790,14 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     case FmtBFormat2D:
     case FmtBFormat3D:
     case FmtUHJ2:
+    case FmtUHJ3:
         DirectChannels = DirectMode::Off;
         break;
     }
 
     voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
     if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D
-        || voice->mFmtChannels == FmtUHJ2)
+        || voice->mFmtChannels == FmtUHJ2 || voice->mFmtChannels == FmtUHJ3)
     {
         /* Special handling for B-Format sources. */
 
@@ -900,7 +901,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * whether input is 2D or 3D.
              */
             const uint8_t *index_map{
-                (voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtUHJ2) ?
+                (voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtUHJ2
+                    || voice->mFmtChannels == FmtUHJ3) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 
@@ -1558,7 +1560,7 @@ void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
 
     if((voice->mProps.DirectChannels != DirectMode::Off && voice->mFmtChannels != FmtMono
             && voice->mFmtChannels != FmtBFormat2D && voice->mFmtChannels != FmtBFormat3D
-            && voice->mFmtChannels != FmtUHJ2)
+            && voice->mFmtChannels != FmtUHJ2 && voice->mFmtChannels != FmtUHJ3)
         || voice->mProps.mSpatializeMode==SpatializeMode::Off
         || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && voice->mFmtChannels != FmtMono))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);

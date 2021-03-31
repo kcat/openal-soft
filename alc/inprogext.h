@@ -81,6 +81,9 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 #define AL_FORMAT_UHJ2CHN8                       0x19A2
 #define AL_FORMAT_UHJ2CHN16                      0x19A3
 #define AL_FORMAT_UHJ2CHN_FLOAT32                0x19A4
+#define AL_FORMAT_UHJ3CHN8                       0x19A5
+#define AL_FORMAT_UHJ3CHN16                      0x19A6
+#define AL_FORMAT_UHJ3CHN_FLOAT32                0x19A7
 #endif
 
 #ifdef __cplusplus

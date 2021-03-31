@@ -5,6 +5,7 @@
 
 #include "almalloc.h"
 #include "bufferline.h"
+#include "resampler_limits.h"
 
 
 struct Uhj2Encoder {
@@ -30,6 +31,25 @@ struct Uhj2Encoder {
         const FloatBufferLine *InSamples, const size_t SamplesToDo);
 
     DEF_NEWDEL(Uhj2Encoder)
+};
+
+
+struct UhjDecoder {
+    constexpr static size_t sFilterDelay{128};
+
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};
+
+    alignas(16) std::array<float,sFilterDelay-1> mDTHistory{};
+    alignas(16) std::array<float,sFilterDelay-1> mSHistory{};
+
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay*2> mTemp{};
+
+    void decode(const al::span<float*,3> Samples, const size_t SamplesToDo,
+        const size_t ForwardSamples);
+
+    DEF_NEWDEL(UhjDecoder)
 };
 
 #endif /* CORE_UHJFILTER_H */

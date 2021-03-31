@@ -15,6 +15,7 @@
 #include "core/filters/splitter.h"
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
+#include "core/uhjfilter.h"
 #include "vector.h"
 
 struct ALCcontext;
@@ -35,6 +36,12 @@ enum class DirectMode : unsigned char {
     DropMismatch,
     RemixMismatch
 };
+
+
+/* Maximum number of extra source samples that may need to be loaded, for
+ * resampling or conversion purposes.
+ */
+constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + UhjDecoder::sFilterDelay};
 
 
 enum {
@@ -191,10 +198,12 @@ struct Voice {
     FmtChannels mFmtChannels;
     FmtType mFmtType;
     uint mFrequency;
-    uint mSampleSize;
+    uint mFrameSize;
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;
     uint mAmbiOrder;
+
+    std::unique_ptr<UhjDecoder> mDecoder;
 
     /** Current target parameters used for mixing. */
     uint mStep{0};
@@ -218,7 +227,9 @@ struct Voice {
      * now current (which may be overwritten if the buffer data is still
      * available).
      */
-    using BufferLine = std::array<float,BufferLineSize+MaxResamplerPadding>;
+    static constexpr size_t LineSize{BufferLineSize + MaxResamplerPadding +
+        UhjDecoder::sFilterDelay};
+    using BufferLine = std::array<float,LineSize>;
     al::vector<BufferLine,16> mVoiceSamples{2};
 
     struct ChannelData {

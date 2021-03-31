@@ -51,7 +51,9 @@
 #include "atomic.h"
 #include "core/except.h"
 #include "inprogext.h"
+#include "core/logging.h"
 #include "opthelpers.h"
+#include "voice.h"
 
 
 namespace {
@@ -503,7 +505,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             unpackalign, NameFromUserFmtType(SrcType));
 
     const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
-        ALBuf->UnpackAmbiOrder : 0};
+        ALBuf->UnpackAmbiOrder : ((DstChannels == FmtUHJ2) ? 1 : 0)};
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
@@ -646,10 +648,11 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
     const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
-        ALBuf->UnpackAmbiOrder : 0};
+        ALBuf->UnpackAmbiOrder : ((DstChannels == FmtUHJ2) ? 1 : 0)};
 
+    constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
     al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, ambiorder) *
-        size_t{BufferLineSize + (MaxResamplerPadding>>1)}).swap(ALBuf->mData);
+        size_t{line_size}).swap(ALBuf->mData);
 
     ALBuf->mCallback = callback;
     ALBuf->mUserData = userptr;

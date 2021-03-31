@@ -789,23 +789,18 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
     case FmtBFormat2D:
     case FmtBFormat3D:
-        DirectChannels = DirectMode::Off;
-        break;
-
-    /* TODO: UHJ2 should be treated as BFormat2D for panning. */
     case FmtUHJ2:
         DirectChannels = DirectMode::Off;
-        chans = StereoMap;
-        downmix_gain = 1.0f / 2.0f;
         break;
     }
 
     voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
-    if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D)
+    if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D
+        || voice->mFmtChannels == FmtUHJ2)
     {
         /* Special handling for B-Format sources. */
 
-        if(Device->AvgSpeakerDist > 0.0f)
+        if(Device->AvgSpeakerDist > 0.0f && voice->mFmtChannels != FmtUHJ2)
         {
             if(!(Distance > std::numeric_limits<float>::epsilon()))
             {
@@ -904,7 +899,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Convert the rotation matrix for input ordering and scaling, and
              * whether input is 2D or 3D.
              */
-            const uint8_t *index_map{(voice->mFmtChannels == FmtBFormat2D) ?
+            const uint8_t *index_map{
+                (voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtUHJ2) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 
@@ -1561,7 +1557,8 @@ void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
     }
 
     if((voice->mProps.DirectChannels != DirectMode::Off && voice->mFmtChannels != FmtMono
-            && voice->mFmtChannels != FmtBFormat2D && voice->mFmtChannels != FmtBFormat3D)
+            && voice->mFmtChannels != FmtBFormat2D && voice->mFmtChannels != FmtBFormat3D
+            && voice->mFmtChannels != FmtUHJ2)
         || voice->mProps.mSpatializeMode==SpatializeMode::Off
         || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && voice->mFmtChannels != FmtMono))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);

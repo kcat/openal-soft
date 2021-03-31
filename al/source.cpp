@@ -439,13 +439,13 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
         std::memory_order_relaxed);
 
     ALbuffer *buffer{BufferList->mBuffer};
-    ALuint num_channels{buffer->channelsFromFmt()};
+    ALuint num_channels{(buffer->mChannels==FmtUHJ2) ? 3 : buffer->channelsFromFmt()};
     voice->mFrequency = buffer->mSampleRate;
     voice->mFmtChannels = buffer->mChannels;
     voice->mFmtType = buffer->mType;
-    voice->mSampleSize  = buffer->bytesFromFmt();
-    voice->mAmbiLayout = buffer->mAmbiLayout;
-    voice->mAmbiScaling = buffer->mAmbiScaling;
+    voice->mFrameSize = buffer->frameSizeFromFmt();
+    voice->mAmbiLayout = (buffer->mChannels==FmtUHJ2) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
+    voice->mAmbiScaling = (buffer->mChannels==FmtUHJ2) ? AmbiScaling::FuMa : buffer->mAmbiScaling;
     voice->mAmbiOrder = buffer->mAmbiOrder;
 
     if(buffer->mCallback) voice->mFlags |= VoiceIsCallback;

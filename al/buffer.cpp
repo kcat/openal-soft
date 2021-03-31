@@ -271,6 +271,7 @@ ALuint ChannelsFromUserFmt(UserFmtChannels chans, ALuint ambiorder) noexcept
     case UserFmtX71: return 8;
     case UserFmtBFormat2D: return (ambiorder*2) + 1;
     case UserFmtBFormat3D: return (ambiorder+1) * (ambiorder+1);
+    case UserFmtUHJ2: return 2;
     }
     return 0;
 }
@@ -465,6 +466,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     case UserFmtX71: DstChannels = FmtX71; break;
     case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
     case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
+    case UserFmtUHJ2: DstChannels = FmtUHJ2; break;
     }
     if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
         SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
@@ -622,6 +624,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     case UserFmtX71: DstChannels = FmtX71; break;
     case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
     case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
+    case UserFmtUHJ2: DstChannels = FmtUHJ2; break;
     }
     if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
@@ -675,7 +678,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         UserFmtChannels channels;
         UserFmtType type;
     };
-    static const std::array<FormatMap,46> UserFmtList{{
+    static const std::array<FormatMap,49> UserFmtList{{
         { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
         { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
         { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
@@ -731,6 +734,10 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         { AL_FORMAT_BFORMAT3D_16,      UserFmtBFormat3D, UserFmtShort },
         { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
         { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
+
+        { AL_FORMAT_UHJ2CHN8,        UserFmtUHJ2, UserFmtUByte },
+        { AL_FORMAT_UHJ2CHN16,       UserFmtUHJ2, UserFmtShort },
+        { AL_FORMAT_UHJ2CHN_FLOAT32, UserFmtUHJ2, UserFmtFloat },
     }};
 
     for(const auto &fmt : UserFmtList)

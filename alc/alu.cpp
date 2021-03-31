@@ -791,6 +791,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     case FmtBFormat3D:
         DirectChannels = DirectMode::Off;
         break;
+
+    /* TODO: UHJ2 should be treated as BFormat2D for panning. */
+    case FmtUHJ2:
+        DirectChannels = DirectMode::Off;
+        chans = StereoMap;
+        downmix_gain = 1.0f / 2.0f;
+        break;
     }
 
     voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);

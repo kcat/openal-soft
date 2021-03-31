@@ -27,6 +27,7 @@ enum FmtChannels : unsigned char {
     FmtX71, /* (WFX order) */
     FmtBFormat2D,
     FmtBFormat3D,
+    FmtUHJ2, /* 2-channel UHJ, aka "BHJ", stereo-compatible */
 };
 
 enum class AmbiLayout : unsigned char {

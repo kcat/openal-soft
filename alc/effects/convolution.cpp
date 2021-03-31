@@ -374,7 +374,25 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
     for(auto &chan : *mChans)
         std::fill(std::begin(chan.Target), std::end(chan.Target), 0.0f);
     const float gain{slot->Gain};
-    if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
+    /* TODO: UHJ should be decoded to B-Format and processed that way, since
+     * there's no telling if it can ever do a direct-out mix (even if the
+     * device is outputing UHJ, the effect slot can feed another effect that's
+     * not UHJ).
+     *
+     * Not that UHJ should really ever be used for convolution, but it's a
+     * valid format regardless.
+     */
+    if(mChannels == FmtUHJ2 && target.RealOut
+        && target.RealOut->ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
+        && target.RealOut->ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX)
+    {
+        mOutTarget = target.RealOut->Buffer;
+        const uint lidx = target.RealOut->ChannelIndex[FrontLeft];
+        const uint ridx = target.RealOut->ChannelIndex[FrontRight];
+        (*mChans)[0].Target[lidx] = gain;
+        (*mChans)[1].Target[ridx] = gain;
+    }
+    else if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
         ALCdevice *device{context->mDevice.get()};
         if(device->mAmbiOrder > mAmbiOrder)
@@ -416,6 +434,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
         case FmtX71: chanmap = X71Map; break;
         case FmtBFormat2D:
         case FmtBFormat3D:
+        case FmtUHJ2:
             break;
         }
 

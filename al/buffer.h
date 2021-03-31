@@ -35,6 +35,7 @@ enum UserFmtChannels : unsigned char {
     UserFmtX71 = FmtX71,
     UserFmtBFormat2D = FmtBFormat2D,
     UserFmtBFormat3D = FmtBFormat3D,
+    UserFmtUHJ2 = FmtUHJ2,
 };
 
 

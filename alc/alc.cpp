@@ -824,6 +824,16 @@ constexpr struct {
 
     DECL(AL_EFFECT_CONVOLUTION_REVERB_SOFT),
     DECL(AL_EFFECTSLOT_STATE_SOFT),
+
+    DECL(AL_FORMAT_UHJ2CHN8_SOFT),
+    DECL(AL_FORMAT_UHJ2CHN16_SOFT),
+    DECL(AL_FORMAT_UHJ2CHN_FLOAT32_SOFT),
+    DECL(AL_FORMAT_UHJ3CHN8_SOFT),
+    DECL(AL_FORMAT_UHJ3CHN16_SOFT),
+    DECL(AL_FORMAT_UHJ3CHN_FLOAT32_SOFT),
+    DECL(AL_FORMAT_UHJ4CHN8_SOFT),
+    DECL(AL_FORMAT_UHJ4CHN16_SOFT),
+    DECL(AL_FORMAT_UHJ4CHN_FLOAT32_SOFT),
 };
 #undef DECL
 
@@ -885,7 +895,8 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_source_latency "
     "AL_SOFT_source_length "
     "AL_SOFT_source_resampler "
-    "AL_SOFT_source_spatialize";
+    "AL_SOFT_source_spatialize "
+    "AL_SOFTX_UHJ";
 
 std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 

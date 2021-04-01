@@ -46,7 +46,7 @@ struct UhjDecoder {
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay*2> mTemp{};
 
-    void decode(const al::span<float*,3> Samples, const size_t SamplesToDo,
+    void decode(const al::span<float*,4> Samples, const size_t SamplesToDo,
         const size_t ForwardSamples);
 
     DEF_NEWDEL(UhjDecoder)

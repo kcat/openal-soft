@@ -29,6 +29,7 @@ enum FmtChannels : unsigned char {
     FmtBFormat3D,
     FmtUHJ2, /* 2-channel UHJ, aka "BHJ", stereo-compatible */
     FmtUHJ3, /* 3-channel UHJ, aka "THJ", first-two channels are stereo-compatible */
+    FmtUHJ4, /* 4-channel UHJ, aka "PHJ", first-two channels are stereo-compatible */
 };
 
 enum class AmbiLayout : unsigned char {

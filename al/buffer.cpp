@@ -275,6 +275,7 @@ ALuint ChannelsFromUserFmt(UserFmtChannels chans, ALuint ambiorder) noexcept
     case UserFmtBFormat3D: return (ambiorder+1) * (ambiorder+1);
     case UserFmtUHJ2: return 2;
     case UserFmtUHJ3: return 3;
+    case UserFmtUHJ4: return 4;
     }
     return 0;
 }
@@ -471,6 +472,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
     case UserFmtUHJ2: DstChannels = FmtUHJ2; break;
     case UserFmtUHJ3: DstChannels = FmtUHJ3; break;
+    case UserFmtUHJ4: DstChannels = FmtUHJ4; break;
     }
     if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
         SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
@@ -507,7 +509,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             unpackalign, NameFromUserFmtType(SrcType));
 
     const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
-        ALBuf->UnpackAmbiOrder : ((DstChannels == FmtUHJ2 || DstChannels == FmtUHJ3) ? 1 : 0)};
+        ALBuf->UnpackAmbiOrder :
+        ((DstChannels == FmtUHJ2 || DstChannels == FmtUHJ3 || DstChannels == FmtUHJ4) ? 1 :
+        0)};
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
@@ -630,6 +634,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
     case UserFmtUHJ2: DstChannels = FmtUHJ2; break;
     case UserFmtUHJ3: DstChannels = FmtUHJ3; break;
+    case UserFmtUHJ4: DstChannels = FmtUHJ4; break;
     }
     if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
@@ -651,7 +656,9 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
     const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
-        ALBuf->UnpackAmbiOrder : ((DstChannels == FmtUHJ2 || DstChannels == FmtUHJ3) ? 1 : 0)};
+        ALBuf->UnpackAmbiOrder :
+        ((DstChannels == FmtUHJ2 || DstChannels == FmtUHJ3 || DstChannels == FmtUHJ4) ? 1 :
+        0)};
 
     constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
     al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, ambiorder) *
@@ -684,7 +691,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         UserFmtChannels channels;
         UserFmtType type;
     };
-    static const std::array<FormatMap,52> UserFmtList{{
+    static const std::array<FormatMap,55> UserFmtList{{
         { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
         { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
         { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
@@ -741,13 +748,17 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
         { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
 
-        { AL_FORMAT_UHJ2CHN8,        UserFmtUHJ2, UserFmtUByte },
-        { AL_FORMAT_UHJ2CHN16,       UserFmtUHJ2, UserFmtShort },
-        { AL_FORMAT_UHJ2CHN_FLOAT32, UserFmtUHJ2, UserFmtFloat },
+        { AL_FORMAT_UHJ2CHN8_SOFT,        UserFmtUHJ2, UserFmtUByte },
+        { AL_FORMAT_UHJ2CHN16_SOFT,       UserFmtUHJ2, UserFmtShort },
+        { AL_FORMAT_UHJ2CHN_FLOAT32_SOFT, UserFmtUHJ2, UserFmtFloat },
 
-        { AL_FORMAT_UHJ3CHN8,        UserFmtUHJ3, UserFmtUByte },
-        { AL_FORMAT_UHJ3CHN16,       UserFmtUHJ3, UserFmtShort },
-        { AL_FORMAT_UHJ3CHN_FLOAT32, UserFmtUHJ3, UserFmtFloat },
+        { AL_FORMAT_UHJ3CHN8_SOFT,        UserFmtUHJ3, UserFmtUByte },
+        { AL_FORMAT_UHJ3CHN16_SOFT,       UserFmtUHJ3, UserFmtShort },
+        { AL_FORMAT_UHJ3CHN_FLOAT32_SOFT, UserFmtUHJ3, UserFmtFloat },
+
+        { AL_FORMAT_UHJ4CHN8_SOFT,        UserFmtUHJ4, UserFmtUByte },
+        { AL_FORMAT_UHJ4CHN16_SOFT,       UserFmtUHJ4, UserFmtShort },
+        { AL_FORMAT_UHJ4CHN_FLOAT32_SOFT, UserFmtUHJ4, UserFmtFloat },
     }};
 
     for(const auto &fmt : UserFmtList)

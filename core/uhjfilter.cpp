@@ -109,7 +109,7 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
  * UHJ should not be run through a normal B-Format decoder, as it needs
  * different shelf filters.
  */
-void UhjDecoder::decode(const al::span<float*, 3> Samples, const size_t SamplesToDo,
+void UhjDecoder::decode(const al::span<float*,4> Samples, const size_t SamplesToDo,
     const size_t ForwardSamples)
 {
     ASSUME(SamplesToDo > 0);
@@ -137,13 +137,12 @@ void UhjDecoder::decode(const al::span<float*, 3> Samples, const size_t SamplesT
     std::copy_n(mTemp.cbegin()+ForwardSamples, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, SamplesToDo}, mTemp.data());
 
+    /* W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T) */
     for(size_t i{0};i < SamplesToDo;++i)
-    {
-        /* W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T) */
         woutput[i] = 0.981530f*mS[i] + 0.197484f*xoutput[i];
-        /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
+    /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
+    for(size_t i{0};i < SamplesToDo;++i)
         xoutput[i] = 0.418504f*mS[i] - xoutput[i];
-    }
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
@@ -151,9 +150,14 @@ void UhjDecoder::decode(const al::span<float*, 3> Samples, const size_t SamplesT
     std::copy_n(mTemp.cbegin()+ForwardSamples, mSHistory.size(), mSHistory.begin());
     PShift.process({youtput, SamplesToDo}, mTemp.data());
 
+    /* Y = 0.795954*D - 0.676406*T + j(0.186626*S) */
     for(size_t i{0};i < SamplesToDo;++i)
-    {
-        /* Y = 0.795954*D - 0.676406*T + j(0.186626*S) */
         youtput[i] = 0.795954f*mD[i] - 0.676406f*mT[i] + 0.186626f*youtput[i];
+
+    if(Samples[3])
+    {
+        /* Z = 1.023332*Q */
+        for(size_t i{0};i < SamplesToDo;++i)
+            Samples[3][i] = 1.023332f*Samples[3][i];
     }
 }

@@ -382,7 +382,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
      * Not that UHJ should really ever be used for convolution, but it's a
      * valid format regardless.
      */
-    if((mChannels == FmtUHJ2 || mChannels == FmtUHJ3) && target.RealOut
+    if((mChannels == FmtUHJ2 || mChannels == FmtUHJ3 || mChannels == FmtUHJ4) && target.RealOut
         && target.RealOut->ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
         && target.RealOut->ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX)
     {
@@ -436,6 +436,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
         case FmtBFormat3D:
         case FmtUHJ2:
         case FmtUHJ3:
+        case FmtUHJ4:
             break;
         }
 

@@ -8,7 +8,7 @@
 #include "resampler_limits.h"
 
 
-struct Uhj2Encoder {
+struct UhjEncoder {
     /* The filter delay is half it's effective size, so a delay of 128 has a
      * FIR length of 256.
      */
@@ -30,7 +30,7 @@ struct Uhj2Encoder {
     void encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
         const FloatBufferLine *InSamples, const size_t SamplesToDo);
 
-    DEF_NEWDEL(Uhj2Encoder)
+    DEF_NEWDEL(UhjEncoder)
 };
 
 

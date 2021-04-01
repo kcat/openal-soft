@@ -1889,7 +1889,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         return ALC_NO_ERROR;
 
     device->AvgSpeakerDist = 0.0f;
-    device->Uhj_Encoder = nullptr;
+    device->mUhjEncoder = nullptr;
     device->AmbiDecoder = nullptr;
     device->Bs2b = nullptr;
     device->PostProcess = nullptr;
@@ -2000,8 +2000,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
     nanoseconds::rep sample_delay{0};
-    if(device->Uhj_Encoder)
-        sample_delay += Uhj2Encoder::sFilterDelay;
+    if(device->mUhjEncoder)
+        sample_delay += UhjEncoder::sFilterDelay;
     if(device->mHrtfState)
         sample_delay += HrtfDirectDelay;
     if(auto *ambidec = device->AmbiDecoder.get())

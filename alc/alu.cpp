@@ -312,7 +312,7 @@ void ALCdevice::ProcessUhj(const size_t SamplesToDo)
     const uint ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
-    Uhj_Encoder->encode(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer.data(),
+    mUhjEncoder->encode(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer.data(),
         SamplesToDo);
 }
 

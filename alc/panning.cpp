@@ -1024,7 +1024,7 @@ no_hrtf:
     }
     if(device->mRenderMode == RenderMode::Normal)
     {
-        device->Uhj_Encoder = std::make_unique<Uhj2Encoder>();
+        device->mUhjEncoder = std::make_unique<UhjEncoder>();
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
         device->PostProcess = &ALCdevice::ProcessUhj;

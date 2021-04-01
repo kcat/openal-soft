@@ -14,11 +14,11 @@
 
 namespace {
 
-static_assert(Uhj2Encoder::sFilterDelay==UhjDecoder::sFilterDelay, "UHJ filter delays mismatch");
+static_assert(UhjEncoder::sFilterDelay==UhjDecoder::sFilterDelay, "UHJ filter delays mismatch");
 
 using complex_d = std::complex<double>;
 
-const PhaseShifterT<Uhj2Encoder::sFilterDelay*2> PShift{};
+const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
 
 } // namespace
 
@@ -40,7 +40,7 @@ const PhaseShifterT<Uhj2Encoder::sFilterDelay*2> PShift{};
  * with the desired shift.
  */
 
-void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
+void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);

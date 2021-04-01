@@ -39,7 +39,7 @@ struct ALfilter;
 struct BackendBase;
 struct Compressor;
 struct EffectState;
-struct Uhj2Encoder;
+struct UhjEncoder;
 struct bs2b;
 
 using uint = unsigned int;
@@ -249,7 +249,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     uint mIrSize{0};
 
     /* Ambisonic-to-UHJ encoder */
-    std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
+    std::unique_ptr<UhjEncoder> mUhjEncoder;
 
     /* Ambisonic decoder for speakers */
     std::unique_ptr<BFormatDec> AmbiDecoder;

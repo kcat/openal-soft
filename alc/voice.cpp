@@ -636,15 +636,9 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
 
             if(mDecoder)
             {
-                std::array<float*,4> samples{{mVoiceSamples[0].data() + MaxResamplerEdge,
-                    mVoiceSamples[1].data() + MaxResamplerEdge,
-                    mVoiceSamples[2].data() + MaxResamplerEdge,
-                    nullptr}};
-                if(mVoiceSamples.size() > 3)
-                    samples[3] = mVoiceSamples[3].data() + MaxResamplerEdge;
                 const size_t srcOffset{(increment*DstBufferSize + DataPosFrac)>>MixerFracBits};
                 SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
-                mDecoder->decode(samples, SrcBufferSize, srcOffset);
+                mDecoder->decode(mVoiceSamples, MaxResamplerEdge, SrcBufferSize, srcOffset);
             }
         }
 

@@ -37,6 +37,9 @@ struct Uhj2Encoder {
 struct UhjDecoder {
     constexpr static size_t sFilterDelay{128};
 
+    constexpr static size_t sLineSize{BufferLineSize+MaxResamplerPadding+sFilterDelay};
+    using BufferLine = std::array<float,sLineSize>;
+
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};
@@ -46,8 +49,8 @@ struct UhjDecoder {
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay*2> mTemp{};
 
-    void decode(const al::span<float*,4> Samples, const size_t SamplesToDo,
-        const size_t ForwardSamples);
+    void decode(const al::span<BufferLine> samples, const size_t offset, const size_t samplesToDo,
+        const size_t forwardSamples);
 
     DEF_NEWDEL(UhjDecoder)
 };

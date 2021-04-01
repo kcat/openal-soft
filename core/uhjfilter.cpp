@@ -109,55 +109,56 @@ void Uhj2Encoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Ri
  * UHJ should not be run through a normal B-Format decoder, as it needs
  * different shelf filters.
  */
-void UhjDecoder::decode(const al::span<float*,4> Samples, const size_t SamplesToDo,
-    const size_t ForwardSamples)
+void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
+    const size_t samplesToDo, const size_t forwardSamples)
 {
-    ASSUME(SamplesToDo > 0);
+    ASSUME(samplesToDo > 0);
 
     /* S = Left + Right */
-    for(size_t i{0};i < SamplesToDo+sFilterDelay;++i)
-        mS[i] = Samples[0][i] + Samples[1][i];
+    for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        mS[i] = samples[0][offset+i] + samples[1][offset+i];
 
     /* D = Left - Right */
-    for(size_t i{0};i < SamplesToDo+sFilterDelay;++i)
-        mD[i] = Samples[0][i] - Samples[1][i];
+    for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        mD[i] = samples[0][offset+i] - samples[1][offset+i];
 
     /* T */
-    for(size_t i{0};i < SamplesToDo+sFilterDelay;++i)
-        mT[i] = Samples[2][i];
+    for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        mT[i] = samples[2][offset+i];
 
-    float *woutput{Samples[0]};
-    float *xoutput{Samples[1]};
-    float *youtput{Samples[2]};
+    float *woutput{samples[0].data() + offset};
+    float *xoutput{samples[1].data() + offset};
+    float *youtput{samples[2].data() + offset};
 
     /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
-    std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
+    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
         [](const float d, const float t) noexcept { return 0.828347f*d + 0.767835f*t; });
-    std::copy_n(mTemp.cbegin()+ForwardSamples, mDTHistory.size(), mDTHistory.begin());
-    PShift.process({xoutput, SamplesToDo}, mTemp.data());
+    std::copy_n(mTemp.cbegin()+forwardSamples, mDTHistory.size(), mDTHistory.begin());
+    PShift.process({xoutput, samplesToDo}, mTemp.data());
 
     /* W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T) */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(size_t i{0};i < samplesToDo;++i)
         woutput[i] = 0.981530f*mS[i] + 0.197484f*xoutput[i];
     /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(size_t i{0};i < samplesToDo;++i)
         xoutput[i] = 0.418504f*mS[i] - xoutput[i];
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
-    std::copy_n(mS.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
-    std::copy_n(mTemp.cbegin()+ForwardSamples, mSHistory.size(), mSHistory.begin());
-    PShift.process({youtput, SamplesToDo}, mTemp.data());
+    std::copy_n(mS.cbegin(), samplesToDo+sFilterDelay, tmpiter);
+    std::copy_n(mTemp.cbegin()+forwardSamples, mSHistory.size(), mSHistory.begin());
+    PShift.process({youtput, samplesToDo}, mTemp.data());
 
     /* Y = 0.795954*D - 0.676406*T + j(0.186626*S) */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(size_t i{0};i < samplesToDo;++i)
         youtput[i] = 0.795954f*mD[i] - 0.676406f*mT[i] + 0.186626f*youtput[i];
 
-    if(Samples[3])
+    if(samples.size() > 3)
     {
+        float *zoutput{samples[3].data() + offset};
         /* Z = 1.023332*Q */
-        for(size_t i{0};i < SamplesToDo;++i)
-            Samples[3][i] = 1.023332f*Samples[3][i];
+        for(size_t i{0};i < samplesToDo;++i)
+            zoutput[i] = 1.023332f*zoutput[i];
     }
 }

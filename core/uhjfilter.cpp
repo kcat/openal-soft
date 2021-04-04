@@ -52,26 +52,24 @@ void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Rig
     const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1].data())};
     const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2].data())};
 
-    /* Combine the previously delayed mid/side signal with the input. */
+    /* Combine the previously delayed S/D signal with the input. Include any
+     * existing direct signal with it.
+     */
 
     /* S = 0.9396926*W + 0.1855740*X */
     auto miditer = mS.begin() + sFilterDelay;
     std::transform(winput, winput+SamplesToDo, xinput, miditer,
         [](const float w, const float x) noexcept -> float
         { return 0.9396926f*w + 0.1855740f*x; });
+    for(size_t i{0};i < SamplesToDo;++i,++miditer)
+        *miditer += left[i] + right[i];
 
     /* D = 0.6554516*Y */
     auto sideiter = mD.begin() + sFilterDelay;
     std::transform(yinput, yinput+SamplesToDo, sideiter,
         [](const float y) noexcept -> float { return 0.6554516f*y; });
-
-    /* Include any existing direct signal in the mid/side buffers. */
-    for(size_t i{0};i < SamplesToDo;++i,++miditer)
-        *miditer += left[i] + right[i];
     for(size_t i{0};i < SamplesToDo;++i,++sideiter)
         *sideiter += left[i] - right[i];
-
-    /* Now add the all-passed signal into the side signal. */
 
     /* D += j(-0.3420201*W + 0.5098604*X) */
     auto tmpiter = std::copy(mWXHistory.cbegin(), mWXHistory.cend(), mTemp.begin());
@@ -126,9 +124,9 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
         mT[i] = samples[2][offset+i];
 
-    float *woutput{samples[0].data() + offset};
-    float *xoutput{samples[1].data() + offset};
-    float *youtput{samples[2].data() + offset};
+    float *RESTRICT woutput{samples[0].data() + offset};
+    float *RESTRICT xoutput{samples[1].data() + offset};
+    float *RESTRICT youtput{samples[2].data() + offset};
 
     /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -156,7 +154,7 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
 
     if(samples.size() > 3)
     {
-        float *zoutput{samples[3].data() + offset};
+        float *RESTRICT zoutput{samples[3].data() + offset};
         /* Z = 1.023332*Q */
         for(size_t i{0};i < samplesToDo;++i)
             zoutput[i] = 1.023332f*zoutput[i];

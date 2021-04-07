@@ -1965,6 +1965,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             throw al::backend_exception{al::backend_error::DeviceError, "Device reset failure"};
     }
     catch(std::exception &e) {
+        ERR("Device error: %s\n", e.what());
         device->handleDisconnect("%s", e.what());
         return ALC_INVALID_DEVICE;
     }

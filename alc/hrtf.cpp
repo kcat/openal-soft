@@ -49,6 +49,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/filters/splitter.h"
 #include "core/logging.h"
 #include "math_defs.h"
@@ -338,12 +339,19 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     auto hrir_delay_round = [](const uint d) noexcept -> uint
     { return (d+HrirDelayFracHalf) >> HrirDelayFracBits; };
 
+    TRACE("Min delay: %.2f, max delay: %.2f, FIR length: %u\n",
+        min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
+
+    const bool per_hrir_min{mChannels.size() > AmbiChannelsFromOrder(1)};
     auto tmpres = al::vector<std::array<double2,HrirLength>>(mChannels.size());
+    max_delay = 0;
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const ConstHrirSpan hrir{impres[c].hrir};
-        const uint ldelay{hrir_delay_round(impres[c].ldelay - min_delay)};
-        const uint rdelay{hrir_delay_round(impres[c].rdelay - min_delay)};
+        const uint base_delay{per_hrir_min ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
+        const uint ldelay{hrir_delay_round(impres[c].ldelay - base_delay)};
+        const uint rdelay{hrir_delay_round(impres[c].rdelay - base_delay)};
+        max_delay = maxu(max_delay, maxu(impres[c].ldelay, impres[c].rdelay) - base_delay);
 
         for(size_t i{0u};i < mChannels.size();++i)
         {
@@ -368,11 +376,8 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     }
     tmpres.clear();
 
-    max_delay -= min_delay;
     const uint max_length{minu(hrir_delay_round(max_delay) + irSize, HrirLength)};
-
-    TRACE("Skipped delay: %.2f, new max delay: %.2f, FIR length: %u\n",
-        min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne},
+    TRACE("New max delay: %.2f, FIR length: %u\n", max_delay/double{HrirDelayFracOne},
         max_length);
     mIrSize = max_length;
 }

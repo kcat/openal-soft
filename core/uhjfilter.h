@@ -53,7 +53,7 @@ struct UhjDecoder {
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
      * channel ordering and scaling. For 3-channel, the 3rd channel may be
      * attenuated by 'n', where 0 <= n <= 1. So 2-channel UHJ can be decoded by
-     * leaving the 3rd channel silent (n=0).
+     * leaving the 3rd channel input silent (n=0).
      */
     void decode(const al::span<BufferLine> samples, const size_t offset, const size_t samplesToDo,
         const size_t forwardSamples);

@@ -44,7 +44,7 @@ void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Rig
     const FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
     /* Given FuMa input, a +3dB boost is needed for the expected levels. */
-    constexpr float sqrt2{1.41421356237f};
+    static constexpr float sqrt2{1.41421356237f};
 
     ASSUME(SamplesToDo > 0);
 
@@ -114,7 +114,7 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     const size_t samplesToDo, const size_t forwardSamples)
 {
     /* A -3dB attenuation is needed for FuMa output. */
-    constexpr float sqrt1_2{0.707106781187f};
+    static constexpr float sqrt1_2{0.707106781187f};
 
     ASSUME(samplesToDo > 0);
 

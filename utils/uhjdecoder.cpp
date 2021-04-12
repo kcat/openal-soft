@@ -492,8 +492,10 @@ int main(int argc, char **argv)
                 decoder->decode2(inmem.get(), decmem, got);
             for(size_t i{0};i < got;++i)
             {
+                /* Attenuate by -3dB for FuMa output levels. */
+                constexpr float sqrt1_2{0.707106781187f};
                 for(size_t j{0};j < outchans;++j)
-                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][i]);
+                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][i] * sqrt1_2);
             }
 
             size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};

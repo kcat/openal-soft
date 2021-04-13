@@ -1004,7 +1004,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
             usemask &= ~(1_u64 << idx);
 
             if(slot->mState != SlotState::Stopped
-                && slot->PropsClean.test_and_set(std::memory_order_acq_rel))
+                && !slot->PropsClean.test_and_set(std::memory_order_acq_rel))
                 slot->updateProps(context);
         }
     }

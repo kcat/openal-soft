@@ -16,6 +16,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
+#include "atomic.h"
 #include "math_defs.h"
 #include "vector.h"
 #include "voice.h"
@@ -109,7 +110,7 @@ struct ALsource {
     /** Source Buffer Queue head. */
     al::deque<ALbufferQueueItem> mQueue;
 
-    std::atomic_flag PropsClean;
+    al::atomic_invflag mPropsDirty;
 
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.

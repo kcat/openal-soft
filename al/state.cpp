@@ -142,7 +142,7 @@ END_API_FUNC
     if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
         UpdateContextProps(context.get());                                    \
     else                                                                      \
-        context->mPropsClean.clear(std::memory_order_release);                \
+        context->mPropsDirty.set(std::memory_order_release);                  \
 } while(0)
 
 

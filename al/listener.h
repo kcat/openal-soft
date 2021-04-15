@@ -9,6 +9,7 @@
 #include "AL/efx.h"
 
 #include "almalloc.h"
+#include "atomic.h"
 
 
 struct ALlistener {
@@ -19,9 +20,9 @@ struct ALlistener {
     float Gain{1.0f};
     float mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
-    std::atomic_flag PropsClean;
+    al::atomic_invflag mPropsDirty;
 
-    ALlistener() { PropsClean.test_and_set(std::memory_order_relaxed); }
+    ALlistener() { mPropsDirty.test_and_clear(std::memory_order_relaxed); }
 
     DISABLE_ALLOC()
 };

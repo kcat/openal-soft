@@ -1557,9 +1557,9 @@ void ALCcontext::processUpdates()
             /* busy-wait */
         }
 
-        if(!mPropsClean.test_and_set(std::memory_order_acq_rel))
+        if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
             UpdateContextProps(this);
-        if(!mListener.PropsClean.test_and_set(std::memory_order_acq_rel))
+        if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
             UpdateListenerProps(this);
         UpdateAllEffectSlotProps(this);
         UpdateAllSourceProps(this);
@@ -2191,7 +2191,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 auto send_begin = source->Send.begin() + static_cast<ptrdiff_t>(num_sends);
                 std::for_each(send_begin, source->Send.end(), clear_send);
 
-                source->PropsClean.clear(std::memory_order_release);
+                source->mPropsDirty.set(std::memory_order_release);
             }
         }
 
@@ -2234,9 +2234,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         }
         srclock.unlock();
 
-        context->mPropsClean.test_and_set(std::memory_order_release);
+        context->mPropsDirty.test_and_clear(std::memory_order_release);
         UpdateContextProps(context);
-        context->mListener.PropsClean.test_and_set(std::memory_order_release);
+        context->mListener.mPropsDirty.test_and_clear(std::memory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
     }
@@ -2348,7 +2348,7 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 
 ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device) : mDevice{std::move(device)}
 {
-    mPropsClean.test_and_set(std::memory_order_relaxed);
+    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 }
 
 ALCcontext::~ALCcontext()

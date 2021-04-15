@@ -40,7 +40,7 @@
     if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
         UpdateListenerProps(context.get());                                   \
     else                                                                      \
-        listener.PropsClean.clear(std::memory_order_release);                 \
+        listener.mPropsDirty.set(std::memory_order_release);                  \
 } while(0)
 
 

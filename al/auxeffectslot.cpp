@@ -308,7 +308,7 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
         && slot->mState == SlotState::Playing)                                \
         slot->updateProps(context.get());                                     \
     else                                                                      \
-        slot->PropsClean.clear(std::memory_order_release);                    \
+        slot->mPropsDirty.set(std::memory_order_release);                     \
 } while(0)
 
 } // namespace
@@ -460,7 +460,7 @@ START_API_FUNC
     if(slot->mState == SlotState::Playing)
         return;
 
-    slot->PropsClean.test_and_set(std::memory_order_acq_rel);
+    slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
     slot->updateProps(context.get());
 
     AddActiveEffectSlots({&slot, 1}, context.get());
@@ -491,7 +491,7 @@ START_API_FUNC
 
         if(slot->mState != SlotState::Playing)
         {
-            slot->PropsClean.test_and_set(std::memory_order_acq_rel);
+            slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
             slot->updateProps(context.get());
         }
         slots[i] = slot;
@@ -884,7 +884,7 @@ END_API_FUNC
 
 ALeffectslot::ALeffectslot()
 {
-    PropsClean.test_and_set(std::memory_order_relaxed);
+    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 
     EffectStateFactory *factory{getFactoryByType(EffectSlotType::None)};
     assert(factory != nullptr);
@@ -1004,7 +1004,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
             usemask &= ~(1_u64 << idx);
 
             if(slot->mState != SlotState::Stopped
-                && !slot->PropsClean.test_and_set(std::memory_order_acq_rel))
+                && slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
                 slot->updateProps(context);
         }
     }

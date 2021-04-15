@@ -466,7 +466,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 
     voice->prepare(device);
 
-    source->PropsClean.test_and_set(std::memory_order_acq_rel);
+    source->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
     UpdateSourceProps(source, voice, context);
 
     voice->mSourceID.store(source->id, std::memory_order_release);
@@ -1057,7 +1057,7 @@ bool UpdateSourceProps(ALsource *source, ALCcontext *context)
     if(SourceShouldUpdate(source, context) && (voice=GetSourceVoice(source, context)) != nullptr)
         UpdateSourceProps(source, voice, context);
     else
-        source->PropsClean.clear(std::memory_order_release);
+        source->mPropsDirty.set(std::memory_order_release);
     return true;
 }
 
@@ -1539,7 +1539,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
              */
             Voice *voice{GetSourceVoice(Source, Context)};
             if(voice) UpdateSourceProps(Source, voice, Context);
-            else Source->PropsClean.clear(std::memory_order_release);
+            else Source->mPropsDirty.set(std::memory_order_release);
         }
         else
         {
@@ -3386,7 +3386,7 @@ ALsource::ALsource()
         send.LFReference = HIGHPASSFREQREF;
     }
 
-    PropsClean.test_and_set(std::memory_order_relaxed);
+    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 }
 
 ALsource::~ALsource()
@@ -3413,7 +3413,7 @@ void UpdateAllSourceProps(ALCcontext *context)
         ALsource *source = sid ? LookupSource(context, sid) : nullptr;
         if(source && source->VoiceIdx == vidx)
         {
-            if(!source->PropsClean.test_and_set(std::memory_order_acq_rel))
+            if(!source->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
                 UpdateSourceProps(source, voice, context);
         }
         ++vidx;

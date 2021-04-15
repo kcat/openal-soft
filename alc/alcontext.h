@@ -202,7 +202,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
     al::vector<WetBufferPtr> mWetBuffers;
 
 
-    std::atomic_flag mPropsClean;
+    al::atomic_invflag mPropsDirty;
     std::atomic<bool> mDeferUpdates{false};
 
     std::mutex mPropLock;

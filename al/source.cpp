@@ -349,6 +349,57 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     return offset;
 }
 
+/* GetSourceLength
+ *
+ * Gets the length of the given Source's buffer queue, in the appropriate
+ * format (Bytes, Samples or Seconds).
+ */
+double GetSourceLength(const ALsource *source, ALenum name)
+{
+    uint64_t length{0};
+    const ALbuffer *BufferFmt{nullptr};
+    for(auto &listitem : source->mQueue)
+    {
+        if(!BufferFmt)
+            BufferFmt = listitem.mBuffer;
+        length += listitem.mSampleLen;
+    }
+    if(length == 0)
+        return 0.0;
+
+    assert(BufferFmt != nullptr);
+    switch(name)
+    {
+    case AL_SEC_LENGTH_SOFT:
+        return static_cast<double>(length) / BufferFmt->mSampleRate;
+
+    case AL_SAMPLE_LENGTH_SOFT:
+        return static_cast<double>(length);
+
+    case AL_BYTE_LENGTH_SOFT:
+        if(BufferFmt->OriginalType == UserFmtIMA4)
+        {
+            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
+
+            /* Round down to nearest ADPCM block */
+            return static_cast<double>(length / FrameBlockSize) * BlockSize;
+        }
+        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
+        {
+            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint align{(FrameBlockSize-2)/2 + 7};
+            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
+
+            /* Round down to nearest ADPCM block */
+            return static_cast<double>(length / FrameBlockSize) * BlockSize;
+        }
+        return static_cast<double>(length) * BufferFmt->frameSizeFromFmt();
+    }
+    return 0.0;
+}
+
 
 struct VoicePos {
     ALuint pos, frac;
@@ -896,6 +947,11 @@ enum SourceProp : ALenum {
     /* AL_EXT_BFORMAT */
     srcOrientation = AL_ORIENTATION,
 
+    /* AL_SOFT_source_length */
+    srcByteLength = AL_BYTE_LENGTH_SOFT,
+    srcSampleLength = AL_SAMPLE_LENGTH_SOFT,
+    srcSecLength = AL_SEC_LENGTH_SOFT,
+
     /* AL_SOFT_source_resampler */
     srcResampler = AL_SOURCE_RESAMPLER_SOFT,
 
@@ -945,6 +1001,9 @@ ALuint FloatValsByProp(ALenum prop)
     case AL_SOURCE_RADIUS:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SEC_LENGTH_SOFT:
         return 1;
 
     case AL_STEREO_ANGLES:
@@ -1007,6 +1066,9 @@ ALuint DoubleValsByProp(ALenum prop)
     case AL_SOURCE_RADIUS:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SEC_LENGTH_SOFT:
         return 1;
 
     case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1067,6 +1129,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     switch(prop)
     {
+    case AL_SEC_LENGTH_SOFT:
     case AL_SEC_OFFSET_LATENCY_SOFT:
     case AL_SEC_OFFSET_CLOCK_SOFT:
         /* Query only */
@@ -1260,6 +1323,8 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_DIRECT_CHANNELS_SOFT:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
         CHECKSIZE(values, 1);
         ival = static_cast<int>(values[0]);
         return SetSourceiv(Source, Context, prop, {&ival, 1u});
@@ -1297,6 +1362,8 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SOURCE_TYPE:
     case AL_BUFFERS_QUEUED:
     case AL_BUFFERS_PROCESSED:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
         /* Query only */
         SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
             "Setting read-only source property 0x%04x", prop);
@@ -1568,6 +1635,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_SOURCE_RADIUS:
+    case AL_SEC_LENGTH_SOFT:
         CHECKSIZE(values, 1);
         fvals[0] = static_cast<float>(values[0]);
         return SetSourcefv(Source, Context, prop, {fvals, 1u});
@@ -1617,6 +1685,8 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_BUFFERS_QUEUED:
     case AL_BUFFERS_PROCESSED:
     case AL_SOURCE_STATE:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
     case AL_SAMPLE_OFFSET_CLOCK_SOFT:
         /* Query only */
@@ -1678,6 +1748,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_SOURCE_RADIUS:
+    case AL_SEC_LENGTH_SOFT:
         CHECKSIZE(values, 1);
         fvals[0] = static_cast<float>(values[0]);
         return SetSourcefv(Source, Context, prop, {fvals, 1u});
@@ -1811,6 +1882,13 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SOURCE_RADIUS:
         CHECKSIZE(values, 1);
         values[0] = Source->Radius;
+        return true;
+
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SEC_LENGTH_SOFT:
+        CHECKSIZE(values, 1);
+        values[0] = GetSourceLength(Source, prop);
         return true;
 
     case AL_STEREO_ANGLES:
@@ -2006,6 +2084,14 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         values[0] = ALenumFromDistanceModel(Source->mDistanceModel);
         return true;
 
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SEC_LENGTH_SOFT:
+        CHECKSIZE(values, 1);
+        values[0] = static_cast<int>(mind(GetSourceLength(Source, prop),
+            std::numeric_limits<int>::max()));
+        return true;
+
     case AL_SOURCE_RESAMPLER_SOFT:
         CHECKSIZE(values, 1);
         values[0] = static_cast<int>(Source->mResampler);
@@ -2097,6 +2183,13 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 
     switch(prop)
     {
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SEC_LENGTH_SOFT:
+        CHECKSIZE(values, 1);
+        values[0] = static_cast<int64_t>(GetSourceLength(Source, prop));
+        return true;
+
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         CHECKSIZE(values, 2);
         /* Get the source offset with the clock time first. Then get the clock

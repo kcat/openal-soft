@@ -203,6 +203,9 @@ void SetRTPriority(void)
 #include <pthread.h>
 #include <sched.h>
 #endif
+#ifdef HAVE_RTKIT
+#include "core/rtkit.h"
+#endif
 
 const PathNamePair &GetProcBinary()
 {
@@ -409,28 +412,68 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
 void SetRTPriority()
 {
+    if(RTPrioLevel <= 0)
+        return;
+
+    int err{-ENOTSUP};
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-    if(RTPrioLevel > 0)
-    {
-        struct sched_param param{};
-        /* Use the minimum real-time priority possible for now (on Linux this
-         * should be 1 for SCHED_RR).
-         */
-        param.sched_priority = sched_get_priority_min(SCHED_RR);
-        int err;
+    struct sched_param param{};
+    /* Use the minimum real-time priority possible for now (on Linux this
+     * should be 1 for SCHED_RR).
+     */
+    param.sched_priority = sched_get_priority_min(SCHED_RR);
 #ifdef SCHED_RESET_ON_FORK
-        err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
-        if(err == EINVAL)
+    err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
+    if(err == EINVAL)
 #endif
-            err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
-        if(err != 0)
-            ERR("Failed to set real-time priority for thread: %s (%d)\n", std::strerror(err), err);
+        err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+    if(err == 0) return;
+
+    WARN("pthread_setschedparam failed: %s (%d)\n", std::strerror(err), err);
+#endif
+#ifdef HAVE_RTKIT
+    if(HasDBus())
+    {
+        dbus::Error error;
+        if(dbus::ConnectionPtr conn{(*pdbus_bus_get)(DBUS_BUS_SYSTEM, &error.get())})
+        {
+            /* Don't stupidly exit if the connection dies while doing this. */
+            (*pdbus_connection_set_exit_on_disconnect)(conn.get(), false);
+
+            int nicemin{};
+            rtkit_get_min_nice_level(conn.get(), &nicemin);
+            int rtmax{rtkit_get_max_realtime_priority(conn.get())};
+            TRACE("Maximum real-time priority: %d, minimum niceness: %d\n", rtmax, nicemin);
+
+            if(rtmax > 0)
+            {
+                /* Use half the maximum real-time priority allowed. */
+                TRACE("Making real-time with priority %d\n", (rtmax+1)/2);
+                err = rtkit_make_realtime(conn.get(), 0, (rtmax+1)/2);
+                if(err != 0)
+                {
+                    err = std::abs(err);
+                    WARN("Failed to set real-time priority: %s (%d)\n", std::strerror(err), err);
+                }
+            }
+            if(err != 0 && nicemin < 0)
+            {
+                TRACE("Making high priority with niceness %d\n", nicemin);
+                err = rtkit_make_high_priority(conn.get(), 0, nicemin);
+                if(err != 0)
+                {
+                    err = std::abs(err);
+                    WARN("Failed to set high priority: %s (%d)\n", std::strerror(err), err);
+                }
+            }
+        }
+        else
+            WARN("D-Bus connection failed with %s: %s\n", error->name, error->message);
     }
-#else
-    /* Real-time priority not available */
-    if(RTPrioLevel > 0)
-        ERR("Cannot set priority level for thread\n");
+    else
+        WARN("D-Bus not available\n");
 #endif
+    ERR("Could not set elevated priority: %s (%d)\n", std::strerror(err), err);
 }
 
 #endif

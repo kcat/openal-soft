@@ -13,6 +13,9 @@
 /* Define if we have the getopt function */
 #cmakedefine HAVE_GETOPT
 
+/* Define if we have DBus/RTKit */
+#cmakedefine HAVE_RTKIT
+
 /* Define if we have SSE CPU extensions */
 #cmakedefine HAVE_SSE
 #cmakedefine HAVE_SSE2

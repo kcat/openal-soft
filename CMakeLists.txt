@@ -673,7 +673,30 @@ set(CORE_OBJS
     core/mastering.h
     core/resampler_limits.h
     core/uhjfilter.cpp
-    core/uhjfilter.h
+    core/uhjfilter.h)
+
+set(HAVE_RTKIT 0)
+option(ALSOFT_REQUIRE_RTKIT "Require RTKit/D-Bus support" FALSE)
+find_package(DBus1)
+if(DBus1_FOUND)
+    option(ALSOFT_RTKIT "Enable RTKit support" ON)
+    if(ALSOFT_RTKIT)
+        set(HAVE_RTKIT 1)
+        set(CORE_OBJS ${CORE_OBJS} core/dbus_wrap.cpp core/dbus_wrap.h core/rtkit.cpp core/rtkit.h)
+        if(WIN32 OR HAVE_DLFCN_H)
+            set(INC_PATHS ${INC_PATHS} ${DBus1_INCLUDE_DIRS})
+            set(CPP_DEFS ${CPP_DEFS} ${DBus1_DEFINITIONS})
+        else()
+            set(EXTRA_LIBS ${EXTRA_LIBS} ${DBus1_LIBRARIES})
+        endif()
+    endif()
+endif()
+if(ALSOFT_REQUIRE_RTKIT AND NOT HAVE_RTKIT)
+    message(FATAL_ERROR "Failed to enabled required RTKit support")
+endif()
+
+# Default mixers, always available
+set(CORE_OBJS ${CORE_OBJS}
     core/mixer/defs.h
     core/mixer/hrtfbase.h
     core/mixer/hrtfdefs.h

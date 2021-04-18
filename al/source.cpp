@@ -3506,7 +3506,7 @@ void UpdateAllSourceProps(ALCcontext *context)
         ALsource *source = sid ? LookupSource(context, sid) : nullptr;
         if(source && source->VoiceIdx == vidx)
         {
-            if(!source->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+            if(source->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
                 UpdateSourceProps(source, voice, context);
         }
         ++vidx;

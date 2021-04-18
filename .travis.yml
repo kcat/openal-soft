@@ -72,7 +72,6 @@ script:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
       cmake \
-        -DALSOFT_REQUIRE_RTKIT=ON \
         -DALSOFT_REQUIRE_ALSA=ON \
         -DALSOFT_REQUIRE_OSS=ON \
         -DALSOFT_REQUIRE_PORTAUDIO=ON \

@@ -28,7 +28,8 @@ jobs:
         - {
             name: "Linux",
             os: ubuntu-latest,
-            cmake_opts: "-DALSOFT_REQUIRE_ALSA=ON \
+            cmake_opts: "-DALSOFT_REQUIRE_RTKIT=ON \
+              -DALSOFT_REQUIRE_ALSA=ON \
               -DALSOFT_REQUIRE_OSS=ON \
               -DALSOFT_REQUIRE_PORTAUDIO=ON \
               -DALSOFT_REQUIRE_PULSEAUDIO=ON \
@@ -38,7 +39,8 @@ jobs:
               portaudio19-dev \
               libasound2-dev \
               libjack-dev \
-              qtbase5-dev",
+              qtbase5-dev \
+              libdbus-1-dev",
             build_type: "Release"
           }
 

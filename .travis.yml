@@ -26,7 +26,8 @@ install:
         portaudio19-dev \
         libasound2-dev \
         libjack-dev \
-        qtbase5-dev
+        qtbase5-dev \
+        libdbus-1-dev
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
@@ -71,6 +72,7 @@ script:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
       cmake \
+        -DALSOFT_REQUIRE_RTKIT=ON \
         -DALSOFT_REQUIRE_ALSA=ON \
         -DALSOFT_REQUIRE_OSS=ON \
         -DALSOFT_REQUIRE_PORTAUDIO=ON \

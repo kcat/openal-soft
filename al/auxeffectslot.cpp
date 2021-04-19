@@ -596,6 +596,8 @@ START_API_FUNC
         if(!(value == AL_TRUE || value == AL_FALSE))
             SETERR_RETURN(context, AL_INVALID_VALUE,,
                 "Effect slot auxiliary send auto out of range");
+        if UNLIKELY(slot->AuxSendAuto == !!value)
+            return;
         slot->AuxSendAuto = !!value;
         break;
 
@@ -603,6 +605,8 @@ START_API_FUNC
         target = LookupEffectSlot(context.get(), static_cast<ALuint>(value));
         if(value && !target)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect slot target ID");
+        if UNLIKELY(slot->Target == target)
+            return;
         if(target)
         {
             ALeffectslot *checker{target};
@@ -636,6 +640,14 @@ START_API_FUNC
         if(slot->mState == SlotState::Playing)
             SETERR_RETURN(context, AL_INVALID_OPERATION,,
                 "Setting buffer on playing effect slot %u", slot->id);
+
+        if(ALbuffer *buffer{slot->Buffer})
+        {
+            if UNLIKELY(buffer->id == static_cast<ALuint>(value))
+                return;
+        }
+        else if UNLIKELY(value == 0)
+            return;
 
         {
             std::lock_guard<std::mutex> ___{device->BufferLock};
@@ -720,6 +732,8 @@ START_API_FUNC
     case AL_EFFECTSLOT_GAIN:
         if(!(value >= 0.0f && value <= 1.0f))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Effect slot gain out of range");
+        if UNLIKELY(slot->Gain == value)
+            return;
         slot->Gain = value;
         break;
 

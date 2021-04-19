@@ -1033,33 +1033,33 @@ void PulsePlayback::start()
 {
     auto plock = mMainloop.getUniqueLock();
 
-    pa_stream_set_write_callback(mStream, &PulsePlayback::streamWriteCallbackC, this);
-    pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
-        &mMainloop)};
-
-    /* Write some (silent) samples to fill the prebuf amount if needed. */
-    if(size_t prebuf{mAttr.prebuf})
+    /* Write some (silent) samples to fill the buffer before we start feeding
+     * it newly mixed samples.
+     */
+    if(size_t todo{pa_stream_writable_size(mStream)})
     {
-        prebuf = minz(prebuf, pa_stream_writable_size(mStream));
-
-        void *buf{pa_xmalloc(prebuf)};
+        void *buf{pa_xmalloc(todo)};
         switch(mSpec.format)
         {
         case PA_SAMPLE_U8:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x80);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x80);
             break;
         case PA_SAMPLE_ALAW:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0xD5);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0xD5);
             break;
         case PA_SAMPLE_ULAW:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x7f);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x7f);
             break;
         default:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x00);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x00);
             break;
         }
-        pa_stream_write(mStream, buf, prebuf, pa_xfree, 0, PA_SEEK_RELATIVE);
+        pa_stream_write(mStream, buf, todo, pa_xfree, 0, PA_SEEK_RELATIVE);
     }
+
+    pa_stream_set_write_callback(mStream, &PulsePlayback::streamWriteCallbackC, this);
+    pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
+        &mMainloop)};
 
     mMainloop.waitForOperation(op, plock);
 }

@@ -587,8 +587,12 @@ START_API_FUNC
         }
         if UNLIKELY(slot->mState == SlotState::Initial)
         {
+            slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+            slot->updateProps(context.get());
+
             AddActiveEffectSlots({&slot, 1}, context.get());
             slot->mState = SlotState::Playing;
+            return;
         }
         break;
 

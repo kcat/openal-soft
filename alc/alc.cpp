@@ -1130,6 +1130,8 @@ void alc_initconfig(void)
 
     if(auto priopt = ConfigValueInt(nullptr, nullptr, "rt-prio"))
         RTPrioLevel = *priopt;
+    if(auto limopt = ConfigValueBool(nullptr, nullptr, "rt-time-limit"))
+        AllowRTTimeLimit = *limopt;
 
     aluInit();
     aluInitMixer();
@@ -1316,6 +1318,9 @@ void ProbeCaptureDeviceList()
 
 /* Mixing thread piority level */
 int RTPrioLevel{1};
+
+/* Allow reducing the process's RTTime limit for RTKit. */
+bool AllowRTTimeLimit{true};
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG

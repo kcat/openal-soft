@@ -190,6 +190,11 @@
 #  be a problem.
 #rt-prio = 1
 
+## rt-time-limit: (global)
+#  On non-Windows systems, allows reducing the process's RLIMIT_RTTIME resource
+#  as necessary for acquiring real-time priority from RTKit.
+#rt-time-limit = true
+
 ## sources:
 #  Sets the maximum number of allocatable sources. Lower values may help for
 #  systems with apps that try to play more sounds than the CPU can handle.

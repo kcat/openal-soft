@@ -359,6 +359,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
 
 extern int RTPrioLevel;
+extern bool AllowRTTimeLimit;
 void SetRTPriority(void);
 
 /**

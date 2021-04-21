@@ -2255,6 +2255,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             device->Flags.set(DeviceRunning);
         }
         catch(al::backend_exception& e) {
+            ERR("%s\n", e.what());
             device->handleDisconnect("%s", e.what());
             return ALC_INVALID_DEVICE;
         }
@@ -3888,6 +3889,7 @@ START_API_FUNC
             dev->Flags.set(DeviceRunning);
         }
         catch(al::backend_exception& e) {
+            ERR("%s\n", e.what());
             dev->handleDisconnect("%s", e.what());
             alcSetError(dev.get(), ALC_INVALID_DEVICE);
         }
@@ -4097,6 +4099,7 @@ START_API_FUNC
         dev->Flags.set(DeviceRunning);
     }
     catch(al::backend_exception& e) {
+        ERR("%s\n", e.what());
         dev->handleDisconnect("%s", e.what());
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
     }
@@ -4205,6 +4208,7 @@ START_API_FUNC
                 dev->Flags.set(DeviceRunning);
             }
             catch(al::backend_exception &be) {
+                ERR("%s\n", be.what());
                 dev->handleDisconnect("%s", be.what());
             }
         }

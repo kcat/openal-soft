@@ -40,7 +40,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alu.h"
-#include "compat.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "strutils.h"

@@ -1,5 +1,5 @@
-#ifndef AL_COMPAT_H
-#define AL_COMPAT_H
+#ifndef CORE_HELPERS_H
+#define CORE_HELPERS_H
 
 #include <string>
 
@@ -15,4 +15,4 @@ void SetRTPriority(void);
 
 al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
 
-#endif /* AL_COMPAT_H */
+#endif /* CORE_HELPERS_H */

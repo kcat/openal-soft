@@ -46,8 +46,8 @@
 
 #include "alcmain.h"
 #include "alu.h"
-#include "compat.h"
 #include "comptr.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"

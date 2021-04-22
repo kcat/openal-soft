@@ -667,6 +667,8 @@ set(CORE_OBJS
     core/fmt_traits.h
     core/fpu_ctrl.cpp
     core/fpu_ctrl.h
+    core/helpers.cpp
+    core/helpers.h
     core/logging.cpp
     core/logging.h
     core/mastering.cpp
@@ -751,7 +753,6 @@ set(ALC_OBJS
     alc/bformatdec.h
     alc/buffer_storage.cpp
     alc/buffer_storage.h
-    alc/compat.h
     alc/converter.cpp
     alc/converter.h
     alc/effectslot.cpp
@@ -772,7 +773,6 @@ set(ALC_OBJS
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
     alc/front_stablizer.h
-    alc/helpers.cpp
     alc/hrtf.cpp
     alc/hrtf.h
     alc/inprogext.h

@@ -35,7 +35,7 @@
 #include "albit.h"
 #include "alcmain.h"
 #include "alu.h"
-#include "compat.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"

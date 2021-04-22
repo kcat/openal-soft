@@ -31,7 +31,7 @@
 
 #include "alcmain.h"
 #include "alu.h"
-#include "compat.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"

@@ -1,5 +1,5 @@
-#ifndef ALC_HRTF_H
-#define ALC_HRTF_H
+#ifndef CORE_HRTF_H
+#define CORE_HRTF_H
 
 #include <array>
 #include <cstddef>
@@ -10,10 +10,10 @@
 #include "aloptional.h"
 #include "alspan.h"
 #include "atomic.h"
-#include "core/ambidefs.h"
-#include "core/bufferline.h"
-#include "core/filters/splitter.h"
-#include "core/mixer/hrtfdefs.h"
+#include "ambidefs.h"
+#include "bufferline.h"
+#include "filters/splitter.h"
+#include "mixer/hrtfdefs.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 
@@ -88,4 +88,4 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
     float spread, HrirArray &coeffs, const al::span<uint,2> delays);
 
-#endif /* ALC_HRTF_H */
+#endif /* CORE_HRTF_H */

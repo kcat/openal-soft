@@ -669,6 +669,8 @@ set(CORE_OBJS
     core/fpu_ctrl.h
     core/helpers.cpp
     core/helpers.h
+    core/hrtf.cpp
+    core/hrtf.h
     core/logging.cpp
     core/logging.h
     core/mastering.cpp
@@ -773,8 +775,6 @@ set(ALC_OBJS
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
     alc/front_stablizer.h
-    alc/hrtf.cpp
-    alc/hrtf.h
     alc/inprogext.h
     alc/panning.cpp
     alc/uiddefs.cpp

@@ -40,9 +40,12 @@ const PathNamePair &GetProcBinary()
     if(procbin) return *procbin;
 
     auto fullpath = al::vector<WCHAR>(256);
-    DWORD len;
-    while((len=GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))) == fullpath.size())
+    DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
+    while(len == fullpath.size())
+    {
         fullpath.resize(fullpath.size() << 1);
+        len = GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()));
+    }
     if(len == 0)
     {
         ERR("Failed to get process name: error %lu\n", GetLastError());

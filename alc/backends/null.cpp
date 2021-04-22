@@ -33,6 +33,7 @@
 #include "alcmain.h"
 #include "almalloc.h"
 #include "alu.h"
+#include "compat.h"
 #include "threads.h"
 
 

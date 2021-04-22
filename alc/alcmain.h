@@ -358,10 +358,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 #define RECORD_THREAD_NAME "alsoft-record"
 
 
-extern int RTPrioLevel;
-extern bool AllowRTTimeLimit;
-void SetRTPriority(void);
-
 /**
  * Returns the index for the given channel name (e.g. FrontCenter), or
  * INVALID_CHANNEL_INDEX if it doesn't exist.
@@ -369,8 +365,5 @@ void SetRTPriority(void);
 inline uint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
 { return real.ChannelIndex[chan]; }
 #define INVALID_CHANNEL_INDEX ~0u
-
-
-al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
 
 #endif

@@ -1316,12 +1316,6 @@ void ProbeCaptureDeviceList()
 
 } // namespace
 
-/* Mixing thread piority level */
-int RTPrioLevel{1};
-
-/* Allow reducing the process's RTTime limit for RTKit. */
-bool AllowRTTimeLimit{true};
-
 FILE *gLogFile{stderr};
 #ifdef _DEBUG
 LogLevel gLogLevel{LogLevel::Warning};

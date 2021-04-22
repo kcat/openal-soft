@@ -41,6 +41,13 @@
 #include "vector.h"
 
 
+/* Mixing thread piority level */
+int RTPrioLevel{1};
+
+/* Allow reducing the process's RTTime limit for RTKit. */
+bool AllowRTTimeLimit{true};
+
+
 #ifdef _WIN32
 
 #include <shlobj.h>

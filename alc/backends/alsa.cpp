@@ -42,6 +42,7 @@
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alu.h"
+#include "compat.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"

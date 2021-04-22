@@ -38,6 +38,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "compat.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "strutils.h"

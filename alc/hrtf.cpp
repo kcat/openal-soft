@@ -42,7 +42,6 @@
 
 #include "albit.h"
 #include "albyte.h"
-#include "alconfig.h"
 #include "alfstream.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -1217,13 +1216,13 @@ al::span<const char> GetResource(int name)
 } // namespace
 
 
-al::vector<std::string> EnumerateHrtf(const char *devname)
+al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
 
     bool usedefaults{true};
-    if(auto pathopt = ConfigValueStr(devname, nullptr, "hrtf-paths"))
+    if(pathopt)
     {
         const char *pathlist{pathopt->c_str()};
         while(pathlist && *pathlist)
@@ -1270,15 +1269,6 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
     list.reserve(EnumeratedHrtfs.size());
     for(auto &entry : EnumeratedHrtfs)
         list.emplace_back(entry.mDispName);
-
-    if(auto defhrtfopt = ConfigValueStr(devname, nullptr, "default-hrtf"))
-    {
-        auto iter = std::find(list.begin(), list.end(), *defhrtfopt);
-        if(iter == list.end())
-            WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
-        else if(iter != list.begin())
-            std::rotate(list.begin(), iter, iter+1);
-    }
 
     return list;
 }

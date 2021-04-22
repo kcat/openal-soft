@@ -1927,7 +1927,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     /*************************************************************************
      * Update device format request if HRTF is requested
      */
-    device->HrtfStatus = ALC_HRTF_DISABLED_SOFT;
+    device->mHrtfStatus = ALC_HRTF_DISABLED_SOFT;
     if(device->Type != DeviceType::Loopback)
     {
         if(auto hrtfopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf"))
@@ -2331,6 +2331,19 @@ ALCdevice::~ALCdevice()
     if(oldarray != &EmptyContextArray) delete oldarray;
 }
 
+void ALCdevice::enumerateHrtfs()
+{
+    mHrtfList = EnumerateHrtf(ConfigValueStr(DeviceName.c_str(), nullptr, "hrtf-paths"));
+    if(auto defhrtfopt = ConfigValueStr(DeviceName.c_str(), nullptr, "default-hrtf"))
+    {
+        auto iter = std::find(mHrtfList.begin(), mHrtfList.end(), *defhrtfopt);
+        if(iter == mHrtfList.end())
+            WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
+        else if(iter != mHrtfList.begin())
+            std::rotate(mHrtfList.begin(), iter, iter+1);
+    }
+}
+
 
 /** Checks if the device handle is valid, and returns a new reference if so. */
 static DeviceRef VerifyDevice(ALCdevice *device)
@@ -2732,7 +2745,7 @@ START_API_FUNC
         if(DeviceRef dev{VerifyDevice(Device)})
         {
             std::lock_guard<std::mutex> _{dev->StateLock};
-            value = (dev->mHrtf ? dev->HrtfName.c_str() : "");
+            value = (dev->mHrtf ? dev->mHrtfName.c_str() : "");
         }
         else
             alcSetError(nullptr, ALC_INVALID_DEVICE);
@@ -2930,7 +2943,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             values[i++] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
 
             values[i++] = ALC_HRTF_STATUS_SOFT;
-            values[i++] = device->HrtfStatus;
+            values[i++] = device->mHrtfStatus;
 
             values[i++] = ALC_OUTPUT_LIMITER_SOFT;
             values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
@@ -3052,14 +3065,14 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_HRTF_STATUS_SOFT:
-        values[0] = device->HrtfStatus;
+        values[0] = device->mHrtfStatus;
         return 1;
 
     case ALC_NUM_HRTF_SPECIFIERS_SOFT:
         {
             std::lock_guard<std::mutex> _{device->StateLock};
-            device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-            values[0] = static_cast<int>(minz(device->HrtfList.size(),
+            device->enumerateHrtfs();
+            values[0] = static_cast<int>(minz(device->mHrtfList.size(),
                 std::numeric_limits<int>::max()));
         }
         return 1;
@@ -3170,7 +3183,7 @@ START_API_FUNC
             values[i++] = (dev->mHrtf ? ALC_TRUE : ALC_FALSE);
 
             values[i++] = ALC_HRTF_STATUS_SOFT;
-            values[i++] = dev->HrtfStatus;
+            values[i++] = dev->mHrtfStatus;
 
             values[i++] = ALC_OUTPUT_LIMITER_SOFT;
             values[i++] = dev->Limiter ? ALC_TRUE : ALC_FALSE;
@@ -4115,8 +4128,8 @@ START_API_FUNC
     else switch(paramName)
     {
         case ALC_HRTF_SPECIFIER_SOFT:
-            if(index >= 0 && static_cast<uint>(index) < dev->HrtfList.size())
-                return dev->HrtfList[static_cast<uint>(index)].c_str();
+            if(index >= 0 && static_cast<uint>(index) < dev->mHrtfList.size())
+                return dev->mHrtfList[static_cast<uint>(index)].c_str();
             alcSetError(dev.get(), ALC_INVALID_VALUE);
             break;
 

@@ -291,9 +291,9 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALCuint NumStereoSources{};
     ALCuint NumAuxSends{};
 
-    std::string HrtfName;
-    al::vector<std::string> HrtfList;
-    ALCenum HrtfStatus{ALC_FALSE};
+    std::string mHrtfName;
+    al::vector<std::string> mHrtfList;
+    ALCenum mHrtfStatus{ALC_FALSE};
 
     ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 
@@ -316,6 +316,8 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     ALCdevice(const ALCdevice&) = delete;
     ALCdevice& operator=(const ALCdevice&) = delete;
     ~ALCdevice();
+
+    void enumerateHrtfs();
 
     uint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
     uint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }

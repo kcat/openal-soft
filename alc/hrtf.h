@@ -7,6 +7,7 @@
 #include <string>
 
 #include "almalloc.h"
+#include "aloptional.h"
 #include "alspan.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
@@ -81,7 +82,7 @@ struct DirectHrtfState {
 };
 
 
-al::vector<std::string> EnumerateHrtf(const char *devname);
+al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt);
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
 
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,

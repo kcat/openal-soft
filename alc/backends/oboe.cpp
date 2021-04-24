@@ -18,7 +18,7 @@ constexpr char device_name[] = "Oboe Default";
 
 
 struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback {
-    OboePlayback(ALCdevice *device) : BackendBase{device} { }
+    OboePlayback(DeviceBase *device) : BackendBase{device} { }
 
     oboe::ManagedStream mStream;
 
@@ -221,7 +221,7 @@ void OboePlayback::stop()
 
 
 struct OboeCapture final : public BackendBase {
-    OboeCapture(ALCdevice *device) : BackendBase{device} { }
+    OboeCapture(DeviceBase *device) : BackendBase{device} { }
 
     oboe::ManagedStream mStream;
 
@@ -368,7 +368,7 @@ std::string OboeBackendFactory::probe(BackendType type)
     return std::string{};
 }
 
-BackendPtr OboeBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr OboeBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OboePlayback{device}};

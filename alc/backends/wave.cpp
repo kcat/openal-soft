@@ -93,7 +93,7 @@ void fwrite32le(uint val, FILE *f)
 
 
 struct WaveBackend final : public BackendBase {
-    WaveBackend(ALCdevice *device) noexcept : BackendBase{device} { }
+    WaveBackend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WaveBackend() override;
 
     int mixerProc();
@@ -395,7 +395,7 @@ std::string WaveBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr WaveBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WaveBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WaveBackend{device}};

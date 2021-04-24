@@ -236,7 +236,7 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
 
 
 struct JackPlayback final : public BackendBase {
-    JackPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    JackPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
     int process(jack_nframes_t numframes) noexcept;
@@ -637,7 +637,7 @@ std::string JackBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr JackBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr JackBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new JackPlayback{device}};

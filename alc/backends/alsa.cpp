@@ -408,7 +408,7 @@ int verify_state(snd_pcm_t *handle)
 
 
 struct AlsaPlayback final : public BackendBase {
-    AlsaPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    AlsaPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~AlsaPlayback() override;
 
     int mixerProc();
@@ -868,7 +868,7 @@ ClockLatency AlsaPlayback::getClockLatency()
 
 
 struct AlsaCapture final : public BackendBase {
-    AlsaCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    AlsaCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
     void open(const char *name) override;
@@ -1257,7 +1257,7 @@ std::string AlsaBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr AlsaBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr AlsaBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new AlsaPlayback{device}};

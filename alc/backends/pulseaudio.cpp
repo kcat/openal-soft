@@ -282,7 +282,7 @@ al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
     return al::nullopt;
 }
 
-void SetChannelOrderFromMap(ALCdevice *device, const pa_channel_map &chanmap)
+void SetChannelOrderFromMap(DeviceBase *device, const pa_channel_map &chanmap)
 {
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
     for(uint i{0};i < chanmap.channels;++i)
@@ -655,7 +655,7 @@ PulseMainloop gGlobalMainloop;
 
 
 struct PulsePlayback final : public BackendBase {
-    PulsePlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    PulsePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PulsePlayback() override;
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
@@ -1108,7 +1108,7 @@ ClockLatency PulsePlayback::getClockLatency()
 
 
 struct PulseCapture final : public BackendBase {
-    PulseCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    PulseCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
     void streamStateCallback(pa_stream *stream) noexcept;
@@ -1510,7 +1510,7 @@ std::string PulseBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr PulseBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr PulseBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PulsePlayback{device}};

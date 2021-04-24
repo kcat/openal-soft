@@ -46,7 +46,7 @@ static const char sndio_device[] = "SndIO Default";
 
 
 struct SndioPlayback final : public BackendBase {
-    SndioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    SndioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioPlayback() override;
 
     int mixerProc();
@@ -293,7 +293,7 @@ void SndioPlayback::stop()
 
 
 struct SndioCapture final : public BackendBase {
-    SndioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    SndioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioCapture() override;
 
     int recordProc();
@@ -512,7 +512,7 @@ std::string SndIOBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr SndIOBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SndIOBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new SndioPlayback{device}};

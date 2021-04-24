@@ -46,7 +46,7 @@ namespace {
 constexpr char defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
 
 struct Sdl2Backend final : public BackendBase {
-    Sdl2Backend(ALCdevice *device) noexcept : BackendBase{device} { }
+    Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~Sdl2Backend() override;
 
     void audioCallback(Uint8 *stream, int len) noexcept;
@@ -213,7 +213,7 @@ std::string SDL2BackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr SDL2BackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SDL2BackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl2Backend{device}};

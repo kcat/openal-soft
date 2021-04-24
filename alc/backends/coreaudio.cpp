@@ -47,7 +47,7 @@ static const char ca_device[] = "CoreAudio Default";
 
 
 struct CoreAudioPlayback final : public BackendBase {
-    CoreAudioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    CoreAudioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~CoreAudioPlayback() override;
 
     OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -304,7 +304,7 @@ void CoreAudioPlayback::stop()
 
 
 struct CoreAudioCapture final : public BackendBase {
-    CoreAudioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    CoreAudioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~CoreAudioCapture() override;
 
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -686,7 +686,7 @@ std::string CoreAudioBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr CoreAudioBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr CoreAudioBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new CoreAudioPlayback{device}};

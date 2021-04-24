@@ -125,7 +125,7 @@ void ProbeCaptureDevices(void)
 
 
 struct WinMMPlayback final : public BackendBase {
-    WinMMPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    WinMMPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WinMMPlayback() override;
 
     void CALLBACK waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
@@ -370,7 +370,7 @@ void WinMMPlayback::stop()
 
 
 struct WinMMCapture final : public BackendBase {
-    WinMMCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    WinMMCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WinMMCapture() override;
 
     void CALLBACK waveInProc(HWAVEIN device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
@@ -621,7 +621,7 @@ std::string WinMMBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr WinMMBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WinMMBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WinMMPlayback{device}};

@@ -30,9 +30,9 @@ struct BackendBase {
 
     virtual ClockLatency getClockLatency();
 
-    ALCdevice *const mDevice;
+    DeviceBase *const mDevice;
 
-    BackendBase(ALCdevice *device) noexcept : mDevice{device} { }
+    BackendBase(DeviceBase *device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
 
 protected:
@@ -57,7 +57,7 @@ enum class BackendType {
 /* Helper to get the current clock time from the device's ClockBase, and
  * SamplesDone converted from the sample rate.
  */
-inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
+inline std::chrono::nanoseconds GetDeviceClockTime(DeviceBase *device)
 {
     using std::chrono::seconds;
     using std::chrono::nanoseconds;
@@ -69,7 +69,7 @@ inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
 /* Helper to get the device latency from the backend, including any fixed
  * latency from post-processing.
  */
-inline ClockLatency GetClockLatency(ALCdevice *device)
+inline ClockLatency GetClockLatency(DeviceBase *device)
 {
     BackendBase *backend{device->Backend.get()};
     ClockLatency ret{backend->getClockLatency()};
@@ -85,7 +85,7 @@ struct BackendFactory {
 
     virtual std::string probe(BackendType type) = 0;
 
-    virtual BackendPtr createBackend(ALCdevice *device, BackendType type) = 0;
+    virtual BackendPtr createBackend(DeviceBase *device, BackendType type) = 0;
 
 protected:
     virtual ~BackendFactory() = default;

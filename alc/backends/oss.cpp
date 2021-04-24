@@ -227,7 +227,7 @@ uint log2i(uint x)
 
 
 struct OSSPlayback final : public BackendBase {
-    OSSPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    OSSPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OSSPlayback() override;
 
     int mixerProc();
@@ -443,7 +443,7 @@ void OSSPlayback::stop()
 
 
 struct OSScapture final : public BackendBase {
-    OSScapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    OSScapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OSScapture() override;
 
     int recordProc();
@@ -681,7 +681,7 @@ std::string OSSBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr OSSBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr OSSBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OSSPlayback{device}};

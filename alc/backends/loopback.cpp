@@ -29,7 +29,7 @@
 namespace {
 
 struct LoopbackBackend final : public BackendBase {
-    LoopbackBackend(ALCdevice *device) noexcept : BackendBase{device} { }
+    LoopbackBackend(DeviceBase *device) noexcept : BackendBase{device} { }
 
     void open(const ALCchar *name) override;
     bool reset() override;
@@ -69,7 +69,7 @@ bool LoopbackBackendFactory::querySupport(BackendType)
 std::string LoopbackBackendFactory::probe(BackendType)
 { return std::string{}; }
 
-BackendPtr LoopbackBackendFactory::createBackend(ALCdevice *device, BackendType)
+BackendPtr LoopbackBackendFactory::createBackend(DeviceBase *device, BackendType)
 { return BackendPtr{new LoopbackBackend{device}}; }
 
 BackendFactory &LoopbackBackendFactory::getFactory()

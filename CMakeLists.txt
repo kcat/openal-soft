@@ -644,6 +644,7 @@ set(COMMON_OBJS
 set(CORE_OBJS
     core/ambdec.cpp
     core/ambdec.h
+    core/ambidefs.cpp
     core/ambidefs.h
     core/bs2b.cpp
     core/bs2b.h

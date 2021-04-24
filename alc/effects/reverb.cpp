@@ -32,7 +32,7 @@
 #include "alcmain.h"
 #include "alcontext.h"
 #include "alnumeric.h"
-#include "bformatdec.h"
+#include "core/ambidefs.h"
 #include "core/filters/biquad.h"
 #include "effectslot.h"
 #include "vector.h"
@@ -665,7 +665,7 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const Buffer&)
     if(device->mAmbiOrder > 1)
     {
         mMixOut = &ReverbState::MixOutAmbiUp;
-        mOrderScales = BFormatDec::GetHFOrderScales(1, device->mAmbiOrder);
+        mOrderScales = AmbiScale::GetHFOrderScales(1, device->mAmbiOrder);
     }
     else
     {

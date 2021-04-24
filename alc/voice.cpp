@@ -44,7 +44,6 @@
 #include "alstring.h"
 #include "alu.h"
 #include "async_event.h"
-#include "bformatdec.h"
 #include "buffer_storage.h"
 #include "core/ambidefs.h"
 #include "core/cpu_caps.h"
@@ -840,7 +839,7 @@ void Voice::prepare(DeviceBase *device)
     {
         const uint8_t *OrderFromChan{(mFmtChannels == FmtBFormat2D) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
-        const auto scales = BFormatDec::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
+        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
 
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
         for(auto &chandata : mChans)

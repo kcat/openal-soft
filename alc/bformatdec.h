@@ -58,10 +58,6 @@ public:
         const FloatBufferLine *InSamples, const size_t lidx, const size_t ridx, const size_t cidx,
         const size_t SamplesToDo);
 
-    /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint in_order,
-        const uint out_order) noexcept;
-
     static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,
         const size_t inchans, const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
         std::unique_ptr<FrontStablizer> stablizer);

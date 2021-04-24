@@ -14,7 +14,6 @@
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alspan.h"
-#include "bformatdec.h"
 #include "buffer_storage.h"
 #include "core/ambidefs.h"
 #include "core/filters/splitter.h"
@@ -398,7 +397,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         if(device->mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;
-            const auto scales = BFormatDec::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
+            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
             (*mChans)[0].mHfScale = scales[0];
             for(size_t i{1};i < mChans->size();++i)
                 (*mChans)[i].mHfScale = scales[1];

@@ -527,8 +527,8 @@ struct ReverbState final : public EffectState {
     void lateFaded(const size_t offset, const size_t todo, const float fade,
         const float fadeStep);
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -607,7 +607,7 @@ void ReverbState::allocLines(const float frequency)
     mLate.Delay.realizeLineOffset(mSampleBuffer.data());
 }
 
-void ReverbState::deviceUpdate(const ALCdevice *device, const Buffer&)
+void ReverbState::deviceUpdate(const DeviceBase *device, const Buffer&)
 {
     const auto frequency = static_cast<float>(device->Frequency);
 
@@ -985,10 +985,10 @@ void ReverbState::update3DPanning(const float *ReflectionsPan, const float *Late
     }
 }
 
-void ReverbState::update(const ALCcontext *Context, const EffectSlot *Slot,
+void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *Device{Context->mDevice.get()};
+    const DeviceBase *Device{Context->mDevice};
     const auto frequency = static_cast<float>(Device->Frequency);
 
     /* Calculate the master filters */

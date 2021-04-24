@@ -69,8 +69,8 @@ struct AutowahState final : public EffectState {
     alignas(16) float mBufferOut[BufferLineSize];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -78,7 +78,7 @@ struct AutowahState final : public EffectState {
     DEF_NEWDEL(AutowahState)
 };
 
-void AutowahState::deviceUpdate(const ALCdevice*, const Buffer&)
+void AutowahState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     /* (Re-)initializing parameters and clear the buffers. */
 
@@ -104,10 +104,10 @@ void AutowahState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void AutowahState::update(const ALCcontext *context, const EffectSlot *slot,
+void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
     const float ReleaseTime{clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f)};

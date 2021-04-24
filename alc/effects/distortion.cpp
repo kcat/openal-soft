@@ -45,8 +45,8 @@ struct DistortionState final : public EffectState {
     float mBuffer[2][BufferLineSize]{};
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -54,16 +54,16 @@ struct DistortionState final : public EffectState {
     DEF_NEWDEL(DistortionState)
 };
 
-void DistortionState::deviceUpdate(const ALCdevice*, const Buffer&)
+void DistortionState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     mLowpass.clear();
     mBandpass.clear();
 }
 
-void DistortionState::update(const ALCcontext *context, const EffectSlot *slot,
+void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
 
     /* Store waveshaper edge settings. */
     const float edge{minf(std::sin(al::MathDefs<float>::Pi()*0.5f * props->Distortion.Edge),

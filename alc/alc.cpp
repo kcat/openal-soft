@@ -980,10 +980,10 @@ constexpr int alcEFXMajorVersion{1};
 constexpr int alcEFXMinorVersion{0};
 
 
-/* To avoid extraneous allocations, a 0-sized FlexArray<ALCcontext*> is defined
- * globally as a sharable object.
+/* To avoid extraneous allocations, a 0-sized FlexArray<ContextBase*> is
+ * defined globally as a sharable object.
  */
-al::FlexArray<ALCcontext*> EmptyContextArray{0u};
+al::FlexArray<ContextBase*> EmptyContextArray{0u};
 
 
 using DeviceRef = al::intrusive_ptr<ALCdevice>;
@@ -1571,7 +1571,7 @@ void ALCcontext::processUpdates()
 }
 
 
-void ALCcontext::allocVoiceChanges(size_t addcount)
+void ContextBase::allocVoiceChanges(size_t addcount)
 {
     constexpr size_t clustersize{128};
     /* Convert element count to cluster count. */
@@ -1588,7 +1588,7 @@ void ALCcontext::allocVoiceChanges(size_t addcount)
     }
 }
 
-void ALCcontext::allocVoices(size_t addcount)
+void ContextBase::allocVoices(size_t addcount)
 {
     constexpr size_t clustersize{32};
     /* Convert element count to cluster count. */
@@ -2117,8 +2117,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 
     FPUCtl mixer_mode{};
-    for(ALCcontext *context : *device->mContexts.load())
+    for(ContextBase *ctxbase : *device->mContexts.load())
     {
+        auto *context = static_cast<ALCcontext*>(ctxbase);
+
         auto GetEffectBuffer = [](ALbuffer *buffer) noexcept -> EffectState::Buffer
         {
             if(!buffer) return EffectState::Buffer{};
@@ -2270,8 +2272,10 @@ static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
         /* Make sure disconnection is finished before continuing on. */
         device->waitForMix();
 
-        for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
+        for(ContextBase *ctxbase : *device->mContexts.load(std::memory_order_acquire))
         {
+            auto *ctx = static_cast<ALCcontext*>(ctxbase);
+
             /* Clear any pending voice changes and reallocate voices to get a
              * clean restart.
              */
@@ -2297,8 +2301,14 @@ static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
 }
 
 
-ALCdevice::ALCdevice(DeviceType type) : Type{type}, mContexts{&EmptyContextArray}
+DeviceBase::DeviceBase(DeviceType type) : Type{type}, mContexts{&EmptyContextArray}
 {
+}
+
+DeviceBase::~DeviceBase()
+{
+    auto *oldarray = mContexts.exchange(nullptr, std::memory_order_relaxed);
+    if(oldarray != &EmptyContextArray) delete oldarray;
 }
 
 ALCdevice::~ALCdevice()
@@ -2324,11 +2334,6 @@ ALCdevice::~ALCdevice()
         { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
-
-    mHrtf = nullptr;
-
-    auto *oldarray = mContexts.exchange(nullptr, std::memory_order_relaxed);
-    if(oldarray != &EmptyContextArray) delete oldarray;
 }
 
 void ALCdevice::enumerateHrtfs()
@@ -2359,15 +2364,11 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 }
 
 
-ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device) : mDevice{std::move(device)}
-{
-    mPropsDirty.test_and_clear(std::memory_order_relaxed);
-}
+ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
+{ }
 
-ALCcontext::~ALCcontext()
+ContextBase::~ContextBase()
 {
-    TRACE("Freeing context %p\n", voidp{this});
-
     size_t count{0};
     ContextProps *cprops{mParams.ContextUpdate.exchange(nullptr, std::memory_order_relaxed)};
     if(cprops)
@@ -2384,14 +2385,6 @@ ALCcontext::~ALCcontext()
     }
     TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
 
-    count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
-        [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
-    if(count > 0)
-        WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
-    mSourceList.clear();
-    mNumSources = 0;
-
     count = 0;
     EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
     while(eprops)
@@ -2407,15 +2400,6 @@ ALCcontext::~ALCcontext()
         al::destroy_n(curarray->end(), curarray->size());
         delete curarray;
     }
-    mDefaultSlot = nullptr;
-
-    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
-        [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
-    if(count > 0)
-        WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
-    mEffectSlotList.clear();
-    mNumEffectSlots = 0;
 
     count = 0;
     VoicePropsItem *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
@@ -2463,6 +2447,35 @@ ALCcontext::~ALCcontext()
             TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
         mAsyncEvents->readAdvance(count);
     }
+}
+
+
+ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
+  : ContextBase{device.get()}, mALDevice{std::move(device)}
+{
+    mPropsDirty.test_and_clear(std::memory_order_relaxed);
+}
+
+ALCcontext::~ALCcontext()
+{
+    TRACE("Freeing context %p\n", voidp{this});
+
+    size_t count{std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
+        [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
+        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); })};
+    if(count > 0)
+        WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
+    mSourceList.clear();
+    mNumSources = 0;
+
+    mDefaultSlot = nullptr;
+    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
+        [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
+        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
+    if(count > 0)
+        WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
+    mEffectSlotList.clear();
+    mNumEffectSlots = 0;
 }
 
 void ALCcontext::init()
@@ -2531,7 +2544,7 @@ bool ALCcontext::deinit()
     auto *oldarray = mDevice->mContexts.load(std::memory_order_acquire);
     if(auto toremove = static_cast<size_t>(std::count(oldarray->begin(), oldarray->end(), this)))
     {
-        using ContextArray = al::FlexArray<ALCcontext*>;
+        using ContextArray = al::FlexArray<ContextBase*>;
         auto alloc_ctx_array = [](const size_t count) -> ContextArray*
         {
             if(count == 0) return &EmptyContextArray;
@@ -2543,7 +2556,7 @@ bool ALCcontext::deinit()
          * given context.
          */
         std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
-            std::bind(std::not_equal_to<ALCcontext*>{}, _1, this));
+            std::bind(std::not_equal_to<>{}, _1, this));
 
         /* Store the new context array in the device. Wait for any current mix
          * to finish before deleting the old array.
@@ -3361,7 +3374,7 @@ START_API_FUNC
     UpdateListenerProps(context.get());
 
     {
-        using ContextArray = al::FlexArray<ALCcontext*>;
+        using ContextArray = al::FlexArray<ContextBase*>;
 
         /* Allocate a new context array, which holds 1 more than the current/
          * old array.
@@ -3424,7 +3437,7 @@ START_API_FUNC
     ContextRef ctx{*iter};
     ContextList.erase(iter);
 
-    ALCdevice *Device{ctx->mDevice.get()};
+    ALCdevice *Device{ctx->mALDevice.get()};
 
     std::lock_guard<std::mutex> _{Device->StateLock};
     if(!ctx->deinit() && Device->Flags.test(DeviceRunning))
@@ -3516,7 +3529,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return nullptr;
     }
-    return ctx->mDevice.get();
+    return ctx->mALDevice.get();
 }
 END_API_FUNC
 
@@ -3745,7 +3758,7 @@ START_API_FUNC
 
     std::unique_lock<std::mutex> statelock{dev->StateLock};
     al::vector<ContextRef> orphanctxs;
-    for(ALCcontext *ctx : *dev->mContexts.load())
+    for(ContextBase *ctx : *dev->mContexts.load())
     {
         auto ctxiter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);
         if(ctxiter != ContextList.end() && *ctxiter == ctx)

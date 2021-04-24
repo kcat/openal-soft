@@ -90,8 +90,8 @@ struct EqualizerState final : public EffectState {
     FloatBufferLine mSampleBuffer{};
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -99,7 +99,7 @@ struct EqualizerState final : public EffectState {
     DEF_NEWDEL(EqualizerState)
 };
 
-void EqualizerState::deviceUpdate(const ALCdevice*, const Buffer&)
+void EqualizerState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
@@ -108,10 +108,10 @@ void EqualizerState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void EqualizerState::update(const ALCcontext *context, const EffectSlot *slot,
+void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     auto frequency = static_cast<float>(device->Frequency);
     float gain, f0norm;
 

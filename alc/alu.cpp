@@ -279,7 +279,7 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
 }
 
 
-void ALCdevice::ProcessHrtf(const size_t SamplesToDo)
+void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
 {
     /* HRTF is stereo output only. */
     const uint lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -289,12 +289,12 @@ void ALCdevice::ProcessHrtf(const size_t SamplesToDo)
         mHrtfState->mTemp.data(), mHrtfState->mChannels.data(), mHrtfState->mIrSize, SamplesToDo);
 }
 
-void ALCdevice::ProcessAmbiDec(const size_t SamplesToDo)
+void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)
 {
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 }
 
-void ALCdevice::ProcessAmbiDecStablized(const size_t SamplesToDo)
+void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
 {
     /* Decode with front image stablization. */
     const uint lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -305,7 +305,7 @@ void ALCdevice::ProcessAmbiDecStablized(const size_t SamplesToDo)
         SamplesToDo);
 }
 
-void ALCdevice::ProcessUhj(const size_t SamplesToDo)
+void DeviceBase::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
     const uint lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -316,7 +316,7 @@ void ALCdevice::ProcessUhj(const size_t SamplesToDo)
         SamplesToDo);
 }
 
-void ALCdevice::ProcessBs2b(const size_t SamplesToDo)
+void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
@@ -364,7 +364,7 @@ inline auto& GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 }
 
 
-bool CalcContextParams(ALCcontext *ctx)
+bool CalcContextParams(ContextBase *ctx)
 {
     ContextProps *props{ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
@@ -379,7 +379,7 @@ bool CalcContextParams(ALCcontext *ctx)
     return true;
 }
 
-bool CalcListenerParams(ALCcontext *ctx)
+bool CalcListenerParams(ContextBase *ctx)
 {
     ListenerProps *props{ctx->mParams.ListenerUpdate.exchange(nullptr,
         std::memory_order_acq_rel)};
@@ -417,7 +417,7 @@ bool CalcListenerParams(ALCcontext *ctx)
     return true;
 }
 
-bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ALCcontext *context)
+bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBase *context)
 {
     EffectSlotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
@@ -487,7 +487,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ALCcontex
         output = EffectTarget{&target->Wet, nullptr};
     else
     {
-        ALCdevice *device{context->mDevice.get()};
+        DeviceBase *device{context->mDevice};
         output = EffectTarget{&device->Dry, &device->RealOut};
     }
     state->update(context, slot, &slot->mEffectProps, output);
@@ -677,7 +677,7 @@ struct GainTriplet { float Base, HF, LF; };
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
     const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
-    const VoiceProps *props, const ContextParams &Context, const ALCdevice *Device)
+    const VoiceProps *props, const ContextParams &Context, const DeviceBase *Device)
 {
     static const ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
@@ -1202,9 +1202,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 }
 
-void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *context)
+void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
 {
-    const ALCdevice *Device{context->mDevice.get()};
+    const DeviceBase *Device{context->mDevice};
     EffectSlot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -1248,9 +1248,9 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcon
         context->mParams, Device);
 }
 
-void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontext *context)
+void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
 {
-    const ALCdevice *Device{context->mDevice.get()};
+    const DeviceBase *Device{context->mDevice};
     const uint NumSends{Device->NumAuxSends};
 
     /* Set mixing buffers and get send parameters. */
@@ -1548,7 +1548,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ALCcontex
         context->mParams, Device);
 }
 
-void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
+void CalcSourceParams(Voice *voice, ContextBase *context, bool force)
 {
     VoicePropsItem *props{voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props && !force) return;
@@ -1572,7 +1572,7 @@ void CalcSourceParams(Voice *voice, ALCcontext *context, bool force)
 }
 
 
-void SendSourceStateEvent(ALCcontext *context, uint id, VChangeState state)
+void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
@@ -1585,7 +1585,7 @@ void SendSourceStateEvent(ALCcontext *context, uint id, VChangeState state)
     ring->writeAdvance(1);
 }
 
-void ProcessVoiceChanges(ALCcontext *ctx)
+void ProcessVoiceChanges(ContextBase *ctx)
 {
     VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
     VoiceChange *next{cur->mNext.load(std::memory_order_acquire)};
@@ -1680,7 +1680,7 @@ void ProcessVoiceChanges(ALCcontext *ctx)
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 
-void ProcessParamUpdates(ALCcontext *ctx, const EffectSlotArray &slots,
+void ProcessParamUpdates(ContextBase *ctx, const EffectSlotArray &slots,
     const al::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
@@ -1704,11 +1704,11 @@ void ProcessParamUpdates(ALCcontext *ctx, const EffectSlotArray &slots,
     IncrementRef(ctx->mUpdateCount);
 }
 
-void ProcessContexts(ALCdevice *device, const uint SamplesToDo)
+void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    for(ALCcontext *ctx : *device->mContexts.load(std::memory_order_acquire))
+    for(ContextBase *ctx : *device->mContexts.load(std::memory_order_acquire))
     {
         const EffectSlotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
         const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
@@ -1910,7 +1910,7 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
 
 } // namespace
 
-void ALCdevice::renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep)
+void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep)
 {
     FPUCtl mixer_mode{};
     for(uint written{0u};written < numSamples;)
@@ -1981,7 +1981,7 @@ void ALCdevice::renderSamples(void *outBuffer, const uint numSamples, const size
     }
 }
 
-void ALCdevice::handleDisconnect(const char *msg, ...)
+void DeviceBase::handleDisconnect(const char *msg, ...)
 {
     if(!Connected.exchange(false, std::memory_order_acq_rel))
         return;
@@ -1997,7 +1997,7 @@ void ALCdevice::handleDisconnect(const char *msg, ...)
         evt.u.disconnect.msg[sizeof(evt.u.disconnect.msg)-1] = 0;
 
     IncrementRef(MixCount);
-    for(ALCcontext *ctx : *mContexts.load())
+    for(ContextBase *ctx : *mContexts.load())
     {
         const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))

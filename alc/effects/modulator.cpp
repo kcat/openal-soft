@@ -81,8 +81,8 @@ struct ModulatorState final : public EffectState {
     } mChans[MaxAmbiChannels];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -90,7 +90,7 @@ struct ModulatorState final : public EffectState {
     DEF_NEWDEL(ModulatorState)
 };
 
-void ModulatorState::deviceUpdate(const ALCdevice*, const Buffer&)
+void ModulatorState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
@@ -99,10 +99,10 @@ void ModulatorState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void ModulatorState::update(const ALCcontext *context, const EffectSlot *slot,
+void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
 
     const float step{props->Modulator.Frequency / static_cast<float>(device->Frequency)};
     mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, float{WAVEFORM_FRACONE-1}));

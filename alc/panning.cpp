@@ -1041,7 +1041,7 @@ no_hrtf:
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
 {
-    ALCdevice *device{context->mDevice.get()};
+    DeviceBase *device{context->mDevice};
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
 
     auto wetbuffer_iter = context->mWetBuffers.end();

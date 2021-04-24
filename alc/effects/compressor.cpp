@@ -49,8 +49,8 @@ struct CompressorState final : public EffectState {
     float mEnvFollower{1.0f};
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -58,7 +58,7 @@ struct CompressorState final : public EffectState {
     DEF_NEWDEL(CompressorState)
 };
 
-void CompressorState::deviceUpdate(const ALCdevice *device, const Buffer&)
+void CompressorState::deviceUpdate(const DeviceBase *device, const Buffer&)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
@@ -73,7 +73,7 @@ void CompressorState::deviceUpdate(const ALCdevice *device, const Buffer&)
     mReleaseMult = std::pow(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
 }
 
-void CompressorState::update(const ALCcontext*, const EffectSlot *slot,
+void CompressorState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
     mEnabled = props->Compressor.OnOff;

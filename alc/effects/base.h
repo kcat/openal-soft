@@ -10,6 +10,7 @@
 #include "atomic.h"
 #include "intrusive_ptr.h"
 
+struct ContextBase;
 struct EffectSlot;
 struct BufferStorage;
 
@@ -175,8 +176,8 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 
     virtual ~EffectState() = default;
 
-    virtual void deviceUpdate(const ALCdevice *device, const Buffer &buffer) = 0;
-    virtual void update(const ALCcontext *context, const EffectSlot *slot,
+    virtual void deviceUpdate(const DeviceBase *device, const Buffer &buffer) = 0;
+    virtual void update(const ContextBase *context, const EffectSlot *slot,
         const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) = 0;

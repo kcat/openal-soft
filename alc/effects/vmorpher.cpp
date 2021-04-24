@@ -138,8 +138,8 @@ struct VmorpherState final : public EffectState {
     alignas(16) float mSampleBufferB[MAX_UPDATE_SAMPLES]{};
     alignas(16) float mLfo[MAX_UPDATE_SAMPLES]{};
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -202,7 +202,7 @@ std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(VMorpherPhenome p
 }
 
 
-void VmorpherState::deviceUpdate(const ALCdevice*, const Buffer&)
+void VmorpherState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
@@ -214,10 +214,10 @@ void VmorpherState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void VmorpherState::update(const ALCcontext *context, const EffectSlot *slot,
+void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     const float frequency{static_cast<float>(device->Frequency)};
     const float step{props->Vmorpher.Rate / frequency};
     mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, float{WAVEFORM_FRACONE-1}));

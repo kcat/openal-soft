@@ -84,8 +84,8 @@ struct FshifterState final : public EffectState {
     } mGains[2];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -93,7 +93,7 @@ struct FshifterState final : public EffectState {
     DEF_NEWDEL(FshifterState)
 };
 
-void FshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
+void FshifterState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount = 0;
@@ -114,10 +114,10 @@ void FshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void FshifterState::update(const ALCcontext *context, const EffectSlot *slot,
+void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
 
     const float step{props->Fshifter.Frequency / static_cast<float>(device->Frequency)};
     mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * MixerFracOne);

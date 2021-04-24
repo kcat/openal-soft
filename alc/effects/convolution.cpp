@@ -190,8 +190,8 @@ struct ConvolutionState final : public EffectState {
     void (ConvolutionState::*mMix)(const al::span<FloatBufferLine>,const size_t)
     {&ConvolutionState::NormalMix};
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -219,7 +219,7 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
 }
 
 
-void ConvolutionState::deviceUpdate(const ALCdevice *device, const Buffer &buffer)
+void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buffer)
 {
     constexpr uint MaxConvolveAmbiOrder{1u};
 
@@ -316,7 +316,7 @@ void ConvolutionState::deviceUpdate(const ALCdevice *device, const Buffer &buffe
 }
 
 
-void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
+void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps* /*props*/, const EffectTarget target)
 {
     /* NOTE: Stereo and Rear are slightly different from normal mixing (as
@@ -394,7 +394,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
     }
     else if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
     {
-        ALCdevice *device{context->mDevice.get()};
+        DeviceBase *device{context->mDevice};
         if(device->mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;
@@ -421,7 +421,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
     }
     else
     {
-        ALCdevice *device{context->mDevice.get()};
+        DeviceBase *device{context->mDevice};
         al::span<const ChanMap> chanmap{};
         switch(mChannels)
         {

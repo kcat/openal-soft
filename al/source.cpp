@@ -183,7 +183,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
  */
 int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
 {
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
     uint64_t readPos{};
     ALuint refcount;
@@ -222,7 +222,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
  */
 double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
 {
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
     uint64_t readPos{};
     ALuint refcount;
@@ -271,7 +271,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
  */
 double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
     ALuint readPos{};
     ALuint readPosFrac{};
@@ -540,7 +540,7 @@ VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 
 void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 {
-    ALCdevice *device{ctx->mDevice.get()};
+    ALCdevice *device{ctx->mALDevice.get()};
 
     VoiceChange *oldhead{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
     while(VoiceChange *next{oldhead->mNext.load(std::memory_order_relaxed)})
@@ -1248,7 +1248,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
             if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
 
-            if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mDevice.get()))
+            if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mALDevice.get()))
                 return true;
         }
         Source->OffsetType = prop;
@@ -1350,7 +1350,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
 bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values)
 {
-    ALCdevice *device{Context->mDevice.get()};
+    ALCdevice *device{Context->mALDevice.get()};
     ALeffectslot *slot{nullptr};
     al::deque<ALbufferQueueItem> oldlist;
     std::unique_lock<std::mutex> slotlock;
@@ -1794,7 +1794,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 
 bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<double> values)
 {
-    ALCdevice *device{Context->mDevice.get()};
+    ALCdevice *device{Context->mALDevice.get()};
     ClockLatency clocktime;
     nanoseconds srcclock;
     int ivals[MaxValues];
@@ -2174,7 +2174,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
 bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int64_t> values)
 {
-    ALCdevice *device = Context->mDevice.get();
+    ALCdevice *device{Context->mALDevice.get()};
     ClockLatency clocktime;
     nanoseconds srcclock;
     double dvals[MaxValues];
@@ -2332,7 +2332,7 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     std::unique_lock<std::mutex> srclock{context->mSourceLock};
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     if(static_cast<ALuint>(n) > device->SourcesMax-context->mNumSources)
     {
         context->setError(AL_OUT_OF_MEMORY, "Exceeding %u source limit (%u + %d)",
@@ -2924,7 +2924,7 @@ START_API_FUNC
         ++sources;
     }
 
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     /* If the device is disconnected, go right to stopped. */
     if UNLIKELY(!device->Connected.load(std::memory_order_acquire))
     {
@@ -3302,7 +3302,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     ALbuffer *BufferFmt{nullptr};
     for(auto &item : source->mQueue)
     {

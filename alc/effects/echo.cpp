@@ -57,8 +57,8 @@ struct EchoState final : public EffectState {
 
     alignas(16) float mTempBuffer[2][BufferLineSize];
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -66,7 +66,7 @@ struct EchoState final : public EffectState {
     DEF_NEWDEL(EchoState)
 };
 
-void EchoState::deviceUpdate(const ALCdevice *Device, const Buffer&)
+void EchoState::deviceUpdate(const DeviceBase *Device, const Buffer&)
 {
     const auto frequency = static_cast<float>(Device->Frequency);
 
@@ -85,10 +85,10 @@ void EchoState::deviceUpdate(const ALCdevice *Device, const Buffer&)
     }
 }
 
-void EchoState::update(const ALCcontext *context, const EffectSlot *slot,
+void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
     mTap[0].delay = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);

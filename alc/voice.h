@@ -18,7 +18,8 @@
 #include "core/uhjfilter.h"
 #include "vector.h"
 
-struct ALCcontext;
+struct ContextBase;
+struct DeviceBase;
 struct EffectSlot;
 enum class DistanceModel : unsigned char;
 
@@ -247,9 +248,9 @@ struct Voice {
     Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;
 
-    void mix(const State vstate, ALCcontext *Context, const uint SamplesToDo);
+    void mix(const State vstate, ContextBase *Context, const uint SamplesToDo);
 
-    void prepare(ALCdevice *device);
+    void prepare(DeviceBase *device);
 
     DEF_NEWDEL(Voice)
 };

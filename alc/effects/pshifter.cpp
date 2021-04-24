@@ -93,8 +93,8 @@ struct PshifterState final : public EffectState {
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -102,7 +102,7 @@ struct PshifterState final : public EffectState {
     DEF_NEWDEL(PshifterState)
 };
 
-void PshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
+void PshifterState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount       = 0;
@@ -122,7 +122,7 @@ void PshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
     std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
 }
 
-void PshifterState::update(const ALCcontext*, const EffectSlot *slot,
+void PshifterState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
     const int tune{props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune};

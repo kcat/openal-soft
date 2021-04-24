@@ -181,7 +181,7 @@ void aluInitMixer()
 
 namespace {
 
-void SendSourceStoppedEvent(ALCcontext *context, uint id)
+void SendSourceStoppedEvent(ContextBase *context, uint id)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
@@ -370,7 +370,7 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 
 
 void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &parms,
-    const float TargetGain, const uint Counter, uint OutPos, ALCdevice *Device)
+    const float TargetGain, const uint Counter, uint OutPos, DeviceBase *Device)
 {
     const uint IrSize{Device->mIrSize};
     auto &HrtfSamples = Device->HrtfSourceData;
@@ -446,7 +446,7 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
 }
 
 void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, DirectParams &parms,
-    const float *TargetGains, const uint Counter, const uint OutPos, ALCdevice *Device)
+    const float *TargetGains, const uint Counter, const uint OutPos, DeviceBase *Device)
 {
     using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
     static constexpr FilterProc NfcProcess[MaxAmbiOrder+1]{
@@ -474,7 +474,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
 
 } // namespace
 
-void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
+void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo)
 {
     static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
 
@@ -496,7 +496,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
         return;
     }
 
-    ALCdevice *Device{Context->mDevice.get()};
+    DeviceBase *Device{Context->mDevice};
     const uint NumSends{Device->NumAuxSends};
 
     ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
@@ -819,7 +819,7 @@ void Voice::mix(const State vstate, ALCcontext *Context, const uint SamplesToDo)
     }
 }
 
-void Voice::prepare(ALCdevice *device)
+void Voice::prepare(DeviceBase *device)
 {
     if((mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3 || mFmtChannels==FmtUHJ4) && !mDecoder)
         mDecoder = std::make_unique<UhjDecoder>();

@@ -68,8 +68,8 @@ struct ChorusState final : public EffectState {
     void getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
     void getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -77,7 +77,7 @@ struct ChorusState final : public EffectState {
     DEF_NEWDEL(ChorusState)
 };
 
-void ChorusState::deviceUpdate(const ALCdevice *Device, const Buffer&)
+void ChorusState::deviceUpdate(const DeviceBase *Device, const Buffer&)
 {
     constexpr float max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
 
@@ -94,7 +94,7 @@ void ChorusState::deviceUpdate(const ALCdevice *Device, const Buffer&)
     }
 }
 
-void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
+void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
     const EffectProps *props, const EffectTarget target)
 {
     constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
@@ -102,7 +102,7 @@ void ChorusState::update(const ALCcontext *Context, const EffectSlot *Slot,
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
      */
-    const ALCdevice *device{Context->mDevice.get()};
+    const DeviceBase *device{Context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
     mWaveform = props->Chorus.Waveform;

@@ -325,7 +325,7 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     if(static_cast<ALuint>(n) > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
     {
         context->setError(AL_OUT_OF_MEMORY, "Exceeding %u effect slot limit (%u + %d)",
@@ -571,7 +571,7 @@ START_API_FUNC
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
-        device = context->mDevice.get();
+        device = context->mALDevice.get();
 
         {
             std::lock_guard<std::mutex> ___{device->EffectLock};
@@ -639,7 +639,7 @@ START_API_FUNC
         break;
 
     case AL_BUFFER:
-        device = context->mDevice.get();
+        device = context->mALDevice.get();
 
         if(slot->mState == SlotState::Playing)
             SETERR_RETURN(context, AL_INVALID_OPERATION,,
@@ -946,7 +946,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         }
         al::intrusive_ptr<EffectState> state{factory->create()};
 
-        ALCdevice *device{context->mDevice.get()};
+        ALCdevice *device{context->mALDevice.get()};
         std::unique_lock<std::mutex> statelock{device->StateLock};
         state->mOutTarget = device->Dry.Buffer;
         {

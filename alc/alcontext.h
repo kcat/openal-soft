@@ -26,6 +26,7 @@
 
 struct ALeffectslot;
 struct ALsource;
+struct DeviceBase;
 struct EffectSlot;
 struct EffectSlotProps;
 struct RingBuffer;
@@ -98,40 +99,8 @@ struct ContextParams {
     DistanceModel mDistanceModel{};
 };
 
-
-struct SourceSubList {
-    uint64_t FreeMask{~0_u64};
-    ALsource *Sources{nullptr}; /* 64 */
-
-    SourceSubList() noexcept = default;
-    SourceSubList(const SourceSubList&) = delete;
-    SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
-    { rhs.FreeMask = ~0_u64; rhs.Sources = nullptr; }
-    ~SourceSubList();
-
-    SourceSubList& operator=(const SourceSubList&) = delete;
-    SourceSubList& operator=(SourceSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
-};
-
-struct EffectSlotSubList {
-    uint64_t FreeMask{~0_u64};
-    ALeffectslot *EffectSlots{nullptr}; /* 64 */
-
-    EffectSlotSubList() noexcept = default;
-    EffectSlotSubList(const EffectSlotSubList&) = delete;
-    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
-      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
-    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
-    ~EffectSlotSubList();
-
-    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
-    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
-};
-
-struct ALCcontext : public al::intrusive_ref<ALCcontext> {
-    const al::intrusive_ptr<ALCdevice> mDevice;
+struct ContextBase {
+    DeviceBase *const mDevice;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
@@ -197,6 +166,47 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext> {
 
     using VoiceCluster = std::unique_ptr<Voice[]>;
     al::vector<VoiceCluster> mVoiceClusters;
+
+
+    ContextBase(DeviceBase *device);
+    ContextBase(const ContextBase&) = delete;
+    ContextBase& operator=(const ContextBase&) = delete;
+    ~ContextBase();
+};
+
+struct SourceSubList {
+    uint64_t FreeMask{~0_u64};
+    ALsource *Sources{nullptr}; /* 64 */
+
+    SourceSubList() noexcept = default;
+    SourceSubList(const SourceSubList&) = delete;
+    SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
+    { rhs.FreeMask = ~0_u64; rhs.Sources = nullptr; }
+    ~SourceSubList();
+
+    SourceSubList& operator=(const SourceSubList&) = delete;
+    SourceSubList& operator=(SourceSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
+};
+
+struct EffectSlotSubList {
+    uint64_t FreeMask{~0_u64};
+    ALeffectslot *EffectSlots{nullptr}; /* 64 */
+
+    EffectSlotSubList() noexcept = default;
+    EffectSlotSubList(const EffectSlotSubList&) = delete;
+    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
+      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
+    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
+    ~EffectSlotSubList();
+
+    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
+    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
+};
+
+struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
+    const al::intrusive_ptr<ALCdevice> mALDevice;
 
     /* Wet buffers used by effect slots. */
     al::vector<WetBufferPtr> mWetBuffers;

@@ -1,12 +1,12 @@
-#ifndef CONVERTER_H
-#define CONVERTER_H
+#ifndef CORE_CONVERTER_H
+#define CORE_CONVERTER_H
 
 #include <cstddef>
 #include <memory>
 
 #include "almalloc.h"
-#include "core/devformat.h"
-#include "core/mixer/defs.h"
+#include "devformat.h"
+#include "mixer/defs.h"
 
 using uint = unsigned int;
 
@@ -56,4 +56,4 @@ struct ChannelConverter {
     void convert(const void *src, float *dst, uint frames) const;
 };
 
-#endif /* CONVERTER_H */
+#endif /* CORE_CONVERTER_H */

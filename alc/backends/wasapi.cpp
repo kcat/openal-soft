@@ -59,7 +59,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "comptr.h"
-#include "converter.h"
+#include "core/converter.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"

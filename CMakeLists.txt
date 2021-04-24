@@ -651,6 +651,8 @@ set(CORE_OBJS
     core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
+    core/converter.cpp
+    core/converter.h
     core/cpu_caps.cpp
     core/cpu_caps.h
     core/devformat.cpp
@@ -677,7 +679,8 @@ set(CORE_OBJS
     core/mastering.h
     core/resampler_limits.h
     core/uhjfilter.cpp
-    core/uhjfilter.h)
+    core/uhjfilter.h
+    core/uiddefs.cpp)
 
 set(HAVE_RTKIT 0)
 option(ALSOFT_REQUIRE_RTKIT "Require RTKit/D-Bus support" FALSE)
@@ -755,8 +758,6 @@ set(ALC_OBJS
     alc/bformatdec.h
     alc/buffer_storage.cpp
     alc/buffer_storage.h
-    alc/converter.cpp
-    alc/converter.h
     alc/effectslot.cpp
     alc/effectslot.h
     alc/effects/base.h
@@ -777,7 +778,6 @@ set(ALC_OBJS
     alc/front_stablizer.h
     alc/inprogext.h
     alc/panning.cpp
-    alc/uiddefs.cpp
     alc/voice.cpp
     alc/voice.h
     alc/voice_change.h)

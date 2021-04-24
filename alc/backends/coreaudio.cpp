@@ -32,7 +32,7 @@
 #include "alcmain.h"
 #include "alu.h"
 #include "ringbuffer.h"
-#include "converter.h"
+#include "core/converter.h"
 #include "core/logging.h"
 #include "backends/base.h"
 

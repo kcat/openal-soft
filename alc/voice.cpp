@@ -36,7 +36,6 @@
 #include <vector>
 
 #include "albyte.h"
-#include "alconfig.h"
 #include "alcontext.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -131,9 +130,9 @@ inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 } // namespace
 
 
-void aluInitMixer()
+void aluInitMixer(al::optional<std::string> resampler)
 {
-    if(auto resopt = ConfigValueStr(nullptr, nullptr, "resampler"))
+    if(resampler)
     {
         struct ResamplerEntry {
             const char name[16];
@@ -150,7 +149,7 @@ void aluInitMixer()
             { "fast_bsinc24", Resampler::FastBSinc24 },
         };
 
-        const char *str{resopt->c_str()};
+        const char *str{resampler->c_str()};
         if(al::strcasecmp(str, "bsinc") == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", str);

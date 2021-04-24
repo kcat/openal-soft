@@ -15,6 +15,9 @@ struct EffectSlot;
 struct BufferStorage;
 
 
+/** Target gain for the reverb decay feedback reaching the decay time. */
+constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
+
 enum class ChorusWaveform {
     Sinusoid,
     Triangle

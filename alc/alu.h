@@ -4,8 +4,10 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <string>
 #include <type_traits>
 
+#include "aloptional.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
@@ -32,9 +34,6 @@ constexpr float GainMixMax{1000.0f}; /* +60dB */
 constexpr float SpeedOfSoundMetersPerSec{343.3f};
 constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 
-/** Target gain for the reverb decay feedback reaching the decay time. */
-constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
-
 
 enum HrtfRequestMode {
     Hrtf_Default = 0,
@@ -44,7 +43,7 @@ enum HrtfRequestMode {
 
 void aluInit(void);
 
-void aluInitMixer(void);
+void aluInitMixer(al::optional<std::string> resampler);
 
 /* aluInitRenderer
  *

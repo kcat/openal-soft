@@ -1128,7 +1128,7 @@ void alc_initconfig(void)
         AllowRTTimeLimit = *limopt;
 
     aluInit();
-    aluInitMixer();
+    aluInitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
 
     auto traperr = al::getenv("ALSOFT_TRAP_ERROR");
     if(traperr && (al::strcasecmp(traperr->c_str(), "true") == 0

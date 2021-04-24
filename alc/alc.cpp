@@ -856,8 +856,8 @@ std::string alcAllDevicesList;
 std::string alcCaptureDeviceList;
 
 /* Default is always the first in the list */
-al::string alcDefaultAllDevicesSpecifier;
-al::string alcCaptureDefaultDeviceSpecifier;
+std::string alcDefaultAllDevicesSpecifier;
+std::string alcCaptureDefaultDeviceSpecifier;
 
 /* Default context extensions */
 constexpr ALchar alExtList[] =
@@ -1028,7 +1028,7 @@ void alc_initconfig(void)
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
         ALSOFT_GIT_BRANCH);
     {
-        al::string names;
+        std::string names;
         if(al::size(BackendList) < 1)
             names = "(none)";
         else

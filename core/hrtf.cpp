@@ -11,12 +11,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <functional>
 #include <fstream>
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
 #include <type_traits>
 #include <utility>
@@ -33,8 +31,10 @@
 #include "helpers.h"
 #include "logging.h"
 #include "math_defs.h"
+#include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
 #include "polyphase_resampler.h"
+#include "vector.h"
 
 
 namespace {

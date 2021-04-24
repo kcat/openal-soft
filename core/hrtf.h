@@ -12,7 +12,6 @@
 #include "atomic.h"
 #include "ambidefs.h"
 #include "bufferline.h"
-#include "filters/splitter.h"
 #include "mixer/hrtfdefs.h"
 #include "intrusive_ptr.h"
 #include "vector.h"

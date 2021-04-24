@@ -980,12 +980,6 @@ constexpr int alcEFXMajorVersion{1};
 constexpr int alcEFXMinorVersion{0};
 
 
-/* To avoid extraneous allocations, a 0-sized FlexArray<ContextBase*> is
- * defined globally as a sharable object.
- */
-al::FlexArray<ContextBase*> EmptyContextArray{0u};
-
-
 using DeviceRef = al::intrusive_ptr<ALCdevice>;
 
 
@@ -2301,14 +2295,14 @@ static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
 }
 
 
-DeviceBase::DeviceBase(DeviceType type) : Type{type}, mContexts{&EmptyContextArray}
+DeviceBase::DeviceBase(DeviceType type) : Type{type}, mContexts{&sEmptyContextArray}
 {
 }
 
 DeviceBase::~DeviceBase()
 {
     auto *oldarray = mContexts.exchange(nullptr, std::memory_order_relaxed);
-    if(oldarray != &EmptyContextArray) delete oldarray;
+    if(oldarray != &sEmptyContextArray) delete oldarray;
 }
 
 ALCdevice::~ALCdevice()
@@ -2547,7 +2541,7 @@ bool ALCcontext::deinit()
         using ContextArray = al::FlexArray<ContextBase*>;
         auto alloc_ctx_array = [](const size_t count) -> ContextArray*
         {
-            if(count == 0) return &EmptyContextArray;
+            if(count == 0) return &DeviceBase::sEmptyContextArray;
             return ContextArray::Create(count).release();
         };
         auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
@@ -2562,7 +2556,7 @@ bool ALCcontext::deinit()
          * to finish before deleting the old array.
          */
         mDevice->mContexts.store(newarray);
-        if(oldarray != &EmptyContextArray)
+        if(oldarray != &DeviceBase::sEmptyContextArray)
         {
             mDevice->waitForMix();
             delete oldarray;
@@ -3393,7 +3387,7 @@ START_API_FUNC
          * to finish before deleting the old array.
          */
         dev->mContexts.store(newarray.release());
-        if(oldarray != &EmptyContextArray)
+        if(oldarray != &DeviceBase::sEmptyContextArray)
         {
             dev->waitForMix();
             delete oldarray;

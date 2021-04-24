@@ -657,6 +657,8 @@ set(CORE_OBJS
     core/cpu_caps.h
     core/devformat.cpp
     core/devformat.h
+    core/device.cpp
+    core/device.h
     core/except.cpp
     core/except.h
     core/filters/biquad.h

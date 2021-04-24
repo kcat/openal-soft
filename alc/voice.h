@@ -1,9 +1,13 @@
 #ifndef VOICE_H
 #define VOICE_H
 
+#include <stddef.h>
+
 #include <array>
 #include <atomic>
+#include <memory>
 
+#include "albyte.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "alu.h"
@@ -15,6 +19,7 @@
 #include "core/filters/splitter.h"
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
+#include "core/resampler_limits.h"
 #include "core/uhjfilter.h"
 #include "vector.h"
 

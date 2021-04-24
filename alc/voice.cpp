@@ -22,19 +22,19 @@
 
 #include "voice.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <climits>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
 #include <new>
 #include <utility>
+#include <vector>
 
-#include "alcmain.h"
 #include "albyte.h"
 #include "alconfig.h"
 #include "alcontext.h"
@@ -46,21 +46,20 @@
 #include "async_event.h"
 #include "bformatdec.h"
 #include "buffer_storage.h"
+#include "core/ambidefs.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
-#include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
-#include "inprogext.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
-#include "threads.h"
 #include "vector.h"
 #include "voice_change.h"
 

@@ -740,7 +740,9 @@ void InitHrtfPanning(ALCdevice *device)
     static const float AmbiOrderHFGain1O[MaxAmbiOrder+1]{
         2.000000000e+00f, 1.154700538e+00f
     }, AmbiOrderHFGain2O[MaxAmbiOrder+1]{
-        2.357022604e+00f, 1.825741858e+00f, 9.428090416e-01f
+        /*AMP   1.000000000e+00f, 7.745966692e-01f, 4.000000000e-01f*/
+        /*RMS*/ 9.128709292e-01f, 7.071067812e-01f, 3.651483717e-01f
+        /*ENRGY 2.357022604e+00f, 1.825741858e+00f, 9.428090416e-01f*/
     };
 
     static_assert(al::size(AmbiPoints1O) == al::size(AmbiMatrix1O), "First-Order Ambisonic HRTF mismatch");

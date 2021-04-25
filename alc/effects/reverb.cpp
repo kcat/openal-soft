@@ -20,23 +20,34 @@
 
 #include "config.h"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-
-#include <array>
-#include <numeric>
 #include <algorithm>
+#include <array>
+#include <cstdio>
 #include <functional>
+#include <iterator>
+#include <numeric>
+#include <stdint.h>
 
-#include "alcmain.h"
 #include "alcontext.h"
+#include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
+#include "alu.h"
 #include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
+#include "core/filters/splitter.h"
+#include "core/mixer.h"
+#include "core/mixer/defs.h"
+#include "effects/base.h"
 #include "effectslot.h"
-#include "vector.h"
+#include "intrusive_ptr.h"
+#include "math_defs.h"
+#include "opthelpers.h"
 #include "vecmat.h"
+#include "vector.h"
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.
@@ -44,6 +55,11 @@
 float ReverbBoost = 1.0f;
 
 namespace {
+
+using uint = unsigned int;
+
+constexpr float MaxModulationTime{4.0f};
+constexpr float DefaultModulationTime{0.25f};
 
 #define MOD_FRACBITS 24
 #define MOD_FRACONE  (1<<MOD_FRACBITS)
@@ -379,15 +395,15 @@ struct ReverbState final : public EffectState {
         /* Calculated parameters which indicate if cross-fading is needed after
          * an update.
          */
-        float Density{AL_EAXREVERB_DEFAULT_DENSITY};
-        float Diffusion{AL_EAXREVERB_DEFAULT_DIFFUSION};
-        float DecayTime{AL_EAXREVERB_DEFAULT_DECAY_TIME};
-        float HFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_HFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
-        float LFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_LFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
-        float ModulationTime{AL_EAXREVERB_DEFAULT_MODULATION_TIME};
-        float ModulationDepth{AL_EAXREVERB_DEFAULT_MODULATION_DEPTH};
-        float HFReference{AL_EAXREVERB_DEFAULT_HFREFERENCE};
-        float LFReference{AL_EAXREVERB_DEFAULT_LFREFERENCE};
+        float Density{1.0f};
+        float Diffusion{1.0f};
+        float DecayTime{1.49f};
+        float HFDecayTime{0.83f * 1.49f};
+        float LFDecayTime{1.0f * 1.49f};
+        float ModulationTime{0.25f};
+        float ModulationDepth{0.0f};
+        float HFReference{5000.0f};
+        float LFReference{250.0f};
     } mParams;
 
     /* Master effect filters */
@@ -556,16 +572,17 @@ void ReverbState::allocLines(const float frequency)
     /* Multiplier for the maximum density value, i.e. density=1, which is
      * actually the least density...
      */
-    const float multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
+    const float multiplier{CalcDelayLengthMult(1.0f)};
 
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
      * largest late tap width.  Finally, it must also be extended by the
      * update size (BufferLineSize) for block processing.
      */
-    float length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier +
-        AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
-        (LATE_LINE_LENGTHS.back() - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*multiplier};
+    constexpr float LateLineDiffAvg{(LATE_LINE_LENGTHS.back()-LATE_LINE_LENGTHS.front()) /
+        float{NUM_LINES}};
+    float length{ReverbMaxReflectionsDelay + EARLY_TAP_LENGTHS.back()*multiplier +
+        ReverbMaxLateReverbDelay + LateLineDiffAvg*multiplier};
     totalSamples += mDelay.calcLineLength(length, totalSamples, frequency, BufferLineSize);
 
     /* The early vector all-pass line. */
@@ -584,7 +601,7 @@ void ReverbState::allocLines(const float frequency)
      * time and depth coefficient, and halfed for the low-to-high frequency
      * swing.
      */
-    constexpr float max_mod_delay{AL_EAXREVERB_MAX_MODULATION_TIME*MODULATION_DEPTH_COEFF / 2.0f};
+    constexpr float max_mod_delay{MaxModulationTime*MODULATION_DEPTH_COEFF / 2.0f};
 
     /* The late delay lines are calculated from the largest maximum density
      * line length, and the maximum modulation delay. An additional sample is
@@ -614,11 +631,11 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const Buffer&)
     /* Allocate the delay lines. */
     allocLines(frequency);
 
-    const float multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
+    const float multiplier{CalcDelayLengthMult(1.0f)};
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
-    mLateFeedTap = float2uint(
-        (AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS.back()*multiplier) * frequency);
+    mLateFeedTap = float2uint((ReverbMaxReflectionsDelay + EARLY_TAP_LENGTHS.back()*multiplier) *
+        frequency);
 
     /* Clear filters and gain coefficients since the delay lines were all just
      * cleared (if not reallocated).
@@ -813,15 +830,14 @@ void Modulation::updateModulator(float modTime, float modDepth, float frequency)
      * (half of it is spent decreasing the frequency, half is spent increasing
      * it).
      */
-    if(modTime >= AL_EAXREVERB_DEFAULT_MODULATION_TIME)
+    if(modTime >= DefaultModulationTime)
     {
         /* To cancel the effects of a long period modulation on the late
          * reverberation, the amount of pitch should be varied (decreased)
          * according to the modulation time. The natural form is varying
          * inversely, in fact resulting in an invariant.
          */
-        Depth[1] = MODULATION_DEPTH_COEFF / 4.0f * AL_EAXREVERB_DEFAULT_MODULATION_TIME *
-            modDepth * frequency;
+        Depth[1] = MODULATION_DEPTH_COEFF / 4.0f * DefaultModulationTime * modDepth * frequency;
     }
     else
         Depth[1] = MODULATION_DEPTH_COEFF / 4.0f * modTime * modDepth * frequency;
@@ -835,7 +851,8 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
     /* Scaling factor to convert the normalized reference frequencies from
      * representing 0...freq to 0...max_reference.
      */
-    const float norm_weight_factor{frequency / AL_EAXREVERB_MAX_HFREFERENCE};
+    constexpr float MaxHFReference{20000.0f};
+    const float norm_weight_factor{frequency / MaxHFReference};
 
     const float late_allpass_avg{
         std::accumulate(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
@@ -1024,10 +1041,10 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
             props->Reverb.DecayTime);
 
     /* Calculate the LF/HF decay times. */
-    const float lfDecayTime{clampf(props->Reverb.DecayTime * props->Reverb.DecayLFRatio,
-        AL_EAXREVERB_MIN_DECAY_TIME, AL_EAXREVERB_MAX_DECAY_TIME)};
-    const float hfDecayTime{clampf(props->Reverb.DecayTime * hfRatio,
-        AL_EAXREVERB_MIN_DECAY_TIME, AL_EAXREVERB_MAX_DECAY_TIME)};
+    constexpr float MinDecayTime{0.1f}, MaxDecayTime{20.0f};
+    const float lfDecayTime{clampf(props->Reverb.DecayTime*props->Reverb.DecayLFRatio,
+        MinDecayTime, MaxDecayTime)};
+    const float hfDecayTime{clampf(props->Reverb.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
 
     /* Update the modulator rate and depth. */
     mLate.Mod.updateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,

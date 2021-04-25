@@ -21,26 +21,32 @@
 #include "config.h"
 
 #include <algorithm>
+#include <array>
 #include <climits>
-#include <cmath>
 #include <cstdlib>
 #include <iterator>
 
-#include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "alu.h"
-#include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/mixer.h"
+#include "core/mixer/defs.h"
+#include "core/resampler_limits.h"
 #include "effects/base.h"
 #include "effectslot.h"
+#include "intrusive_ptr.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 #include "vector.h"
 
 
 namespace {
+
+using uint = unsigned int;
 
 #define MAX_UPDATE_SAMPLES 256
 
@@ -79,7 +85,7 @@ struct ChorusState final : public EffectState {
 
 void ChorusState::deviceUpdate(const DeviceBase *Device, const Buffer&)
 {
-    constexpr float max_delay{maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY)};
+    constexpr float max_delay{maxf(ChorusMaxDelay, FlangerMaxDelay)};
 
     const auto frequency = static_cast<float>(Device->Frequency);
     const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*frequency) + 1u)};
@@ -247,7 +253,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
             ++offset;
         }
 
-        for(ALsizei c{0};c < 2;++c)
+        for(size_t c{0};c < 2;++c)
             MixSamples({temps[c], todo}, samplesOut, mGains[c].Current, mGains[c].Target,
                 samplesToDo-base, base);
 

@@ -18,10 +18,16 @@ struct BufferStorage;
 /** Target gain for the reverb decay feedback reaching the decay time. */
 constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
 
+constexpr float ReverbMaxReflectionsDelay{0.3f};
+constexpr float ReverbMaxLateReverbDelay{0.1f};
+
 enum class ChorusWaveform {
     Sinusoid,
     Triangle
 };
+
+constexpr float ChorusMaxDelay{0.016f};
+constexpr float FlangerMaxDelay{0.004f};
 
 constexpr float EchoMaxDelay{0.207f};
 constexpr float EchoMaxLRDelay{0.404f};

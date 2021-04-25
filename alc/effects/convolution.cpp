@@ -1,7 +1,15 @@
 
 #include "config.h"
 
+#include <algorithm>
+#include <array>
+#include <complex>
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <memory>
 #include <stdint.h>
+#include <utility>
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
@@ -9,20 +17,28 @@
 #include <arm_neon.h>
 #endif
 
+#include "albyte.h"
 #include "alcmain.h"
 #include "alcomplex.h"
 #include "alcontext.h"
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "buffer_storage.h"
+#include "config.h"
 #include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
-#include "core/logging.h"
+#include "core/mixer.h"
 #include "effects/base.h"
 #include "effectslot.h"
+#include "intrusive_ptr.h"
 #include "math_defs.h"
 #include "polyphase_resampler.h"
+#include "vector.h"
 
 
 namespace {

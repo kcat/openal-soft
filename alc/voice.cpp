@@ -53,6 +53,7 @@
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
 #include "core/logging.h"
+#include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
@@ -74,8 +75,6 @@ struct CopyTag;
 static_assert(!(sizeof(Voice::BufferLine)&15), "Voice::BufferLine must be a multiple of 16 bytes");
 
 Resampler ResamplerDefault{Resampler::Linear};
-
-MixerFunc MixSamples{Mix_<CTag>};
 
 namespace {
 

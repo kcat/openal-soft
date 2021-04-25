@@ -20,17 +20,28 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <cmath>
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <iterator>
 
 #include "alcmain.h"
-#include "alcontext.h"
-#include "alu.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/mixer.h"
+#include "effects/base.h"
 #include "effectslot.h"
+#include "intrusive_ptr.h"
+
+struct ContextBase;
 
 
 namespace {
+
+using uint = unsigned int;
 
 struct DedicatedState final : public EffectState {
     float mCurrentGains[MAX_OUTPUT_CHANNELS];

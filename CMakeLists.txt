@@ -680,6 +680,8 @@ set(CORE_OBJS
     core/logging.h
     core/mastering.cpp
     core/mastering.h
+    core/mixer.cpp
+    core/mixer.h
     core/resampler_limits.h
     core/uhjfilter.cpp
     core/uhjfilter.h

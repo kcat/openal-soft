@@ -5,15 +5,13 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cmath>
-#include <iterator>
-#include <numeric>
+#include <utility>
 
 #include "almalloc.h"
-#include "alu.h"
 #include "core/ambdec.h"
 #include "core/filters/splitter.h"
+#include "core/mixer.h"
 #include "front_stablizer.h"
 #include "math_defs.h"
 #include "opthelpers.h"

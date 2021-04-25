@@ -20,17 +20,25 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-
 #include <algorithm>
+#include <array>
+#include <cstdlib>
 #include <functional>
+#include <iterator>
+#include <utility>
 
-#include "alcmain.h"
 #include "alcontext.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
+#include "core/mixer.h"
+#include "effects/base.h"
 #include "effectslot.h"
-#include "vecmat.h"
+#include "intrusive_ptr.h"
 
 
 namespace {

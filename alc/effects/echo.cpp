@@ -20,19 +20,31 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <iterator>
+#include <tuple>
 
-#include "alcmain.h"
 #include "alcontext.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "alspan.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
+#include "core/mixer.h"
+#include "effects/base.h"
 #include "effectslot.h"
+#include "intrusive_ptr.h"
+#include "opthelpers.h"
 #include "vector.h"
 
 
 namespace {
+
+using uint = unsigned int;
 
 constexpr float LowpassFreqRef{5000.0f};
 
@@ -148,7 +160,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
     mFilter.setComponents(z1, z2);
     mOffset = offset;
 
-    for(ALsizei c{0};c < 2;c++)
+    for(size_t c{0};c < 2;c++)
         MixSamples({mTempBuffer[c], samplesToDo}, samplesOut, mGains[c].Current, mGains[c].Target,
             samplesToDo, 0);
 }

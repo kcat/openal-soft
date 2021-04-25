@@ -20,23 +20,33 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-#include <array>
-#include <complex>
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <complex>
+#include <cstdlib>
+#include <iterator>
 
-#include "alcmain.h"
 #include "alcomplex.h"
-#include "alcontext.h"
+#include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
+#include "alspan.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/mixer.h"
+#include "core/mixer/defs.h"
+#include "effects/base.h"
 #include "effectslot.h"
+#include "intrusive_ptr.h"
 #include "math_defs.h"
+
+struct ContextBase;
 
 
 namespace {
 
+using uint = unsigned int;
 using complex_d = std::complex<double>;
 
 #define STFT_SIZE      1024

@@ -64,6 +64,7 @@
 #include "core/fpu_ctrl.h"
 #include "core/hrtf.h"
 #include "core/mastering.h"
+#include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "core/uhjfilter.h"
 #include "effects/base.h"

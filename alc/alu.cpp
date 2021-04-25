@@ -50,10 +50,10 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
-#include "async_event.h"
 #include "atomic.h"
 #include "bformatdec.h"
 #include "core/ambidefs.h"
+#include "core/async_event.h"
 #include "core/bs2b.h"
 #include "core/bsinc_tables.h"
 #include "core/cpu_caps.h"
@@ -1581,7 +1581,24 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
 
     AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
-    evt->u.srcstate.state = state;
+    switch(state)
+    {
+    case VChangeState::Reset:
+        evt->u.srcstate.state = AsyncEvent::SrcState::Reset;
+        break;
+    case VChangeState::Stop:
+        evt->u.srcstate.state = AsyncEvent::SrcState::Stop;
+        break;
+    case VChangeState::Play:
+        evt->u.srcstate.state = AsyncEvent::SrcState::Play;
+        break;
+    case VChangeState::Pause:
+        evt->u.srcstate.state = AsyncEvent::SrcState::Pause;
+        break;
+    /* Shouldn't happen. */
+    case VChangeState::Restart:
+        ASSUME(0);
+    }
 
     ring->writeAdvance(1);
 }

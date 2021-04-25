@@ -42,9 +42,9 @@
 #include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
-#include "async_event.h"
 #include "buffer_storage.h"
 #include "core/ambidefs.h"
+#include "core/async_event.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -185,7 +185,7 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 
     AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
-    evt->u.srcstate.state = VChangeState::Stop;
+    evt->u.srcstate.state = AsyncEvent::SrcState::Stop;
 
     ring->writeAdvance(1);
 }

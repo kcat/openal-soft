@@ -646,6 +646,7 @@ set(CORE_OBJS
     core/ambdec.h
     core/ambidefs.cpp
     core/ambidefs.h
+    core/async_event.h
     core/bs2b.cpp
     core/bs2b.h
     core/bsinc_defs.h
@@ -758,7 +759,6 @@ set(ALC_OBJS
     alc/alconfig.cpp
     alc/alconfig.h
     alc/alcontext.h
-    alc/async_event.h
     alc/bformatdec.cpp
     alc/bformatdec.h
     alc/buffer_storage.cpp

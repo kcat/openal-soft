@@ -1,22 +1,13 @@
 #ifndef ALU_H
 #define ALU_H
 
-#include <array>
-#include <cmath>
-#include <cstddef>
 #include <string>
-#include <type_traits>
 
 #include "aloptional.h"
-#include "alspan.h"
-#include "core/ambidefs.h"
-#include "core/bufferline.h"
-#include "core/devformat.h"
 
 struct ALCcontext;
 struct ALCdevice;
 struct EffectSlot;
-struct MixParams;
 
 
 #define MAX_SENDS  6

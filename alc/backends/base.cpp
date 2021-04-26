@@ -3,21 +3,22 @@
 
 #include "base.h"
 
+#include <algorithm>
+#include <array>
 #include <atomic>
-#include <thread>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <mmreg.h>
-#endif
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alnumeric.h"
-#include "aloptional.h"
-#include "atomic.h"
 #include "core/logging.h"
+#include "aloptional.h"
+#endif
+
+#include "atomic.h"
+#include "core/devformat.h"
 
 
 bool BackendBase::reset()

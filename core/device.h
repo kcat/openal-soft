@@ -271,4 +271,20 @@ struct DeviceBase {
     DISABLE_ALLOC()
 };
 
+
+/* Must be less than 15 characters (16 including terminating null) for
+ * compatibility with pthread_setname_np limitations. */
+#define MIXER_THREAD_NAME "alsoft-mixer"
+
+#define RECORD_THREAD_NAME "alsoft-record"
+
+
+/**
+ * Returns the index for the given channel name (e.g. FrontCenter), or
+ * INVALID_CHANNEL_INDEX if it doesn't exist.
+ */
+inline uint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
+{ return real.ChannelIndex[chan]; }
+#define INVALID_CHANNEL_INDEX ~0u
+
 #endif /* CORE_DEVICE_H */

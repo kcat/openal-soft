@@ -18,7 +18,6 @@
 #endif
 
 #include "albyte.h"
-#include "alcmain.h"
 #include "alcomplex.h"
 #include "alcontext.h"
 #include "almalloc.h"

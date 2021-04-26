@@ -25,7 +25,6 @@
 #include <cstdlib>
 #include <iterator>
 
-#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "core/bufferline.h"

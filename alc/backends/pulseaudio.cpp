@@ -23,30 +23,46 @@
 
 #include "backends/pulseaudio.h"
 
-#include <poll.h>
-#include <cstring>
-
-#include <array>
-#include <string>
-#include <vector>
-#include <atomic>
-#include <thread>
 #include <algorithm>
-#include <functional>
+#include <array>
+#include <atomic>
+#include <bitset>
+#include <chrono>
 #include <condition_variable>
+#include <cstring>
+#include <functional>
+#include <limits>
+#include <mutex>
+#include <new>
+#include <poll.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string>
+#include <sys/types.h>
+#include <thread>
+#include <utility>
 
-#include "alcmain.h"
-#include "alu.h"
+#include "albyte.h"
 #include "alconfig.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "aloptional.h"
+#include "alspan.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "opthelpers.h"
 #include "strutils.h"
+#include "vector.h"
 
 #include <pulse/pulseaudio.h>
 
 
 namespace {
+
+using uint = unsigned int;
 
 #ifdef HAVE_DYNLOAD
 #define PULSE_FUNCS(MAGIC)                                                    \

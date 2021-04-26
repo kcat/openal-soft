@@ -28,7 +28,6 @@
 #include <cassert>
 #include <chrono>
 #include <climits>
-#include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
@@ -37,46 +36,46 @@
 #include <limits>
 #include <memory>
 #include <new>
-#include <numeric>
+#include <stdint.h>
 #include <utility>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/efx.h"
-
-#include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "atomic.h"
+#include "buffer_storage.h"
 #include "core/ambidefs.h"
 #include "core/async_event.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
+#include "core/bsinc_defs.h"
 #include "core/bsinc_tables.h"
+#include "core/bufferline.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"
-#include "core/filters/splitter.h"
 #include "core/fpu_ctrl.h"
-#include "core/front_stablizer.h"
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
+#include "core/mixer/hrtfdefs.h"
+#include "core/resampler_limits.h"
 #include "core/uhjfilter.h"
 #include "effects/base.h"
 #include "effectslot.h"
-#include "inprogext.h"
+#include "intrusive_ptr.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 #include "threads.h"
 #include "vecmat.h"
+#include "vector.h"
 #include "voice.h"
 #include "voice_change.h"
 
@@ -93,7 +92,6 @@ struct SSE4Tag;
 #ifdef HAVE_NEON
 struct NEONTag;
 #endif
-struct CopyTag;
 struct PointTag;
 struct LerpTag;
 struct CubicTag;
@@ -105,6 +103,8 @@ static_assert(!(MaxResamplerPadding&1), "MaxResamplerPadding is not a multiple o
 
 
 namespace {
+
+using uint = unsigned int;
 
 constexpr uint MaxPitch{10};
 

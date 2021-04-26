@@ -2,12 +2,13 @@
 #define ALC_BACKENDS_BASE_H
 
 #include <chrono>
+#include <cstdarg>
 #include <memory>
-#include <mutex>
+#include <ratio>
 #include <string>
 
 #include "albyte.h"
-#include "alcmain.h"
+#include "core/device.h"
 #include "core/except.h"
 
 

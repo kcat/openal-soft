@@ -18,6 +18,7 @@
 #include "alnumeric.h"
 #include "alu.h"
 #include "atomic.h"
+#include "core/bufferline.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "threads.h"

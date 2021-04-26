@@ -647,6 +647,8 @@ set(CORE_OBJS
     core/ambidefs.cpp
     core/ambidefs.h
     core/async_event.h
+    core/bformatdec.cpp
+    core/bformatdec.h
     core/bs2b.cpp
     core/bs2b.h
     core/bsinc_defs.h
@@ -673,6 +675,7 @@ set(CORE_OBJS
     core/fmt_traits.h
     core/fpu_ctrl.cpp
     core/fpu_ctrl.h
+    core/front_stablizer.h
     core/helpers.cpp
     core/helpers.h
     core/hrtf.cpp
@@ -759,8 +762,6 @@ set(ALC_OBJS
     alc/alconfig.cpp
     alc/alconfig.h
     alc/alcontext.h
-    alc/bformatdec.cpp
-    alc/bformatdec.h
     alc/buffer_storage.cpp
     alc/buffer_storage.h
     alc/effectslot.cpp
@@ -780,7 +781,6 @@ set(ALC_OBJS
     alc/effects/pshifter.cpp
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
-    alc/front_stablizer.h
     alc/inprogext.h
     alc/panning.cpp
     alc/voice.cpp

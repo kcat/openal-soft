@@ -1,5 +1,5 @@
-#ifndef BFORMATDEC_H
-#define BFORMATDEC_H
+#ifndef CORE_BFORMATDEC_H
+#define CORE_BFORMATDEC_H
 
 #include <array>
 #include <cstddef>
@@ -7,10 +7,10 @@
 
 #include "almalloc.h"
 #include "alspan.h"
-#include "core/ambidefs.h"
-#include "core/bufferline.h"
-#include "core/devformat.h"
-#include "core/filters/splitter.h"
+#include "ambidefs.h"
+#include "bufferline.h"
+#include "devformat.h"
+#include "filters/splitter.h"
 
 struct AmbDecConf;
 struct FrontStablizer;
@@ -68,4 +68,4 @@ public:
     DEF_FAM_NEWDEL(BFormatDec, mChannelDec)
 };
 
-#endif /* BFORMATDEC_H */
+#endif /* CORE_BFORMATDEC_H */

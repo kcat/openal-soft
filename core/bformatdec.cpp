@@ -9,11 +9,11 @@
 #include <utility>
 
 #include "almalloc.h"
-#include "core/ambdec.h"
-#include "core/filters/splitter.h"
-#include "core/mixer.h"
+#include "ambdec.h"
+#include "filters/splitter.h"
 #include "front_stablizer.h"
 #include "math_defs.h"
+#include "mixer.h"
 #include "opthelpers.h"
 
 

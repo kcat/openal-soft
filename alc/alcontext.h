@@ -35,6 +35,8 @@ struct Voice;
 struct VoiceChange;
 struct VoicePropsItem;
 
+using uint = unsigned int;
+
 
 enum class DistanceModel : unsigned char {
     Disable,
@@ -108,6 +110,7 @@ struct ContextBase {
      */
     RefCount mUpdateCount{0u};
     std::atomic<bool> mHoldUpdates{false};
+    std::atomic<bool> mStopVoicesOnDisconnect{true};
 
     float mGainBoost{1.0f};
 

@@ -5,8 +5,10 @@
 
 #include <cassert>
 #include <cstring>
+#include <stdint.h>
 
-#include "alu.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/logging.h"
 
 #include "oboe/Oboe.h"

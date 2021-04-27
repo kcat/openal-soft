@@ -551,15 +551,20 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
     device->waitForMix();
     if UNLIKELY(!connected)
     {
-        /* If the device is disconnected, just ignore all pending changes. */
-        VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
-        while(VoiceChange *next{cur->mNext.load(std::memory_order_acquire)})
+        if(ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
-            cur = next;
-            if(Voice *voice{cur->mVoice})
-                voice->mSourceID.store(0, std::memory_order_relaxed);
+            /* If the device is disconnected and voices are stopped, just
+             * ignore all pending changes.
+             */
+            VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
+            while(VoiceChange *next{cur->mNext.load(std::memory_order_acquire)})
+            {
+                cur = next;
+                if(Voice *voice{cur->mVoice})
+                    voice->mSourceID.store(0, std::memory_order_relaxed);
+            }
+            ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
         }
-        ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
     }
 }
 
@@ -2925,17 +2930,22 @@ START_API_FUNC
     }
 
     ALCdevice *device{context->mALDevice.get()};
-    /* If the device is disconnected, go right to stopped. */
+    /* If the device is disconnected, and voices stop on disconnect, go right
+     * to stopped.
+     */
     if UNLIKELY(!device->Connected.load(std::memory_order_acquire))
     {
-        /* TODO: Send state change event? */
-        for(ALsource *source : srchandles)
+        if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
-            source->Offset = 0.0;
-            source->OffsetType = AL_NONE;
-            source->state = AL_STOPPED;
+            for(ALsource *source : srchandles)
+            {
+                /* TODO: Send state change event? */
+                source->Offset = 0.0;
+                source->OffsetType = AL_NONE;
+                source->state = AL_STOPPED;
+            }
+            return;
         }
-        return;
     }
 
     /* Count the number of reusable voices. */

@@ -834,6 +834,8 @@ constexpr struct {
     DECL(AL_FORMAT_UHJ4CHN8_SOFT),
     DECL(AL_FORMAT_UHJ4CHN16_SOFT),
     DECL(AL_FORMAT_UHJ4CHN_FLOAT32_SOFT),
+
+    DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 };
 #undef DECL
 
@@ -889,6 +891,7 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_events "
     "AL_SOFTX_filter_gain_ex "
     "AL_SOFT_gain_clamp_ex "
+    "AL_SOFTX_hold_on_disconnect "
     "AL_SOFT_loop_points "
     "AL_SOFTX_map_buffer "
     "AL_SOFT_MSADPCM "
@@ -2269,6 +2272,8 @@ static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
         for(ContextBase *ctxbase : *device->mContexts.load(std::memory_order_acquire))
         {
             auto *ctx = static_cast<ALCcontext*>(ctxbase);
+            if(!ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
+                continue;
 
             /* Clear any pending voice changes and reallocate voices to get a
              * clean restart.

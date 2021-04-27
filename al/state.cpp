@@ -32,6 +32,7 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alcmain.h"
 #include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -152,12 +153,18 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
-    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        context->mSourceDistanceModel = true;
-        DO_UPDATEPROPS();
+        {
+            std::lock_guard<std::mutex> _{context->mPropLock};
+            context->mSourceDistanceModel = true;
+            DO_UPDATEPROPS();
+        }
+        break;
+
+    case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
+        context->setError(AL_INVALID_OPERATION, "Re-enabling AL_STOP_SOURCES_ON_DISCONNECT_SOFT not yet supported");
         break;
 
     default:
@@ -172,12 +179,18 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
-    std::lock_guard<std::mutex> _{context->mPropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
-        context->mSourceDistanceModel = false;
-        DO_UPDATEPROPS();
+        {
+            std::lock_guard<std::mutex> _{context->mPropLock};
+            context->mSourceDistanceModel = false;
+            DO_UPDATEPROPS();
+        }
+        break;
+
+    case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
+        context->mStopVoicesOnDisconnect = false;
         break;
 
     default:
@@ -198,6 +211,10 @@ START_API_FUNC
     {
     case AL_SOURCE_DISTANCE_MODEL:
         value = context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
+        break;
+
+    case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
+        value = context->mStopVoicesOnDisconnect ? AL_TRUE : AL_FALSE;
         break;
 
     default:

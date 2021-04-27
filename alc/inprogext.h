@@ -89,6 +89,11 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 #define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
 #endif
 
+#ifndef AL_SOFT_hold_on_disconnect
+#define AL_SOFT_hold_on_disconnect
+#define AL_STOP_SOURCES_ON_DISCONNECT_SOFT       0x19AB
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

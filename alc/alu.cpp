@@ -2030,6 +2030,12 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
             }
         }
 
+        if(!ctx->mStopVoicesOnDisconnect)
+        {
+            ProcessVoiceChanges(ctx);
+            continue;
+        }
+
         auto voicelist = ctx->getVoicesSpanAcquired();
         auto stop_voice = [](Voice *voice) -> void
         {

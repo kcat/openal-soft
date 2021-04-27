@@ -1,21 +1,13 @@
 #ifndef ALU_H
 #define ALU_H
 
-#include <string>
-
-#include "aloptional.h"
-
 struct ALCcontext;
 struct ALCdevice;
 struct EffectSlot;
 
 
-#define MAX_SENDS  6
-
-
 constexpr float GainMixMax{1000.0f}; /* +60dB */
 
-constexpr float SpeedOfSoundMetersPerSec{343.3f};
 constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 
 
@@ -26,8 +18,6 @@ enum HrtfRequestMode {
 };
 
 void aluInit(void);
-
-void aluInitMixer(al::optional<std::string> resampler);
 
 /* aluInitRenderer
  *

@@ -39,7 +39,6 @@
 #include <stdint.h>
 #include <utility>
 
-#include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -53,6 +52,7 @@
 #include "core/bsinc_defs.h"
 #include "core/bsinc_tables.h"
 #include "core/bufferline.h"
+#include "core/context.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -66,6 +66,7 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
 #include "core/uhjfilter.h"
+#include "core/voice_change.h"
 #include "effects/base.h"
 #include "effectslot.h"
 #include "intrusive_ptr.h"
@@ -77,7 +78,6 @@
 #include "vecmat.h"
 #include "vector.h"
 #include "voice.h"
-#include "voice_change.h"
 
 struct CTag;
 #ifdef HAVE_SSE

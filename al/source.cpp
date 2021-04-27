@@ -63,6 +63,7 @@
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
 #include "core/logging.h"
+#include "core/voice_change.h"
 #include "event.h"
 #include "filter.h"
 #include "inprogext.h"
@@ -70,7 +71,6 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "voice_change.h"
 
 
 namespace {

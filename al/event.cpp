@@ -23,12 +23,12 @@
 #include "core/async_event.h"
 #include "core/except.h"
 #include "core/logging.h"
+#include "core/voice_change.h"
 #include "effects/base.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "voice_change.h"
 
 
 static int EventThread(ALCcontext *context)

@@ -93,6 +93,7 @@
 #include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/uhjfilter.h"
+#include "core/voice_change.h"
 #include "effects/base.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
@@ -103,7 +104,6 @@
 #include "threads.h"
 #include "vecmat.h"
 #include "vector.h"
-#include "voice_change.h"
 
 #include "backends/base.h"
 #include "backends/null.h"

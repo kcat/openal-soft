@@ -655,6 +655,8 @@ set(CORE_OBJS
     core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
+    core/context.cpp
+    core/context.h
     core/converter.cpp
     core/converter.h
     core/cpu_caps.cpp
@@ -689,7 +691,8 @@ set(CORE_OBJS
     core/resampler_limits.h
     core/uhjfilter.cpp
     core/uhjfilter.h
-    core/uiddefs.cpp)
+    core/uiddefs.cpp
+    core/voice_change.h)
 
 set(HAVE_RTKIT 0)
 option(ALSOFT_REQUIRE_RTKIT "Require RTKit/D-Bus support" FALSE)
@@ -784,8 +787,7 @@ set(ALC_OBJS
     alc/inprogext.h
     alc/panning.cpp
     alc/voice.cpp
-    alc/voice.h
-    alc/voice_change.h)
+    alc/voice.h)
 
 # Include SIMD mixers
 set(CPU_EXTS "Default")

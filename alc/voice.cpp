@@ -22,8 +22,6 @@
 
 #include "voice.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -32,19 +30,19 @@
 #include <iterator>
 #include <memory>
 #include <new>
+#include <stdlib.h>
 #include <utility>
 #include <vector>
 
 #include "albyte.h"
-#include "alcontext.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
-#include "alu.h"
 #include "buffer_storage.h"
 #include "core/ambidefs.h"
 #include "core/async_event.h"
+#include "core/context.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -57,10 +55,10 @@
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
+#include "core/voice_change.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "vector.h"
-#include "voice_change.h"
 
 struct CTag;
 #ifdef HAVE_SSE
@@ -77,6 +75,8 @@ static_assert(!(sizeof(Voice::BufferLine)&15), "Voice::BufferLine must be a mult
 Resampler ResamplerDefault{Resampler::Linear};
 
 namespace {
+
+using uint = unsigned int;
 
 using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);

@@ -6,11 +6,12 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <string>
 
 #include "albyte.h"
 #include "almalloc.h"
+#include "aloptional.h"
 #include "alspan.h"
-#include "alu.h"
 #include "buffer_storage.h"
 #include "core/bufferline.h"
 #include "core/devformat.h"
@@ -29,6 +30,9 @@ struct EffectSlot;
 enum class DistanceModel : unsigned char;
 
 using uint = unsigned int;
+
+
+#define MAX_SENDS  6
 
 
 enum class SpatializeMode : unsigned char {
@@ -261,5 +265,7 @@ struct Voice {
 };
 
 extern Resampler ResamplerDefault;
+
+void aluInitMixer(al::optional<std::string> resampler);
 
 #endif /* VOICE_H */

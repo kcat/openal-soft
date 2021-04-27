@@ -763,12 +763,13 @@ set(OPENAL_OBJS
 # ALC and related routines
 set(ALC_OBJS
     alc/alc.cpp
-    alc/alcmain.h
     alc/alu.cpp
     alc/alu.h
     alc/alconfig.cpp
     alc/alconfig.h
     alc/alcontext.h
+    alc/device.cpp
+    alc/device.h
     alc/effectslot.cpp
     alc/effectslot.h
     alc/effects/base.h

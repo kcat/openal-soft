@@ -1,7 +1,7 @@
 #ifndef BACKENDS_SOLARIS_H
 #define BACKENDS_SOLARIS_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct SolarisBackendFactory final : public BackendFactory {
 public:

@@ -24,25 +24,25 @@
 
 #include <atomic>
 #include <cmath>
-#include <cstdlib>
-#include <cstring>
 #include <mutex>
+#include <stdexcept>
+#include <string>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alc/alcmain.h"
 #include "alc/alcontext.h"
 #include "alc/alu.h"
 #include "alc/inprogext.h"
-#include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
+#include "aloptional.h"
 #include "atomic.h"
+#include "core/context.h"
 #include "core/except.h"
+#include "core/mixer/defs.h"
 #include "core/voice.h"
-#include "event.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "strutils.h"
 

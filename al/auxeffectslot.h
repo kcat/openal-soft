@@ -8,7 +8,7 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "alc/alcmain.h"
+#include "alc/device.h"
 #include "alc/effectslot.h"
 #include "alc/effects/base.h"
 #include "almalloc.h"

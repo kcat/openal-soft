@@ -1,7 +1,7 @@
 #ifndef BACKENDS_SDL2_H
 #define BACKENDS_SDL2_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct SDL2BackendFactory final : public BackendFactory {
 public:

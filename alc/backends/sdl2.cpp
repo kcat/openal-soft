@@ -20,16 +20,15 @@
 
 #include "config.h"
 
-#include "backends/sdl2.h"
+#include "sdl2.h"
 
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 
-#include "alcmain.h"
 #include "almalloc.h"
-#include "alu.h"
+#include "core/device.h"
 #include "core/logging.h"
 
 #include <SDL2/SDL.h>

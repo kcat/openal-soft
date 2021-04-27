@@ -1,35 +1,18 @@
-#ifndef ALC_MAIN_H
-#define ALC_MAIN_H
+#ifndef ALC_DEVICE_H
+#define ALC_DEVICE_H
 
-#include <algorithm>
-#include <array>
 #include <atomic>
-#include <bitset>
-#include <chrono>
-#include <cstdint>
-#include <cstddef>
-#include <memory>
 #include <mutex>
+#include <stdint.h>
 #include <string>
-#include <thread>
 #include <utility>
 
-#include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
-#include "atomic.h"
-#include "core/ambidefs.h"
-#include "core/bufferline.h"
-#include "core/devformat.h"
 #include "core/device.h"
-#include "core/filters/splitter.h"
-#include "core/hrtf.h"
-#include "core/mixer/defs.h"
-#include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 

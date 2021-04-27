@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/solaris.h"
+#include "solaris.h"
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -39,10 +39,9 @@
 #include <thread>
 #include <functional>
 
-#include "alcmain.h"
 #include "albyte.h"
-#include "alu.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "threads.h"

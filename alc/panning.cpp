@@ -38,7 +38,6 @@
 #include "AL/alext.h"
 
 #include "al/auxeffectslot.h"
-#include "alcmain.h"
 #include "alconfig.h"
 #include "alcontext.h"
 #include "almalloc.h"
@@ -56,6 +55,7 @@
 #include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/uhjfilter.h"
+#include "device.h"
 #include "math_defs.h"
 #include "opthelpers.h"
 

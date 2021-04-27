@@ -37,8 +37,8 @@
 #include "AL/efx.h"
 
 #include "albit.h"
-#include "alc/alcmain.h"
 #include "alc/alcontext.h"
+#include "alc/device.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/except.h"

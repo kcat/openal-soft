@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/wasapi.h"
+#include "wasapi.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -56,10 +56,10 @@
 #include <vector>
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alu.h"
+#include "alnumeric.h"
 #include "comptr.h"
 #include "core/converter.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"

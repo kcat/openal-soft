@@ -1,18 +1,21 @@
 #ifndef EFFECTS_BASE_H
 #define EFFECTS_BASE_H
 
-#include <cstddef>
+#include <stddef.h>
 
 #include "albyte.h"
-#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
+#include "core/bufferline.h"
 #include "intrusive_ptr.h"
 
-struct ContextBase;
-struct EffectSlot;
 struct BufferStorage;
+struct ContextBase;
+struct DeviceBase;
+struct EffectSlot;
+struct MixParams;
+struct RealMixParams;
 
 
 /** Target gain for the reverb decay feedback reaching the decay time. */

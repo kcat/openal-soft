@@ -2,10 +2,10 @@
 #include "config.h"
 
 #include "AL/al.h"
-#include "inprogext.h"
+#include "alc/inprogext.h"
 
+#include "alc/effects/base.h"
 #include "effects.h"
-#include "effects/base.h"
 
 
 namespace {

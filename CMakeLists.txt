@@ -1345,7 +1345,6 @@ target_include_directories(${IMPL_TARGET}
     ${INC_PATHS}
     ${OpenAL_BINARY_DIR}
     ${OpenAL_SOURCE_DIR}
-    ${OpenAL_SOURCE_DIR}/alc
     ${OpenAL_SOURCE_DIR}/common
 )
 

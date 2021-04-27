@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/dsound.h"
+#include "dsound.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -44,9 +44,9 @@
 #include <algorithm>
 #include <functional>
 
-#include "alcmain.h"
-#include "alu.h"
+#include "alnumeric.h"
 #include "comptr.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
@@ -175,7 +175,7 @@ struct DSoundPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;

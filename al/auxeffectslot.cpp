@@ -36,18 +36,18 @@
 #include "AL/efx.h"
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alcontext.h"
+#include "alc/alcmain.h"
+#include "alc/alcontext.h"
+#include "alc/alu.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "alu.h"
 #include "buffer.h"
 #include "core/except.h"
 #include "core/fpu_ctrl.h"
 #include "core/logging.h"
 #include "effect.h"
-#include "inprogext.h"
 #include "opthelpers.h"
 
 

@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#include "backends/pulseaudio.h"
+#include "pulseaudio.h"
 
 #include <algorithm>
 #include <array>
@@ -43,7 +43,7 @@
 #include <utility>
 
 #include "albyte.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"

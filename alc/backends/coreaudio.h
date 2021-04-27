@@ -1,7 +1,7 @@
 #ifndef BACKENDS_COREAUDIO_H
 #define BACKENDS_COREAUDIO_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct CoreAudioBackendFactory final : public BackendFactory {
 public:

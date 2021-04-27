@@ -10,9 +10,9 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <limits>
 #include <string>
 
-#include "alcmain.h"
 #include "almalloc.h"
 #include "alfstream.h"
 #include "aloptional.h"
@@ -199,7 +199,8 @@ void SetRTPriority(void)
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include "core/rtkit.h"
+#include "dbus_wrap.h"
+#include "rtkit.h"
 #ifndef RLIMIT_RTTIME
 #define RLIMIT_RTTIME 15
 #endif

@@ -27,6 +27,8 @@
 #include <iterator>
 #include <utility>
 
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -36,8 +38,6 @@
 #include "core/device.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
-#include "effects/base.h"
-#include "effectslot.h"
 #include "intrusive_ptr.h"
 
 

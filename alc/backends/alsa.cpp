@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/alsa.h"
+#include "alsa.h"
 
 #include <algorithm>
 #include <atomic>
@@ -36,12 +36,11 @@
 #include <utility>
 
 #include "albyte.h"
-#include "alcmain.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
-#include "alu.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"

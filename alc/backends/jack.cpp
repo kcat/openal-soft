@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/jack.h"
+#include "jack.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -31,9 +31,9 @@
 #include <thread>
 #include <functional>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"

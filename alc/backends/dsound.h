@@ -1,7 +1,7 @@
 #ifndef BACKENDS_DSOUND_H
 #define BACKENDS_DSOUND_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct DSoundBackendFactory final : public BackendFactory {
 public:

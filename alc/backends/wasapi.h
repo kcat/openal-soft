@@ -1,7 +1,7 @@
 #ifndef BACKENDS_WASAPI_H
 #define BACKENDS_WASAPI_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct WasapiBackendFactory final : public BackendFactory {
 public:

@@ -20,23 +20,22 @@
 
 #include "config.h"
 
-#include "backends/coreaudio.h"
+#include "coreaudio.h"
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <cmath>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "ringbuffer.h"
+#include "alnumeric.h"
 #include "core/converter.h"
+#include "core/device.h"
 #include "core/logging.h"
-#include "backends/base.h"
+#include "ringbuffer.h"
 
-#include <unistd.h>
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
 

@@ -5,8 +5,8 @@
 
 #include "almalloc.h"
 #include "alspan.h"
+#include "base.h"
 #include "core/bufferline.h"
-#include "effects/base.h"
 #include "intrusive_ptr.h"
 
 struct ContextBase;

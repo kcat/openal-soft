@@ -27,6 +27,8 @@
 #include <cstdlib>
 #include <iterator>
 
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
 #include "alcomplex.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -36,8 +38,6 @@
 #include "core/device.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
-#include "effects/base.h"
-#include "effectslot.h"
 #include "intrusive_ptr.h"
 #include "math_defs.h"
 

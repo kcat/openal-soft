@@ -27,7 +27,7 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alcontext.h"
+#include "alc/alcontext.h"
 #include "alstring.h"
 #include "core/except.h"
 #include "opthelpers.h"

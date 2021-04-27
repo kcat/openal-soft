@@ -1,7 +1,7 @@
 #ifndef BACKENDS_LOOPBACK_H
 #define BACKENDS_LOOPBACK_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct LoopbackBackendFactory final : public BackendFactory {
 public:

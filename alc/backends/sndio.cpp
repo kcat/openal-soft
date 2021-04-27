@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/sndio.h"
+#include "sndio.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +29,8 @@
 #include <thread>
 #include <functional>
 
-#include "alcmain.h"
-#include "alu.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"

@@ -1,7 +1,7 @@
 #ifndef BACKENDS_PULSEAUDIO_H
 #define BACKENDS_PULSEAUDIO_H
 
-#include "backends/base.h"
+#include "base.h"
 
 class PulseBackendFactory final : public BackendFactory {
 public:

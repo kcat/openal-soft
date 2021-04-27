@@ -20,15 +20,15 @@
 
 #include "config.h"
 
-#include "backends/portaudio.h"
+#include "portaudio.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"

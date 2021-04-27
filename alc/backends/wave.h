@@ -1,7 +1,7 @@
 #ifndef BACKENDS_WAVE_H
 #define BACKENDS_WAVE_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct WaveBackendFactory final : public BackendFactory {
 public:

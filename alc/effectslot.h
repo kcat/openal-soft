@@ -1,13 +1,12 @@
 #ifndef EFFECTSLOT_H
 #define EFFECTSLOT_H
 
-#include <atomic.h>
+#include <atomic>
 
 #include "almalloc.h"
-#include "alcmain.h"
+#include "core/device.h"
 #include "effects/base.h"
 #include "intrusive_ptr.h"
-
 
 struct EffectSlot;
 struct WetBuffer;

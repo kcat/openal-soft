@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/null.h"
+#include "null.h"
 
 #include <exception>
 #include <atomic>
@@ -30,9 +30,8 @@
 #include <functional>
 #include <thread>
 
-#include "alcmain.h"
+#include "core/device.h"
 #include "almalloc.h"
-#include "alu.h"
 #include "core/helpers.h"
 #include "threads.h"
 

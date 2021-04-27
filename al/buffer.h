@@ -6,10 +6,10 @@
 #include "AL/al.h"
 
 #include "albyte.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
 #include "core/buffer_storage.h"
-#include "inprogext.h"
 #include "vector.h"
 
 

@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#include "backends/opensl.h"
+#include "opensl.h"
 
 #include <stdlib.h>
 #include <jni.h>
@@ -33,8 +33,8 @@
 #include <functional>
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alu.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"

@@ -11,11 +11,11 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alcontext.h"
+#include "alc/alcontext.h"
+#include "alc/alu.h"
 #include "aldeque.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
 #include "atomic.h"
 #include "core/voice.h"
 #include "math_defs.h"

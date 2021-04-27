@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/oss.h"
+#include "oss.h"
 
 #include <fcntl.h>
 #include <poll.h>
@@ -41,13 +41,12 @@
 #include <thread>
 #include <utility>
 
-#include "alcmain.h"
-#include "alconfig.h"
 #include "albyte.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
-#include "alu.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"

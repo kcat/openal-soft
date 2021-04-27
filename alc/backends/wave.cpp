@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/wave.h"
+#include "wave.h"
 
 #include <algorithm>
 #include <atomic>
@@ -35,11 +35,10 @@
 
 #include "albit.h"
 #include "albyte.h"
-#include "alcmain.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"

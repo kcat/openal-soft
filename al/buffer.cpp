@@ -43,8 +43,9 @@
 
 #include "albit.h"
 #include "albyte.h"
-#include "alcmain.h"
-#include "alcontext.h"
+#include "alc/alcmain.h"
+#include "alc/alcontext.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -52,7 +53,6 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "core/voice.h"
-#include "inprogext.h"
 #include "opthelpers.h"
 
 

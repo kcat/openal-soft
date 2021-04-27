@@ -1,7 +1,7 @@
 #ifndef BACKENDS_WINMM_H
 #define BACKENDS_WINMM_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct WinMMBackendFactory final : public BackendFactory {
 public:

@@ -1,7 +1,7 @@
 #ifndef BACKENDS_ALSA_H
 #define BACKENDS_ALSA_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct AlsaBackendFactory final : public BackendFactory {
 public:

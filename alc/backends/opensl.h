@@ -1,7 +1,7 @@
 #ifndef BACKENDS_OSL_H
 #define BACKENDS_OSL_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct OSLBackendFactory final : public BackendFactory {
 public:

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/winmm.h"
+#include "winmm.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,8 +38,8 @@
 #include <algorithm>
 #include <functional>
 
-#include "alcmain.h"
-#include "alu.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"

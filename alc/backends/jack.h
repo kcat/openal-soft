@@ -1,7 +1,7 @@
 #ifndef BACKENDS_JACK_H
 #define BACKENDS_JACK_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct JackBackendFactory final : public BackendFactory {
 public:

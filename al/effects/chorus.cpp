@@ -4,10 +4,10 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "alc/effects/base.h"
 #include "aloptional.h"
 #include "core/logging.h"
 #include "effects.h"
-#include "effects/base.h"
 
 
 namespace {

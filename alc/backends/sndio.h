@@ -1,7 +1,7 @@
 #ifndef BACKENDS_SNDIO_H
 #define BACKENDS_SNDIO_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct SndIOBackendFactory final : public BackendFactory {
 public:

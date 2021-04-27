@@ -1,12 +1,17 @@
 
 #include "config.h"
 
-#include "alcmain.h"
-#include "alcontext.h"
+#include <stddef.h>
+
 #include "almalloc.h"
 #include "alspan.h"
+#include "core/bufferline.h"
 #include "effects/base.h"
-#include "effectslot.h"
+#include "intrusive_ptr.h"
+
+struct ContextBase;
+struct DeviceBase;
+struct EffectSlot;
 
 
 namespace {

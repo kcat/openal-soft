@@ -27,11 +27,11 @@
 #include <iterator>
 #include <utility>
 
-#include "alcontext.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
+#include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/filters/biquad.h"

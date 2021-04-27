@@ -26,11 +26,11 @@
 #include <iterator>
 #include <tuple>
 
-#include "alcontext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/bufferline.h"
+#include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/filters/biquad.h"

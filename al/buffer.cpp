@@ -50,10 +50,10 @@
 #include "aloptional.h"
 #include "atomic.h"
 #include "core/except.h"
-#include "inprogext.h"
 #include "core/logging.h"
+#include "core/voice.h"
+#include "inprogext.h"
 #include "opthelpers.h"
-#include "voice.h"
 
 
 namespace {

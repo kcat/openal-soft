@@ -1,22 +1,3 @@
-/**
- * OpenAL cross platform audio library
- * Copyright (C) 1999-2007 by authors.
- * This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Library General Public
- *  License as published by the Free Software Foundation; either
- *  version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- *  License along with this library; if not, write to the
- *  Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- * Or go to http://www.gnu.org/copyleft/lgpl.html
- */
 
 #include "config.h"
 
@@ -39,26 +20,26 @@
 #include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "ambidefs.h"
+#include "async_event.h"
 #include "buffer_storage.h"
-#include "core/ambidefs.h"
-#include "core/async_event.h"
-#include "core/context.h"
-#include "core/cpu_caps.h"
-#include "core/devformat.h"
-#include "core/device.h"
-#include "core/filters/biquad.h"
-#include "core/filters/nfc.h"
-#include "core/filters/splitter.h"
-#include "core/fmt_traits.h"
-#include "core/logging.h"
-#include "core/mixer.h"
-#include "core/mixer/defs.h"
-#include "core/mixer/hrtfdefs.h"
-#include "core/resampler_limits.h"
-#include "core/voice_change.h"
+#include "context.h"
+#include "cpu_caps.h"
+#include "devformat.h"
+#include "device.h"
+#include "filters/biquad.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
+#include "fmt_traits.h"
+#include "logging.h"
+#include "mixer.h"
+#include "mixer/defs.h"
+#include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
+#include "resampler_limits.h"
 #include "ringbuffer.h"
 #include "vector.h"
+#include "voice_change.h"
 
 struct CTag;
 #ifdef HAVE_SSE
@@ -128,8 +109,7 @@ inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 
 } // namespace
 
-
-void aluInitMixer(al::optional<std::string> resampler)
+void Voice::InitMixer(al::optional<std::string> resampler)
 {
     if(resampler)
     {

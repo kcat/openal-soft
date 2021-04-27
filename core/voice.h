@@ -1,27 +1,26 @@
-#ifndef VOICE_H
-#define VOICE_H
-
-#include <stddef.h>
+#ifndef CORE_VOICE_H
+#define CORE_VOICE_H
 
 #include <array>
 #include <atomic>
 #include <memory>
+#include <stddef.h>
 #include <string>
 
 #include "albyte.h"
 #include "almalloc.h"
 #include "aloptional.h"
 #include "alspan.h"
+#include "bufferline.h"
 #include "buffer_storage.h"
-#include "core/bufferline.h"
-#include "core/devformat.h"
-#include "core/filters/biquad.h"
-#include "core/filters/nfc.h"
-#include "core/filters/splitter.h"
-#include "core/mixer/defs.h"
-#include "core/mixer/hrtfdefs.h"
-#include "core/resampler_limits.h"
-#include "core/uhjfilter.h"
+#include "devformat.h"
+#include "filters/biquad.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
+#include "mixer/defs.h"
+#include "mixer/hrtfdefs.h"
+#include "resampler_limits.h"
+#include "uhjfilter.h"
 #include "vector.h"
 
 struct ContextBase;
@@ -261,11 +260,11 @@ struct Voice {
 
     void prepare(DeviceBase *device);
 
+    static void InitMixer(al::optional<std::string> resampler);
+
     DEF_NEWDEL(Voice)
 };
 
 extern Resampler ResamplerDefault;
 
-void aluInitMixer(al::optional<std::string> resampler);
-
-#endif /* VOICE_H */
+#endif /* CORE_VOICE_H */

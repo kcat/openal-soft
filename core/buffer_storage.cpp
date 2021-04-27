@@ -3,7 +3,7 @@
 
 #include "buffer_storage.h"
 
-#include <cstdint>
+#include <stdint.h>
 
 
 uint BytesFromFmt(FmtType type) noexcept

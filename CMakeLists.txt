@@ -655,6 +655,8 @@ set(CORE_OBJS
     core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
+    core/buffer_storage.cpp
+    core/buffer_storage.h
     core/context.cpp
     core/context.h
     core/converter.cpp
@@ -692,6 +694,8 @@ set(CORE_OBJS
     core/uhjfilter.cpp
     core/uhjfilter.h
     core/uiddefs.cpp
+    core/voice.cpp
+    core/voice.h
     core/voice_change.h)
 
 set(HAVE_RTKIT 0)
@@ -765,8 +769,6 @@ set(ALC_OBJS
     alc/alconfig.cpp
     alc/alconfig.h
     alc/alcontext.h
-    alc/buffer_storage.cpp
-    alc/buffer_storage.h
     alc/effectslot.cpp
     alc/effectslot.h
     alc/effects/base.h
@@ -785,9 +787,7 @@ set(ALC_OBJS
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
     alc/inprogext.h
-    alc/panning.cpp
-    alc/voice.cpp
-    alc/voice.h)
+    alc/panning.cpp)
 
 # Include SIMD mixers
 set(CPU_EXTS "Default")

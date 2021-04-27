@@ -40,11 +40,11 @@
 #include "alu.h"
 #include "atomic.h"
 #include "core/except.h"
+#include "core/voice.h"
 #include "event.h"
 #include "inprogext.h"
 #include "opthelpers.h"
 #include "strutils.h"
-#include "voice.h"
 
 
 namespace {

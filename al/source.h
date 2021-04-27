@@ -17,9 +17,9 @@
 #include "alnumeric.h"
 #include "alu.h"
 #include "atomic.h"
+#include "core/voice.h"
 #include "math_defs.h"
 #include "vector.h"
-#include "voice.h"
 
 struct ALbuffer;
 struct ALeffectslot;

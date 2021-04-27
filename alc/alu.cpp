@@ -44,7 +44,6 @@
 #include "alspan.h"
 #include "alstring.h"
 #include "atomic.h"
-#include "buffer_storage.h"
 #include "core/ambidefs.h"
 #include "core/async_event.h"
 #include "core/bformatdec.h"
@@ -52,6 +51,7 @@
 #include "core/bsinc_defs.h"
 #include "core/bsinc_tables.h"
 #include "core/bufferline.h"
+#include "core/buffer_storage.h"
 #include "core/context.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
@@ -66,6 +66,7 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
 #include "core/uhjfilter.h"
+#include "core/voice.h"
 #include "core/voice_change.h"
 #include "effects/base.h"
 #include "effectslot.h"
@@ -77,7 +78,6 @@
 #include "threads.h"
 #include "vecmat.h"
 #include "vector.h"
-#include "voice.h"
 
 struct CTag;
 #ifdef HAVE_SSE

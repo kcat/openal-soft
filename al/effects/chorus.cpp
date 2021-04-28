@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include <stdexcept>
+
 #include "AL/al.h"
 #include "AL/efx.h"
 

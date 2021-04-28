@@ -37,6 +37,7 @@
 #include <mutex>
 #include <new>
 #include <numeric>
+#include <stdexcept>
 #include <thread>
 #include <utility>
 

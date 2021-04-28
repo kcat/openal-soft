@@ -35,6 +35,7 @@
 #include <mutex>
 #include <new>
 #include <numeric>
+#include <stdexcept>
 #include <utility>
 
 #include "AL/al.h"

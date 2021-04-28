@@ -39,7 +39,7 @@
 
 #include "al/auxeffectslot.h"
 #include "alconfig.h"
-#include "alcontext.h"
+#include "alc/context.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"

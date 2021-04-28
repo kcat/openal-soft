@@ -46,9 +46,9 @@
 #include "AL/efx.h"
 
 #include "albit.h"
-#include "alc/alcontext.h"
 #include "alc/alu.h"
 #include "alc/backends/base.h"
+#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"

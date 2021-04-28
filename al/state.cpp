@@ -32,8 +32,8 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alc/alcontext.h"
 #include "alc/alu.h"
+#include "alc/context.h"
 #include "alc/inprogext.h"
 #include "alnumeric.h"
 #include "aloptional.h"

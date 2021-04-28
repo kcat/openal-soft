@@ -27,10 +27,10 @@
 #include <windows.h>
 #endif
 
-#include <exception>
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <chrono>
@@ -48,9 +48,10 @@
 #include <memory>
 #include <mutex>
 #include <new>
-#include <numeric>
+#include <stddef.h>
+#include <stdexcept>
 #include <string>
-#include <thread>
+#include <type_traits>
 #include <utility>
 
 #include "AL/al.h"
@@ -61,14 +62,14 @@
 #include "al/auxeffectslot.h"
 #include "al/buffer.h"
 #include "al/effect.h"
-#include "al/event.h"
 #include "al/filter.h"
 #include "al/listener.h"
 #include "al/source.h"
 #include "albit.h"
 #include "albyte.h"
 #include "alconfig.h"
-#include "alcontext.h"
+#include "alc/context.h"
+#include "alc/effectslot.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -77,32 +78,29 @@
 #include "alu.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
-#include "core/async_event.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
+#include "core/context.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
+#include "core/device.h"
 #include "core/except.h"
 #include "core/helpers.h"
 #include "core/mastering.h"
-#include "core/filters/nfc.h"
-#include "core/filters/splitter.h"
+#include "core/mixer/hrtfdefs.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
-#include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/uhjfilter.h"
+#include "core/voice.h"
 #include "core/voice_change.h"
 #include "device.h"
 #include "effects/base.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "pragmadefs.h"
-#include "ringbuffer.h"
 #include "strutils.h"
 #include "threads.h"
-#include "vecmat.h"
 #include "vector.h"
 
 #include "backends/base.h"
@@ -155,6 +153,31 @@
 #endif
 
 
+FILE *gLogFile{stderr};
+#ifdef _DEBUG
+LogLevel gLogLevel{LogLevel::Warning};
+#else
+LogLevel gLogLevel{LogLevel::Error};
+#endif
+
+/************************************************
+ * Library initialization
+ ************************************************/
+#if defined(_WIN32) && !defined(AL_LIBTYPE_STATIC)
+BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
+{
+    switch(reason)
+    {
+    case DLL_PROCESS_ATTACH:
+        /* Pin the DLL so we won't get unloaded until the process terminates */
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+            reinterpret_cast<WCHAR*>(module), &module);
+        break;
+    }
+    return TRUE;
+}
+#endif
+
 namespace {
 
 using namespace std::placeholders;
@@ -162,6 +185,7 @@ using std::chrono::seconds;
 using std::chrono::nanoseconds;
 
 using voidp = void*;
+using float2 = std::array<float,2>;
 
 
 /************************************************
@@ -861,84 +885,13 @@ std::string alcCaptureDeviceList;
 std::string alcDefaultAllDevicesSpecifier;
 std::string alcCaptureDefaultDeviceSpecifier;
 
-/* Default context extensions */
-constexpr ALchar alExtList[] =
-    "AL_EXT_ALAW "
-    "AL_EXT_BFORMAT "
-    "AL_EXT_DOUBLE "
-    "AL_EXT_EXPONENT_DISTANCE "
-    "AL_EXT_FLOAT32 "
-    "AL_EXT_IMA4 "
-    "AL_EXT_LINEAR_DISTANCE "
-    "AL_EXT_MCFORMATS "
-    "AL_EXT_MULAW "
-    "AL_EXT_MULAW_BFORMAT "
-    "AL_EXT_MULAW_MCFORMATS "
-    "AL_EXT_OFFSET "
-    "AL_EXT_source_distance_model "
-    "AL_EXT_SOURCE_RADIUS "
-    "AL_EXT_STEREO_ANGLES "
-    "AL_LOKI_quadriphonic "
-    "AL_SOFT_bformat_ex "
-    "AL_SOFTX_bformat_hoa "
-    "AL_SOFT_block_alignment "
-    "AL_SOFTX_callback_buffer "
-    "AL_SOFTX_convolution_reverb "
-    "AL_SOFT_deferred_updates "
-    "AL_SOFT_direct_channels "
-    "AL_SOFT_direct_channels_remix "
-    "AL_SOFT_effect_target "
-    "AL_SOFT_events "
-    "AL_SOFTX_filter_gain_ex "
-    "AL_SOFT_gain_clamp_ex "
-    "AL_SOFTX_hold_on_disconnect "
-    "AL_SOFT_loop_points "
-    "AL_SOFTX_map_buffer "
-    "AL_SOFT_MSADPCM "
-    "AL_SOFT_source_latency "
-    "AL_SOFT_source_length "
-    "AL_SOFT_source_resampler "
-    "AL_SOFT_source_spatialize "
-    "AL_SOFTX_UHJ";
-
 std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
-
-/* Thread-local current context. The handling may look a little obtuse, but
- * it's designed this way to avoid a bug with 32-bit GCC/MinGW, which causes
- * thread-local object destructors to get a junk 'this' pointer. This method
- * has the benefit of making LocalContext access more efficient since it's a
- * a plain pointer, with the ThreadContext object used to check it at thread
- * exit (and given no data fields, 'this' being junk is inconsequential since
- * it's never accessed).
- */
-thread_local ALCcontext *LocalContext{nullptr};
-class ThreadCtx {
-public:
-    ~ThreadCtx()
-    {
-        if(ALCcontext *ctx{LocalContext})
-        {
-            const bool result{ctx->releaseIfNoDelete()};
-            ERR("Context %p current for thread being destroyed%s!\n", voidp{ctx},
-                result ? "" : ", leak detected");
-        }
-    }
-
-    void set(ALCcontext *ctx) const noexcept { LocalContext = ctx; }
-};
-thread_local ThreadCtx ThreadContext;
-
-/* Process-wide current context */
-std::atomic<ALCcontext*> GlobalContext{nullptr};
 
 /* Flag to trap ALC device errors */
 bool TrapALCError{false};
 
 /* One-time configuration init control */
 std::once_flag alc_config_once{};
-
-/* Default effect that applies to sources that don't have an effect on send 0 */
-ALeffect DefaultEffect;
 
 /* Flag to specify if alcSuspendContext/alcProcessContext should defer/process
  * updates.
@@ -1271,10 +1224,10 @@ void alc_initconfig(void)
         } while(next++);
     }
 
-    InitEffect(&DefaultEffect);
+    InitEffect(&ALCcontext::sDefaultEffect);
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
     if(defrevopt || (defrevopt=ConfigValueStr(nullptr, nullptr, "default-reverb")))
-        LoadReverbPreset(defrevopt->c_str(), &DefaultEffect);
+        LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
 
@@ -1311,37 +1264,6 @@ void ProbeCaptureDeviceList()
     }
 }
 
-} // namespace
-
-FILE *gLogFile{stderr};
-#ifdef _DEBUG
-LogLevel gLogLevel{LogLevel::Warning};
-#else
-LogLevel gLogLevel{LogLevel::Error};
-#endif
-
-/************************************************
- * Library initialization
- ************************************************/
-#if defined(_WIN32) && !defined(AL_LIBTYPE_STATIC)
-BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
-{
-    switch(reason)
-    {
-    case DLL_PROCESS_ATTACH:
-        /* Pin the DLL so we won't get unloaded until the process terminates */
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-            reinterpret_cast<WCHAR*>(module), &module);
-        break;
-    }
-    return TRUE;
-}
-#endif
-
-/************************************************
- * Device format information
- ************************************************/
-namespace {
 
 struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
 al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
@@ -1534,92 +1456,9 @@ const std::array<InputRemixMap,1> X71Downmix{{
     { BackCenter, {{{BackLeft, 0.5f}, {BackRight, 0.5f}}} },
 }};
 
-} // namespace
-
-/************************************************
- * Miscellaneous ALC helpers
- ************************************************/
-
-void ALCcontext::processUpdates()
-{
-    std::lock_guard<std::mutex> _{mPropLock};
-    if(mDeferUpdates.exchange(false, std::memory_order_acq_rel))
-    {
-        /* Tell the mixer to stop applying updates, then wait for any active
-         * updating to finish, before providing updates.
-         */
-        mHoldUpdates.store(true, std::memory_order_release);
-        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
-            /* busy-wait */
-        }
-
-        if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-            UpdateContextProps(this);
-        if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-            UpdateListenerProps(this);
-        UpdateAllEffectSlotProps(this);
-        UpdateAllSourceProps(this);
-
-        /* Now with all updates declared, let the mixer continue applying them
-         * so they all happen at once.
-         */
-        mHoldUpdates.store(false, std::memory_order_release);
-    }
-}
-
-
-void ContextBase::allocVoiceChanges(size_t addcount)
-{
-    constexpr size_t clustersize{128};
-    /* Convert element count to cluster count. */
-    addcount = (addcount+(clustersize-1)) / clustersize;
-    while(addcount)
-    {
-        VoiceChangeCluster cluster{std::make_unique<VoiceChange[]>(clustersize)};
-        for(size_t i{1};i < clustersize;++i)
-            cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
-        cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
-        mVoiceChangeClusters.emplace_back(std::move(cluster));
-        mVoiceChangeTail = mVoiceChangeClusters.back().get();
-        --addcount;
-    }
-}
-
-void ContextBase::allocVoices(size_t addcount)
-{
-    constexpr size_t clustersize{32};
-    /* Convert element count to cluster count. */
-    addcount = (addcount+(clustersize-1)) / clustersize;
-
-    if(addcount >= std::numeric_limits<int>::max()/clustersize - mVoiceClusters.size())
-        throw std::runtime_error{"Allocating too many voices"};
-    const size_t totalcount{(mVoiceClusters.size()+addcount) * clustersize};
-    TRACE("Increasing allocated voices to %zu\n", totalcount);
-
-    auto newarray = VoiceArray::Create(totalcount);
-    while(addcount)
-    {
-        mVoiceClusters.emplace_back(std::make_unique<Voice[]>(clustersize));
-        --addcount;
-    }
-
-    auto voice_iter = newarray->begin();
-    for(VoiceCluster &cluster : mVoiceClusters)
-    {
-        for(size_t i{0};i < clustersize;++i)
-            *(voice_iter++) = &cluster[i];
-    }
-
-    if(auto *oldvoices = mVoices.exchange(newarray.release(), std::memory_order_acq_rel))
-    {
-        mDevice->waitForMix();
-        delete oldvoices;
-    }
-}
-
 
 /** Stores the latest ALC device error. */
-static void alcSetError(ALCdevice *device, ALCenum errorCode)
+void alcSetError(ALCdevice *device, ALCenum errorCode)
 {
     WARN("Error generated on device %p, code 0x%04x\n", voidp{device}, errorCode);
     if(TrapALCError)
@@ -1640,7 +1479,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
-static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
+std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
 {
     constexpr bool AutoKnee{true};
     constexpr bool AutoAttack{true};
@@ -1679,7 +1518,7 @@ static inline void UpdateClockBase(ALCdevice *device)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
+ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 {
     HrtfRequestMode hrtf_userreq{Hrtf_Default};
     HrtfRequestMode hrtf_appreq{Hrtf_Default};
@@ -2261,7 +2100,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
  * Updates device parameters as above, and also first clears the disconnected
  * status, if set.
  */
-static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
+bool ResetDeviceParams(ALCdevice *device, const int *attrList)
 {
     /* If the device was disconnected, reset it since we're opened anew. */
     if UNLIKELY(!device->Connected.load(std::memory_order_relaxed))
@@ -2301,7 +2140,7 @@ static bool ResetDeviceParams(ALCdevice *device, const int *attrList)
 
 
 /** Checks if the device handle is valid, and returns a new reference if so. */
-static DeviceRef VerifyDevice(ALCdevice *device)
+DeviceRef VerifyDevice(ALCdevice *device)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
@@ -2314,225 +2153,10 @@ static DeviceRef VerifyDevice(ALCdevice *device)
 }
 
 
-ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
-{ }
-
-ContextBase::~ContextBase()
-{
-    size_t count{0};
-    ContextProps *cprops{mParams.ContextUpdate.exchange(nullptr, std::memory_order_relaxed)};
-    if(cprops)
-    {
-        ++count;
-        delete cprops;
-    }
-    cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
-    while(cprops)
-    {
-        std::unique_ptr<ContextProps> old{cprops};
-        cprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
-
-    count = 0;
-    EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
-    while(eprops)
-    {
-        std::unique_ptr<EffectSlotProps> old{eprops};
-        eprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
-
-    if(EffectSlotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
-    {
-        al::destroy_n(curarray->end(), curarray->size());
-        delete curarray;
-    }
-
-    count = 0;
-    VoicePropsItem *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
-    while(vprops)
-    {
-        std::unique_ptr<VoicePropsItem> old{vprops};
-        vprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
-
-    delete mVoices.exchange(nullptr, std::memory_order_relaxed);
-
-    count = 0;
-    ListenerProps *lprops{mParams.ListenerUpdate.exchange(nullptr, std::memory_order_relaxed)};
-    if(lprops)
-    {
-        ++count;
-        delete lprops;
-    }
-    lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
-    while(lprops)
-    {
-        std::unique_ptr<ListenerProps> old{lprops};
-        lprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu listener property object%s\n", count, (count==1)?"":"s");
-
-    if(mAsyncEvents)
-    {
-        count = 0;
-        auto evt_vec = mAsyncEvents->getReadVector();
-        if(evt_vec.first.len > 0)
-        {
-            al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf), evt_vec.first.len);
-            count += evt_vec.first.len;
-        }
-        if(evt_vec.second.len > 0)
-        {
-            al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf), evt_vec.second.len);
-            count += evt_vec.second.len;
-        }
-        if(count > 0)
-            TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
-        mAsyncEvents->readAdvance(count);
-    }
-}
-
-
-ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
-  : ContextBase{device.get()}, mALDevice{std::move(device)}
-{
-    mPropsDirty.test_and_clear(std::memory_order_relaxed);
-}
-
-ALCcontext::~ALCcontext()
-{
-    TRACE("Freeing context %p\n", voidp{this});
-
-    size_t count{std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
-        [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); })};
-    if(count > 0)
-        WARN("%zu Source%s not deleted\n", count, (count==1)?"":"s");
-    mSourceList.clear();
-    mNumSources = 0;
-
-    mDefaultSlot = nullptr;
-    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
-        [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
-    if(count > 0)
-        WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
-    mEffectSlotList.clear();
-    mNumEffectSlots = 0;
-}
-
-void ALCcontext::init()
-{
-    if(DefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
-    {
-        mDefaultSlot = std::make_unique<ALeffectslot>();
-        aluInitEffectPanning(&mDefaultSlot->mSlot, this);
-    }
-
-    EffectSlotArray *auxslots;
-    if(!mDefaultSlot)
-        auxslots = EffectSlot::CreatePtrArray(0);
-    else
-    {
-        auxslots = EffectSlot::CreatePtrArray(1);
-        (*auxslots)[0] = &mDefaultSlot->mSlot;
-        mDefaultSlot->mState = SlotState::Playing;
-    }
-    mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
-
-    allocVoiceChanges(1);
-    {
-        VoiceChange *cur{mVoiceChangeTail};
-        while(VoiceChange *next{cur->mNext.load(std::memory_order_relaxed)})
-            cur = next;
-        mCurrentVoiceChange.store(cur, std::memory_order_relaxed);
-    }
-
-    mExtensionList = alExtList;
-
-
-    mParams.Matrix = alu::Matrix::Identity();
-    mParams.Velocity = alu::Vector{};
-    mParams.Gain = mListener.Gain;
-    mParams.MetersPerUnit = mListener.mMetersPerUnit;
-    mParams.DopplerFactor = mDopplerFactor;
-    mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
-    mParams.SourceDistanceModel = mSourceDistanceModel;
-    mParams.mDistanceModel = mDistanceModel;
-
-
-    mAsyncEvents = RingBuffer::Create(511, sizeof(AsyncEvent), false);
-    StartEventThrd(this);
-
-
-    allocVoices(256);
-    mActiveVoiceCount.store(64, std::memory_order_relaxed);
-}
-
-bool ALCcontext::deinit()
-{
-    if(LocalContext == this)
-    {
-        WARN("%p released while current on thread\n", voidp{this});
-        ThreadContext.set(nullptr);
-        release();
-    }
-
-    ALCcontext *origctx{this};
-    if(GlobalContext.compare_exchange_strong(origctx, nullptr))
-        release();
-
-    bool ret{};
-    /* First make sure this context exists in the device's list. */
-    auto *oldarray = mDevice->mContexts.load(std::memory_order_acquire);
-    if(auto toremove = static_cast<size_t>(std::count(oldarray->begin(), oldarray->end(), this)))
-    {
-        using ContextArray = al::FlexArray<ContextBase*>;
-        auto alloc_ctx_array = [](const size_t count) -> ContextArray*
-        {
-            if(count == 0) return &DeviceBase::sEmptyContextArray;
-            return ContextArray::Create(count).release();
-        };
-        auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
-
-        /* Copy the current/old context handles to the new array, excluding the
-         * given context.
-         */
-        std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
-            std::bind(std::not_equal_to<>{}, _1, this));
-
-        /* Store the new context array in the device. Wait for any current mix
-         * to finish before deleting the old array.
-         */
-        mDevice->mContexts.store(newarray);
-        if(oldarray != &DeviceBase::sEmptyContextArray)
-        {
-            mDevice->waitForMix();
-            delete oldarray;
-        }
-
-        ret = !newarray->empty();
-    }
-    else
-        ret = !oldarray->empty();
-
-    StopEventThrd(this);
-
-    return ret;
-}
-
-
 /**
  * Checks if the given context is valid, returning a new reference to it if so.
  */
-static ContextRef VerifyContext(ALCcontext *context)
+ContextRef VerifyContext(ALCcontext *context)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
     auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
@@ -2544,16 +2168,18 @@ static ContextRef VerifyContext(ALCcontext *context)
     return nullptr;
 }
 
+} // namespace
+
 /** Returns a new reference to the currently active context for this thread. */
 ContextRef GetContextRef(void)
 {
-    ALCcontext *context{LocalContext};
+    ALCcontext *context{ALCcontext::sLocalContext};
     if(context)
         context->add_ref();
     else
     {
         std::lock_guard<std::recursive_mutex> _{ListLock};
-        context = GlobalContext.load(std::memory_order_acquire);
+        context = ALCcontext::sGlobalContext.load(std::memory_order_acquire);
         if(context) context->add_ref();
     }
     return ContextRef{context};
@@ -3359,7 +2985,7 @@ START_API_FUNC
 
     if(ALeffectslot *slot{context->mDefaultSlot.get()})
     {
-        if(slot->initEffect(&DefaultEffect, context.get()) == AL_NO_ERROR)
+        if(slot->initEffect(&ALCcontext::sDefaultEffect, context.get()) == AL_NO_ERROR)
             slot->updateProps(context.get());
         else
             ERR("Failed to initialize the default effect\n");
@@ -3402,8 +3028,8 @@ END_API_FUNC
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 START_API_FUNC
 {
-    ALCcontext *Context{LocalContext};
-    if(!Context) Context = GlobalContext.load();
+    ALCcontext *Context{ALCcontext::sLocalContext};
+    if(!Context) Context = ALCcontext::sGlobalContext.load();
     return Context;
 }
 END_API_FUNC
@@ -3411,7 +3037,7 @@ END_API_FUNC
 /** Returns the currently active thread-local context. */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 START_API_FUNC
-{ return LocalContext; }
+{ return ALCcontext::sLocalContext; }
 END_API_FUNC
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
@@ -3432,14 +3058,14 @@ START_API_FUNC
      * pointer. Take ownership of the reference (if any) that was previously
      * stored there.
      */
-    ctx = ContextRef{GlobalContext.exchange(ctx.release())};
+    ctx = ContextRef{ALCcontext::sGlobalContext.exchange(ctx.release())};
 
     /* Reset (decrement) the previous global reference by replacing it with the
      * thread-local context. Take ownership of the thread-local context
      * reference (if any), clearing the storage to null.
      */
-    ctx = ContextRef{LocalContext};
-    if(ctx) ThreadContext.set(nullptr);
+    ctx = ContextRef{ALCcontext::sLocalContext};
+    if(ctx) ALCcontext::sThreadContext.set(nullptr);
     /* Reset (decrement) the previous thread-local reference. */
 
     return ALC_TRUE;
@@ -3462,8 +3088,8 @@ START_API_FUNC
         }
     }
     /* context's reference count is already incremented */
-    ContextRef old{LocalContext};
-    ThreadContext.set(ctx.release());
+    ContextRef old{ALCcontext::sLocalContext};
+    ALCcontext::sThreadContext.set(ctx.release());
 
     return ALC_TRUE;
 }

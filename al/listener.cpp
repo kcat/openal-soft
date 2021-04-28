@@ -29,7 +29,7 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "alc/alcontext.h"
+#include "alc/context.h"
 #include "almalloc.h"
 #include "atomic.h"
 #include "core/except.h"

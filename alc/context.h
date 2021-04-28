@@ -1,40 +1,27 @@
-#ifndef ALCONTEXT_H
-#define ALCONTEXT_H
+#ifndef ALC_CONTEXT_H
+#define ALC_CONTEXT_H
 
-#include <array>
 #include <atomic>
-#include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <mutex>
-#include <thread>
+#include <stdint.h>
 #include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "al/listener.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
 #include "atomic.h"
-#include "core/bufferline.h"
 #include "core/context.h"
-#include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "threads.h"
-#include "vecmat.h"
 #include "vector.h"
 
+struct ALeffect;
 struct ALeffectslot;
 struct ALsource;
-struct DeviceBase;
-struct EffectSlot;
-struct EffectSlotProps;
-struct RingBuffer;
-struct Voice;
-struct VoiceChange;
-struct VoicePropsItem;
 
 using uint = unsigned int;
 
@@ -141,6 +128,24 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 #endif
     void setError(ALenum errorCode, const char *msg, ...);
 
+    /* Process-wide current context */
+    static std::atomic<ALCcontext*> sGlobalContext;
+
+    /* Thread-local current context. */
+    static thread_local ALCcontext *sLocalContext;
+    /* Thread-local context handling. This handles attempting to release the
+     * context which may have been left current when the thread is destroyed.
+     */
+    class ThreadCtx {
+    public:
+        ~ThreadCtx();
+        void set(ALCcontext *ctx) const noexcept { sLocalContext = ctx; }
+    };
+    static thread_local ThreadCtx sThreadContext;
+
+    /* Default effect that applies to sources that don't have an effect on send 0. */
+    static ALeffect sDefaultEffect;
+
     DEF_NEWDEL(ALCcontext)
 };
 
@@ -159,4 +164,4 @@ void UpdateContextProps(ALCcontext *context);
 
 extern bool TrapALError;
 
-#endif /* ALCONTEXT_H */
+#endif /* ALC_CONTEXT_H */

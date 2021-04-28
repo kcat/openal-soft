@@ -43,7 +43,7 @@
 
 #include "albit.h"
 #include "albyte.h"
-#include "alc/alcontext.h"
+#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"

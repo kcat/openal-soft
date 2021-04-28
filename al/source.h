@@ -11,8 +11,8 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alc/alcontext.h"
 #include "alc/alu.h"
+#include "alc/context.h"
 #include "aldeque.h"
 #include "almalloc.h"
 #include "alnumeric.h"

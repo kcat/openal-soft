@@ -767,7 +767,8 @@ set(ALC_OBJS
     alc/alu.h
     alc/alconfig.cpp
     alc/alconfig.h
-    alc/alcontext.h
+    alc/context.cpp
+    alc/context.h
     alc/device.cpp
     alc/device.h
     alc/effectslot.cpp

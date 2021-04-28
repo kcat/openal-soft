@@ -39,9 +39,10 @@
 #include "AL/efx.h"
 
 #include "albit.h"
-#include "alc/alcontext.h"
+#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/effects/base.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"

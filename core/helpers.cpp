@@ -437,9 +437,9 @@ void SetRTPriority()
         if(dbus::ConnectionPtr conn{(*pdbus_bus_get)(DBUS_BUS_SYSTEM, &error.get())})
         {
             using ulonglong = unsigned long long;
-            auto limit_rttime = [](DBusConnection *conn) -> int
+            auto limit_rttime = [](DBusConnection *c) -> int
             {
-                long long maxrttime{rtkit_get_rttime_usec_max(conn)};
+                long long maxrttime{rtkit_get_rttime_usec_max(c)};
                 if(maxrttime <= 0) return static_cast<int>(std::abs(maxrttime));
                 const ulonglong umaxtime{static_cast<ulonglong>(maxrttime)};
 

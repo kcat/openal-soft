@@ -15,9 +15,8 @@ struct BSincTag;
 struct FastBSincTag;
 
 
-/* SSE2 is required for any SSE support. */
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE2__)
-#pragma GCC target("sse2")
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE__)
+#pragma GCC target("sse")
 #endif
 
 namespace {

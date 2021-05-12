@@ -1,0 +1,39 @@
+name: android
+
+on: [push]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  PYENV_VERSION: 2.7.18
+
+jobs:
+  build:
+    if: "contains(github.event.commits[0].message, '[ci build]')"
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        
+    - name: Install Android SDK
+      # Some projects don't allow in-source building, so create a separate build directory
+      # We'll use this as our working directory for all
+      run: |
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6858069_latest.zip
+        unzip commandlinetools-linux-6858069_latest.zip
+        mkdir -p ~/.android && touch ~/.android/repositories.cfg
+        ./cmdline-tools/bin/sdkmanager --verbose --sdk_root=$GITHUB_WORKSPACE/android-sdk "platform-tools" "cmdline-tools;latest" "platforms;android-28" "build-tools;29.0.2"
+      
+    - name: Build
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: |
+        export ANDROID_SDK_ROOT=$GITHUB_WORKSPACE/android-sdk
+        export ALSOFT_ROOT=$GITHUB_WORKSPACE
+        cd hello-jni
+        call gradlew assembleRelease --parallel --info
+        

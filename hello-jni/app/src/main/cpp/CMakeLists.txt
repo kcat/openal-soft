@@ -10,11 +10,19 @@ function(configure_target_outdir target)
     )
 endfunction(configure_lib_outdir)
 
+if(ANDROID_ABI STREQUAL "x86" OR ANDROID_ABI STREQUAL "x86_64")
+    set(ALSOFT_REQUIRE_SSE ON CACHE BOOL "" FORCE)
+    set(ALSOFT_REQUIRE_SSE2 ON CACHE BOOL "" FORCE)
+endif()
+
 set(ALSOFT_DLOPEN OFF CACHE BOOL "Check for the dlopen API for loading optional libs" FORCE)
 set(ALSOFT_UTILS OFF CACHE BOOL "Build utility program" FORCE)
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "Build example programs" FORCE)
 set(ALSOFT_INSTALL OFF CACHE BOOL "Install main library" FORCE)
-add_subdirectory(../../../../../)
+set(ALSOFT_INSTALL OFF CACHE BOOL "Install main library" FORCE)
+
+set(ALSOFT_ROOT "$ENV{ALSOFT_ROOT}")
+add_subdirectory(${ALSOFT_ROOT} "${PROJECT_BINARY_DIR}/alsoft")
 configure_target_outdir(common)
 configure_target_outdir(OpenAL)
 # end openal-soft

@@ -4,7 +4,7 @@ apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 29
-    ndkVersion '21.2.6472646'
+    // ndkVersion '21.2.6472646'
 
     defaultConfig {
         applicationId 'com.example.hellojni'
@@ -12,6 +12,10 @@ android {
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
+        
+        ndk {
+            abiFilters = ['x86']
+        }
     }
     buildFeatures {
         viewBinding true
@@ -29,26 +33,26 @@ android {
         }
     }
 
-    flavorDimensions 'cpuArch'
-    productFlavors {
-        arm8 {
-            dimension 'cpuArch'
-            ndk {
-                abiFilters 'arm64-v8a', 'armeabi-v7a'
-            }
-        }
-        x86_64 {
-            dimension 'cpuArch'
-            ndk {
-                abiFilters 'x86_64', 'x86'
-            }
-        }
-        universal {
-            dimension 'cpuArch'
-            // include all default ABIs. with NDK-r16,  it is:
-            //   armeabi-v7a, arm64-v8a, x86, x86_64
-        }
-    }
+    // flavorDimensions 'cpuArch'
+    // productFlavors {
+    //     arm8 {
+    //         dimension 'cpuArch'
+    //         ndk {
+    //             abiFilters 'arm64-v8a', 'armeabi-v7a'
+    //         }
+    //     }
+    //     x86_64 {
+    //         dimension 'cpuArch'
+    //         ndk {
+    //             abiFilters 'x86_64', 'x86'
+    //         }
+    //     }
+    //     universal {
+    //         dimension 'cpuArch'
+    //         // include all default ABIs. with NDK-r16,  it is:
+    //         //   armeabi-v7a, arm64-v8a, x86, x86_64
+    //     }
+    // }
 }
 
 dependencies {

@@ -105,7 +105,7 @@ void CoreAudioPlayback::open(const char *name)
     /* open the default output unit */
     AudioComponentDescription desc{};
     desc.componentType = kAudioUnitType_Output;
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
     desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #else
     desc.componentSubType = kAudioUnitSubType_DefaultOutput;
@@ -410,7 +410,7 @@ void CoreAudioCapture::open(const char *name)
             name};
 
     desc.componentType = kAudioUnitType_Output;
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
     desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #else
     desc.componentSubType = kAudioUnitSubType_HALOutput;
@@ -446,7 +446,7 @@ void CoreAudioCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not enable audio unit input property: %u", err};
 
-#if !TARGET_OS_IOS
+#if !TARGET_OS_IOS && !TARGET_OS_TV
     {
         // Get the default input device
         AudioDeviceID inputDevice = kAudioDeviceUnknown;

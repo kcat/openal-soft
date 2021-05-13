@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if(APPLE)
     # The workaround for try_compile failing with code signing
     # since cmake-3.18.2, not required
     set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
@@ -11,7 +11,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # Fix compile failure with armv7 deployment target >= 11.0, xcode clang
     # will report:
     # error: invalid iOS deployment version '--target=armv7-apple-ios13.6',

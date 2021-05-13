@@ -2,12 +2,6 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
-# Fix compile failure with armv7 deployment target >= 11.0, xcode clang will
-# report:
-# error: invalid iOS deployment version '--target=armv7-apple-ios13.6',
-# iOS 10 is the maximum deployment target for 32-bit targets
-# If CMAKE_OSX_DEPLOYMENT_TARGET is not defined, cmake will choose latest
-# deployment target
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # The workaround for try_compile failing with code signing
     # since cmake-3.18.2, not required
@@ -17,6 +11,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+
+    # Fix compile failure with armv7 deployment target >= 11.0, xcode clang
+    # will report:
+    # error: invalid iOS deployment version '--target=armv7-apple-ios13.6',
+    # iOS 10 is the maximum deployment target for 32-bit targets
+    # If CMAKE_OSX_DEPLOYMENT_TARGET is not defined, cmake will choose latest
+    # deployment target
     if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
         if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
             OR NOT CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "11.0")

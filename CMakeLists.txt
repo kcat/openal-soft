@@ -1535,17 +1535,16 @@ if(ALSOFT_UTILS)
     message(STATUS "")
 endif()
 
-
-# Add a static library with common functions used by multiple example targets
-add_library(ex-common STATIC EXCLUDE_FROM_ALL
-    examples/common/alhelpers.c
-    examples/common/alhelpers.h)
-target_compile_definitions(ex-common PUBLIC ${CPP_DEFS})
-target_include_directories(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
-target_compile_options(ex-common PUBLIC ${C_FLAGS})
-target_link_libraries(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
-
 if(ALSOFT_EXAMPLES)
+    # Add a static library with common functions used by multiple example targets
+    add_library(ex-common STATIC EXCLUDE_FROM_ALL
+        examples/common/alhelpers.c
+        examples/common/alhelpers.h)
+    target_compile_definitions(ex-common PUBLIC ${CPP_DEFS})
+    target_include_directories(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
+    target_compile_options(ex-common PUBLIC ${C_FLAGS})
+    target_link_libraries(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
+    
     add_executable(altonegen examples/altonegen.c)
     target_link_libraries(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common ${UNICODE_FLAG})
 

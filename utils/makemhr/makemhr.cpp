@@ -211,7 +211,7 @@ static inline uint dither_rng(uint *seed)
 static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
                        const uint count, const uint step, uint *seed)
 {
-    static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
+    static constexpr double PRNG_SCALE = 1.0 / (std::numeric_limits<uint>::max)();
 
     for(uint i{0};i < count;i++)
     {

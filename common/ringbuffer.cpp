@@ -45,7 +45,7 @@ RingBufferPtr RingBuffer::Create(size_t sz, size_t elem_sz, int limit_writes)
 #endif
     }
     ++power_of_two;
-    if(power_of_two <= sz || power_of_two > std::numeric_limits<size_t>::max()/elem_sz)
+    if(power_of_two <= sz || power_of_two > (std::numeric_limits<size_t>::max)()/elem_sz)
         throw std::overflow_error{"Ring buffer size overflow"};
 
     const size_t bufbytes{power_of_two * elem_sz};

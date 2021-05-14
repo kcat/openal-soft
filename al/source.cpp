@@ -434,13 +434,13 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
     {
     case AL_SEC_OFFSET:
         dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
-        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        offset = static_cast<ALuint>(mind(dbloff, (std::numeric_limits<ALuint>::max)()));
         frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_SAMPLE_OFFSET:
         dblfrac = std::modf(Offset, &dbloff);
-        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        offset = static_cast<ALuint>(mind(dbloff, (std::numeric_limits<ALuint>::max)()));
         frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
@@ -2095,7 +2095,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SEC_LENGTH_SOFT:
         CHECKSIZE(values, 1);
         values[0] = static_cast<int>(mind(GetSourceLength(Source, prop),
-            std::numeric_limits<int>::max()));
+            (std::numeric_limits<int>::max)()));
         return true;
 
     case AL_SOURCE_RESAMPLER_SOFT:

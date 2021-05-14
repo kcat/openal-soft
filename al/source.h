@@ -46,7 +46,7 @@ struct ALsource {
     float InnerAngle{360.0f};
     float OuterAngle{360.0f};
     float RefDistance{1.0f};
-    float MaxDistance{std::numeric_limits<float>::max()};
+    float MaxDistance{(std::numeric_limits<float>::max)()};
     float RolloffFactor{1.0f};
     std::array<float,3> Position{{0.0f, 0.0f, 0.0f}};
     std::array<float,3> Velocity{{0.0f, 0.0f, 0.0f}};

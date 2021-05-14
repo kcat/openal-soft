@@ -1023,7 +1023,7 @@ bool PulsePlayback::reset()
         const auto perlen = static_cast<uint>(clampd(scale*mDevice->UpdateSize + 0.5, 64.0,
             8192.0));
         const auto buflen = static_cast<uint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2,
-            std::numeric_limits<int>::max()/mFrameSize));
+            (std::numeric_limits<int>::max)()/mFrameSize));
 
         mAttr.maxlength = ~0u;
         mAttr.tlength = buflen * mFrameSize;
@@ -1403,7 +1403,7 @@ uint PulseCapture::availableSamples()
         }
     }
 
-    readable = std::min<size_t>(readable, std::numeric_limits<uint>::max());
+    readable = std::min<size_t>(readable, (std::numeric_limits<uint>::max)());
     mLastReadable = std::max(mLastReadable, static_cast<uint>(readable));
     return mLastReadable / static_cast<uint>(pa_frame_size(&mSpec));
 }

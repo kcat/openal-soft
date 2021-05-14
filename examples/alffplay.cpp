@@ -295,7 +295,7 @@ struct AudioState {
     nanoseconds mCurrentPts{0};
 
     /* Device clock time that the stream started at. */
-    nanoseconds mDeviceStartTime{nanoseconds::min()};
+    nanoseconds mDeviceStartTime{(nanoseconds::min)()};
 
     /* Decompressed sample frame, and swresample context for conversion */
     AVFramePtr    mDecodedFrame;
@@ -378,7 +378,7 @@ struct VideoState {
      * was last updated - used to have running video pts
      */
     nanoseconds mDisplayPts{0};
-    microseconds mDisplayPtsTime{microseconds::min()};
+    microseconds mDisplayPtsTime{(microseconds::min)()};
     std::mutex mDispPtsMutex;
 
     /* Swscale context for format conversion */
@@ -386,7 +386,7 @@ struct VideoState {
 
     struct Picture {
         AVFramePtr mFrame{};
-        nanoseconds mPts{nanoseconds::min()};
+        nanoseconds mPts{(nanoseconds::min)()};
     };
     std::array<Picture,VIDEO_PICTURE_QUEUE_SIZE> mPictQ;
     std::atomic<size_t> mPictQRead{0u}, mPictQWrite{1u};
@@ -421,7 +421,7 @@ struct MovieState {
 
     SyncMaster mAVSyncType{SyncMaster::Default};
 
-    microseconds mClockBase{microseconds::min()};
+    microseconds mClockBase{(microseconds::min)()};
 
     std::atomic<bool> mQuit{false};
 
@@ -465,7 +465,7 @@ nanoseconds AudioState::getClockNoLock()
     if(alcGetInteger64vSOFT)
     {
         // If device start time = min, we aren't playing yet.
-        if(mDeviceStartTime == nanoseconds::min())
+        if(mDeviceStartTime == (nanoseconds::min)())
             return nanoseconds::zero();
 
         // Get the current device clock time and latency.
@@ -483,7 +483,7 @@ nanoseconds AudioState::getClockNoLock()
 
     if(mBufferDataSize > 0)
     {
-        if(mDeviceStartTime == nanoseconds::min())
+        if(mDeviceStartTime == (nanoseconds::min)())
             return nanoseconds::zero();
 
         /* With a callback buffer and no device clock, mDeviceStartTime is
@@ -1409,7 +1409,7 @@ nanoseconds VideoState::getClock()
 {
     /* NOTE: This returns incorrect times while not playing. */
     std::lock_guard<std::mutex> _{mDispPtsMutex};
-    if(mDisplayPtsTime == microseconds::min())
+    if(mDisplayPtsTime == (microseconds::min)())
         return nanoseconds::zero();
     auto delta = get_avtime() - mDisplayPtsTime;
     return mDisplayPts + delta;
@@ -1729,7 +1729,7 @@ void MovieState::setTitle(SDL_Window *window)
 
 nanoseconds MovieState::getClock()
 {
-    if(mClockBase == microseconds::min())
+    if(mClockBase == (microseconds::)min())
         return nanoseconds::zero();
     return get_avtime() - mClockBase;
 }
@@ -2069,7 +2069,7 @@ int main(int argc, char *argv[])
     enum class EomAction {
         Next, Quit
     } eom_action{EomAction::Next};
-    seconds last_time{seconds::min()};
+    seconds last_time{(seconds::min)()};
     while(1)
     {
         SDL_Event event{};
@@ -2130,7 +2130,7 @@ int main(int argc, char *argv[])
 
             case FF_MOVIE_DONE_EVENT:
                 std::cout<<'\n';
-                last_time = seconds::min();
+                last_time = (seconds::min)();
                 if(eom_action != EomAction::Quit)
                 {
                     movState = nullptr;

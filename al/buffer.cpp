@@ -537,7 +537,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
             size, SrcByteAlign, align);
 
-    if UNLIKELY(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align)
+    if UNLIKELY(size/SrcByteAlign > (std::numeric_limits<ALsizei>::max)()/align)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
     const ALuint frames{size / SrcByteAlign * align};
@@ -547,7 +547,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      */
     ALuint NumChannels{ChannelsFromFmt(DstChannels, ambiorder)};
     ALuint FrameSize{NumChannels * BytesFromFmt(DstType)};
-    if UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize)
+    if UNLIKELY(frames > (std::numeric_limits<size_t>::max)()/FrameSize)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
     size_t newsize{static_cast<size_t>(frames) * FrameSize};

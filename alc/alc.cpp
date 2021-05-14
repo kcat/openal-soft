@@ -2662,7 +2662,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             std::lock_guard<std::mutex> _{device->StateLock};
             device->enumerateHrtfs();
             values[0] = static_cast<int>(minz(device->mHrtfList.size(),
-                std::numeric_limits<int>::max()));
+                (std::numeric_limits<int>::max)()));
         }
         return 1;
 

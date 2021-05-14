@@ -64,9 +64,9 @@ namespace al {
 
 semaphore::semaphore(unsigned int initial)
 {
-    if(initial > static_cast<unsigned int>(std::numeric_limits<int>::max()))
+    if(initial > static_cast<unsigned int>((std::numeric_limits<int>::max)()))
         throw std::system_error(std::make_error_code(std::errc::value_too_large));
-    mSem = CreateSemaphore(nullptr, initial, std::numeric_limits<int>::max(), nullptr);
+    mSem = CreateSemaphore(nullptr, initial, (std::numeric_limits<int>::max)(), nullptr);
     if(mSem == nullptr)
         throw std::system_error(std::make_error_code(std::errc::resource_unavailable_try_again));
 }

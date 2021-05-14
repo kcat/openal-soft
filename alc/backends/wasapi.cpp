@@ -1399,7 +1399,7 @@ HRESULT WasapiCapture::resetProxy()
 
     // Make sure buffer is at least 100ms in size
     ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
-    buf_time = std::max(buf_time, ReferenceTime{milliseconds{100}});
+    buf_time = (std::max)(buf_time, ReferenceTime{milliseconds{100}});
 
     WAVEFORMATEXTENSIBLE InputType{};
     InputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;

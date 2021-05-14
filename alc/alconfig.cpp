@@ -216,7 +216,7 @@ void LoadConfigFromFile(std::istream &f)
             continue;
         }
 
-        auto cmtpos = std::min(buffer.find('#'), buffer.size());
+        auto cmtpos = (std::min)(buffer.find('#'), buffer.size());
         while(cmtpos > 0 && std::isspace(buffer[cmtpos-1]))
             --cmtpos;
         if(!cmtpos) continue;

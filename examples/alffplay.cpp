@@ -235,9 +235,13 @@ public:
         std::unique_lock<std::mutex> lock{mMutex};
 
         AVPacket *pkt{getPacket(lock)};
-        if(!pkt) return avcodec_send_packet(codecctx, nullptr);
-
         const int ret{avcodec_send_packet(codecctx, pkt)};
+        if(!pkt)
+        {
+            if(!ret) return AVErrorEOF;
+            std::cerr<< "Failed to send flush packet: "<<ret <<std::endl;
+            return ret;
+        }
         if(ret != AVERROR(EAGAIN))
         {
             if(ret < 0)
@@ -1470,7 +1474,11 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             break;
         Picture *nextvp{&mPictQ[next_idx]};
         if(clocktime < nextvp->mPts)
-            break;
+        {
+            /* For the first update, ensure the first frame gets shown.  */
+            if(!mFirstUpdate || vp)
+                break;
+        }
 
         vp = nextvp;
         updated = true;

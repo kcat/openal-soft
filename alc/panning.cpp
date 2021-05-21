@@ -284,9 +284,8 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
     if(total > 0)
     {
         auto chandelays = DistanceComp::Create(total);
-        std::copy(ChanDelay.cbegin(), ChanDelay.cend(), chandelays->mChannels.begin());
 
-        chandelays->mChannels[0].Buffer = chandelays->mSamples.data();
+        ChanDelay[0].Buffer = chandelays->mSamples.data();
         auto set_bufptr = [](const DistanceComp::ChanData &last, const DistanceComp::ChanData &cur)
             -> DistanceComp::ChanData
         {
@@ -294,7 +293,8 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
             ret.Buffer = last.Buffer + RoundUp(last.Length, 4);
             return ret;
         };
-        std::partial_sum(ChanDelay.begin(), ChanDelay.end(), ChanDelay.begin(), set_bufptr);
+        std::partial_sum(ChanDelay.begin(), ChanDelay.end(), chandelays->mChannels.begin(),
+            set_bufptr);
         device->ChannelDelays = std::move(chandelays);
     }
 }

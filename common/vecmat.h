@@ -35,6 +35,13 @@ public:
         return *this;
     }
 
+    VectorR operator-(const VectorR &rhs) const noexcept
+    {
+        const VectorR ret{mVals[0] - rhs.mVals[0], mVals[1] - rhs.mVals[1],
+            mVals[2] - rhs.mVals[2], mVals[3] - rhs.mVals[3]};
+        return ret;
+    }
+
     T normalize(T limit = std::numeric_limits<T>::epsilon())
     {
         limit = std::max(limit, std::numeric_limits<T>::epsilon());

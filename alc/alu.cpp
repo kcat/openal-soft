@@ -386,6 +386,9 @@ bool CalcListenerParams(ContextBase *ctx)
         std::memory_order_acq_rel)};
     if(!props) return false;
 
+    const alu::Vector pos{props->Position[0], props->Position[1], props->Position[2], 1.0f};
+    ctx->mParams.Position = pos;
+
     /* AT then UP */
     alu::Vector N{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
     N.normalize();
@@ -395,21 +398,15 @@ bool CalcListenerParams(ContextBase *ctx)
     alu::Vector U{N.cross_product(V)};
     U.normalize();
 
-    const alu::MatrixR<double> rot{
+    const alu::Matrix rot{
         U[0], V[0], -N[0], 0.0,
         U[1], V[1], -N[1], 0.0,
         U[2], V[2], -N[2], 0.0,
          0.0,  0.0,   0.0, 1.0};
-    const alu::VectorR<double> pos{props->Position[0],props->Position[1],props->Position[2],1.0};
-    const alu::VectorR<double> vel{props->Velocity[0],props->Velocity[1],props->Velocity[2],0.0};
-    const alu::Vector P{alu::cast_to<float>(rot * pos)};
+    const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0};
 
-    ctx->mParams.Matrix = alu::Matrix{
-         U[0],  V[0], -N[0], 0.0f,
-         U[1],  V[1], -N[1], 0.0f,
-         U[2],  V[2], -N[2], 0.0f,
-        -P[0], -P[1], -P[2], 1.0f};
-    ctx->mParams.Velocity = alu::cast_to<float>(rot * vel);
+    ctx->mParams.Matrix = rot;
+    ctx->mParams.Velocity = rot * vel;
 
     ctx->mParams.Gain = props->Gain * ctx->mGainBoost;
     ctx->mParams.MetersPerUnit = props->MetersPerUnit;
@@ -1318,7 +1315,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     if(!props->HeadRelative)
     {
         /* Transform source vectors */
-        Position = context->mParams.Matrix * Position;
+        Position = context->mParams.Matrix * (Position - context->mParams.Position);
         Velocity = context->mParams.Matrix * Velocity;
         Direction = context->mParams.Matrix * Direction;
     }
@@ -1330,7 +1327,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
     const bool directional{Direction.normalize() > 0.0f};
     alu::Vector ToSource{Position[0], Position[1], Position[2], 0.0f};
-    const float Distance{ToSource.normalize(props->RefDistance / 1024.0f)};
+    const float Distance{ToSource.normalize()};
 
     /* Initial source gain */
     GainTriplet DryGain{props->Gain, 1.0f, 1.0f};

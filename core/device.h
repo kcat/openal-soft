@@ -258,6 +258,7 @@ struct DeviceBase {
     inline void postProcess(const size_t SamplesToDo)
     { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
 
+    void renderSamples(const al::span<float*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
@@ -269,6 +270,9 @@ struct DeviceBase {
     void handleDisconnect(const char *msg, ...);
 
     DISABLE_ALLOC()
+
+private:
+    uint renderSamples(const uint numSamples);
 };
 
 

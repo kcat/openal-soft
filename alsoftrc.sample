@@ -484,8 +484,7 @@
 [jack]
 
 ## spawn-server: (global)
-#  Attempts to autospawn a JACK server whenever needed (initializing the
-#  backend, opening devices, etc).
+#  Attempts to autospawn a JACK server when initializing.
 #spawn-server = false
 
 ## custom-devices: (global)
@@ -495,6 +494,12 @@
 #  is the regular expression to identify the target ports on the server (as
 #  given by the jack_get_ports function) for each enumerated device.
 #custom-devices =
+
+## rt-mix:
+#  Renders samples directly in the real-time processing callback. This allows
+#  for lower latency and less overall CPU utilization, but can increase the
+#  risk of underruns when increasing the amount of work the mixer needs to do.
+#rt-mix = true
 
 ## connect-ports:
 #  Attempts to automatically connect the client ports to physical server ports.
@@ -509,6 +514,7 @@
 #  less than JACK's buffer update size, it will be clamped. This option may
 #  be useful in case the server's update size is too small and doesn't give the
 #  mixer time to keep enough audio available for the processing requests.
+#  Ignored when rt-mix is true.
 #buffer-size = 0
 
 ##

@@ -239,6 +239,10 @@ struct JackPlayback final : public BackendBase {
     JackPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
+    int processRt(jack_nframes_t numframes) noexcept;
+    static int processRtC(jack_nframes_t numframes, void *arg) noexcept
+    { return static_cast<JackPlayback*>(arg)->processRt(numframes); }
+
     int process(jack_nframes_t numframes) noexcept;
     static int processC(jack_nframes_t numframes, void *arg) noexcept
     { return static_cast<JackPlayback*>(arg)->process(numframes); }
@@ -259,6 +263,7 @@ struct JackPlayback final : public BackendBase {
     std::mutex mMutex;
 
     std::atomic<bool> mPlaying{false};
+    bool mRTMixing{false};
     RingBufferPtr mRing;
     al::semaphore mSem;
 
@@ -280,6 +285,30 @@ JackPlayback::~JackPlayback()
     mPort.fill(nullptr);
     jack_client_close(mClient);
     mClient = nullptr;
+}
+
+
+int JackPlayback::processRt(jack_nframes_t numframes) noexcept
+{
+    std::array<jack_default_audio_sample_t*,MAX_OUTPUT_CHANNELS> out;
+    size_t numchans{0};
+    for(auto port : mPort)
+    {
+        if(!port || numchans == mDevice->RealOut.Buffer.size())
+            break;
+        out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
+    }
+
+    if LIKELY(mPlaying.load(std::memory_order_acquire))
+        mDevice->renderSamples({out.data(), numchans}, static_cast<uint>(numframes));
+    else
+    {
+        auto clear_buf = [numframes](float *outbuf) -> void
+        { std::fill_n(outbuf, numframes, 0.0f); };
+        std::for_each(out.begin(), out.begin()+numchans, clear_buf);
+    }
+
+    return 0;
 }
 
 
@@ -422,7 +451,9 @@ void JackPlayback::open(const char *name)
         mPortPattern = iter->mPattern;
     }
 
-    jack_set_process_callback(mClient, &JackPlayback::processC, this);
+    mRTMixing = GetConfigValueBool(name, "jack", "rt-mix", 1);
+    jack_set_process_callback(mClient,
+        mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
     mDevice->DeviceName = name;
 }
@@ -439,12 +470,20 @@ bool JackPlayback::reset()
      */
     mDevice->Frequency = jack_get_sample_rate(mClient);
     mDevice->UpdateSize = jack_get_buffer_size(mClient);
-    mDevice->BufferSize = mDevice->UpdateSize * 2;
-
-    const char *devname{mDevice->DeviceName.c_str()};
-    uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
-    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+    if(mRTMixing)
+    {
+        /* Assume only two periods when directly mixing. Should try to query
+         * the total port latency when connected.
+         */
+        mDevice->BufferSize = mDevice->UpdateSize * 2;
+    }
+    else
+    {
+        const char *devname{mDevice->DeviceName.c_str()};
+        uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+        bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+        mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+    }
 
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;
@@ -460,7 +499,8 @@ bool JackPlayback::reset()
         });
     if(bad_port != ports_end)
     {
-        ERR("Not enough JACK ports available for %s output\n", DevFmtChannelsString(mDevice->FmtChans));
+        ERR("Not enough JACK ports available for %s output\n",
+            DevFmtChannelsString(mDevice->FmtChans));
         if(bad_port == mPort.begin()) return false;
 
         if(bad_port == mPort.begin()+1)
@@ -523,36 +563,45 @@ void JackPlayback::start()
     mDevice->UpdateSize = jack_get_buffer_size(mClient);
     mDevice->BufferSize = mDevice->UpdateSize * 2;
 
-    uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-    bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
-    mDevice->BufferSize = bufsize + mDevice->UpdateSize;
-
     mRing = nullptr;
-    mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
-
-    try {
+    if(mRTMixing)
         mPlaying.store(true, std::memory_order_release);
-        mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
-    }
-    catch(std::exception& e) {
-        jack_deactivate(mClient);
-        mPlaying.store(false, std::memory_order_release);
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start mixing thread: %s", e.what()};
+    else
+    {
+        uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+        bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+        mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+
+        mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
+
+        try {
+            mPlaying.store(true, std::memory_order_release);
+            mKillNow.store(false, std::memory_order_release);
+            mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
+        }
+        catch(std::exception& e) {
+            jack_deactivate(mClient);
+            mPlaying.store(false, std::memory_order_release);
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to start mixing thread: %s", e.what()};
+        }
     }
 }
 
 void JackPlayback::stop()
 {
-    if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
-        return;
+    if(mPlaying.load(std::memory_order_acquire))
+    {
+        mKillNow.store(true, std::memory_order_release);
+        if(mThread.joinable())
+        {
+            mSem.post();
+            mThread.join();
+        }
 
-    mSem.post();
-    mThread.join();
-
-    jack_deactivate(mClient);
-    mPlaying.store(false, std::memory_order_release);
+        jack_deactivate(mClient);
+        mPlaying.store(false, std::memory_order_release);
+    }
 }
 
 
@@ -562,7 +611,7 @@ ClockLatency JackPlayback::getClockLatency()
 
     std::lock_guard<std::mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
-    ret.Latency  = std::chrono::seconds{mRing->readSpace()};
+    ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;
 
     return ret;

@@ -1925,52 +1925,78 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
 
 } // namespace
 
+uint DeviceBase::renderSamples(const uint numSamples)
+{
+    const uint samplesToDo{minu(numSamples, BufferLineSize)};
+
+    /* Clear main mixing buffers. */
+    for(FloatBufferLine &buffer : MixBuffer)
+        buffer.fill(0.0f);
+
+    /* Increment the mix count at the start (lsb should now be 1). */
+    IncrementRef(MixCount);
+
+    /* Process and mix each context's sources and effects. */
+    ProcessContexts(this, samplesToDo);
+
+    /* Increment the clock time. Every second's worth of samples is converted
+     * and added to clock base so that large sample counts don't overflow
+     * during conversion. This also guarantees a stable conversion.
+     */
+    SamplesDone += samplesToDo;
+    ClockBase += std::chrono::seconds{SamplesDone / Frequency};
+    SamplesDone %= Frequency;
+
+    /* Increment the mix count at the end (lsb should now be 0). */
+    IncrementRef(MixCount);
+
+    /* Apply any needed post-process for finalizing the Dry mix to the RealOut
+     * (Ambisonic decode, UHJ encode, etc).
+     */
+    postProcess(samplesToDo);
+
+    /* Apply compression, limiting sample amplitude if needed or desired. */
+    if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer.data());
+
+    /* Apply delays and attenuation for mismatched speaker distances. */
+    if(ChannelDelays)
+        ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelays->mChannels.data());
+
+    /* Apply dithering. The compressor should have left enough headroom for the
+     * dither noise to not saturate.
+     */
+    if(DitherDepth > 0.0f)
+        ApplyDither(RealOut.Buffer, &DitherSeed, DitherDepth, samplesToDo);
+
+    return samplesToDo;
+}
+
+void DeviceBase::renderSamples(const al::span<float*> outBuffers, const uint numSamples)
+{
+    FPUCtl mixer_mode{};
+    uint total{0};
+    while(const uint todo{numSamples - total})
+    {
+        const uint samplesToDo{renderSamples(todo)};
+
+        auto *srcbuf = RealOut.Buffer.data();
+        for(auto *dstbuf : outBuffers)
+        {
+            std::copy_n(srcbuf->data(), samplesToDo, dstbuf + total);
+            ++srcbuf;
+        }
+
+        total += samplesToDo;
+    }
+}
+
 void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep)
 {
     FPUCtl mixer_mode{};
-    for(uint written{0u};written < numSamples;)
+    uint total{0};
+    while(const uint todo{numSamples - total})
     {
-        const uint samplesToDo{minu(numSamples-written, BufferLineSize)};
-
-        /* Clear main mixing buffers. */
-        for(FloatBufferLine &buffer : MixBuffer)
-            buffer.fill(0.0f);
-
-        /* Increment the mix count at the start (lsb should now be 1). */
-        IncrementRef(MixCount);
-
-        /* Process and mix each context's sources and effects. */
-        ProcessContexts(this, samplesToDo);
-
-        /* Increment the clock time. Every second's worth of samples is
-         * converted and added to clock base so that large sample counts don't
-         * overflow during conversion. This also guarantees a stable
-         * conversion.
-         */
-        SamplesDone += samplesToDo;
-        ClockBase += std::chrono::seconds{SamplesDone / Frequency};
-        SamplesDone %= Frequency;
-
-        /* Increment the mix count at the end (lsb should now be 0). */
-        IncrementRef(MixCount);
-
-        /* Apply any needed post-process for finalizing the Dry mix to the
-         * RealOut (Ambisonic decode, UHJ encode, etc).
-         */
-        postProcess(samplesToDo);
-
-        /* Apply compression, limiting sample amplitude if needed or desired. */
-        if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer.data());
-
-        /* Apply delays and attenuation for mismatched speaker distances. */
-        if(ChannelDelays)
-            ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelays->mChannels.data());
-
-        /* Apply dithering. The compressor should have left enough headroom for
-         * the dither noise to not saturate.
-         */
-        if(DitherDepth > 0.0f)
-            ApplyDither(RealOut.Buffer, &DitherSeed, DitherDepth, samplesToDo);
+        const uint samplesToDo{renderSamples(todo)};
 
         if LIKELY(outBuffer)
         {
@@ -1980,7 +2006,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
             switch(FmtType)
             {
 #define HANDLE_WRITE(T) case T:                                               \
-    Write<T>(RealOut.Buffer, outBuffer, written, samplesToDo, frameStep); break;
+    Write<T>(RealOut.Buffer, outBuffer, total, samplesToDo, frameStep); break;
             HANDLE_WRITE(DevFmtByte)
             HANDLE_WRITE(DevFmtUByte)
             HANDLE_WRITE(DevFmtShort)
@@ -1992,7 +2018,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
             }
         }
 
-        written += samplesToDo;
+        total += samplesToDo;
     }
 }
 

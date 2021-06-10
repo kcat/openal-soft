@@ -197,40 +197,77 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
     }
 
     auto listopt = ConfigValueStr(nullptr, "jack", "custom-devices");
-    if(!listopt) return;
-
-    size_t strpos{0};
-    while(strpos < listopt->size())
+    if(listopt)
     {
-        size_t nextpos{listopt->find(';', strpos)};
-        size_t seppos{listopt->find('=', strpos)};
-        if(seppos >= nextpos || seppos == strpos)
+        for(size_t strpos{0};strpos < listopt->size();)
         {
-            const std::string entry{listopt->substr(strpos, nextpos-strpos)};
-            ERR("Invalid device entry: \"%s\"\n", entry.c_str());
+            size_t nextpos{listopt->find(';', strpos)};
+            size_t seppos{listopt->find('=', strpos)};
+            if(seppos >= nextpos || seppos == strpos)
+            {
+                const std::string entry{listopt->substr(strpos, nextpos-strpos)};
+                ERR("Invalid device entry: \"%s\"\n", entry.c_str());
+                if(nextpos != std::string::npos) ++nextpos;
+                strpos = nextpos;
+                continue;
+            }
+
+            const al::span<const char> name{listopt->data()+strpos, seppos-strpos};
+            const al::span<const char> pattern{listopt->data()+(seppos+1),
+                std::min(nextpos, listopt->size())-(seppos+1)};
+
+            /* Check if this custom pattern already exists in the list. */
+            auto check_pattern = [pattern](const DeviceEntry &entry) -> bool
+            {
+                const size_t len{pattern.size()};
+                return entry.mPattern.length() == len
+                    && entry.mPattern.compare(0, len, pattern.data(), len) == 0;
+            };
+            auto itemmatch = std::find_if(list.begin(), list.end(), check_pattern);
+            if(itemmatch != list.end())
+            {
+                /* If so, replace the name with this custom one. */
+                itemmatch->mName.assign(name.data(), name.size());
+                TRACE("Customized device name: %s = %s\n", itemmatch->mName.c_str(),
+                    itemmatch->mPattern.c_str());
+            }
+            else
+            {
+                /* Otherwise, add a new device entry. */
+                list.emplace_back(DeviceEntry{std::string{name.data(), name.size()},
+                    std::string{pattern.data(), pattern.size()}});
+                const auto &entry = list.back();
+                TRACE("Got custom device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
+            }
+
             if(nextpos != std::string::npos) ++nextpos;
             strpos = nextpos;
-            continue;
         }
+    }
 
-        size_t count{1};
-        std::string name{listopt->substr(strpos, seppos-strpos)};
-        auto check_name = [&name](const DeviceEntry &entry) -> bool
-        { return entry.mName == name; };
-        while(std::find_if(list.cbegin(), list.cend(), check_name) != list.cend())
+    if(list.size() > 1)
+    {
+        /* Rename entries that have matching names, by appending '#2', '#3',
+         * etc, as needed.
+         */
+        for(auto curitem = list.begin()+1;curitem != list.end();++curitem)
         {
-            name = listopt->substr(strpos, seppos-strpos);
-            name += " #";
-            name += std::to_string(++count);
+            auto check_match = [curitem](const DeviceEntry &entry) -> bool
+            { return entry.mName == curitem->mName; };
+            if(std::find_if(list.begin(), curitem, check_match) != curitem)
+            {
+                std::string name{curitem->mName};
+                size_t count{1};
+                auto check_name = [&name](const DeviceEntry &entry) -> bool
+                { return entry.mName == name; };
+                do {
+                    name = curitem->mName;
+                    name += " #";
+                    name += std::to_string(++count);
+                } while(std::find_if(list.begin(), curitem, check_name) != curitem);
+                curitem->mName = std::move(name);
+            }
         }
-
-        ++seppos;
-        list.emplace_back(DeviceEntry{std::move(name), listopt->substr(seppos, nextpos-seppos)});
-        const auto &entry = list.back();
-        TRACE("Got custom device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
-
-        if(nextpos != std::string::npos) ++nextpos;
-        strpos = nextpos;
     }
 }
 

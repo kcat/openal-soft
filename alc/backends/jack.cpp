@@ -315,11 +315,11 @@ JackPlayback::~JackPlayback()
     if(!mClient)
         return;
 
-    std::for_each(mPort.begin(), mPort.end(),
-        [this](jack_port_t *port) -> void
-        { if(port) jack_port_unregister(mClient, port); }
-    );
+    auto unregister_port = [this](jack_port_t *port) -> void
+    { if(port) jack_port_unregister(mClient, port); };
+    std::for_each(mPort.begin(), mPort.end(), unregister_port);
     mPort.fill(nullptr);
+
     jack_client_close(mClient);
     mClient = nullptr;
 }
@@ -497,9 +497,9 @@ void JackPlayback::open(const char *name)
 
 bool JackPlayback::reset()
 {
-    std::for_each(mPort.begin(), mPort.end(),
-        [this](jack_port_t *port) -> void
-        { if(port) jack_port_unregister(mClient, port); });
+    auto unregister_port = [this](jack_port_t *port) -> void
+    { if(port) jack_port_unregister(mClient, port); };
+    std::for_each(mPort.begin(), mPort.end(), unregister_port);
     mPort.fill(nullptr);
 
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer

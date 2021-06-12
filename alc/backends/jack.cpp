@@ -531,7 +531,7 @@ bool JackPlayback::reset()
         {
             std::string name{"channel_" + std::to_string(&port - &mPort[0] + 1)};
             port = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
-                JackPortIsOutput, 0);
+                JackPortIsOutput | JackPortIsTerminal, 0);
             return port != nullptr;
         });
     if(bad_port != ports_end)

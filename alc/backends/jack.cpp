@@ -99,6 +99,8 @@ decltype(jack_error_callback) * pjack_error_callback;
 #endif
 
 
+constexpr char JackDefaultAudioType[] = JACK_DEFAULT_AUDIO_TYPE;
+
 jack_options_t ClientOptions = JackNullOption;
 
 bool jack_load()
@@ -150,6 +152,11 @@ bool jack_load()
 }
 
 
+struct JackDeleter {
+    void operator()(void *ptr) { jack_free(ptr); }
+};
+using JackPortsPtr = std::unique_ptr<const char*[],JackDeleter>;
+
 struct DeviceEntry {
     std::string mName;
     std::string mPattern;
@@ -162,8 +169,7 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
 {
     std::remove_reference_t<decltype(list)>{}.swap(list);
 
-    const char **ports{jack_get_ports(client, nullptr, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput)};
-    if(ports)
+    if(JackPortsPtr ports{jack_get_ports(client, nullptr, JackDefaultAudioType, JackPortIsInput)})
     {
         for(size_t i{0};ports[i];++i)
         {
@@ -193,11 +199,9 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
             WARN("No device names found in available ports, adding a generic name.\n");
             list.emplace_back(DeviceEntry{"JACK", ""});
         }
-        jack_free(ports);
     }
 
-    auto listopt = ConfigValueStr(nullptr, "jack", "custom-devices");
-    if(listopt)
+    if(auto listopt = ConfigValueStr(nullptr, "jack", "custom-devices"))
     {
         for(size_t strpos{0};strpos < listopt->size();)
         {
@@ -525,18 +529,20 @@ bool JackPlayback::reset()
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;
 
+    int port_num{0};
     auto ports_end = mPort.begin() + mDevice->channelsFromFmt();
-    auto bad_port = std::find_if_not(mPort.begin(), ports_end,
-        [this](jack_port_t *&port) -> bool
-        {
-            std::string name{"channel_" + std::to_string(&port - &mPort[0] + 1)};
-            port = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
-                JackPortIsOutput | JackPortIsTerminal, 0);
-            return port != nullptr;
-        });
+    auto bad_port = mPort.begin();
+    while(bad_port != ports_end)
+    {
+        std::string name{"channel_" + std::to_string(++port_num)};
+        *bad_port = jack_port_register(mClient, name.c_str(), JackDefaultAudioType,
+            JackPortIsOutput | JackPortIsTerminal, 0);
+        if(!*bad_port) break;
+        ++bad_port;
+    }
     if(bad_port != ports_end)
     {
-        ERR("Not enough JACK ports available for %s output\n",
+        ERR("Failed to register enough JACK ports for %s output\n",
             DevFmtChannelsString(mDevice->FmtChans));
         if(bad_port == mPort.begin()) return false;
 
@@ -567,13 +573,12 @@ void JackPlayback::start()
     const char *devname{mDevice->DeviceName.c_str()};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
-        const char **ports{jack_get_ports(mClient, mPortPattern.c_str(), JACK_DEFAULT_AUDIO_TYPE,
+        JackPortsPtr ports{jack_get_ports(mClient, mPortPattern.c_str(), JackDefaultAudioType,
             JackPortIsInput)};
-        if(ports == nullptr)
+        if(!ports)
         {
             jack_deactivate(mClient);
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "No physical playback ports found"};
+            throw al::backend_exception{al::backend_error::DeviceError, "No playback ports found"};
         }
         auto connect_port = [this](const jack_port_t *port, const char *pname) -> bool
         {
@@ -588,8 +593,7 @@ void JackPlayback::start()
                     pname);
             return true;
         };
-        std::mismatch(mPort.begin(), mPort.end(), ports, connect_port);
-        jack_free(ports);
+        std::mismatch(mPort.begin(), mPort.end(), ports.get(), connect_port);
     }
 
     /* Reconfigure buffer metrics in case the server changed it since the reset

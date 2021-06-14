@@ -557,28 +557,6 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
             }
         }
 
-        if((mFlags&(VoiceIsCallback|VoiceCallbackStopped)) == VoiceIsCallback && BufferListItem)
-        {
-            if(SrcBufferSize > mNumCallbackSamples)
-            {
-                const size_t byteOffset{mNumCallbackSamples*mFrameSize};
-                const size_t needBytes{SrcBufferSize*mFrameSize - byteOffset};
-
-                const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
-                    &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
-                if(gotBytes < 0)
-                    mFlags |= VoiceCallbackStopped;
-                else if(static_cast<uint>(gotBytes) < needBytes)
-                {
-                    mFlags |= VoiceCallbackStopped;
-                    mNumCallbackSamples += static_cast<uint>(static_cast<uint>(gotBytes) /
-                        mFrameSize);
-                }
-                else
-                    mNumCallbackSamples = SrcBufferSize;
-            }
-        }
-
         if UNLIKELY(!BufferListItem)
         {
             for(auto &chanbuffer : mVoiceSamples)
@@ -604,8 +582,31 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, mFmtChannels,
                     SrcBufferSize, mVoiceSamples);
             else if((mFlags&VoiceIsCallback))
+            {
+                if(!(mFlags&VoiceCallbackStopped))
+                {
+                    if(SrcBufferSize > mNumCallbackSamples)
+                    {
+                        const size_t byteOffset{mNumCallbackSamples*mFrameSize};
+                        const size_t needBytes{SrcBufferSize*mFrameSize - byteOffset};
+
+                        const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
+                            &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
+                        if(gotBytes < 0)
+                            mFlags |= VoiceCallbackStopped;
+                        else if(static_cast<uint>(gotBytes) < needBytes)
+                        {
+                            mFlags |= VoiceCallbackStopped;
+                            mNumCallbackSamples += static_cast<uint>(static_cast<uint>(gotBytes) /
+                                mFrameSize);
+                        }
+                        else
+                            mNumCallbackSamples = SrcBufferSize;
+                    }
+                }
                 LoadBufferCallback(BufferListItem, mNumCallbackSamples, mFmtType, mFmtChannels,
                     SrcBufferSize, mVoiceSamples);
+            }
             else
                 LoadBufferQueue(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, mFmtChannels,
                     SrcBufferSize, mVoiceSamples);

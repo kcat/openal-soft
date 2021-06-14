@@ -17,10 +17,10 @@ enum Channel : unsigned char {
     SideLeft,
     SideRight,
 
+    TopCenter,
     TopFrontLeft,
     TopFrontCenter,
     TopFrontRight,
-    TopCenter,
     TopBackLeft,
     TopBackCenter,
     TopBackRight,

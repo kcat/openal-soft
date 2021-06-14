@@ -559,6 +559,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
         if UNLIKELY(!BufferListItem)
         {
+            SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerPadding;
             for(auto &chanbuffer : mVoiceSamples)
             {
                 auto srciter = chanbuffer.data() + MaxResamplerEdge;
@@ -572,7 +573,6 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 { return std::abs(lhs) < std::abs(rhs); };
                 srciter = std::min_element(srciter, srcend, abs_lt);
 
-                SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerPadding;
                 std::fill(srciter+1, chanbuffer.data() + SrcBufferSize, *srciter);
             }
         }

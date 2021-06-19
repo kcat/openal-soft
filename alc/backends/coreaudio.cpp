@@ -97,9 +97,9 @@ std::string GetDeviceName(AudioDeviceID devId)
         sizeof(nameRef), &nameRef)};
     if(err == noErr)
     {
-        UInt32 propSize{CFStringGetMaximumSizeForEncoding(CFStringGetLength(nameRef),
+        const CFIndex propSize{CFStringGetMaximumSizeForEncoding(CFStringGetLength(nameRef),
             kCFStringEncodingUTF8)};
-        devname.resize(propSize+1, '\0');
+        devname.resize(static_cast<size_t>(propSize)+1, '\0');
 
         CFStringGetCString(nameRef, &devname[0], propSize+1, kCFStringEncodingUTF8);
         CFRelease(nameRef);

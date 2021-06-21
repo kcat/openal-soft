@@ -141,14 +141,13 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
     }
 
     auto buffer_data = std::vector<char>(propSize);
-    AudioBufferList *buflist{::new(buffer_data.data()) AudioBufferList{}};
+    AudioBufferList *buflist{reinterpret_cast<AudioBufferList*>(buffer_data.data())};
 
     err = GetDevProperty(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0, propSize,
         buflist);
     if(err)
     {
         ERR("kAudioDevicePropertyStreamConfiguration query failed: %u\n", err);
-        al::destroy_at(buflist);
         return 0;
     }
 
@@ -156,7 +155,6 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
     for(size_t i{0};i < buflist->mNumberBuffers;++i)
         numChannels += buflist->mBuffers[i].mNumberChannels;
 
-    al::destroy_at(buflist);
     return numChannels;
 }
 

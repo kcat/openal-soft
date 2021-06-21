@@ -207,6 +207,7 @@ struct Voice {
     FmtChannels mFmtChannels;
     FmtType mFmtType;
     uint mFrequency;
+    uint mNumChannels;
     uint mFrameSize;
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;

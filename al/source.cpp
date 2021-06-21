@@ -491,21 +491,26 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
         std::memory_order_relaxed);
 
     ALbuffer *buffer{BufferList->mBuffer};
-    ALuint num_channels{(buffer->mChannels==FmtUHJ2) ? 3 : buffer->channelsFromFmt()};
     voice->mFrequency = buffer->mSampleRate;
     voice->mFmtChannels = buffer->mChannels;
     voice->mFmtType = buffer->mType;
+    voice->mNumChannels = buffer->channelsFromFmt();
     voice->mFrameSize = buffer->frameSizeFromFmt();
     voice->mAmbiLayout = (buffer->mChannels == FmtUHJ2 || buffer->mChannels == FmtUHJ3
         || voice->mFmtChannels == FmtUHJ4) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
     voice->mAmbiScaling = (buffer->mChannels == FmtUHJ2 || buffer->mChannels == FmtUHJ3
-         || voice->mFmtChannels == FmtUHJ4) ? AmbiScaling::FuMa : buffer->mAmbiScaling;
+        || voice->mFmtChannels == FmtUHJ4) ? AmbiScaling::FuMa : buffer->mAmbiScaling;
     voice->mAmbiOrder = buffer->mAmbiOrder;
 
     if(buffer->mCallback) voice->mFlags |= VoiceIsCallback;
     else if(source->SourceType == AL_STATIC) voice->mFlags |= VoiceIsStatic;
     voice->mNumCallbackSamples = 0;
 
+    /* Even if storing really high order ambisonics, we only mix channels for
+     * orders up to MaxAmbiOrder. The rest are simply dropped.
+     */
+    const ALuint num_channels{(buffer->mChannels == FmtUHJ2) ? 3 :
+        ChannelsFromFmt(buffer->mChannels, minu(buffer->mAmbiOrder, MaxAmbiOrder))};
     if(voice->mChans.capacity() > 2 && num_channels < voice->mChans.capacity())
     {
         decltype(voice->mChans){}.swap(voice->mChans);

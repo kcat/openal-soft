@@ -200,24 +200,22 @@ const float *DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *ds
 
 void LoadSamples(const al::span<Voice::BufferLine> dstSamples, const size_t dstOffset,
     const al::byte *src, const size_t srcOffset, const FmtType srctype, const FmtChannels srcchans,
-    const size_t samples) noexcept
+    const size_t srcstep, const size_t samples) noexcept
 {
 #define HANDLE_FMT(T) case T:                                                 \
     {                                                                         \
         constexpr size_t sampleSize{sizeof(al::FmtTypeTraits<T>::Type)};      \
         if(srcchans == FmtUHJ2)                                               \
         {                                                                     \
-            constexpr size_t srcstep{2u};                                     \
-            src += srcOffset*srcstep*sampleSize;                              \
+            src += srcOffset*2u*sampleSize;                                   \
             al::LoadSampleArray<T>(dstSamples[0].data() + dstOffset, src,     \
-                srcstep, samples);                                            \
+                2u, samples);                                                 \
             al::LoadSampleArray<T>(dstSamples[1].data() + dstOffset,          \
-                src + sampleSize, srcstep, samples);                          \
+                src + sampleSize, 2u, samples);                               \
             std::fill_n(dstSamples[2].data() + dstOffset, samples, 0.0f);     \
         }                                                                     \
         else                                                                  \
         {                                                                     \
-            const size_t srcstep{dstSamples.size()};                          \
             src += srcOffset*srcstep*sampleSize;                              \
             for(auto &dst : dstSamples)                                       \
             {                                                                 \
@@ -243,7 +241,8 @@ void LoadSamples(const al::span<Voice::BufferLine> dstSamples, const size_t dstO
 
 void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     const size_t dataPosInt, const FmtType sampleType, const FmtChannels sampleChannels,
-    const size_t samplesToLoad, const al::span<Voice::BufferLine> voiceSamples)
+    const size_t srcStep, const size_t samplesToLoad,
+    const al::span<Voice::BufferLine> voiceSamples)
 {
     const uint loopStart{buffer->mLoopStart};
     const uint loopEnd{buffer->mLoopEnd};
@@ -255,7 +254,7 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
         /* Load what's left to play from the buffer */
         const size_t remaining{minz(samplesToLoad, buffer->mSampleLen-dataPosInt)};
         LoadSamples(voiceSamples, MaxResamplerEdge, buffer->mSamples, dataPosInt, sampleType,
-            sampleChannels, remaining);
+            sampleChannels, srcStep, remaining);
 
         if(const size_t toFill{samplesToLoad - remaining})
         {
@@ -271,7 +270,7 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
         /* Load what's left of this loop iteration */
         const size_t remaining{minz(samplesToLoad, loopEnd-dataPosInt)};
         LoadSamples(voiceSamples, MaxResamplerEdge, buffer->mSamples, dataPosInt, sampleType,
-            sampleChannels, remaining);
+            sampleChannels, srcStep, remaining);
 
         /* Load repeats of the loop to fill the buffer. */
         const auto loopSize = static_cast<size_t>(loopEnd - loopStart);
@@ -279,20 +278,20 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
         while(const size_t toFill{minz(samplesToLoad - samplesLoaded, loopSize)})
         {
             LoadSamples(voiceSamples, MaxResamplerEdge + samplesLoaded, buffer->mSamples,
-                loopStart, sampleType, sampleChannels, toFill);
+                loopStart, sampleType, sampleChannels, srcStep, toFill);
             samplesLoaded += toFill;
         }
     }
 }
 
 void LoadBufferCallback(VoiceBufferItem *buffer, const size_t numCallbackSamples,
-    const FmtType sampleType, const FmtChannels sampleChannels, const size_t samplesToLoad,
-    const al::span<Voice::BufferLine> voiceSamples)
+    const FmtType sampleType, const FmtChannels sampleChannels, const size_t srcStep,
+    const size_t samplesToLoad, const al::span<Voice::BufferLine> voiceSamples)
 {
     /* Load what's left to play from the buffer */
     const size_t remaining{minz(samplesToLoad, numCallbackSamples)};
     LoadSamples(voiceSamples, MaxResamplerEdge, buffer->mSamples, 0, sampleType, sampleChannels,
-        remaining);
+        srcStep, remaining);
 
     if(const size_t toFill{samplesToLoad - remaining})
     {
@@ -306,7 +305,8 @@ void LoadBufferCallback(VoiceBufferItem *buffer, const size_t numCallbackSamples
 
 void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     size_t dataPosInt, const FmtType sampleType, const FmtChannels sampleChannels,
-    const size_t samplesToLoad, const al::span<Voice::BufferLine> voiceSamples)
+    const size_t srcStep, const size_t samplesToLoad,
+    const al::span<Voice::BufferLine> voiceSamples)
 {
     /* Crawl the buffer queue to fill in the temp buffer */
     size_t samplesLoaded{0};
@@ -322,7 +322,7 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 
         const size_t remaining{minz(samplesToLoad-samplesLoaded, buffer->mSampleLen-dataPosInt)};
         LoadSamples(voiceSamples, MaxResamplerEdge+samplesLoaded, buffer->mSamples, dataPosInt,
-            sampleType, sampleChannels, remaining);
+            sampleType, sampleChannels, srcStep, remaining);
 
         samplesLoaded += remaining;
         if(samplesLoaded == samplesToLoad)
@@ -580,7 +580,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         {
             if((mFlags&VoiceIsStatic))
                 LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, mFmtChannels,
-                    SrcBufferSize, mVoiceSamples);
+                    mNumChannels, SrcBufferSize, mVoiceSamples);
             else if((mFlags&VoiceIsCallback))
             {
                 if(!(mFlags&VoiceCallbackStopped))
@@ -605,11 +605,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                     }
                 }
                 LoadBufferCallback(BufferListItem, mNumCallbackSamples, mFmtType, mFmtChannels,
-                    SrcBufferSize, mVoiceSamples);
+                    mNumChannels, SrcBufferSize, mVoiceSamples);
             }
             else
                 LoadBufferQueue(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, mFmtChannels,
-                    SrcBufferSize, mVoiceSamples);
+                    mNumChannels, SrcBufferSize, mVoiceSamples);
 
             if(mDecoder)
             {

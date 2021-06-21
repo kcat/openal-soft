@@ -26,7 +26,8 @@ install:
         portaudio19-dev \
         libasound2-dev \
         libjack-dev \
-        qtbase5-dev
+        qtbase5-dev \
+        libdbus-1-dev
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then

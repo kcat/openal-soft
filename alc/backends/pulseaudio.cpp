@@ -21,31 +21,48 @@
 
 #include "config.h"
 
-#include "backends/pulseaudio.h"
+#include "pulseaudio.h"
 
-#include <poll.h>
-#include <cstring>
-
-#include <array>
-#include <string>
-#include <vector>
-#include <atomic>
-#include <thread>
 #include <algorithm>
-#include <functional>
+#include <array>
+#include <atomic>
+#include <bitset>
+#include <chrono>
 #include <condition_variable>
+#include <cstring>
+#include <functional>
+#include <limits>
+#include <mutex>
+#include <new>
+#include <poll.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string>
+#include <sys/types.h>
+#include <thread>
+#include <utility>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "alconfig.h"
+#include "albyte.h"
+#include "alc/alconfig.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "aloptional.h"
+#include "alspan.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "opthelpers.h"
 #include "strutils.h"
+#include "vector.h"
 
 #include <pulse/pulseaudio.h>
 
 
 namespace {
+
+using uint = unsigned int;
 
 #ifdef HAVE_DYNLOAD
 #define PULSE_FUNCS(MAGIC)                                                    \
@@ -281,7 +298,7 @@ al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
     return al::nullopt;
 }
 
-void SetChannelOrderFromMap(ALCdevice *device, const pa_channel_map &chanmap)
+void SetChannelOrderFromMap(DeviceBase *device, const pa_channel_map &chanmap)
 {
     device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
     for(uint i{0};i < chanmap.channels;++i)
@@ -654,7 +671,7 @@ PulseMainloop gGlobalMainloop;
 
 
 struct PulsePlayback final : public BackendBase {
-    PulsePlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    PulsePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PulsePlayback() override;
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
@@ -1033,33 +1050,33 @@ void PulsePlayback::start()
 {
     auto plock = mMainloop.getUniqueLock();
 
-    pa_stream_set_write_callback(mStream, &PulsePlayback::streamWriteCallbackC, this);
-    pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
-        &mMainloop)};
-
-    /* Write some (silent) samples to fill the prebuf amount if needed. */
-    if(size_t prebuf{mAttr.prebuf})
+    /* Write some (silent) samples to fill the buffer before we start feeding
+     * it newly mixed samples.
+     */
+    if(size_t todo{pa_stream_writable_size(mStream)})
     {
-        prebuf = minz(prebuf, pa_stream_writable_size(mStream));
-
-        void *buf{pa_xmalloc(prebuf)};
+        void *buf{pa_xmalloc(todo)};
         switch(mSpec.format)
         {
         case PA_SAMPLE_U8:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x80);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x80);
             break;
         case PA_SAMPLE_ALAW:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0xD5);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0xD5);
             break;
         case PA_SAMPLE_ULAW:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x7f);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x7f);
             break;
         default:
-            std::fill_n(static_cast<uint8_t*>(buf), prebuf, 0x00);
+            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x00);
             break;
         }
-        pa_stream_write(mStream, buf, prebuf, pa_xfree, 0, PA_SEEK_RELATIVE);
+        pa_stream_write(mStream, buf, todo, pa_xfree, 0, PA_SEEK_RELATIVE);
     }
+
+    pa_stream_set_write_callback(mStream, &PulsePlayback::streamWriteCallbackC, this);
+    pa_operation *op{pa_stream_cork(mStream, 0, &PulseMainloop::streamSuccessCallbackC,
+        &mMainloop)};
 
     mMainloop.waitForOperation(op, plock);
 }
@@ -1107,7 +1124,7 @@ ClockLatency PulsePlayback::getClockLatency()
 
 
 struct PulseCapture final : public BackendBase {
-    PulseCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    PulseCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
     void streamStateCallback(pa_stream *stream) noexcept;
@@ -1509,7 +1526,7 @@ std::string PulseBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr PulseBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr PulseBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PulsePlayback{device}};

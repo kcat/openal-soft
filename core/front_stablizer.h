@@ -1,12 +1,12 @@
-#ifndef ALC_FRONT_STABLIZER_H
-#define ALC_FRONT_STABLIZER_H
+#ifndef CORE_FRONT_STABLIZER_H
+#define CORE_FRONT_STABLIZER_H
 
 #include <array>
 #include <memory>
 
 #include "almalloc.h"
-#include "core/bufferline.h"
-#include "core/filters/splitter.h"
+#include "bufferline.h"
+#include "filters/splitter.h"
 
 
 struct FrontStablizer {
@@ -33,4 +33,4 @@ struct FrontStablizer {
     DEF_FAM_NEWDEL(FrontStablizer, DelayBuf)
 };
 
-#endif /* ALC_FRONT_STABLIZER_H */
+#endif /* CORE_FRONT_STABLIZER_H */

@@ -1,5 +1,5 @@
-#ifndef ALC_BUFFER_STORAGE_H
-#define ALC_BUFFER_STORAGE_H
+#ifndef CORE_BUFFER_STORAGE_H
+#define CORE_BUFFER_STORAGE_H
 
 #include <atomic>
 
@@ -27,6 +27,9 @@ enum FmtChannels : unsigned char {
     FmtX71, /* (WFX order) */
     FmtBFormat2D,
     FmtBFormat3D,
+    FmtUHJ2, /* 2-channel UHJ, aka "BHJ", stereo-compatible */
+    FmtUHJ3, /* 3-channel UHJ, aka "THJ" */
+    FmtUHJ4, /* 4-channel UHJ, aka "PHJ" */
 };
 
 enum class AmbiLayout : unsigned char {
@@ -69,4 +72,4 @@ struct BufferStorage {
     { return mChannels == FmtBFormat2D || mChannels == FmtBFormat3D; }
 };
 
-#endif /* ALC_BUFFER_STORAGE_H */
+#endif /* CORE_BUFFER_STORAGE_H */

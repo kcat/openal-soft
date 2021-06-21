@@ -5,38 +5,19 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cmath>
-#include <iterator>
-#include <numeric>
+#include <utility>
 
 #include "almalloc.h"
-#include "alu.h"
-#include "core/ambdec.h"
-#include "core/filters/splitter.h"
+#include "ambdec.h"
+#include "filters/splitter.h"
 #include "front_stablizer.h"
 #include "math_defs.h"
+#include "mixer.h"
 #include "opthelpers.h"
 
 
 namespace {
-
-constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale{{
-    1.00000000e+00f, 1.00000000e+00f
-}};
-constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale2O{{
-    7.45355990e-01f, 1.00000000e+00f, 1.00000000e+00f
-}};
-constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale3O{{
-    5.89792205e-01f, 8.79693856e-01f, 1.00000000e+00f, 1.00000000e+00f
-}};
-
-inline auto& GetDecoderHFScales(uint order) noexcept
-{
-    if(order >= 3) return Ambi3DDecoderHFScale3O;
-    if(order == 2) return Ambi3DDecoderHFScale2O;
-    return Ambi3DDecoderHFScale;
-}
 
 inline auto& GetAmbiScales(AmbDecScale scaletype) noexcept
 {
@@ -265,22 +246,6 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
     std::copy(side_end, side_end+FrontStablizer::DelayLength, mStablizer->Side.begin());
 }
 
-
-auto BFormatDec::GetHFOrderScales(const uint in_order, const uint out_order) noexcept
-    -> std::array<float,MaxAmbiOrder+1>
-{
-    std::array<float,MaxAmbiOrder+1> ret{};
-
-    assert(out_order >= in_order);
-
-    const auto &target = GetDecoderHFScales(out_order);
-    const auto &input = GetDecoderHFScales(in_order);
-
-    for(size_t i{0};i < in_order+1;++i)
-        ret[i] = input[i] / target[i];
-
-    return ret;
-}
 
 std::unique_ptr<BFormatDec> BFormatDec::Create(const AmbDecConf *conf, const bool allow_2band,
     const size_t inchans, const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],

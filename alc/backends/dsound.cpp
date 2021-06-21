@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/dsound.h"
+#include "dsound.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -44,10 +44,10 @@
 #include <algorithm>
 #include <functional>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "compat.h"
+#include "alnumeric.h"
 #include "comptr.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"
@@ -170,12 +170,12 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
 
 
 struct DSoundPlayback final : public BackendBase {
-    DSoundPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    DSoundPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~DSoundPlayback() override;
 
     int mixerProc();
 
-    void open(const ALCchar *name) override;
+    void open(const char *name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -548,7 +548,7 @@ void DSoundPlayback::stop()
 
 
 struct DSoundCapture final : public BackendBase {
-    DSoundCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    DSoundCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~DSoundCapture() override;
 
     void open(const char *name) override;
@@ -840,7 +840,7 @@ std::string DSoundBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr DSoundBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr DSoundBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new DSoundPlayback{device}};

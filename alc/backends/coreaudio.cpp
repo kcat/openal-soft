@@ -20,23 +20,25 @@
 
 #include "config.h"
 
-#include "backends/coreaudio.h"
+#include "coreaudio.h"
 
 #include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <cmath>
+#include <memory>
+#include <string>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "ringbuffer.h"
-#include "converter.h"
+#include "alnumeric.h"
+#include "core/converter.h"
+#include "core/device.h"
 #include "core/logging.h"
-#include "backends/base.h"
+#include "ringbuffer.h"
 
-#include <unistd.h>
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
 
@@ -45,9 +47,200 @@ namespace {
 
 static const char ca_device[] = "CoreAudio Default";
 
+struct DeviceEntry {
+    AudioDeviceID mId;
+    std::string mName;
+};
+
+std::vector<DeviceEntry> PlaybackList;
+
+
+OSStatus GetHwProperty(AudioHardwarePropertyID propId, UInt32 dataSize, void *propData)
+{
+    const AudioObjectPropertyAddress addr{propId, kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMaster};
+    return AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0, nullptr, &dataSize,
+        propData);
+}
+
+OSStatus GetHwPropertySize(AudioHardwarePropertyID propId, UInt32 *outSize)
+{
+    const AudioObjectPropertyAddress addr{propId, kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMaster};
+    return AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr, 0, nullptr, outSize);
+}
+
+OSStatus GetDevProperty(AudioDeviceID devId, AudioDevicePropertyID propId, bool isCapture,
+    UInt32 elem, UInt32 dataSize, void *propData)
+{
+    static const AudioObjectPropertyScope scopes[2]{kAudioDevicePropertyScopeOutput,
+        kAudioDevicePropertyScopeInput};
+    const AudioObjectPropertyAddress addr{propId, scopes[isCapture], elem};
+    return AudioObjectGetPropertyData(devId, &addr, 0, nullptr, &dataSize, propData);
+}
+
+OSStatus GetDevPropertySize(AudioDeviceID devId, AudioDevicePropertyID inPropertyID,
+    bool isCapture, UInt32 elem, UInt32 *outSize)
+{
+    static const AudioObjectPropertyScope scopes[2]{kAudioDevicePropertyScopeOutput,
+        kAudioDevicePropertyScopeInput};
+    const AudioObjectPropertyAddress addr{inPropertyID, scopes[isCapture], elem};
+    return AudioObjectGetPropertyDataSize(devId, &addr, 0, nullptr, outSize);
+}
+
+
+std::string GetDeviceName(AudioDeviceID devId)
+{
+    std::string devname;
+    CFStringRef nameRef;
+
+    /* Try to get the device name as a CFString, for Unicode name support. */
+    OSStatus err{GetDevProperty(devId, kAudioDevicePropertyDeviceNameCFString, false, 0,
+        sizeof(nameRef), &nameRef)};
+    if(err == noErr)
+    {
+        const CFIndex propSize{CFStringGetMaximumSizeForEncoding(CFStringGetLength(nameRef),
+            kCFStringEncodingUTF8)};
+        devname.resize(static_cast<size_t>(propSize)+1, '\0');
+
+        CFStringGetCString(nameRef, &devname[0], propSize+1, kCFStringEncodingUTF8);
+        CFRelease(nameRef);
+    }
+    else
+    {
+        /* If that failed, just get the C string. Hopefully there's nothing bad
+         * with this.
+         */
+        UInt32 propSize{};
+        if(GetDevPropertySize(devId, kAudioDevicePropertyDeviceName, false, 0, &propSize))
+            return devname;
+
+        devname.resize(propSize+1, '\0');
+        if(GetDevProperty(devId, kAudioDevicePropertyDeviceName, false, 0, propSize, &devname[0]))
+        {
+            devname.clear();
+            return devname;
+        }
+    }
+
+    /* Clear extraneous nul chars that may have been written with the name
+     * string, and return it.
+     */
+    while(!devname.back())
+        devname.pop_back();
+    return devname;
+}
+
+UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
+{
+    UInt32 propSize{};
+    auto err = GetDevPropertySize(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0,
+        &propSize);
+    if(err)
+    {
+        ERR("kAudioDevicePropertyStreamConfiguration size query failed: %u\n", err);
+        return 0;
+    }
+
+    auto buflist_data = std::make_unique<char[]>(propSize);
+    auto *buflist = reinterpret_cast<AudioBufferList*>(buflist_data.get());
+
+    err = GetDevProperty(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0, propSize,
+        buflist);
+    if(err)
+    {
+        ERR("kAudioDevicePropertyStreamConfiguration query failed: %u\n", err);
+        return 0;
+    }
+
+    UInt32 numChannels{0};
+    for(size_t i{0};i < buflist->mNumberBuffers;++i)
+        numChannels += buflist->mBuffers[i].mNumberChannels;
+
+    return numChannels;
+}
+
+
+void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
+{
+    UInt32 propSize{};
+    if(auto err = GetHwPropertySize(kAudioHardwarePropertyDevices, &propSize))
+    {
+        ERR("Failed to get device list size: %u\n", err);
+        return;
+    }
+
+    auto devIds = std::vector<AudioDeviceID>(propSize/sizeof(AudioDeviceID), kAudioDeviceUnknown);
+    if(auto err = GetHwProperty(kAudioHardwarePropertyDevices, propSize, devIds.data()))
+    {
+        ERR("Failed to get device list: %u\n", err);
+        return;
+    }
+
+    std::vector<DeviceEntry> newdevs;
+    newdevs.reserve(devIds.size());
+
+    AudioDeviceID defaultId{kAudioDeviceUnknown};
+    GetHwProperty(isCapture ? kAudioHardwarePropertyDefaultInputDevice :
+        kAudioHardwarePropertyDefaultOutputDevice, sizeof(defaultId), &defaultId);
+
+    if(defaultId != kAudioDeviceUnknown)
+    {
+        newdevs.emplace_back(DeviceEntry{defaultId, GetDeviceName(defaultId)});
+        const auto &entry = newdevs.back();
+        TRACE("Got device: %s = ID %u\n", entry.mName.c_str(), entry.mId);
+    }
+    for(const AudioDeviceID devId : devIds)
+    {
+        if(devId == kAudioDeviceUnknown)
+            continue;
+
+        auto match_devid = [devId](const DeviceEntry &entry) noexcept -> bool
+        { return entry.mId == devId; };
+        auto match = std::find_if(newdevs.cbegin(), newdevs.cend(), match_devid);
+        if(match != newdevs.cend()) continue;
+
+        auto numChannels = GetDeviceChannelCount(devId, isCapture);
+        if(numChannels > 0)
+        {
+            newdevs.emplace_back(DeviceEntry{devId, GetDeviceName(devId)});
+            const auto &entry = newdevs.back();
+            TRACE("Got device: %s = ID %u\n", entry.mName.c_str(), entry.mId);
+        }
+    }
+
+    if(newdevs.size() > 1)
+    {
+        /* Rename entries that have matching names, by appending '#2', '#3',
+         * etc, as needed.
+         */
+        for(auto curitem = newdevs.begin()+1;curitem != newdevs.end();++curitem)
+        {
+            auto check_match = [curitem](const DeviceEntry &entry) -> bool
+            { return entry.mName == curitem->mName; };
+            if(std::find_if(newdevs.begin(), curitem, check_match) != curitem)
+            {
+                std::string name{curitem->mName};
+                size_t count{1};
+                auto check_name = [&name](const DeviceEntry &entry) -> bool
+                { return entry.mName == name; };
+                do {
+                    name = curitem->mName;
+                    name += " #";
+                    name += std::to_string(++count);
+                } while(std::find_if(newdevs.begin(), curitem, check_name) != curitem);
+                curitem->mName = std::move(name);
+            }
+        }
+    }
+
+    newdevs.shrink_to_fit();
+    newdevs.swap(list);
+}
+
 
 struct CoreAudioPlayback final : public BackendBase {
-    CoreAudioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    CoreAudioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~CoreAudioPlayback() override;
 
     OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -96,19 +289,41 @@ OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTi
 
 void CoreAudioPlayback::open(const char *name)
 {
+#if TARGET_OS_IOS || TARGET_OS_TV
     if(!name)
         name = ca_device;
     else if(strcmp(name, ca_device) != 0)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
             name};
+#else
+    AudioDeviceID audioDevice{kAudioDeviceUnknown};
+    if(!name)
+        GetHwProperty(kAudioHardwarePropertyDefaultOutputDevice, sizeof(audioDevice),
+            &audioDevice);
+    else
+    {
+        if(PlaybackList.empty())
+            EnumerateDevices(PlaybackList, false);
+
+        auto find_name = [name](const DeviceEntry &entry) -> bool
+        { return entry.mName == name; };
+        auto devmatch = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), find_name);
+        if(devmatch == PlaybackList.cend())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
+
+        audioDevice = devmatch->mId;
+    }
+#endif
 
     /* open the default output unit */
     AudioComponentDescription desc{};
     desc.componentType = kAudioUnitType_Output;
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
     desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #else
-    desc.componentSubType = kAudioUnitSubType_DefaultOutput;
+    desc.componentSubType = (audioDevice == kAudioDeviceUnknown) ?
+        kAudioUnitSubType_DefaultOutput : kAudioUnitSubType_HALOutput;
 #endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
@@ -123,6 +338,12 @@ void CoreAudioPlayback::open(const char *name)
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not create component instance: %u", err};
+
+#if !TARGET_OS_IOS && !TARGET_OS_TV
+    if(audioDevice != kAudioDeviceUnknown)
+        AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, 0, &audioDevice, sizeof(AudioDeviceID));
+#endif
 
     err = AudioUnitInitialize(audioUnit);
     if(err != noErr)
@@ -139,7 +360,19 @@ void CoreAudioPlayback::open(const char *name)
     }
     mAudioUnit = audioUnit;
 
-    mDevice->DeviceName = name;
+    if(name)
+        mDevice->DeviceName = name;
+    else
+    {
+        UInt32 propSize{sizeof(audioDevice)};
+        audioDevice = kAudioDeviceUnknown;
+        AudioUnitGetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, 0, &audioDevice, &propSize);
+
+        std::string devname{GetDeviceName(audioDevice)};
+        if(!devname.empty()) mDevice->DeviceName = std::move(devname);
+        else mDevice->DeviceName = "Unknown Device Name";
+    }
 }
 
 bool CoreAudioPlayback::reset()
@@ -304,7 +537,7 @@ void CoreAudioPlayback::stop()
 
 
 struct CoreAudioCapture final : public BackendBase {
-    CoreAudioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    CoreAudioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~CoreAudioCapture() override;
 
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -410,7 +643,7 @@ void CoreAudioCapture::open(const char *name)
             name};
 
     desc.componentType = kAudioUnitType_Output;
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
     desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #else
     desc.componentSubType = kAudioUnitSubType_HALOutput;
@@ -446,28 +679,21 @@ void CoreAudioCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not enable audio unit input property: %u", err};
 
-#if !TARGET_OS_IOS
+#if !TARGET_OS_IOS && !TARGET_OS_TV
     {
         // Get the default input device
-        AudioDeviceID inputDevice = kAudioDeviceUnknown;
-
-        propertySize = sizeof(AudioDeviceID);
-        AudioObjectPropertyAddress propertyAddress{};
-        propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
-        propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
-        propertyAddress.mElement = kAudioObjectPropertyElementMaster;
-
-        err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, nullptr,
-            &propertySize, &inputDevice);
+        AudioDeviceID defaultId{kAudioDeviceUnknown};
+        err = GetHwProperty(kAudioHardwarePropertyDefaultInputDevice, sizeof(defaultId),
+            &defaultId);
         if(err != noErr)
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Could not get input device: %u", err};
-        if(inputDevice == kAudioDeviceUnknown)
+        if(defaultId == kAudioDeviceUnknown)
             throw al::backend_exception{al::backend_error::NoDevice, "Unknown input device"};
 
         // Track the input device
         err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
+            kAudioUnitScope_Global, 0, &defaultId, sizeof(AudioDeviceID));
         if(err != noErr)
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Could not set input device: %u", err};
@@ -675,9 +901,22 @@ bool CoreAudioBackendFactory::querySupport(BackendType type)
 std::string CoreAudioBackendFactory::probe(BackendType type)
 {
     std::string outnames;
+    auto append_name = [&outnames](const DeviceEntry &entry) -> void
+    {
+        /* Includes null char. */
+        outnames.append(entry.mName.c_str(), entry.mName.length()+1);
+    };
+
     switch(type)
     {
     case BackendType::Playback:
+#if !TARGET_OS_IOS && !TARGET_OS_TV
+        EnumerateDevices(PlaybackList, false);
+        std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
+        break;
+#else
+        /*fall-through*/
+#endif
     case BackendType::Capture:
         /* Includes null char. */
         outnames.append(ca_device, sizeof(ca_device));
@@ -686,7 +925,7 @@ std::string CoreAudioBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr CoreAudioBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr CoreAudioBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new CoreAudioPlayback{device}};

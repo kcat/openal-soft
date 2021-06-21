@@ -20,19 +20,31 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <iterator>
+#include <tuple>
 
-#include "alcmain.h"
-#include "alcontext.h"
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "alspan.h"
+#include "core/bufferline.h"
+#include "core/context.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
-#include "effectslot.h"
+#include "core/mixer.h"
+#include "intrusive_ptr.h"
+#include "opthelpers.h"
 #include "vector.h"
 
 
 namespace {
+
+using uint = unsigned int;
 
 constexpr float LowpassFreqRef{5000.0f};
 
@@ -57,8 +69,8 @@ struct EchoState final : public EffectState {
 
     alignas(16) float mTempBuffer[2][BufferLineSize];
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -66,7 +78,7 @@ struct EchoState final : public EffectState {
     DEF_NEWDEL(EchoState)
 };
 
-void EchoState::deviceUpdate(const ALCdevice *Device, const Buffer&)
+void EchoState::deviceUpdate(const DeviceBase *Device, const Buffer&)
 {
     const auto frequency = static_cast<float>(Device->Frequency);
 
@@ -85,10 +97,10 @@ void EchoState::deviceUpdate(const ALCdevice *Device, const Buffer&)
     }
 }
 
-void EchoState::update(const ALCcontext *context, const EffectSlot *slot,
+void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
     mTap[0].delay = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);
@@ -148,7 +160,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
     mFilter.setComponents(z1, z2);
     mOffset = offset;
 
-    for(ALsizei c{0};c < 2;c++)
+    for(size_t c{0};c < 2;c++)
         MixSamples({mTempBuffer[c], samplesToDo}, samplesOut, mGains[c].Current, mGains[c].Target,
             samplesToDo, 0);
 }

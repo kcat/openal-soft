@@ -1,10 +1,9 @@
-#ifndef ALC_EVENT_H
-#define ALC_EVENT_H
+#ifndef CORE_EVENT_H
+#define CORE_EVENT_H
 
 #include "almalloc.h"
 
 struct EffectState;
-enum class VChangeState;
 
 using uint = unsigned int;
 
@@ -23,12 +22,19 @@ enum {
 };
 
 struct AsyncEvent {
+    enum class SrcState {
+        Reset,
+        Stop,
+        Play,
+        Pause
+    };
+
     uint EnumType{0u};
     union {
         char dummy;
         struct {
             uint id;
-            VChangeState state;
+            SrcState state;
         } srcstate;
         struct {
             uint id;

@@ -1,5 +1,5 @@
-#ifndef BFORMATDEC_H
-#define BFORMATDEC_H
+#ifndef CORE_BFORMATDEC_H
+#define CORE_BFORMATDEC_H
 
 #include <array>
 #include <cstddef>
@@ -7,10 +7,10 @@
 
 #include "almalloc.h"
 #include "alspan.h"
-#include "core/ambidefs.h"
-#include "core/bufferline.h"
-#include "core/devformat.h"
-#include "core/filters/splitter.h"
+#include "ambidefs.h"
+#include "bufferline.h"
+#include "devformat.h"
+#include "filters/splitter.h"
 
 struct AmbDecConf;
 struct FrontStablizer;
@@ -58,10 +58,6 @@ public:
         const FloatBufferLine *InSamples, const size_t lidx, const size_t ridx, const size_t cidx,
         const size_t SamplesToDo);
 
-    /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint in_order,
-        const uint out_order) noexcept;
-
     static std::unique_ptr<BFormatDec> Create(const AmbDecConf *conf, const bool allow_2band,
         const size_t inchans, const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
         std::unique_ptr<FrontStablizer> stablizer);
@@ -72,4 +68,4 @@ public:
     DEF_FAM_NEWDEL(BFormatDec, mChannelDec)
 };
 
-#endif /* BFORMATDEC_H */
+#endif /* CORE_BFORMATDEC_H */

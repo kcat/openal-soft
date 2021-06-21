@@ -1,24 +1,7 @@
-/**
- * OpenAL cross platform audio library
- * Copyright (C) 2011 by authors.
- * This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Library General Public
- *  License as published by the Free Software Foundation; either
- *  version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- *  License along with this library; if not, write to the
- *  Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- * Or go to http://www.gnu.org/copyleft/lgpl.html
- */
 
 #include "config.h"
+
+#include "helpers.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -27,18 +10,24 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <limits>
 #include <string>
 
-#include "alcmain.h"
 #include "almalloc.h"
 #include "alfstream.h"
 #include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
-#include "compat.h"
-#include "core/logging.h"
+#include "logging.h"
 #include "strutils.h"
 #include "vector.h"
+
+
+/* Mixing thread piority level */
+int RTPrioLevel{1};
+
+/* Allow reducing the process's RTTime limit for RTKit. */
+bool AllowRTTimeLimit{true};
 
 
 #ifdef _WIN32
@@ -51,9 +40,12 @@ const PathNamePair &GetProcBinary()
     if(procbin) return *procbin;
 
     auto fullpath = al::vector<WCHAR>(256);
-    DWORD len;
-    while((len=GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))) == fullpath.size())
+    DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
+    while(len == fullpath.size())
+    {
         fullpath.resize(fullpath.size() << 1);
+        len = GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()));
+    }
     if(len == 0)
     {
         ERR("Failed to get process name: error %lu\n", GetLastError());
@@ -202,6 +194,16 @@ void SetRTPriority(void)
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
 #include <pthread.h>
 #include <sched.h>
+#endif
+#ifdef HAVE_RTKIT
+#include <sys/time.h>
+#include <sys/resource.h>
+
+#include "dbus_wrap.h"
+#include "rtkit.h"
+#ifndef RLIMIT_RTTIME
+#define RLIMIT_RTTIME 15
+#endif
 #endif
 
 const PathNamePair &GetProcBinary()
@@ -409,28 +411,104 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
 void SetRTPriority()
 {
+    if(RTPrioLevel <= 0)
+        return;
+
+    int err{-ENOTSUP};
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-    if(RTPrioLevel > 0)
-    {
-        struct sched_param param{};
-        /* Use the minimum real-time priority possible for now (on Linux this
-         * should be 1 for SCHED_RR).
-         */
-        param.sched_priority = sched_get_priority_min(SCHED_RR);
-        int err;
+    struct sched_param param{};
+    /* Use the minimum real-time priority possible for now (on Linux this
+     * should be 1 for SCHED_RR).
+     */
+    param.sched_priority = sched_get_priority_min(SCHED_RR);
 #ifdef SCHED_RESET_ON_FORK
-        err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
-        if(err == EINVAL)
+    err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
+    if(err == EINVAL)
 #endif
-            err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
-        if(err != 0)
-            ERR("Failed to set real-time priority for thread: %s (%d)\n", std::strerror(err), err);
+        err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+    if(err == 0) return;
+
+    WARN("pthread_setschedparam failed: %s (%d)\n", std::strerror(err), err);
+#endif
+#ifdef HAVE_RTKIT
+    if(HasDBus())
+    {
+        dbus::Error error;
+        if(dbus::ConnectionPtr conn{(*pdbus_bus_get)(DBUS_BUS_SYSTEM, &error.get())})
+        {
+            using ulonglong = unsigned long long;
+            auto limit_rttime = [](DBusConnection *c) -> int
+            {
+                long long maxrttime{rtkit_get_rttime_usec_max(c)};
+                if(maxrttime <= 0) return static_cast<int>(std::abs(maxrttime));
+                const ulonglong umaxtime{static_cast<ulonglong>(maxrttime)};
+
+                struct rlimit rlim{};
+                if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
+                    return errno;
+                TRACE("RTTime max: %llu (hard: %llu, soft: %llu)\n", umaxtime,
+                    ulonglong{rlim.rlim_max}, ulonglong{rlim.rlim_cur});
+                if(rlim.rlim_max > umaxtime)
+                {
+                    rlim.rlim_max = static_cast<rlim_t>(std::min<ulonglong>(umaxtime,
+                        std::numeric_limits<rlim_t>::max()));
+                    rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
+                    if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)
+                        return errno;
+                }
+                return 0;
+            };
+
+            /* Don't stupidly exit if the connection dies while doing this. */
+            (*pdbus_connection_set_exit_on_disconnect)(conn.get(), false);
+
+            int nicemin{};
+            err = rtkit_get_min_nice_level(conn.get(), &nicemin);
+            if(err == -ENOENT)
+            {
+                err = std::abs(err);
+                ERR("Could not query RTKit: %s (%d)\n", std::strerror(err), err);
+                return;
+            }
+            int rtmax{rtkit_get_max_realtime_priority(conn.get())};
+            TRACE("Maximum real-time priority: %d, minimum niceness: %d\n", rtmax, nicemin);
+
+            err = EINVAL;
+            if(rtmax > 0)
+            {
+                if(AllowRTTimeLimit)
+                {
+                    err = limit_rttime(conn.get());
+                    if(err != 0)
+                        WARN("Failed to set RLIMIT_RTTIME for RTKit: %s (%d)\n",
+                            std::strerror(err), err);
+                }
+
+                /* Use half the maximum real-time priority allowed. */
+                TRACE("Making real-time with priority %d\n", (rtmax+1)/2);
+                err = rtkit_make_realtime(conn.get(), 0, (rtmax+1)/2);
+                if(err == 0) return;
+
+                err = std::abs(err);
+                WARN("Failed to set real-time priority: %s (%d)\n", std::strerror(err), err);
+            }
+            if(nicemin < 0)
+            {
+                TRACE("Making high priority with niceness %d\n", nicemin);
+                err = rtkit_make_high_priority(conn.get(), 0, nicemin);
+                if(err == 0) return;
+
+                err = std::abs(err);
+                WARN("Failed to set high priority: %s (%d)\n", std::strerror(err), err);
+            }
+        }
+        else
+            WARN("D-Bus connection failed with %s: %s\n", error->name, error->message);
     }
-#else
-    /* Real-time priority not available */
-    if(RTPrioLevel > 0)
-        ERR("Cannot set priority level for thread\n");
+    else
+        WARN("D-Bus not available\n");
 #endif
+    ERR("Could not set elevated priority: %s (%d)\n", std::strerror(err), err);
 }
 
 #endif

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/oss.h"
+#include "oss.h"
 
 #include <fcntl.h>
 #include <poll.h>
@@ -41,13 +41,13 @@
 #include <thread>
 #include <utility>
 
-#include "alcmain.h"
-#include "alconfig.h"
 #include "albyte.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
-#include "alu.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
@@ -226,7 +226,7 @@ uint log2i(uint x)
 
 
 struct OSSPlayback final : public BackendBase {
-    OSSPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    OSSPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OSSPlayback() override;
 
     int mixerProc();
@@ -442,7 +442,7 @@ void OSSPlayback::stop()
 
 
 struct OSScapture final : public BackendBase {
-    OSScapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    OSScapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OSScapture() override;
 
     int recordProc();
@@ -680,7 +680,7 @@ std::string OSSBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr OSSBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr OSSBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OSSPlayback{device}};

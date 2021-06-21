@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/null.h"
+#include "null.h"
 
 #include <exception>
 #include <atomic>
@@ -30,9 +30,9 @@
 #include <functional>
 #include <thread>
 
-#include "alcmain.h"
+#include "core/device.h"
 #include "almalloc.h"
-#include "alu.h"
+#include "core/helpers.h"
 #include "threads.h"
 
 
@@ -46,7 +46,7 @@ constexpr char nullDevice[] = "No Output";
 
 
 struct NullBackend final : public BackendBase {
-    NullBackend(ALCdevice *device) noexcept : BackendBase{device} { }
+    NullBackend(DeviceBase *device) noexcept : BackendBase{device} { }
 
     int mixerProc();
 
@@ -165,7 +165,7 @@ std::string NullBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr NullBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr NullBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new NullBackend{device}};

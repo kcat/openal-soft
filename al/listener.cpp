@@ -29,7 +29,7 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "alcontext.h"
+#include "alc/context.h"
 #include "almalloc.h"
 #include "atomic.h"
 #include "core/except.h"
@@ -40,7 +40,7 @@
     if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
         UpdateListenerProps(context.get());                                   \
     else                                                                      \
-        listener.PropsClean.clear(std::memory_order_release);                 \
+        listener.mPropsDirty.set(std::memory_order_release);                  \
 } while(0)
 
 

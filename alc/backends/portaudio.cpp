@@ -20,15 +20,15 @@
 
 #include "config.h"
 
-#include "backends/portaudio.h"
+#include "portaudio.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
-#include "alcmain.h"
-#include "alu.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
+#include "alnumeric.h"
+#include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"
@@ -72,7 +72,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 
 
 struct PortPlayback final : public BackendBase {
-    PortPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    PortPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PortPlayback() override;
 
     int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -231,7 +231,7 @@ void PortPlayback::stop()
 
 
 struct PortCapture final : public BackendBase {
-    PortCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    PortCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PortCapture() override;
 
     int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -431,7 +431,7 @@ std::string PortBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr PortBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr PortBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PortPlayback{device}};

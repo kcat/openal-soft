@@ -86,6 +86,18 @@ typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALv
 typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3);
 typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values);
 #endif
+#ifndef AL_SOFT_UHJ
+#define AL_SOFT_UHJ
+#define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2
+#define AL_FORMAT_UHJ2CHN16_SOFT                 0x19A3
+#define AL_FORMAT_UHJ2CHN_FLOAT32_SOFT           0x19A4
+#define AL_FORMAT_UHJ3CHN8_SOFT                  0x19A5
+#define AL_FORMAT_UHJ3CHN16_SOFT                 0x19A6
+#define AL_FORMAT_UHJ3CHN_FLOAT32_SOFT           0x19A7
+#define AL_FORMAT_UHJ4CHN8_SOFT                  0x19A8
+#define AL_FORMAT_UHJ4CHN16_SOFT                 0x19A9
+#define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
+#endif
 #endif /* ALLOW_EXPERIMENTAL_EXTS */
 }
 
@@ -109,6 +121,7 @@ const std::string AppName{"alffplay"};
 
 ALenum DirectOutMode{AL_FALSE};
 bool EnableWideStereo{false};
+bool EnableUhjDecode{false};
 bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
@@ -222,9 +235,13 @@ public:
         std::unique_lock<std::mutex> lock{mMutex};
 
         AVPacket *pkt{getPacket(lock)};
-        if(!pkt) return avcodec_send_packet(codecctx, nullptr);
-
         const int ret{avcodec_send_packet(codecctx, pkt)};
+        if(!pkt)
+        {
+            if(!ret) return AVErrorEOF;
+            std::cerr<< "Failed to send flush packet: "<<ret <<std::endl;
+            return ret;
+        }
         if(ret != AVERROR(EAGAIN))
         {
             if(ret < 0)
@@ -939,7 +956,6 @@ int AudioState::handler()
 {
     std::unique_lock<std::mutex> srclock{mSrcMutex, std::defer_lock};
     milliseconds sleep_time{AudioBufferTime / 3};
-    ALenum fmt;
 
 #ifdef AL_SOFT_events
     const std::array<ALenum,3> evt_types{{
@@ -958,30 +974,53 @@ int AudioState::handler()
     ALenum ambi_scale{AL_FUMA_SOFT};
 #endif
 
+    ALenum FormatStereo8{AL_FORMAT_STEREO8};
+    ALenum FormatStereo16{AL_FORMAT_STEREO16};
+    ALenum FormatStereo32F{AL_FORMAT_STEREO_FLOAT32};
+#ifdef AL_SOFT_UHJ
+    if(EnableUhjDecode)
+    {
+        FormatStereo8 = AL_FORMAT_UHJ2CHN8_SOFT;
+        FormatStereo16 = AL_FORMAT_UHJ2CHN16_SOFT;
+        FormatStereo32F = AL_FORMAT_UHJ2CHN_FLOAT32_SOFT;
+    }
+#endif
+
     /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
     mFormat = AL_NONE;
-    if((mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP) &&
-       alIsExtensionPresent("AL_EXT_FLOAT32"))
+    if((mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP
+            || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_DBL
+            || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_DBLP
+            || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32
+            || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P
+            || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_S64
+            || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_S64P)
+        && alIsExtensionPresent("AL_EXT_FLOAT32"))
     {
         mDstSampleFmt = AV_SAMPLE_FMT_FLT;
         mFrameSize = 4;
-        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1 &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_71CHN32")) != AL_NONE && fmt != -1)
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 8;
-            mFormat = fmt;
-        }
-        if((mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1 ||
-            mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_51CHN32")) != AL_NONE && fmt != -1)
-        {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 6;
-            mFormat = fmt;
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 8;
+                mFormat = alGetEnumValue("AL_FORMAT_71CHN32");
+            }
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1
+                || mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 6;
+                mFormat = alGetEnumValue("AL_FORMAT_51CHN32");
+            }
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_QUAD)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 4;
+                mFormat = alGetEnumValue("AL_FORMAT_QUAD32");
+            }
         }
         if(mCodecCtx->channel_layout == AV_CH_LAYOUT_MONO)
         {
@@ -994,48 +1033,57 @@ int AudioState::handler()
          * have no way to specify if the source is actually B-Format (let alone
          * if it's 2D or 3D).
          */
-        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4 &&
-           alIsExtensionPresent("AL_EXT_BFORMAT") &&
-           (fmt=alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32")) != AL_NONE && fmt != -1)
+        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4
+            && alIsExtensionPresent("AL_EXT_BFORMAT"))
         {
-            int order{static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1};
-            if((order+1)*(order+1) == mCodecCtx->channels ||
-               (order+1)*(order+1) + 2 == mCodecCtx->channels)
+            /* Calculate what should be the ambisonic order from the number of
+             * channels, and confirm that's the number of channels. Opus allows
+             * an optional non-diegetic stereo stream with the B-Format stream,
+             * which we can ignore, so check for that too.
+             */
+            auto order = static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1;
+            int channels{(order+1) * (order+1)};
+            if(channels == mCodecCtx->channels || channels+2 == mCodecCtx->channels)
             {
                 /* OpenAL only supports first-order with AL_EXT_BFORMAT, which
                  * is 4 channels for 3D buffers.
                  */
                 mFrameSize *= 4;
-                mFormat = fmt;
+                mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32");
             }
         }
-        if(!mFormat)
+        if(!mFormat || mFormat == -1)
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
-            mFormat = AL_FORMAT_STEREO_FLOAT32;
+            mFormat = FormatStereo32F;
         }
     }
     if(mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8 || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8P)
     {
         mDstSampleFmt = AV_SAMPLE_FMT_U8;
         mFrameSize = 1;
-        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1 &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_71CHN8")) != AL_NONE && fmt != -1)
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 8;
-            mFormat = fmt;
-        }
-        if((mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1 ||
-            mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_51CHN8")) != AL_NONE && fmt != -1)
-        {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 6;
-            mFormat = fmt;
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 8;
+                mFormat = alGetEnumValue("AL_FORMAT_71CHN8");
+            }
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1
+                || mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 6;
+                mFormat = alGetEnumValue("AL_FORMAT_51CHN8");
+            }
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_QUAD)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 4;
+                mFormat = alGetEnumValue("AL_FORMAT_QUAD8");
+            }
         }
         if(mCodecCtx->channel_layout == AV_CH_LAYOUT_MONO)
         {
@@ -1043,45 +1091,49 @@ int AudioState::handler()
             mFrameSize *= 1;
             mFormat = AL_FORMAT_MONO8;
         }
-        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4 &&
-           alIsExtensionPresent("AL_EXT_BFORMAT") &&
-           (fmt=alGetEnumValue("AL_FORMAT_BFORMAT3D8")) != AL_NONE && fmt != -1)
+        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4
+            && alIsExtensionPresent("AL_EXT_BFORMAT"))
         {
-            int order{static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1};
-            if((order+1)*(order+1) == mCodecCtx->channels ||
-               (order+1)*(order+1) + 2 == mCodecCtx->channels)
+            auto order = static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1;
+            int channels{(order+1) * (order+1)};
+            if(channels == mCodecCtx->channels || channels+2 == mCodecCtx->channels)
             {
                 mFrameSize *= 4;
-                mFormat = fmt;
+                mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_8");
             }
         }
-        if(!mFormat)
+        if(!mFormat || mFormat == -1)
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
-            mFormat = AL_FORMAT_STEREO8;
+            mFormat = FormatStereo8;
         }
     }
-    if(!mFormat)
+    if(!mFormat || mFormat == -1)
     {
         mDstSampleFmt = AV_SAMPLE_FMT_S16;
         mFrameSize = 2;
-        if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1 &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_71CHN16")) != AL_NONE && fmt != -1)
+        if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
         {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 8;
-            mFormat = fmt;
-        }
-        if((mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1 ||
-            mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
-           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
-           (fmt=alGetEnumValue("AL_FORMAT_51CHN16")) != AL_NONE && fmt != -1)
-        {
-            mDstChanLayout = mCodecCtx->channel_layout;
-            mFrameSize *= 6;
-            mFormat = fmt;
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_7POINT1)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 8;
+                mFormat = alGetEnumValue("AL_FORMAT_71CHN16");
+            }
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1
+                || mCodecCtx->channel_layout == AV_CH_LAYOUT_5POINT1_BACK)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 6;
+                mFormat = alGetEnumValue("AL_FORMAT_51CHN16");
+            }
+            if(mCodecCtx->channel_layout == AV_CH_LAYOUT_QUAD)
+            {
+                mDstChanLayout = mCodecCtx->channel_layout;
+                mFrameSize *= 4;
+                mFormat = alGetEnumValue("AL_FORMAT_QUAD16");
+            }
         }
         if(mCodecCtx->channel_layout == AV_CH_LAYOUT_MONO)
         {
@@ -1089,23 +1141,22 @@ int AudioState::handler()
             mFrameSize *= 1;
             mFormat = AL_FORMAT_MONO16;
         }
-        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4 &&
-           alIsExtensionPresent("AL_EXT_BFORMAT") &&
-           (fmt=alGetEnumValue("AL_FORMAT_BFORMAT3D16")) != AL_NONE && fmt != -1)
+        if(mCodecCtx->channel_layout == 0 && mCodecCtx->channels >= 4
+            && alIsExtensionPresent("AL_EXT_BFORMAT"))
         {
-            int order{static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1};
-            if((order+1)*(order+1) == mCodecCtx->channels ||
-               (order+1)*(order+1) + 2 == mCodecCtx->channels)
+            auto order = static_cast<int>(std::sqrt(mCodecCtx->channels)) - 1;
+            int channels{(order+1) * (order+1)};
+            if(channels == mCodecCtx->channels || channels+2 == mCodecCtx->channels)
             {
                 mFrameSize *= 4;
-                mFormat = fmt;
+                mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_16");
             }
         }
-        if(!mFormat)
+        if(!mFormat || mFormat == -1)
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
-            mFormat = AL_FORMAT_STEREO16;
+            mFormat = FormatStereo16;
         }
     }
     void *samples{nullptr};
@@ -1423,7 +1474,11 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             break;
         Picture *nextvp{&mPictQ[next_idx]};
         if(clocktime < nextvp->mPts)
-            break;
+        {
+            /* For the first update, ensure the first frame gets shown.  */
+            if(!mFirstUpdate || vp)
+                break;
+        }
 
         vp = nextvp;
         updated = true;
@@ -1985,6 +2040,20 @@ int main(int argc, char *argv[])
                 std::cout<< "Found AL_EXT_STEREO_ANGLES" <<std::endl;
                 EnableWideStereo = true;
             }
+        }
+        else if(strcmp(argv[fileidx], "-uhj") == 0)
+        {
+#ifdef AL_SOFT_UHJ
+            if(!alIsExtensionPresent("AL_SOFTX_UHJ"))
+                std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
+            else
+            {
+                std::cout<< "Found AL_SOFT_UHJ" <<std::endl;
+                EnableUhjDecode = true;
+            }
+#else
+            std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
+#endif
         }
         else if(strcmp(argv[fileidx], "-novideo") == 0)
             DisableVideo = true;

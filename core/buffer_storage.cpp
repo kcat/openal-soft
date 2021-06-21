@@ -3,7 +3,7 @@
 
 #include "buffer_storage.h"
 
-#include <cstdint>
+#include <stdint.h>
 
 
 uint BytesFromFmt(FmtType type) noexcept
@@ -33,6 +33,9 @@ uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
     case FmtX71: return 8;
     case FmtBFormat2D: return (ambiorder*2) + 1;
     case FmtBFormat3D: return (ambiorder+1) * (ambiorder+1);
+    case FmtUHJ2: return 2;
+    case FmtUHJ3: return 3;
+    case FmtUHJ4: return 4;
     }
     return 0;
 }

@@ -1,46 +1,37 @@
-#ifndef ALC_MAIN_H
-#define ALC_MAIN_H
+#ifndef CORE_DEVICE_H
+#define CORE_DEVICE_H
 
-#include <algorithm>
+#include <stddef.h>
+
 #include <array>
 #include <atomic>
 #include <bitset>
 #include <chrono>
-#include <cstdint>
-#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
-#include <utility>
-
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
 
 #include "almalloc.h"
-#include "alnumeric.h"
 #include "alspan.h"
+#include "ambidefs.h"
 #include "atomic.h"
-#include "core/ambidefs.h"
 #include "core/bufferline.h"
-#include "core/devformat.h"
-#include "core/filters/splitter.h"
-#include "core/mixer/defs.h"
-#include "hrtf.h"
-#include "inprogext.h"
+#include "devformat.h"
 #include "intrusive_ptr.h"
+#include "mixer/hrtfdefs.h"
+#include "opthelpers.h"
+#include "resampler_limits.h"
+#include "uhjfilter.h"
 #include "vector.h"
 
-class BFormatDec;
-struct ALbuffer;
-struct ALeffect;
-struct ALfilter;
 struct BackendBase;
-struct Compressor;
-struct EffectState;
-struct Uhj2Encoder;
+class BFormatDec;
 struct bs2b;
+struct Compressor;
+struct ContextBase;
+struct DirectHrtfState;
+struct HrtfStore;
+struct UhjEncoder;
 
 using uint = unsigned int;
 
@@ -72,52 +63,6 @@ struct InputRemixMap {
 
     Channel channel;
     std::array<TargetMix,2> targets;
-};
-
-
-struct BufferSubList {
-    uint64_t FreeMask{~0_u64};
-    ALbuffer *Buffers{nullptr}; /* 64 */
-
-    BufferSubList() noexcept = default;
-    BufferSubList(const BufferSubList&) = delete;
-    BufferSubList(BufferSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Buffers{rhs.Buffers}
-    { rhs.FreeMask = ~0_u64; rhs.Buffers = nullptr; }
-    ~BufferSubList();
-
-    BufferSubList& operator=(const BufferSubList&) = delete;
-    BufferSubList& operator=(BufferSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Buffers, rhs.Buffers); return *this; }
-};
-
-struct EffectSubList {
-    uint64_t FreeMask{~0_u64};
-    ALeffect *Effects{nullptr}; /* 64 */
-
-    EffectSubList() noexcept = default;
-    EffectSubList(const EffectSubList&) = delete;
-    EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
-    { rhs.FreeMask = ~0_u64; rhs.Effects = nullptr; }
-    ~EffectSubList();
-
-    EffectSubList& operator=(const EffectSubList&) = delete;
-    EffectSubList& operator=(EffectSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Effects, rhs.Effects); return *this; }
-};
-
-struct FilterSubList {
-    uint64_t FreeMask{~0_u64};
-    ALfilter *Filters{nullptr}; /* 64 */
-
-    FilterSubList() noexcept = default;
-    FilterSubList(const FilterSubList&) = delete;
-    FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
-    { rhs.FreeMask = ~0_u64; rhs.Filters = nullptr; }
-    ~FilterSubList();
-
-    FilterSubList& operator=(const FilterSubList&) = delete;
-    FilterSubList& operator=(FilterSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
 };
 
 
@@ -179,7 +124,12 @@ enum {
     DeviceFlagsCount
 };
 
-struct ALCdevice : public al::intrusive_ref<ALCdevice> {
+struct DeviceBase {
+    /* To avoid extraneous allocations, a 0-sized FlexArray<ContextBase*> is
+     * defined globally as a sharable object.
+     */
+    static al::FlexArray<ContextBase*> sEmptyContextArray;
+
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 
@@ -203,10 +153,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     // Device flags
     std::bitset<DeviceFlagsCount> Flags{};
 
-    // Maximum number of sources that can be created
-    uint SourcesMax{};
-    // Maximum number of slots that can be created
-    uint AuxiliaryEffectSlotMax{};
+    uint NumAuxSends{};
 
     /* Rendering mode. */
     RenderMode mRenderMode{RenderMode::Normal};
@@ -221,6 +168,11 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
+    static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +
+        UhjDecoder::sFilterDelay};
+    using MixerBufferLine = std::array<float,MixerLineSize>;
+    alignas(16) std::array<MixerBufferLine,16> mSampleData;
+
     alignas(16) float ResampledData[BufferLineSize];
     alignas(16) float FilteredData[BufferLineSize];
     union {
@@ -249,7 +201,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     uint mIrSize{0};
 
     /* Ambisonic-to-UHJ encoder */
-    std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
+    std::unique_ptr<UhjEncoder> mUhjEncoder;
 
     /* Ambisonic decoder for speakers */
     std::unique_ptr<BFormatDec> AmbiDecoder;
@@ -257,7 +209,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     /* Stereo-to-binaural filter */
     std::unique_ptr<bs2b> Bs2b;
 
-    using PostProc = void(ALCdevice::*)(const size_t SamplesToDo);
+    using PostProc = void(DeviceBase::*)(const size_t SamplesToDo);
     PostProc PostProcess{nullptr};
 
     std::unique_ptr<Compressor> Limiter;
@@ -277,7 +229,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     RefCount MixCount{0u};
 
     // Contexts created on this device
-    std::atomic<al::FlexArray<ALCcontext*>*> mContexts{nullptr};
+    std::atomic<al::FlexArray<ContextBase*>*> mContexts{nullptr};
 
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
@@ -287,35 +239,10 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     std::unique_ptr<BackendBase> Backend;
 
 
-    ALCuint NumMonoSources{};
-    ALCuint NumStereoSources{};
-    ALCuint NumAuxSends{};
-
-    std::string HrtfName;
-    al::vector<std::string> HrtfList;
-    ALCenum HrtfStatus{ALC_FALSE};
-
-    ALCenum LimiterState{ALC_DONT_CARE_SOFT};
-
-    std::atomic<ALCenum> LastError{ALC_NO_ERROR};
-
-    // Map of Buffers for this device
-    std::mutex BufferLock;
-    al::vector<BufferSubList> BufferList;
-
-    // Map of Effects for this device
-    std::mutex EffectLock;
-    al::vector<EffectSubList> EffectList;
-
-    // Map of Filters for this device
-    std::mutex FilterLock;
-    al::vector<FilterSubList> FilterList;
-
-
-    ALCdevice(DeviceType type);
-    ALCdevice(const ALCdevice&) = delete;
-    ALCdevice& operator=(const ALCdevice&) = delete;
-    ~ALCdevice();
+    DeviceBase(DeviceType type);
+    DeviceBase(const DeviceBase&) = delete;
+    DeviceBase& operator=(const DeviceBase&) = delete;
+    ~DeviceBase();
 
     uint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
     uint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
@@ -338,6 +265,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
     inline void postProcess(const size_t SamplesToDo)
     { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
 
+    void renderSamples(const al::span<float*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
@@ -348,8 +276,12 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 #endif
     void handleDisconnect(const char *msg, ...);
 
-    DEF_NEWDEL(ALCdevice)
+    DISABLE_ALLOC()
+
+private:
+    uint renderSamples(const uint numSamples);
 };
+
 
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
@@ -357,9 +289,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice> {
 
 #define RECORD_THREAD_NAME "alsoft-record"
 
-
-extern int RTPrioLevel;
-void SetRTPriority(void);
 
 /**
  * Returns the index for the given channel name (e.g. FrontCenter), or
@@ -369,7 +298,4 @@ inline uint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcep
 { return real.ChannelIndex[chan]; }
 #define INVALID_CHANNEL_INDEX ~0u
 
-
-al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
-
-#endif
+#endif /* CORE_DEVICE_H */

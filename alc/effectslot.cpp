@@ -5,8 +5,8 @@
 
 #include <stddef.h>
 
-#include "alcontext.h"
 #include "almalloc.h"
+#include "context.h"
 
 
 EffectSlotArray *EffectSlot::CreatePtrArray(size_t count) noexcept

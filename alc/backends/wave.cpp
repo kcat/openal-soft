@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/wave.h"
+#include "wave.h"
 
 #include <algorithm>
 #include <atomic>
@@ -35,12 +35,11 @@
 
 #include "albit.h"
 #include "albyte.h"
-#include "alcmain.h"
-#include "alconfig.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
-#include "compat.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "strutils.h"
@@ -93,7 +92,7 @@ void fwrite32le(uint val, FILE *f)
 
 
 struct WaveBackend final : public BackendBase {
-    WaveBackend(ALCdevice *device) noexcept : BackendBase{device} { }
+    WaveBackend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WaveBackend() override;
 
     int mixerProc();
@@ -395,7 +394,7 @@ std::string WaveBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr WaveBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WaveBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WaveBackend{device}};

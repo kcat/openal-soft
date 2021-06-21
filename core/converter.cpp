@@ -12,7 +12,7 @@
 #include "albit.h"
 #include "albyte.h"
 #include "alnumeric.h"
-#include "core/fpu_ctrl.h"
+#include "fpu_ctrl.h"
 
 struct CTag;
 struct CopyTag;

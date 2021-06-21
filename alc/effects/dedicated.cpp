@@ -20,25 +20,35 @@
 
 #include "config.h"
 
-#include <cstdlib>
-#include <cmath>
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <iterator>
 
-#include "alcmain.h"
-#include "alcontext.h"
-#include "alu.h"
-#include "effectslot.h"
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/mixer.h"
+#include "intrusive_ptr.h"
+
+struct ContextBase;
 
 
 namespace {
+
+using uint = unsigned int;
 
 struct DedicatedState final : public EffectState {
     float mCurrentGains[MAX_OUTPUT_CHANNELS];
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -46,12 +56,12 @@ struct DedicatedState final : public EffectState {
     DEF_NEWDEL(DedicatedState)
 };
 
-void DedicatedState::deviceUpdate(const ALCdevice*, const Buffer&)
+void DedicatedState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
 }
 
-void DedicatedState::update(const ALCcontext*, const EffectSlot *slot,
+void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
     std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);

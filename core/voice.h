@@ -1,27 +1,37 @@
-#ifndef VOICE_H
-#define VOICE_H
+#ifndef CORE_VOICE_H
+#define CORE_VOICE_H
 
 #include <array>
 #include <atomic>
+#include <memory>
+#include <stddef.h>
+#include <string>
 
+#include "albyte.h"
 #include "almalloc.h"
+#include "aloptional.h"
 #include "alspan.h"
-#include "alu.h"
+#include "bufferline.h"
 #include "buffer_storage.h"
-#include "core/bufferline.h"
-#include "core/devformat.h"
-#include "core/filters/biquad.h"
-#include "core/filters/nfc.h"
-#include "core/filters/splitter.h"
-#include "core/mixer/defs.h"
-#include "core/mixer/hrtfdefs.h"
+#include "devformat.h"
+#include "filters/biquad.h"
+#include "filters/nfc.h"
+#include "filters/splitter.h"
+#include "mixer/defs.h"
+#include "mixer/hrtfdefs.h"
+#include "resampler_limits.h"
+#include "uhjfilter.h"
 #include "vector.h"
 
-struct ALCcontext;
+struct ContextBase;
+struct DeviceBase;
 struct EffectSlot;
 enum class DistanceModel : unsigned char;
 
 using uint = unsigned int;
+
+
+#define MAX_SENDS  6
 
 
 enum class SpatializeMode : unsigned char {
@@ -35,6 +45,12 @@ enum class DirectMode : unsigned char {
     DropMismatch,
     RemixMismatch
 };
+
+
+/* Maximum number of extra source samples that may need to be loaded, for
+ * resampling or conversion purposes.
+ */
+constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + UhjDecoder::sFilterDelay};
 
 
 enum {
@@ -191,10 +207,13 @@ struct Voice {
     FmtChannels mFmtChannels;
     FmtType mFmtType;
     uint mFrequency;
-    uint mSampleSize;
+    uint mNumChannels;
+    uint mFrameSize;
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;
     uint mAmbiOrder;
+
+    std::unique_ptr<UhjDecoder> mDecoder;
 
     /** Current target parameters used for mixing. */
     uint mStep{0};
@@ -218,8 +237,8 @@ struct Voice {
      * now current (which may be overwritten if the buffer data is still
      * available).
      */
-    using BufferLine = std::array<float,BufferLineSize+MaxResamplerPadding>;
-    al::vector<BufferLine,16> mVoiceSamples{2};
+    using HistoryLine = std::array<float,MaxResamplerPadding>;
+    al::vector<HistoryLine,16> mPrevSamples{2};
 
     struct ChannelData {
         float mAmbiScale;
@@ -236,11 +255,15 @@ struct Voice {
     Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;
 
-    void mix(const State vstate, ALCcontext *Context, const uint SamplesToDo);
+    void mix(const State vstate, ContextBase *Context, const uint SamplesToDo);
+
+    void prepare(DeviceBase *device);
+
+    static void InitMixer(al::optional<std::string> resampler);
 
     DEF_NEWDEL(Voice)
 };
 
 extern Resampler ResamplerDefault;
 
-#endif /* VOICE_H */
+#endif /* CORE_VOICE_H */

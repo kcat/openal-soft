@@ -1,7 +1,15 @@
 
 #include "config.h"
 
+#include <algorithm>
+#include <array>
+#include <complex>
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <memory>
 #include <stdint.h>
+#include <utility>
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
@@ -9,21 +17,26 @@
 #include <arm_neon.h>
 #endif
 
-#include "alcmain.h"
+#include "albyte.h"
 #include "alcomplex.h"
-#include "alcontext.h"
+#include "alc/effectslot.h"
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "alspan.h"
-#include "bformatdec.h"
-#include "buffer_storage.h"
+#include "base.h"
 #include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/buffer_storage.h"
+#include "core/context.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
-#include "core/logging.h"
-#include "effects/base.h"
-#include "effectslot.h"
+#include "core/mixer.h"
+#include "intrusive_ptr.h"
 #include "math_defs.h"
 #include "polyphase_resampler.h"
+#include "vector.h"
 
 
 namespace {
@@ -190,8 +203,8 @@ struct ConvolutionState final : public EffectState {
     void (ConvolutionState::*mMix)(const al::span<FloatBufferLine>,const size_t)
     {&ConvolutionState::NormalMix};
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -219,7 +232,7 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
 }
 
 
-void ConvolutionState::deviceUpdate(const ALCdevice *device, const Buffer &buffer)
+void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buffer)
 {
     constexpr uint MaxConvolveAmbiOrder{1u};
 
@@ -316,7 +329,7 @@ void ConvolutionState::deviceUpdate(const ALCdevice *device, const Buffer &buffe
 }
 
 
-void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
+void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps* /*props*/, const EffectTarget target)
 {
     /* NOTE: Stereo and Rear are slightly different from normal mixing (as
@@ -374,13 +387,31 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
     for(auto &chan : *mChans)
         std::fill(std::begin(chan.Target), std::end(chan.Target), 0.0f);
     const float gain{slot->Gain};
-    if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
+    /* TODO: UHJ should be decoded to B-Format and processed that way, since
+     * there's no telling if it can ever do a direct-out mix (even if the
+     * device is outputing UHJ, the effect slot can feed another effect that's
+     * not UHJ).
+     *
+     * Not that UHJ should really ever be used for convolution, but it's a
+     * valid format regardless.
+     */
+    if((mChannels == FmtUHJ2 || mChannels == FmtUHJ3 || mChannels == FmtUHJ4) && target.RealOut
+        && target.RealOut->ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
+        && target.RealOut->ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX)
     {
-        ALCdevice *device{context->mDevice.get()};
+        mOutTarget = target.RealOut->Buffer;
+        const uint lidx = target.RealOut->ChannelIndex[FrontLeft];
+        const uint ridx = target.RealOut->ChannelIndex[FrontRight];
+        (*mChans)[0].Target[lidx] = gain;
+        (*mChans)[1].Target[ridx] = gain;
+    }
+    else if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
+    {
+        DeviceBase *device{context->mDevice};
         if(device->mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;
-            const auto scales = BFormatDec::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
+            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
             (*mChans)[0].mHfScale = scales[0];
             for(size_t i{1};i < mChans->size();++i)
                 (*mChans)[i].mHfScale = scales[1];
@@ -403,7 +434,7 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
     }
     else
     {
-        ALCdevice *device{context->mDevice.get()};
+        DeviceBase *device{context->mDevice};
         al::span<const ChanMap> chanmap{};
         switch(mChannels)
         {
@@ -416,6 +447,9 @@ void ConvolutionState::update(const ALCcontext *context, const EffectSlot *slot,
         case FmtX71: chanmap = X71Map; break;
         case FmtBFormat2D:
         case FmtBFormat3D:
+        case FmtUHJ2:
+        case FmtUHJ3:
+        case FmtUHJ4:
             break;
         }
 

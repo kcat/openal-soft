@@ -1,22 +1,3 @@
-/**
- * OpenAL cross platform audio library
- * Copyright (C) 2011 by Chris Robinson
- * This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Library General Public
- *  License as published by the Free Software Foundation; either
- *  version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- *  License along with this library; if not, write to the
- *  Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- * Or go to http://www.gnu.org/copyleft/lgpl.html
- */
 
 #include "config.h"
 
@@ -30,35 +11,33 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <functional>
 #include <fstream>
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
 #include <type_traits>
 #include <utility>
 
 #include "albit.h"
 #include "albyte.h"
-#include "alcmain.h"
-#include "alconfig.h"
 #include "alfstream.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
-#include "core/filters/splitter.h"
-#include "core/logging.h"
+#include "ambidefs.h"
+#include "filters/splitter.h"
+#include "helpers.h"
+#include "logging.h"
 #include "math_defs.h"
+#include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
 #include "polyphase_resampler.h"
+#include "vector.h"
 
 
 namespace {
-
-using namespace std::placeholders;
 
 struct HrtfEntry {
     std::string mDispName;
@@ -338,12 +317,19 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     auto hrir_delay_round = [](const uint d) noexcept -> uint
     { return (d+HrirDelayFracHalf) >> HrirDelayFracBits; };
 
+    TRACE("Min delay: %.2f, max delay: %.2f, FIR length: %u\n",
+        min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
+
+    const bool per_hrir_min{mChannels.size() > AmbiChannelsFromOrder(1)};
     auto tmpres = al::vector<std::array<double2,HrirLength>>(mChannels.size());
+    max_delay = 0;
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const ConstHrirSpan hrir{impres[c].hrir};
-        const uint ldelay{hrir_delay_round(impres[c].ldelay - min_delay)};
-        const uint rdelay{hrir_delay_round(impres[c].rdelay - min_delay)};
+        const uint base_delay{per_hrir_min ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
+        const uint ldelay{hrir_delay_round(impres[c].ldelay - base_delay)};
+        const uint rdelay{hrir_delay_round(impres[c].rdelay - base_delay)};
+        max_delay = maxu(max_delay, maxu(impres[c].ldelay, impres[c].rdelay) - base_delay);
 
         for(size_t i{0u};i < mChannels.size();++i)
         {
@@ -368,11 +354,8 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     }
     tmpres.clear();
 
-    max_delay -= min_delay;
     const uint max_length{minu(hrir_delay_round(max_delay) + irSize, HrirLength)};
-
-    TRACE("Skipped delay: %.2f, new max delay: %.2f, FIR length: %u\n",
-        min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne},
+    TRACE("New max delay: %.2f, FIR length: %u\n", max_delay/double{HrirDelayFracOne},
         max_length);
     mIrSize = max_length;
 }
@@ -1212,13 +1195,13 @@ al::span<const char> GetResource(int name)
 } // namespace
 
 
-al::vector<std::string> EnumerateHrtf(const char *devname)
+al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
 
     bool usedefaults{true};
-    if(auto pathopt = ConfigValueStr(devname, nullptr, "hrtf-paths"))
+    if(pathopt)
     {
         const char *pathlist{pathopt->c_str()};
         while(pathlist && *pathlist)
@@ -1265,15 +1248,6 @@ al::vector<std::string> EnumerateHrtf(const char *devname)
     list.reserve(EnumeratedHrtfs.size());
     for(auto &entry : EnumeratedHrtfs)
         list.emplace_back(entry.mDispName);
-
-    if(auto defhrtfopt = ConfigValueStr(devname, nullptr, "default-hrtf"))
-    {
-        auto iter = std::find(list.begin(), list.end(), *defhrtfopt);
-        if(iter == list.end())
-            WARN("Failed to find default HRTF \"%s\"\n", defhrtfopt->c_str());
-        else if(iter != list.begin())
-            std::rotate(list.begin(), iter, iter+1);
-    }
 
     return list;
 }

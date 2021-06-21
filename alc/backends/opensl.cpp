@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#include "backends/opensl.h"
+#include "opensl.h"
 
 #include <stdlib.h>
 #include <jni.h>
@@ -33,9 +33,9 @@
 #include <functional>
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alu.h"
-#include "compat.h"
+#include "alnumeric.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -151,7 +151,7 @@ const char *res_str(SLresult result) noexcept
 
 
 struct OpenSLPlayback final : public BackendBase {
-    OpenSLPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    OpenSLPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OpenSLPlayback() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
@@ -632,7 +632,7 @@ ClockLatency OpenSLPlayback::getClockLatency()
 
 
 struct OpenSLCapture final : public BackendBase {
-    OpenSLCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    OpenSLCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OpenSLCapture() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
@@ -962,7 +962,7 @@ std::string OSLBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr OSLBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr OSLBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OpenSLPlayback{device}};

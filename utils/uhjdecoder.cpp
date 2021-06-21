@@ -24,12 +24,6 @@
 
 #include "config.h"
 
-#ifdef HAVE_SSE_INTRINSICS
-#include <xmmintrin.h>
-#elif defined(HAVE_NEON)
-#include <arm_neon.h>
-#endif
-
 #include <array>
 #include <complex>
 #include <cstring>
@@ -46,6 +40,7 @@
 #include "alspan.h"
 #include "vector.h"
 #include "opthelpers.h"
+#include "phase_shifter.h"
 
 #include "sndfile.h"
 
@@ -117,197 +112,31 @@ using FloatBufferSpan = al::span<float,BufferLineSize>;
 
 
 struct UhjDecoder {
-    constexpr static size_t sFilterSize{128};
+    constexpr static size_t sFilterDelay{128};
 
-    alignas(16) std::array<float,BufferLineSize+sFilterSize> mS{};
-    alignas(16) std::array<float,BufferLineSize+sFilterSize> mD{};
-    alignas(16) std::array<float,BufferLineSize+sFilterSize> mT{};
-    alignas(16) std::array<float,BufferLineSize+sFilterSize> mQ{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mT{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mQ{};
 
     /* History for the FIR filter. */
-    alignas(16) std::array<float,sFilterSize-1> mDTHistory{};
-    alignas(16) std::array<float,sFilterSize-1> mSHistory{};
+    alignas(16) std::array<float,sFilterDelay-1> mDTHistory{};
+    alignas(16) std::array<float,sFilterDelay-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize + sFilterSize*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
 
-    void decode(const float *RESTRICT InSamples, const al::span<FloatBufferLine> OutSamples,
-        const size_t SamplesToDo);
+    void decode(const float *RESTRICT InSamples, const size_t InChannels,
+        const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo);
     void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine,3> OutSamples,
         const size_t SamplesToDo);
 
     DEF_NEWDEL(UhjDecoder)
 };
 
-/* Same basic filter design as in core/uhjfilter.cpp. */
-template<size_t FilterSize>
-struct PhaseShifterT {
-    static_assert((FilterSize&(FilterSize-1)) == 0, "FilterSize needs to be power-of-two");
-
-    alignas(16) std::array<float,FilterSize> Coeffs{};
-
-    PhaseShifterT()
-    {
-        constexpr size_t fft_size{FilterSize * 2};
-        constexpr size_t half_size{fft_size / 2};
-
-        auto fftBuffer = std::make_unique<complex_d[]>(fft_size);
-        std::fill_n(fftBuffer.get(), fft_size, complex_d{});
-        fftBuffer[half_size] = 1.0;
-
-        forward_fft({fftBuffer.get(), fft_size});
-        for(size_t i{0};i < half_size+1;++i)
-            fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
-        for(size_t i{half_size+1};i < fft_size;++i)
-            fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-        inverse_fft({fftBuffer.get(), fft_size});
-
-        auto fftiter = fftBuffer.get() + half_size + (FilterSize-1);
-        for(float &coeff : Coeffs)
-        {
-            coeff = static_cast<float>(fftiter->real() / double{fft_size});
-            fftiter -= 2;
-        }
-    }
-};
-const PhaseShifterT<UhjDecoder::sFilterSize> PShift{};
-
-/* Mostly the same as in core/uhjfilter.cpp, except this overwrites the output
- * instead of adding to it.
- */
-void allpass_process(al::span<float> dst, const float *RESTRICT src)
-{
-#ifdef HAVE_SSE_INTRINSICS
-    if(size_t todo{dst.size()>>1})
-    {
-        auto *out = reinterpret_cast<__m64*>(dst.data());
-        do {
-            __m128 r04{_mm_setzero_ps()};
-            __m128 r14{_mm_setzero_ps()};
-            for(size_t j{0};j < PShift.Coeffs.size();j+=4)
-            {
-                const __m128 coeffs{_mm_load_ps(&PShift.Coeffs[j])};
-                const __m128 s0{_mm_loadu_ps(&src[j*2])};
-                const __m128 s1{_mm_loadu_ps(&src[j*2 + 4])};
-
-                __m128 s{_mm_shuffle_ps(s0, s1, _MM_SHUFFLE(2, 0, 2, 0))};
-                r04 = _mm_add_ps(r04, _mm_mul_ps(s, coeffs));
-
-                s = _mm_shuffle_ps(s0, s1, _MM_SHUFFLE(3, 1, 3, 1));
-                r14 = _mm_add_ps(r14, _mm_mul_ps(s, coeffs));
-            }
-            src += 2;
-
-            __m128 r4{_mm_add_ps(_mm_unpackhi_ps(r04, r14), _mm_unpacklo_ps(r04, r14))};
-            r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-
-            _mm_storel_pi(out, r4);
-            ++out;
-        } while(--todo);
-    }
-    if((dst.size()&1))
-    {
-        __m128 r4{_mm_setzero_ps()};
-        for(size_t j{0};j < PShift.Coeffs.size();j+=4)
-        {
-            const __m128 coeffs{_mm_load_ps(&PShift.Coeffs[j])};
-            const __m128 s{_mm_setr_ps(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
-            r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
-        }
-        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
-        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-
-        dst.back() = _mm_cvtss_f32(r4);
-    }
-
-#elif defined(HAVE_NEON)
-
-    size_t pos{0};
-    if(size_t todo{dst.size()>>1})
-    {
-        auto shuffle_2020 = [](float32x4_t a, float32x4_t b)
-        {
-            float32x4_t ret{vmovq_n_f32(vgetq_lane_f32(a, 0))};
-            ret = vsetq_lane_f32(vgetq_lane_f32(a, 2), ret, 1);
-            ret = vsetq_lane_f32(vgetq_lane_f32(b, 0), ret, 2);
-            ret = vsetq_lane_f32(vgetq_lane_f32(b, 2), ret, 3);
-            return ret;
-        };
-        auto shuffle_3131 = [](float32x4_t a, float32x4_t b)
-        {
-            float32x4_t ret{vmovq_n_f32(vgetq_lane_f32(a, 1))};
-            ret = vsetq_lane_f32(vgetq_lane_f32(a, 3), ret, 1);
-            ret = vsetq_lane_f32(vgetq_lane_f32(b, 1), ret, 2);
-            ret = vsetq_lane_f32(vgetq_lane_f32(b, 3), ret, 3);
-            return ret;
-        };
-        auto unpacklo = [](float32x4_t a, float32x4_t b)
-        {
-            float32x2x2_t result{vzip_f32(vget_low_f32(a), vget_low_f32(b))};
-            return vcombine_f32(result.val[0], result.val[1]);
-        };
-        auto unpackhi = [](float32x4_t a, float32x4_t b)
-        {
-            float32x2x2_t result{vzip_f32(vget_high_f32(a), vget_high_f32(b))};
-            return vcombine_f32(result.val[0], result.val[1]);
-        };
-        do {
-            float32x4_t r04{vdupq_n_f32(0.0f)};
-            float32x4_t r14{vdupq_n_f32(0.0f)};
-            for(size_t j{0};j < PShift.Coeffs.size();j+=4)
-            {
-                const float32x4_t coeffs{vld1q_f32(&PShift.Coeffs[j])};
-                const float32x4_t s0{vld1q_f32(&src[j*2])};
-                const float32x4_t s1{vld1q_f32(&src[j*2 + 4])};
-
-                r04 = vmlaq_f32(r04, shuffle_2020(s0, s1), coeffs);
-                r14 = vmlaq_f32(r14, shuffle_3131(s0, s1), coeffs);
-            }
-            src += 2;
-
-            float32x4_t r4{vaddq_f32(unpackhi(r04, r14), unpacklo(r04, r14))};
-            float32x2_t r2{vadd_f32(vget_low_f32(r4), vget_high_f32(r4))};
-
-            vst1_f32(&dst[pos], r2);
-            pos += 2;
-        } while(--todo);
-    }
-    if((dst.size()&1))
-    {
-        auto load4 = [](float32_t a, float32_t b, float32_t c, float32_t d)
-        {
-            float32x4_t ret{vmovq_n_f32(a)};
-            ret = vsetq_lane_f32(b, ret, 1);
-            ret = vsetq_lane_f32(c, ret, 2);
-            ret = vsetq_lane_f32(d, ret, 3);
-            return ret;
-        };
-        float32x4_t r4{vdupq_n_f32(0.0f)};
-        for(size_t j{0};j < PShift.Coeffs.size();j+=4)
-        {
-            const float32x4_t coeffs{vld1q_f32(&PShift.Coeffs[j])};
-            const float32x4_t s{load4(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
-            r4 = vmlaq_f32(r4, s, coeffs);
-        }
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        dst[pos] = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
-    }
-
-#else
-
-    for(float &output : dst)
-    {
-        float ret{0.0f};
-        for(size_t j{0};j < PShift.Coeffs.size();++j)
-            ret += src[j*2] * PShift.Coeffs[j];
-
-        output = ret;
-        ++src;
-    }
-#endif
-}
+const PhaseShifterT<UhjDecoder::sFilterDelay*2> PShift{};
 
 
-/* Decoding 3- and 4-channel UHJ is done as:
+/* Decoding UHJ is done as:
  *
  * S = Left + Right
  * D = Left - Right
@@ -317,9 +146,12 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  * Y = 0.795954*D - 0.676406*T + j(0.186626*S)
  * Z = 1.023332*Q
  *
- * where j is a +90 degree phase shift. 3-channel UHJ excludes Q/Z.
+ * where j is a +90 degree phase shift. 3-channel UHJ excludes Q, while 2-
+ * channel excludes Q and T. The B-Format signal reconstructed from 2-channel
+ * UHJ should not be run through a normal B-Format decoder, as it needs
+ * different shelf filters.
  *
- * NOTE: Some souces specify
+ * NOTE: Some sources specify
  *
  * S = (Left + Right)/2
  * D = (Left - Right)/2
@@ -377,12 +209,10 @@ void allpass_process(al::span<float> dst, const float *RESTRICT src)
  *
  * Not halving produces a result matching the original input.
  */
-void UhjDecoder::decode(const float *RESTRICT InSamples,
+void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels,
     const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
-
-    const size_t Channels{OutSamples.size()};
 
     float *woutput{OutSamples[0].data()};
     float *xoutput{OutSamples[1].data()};
@@ -394,43 +224,45 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
 
     /* S = Left + Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mS[sFilterSize+i] = InSamples[i*Channels + 0] + InSamples[i*Channels + 1];
+        mS[sFilterDelay+i] = InSamples[i*InChannels + 0] + InSamples[i*InChannels + 1];
 
     /* D = Left - Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[sFilterSize+i] = InSamples[i*Channels + 0] - InSamples[i*Channels + 1];
+        mD[sFilterDelay+i] = InSamples[i*InChannels + 0] - InSamples[i*InChannels + 1];
 
-    /* T */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mT[sFilterSize+i] = InSamples[i*Channels + 2];
-
-    if(Channels > 3)
+    if(InChannels > 2)
+    {
+        /* T */
+        for(size_t i{0};i < SamplesToDo;++i)
+            mT[sFilterDelay+i] = InSamples[i*InChannels + 2];
+    }
+    if(InChannels > 3)
     {
         /* Q */
         for(size_t i{0};i < SamplesToDo;++i)
-            mQ[sFilterSize+i] = InSamples[i*Channels + 3];
+            mQ[sFilterDelay+i] = InSamples[i*InChannels + 3];
     }
 
     /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
-    std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterSize, mT.cbegin(), tmpiter,
-        [](const float D, const float T) noexcept { return 0.828347f*D + 0.767835f*T; });
+    std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
+        [](const float d, const float t) noexcept { return 0.828347f*d + 0.767835f*t; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
-    allpass_process({xoutput, SamplesToDo}, mTemp.data());
+    PShift.process({xoutput, SamplesToDo}, mTemp.data());
 
     for(size_t i{0};i < SamplesToDo;++i)
     {
         /* W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T) */
         woutput[i] = 0.981530f*mS[i] + 0.197484f*xoutput[i];
-        /* 0.418504*S - j(0.828347*D + 0.767835*T) */
+        /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
         xoutput[i] = 0.418504f*mS[i] - xoutput[i];
     }
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
-    std::copy_n(mS.cbegin(), SamplesToDo+sFilterSize, tmpiter);
+    std::copy_n(mS.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
     std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
-    allpass_process({youtput, SamplesToDo}, mTemp.data());
+    PShift.process({youtput, SamplesToDo}, mTemp.data());
 
     for(size_t i{0};i < SamplesToDo;++i)
     {
@@ -438,7 +270,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
         youtput[i] = 0.795954f*mD[i] - 0.676406f*mT[i] + 0.186626f*youtput[i];
     }
 
-    if(Channels > 3)
+    if(OutSamples.size() > 3)
     {
         float *zoutput{OutSamples[3].data()};
         /* Z = 1.023332*Q */
@@ -446,18 +278,18 @@ void UhjDecoder::decode(const float *RESTRICT InSamples,
             zoutput[i] = 1.023332f*mQ[i];
     }
 
-    std::copy(mS.begin()+SamplesToDo, mS.begin()+SamplesToDo+sFilterSize, mS.begin());
-    std::copy(mD.begin()+SamplesToDo, mD.begin()+SamplesToDo+sFilterSize, mD.begin());
-    std::copy(mT.begin()+SamplesToDo, mT.begin()+SamplesToDo+sFilterSize, mT.begin());
-    std::copy(mQ.begin()+SamplesToDo, mQ.begin()+SamplesToDo+sFilterSize, mQ.begin());
+    std::copy(mS.begin()+SamplesToDo, mS.begin()+SamplesToDo+sFilterDelay, mS.begin());
+    std::copy(mD.begin()+SamplesToDo, mD.begin()+SamplesToDo+sFilterDelay, mD.begin());
+    std::copy(mT.begin()+SamplesToDo, mT.begin()+SamplesToDo+sFilterDelay, mT.begin());
+    std::copy(mQ.begin()+SamplesToDo, mQ.begin()+SamplesToDo+sFilterDelay, mQ.begin());
 }
 
-/* There is a difference with decoding 2-channel UHJ compared to 3-channel, due
- * to 2-channel having lost some of the original signal. The B-Format signal
- * reconstructed from 2-channel UHJ should not be run through a normal B-Format
- * decoder, as it needs different shelf filters.
+/* This is an alternative equation for decoding 2-channel UHJ. Not sure what
+ * the intended benefit is over the above equation as this slightly reduces the
+ * amount of the original left response and has more of the phase-shifted
+ * forward response on the left response.
  *
- * 2-channel UHJ decoding is done as:
+ * This decoding is done as:
  *
  * S = Left + Right
  * D = Left - Right
@@ -482,17 +314,17 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples,
 
     /* S = Left + Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mS[sFilterSize+i] = InSamples[i*2 + 0] + InSamples[i*2 + 1];
+        mS[sFilterDelay+i] = InSamples[i*2 + 0] + InSamples[i*2 + 1];
 
     /* D = Left - Right */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[sFilterSize+i] = InSamples[i*2 + 0] - InSamples[i*2 + 1];
+        mD[sFilterDelay+i] = InSamples[i*2 + 0] - InSamples[i*2 + 1];
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
-    std::copy_n(mD.cbegin(), SamplesToDo+sFilterSize, tmpiter);
+    std::copy_n(mD.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
-    allpass_process({xoutput, SamplesToDo}, mTemp.data());
+    PShift.process({xoutput, SamplesToDo}, mTemp.data());
 
     for(size_t i{0};i < SamplesToDo;++i)
     {
@@ -504,9 +336,9 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples,
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
-    std::copy_n(mS.cbegin(), SamplesToDo+sFilterSize, tmpiter);
+    std::copy_n(mS.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
     std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
-    allpass_process({youtput, SamplesToDo}, mTemp.data());
+    PShift.process({youtput, SamplesToDo}, mTemp.data());
 
     for(size_t i{0};i < SamplesToDo;++i)
     {
@@ -514,8 +346,8 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples,
         youtput[i] = 0.762956f*mD[i] + 0.384230f*youtput[i];
     }
 
-    std::copy(mS.begin()+SamplesToDo, mS.begin()+SamplesToDo+sFilterSize, mS.begin());
-    std::copy(mD.begin()+SamplesToDo, mD.begin()+SamplesToDo+sFilterSize, mD.begin());
+    std::copy(mS.begin()+SamplesToDo, mS.begin()+SamplesToDo+sFilterDelay, mS.begin());
+    std::copy(mD.begin()+SamplesToDo, mD.begin()+SamplesToDo+sFilterDelay, mD.begin());
 }
 
 
@@ -523,13 +355,32 @@ int main(int argc, char **argv)
 {
     if(argc < 2 || std::strcmp(argv[1], "-h") == 0 || std::strcmp(argv[1], "--help") == 0)
     {
-        printf("Usage: %s <filename.wav...>\n", argv[0]);
+        printf("Usage: %s <[options] filename.wav...>\n\n"
+            "  Options:\n"
+            "    --general      Use the general equations for 2-channel UHJ (default).\n"
+            "    --alternative  Use the alternative equations for 2-channel UHJ.\n"
+            "\n"
+            "Note: When decoding 2-channel UHJ to an .amb file, the result should not use\n"
+            "the normal B-Format shelf filters! Only 3- and 4-channel UHJ can accurately\n"
+            "reconstruct the original B-Format signal.",
+            argv[0]);
         return 1;
     }
 
     size_t num_files{0}, num_decoded{0};
+    bool use_general{true};
     for(int fidx{1};fidx < argc;++fidx)
     {
+        if(std::strcmp(argv[fidx], "--general") == 0)
+        {
+            use_general = true;
+            continue;
+        }
+        if(std::strcmp(argv[fidx], "--alternative") == 0)
+        {
+            use_general = false;
+            continue;
+        }
         ++num_files;
         SF_INFO ininfo{};
         SndFilePtr infile{sf_open(argv[fidx], SFM_READ, &ininfo)};
@@ -553,7 +404,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "%s is not a 2-, 3-, or 4-channel file\n", argv[fidx]);
             continue;
         }
-        printf("Converting %s from %d-channel UHJ...\n", argv[fidx], ininfo.channels);
+        printf("Converting %s from %d-channel UHJ%s...\n", argv[fidx], ininfo.channels,
+            (ininfo.channels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
         std::string outname{argv[fidx]};
         auto lastslash = outname.find_last_of('/');
@@ -620,7 +472,7 @@ int main(int argc, char **argv)
          * additional 255 samples of silence need to be fed through the decoder
          * for it to finish.
          */
-        sf_count_t LeadOut{UhjDecoder::sFilterSize*2 - 1};
+        sf_count_t LeadOut{UhjDecoder::sFilterDelay*2 - 1};
         while(LeadOut > 0)
         {
             sf_count_t sgot{sf_readf_float(infile.get(), inmem.get(), BufferLineSize)};
@@ -634,14 +486,16 @@ int main(int argc, char **argv)
             }
 
             auto got = static_cast<size_t>(sgot);
-            if(ininfo.channels == 2)
+            if(ininfo.channels > 2 || use_general)
+                decoder->decode(inmem.get(), static_cast<uint>(ininfo.channels), decmem, got);
+            else
                 decoder->decode2(inmem.get(), decmem, got);
-            else if(ininfo.channels == 3 || ininfo.channels == 4)
-                decoder->decode(inmem.get(), decmem, got);
             for(size_t i{0};i < got;++i)
             {
+                /* Attenuate by -3dB for FuMa output levels. */
+                constexpr float sqrt1_2{0.707106781187f};
                 for(size_t j{0};j < outchans;++j)
-                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][i]);
+                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][i] * sqrt1_2);
             }
 
             size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};

@@ -8,7 +8,7 @@
 
 #include "AL/efx.h"
 
-#include "effects/base.h"
+#include "alc/effects/base.h"
 #include "effects.h"
 
 namespace {

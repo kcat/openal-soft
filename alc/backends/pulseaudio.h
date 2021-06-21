@@ -1,7 +1,7 @@
 #ifndef BACKENDS_PULSEAUDIO_H
 #define BACKENDS_PULSEAUDIO_H
 
-#include "backends/base.h"
+#include "base.h"
 
 class PulseBackendFactory final : public BackendFactory {
 public:
@@ -11,7 +11,7 @@ public:
 
     std::string probe(BackendType type) override;
 
-    BackendPtr createBackend(ALCdevice *device, BackendType type) override;
+    BackendPtr createBackend(DeviceBase *device, BackendType type) override;
 
     static BackendFactory &getFactory();
 };

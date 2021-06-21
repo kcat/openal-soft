@@ -36,18 +36,18 @@
 #include "AL/efx.h"
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alcontext.h"
+#include "alc/alu.h"
+#include "alc/context.h"
+#include "alc/device.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "alu.h"
 #include "buffer.h"
 #include "core/except.h"
 #include "core/fpu_ctrl.h"
 #include "core/logging.h"
 #include "effect.h"
-#include "inprogext.h"
 #include "opthelpers.h"
 
 
@@ -308,7 +308,7 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
         && slot->mState == SlotState::Playing)                                \
         slot->updateProps(context.get());                                     \
     else                                                                      \
-        slot->PropsClean.clear(std::memory_order_release);                    \
+        slot->mPropsDirty.set(std::memory_order_release);                     \
 } while(0)
 
 } // namespace
@@ -325,7 +325,7 @@ START_API_FUNC
     if UNLIKELY(n <= 0) return;
 
     std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
-    ALCdevice *device{context->mDevice.get()};
+    ALCdevice *device{context->mALDevice.get()};
     if(static_cast<ALuint>(n) > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
     {
         context->setError(AL_OUT_OF_MEMORY, "Exceeding %u effect slot limit (%u + %d)",
@@ -460,7 +460,7 @@ START_API_FUNC
     if(slot->mState == SlotState::Playing)
         return;
 
-    slot->PropsClean.test_and_set(std::memory_order_acq_rel);
+    slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
     slot->updateProps(context.get());
 
     AddActiveEffectSlots({&slot, 1}, context.get());
@@ -491,7 +491,7 @@ START_API_FUNC
 
         if(slot->mState != SlotState::Playing)
         {
-            slot->PropsClean.test_and_set(std::memory_order_acq_rel);
+            slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
             slot->updateProps(context.get());
         }
         slots[i] = slot;
@@ -571,7 +571,7 @@ START_API_FUNC
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
-        device = context->mDevice.get();
+        device = context->mALDevice.get();
 
         {
             std::lock_guard<std::mutex> ___{device->EffectLock};
@@ -587,8 +587,12 @@ START_API_FUNC
         }
         if UNLIKELY(slot->mState == SlotState::Initial)
         {
+            slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+            slot->updateProps(context.get());
+
             AddActiveEffectSlots({&slot, 1}, context.get());
             slot->mState = SlotState::Playing;
+            return;
         }
         break;
 
@@ -596,6 +600,8 @@ START_API_FUNC
         if(!(value == AL_TRUE || value == AL_FALSE))
             SETERR_RETURN(context, AL_INVALID_VALUE,,
                 "Effect slot auxiliary send auto out of range");
+        if UNLIKELY(slot->AuxSendAuto == !!value)
+            return;
         slot->AuxSendAuto = !!value;
         break;
 
@@ -603,6 +609,8 @@ START_API_FUNC
         target = LookupEffectSlot(context.get(), static_cast<ALuint>(value));
         if(value && !target)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect slot target ID");
+        if UNLIKELY(slot->Target == target)
+            return;
         if(target)
         {
             ALeffectslot *checker{target};
@@ -631,11 +639,19 @@ START_API_FUNC
         break;
 
     case AL_BUFFER:
-        device = context->mDevice.get();
+        device = context->mALDevice.get();
 
         if(slot->mState == SlotState::Playing)
             SETERR_RETURN(context, AL_INVALID_OPERATION,,
                 "Setting buffer on playing effect slot %u", slot->id);
+
+        if(ALbuffer *buffer{slot->Buffer})
+        {
+            if UNLIKELY(buffer->id == static_cast<ALuint>(value))
+                return;
+        }
+        else if UNLIKELY(value == 0)
+            return;
 
         {
             std::lock_guard<std::mutex> ___{device->BufferLock};
@@ -720,6 +736,8 @@ START_API_FUNC
     case AL_EFFECTSLOT_GAIN:
         if(!(value >= 0.0f && value <= 1.0f))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Effect slot gain out of range");
+        if UNLIKELY(slot->Gain == value)
+            return;
         slot->Gain = value;
         break;
 
@@ -884,7 +902,7 @@ END_API_FUNC
 
 ALeffectslot::ALeffectslot()
 {
-    PropsClean.test_and_set(std::memory_order_relaxed);
+    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 
     EffectStateFactory *factory{getFactoryByType(EffectSlotType::None)};
     assert(factory != nullptr);
@@ -928,7 +946,7 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         }
         al::intrusive_ptr<EffectState> state{factory->create()};
 
-        ALCdevice *device{context->mDevice.get()};
+        ALCdevice *device{context->mALDevice.get()};
         std::unique_lock<std::mutex> statelock{device->StateLock};
         state->mOutTarget = device->Dry.Buffer;
         {
@@ -1004,7 +1022,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
             usemask &= ~(1_u64 << idx);
 
             if(slot->mState != SlotState::Stopped
-                && slot->PropsClean.test_and_set(std::memory_order_acq_rel))
+                && slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
                 slot->updateProps(context);
         }
     }

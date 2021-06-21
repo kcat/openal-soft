@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/solaris.h"
+#include "solaris.h"
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -39,11 +39,10 @@
 #include <thread>
 #include <functional>
 
-#include "alcmain.h"
 #include "albyte.h"
-#include "alu.h"
-#include "alconfig.h"
-#include "compat.h"
+#include "alc/alconfig.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "threads.h"
 #include "vector.h"
@@ -59,7 +58,7 @@ std::string solaris_driver{"/dev/audio"};
 
 
 struct SolarisBackend final : public BackendBase {
-    SolarisBackend(ALCdevice *device) noexcept : BackendBase{device} { }
+    SolarisBackend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SolarisBackend() override;
 
     int mixerProc();
@@ -295,7 +294,7 @@ std::string SolarisBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr SolarisBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SolarisBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new SolarisBackend{device}};

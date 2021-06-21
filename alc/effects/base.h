@@ -1,23 +1,36 @@
 #ifndef EFFECTS_BASE_H
 #define EFFECTS_BASE_H
 
-#include <cstddef>
+#include <stddef.h>
 
 #include "albyte.h"
-#include "alcmain.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
+#include "core/bufferline.h"
 #include "intrusive_ptr.h"
 
-struct EffectSlot;
 struct BufferStorage;
+struct ContextBase;
+struct DeviceBase;
+struct EffectSlot;
+struct MixParams;
+struct RealMixParams;
 
+
+/** Target gain for the reverb decay feedback reaching the decay time. */
+constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
+
+constexpr float ReverbMaxReflectionsDelay{0.3f};
+constexpr float ReverbMaxLateReverbDelay{0.1f};
 
 enum class ChorusWaveform {
     Sinusoid,
     Triangle
 };
+
+constexpr float ChorusMaxDelay{0.016f};
+constexpr float FlangerMaxDelay{0.004f};
 
 constexpr float EchoMaxDelay{0.207f};
 constexpr float EchoMaxLRDelay{0.404f};
@@ -175,8 +188,8 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 
     virtual ~EffectState() = default;
 
-    virtual void deviceUpdate(const ALCdevice *device, const Buffer &buffer) = 0;
-    virtual void update(const ALCcontext *context, const EffectSlot *slot,
+    virtual void deviceUpdate(const DeviceBase *device, const Buffer &buffer) = 0;
+    virtual void update(const ContextBase *context, const EffectSlot *slot,
         const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) = 0;

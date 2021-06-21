@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/wasapi.h"
+#include "wasapi.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -56,11 +56,11 @@
 #include <vector>
 
 #include "albit.h"
-#include "alcmain.h"
-#include "alu.h"
-#include "compat.h"
+#include "alnumeric.h"
 #include "comptr.h"
-#include "converter.h"
+#include "core/converter.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "strutils.h"
@@ -627,7 +627,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 
 
 struct WasapiPlayback final : public BackendBase, WasapiProxy {
-    WasapiPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    WasapiPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WasapiPlayback() override;
 
     int mixerProc();
@@ -1160,7 +1160,7 @@ ClockLatency WasapiPlayback::getClockLatency()
 
 
 struct WasapiCapture final : public BackendBase, WasapiProxy {
-    WasapiCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    WasapiCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WasapiCapture() override;
 
     int recordProc();
@@ -1492,7 +1492,7 @@ HRESULT WasapiCapture::resetProxy()
         CoTaskMemFree(wfx);
         wfx = nullptr;
 
-        auto validate_fmt = [](ALCdevice *device, uint32_t chancount, DWORD chanmask) noexcept
+        auto validate_fmt = [](DeviceBase *device, uint32_t chancount, DWORD chanmask) noexcept
             -> bool
         {
             switch(device->FmtChans)
@@ -1757,7 +1757,7 @@ std::string WasapiBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr WasapiBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr WasapiBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WasapiPlayback{device}};

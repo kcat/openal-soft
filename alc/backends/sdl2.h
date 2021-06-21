@@ -1,7 +1,7 @@
 #ifndef BACKENDS_SDL2_H
 #define BACKENDS_SDL2_H
 
-#include "backends/base.h"
+#include "base.h"
 
 struct SDL2BackendFactory final : public BackendFactory {
 public:
@@ -11,7 +11,7 @@ public:
 
     std::string probe(BackendType type) override;
 
-    BackendPtr createBackend(ALCdevice *device, BackendType type) override;
+    BackendPtr createBackend(DeviceBase *device, BackendType type) override;
 
     static BackendFactory &getFactory();
 };

@@ -2,21 +2,24 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
-# The workaround for try_compile failing with code signing
-# since cmake-3.18.2, not required
-set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
-    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
-    "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+if(APPLE)
+    # The workaround for try_compile failing with code signing
+    # since cmake-3.18.2, not required
+    set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+        ${CMAKE_TRY_COMPILE_PLATFORM_VARIABLES}
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED"
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED")
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
 
-# Fix compile failure with armv7 deployment target >= 11.0, xcode clang will
-# report:
-# error: invalid iOS deployment version '--target=armv7-apple-ios13.6',
-# iOS 10 is the maximum deployment target for 32-bit targets
-# If CMAKE_OSX_DEPLOYMENT_TARGET is not defined, cmake will choose latest
-# deployment target
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    # Fix compile failure with armv7 deployment target >= 11.0, xcode clang
+    # will report:
+    # error: invalid iOS deployment version '--target=armv7-apple-ios13.6',
+    # iOS 10 is the maximum deployment target for 32-bit targets
+    # If CMAKE_OSX_DEPLOYMENT_TARGET is not defined, cmake will choose latest
+    # deployment target
     if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
         if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
             OR NOT CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "11.0")
@@ -369,19 +372,24 @@ set(HAVE_SSE3       0)
 set(HAVE_SSE4_1     0)
 set(HAVE_NEON       0)
 
-# Check for SSE+SSE2 support
+# Check for SSE support
 option(ALSOFT_REQUIRE_SSE "Require SSE support" OFF)
-option(ALSOFT_REQUIRE_SSE2 "Require SSE2 support" OFF)
-if(HAVE_XMMINTRIN_H AND HAVE_EMMINTRIN_H)
+if(HAVE_XMMINTRIN_H)
     option(ALSOFT_CPUEXT_SSE "Enable SSE support" ON)
-    option(ALSOFT_CPUEXT_SSE2 "Enable SSE2 support" ON)
-    if(ALSOFT_CPUEXT_SSE AND ALSOFT_CPUEXT_SSE2)
+    if(ALSOFT_CPUEXT_SSE)
         set(HAVE_SSE 1)
-        set(HAVE_SSE2 1)
     endif()
 endif()
 if(ALSOFT_REQUIRE_SSE AND NOT HAVE_SSE)
     message(FATAL_ERROR "Failed to enabled required SSE CPU extensions")
+endif()
+
+option(ALSOFT_REQUIRE_SSE2 "Require SSE2 support" OFF)
+if(HAVE_EMMINTRIN_H)
+    option(ALSOFT_CPUEXT_SSE2 "Enable SSE2 support" ON)
+    if(HAVE_SSE AND ALSOFT_CPUEXT_SSE2)
+        set(HAVE_SSE2 1)
+    endif()
 endif()
 if(ALSOFT_REQUIRE_SSE2 AND NOT HAVE_SSE2)
     message(FATAL_ERROR "Failed to enable required SSE2 CPU extensions")
@@ -627,6 +635,7 @@ set(COMMON_OBJS
     common/intrusive_ptr.h
     common/math_defs.h
     common/opthelpers.h
+    common/phase_shifter.h
     common/polyphase_resampler.cpp
     common/polyphase_resampler.h
     common/pragmadefs.h
@@ -643,17 +652,29 @@ set(COMMON_OBJS
 set(CORE_OBJS
     core/ambdec.cpp
     core/ambdec.h
+    core/ambidefs.cpp
     core/ambidefs.h
+    core/async_event.h
+    core/bformatdec.cpp
+    core/bformatdec.h
     core/bs2b.cpp
     core/bs2b.h
     core/bsinc_defs.h
     core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
+    core/buffer_storage.cpp
+    core/buffer_storage.h
+    core/context.cpp
+    core/context.h
+    core/converter.cpp
+    core/converter.h
     core/cpu_caps.cpp
     core/cpu_caps.h
     core/devformat.cpp
     core/devformat.h
+    core/device.cpp
+    core/device.h
     core/except.cpp
     core/except.h
     core/filters/biquad.h
@@ -666,12 +687,47 @@ set(CORE_OBJS
     core/fmt_traits.h
     core/fpu_ctrl.cpp
     core/fpu_ctrl.h
+    core/front_stablizer.h
+    core/helpers.cpp
+    core/helpers.h
+    core/hrtf.cpp
+    core/hrtf.h
     core/logging.cpp
     core/logging.h
     core/mastering.cpp
     core/mastering.h
+    core/mixer.cpp
+    core/mixer.h
+    core/resampler_limits.h
     core/uhjfilter.cpp
     core/uhjfilter.h
+    core/uiddefs.cpp
+    core/voice.cpp
+    core/voice.h
+    core/voice_change.h)
+
+set(HAVE_RTKIT 0)
+option(ALSOFT_REQUIRE_RTKIT "Require RTKit/D-Bus support" FALSE)
+find_package(DBus1)
+if(DBus1_FOUND)
+    option(ALSOFT_RTKIT "Enable RTKit support" ON)
+    if(ALSOFT_RTKIT)
+        set(HAVE_RTKIT 1)
+        set(CORE_OBJS ${CORE_OBJS} core/dbus_wrap.cpp core/dbus_wrap.h core/rtkit.cpp core/rtkit.h)
+        if(WIN32 OR HAVE_DLFCN_H)
+            set(INC_PATHS ${INC_PATHS} ${DBus1_INCLUDE_DIRS})
+            set(CPP_DEFS ${CPP_DEFS} ${DBus1_DEFINITIONS})
+        else()
+            set(EXTRA_LIBS ${EXTRA_LIBS} ${DBus1_LIBRARIES})
+        endif()
+    endif()
+endif()
+if(ALSOFT_REQUIRE_RTKIT AND NOT HAVE_RTKIT)
+    message(FATAL_ERROR "Failed to enabled required RTKit support")
+endif()
+
+# Default mixers, always available
+set(CORE_OBJS ${CORE_OBJS}
     core/mixer/defs.h
     core/mixer/hrtfbase.h
     core/mixer/hrtfdefs.h
@@ -715,20 +771,14 @@ set(OPENAL_OBJS
 # ALC and related routines
 set(ALC_OBJS
     alc/alc.cpp
-    alc/alcmain.h
     alc/alu.cpp
     alc/alu.h
     alc/alconfig.cpp
     alc/alconfig.h
-    alc/alcontext.h
-    alc/async_event.h
-    alc/bformatdec.cpp
-    alc/bformatdec.h
-    alc/buffer_storage.cpp
-    alc/buffer_storage.h
-    alc/compat.h
-    alc/converter.cpp
-    alc/converter.h
+    alc/context.cpp
+    alc/context.h
+    alc/device.cpp
+    alc/device.h
     alc/effectslot.cpp
     alc/effectslot.h
     alc/effects/base.h
@@ -746,22 +796,18 @@ set(ALC_OBJS
     alc/effects/pshifter.cpp
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
-    alc/front_stablizer.h
-    alc/helpers.cpp
-    alc/hrtf.cpp
-    alc/hrtf.h
     alc/inprogext.h
-    alc/panning.cpp
-    alc/uiddefs.cpp
-    alc/voice.cpp
-    alc/voice.h
-    alc/voice_change.h)
+    alc/panning.cpp)
 
 # Include SIMD mixers
 set(CPU_EXTS "Default")
+if(HAVE_SSE)
+    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse.cpp)
+    set(CPU_EXTS "${CPU_EXTS}, SSE")
+endif()
 if(HAVE_SSE2)
-    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse.cpp core/mixer/mixer_sse2.cpp)
-    set(CPU_EXTS "${CPU_EXTS}, SSE, SSE2")
+    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse2.cpp)
+    set(CPU_EXTS "${CPU_EXTS}, SSE2")
 endif()
 if(HAVE_SSE3)
     set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse3.cpp)
@@ -1236,7 +1282,8 @@ else()
             router/al.cpp
         )
         target_compile_definitions(OpenAL
-            PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
+            PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}"
+            "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
         target_compile_options(OpenAL PRIVATE ${C_FLAGS})
         target_link_libraries(OpenAL PRIVATE common ${LINKER_FLAGS})
         target_include_directories(OpenAL
@@ -1312,7 +1359,6 @@ target_include_directories(${IMPL_TARGET}
     ${INC_PATHS}
     ${OpenAL_BINARY_DIR}
     ${OpenAL_SOURCE_DIR}
-    ${OpenAL_SOURCE_DIR}/alc
     ${OpenAL_SOURCE_DIR}/common
 )
 
@@ -1321,7 +1367,8 @@ set_target_properties(${IMPL_TARGET} PROPERTIES OUTPUT_NAME ${LIBNAME}
     SOVERSION ${LIB_MAJOR_VERSION}
 )
 target_compile_definitions(${IMPL_TARGET}
-    PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
+    PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
+    ${CPP_DEFS})
 target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
 
 if(TARGET build_version)

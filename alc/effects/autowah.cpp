@@ -20,16 +20,26 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <iterator>
+#include <utility>
 
-#include "alcmain.h"
-#include "alcontext.h"
-#include "core/filters/biquad.h"
-#include "effectslot.h"
-#include "vecmat.h"
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "alspan.h"
+#include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/context.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/mixer.h"
+#include "intrusive_ptr.h"
+#include "math_defs.h"
+
 
 namespace {
 
@@ -69,8 +79,8 @@ struct AutowahState final : public EffectState {
     alignas(16) float mBufferOut[BufferLineSize];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -78,7 +88,7 @@ struct AutowahState final : public EffectState {
     DEF_NEWDEL(AutowahState)
 };
 
-void AutowahState::deviceUpdate(const ALCdevice*, const Buffer&)
+void AutowahState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     /* (Re-)initializing parameters and clear the buffers. */
 
@@ -104,10 +114,10 @@ void AutowahState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void AutowahState::update(const ALCcontext *context, const EffectSlot *slot,
+void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
     const float ReleaseTime{clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f)};

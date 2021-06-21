@@ -8,11 +8,11 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "alcmain.h"
+#include "alc/device.h"
+#include "alc/effectslot.h"
+#include "alc/effects/base.h"
 #include "almalloc.h"
 #include "atomic.h"
-#include "effectslot.h"
-#include "effects/base.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 
@@ -40,7 +40,7 @@ struct ALeffectslot {
         al::intrusive_ptr<EffectState> State;
     } Effect;
 
-    std::atomic_flag PropsClean;
+    al::atomic_invflag mPropsDirty;
 
     SlotState mState{SlotState::Initial};
 

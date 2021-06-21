@@ -6,6 +6,7 @@
 
 #include "alspan.h"
 #include "core/bufferline.h"
+#include "core/resampler_limits.h"
 
 struct HrtfChannelState;
 struct HrtfFilter;
@@ -18,12 +19,6 @@ using float2 = std::array<float,2>;
 constexpr int MixerFracBits{12};
 constexpr int MixerFracOne{1 << MixerFracBits};
 constexpr int MixerFracMask{MixerFracOne - 1};
-
-/* Maximum number of samples to pad on the ends of a buffer for resampling.
- * Note that the padding is symmetric (half at the beginning and half at the
- * end)!
- */
-constexpr int MaxResamplerPadding{48};
 
 constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 

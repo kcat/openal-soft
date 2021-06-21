@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "backends/sndio.h"
+#include "sndio.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +29,9 @@
 #include <thread>
 #include <functional>
 
-#include "alcmain.h"
-#include "alu.h"
+#include "alnumeric.h"
+#include "core/device.h"
+#include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
@@ -45,7 +46,7 @@ static const char sndio_device[] = "SndIO Default";
 
 
 struct SndioPlayback final : public BackendBase {
-    SndioPlayback(ALCdevice *device) noexcept : BackendBase{device} { }
+    SndioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioPlayback() override;
 
     int mixerProc();
@@ -292,7 +293,7 @@ void SndioPlayback::stop()
 
 
 struct SndioCapture final : public BackendBase {
-    SndioCapture(ALCdevice *device) noexcept : BackendBase{device} { }
+    SndioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioCapture() override;
 
     int recordProc();
@@ -511,7 +512,7 @@ std::string SndIOBackendFactory::probe(BackendType type)
     return outnames;
 }
 
-BackendPtr SndIOBackendFactory::createBackend(ALCdevice *device, BackendType type)
+BackendPtr SndIOBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new SndioPlayback{device}};

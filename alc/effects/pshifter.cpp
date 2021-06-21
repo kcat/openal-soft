@@ -20,23 +20,33 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-#include <array>
-#include <complex>
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <complex>
+#include <cstdlib>
+#include <iterator>
 
-#include "alcmain.h"
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
 #include "alcomplex.h"
-#include "alcontext.h"
+#include "almalloc.h"
 #include "alnumeric.h"
-#include "alu.h"
-#include "effectslot.h"
+#include "alspan.h"
+#include "core/bufferline.h"
+#include "core/devformat.h"
+#include "core/device.h"
+#include "core/mixer.h"
+#include "core/mixer/defs.h"
+#include "intrusive_ptr.h"
 #include "math_defs.h"
+
+struct ContextBase;
 
 
 namespace {
 
+using uint = unsigned int;
 using complex_d = std::complex<double>;
 
 #define STFT_SIZE      1024
@@ -93,8 +103,8 @@ struct PshifterState final : public EffectState {
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -102,7 +112,7 @@ struct PshifterState final : public EffectState {
     DEF_NEWDEL(PshifterState)
 };
 
-void PshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
+void PshifterState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount       = 0;
@@ -122,7 +132,7 @@ void PshifterState::deviceUpdate(const ALCdevice*, const Buffer&)
     std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
 }
 
-void PshifterState::update(const ALCcontext*, const EffectSlot *slot,
+void PshifterState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
     const int tune{props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune};

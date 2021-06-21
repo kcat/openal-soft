@@ -18,17 +18,17 @@
 #include "AL/alc.h"
 
 #include "albyte.h"
-#include "alcontext.h"
+#include "alc/context.h"
+#include "alc/effects/base.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
-#include "async_event.h"
+#include "core/async_event.h"
 #include "core/except.h"
 #include "core/logging.h"
-#include "effects/base.h"
-#include "inprogext.h"
+#include "core/voice_change.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "voice_change.h"
 
 
 static int EventThread(ALCcontext *context)
@@ -75,24 +75,21 @@ static int EventThread(ALCcontext *context)
                 msg += " state has changed to ";
                 switch(evt.u.srcstate.state)
                 {
-                case VChangeState::Reset:
+                case AsyncEvent::SrcState::Reset:
                     msg += "AL_INITIAL";
                     state = AL_INITIAL;
                     break;
-                case VChangeState::Stop:
+                case AsyncEvent::SrcState::Stop:
                     msg += "AL_STOPPED";
                     state = AL_STOPPED;
                     break;
-                case VChangeState::Play:
+                case AsyncEvent::SrcState::Play:
                     msg += "AL_PLAYING";
                     state = AL_PLAYING;
                     break;
-                case VChangeState::Pause:
+                case AsyncEvent::SrcState::Pause:
                     msg += "AL_PAUSED";
                     state = AL_PAUSED;
-                    break;
-                /* Shouldn't happen */
-                case VChangeState::Restart:
                     break;
                 }
                 context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,

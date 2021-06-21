@@ -20,17 +20,25 @@
 
 #include "config.h"
 
-#include <cmath>
-#include <cstdlib>
-
 #include <algorithm>
+#include <array>
+#include <cstdlib>
 #include <functional>
+#include <iterator>
+#include <utility>
 
-#include "alcmain.h"
-#include "alcontext.h"
+#include "alc/effects/base.h"
+#include "alc/effectslot.h"
+#include "almalloc.h"
+#include "alspan.h"
+#include "core/ambidefs.h"
+#include "core/bufferline.h"
+#include "core/context.h"
+#include "core/devformat.h"
+#include "core/device.h"
 #include "core/filters/biquad.h"
-#include "effectslot.h"
-#include "vecmat.h"
+#include "core/mixer.h"
+#include "intrusive_ptr.h"
 
 
 namespace {
@@ -90,8 +98,8 @@ struct EqualizerState final : public EffectState {
     FloatBufferLine mSampleBuffer{};
 
 
-    void deviceUpdate(const ALCdevice *device, const Buffer &buffer) override;
-    void update(const ALCcontext *context, const EffectSlot *slot, const EffectProps *props,
+    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
@@ -99,7 +107,7 @@ struct EqualizerState final : public EffectState {
     DEF_NEWDEL(EqualizerState)
 };
 
-void EqualizerState::deviceUpdate(const ALCdevice*, const Buffer&)
+void EqualizerState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
@@ -108,10 +116,10 @@ void EqualizerState::deviceUpdate(const ALCdevice*, const Buffer&)
     }
 }
 
-void EqualizerState::update(const ALCcontext *context, const EffectSlot *slot,
+void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device{context->mDevice.get()};
+    const DeviceBase *device{context->mDevice};
     auto frequency = static_cast<float>(device->Frequency);
     float gain, f0norm;
 

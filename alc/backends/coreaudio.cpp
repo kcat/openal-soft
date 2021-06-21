@@ -30,6 +30,8 @@
 #include <unistd.h>
 
 #include <cmath>
+#include <memory>
+#include <string>
 
 #include "alnumeric.h"
 #include "core/converter.h"
@@ -140,8 +142,8 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         return 0;
     }
 
-    auto buffer_data = std::vector<char>(propSize);
-    AudioBufferList *buflist{reinterpret_cast<AudioBufferList*>(buffer_data.data())};
+    auto buflist_data = std::make_unique<char[]>(propSize);
+    auto *buflist = reinterpret_cast<AudioBufferList*>(buflist_data.get());
 
     err = GetDevProperty(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0, propSize,
         buflist);

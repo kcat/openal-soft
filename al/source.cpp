@@ -509,17 +509,23 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     /* Even if storing really high order ambisonics, we only mix channels for
      * orders up to MaxAmbiOrder. The rest are simply dropped.
      */
-    const ALuint num_channels{(buffer->mChannels == FmtUHJ2) ? 3 :
+    ALuint num_channels{(buffer->mChannels == FmtUHJ2) ? 3 :
         ChannelsFromFmt(buffer->mChannels, minu(buffer->mAmbiOrder, MaxAmbiOrder))};
+    if UNLIKELY(num_channels > device->mSampleData.size())
+    {
+        ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
+            device->mSampleData.size(), buffer->mChannels, buffer->mAmbiOrder);
+        num_channels = static_cast<ALuint>(device->mSampleData.size());
+    }
     if(voice->mChans.capacity() > 2 && num_channels < voice->mChans.capacity())
     {
         decltype(voice->mChans){}.swap(voice->mChans);
-        decltype(voice->mVoiceSamples){}.swap(voice->mVoiceSamples);
+        decltype(voice->mPrevSamples){}.swap(voice->mPrevSamples);
     }
     voice->mChans.reserve(maxu(2, num_channels));
     voice->mChans.resize(num_channels);
-    voice->mVoiceSamples.reserve(maxu(2, num_channels));
-    voice->mVoiceSamples.resize(num_channels);
+    voice->mPrevSamples.reserve(maxu(2, num_channels));
+    voice->mPrevSamples.resize(num_channels);
 
     voice->prepare(device);
 

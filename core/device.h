@@ -20,6 +20,8 @@
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
+#include "resampler_limits.h"
+#include "uhjfilter.h"
 #include "vector.h"
 
 struct BackendBase;
@@ -166,6 +168,11 @@ struct DeviceBase {
     std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
+    static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +
+        UhjDecoder::sFilterDelay};
+    using MixerBufferLine = std::array<float,MixerLineSize>;
+    alignas(16) std::array<MixerBufferLine,16> mSampleData;
+
     alignas(16) float ResampledData[BufferLineSize];
     alignas(16) float FilteredData[BufferLineSize];
     union {

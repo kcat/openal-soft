@@ -65,10 +65,6 @@ static ALuint LoadSound(const char *filename)
         return 0;
     }
 
-
-    if (sfinfo.format & SF_FORMAT_VORBIS)
-        sf_command(sndfile, SFC_SET_SCALE_FLOAT_INT_READ, (void*)1, sizeof(char));
-
     /* Get the sound format, and figure out the OpenAL format */
     format = AL_NONE;
     if(sfinfo.channels == 1)

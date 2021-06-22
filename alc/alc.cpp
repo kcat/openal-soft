@@ -2267,8 +2267,10 @@ START_API_FUNC
     case ALC_ALL_DEVICES_SPECIFIER:
         if(DeviceRef dev{VerifyDevice(Device)})
         {
-            if(dev->Type != DeviceType::Playback)
+            if(dev->Type == DeviceType::Capture)
                 alcSetError(dev.get(), ALC_INVALID_ENUM);
+            else if(dev->Type == DeviceType::Loopback)
+                value = alcDefaultName;
             else
             {
                 std::lock_guard<std::mutex> _{dev->StateLock};

@@ -64,8 +64,8 @@ ALCdevice::~ALCdevice()
 
 void ALCdevice::enumerateHrtfs()
 {
-    mHrtfList = EnumerateHrtf(ConfigValueStr(DeviceName.c_str(), nullptr, "hrtf-paths"));
-    if(auto defhrtfopt = ConfigValueStr(DeviceName.c_str(), nullptr, "default-hrtf"))
+    mHrtfList = EnumerateHrtf(configValue<std::string>(nullptr, "hrtf-paths"));
+    if(auto defhrtfopt = configValue<std::string>(nullptr, "default-hrtf"))
     {
         auto iter = std::find(mHrtfList.begin(), mHrtfList.end(), *defhrtfopt);
         if(iter == mHrtfList.end())

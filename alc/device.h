@@ -10,6 +10,7 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/device.h"
@@ -104,7 +105,29 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
     void enumerateHrtfs();
 
+    bool getConfigValueBool(const char *block, const char *key, int def)
+    { return GetConfigValueBool(DeviceName.c_str(), block, key, def); }
+
+    template<typename T>
+    al::optional<T> configValue(const char *block, const char *key) = delete;
+
     DEF_NEWDEL(ALCdevice)
 };
+
+template<>
+inline al::optional<std::string> ALCdevice::configValue(const char *block, const char *key)
+{ return ConfigValueStr(DeviceName.c_str(), block, key); }
+template<>
+inline al::optional<int> ALCdevice::configValue(const char *block, const char *key)
+{ return ConfigValueInt(DeviceName.c_str(), block, key); }
+template<>
+inline al::optional<uint> ALCdevice::configValue(const char *block, const char *key)
+{ return ConfigValueUInt(DeviceName.c_str(), block, key); }
+template<>
+inline al::optional<float> ALCdevice::configValue(const char *block, const char *key)
+{ return ConfigValueFloat(DeviceName.c_str(), block, key); }
+template<>
+inline al::optional<bool> ALCdevice::configValue(const char *block, const char *key)
+{ return ConfigValueBool(DeviceName.c_str(), block, key); }
 
 #endif

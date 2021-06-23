@@ -1663,7 +1663,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         UpdateClockBase(device);
 
-        const char *devname{nullptr};
         if(loopback)
         {
             device->Frequency = freq;
@@ -1678,13 +1677,11 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         }
         else
         {
-            devname = device->DeviceName.c_str();
-
             device->BufferSize = DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES;
             device->UpdateSize = DEFAULT_UPDATE_SIZE;
             device->Frequency = DEFAULT_OUTPUT_RATE;
 
-            freq = ConfigValueUInt(devname, nullptr, "frequency").value_or(freq);
+            freq = device->configValue<uint>(nullptr, "frequency").value_or(freq);
             if(freq < 1)
                 device->Flags.reset(FrequencyRequest);
             else
@@ -1699,10 +1696,10 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 device->Flags.set(FrequencyRequest);
             }
 
-            if(auto persizeopt = ConfigValueUInt(devname, nullptr, "period_size"))
+            if(auto persizeopt = device->configValue<uint>(nullptr, "period_size"))
                 device->UpdateSize = clampu(*persizeopt, 64, 8192);
 
-            if(auto peropt = ConfigValueUInt(devname, nullptr, "periods"))
+            if(auto peropt = device->configValue<uint>(nullptr, "periods"))
                 device->BufferSize = device->UpdateSize * clampu(*peropt, 2, 16);
             else
                 device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
@@ -1711,7 +1708,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         if(numMono > INT_MAX-numStereo)
             numMono = INT_MAX-numStereo;
         numMono += numStereo;
-        if(auto srcsopt = ConfigValueUInt(devname, nullptr, "sources"))
+        if(auto srcsopt = device->configValue<uint>(nullptr, "sources"))
         {
             if(*srcsopt <= 0) numMono = 256;
             else numMono = *srcsopt;
@@ -1725,7 +1722,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        if(auto sendsopt = ConfigValueInt(devname, nullptr, "sends"))
+        if(auto sendsopt = device->configValue<int>(nullptr, "sends"))
             new_sends = minu(numSends, static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
         else
             new_sends = numSends;
@@ -1766,7 +1763,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->mHrtfStatus = ALC_HRTF_DISABLED_SOFT;
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto hrtfopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf"))
+        if(auto hrtfopt = device->configValue<std::string>(nullptr, "hrtf"))
         {
             const char *hrtf{hrtfopt->c_str()};
             if(al::strcasecmp(hrtf, "true") == 0)
@@ -1857,9 +1854,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             sample_delay += FrontStablizer::DelayLength;
     }
 
-    if(GetConfigValueBool(device->DeviceName.c_str(), nullptr, "dither", 1))
+    if(device->getConfigValueBool(nullptr, "dither", 1))
     {
-        int depth{ConfigValueInt(device->DeviceName.c_str(), nullptr, "dither-depth").value_or(0)};
+        int depth{device->configValue<int>(nullptr, "dither-depth").value_or(0)};
         if(depth <= 0)
         {
             switch(device->FmtType)
@@ -1892,7 +1889,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
               device->DitherDepth);
 
     device->LimiterState = gainLimiter;
-    if(auto limopt = ConfigValueBool(device->DeviceName.c_str(), nullptr, "output-limiter"))
+    if(auto limopt = device->configValue<bool>(nullptr, "output-limiter"))
         gainLimiter = *limopt ? ALC_TRUE : ALC_FALSE;
 
     /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
@@ -2935,7 +2932,7 @@ START_API_FUNC
     ContextRef context{new ALCcontext{dev}};
     context->init();
 
-    if(auto volopt = ConfigValueFloat(dev->DeviceName.c_str(), nullptr, "volume-adjust"))
+    if(auto volopt = dev->configValue<float>(nullptr, "volume-adjust"))
     {
         const float valf{*volopt};
         if(!std::isfinite(valf))
@@ -3170,8 +3167,7 @@ START_API_FUNC
         return nullptr;
     }
 
-    deviceName = device->DeviceName.c_str();
-    if(auto chanopt = ConfigValueStr(deviceName, nullptr, "channels"))
+    if(auto chanopt = device->configValue<std::string>(nullptr, "channels"))
     {
         static const struct ChannelMap {
             const char name[16];
@@ -3204,7 +3200,7 @@ START_API_FUNC
             device->Flags.set(ChannelsRequest);
         }
     }
-    if(auto typeopt = ConfigValueStr(deviceName, nullptr, "sample-type"))
+    if(auto typeopt = device->configValue<std::string>(nullptr, "sample-type"))
     {
         static const struct TypeMap {
             const char name[16];
@@ -3233,7 +3229,7 @@ START_API_FUNC
         }
     }
 
-    if(uint freq{ConfigValueUInt(deviceName, nullptr, "frequency").value_or(0u)})
+    if(uint freq{device->configValue<uint>(nullptr, "frequency").value_or(0u)})
     {
         if(freq < MIN_OUTPUT_RATE || freq > MAX_OUTPUT_RATE)
         {
@@ -3248,28 +3244,28 @@ START_API_FUNC
         device->Flags.set(FrequencyRequest);
     }
 
-    if(auto persizeopt = ConfigValueUInt(deviceName, nullptr, "period_size"))
+    if(auto persizeopt = device->configValue<uint>(nullptr, "period_size"))
         device->UpdateSize = clampu(*persizeopt, 64, 8192);
 
-    if(auto peropt = ConfigValueUInt(deviceName, nullptr, "periods"))
+    if(auto peropt = device->configValue<uint>(nullptr, "periods"))
         device->BufferSize = device->UpdateSize * clampu(*peropt, 2, 16);
     else
         device->BufferSize = maxu(device->BufferSize, device->UpdateSize*2);
 
-    if(auto srcsmax = ConfigValueUInt(deviceName, nullptr, "sources").value_or(0))
+    if(auto srcsmax = device->configValue<uint>(nullptr, "sources").value_or(0))
         device->SourcesMax = srcsmax;
 
-    if(auto slotsmax = ConfigValueUInt(deviceName, nullptr, "slots").value_or(0))
+    if(auto slotsmax = device->configValue<uint>(nullptr, "slots").value_or(0))
         device->AuxiliaryEffectSlotMax = minu(slotsmax, INT_MAX);
 
-    if(auto sendsopt = ConfigValueInt(deviceName, nullptr, "sends"))
+    if(auto sendsopt = device->configValue<int>(nullptr, "sends"))
         device->NumAuxSends = minu(DEFAULT_SENDS,
             static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    if(auto ambiopt = ConfigValueStr(deviceName, nullptr, "ambi-format"))
+    if(auto ambiopt = device->configValue<std::string>(nullptr, "ambi-format"))
     {
         const ALCchar *fmt{ambiopt->c_str()};
         if(al::strcasecmp(fmt, "fuma") == 0)

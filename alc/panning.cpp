@@ -207,8 +207,7 @@ void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d
     static const uint chans_per_order3d[MaxAmbiOrder+1]{ 1, 3, 5, 7 };
 
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
-    const char *devname{device->DeviceName.c_str()};
-    if(!GetConfigValueBool(devname, "decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
+    if(!device->getConfigValueBool("decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
         return;
 
     device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
@@ -224,8 +223,7 @@ void InitDistanceComp(ALCdevice *device, DecoderView decoder,
 {
     const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f, maxf)};
 
-    const char *devname{device->DeviceName.c_str()};
-    if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
+    if(!device->getConfigValueBool("decoder", "distance-comp", 1) || !(maxdist > 0.0f))
         return;
 
     const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
@@ -547,7 +545,6 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         case DevFmtX61: decoder = X61Config; break;
         case DevFmtX71: decoder = X71Config; break;
         case DevFmtAmbi3D:
-            const char *devname{device->DeviceName.c_str()};
             auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
             auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
 
@@ -558,7 +555,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
                 { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
             AllocChannels(device, count, 0);
 
-            float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
+            float nfc_delay{device->configValue<float>("decoder", "nfc-ref-delay").value_or(0.0f)};
             if(nfc_delay > 0.0f)
                 InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
                     true);
@@ -738,7 +735,7 @@ void InitHrtfPanning(ALCdevice *device)
      */
     device->mRenderMode = RenderMode::Hrtf;
     uint ambi_order{1};
-    if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode"))
+    if(auto modeopt = device->configValue<std::string>(nullptr, "hrtf-mode"))
     {
         struct HrtfModeEntry {
             char name[8];
@@ -823,8 +820,6 @@ void InitUhjPanning(ALCdevice *device)
 void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
     HrtfRequestMode hrtf_userreq)
 {
-    const char *devname{device->DeviceName.c_str()};
-
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
 
@@ -885,7 +880,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         };
         if(layout)
         {
-            if(auto decopt = ConfigValueStr(devname, "decoder", layout))
+            if(auto decopt = device->configValue<std::string>("decoder", layout))
                 load_config(decopt->c_str());
         }
 
@@ -895,8 +890,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != INVALID_CHANNEL_INDEX
             && device->RealOut.ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
             && device->RealOut.ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX
-            && GetConfigValueBool(devname, nullptr, "front-stablizer", 0) != 0};
-        const bool hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1) != 0};
+            && device->getConfigValueBool(nullptr, "front-stablizer", 0) != 0};
+        const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", 1) != 0};
         InitPanning(device, hqdec, stablize, decoder);
         if(decoder.mOrder > 0)
         {
@@ -926,7 +921,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     bool headphones{device->IsHeadphones};
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto modeopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode"))
+        if(auto modeopt = device->configValue<std::string>(nullptr, "stereo-mode"))
         {
             const char *mode{modeopt->c_str()};
             if(al::strcasecmp(mode, "headphones") == 0)
@@ -991,7 +986,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
 
         HrtfStore *hrtf{device->mHrtf.get()};
         device->mIrSize = hrtf->irSize;
-        if(auto hrtfsizeopt = ConfigValueUInt(devname, nullptr, "hrtf-size"))
+        if(auto hrtfsizeopt = device->configValue<uint>(nullptr, "hrtf-size"))
         {
             if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
                 device->mIrSize = maxu(*hrtfsizeopt, MinIrLength);
@@ -1010,7 +1005,7 @@ no_hrtf:
 
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto cflevopt = ConfigValueInt(device->DeviceName.c_str(), nullptr, "cf_level"))
+        if(auto cflevopt = device->configValue<int>(nullptr, "cf_level"))
         {
             if(*cflevopt > 0 && *cflevopt <= 6)
             {
@@ -1025,7 +1020,7 @@ no_hrtf:
         }
     }
 
-    if(auto encopt = ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding"))
+    if(auto encopt = device->configValue<std::string>(nullptr, "stereo-encoding"))
     {
         const char *mode{encopt->c_str()};
         if(al::strcasecmp(mode, "uhj") == 0)

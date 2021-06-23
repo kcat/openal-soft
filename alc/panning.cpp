@@ -314,7 +314,7 @@ inline auto& GetAmbiLayout(DevAmbiLayout layouttype) noexcept
 }
 
 
-using ChannelCoeffs = std::array<float,MaxAmbi2DChannels>;
+using ChannelCoeffs = std::array<float,MaxAmbiChannels>;
 enum DecoderMode : bool {
     SingleBand = false,
     DualBand = true
@@ -325,7 +325,8 @@ struct DecoderConfig;
 
 template<size_t N>
 struct DecoderConfig<SingleBand, N> {
-    uint mOrder;
+    uint8_t mOrder;
+    bool mIs3D;
     std::array<Channel,N> mChannels;
     std::array<float,MaxAmbiOrder+1> mOrderGain;
     std::array<ChannelCoeffs,N> mCoeffs;
@@ -333,7 +334,8 @@ struct DecoderConfig<SingleBand, N> {
 
 template<size_t N>
 struct DecoderConfig<DualBand, N> {
-    uint mOrder;
+    uint8_t mOrder;
+    bool mIs3D;
     std::array<Channel,N> mChannels;
     std::array<float,MaxAmbiOrder+1> mOrderGain;
     std::array<ChannelCoeffs,N> mCoeffs;
@@ -343,7 +345,8 @@ struct DecoderConfig<DualBand, N> {
 
 template<>
 struct DecoderConfig<DualBand, 0> {
-    uint mOrder;
+    uint8_t mOrder;
+    bool mIs3D;
     al::span<const Channel> mChannels;
     al::span<const float> mOrderGain;
     al::span<const ChannelCoeffs> mCoeffs;
@@ -354,6 +357,7 @@ struct DecoderConfig<DualBand, 0> {
     DecoderConfig& operator=(const DecoderConfig<SingleBand,N> &rhs) noexcept
     {
         mOrder = rhs.mOrder;
+        mIs3D = rhs.mIs3D;
         mChannels = rhs.mChannels;
         mOrderGain = rhs.mOrderGain;
         mCoeffs = rhs.mCoeffs;
@@ -366,6 +370,7 @@ struct DecoderConfig<DualBand, 0> {
     DecoderConfig& operator=(const DecoderConfig<DualBand,N> &rhs) noexcept
     {
         mOrder = rhs.mOrder;
+        mIs3D = rhs.mIs3D;
         mChannels = rhs.mChannels;
         mOrderGain = rhs.mOrderGain;
         mCoeffs = rhs.mCoeffs;
@@ -377,12 +382,12 @@ struct DecoderConfig<DualBand, 0> {
 using DecoderView = DecoderConfig<DualBand, 0>;
 
 constexpr DecoderConfig<SingleBand, 1> MonoConfig{
-    0, {{FrontCenter}},
+    0, false, {{FrontCenter}},
     {{1.0f}},
     {{ {{1.0f}} }}
 };
 constexpr DecoderConfig<SingleBand, 2> StereoConfig{
-    1, {{FrontLeft, FrontRight}},
+    1, false, {{FrontLeft, FrontRight}},
     {{1.0f, 1.0f}},
     {{
         {{5.00000000e-1f,  2.88675135e-1f,  5.52305643e-2f}},
@@ -390,7 +395,7 @@ constexpr DecoderConfig<SingleBand, 2> StereoConfig{
     }}
 };
 constexpr DecoderConfig<DualBand, 4> QuadConfig{
-    2, {{BackLeft, FrontLeft, FrontRight, BackRight}},
+    2, false, {{BackLeft, FrontLeft, FrontRight, BackRight}},
     /*HF*/{{1.15470054e+0f, 1.00000000e+0f, 5.77350269e-1f}},
     {{
         {{2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f, -1.29099445e-1f, 0.00000000e+0f}},
@@ -407,7 +412,7 @@ constexpr DecoderConfig<DualBand, 4> QuadConfig{
     }}
 };
 constexpr DecoderConfig<SingleBand, 4> X51Config{
-    2, {{SideLeft, FrontLeft, FrontRight, SideRight}},
+    2, false, {{SideLeft, FrontLeft, FrontRight, SideRight}},
     {{1.0f, 1.0f, 1.0f}},
     {{
         {{3.33000782e-1f,  1.89084803e-1f, -2.00042375e-1f, -2.12307769e-2f, -1.14579885e-2f}},
@@ -417,7 +422,7 @@ constexpr DecoderConfig<SingleBand, 4> X51Config{
     }}
 };
 constexpr DecoderConfig<SingleBand, 4> X51RearConfig{
-    2, {{BackLeft, FrontLeft, FrontRight, BackRight}},
+    2, false, {{BackLeft, FrontLeft, FrontRight, BackRight}},
     {{1.0f, 1.0f, 1.0f}},
     {{
         {{3.33000782e-1f,  1.89084803e-1f, -2.00042375e-1f, -2.12307769e-2f, -1.14579885e-2f}},
@@ -427,7 +432,7 @@ constexpr DecoderConfig<SingleBand, 4> X51RearConfig{
     }}
 };
 constexpr DecoderConfig<SingleBand, 5> X61Config{
-    2, {{SideLeft, FrontLeft, FrontRight, SideRight, BackCenter}},
+    2, false, {{SideLeft, FrontLeft, FrontRight, SideRight, BackCenter}},
     {{1.0f, 1.0f, 1.0f}},
     {{
         {{2.04460341e-1f,  2.17177926e-1f, -4.39996780e-2f, -2.60790269e-2f, -6.87239792e-2f}},
@@ -438,7 +443,7 @@ constexpr DecoderConfig<SingleBand, 5> X61Config{
     }}
 };
 constexpr DecoderConfig<DualBand, 6> X71Config{
-    3, {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight}},
+    3, false, {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight}},
     /*HF*/{{1.22474487e+0f, 1.13151672e+0f, 8.66025404e-1f, 4.68689571e-1f}},
     {{
         {{1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f,  7.96819073e-2f, 0.00000000e+0f}},
@@ -522,7 +527,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         for(uint o{0};o < decoder.mOrder+1;++o)
         {
             const float order_gain{decoder.mOrderGain[o]};
-            const size_t order_max{Ambi2DChannelsFromOrder(o)};
+            const size_t order_max{decoder.mIs3D ? AmbiChannelsFromOrder(o) :
+                Ambi2DChannelsFromOrder(o)};
             for(;ambichan < order_max;++ambichan)
                 coeffs[ambichan] = decoder.mCoeffs[i][ambichan] * order_gain;
         }
@@ -535,7 +541,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         for(uint o{0};o < decoder.mOrder+1;++o)
         {
             const float order_gain{decoder.mOrderGainLF[o]};
-            const size_t order_max{Ambi2DChannelsFromOrder(o)};
+            const size_t order_max{decoder.mIs3D ? AmbiChannelsFromOrder(o) :
+                Ambi2DChannelsFromOrder(o)};
             for(;ambichan < order_max;++ambichan)
                 coeffs[ambichan] = decoder.mCoeffsLF[i][ambichan] * order_gain;
         }
@@ -544,10 +551,11 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     /* For non-DevFmtAmbi3D, set the ambisonic order. */
     device->mAmbiOrder = decoder.mOrder;
 
-    /* Built-in speaker decoders are always 2D. */
-    const size_t ambicount{Ambi2DChannelsFromOrder(decoder.mOrder)};
-    std::transform(AmbiIndex::FromACN2D().begin(), AmbiIndex::FromACN2D().begin()+ambicount,
-        std::begin(device->Dry.AmbiMap),
+    const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
+        Ambi2DChannelsFromOrder(decoder.mOrder)};
+    const al::span<const uint8_t> acnmap{decoder.mIs3D ? AmbiIndex::FromACN().data() :
+        AmbiIndex::FromACN2D().data(), ambicount};
+    std::transform(acnmap.begin(), acnmap.end(), std::begin(device->Dry.AmbiMap),
         [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; });
     AllocChannels(device, ambicount, device->channelsFromFmt());
 
@@ -580,7 +588,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         !dual_band ? "single" : "dual",
         (decoder.mOrder > 2) ? "third" :
         (decoder.mOrder > 1) ? "second" : "first",
-        "");
+        decoder.mIs3D ? " periphonic" : "");
     device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
         std::move(stablizer));
 }

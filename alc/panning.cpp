@@ -578,7 +578,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
         al::span<float,MaxAmbiChannels> coeffs{chancoeffs[idx]};
         size_t ambichan{0};
-        for(uint o{0};o < decoder.mOrder+1;++o)
+        for(uint o{0};o < decoder.mOrder+1u;++o)
         {
             const float order_gain{decoder.mOrderGain[o]};
             const size_t order_max{decoder.mIs3D ? AmbiChannelsFromOrder(o) :
@@ -592,7 +592,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         chancoeffslf.resize(maxz(chancoeffslf.size(), idx+1u), ChannelDec{});
         coeffs = chancoeffslf[idx];
         ambichan = 0;
-        for(uint o{0};o < decoder.mOrder+1;++o)
+        for(uint o{0};o < decoder.mOrder+1u;++o)
         {
             const float order_gain{decoder.mOrderGainLF[o]};
             const size_t order_max{decoder.mIs3D ? AmbiChannelsFromOrder(o) :
@@ -872,7 +872,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
             {
                 device->mXOverFreq = clampf(conf.XOverFreq, 100.0f, 1000.0f);
 
-                decoder_store = std::make_unique<decltype(decoder_store)::element_type>();
+                decoder_store = std::make_unique<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>>();
                 decoder = MakeDecoderView(device, &conf, *decoder_store);
                 for(size_t i{0};i < decoder.mChannels.size();++i)
                     speakerdists[i] = conf.Speakers[i].Distance;

@@ -38,6 +38,7 @@
 #include "AL/alext.h"
 
 #include "al/auxeffectslot.h"
+#include "albit.h"
 #include "alconfig.h"
 #include "alc/context.h"
 #include "almalloc.h"
@@ -132,188 +133,6 @@ void AllocChannels(ALCdevice *device, const size_t main_chans, const size_t real
 }
 
 
-struct ChannelMap {
-    Channel ChanName;
-    float Config[MaxAmbi2DChannels];
-};
-
-bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, uint (&speakermap)[MAX_OUTPUT_CHANNELS])
-{
-    auto map_spkr = [device](const AmbDecConf::SpeakerConf &speaker) -> uint
-    {
-        /* NOTE: AmbDec does not define any standard speaker names, however
-         * for this to work we have to by able to find the output channel
-         * the speaker definition corresponds to. Therefore, OpenAL Soft
-         * requires these channel labels to be recognized:
-         *
-         * LF = Front left
-         * RF = Front right
-         * LS = Side left
-         * RS = Side right
-         * LB = Back left
-         * RB = Back right
-         * CE = Front center
-         * CB = Back center
-         *
-         * Additionally, surround51 will acknowledge back speakers for side
-         * channels, and surround51rear will acknowledge side speakers for
-         * back channels, to avoid issues with an ambdec expecting 5.1 to
-         * use the side channels when the device is configured for back,
-         * and vice-versa.
-         */
-        Channel ch{};
-        if(speaker.Name == "LF")
-            ch = FrontLeft;
-        else if(speaker.Name == "RF")
-            ch = FrontRight;
-        else if(speaker.Name == "CE")
-            ch = FrontCenter;
-        else if(speaker.Name == "LS")
-        {
-            if(device->FmtChans == DevFmtX51Rear)
-                ch = BackLeft;
-            else
-                ch = SideLeft;
-        }
-        else if(speaker.Name == "RS")
-        {
-            if(device->FmtChans == DevFmtX51Rear)
-                ch = BackRight;
-            else
-                ch = SideRight;
-        }
-        else if(speaker.Name == "LB")
-        {
-            if(device->FmtChans == DevFmtX51)
-                ch = SideLeft;
-            else
-                ch = BackLeft;
-        }
-        else if(speaker.Name == "RB")
-        {
-            if(device->FmtChans == DevFmtX51)
-                ch = SideRight;
-            else
-                ch = BackRight;
-        }
-        else if(speaker.Name == "CB")
-            ch = BackCenter;
-        else
-        {
-            ERR("AmbDec speaker label \"%s\" not recognized\n", speaker.Name.c_str());
-            return INVALID_CHANNEL_INDEX;
-        }
-        const uint chidx{GetChannelIdxByName(device->RealOut, ch)};
-        if(chidx == INVALID_CHANNEL_INDEX)
-            ERR("Failed to lookup AmbDec speaker label %s\n", speaker.Name.c_str());
-        return chidx;
-    };
-    std::transform(conf->Speakers.get(), conf->Speakers.get()+conf->NumSpeakers,
-        std::begin(speakermap), map_spkr);
-    /* Return success if no invalid entries are found. */
-    auto spkrmap_end = std::begin(speakermap) + conf->NumSpeakers;
-    return std::find(std::begin(speakermap), spkrmap_end, INVALID_CHANNEL_INDEX) == spkrmap_end;
-}
-
-
-void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d)
-{
-    static const uint chans_per_order2d[MaxAmbiOrder+1]{ 1, 2, 2, 2 };
-    static const uint chans_per_order3d[MaxAmbiOrder+1]{ 1, 3, 5, 7 };
-
-    /* NFC is only used when AvgSpeakerDist is greater than 0. */
-    const char *devname{device->DeviceName.c_str()};
-    if(!GetConfigValueBool(devname, "decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
-        return;
-
-    device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
-    TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
-
-    auto iter = std::copy_n(is3d ? chans_per_order3d : chans_per_order2d, order+1u,
-        std::begin(device->NumChannelsPerOrder));
-    std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
-}
-
-void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf,
-    const uint (&speakermap)[MAX_OUTPUT_CHANNELS])
-{
-    auto get_max = std::bind(maxf, _1,
-        std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
-    const float maxdist{std::accumulate(conf->Speakers.get(),
-        conf->Speakers.get()+conf->NumSpeakers, 0.0f, get_max)};
-
-    const char *devname{device->DeviceName.c_str()};
-    if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
-        return;
-
-    const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
-    std::vector<DistanceComp::ChanData> ChanDelay;
-    size_t total{0u};
-    ChanDelay.reserve(conf->NumSpeakers + 1);
-    for(size_t i{0u};i < conf->NumSpeakers;i++)
-    {
-        const AmbDecConf::SpeakerConf &speaker = conf->Speakers[i];
-        const uint chan{speakermap[i]};
-
-        /* Distance compensation only delays in steps of the sample rate. This
-         * is a bit less accurate since the delay time falls to the nearest
-         * sample time, but it's far simpler as it doesn't have to deal with
-         * phase offsets. This means at 48khz, for instance, the distance delay
-         * will be in steps of about 7 millimeters.
-         */
-        float delay{std::floor((maxdist - speaker.Distance)*distSampleScale + 0.5f)};
-        if(delay > float{MAX_DELAY_LENGTH-1})
-        {
-            ERR("Delay for speaker \"%s\" exceeds buffer length (%f > %d)\n",
-                speaker.Name.c_str(), delay, MAX_DELAY_LENGTH-1);
-            delay = float{MAX_DELAY_LENGTH-1};
-        }
-
-        ChanDelay.resize(maxz(ChanDelay.size(), chan+1));
-        ChanDelay[chan].Length = static_cast<uint>(delay);
-        ChanDelay[chan].Gain = speaker.Distance / maxdist;
-        TRACE("Channel %u \"%s\" distance compensation: %u samples, %f gain\n", chan,
-            speaker.Name.c_str(), ChanDelay[chan].Length, ChanDelay[chan].Gain);
-
-        /* Round up to the next 4th sample, so each channel buffer starts
-         * 16-byte aligned.
-         */
-        total += RoundUp(ChanDelay[chan].Length, 4);
-    }
-
-    if(total > 0)
-    {
-        auto chandelays = DistanceComp::Create(total);
-
-        ChanDelay[0].Buffer = chandelays->mSamples.data();
-        auto set_bufptr = [](const DistanceComp::ChanData &last, const DistanceComp::ChanData &cur)
-            -> DistanceComp::ChanData
-        {
-            DistanceComp::ChanData ret{cur};
-            ret.Buffer = last.Buffer + RoundUp(last.Length, 4);
-            return ret;
-        };
-        std::partial_sum(ChanDelay.begin(), ChanDelay.end(), chandelays->mChannels.begin(),
-            set_bufptr);
-        device->ChannelDelays = std::move(chandelays);
-    }
-}
-
-
-inline auto& GetAmbiScales(DevAmbiScaling scaletype) noexcept
-{
-    if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa();
-    if(scaletype == DevAmbiScaling::SN3D) return AmbiScale::FromSN3D();
-    return AmbiScale::FromN3D();
-}
-
-inline auto& GetAmbiLayout(DevAmbiLayout layouttype) noexcept
-{
-    if(layouttype == DevAmbiLayout::FuMa) return AmbiIndex::FromFuMa();
-    return AmbiIndex::FromACN();
-}
-
-
 using ChannelCoeffs = std::array<float,MaxAmbiChannels>;
 enum DecoderMode : bool {
     SingleBand = false,
@@ -325,28 +144,28 @@ struct DecoderConfig;
 
 template<size_t N>
 struct DecoderConfig<SingleBand, N> {
-    uint8_t mOrder;
-    bool mIs3D;
-    std::array<Channel,N> mChannels;
-    std::array<float,MaxAmbiOrder+1> mOrderGain;
-    std::array<ChannelCoeffs,N> mCoeffs;
+    uint8_t mOrder{};
+    bool mIs3D{};
+    std::array<Channel,N> mChannels{};
+    std::array<float,MaxAmbiOrder+1> mOrderGain{};
+    std::array<ChannelCoeffs,N> mCoeffs{};
 };
 
 template<size_t N>
 struct DecoderConfig<DualBand, N> {
-    uint8_t mOrder;
-    bool mIs3D;
-    std::array<Channel,N> mChannels;
-    std::array<float,MaxAmbiOrder+1> mOrderGain;
-    std::array<ChannelCoeffs,N> mCoeffs;
-    std::array<float,MaxAmbiOrder+1> mOrderGainLF;
-    std::array<ChannelCoeffs,N> mCoeffsLF;
+    uint8_t mOrder{};
+    bool mIs3D{};
+    std::array<Channel,N> mChannels{};
+    std::array<float,MaxAmbiOrder+1> mOrderGain{};
+    std::array<ChannelCoeffs,N> mCoeffs{};
+    std::array<float,MaxAmbiOrder+1> mOrderGainLF{};
+    std::array<ChannelCoeffs,N> mCoeffsLF{};
 };
 
 template<>
 struct DecoderConfig<DualBand, 0> {
-    uint8_t mOrder;
-    bool mIs3D;
+    uint8_t mOrder{};
+    bool mIs3D{};
     al::span<const Channel> mChannels;
     al::span<const float> mOrderGain;
     al::span<const ChannelCoeffs> mCoeffs;
@@ -380,6 +199,255 @@ struct DecoderConfig<DualBand, 0> {
     }
 };
 using DecoderView = DecoderConfig<DualBand, 0>;
+
+
+void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d)
+{
+    static const uint chans_per_order2d[MaxAmbiOrder+1]{ 1, 2, 2, 2 };
+    static const uint chans_per_order3d[MaxAmbiOrder+1]{ 1, 3, 5, 7 };
+
+    /* NFC is only used when AvgSpeakerDist is greater than 0. */
+    const char *devname{device->DeviceName.c_str()};
+    if(!GetConfigValueBool(devname, "decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
+        return;
+
+    device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
+    TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
+
+    auto iter = std::copy_n(is3d ? chans_per_order3d : chans_per_order2d, order+1u,
+        std::begin(device->NumChannelsPerOrder));
+    std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
+}
+
+void InitDistanceComp(ALCdevice *device, DecoderView decoder,
+    const al::span<const float,MAX_OUTPUT_CHANNELS> dists)
+{
+    const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f, maxf)};
+
+    const char *devname{device->DeviceName.c_str()};
+    if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
+        return;
+
+    const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
+    std::vector<DistanceComp::ChanData> ChanDelay;
+    ChanDelay.reserve(device->RealOut.Buffer.size());
+    size_t total{0u};
+    for(size_t chidx{0};chidx < decoder.mChannels.size();++chidx)
+    {
+        const Channel ch{decoder.mChannels[chidx]};
+        const uint idx{device->RealOut.ChannelIndex[ch]};
+        if(idx == INVALID_CHANNEL_INDEX)
+            continue;
+
+        const float distance{dists[chidx]};
+
+        /* Distance compensation only delays in steps of the sample rate. This
+         * is a bit less accurate since the delay time falls to the nearest
+         * sample time, but it's far simpler as it doesn't have to deal with
+         * phase offsets. This means at 48khz, for instance, the distance delay
+         * will be in steps of about 7 millimeters.
+         */
+        float delay{std::floor((maxdist - distance)*distSampleScale + 0.5f)};
+        if(delay > float{MAX_DELAY_LENGTH-1})
+        {
+            ERR("Delay for channel %u (%s) exceeds buffer length (%f > %d)\n", idx,
+                GetLabelFromChannel(ch), delay, MAX_DELAY_LENGTH-1);
+            delay = float{MAX_DELAY_LENGTH-1};
+        }
+
+        ChanDelay.resize(maxz(ChanDelay.size(), idx+1));
+        ChanDelay[idx].Length = static_cast<uint>(delay);
+        ChanDelay[idx].Gain = distance / maxdist;
+        TRACE("Channel %s distance comp: %u samples, %f gain\n", GetLabelFromChannel(ch),
+            ChanDelay[idx].Length, ChanDelay[idx].Gain);
+
+        /* Round up to the next 4th sample, so each channel buffer starts
+         * 16-byte aligned.
+         */
+        total += RoundUp(ChanDelay[idx].Length, 4);
+    }
+
+    if(total > 0)
+    {
+        auto chandelays = DistanceComp::Create(total);
+
+        ChanDelay[0].Buffer = chandelays->mSamples.data();
+        auto set_bufptr = [](const DistanceComp::ChanData &last, const DistanceComp::ChanData &cur)
+            -> DistanceComp::ChanData
+        {
+            DistanceComp::ChanData ret{cur};
+            ret.Buffer = last.Buffer + RoundUp(last.Length, 4);
+            return ret;
+        };
+        std::partial_sum(ChanDelay.begin(), ChanDelay.end(), chandelays->mChannels.begin(),
+            set_bufptr);
+        device->ChannelDelays = std::move(chandelays);
+    }
+}
+
+
+inline auto& GetAmbiScales(AmbDecScale scaletype) noexcept
+{
+    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa();
+    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D();
+    return AmbiScale::FromN3D();
+}
+
+inline auto& GetAmbiScales(DevAmbiScaling scaletype) noexcept
+{
+    if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa();
+    if(scaletype == DevAmbiScaling::SN3D) return AmbiScale::FromSN3D();
+    return AmbiScale::FromN3D();
+}
+
+inline auto& GetAmbiLayout(DevAmbiLayout layouttype) noexcept
+{
+    if(layouttype == DevAmbiLayout::FuMa) return AmbiIndex::FromFuMa();
+    return AmbiIndex::FromACN();
+}
+
+
+DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
+    DecoderConfig<DualBand, MAX_OUTPUT_CHANNELS> &decoder)
+{
+    decoder.mOrder = (conf->ChanMask > Ambi2OrderMask) ? uint8_t{3} :
+        (conf->ChanMask > Ambi1OrderMask) ? uint8_t{2} : uint8_t{1};
+    decoder.mIs3D = (conf->ChanMask&AmbiPeriphonicMask) != 0;
+
+    std::copy_n(std::begin(conf->HFOrderGain),
+        std::min(al::size(conf->HFOrderGain), al::size(decoder.mOrderGain)),
+        std::begin(decoder.mOrderGain));
+    std::copy_n(std::begin(conf->LFOrderGain),
+        std::min(al::size(conf->LFOrderGain), al::size(decoder.mOrderGainLF)),
+        std::begin(decoder.mOrderGainLF));
+
+    const uint8_t *acnmap{};
+    std::array<uint8_t,MaxAmbiChannels> idx_map{};
+    if(decoder.mIs3D)
+    {
+        acnmap = AmbiIndex::FromACN().data();
+        uint flags{conf->ChanMask};
+        auto elem = idx_map.begin();
+        while(flags)
+        {
+            int acn{al::countr_zero(flags)};
+            flags &= ~(1u<<acn);
+
+            *elem = static_cast<uint8_t>(acn);
+            ++elem;
+        }
+    }
+    else
+    {
+        acnmap = AmbiIndex::FromACN2D().data();
+        uint flags{conf->ChanMask};
+        auto elem = idx_map.begin();
+        while(flags)
+        {
+            int acn{al::countr_zero(flags)};
+            flags &= ~(1u<<acn);
+
+            switch(acn)
+            {
+            case 0: *elem = 0; break;
+            case 1: *elem = 1; break;
+            case 3: *elem = 2; break;
+            case 4: *elem = 3; break;
+            case 8: *elem = 4; break;
+            case 9: *elem = 5; break;
+            case 15: *elem = 6; break;
+            default: return DecoderView{};
+            }
+            ++elem;
+        }
+    }
+    auto&& coeffscale = GetAmbiScales(conf->CoeffScale);
+    const auto num_coeffs = static_cast<uint>(al::popcount(conf->ChanMask));
+    const auto hfmatrix = conf->HFMatrix;
+    const auto lfmatrix = conf->LFMatrix;
+
+    uint chan_count{0};
+    using const_speaker_span = al::span<const AmbDecConf::SpeakerConf>;
+    for(auto &speaker : const_speaker_span{conf->Speakers.get(), conf->NumSpeakers})
+    {
+        /* NOTE: AmbDec does not define any standard speaker names, however
+         * for this to work we have to by able to find the output channel
+         * the speaker definition corresponds to. Therefore, OpenAL Soft
+         * requires these channel labels to be recognized:
+         *
+         * LF = Front left
+         * RF = Front right
+         * LS = Side left
+         * RS = Side right
+         * LB = Back left
+         * RB = Back right
+         * CE = Front center
+         * CB = Back center
+         *
+         * Additionally, surround51 will acknowledge back speakers for side
+         * channels, and surround51rear will acknowledge side speakers for
+         * back channels, to avoid issues with an ambdec expecting 5.1 to
+         * use the side channels when the device is configured for back,
+         * and vice-versa.
+         */
+        Channel ch{};
+        if(speaker.Name == "LF")
+            ch = FrontLeft;
+        else if(speaker.Name == "RF")
+            ch = FrontRight;
+        else if(speaker.Name == "CE")
+            ch = FrontCenter;
+        else if(speaker.Name == "LS")
+            ch = (device->FmtChans == DevFmtX51Rear) ? BackLeft : SideLeft;
+        else if(speaker.Name == "RS")
+            ch = (device->FmtChans == DevFmtX51Rear) ? BackRight : SideRight;
+        else if(speaker.Name == "LB")
+            ch = (device->FmtChans == DevFmtX51) ? SideLeft : BackLeft;
+        else if(speaker.Name == "RB")
+            ch = (device->FmtChans == DevFmtX51) ? SideRight : BackRight;
+        else if(speaker.Name == "CB")
+            ch = BackCenter;
+        else
+        {
+            ERR("AmbDec speaker label \"%s\" not recognized\n", speaker.Name.c_str());
+            continue;
+        }
+
+        decoder.mChannels[chan_count] = ch;
+        for(size_t src{0};src < num_coeffs;++src)
+        {
+            const size_t dst{idx_map[src]};
+            const size_t acn{acnmap[dst]};
+            decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][src] / coeffscale[acn];
+        }
+        if(conf->FreqBands > 1)
+        {
+            for(size_t src{0};src < num_coeffs;++src)
+            {
+                const size_t dst{idx_map[src]};
+                const size_t acn{acnmap[dst]};
+                decoder.mCoeffsLF[chan_count][dst] = lfmatrix[chan_count][src] / coeffscale[acn];
+            }
+        }
+        ++chan_count;
+    }
+
+    DecoderView ret{};
+    if(chan_count > 0)
+    {
+        ret.mOrder = decoder.mOrder;
+        ret.mIs3D = decoder.mIs3D;
+        ret.mChannels = {decoder.mChannels.data(), chan_count};
+        ret.mOrderGain = decoder.mOrderGain;
+        ret.mCoeffs = {decoder.mCoeffs.data(), chan_count};
+        if(conf->FreqBands > 1)
+        {
+            ret.mOrderGainLF = decoder.mOrderGainLF;
+            ret.mCoeffsLF = {decoder.mCoeffsLF.data(), chan_count};
+        }
+    }
+    return ret;
+}
 
 constexpr DecoderConfig<SingleBand, 1> MonoConfig{
     0, false, {{FrontCenter}},
@@ -464,49 +532,38 @@ constexpr DecoderConfig<DualBand, 6> X71Config{
     }}
 };
 
-void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=false)
+void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=false,
+    DecoderView decoder={})
 {
-    DecoderView decoder{};
-    switch(device->FmtChans)
+    if(!decoder.mOrder)
     {
-    case DevFmtMono:
-        decoder = MonoConfig;
-        break;
-    case DevFmtStereo:
-        decoder = StereoConfig;
-        break;
-    case DevFmtQuad:
-        decoder = QuadConfig;
-        break;
-    case DevFmtX51:
-        decoder = X51Config;
-        break;
-    case DevFmtX51Rear:
-        decoder = X51RearConfig;
-        break;
-    case DevFmtX61:
-        decoder = X61Config;
-        break;
-    case DevFmtX71:
-        decoder = X71Config;
-        break;
-    case DevFmtAmbi3D:
-        const char *devname{device->DeviceName.c_str()};
-        auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
-        auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
+        switch(device->FmtChans)
+        {
+        case DevFmtMono: decoder = MonoConfig; break;
+        case DevFmtStereo: decoder = StereoConfig; break;
+        case DevFmtQuad: decoder = QuadConfig; break;
+        case DevFmtX51: decoder = X51Config; break;
+        case DevFmtX51Rear: decoder = X51RearConfig; break;
+        case DevFmtX61: decoder = X61Config; break;
+        case DevFmtX71: decoder = X71Config; break;
+        case DevFmtAmbi3D:
+            const char *devname{device->DeviceName.c_str()};
+            auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
+            auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
 
-        /* For DevFmtAmbi3D, the ambisonic order is already set. */
-        const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
-        std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
-            [&n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
-            { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
-        AllocChannels(device, count, 0);
+            /* For DevFmtAmbi3D, the ambisonic order is already set. */
+            const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
+            std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
+                [&n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
+                { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
+            AllocChannels(device, count, 0);
 
-        float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
-        if(nfc_delay > 0.0f)
-            InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
-                true);
-        return;
+            float nfc_delay{ConfigValueFloat(devname, "decoder", "nfc-ref-delay").value_or(0.0f)};
+            if(nfc_delay > 0.0f)
+                InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
+                    true);
+            return;
+        }
     }
 
     const bool dual_band{hqdec && !decoder.mCoeffsLF.empty()};
@@ -590,87 +647,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");
     device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
-        std::move(stablizer));
-}
-
-void InitCustomPanning(ALCdevice *device, const bool hqdec, const bool stablize,
-    const AmbDecConf *conf, const uint (&speakermap)[MAX_OUTPUT_CHANNELS])
-{
-    if(!hqdec && conf->FreqBands != 1)
-        ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
-            conf->XOverFreq);
-    device->mXOverFreq = conf->XOverFreq;
-
-    const uint order{(conf->ChanMask > Ambi2OrderMask) ? 3u :
-        (conf->ChanMask > Ambi1OrderMask) ? 2u : 1u};
-    device->mAmbiOrder = order;
-
-    size_t count;
-    if((conf->ChanMask&AmbiPeriphonicMask))
-    {
-        count = AmbiChannelsFromOrder(order);
-        std::transform(AmbiIndex::FromACN().begin(), AmbiIndex::FromACN().begin()+count,
-            std::begin(device->Dry.AmbiMap),
-            [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
-        );
-    }
-    else
-    {
-        count = Ambi2DChannelsFromOrder(order);
-        std::transform(AmbiIndex::FromACN2D().begin(), AmbiIndex::FromACN2D().begin()+count,
-            std::begin(device->Dry.AmbiMap),
-            [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
-        );
-    }
-    AllocChannels(device, count, device->channelsFromFmt());
-
-    std::unique_ptr<FrontStablizer> stablizer;
-    if(stablize)
-    {
-        /* Only enable the stablizer if the decoder does not output to the
-         * front-center channel.
-         */
-        size_t cidx{0};
-        for(;cidx < conf->NumSpeakers;++cidx)
-        {
-            if(speakermap[cidx] == FrontCenter)
-                break;
-        }
-        bool hasfc{false};
-        if(cidx < conf->NumSpeakers && conf->FreqBands != 1)
-        {
-            for(const auto &coeff : conf->LFMatrix[cidx])
-                hasfc |= coeff != 0.0f;
-        }
-        if(!hasfc && cidx < conf->NumSpeakers)
-        {
-            for(const auto &coeff : conf->HFMatrix[cidx])
-                hasfc |= coeff != 0.0f;
-        }
-        if(!hasfc)
-        {
-            stablizer = CreateStablizer(device->channelsFromFmt(), device->Frequency);
-            TRACE("Front stablizer enabled\n");
-        }
-    }
-
-    TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
-        (!hqdec || conf->FreqBands == 1) ? "single" : "dual",
-        (conf->ChanMask > Ambi2OrderMask) ? "third" :
-        (conf->ChanMask > Ambi1OrderMask) ? "second" : "first",
-        (conf->ChanMask&AmbiPeriphonicMask) ? " periphonic" : ""
-    );
-    device->AmbiDecoder = BFormatDec::Create(conf, hqdec, count, device->Frequency, speakermap,
-        std::move(stablizer));
-
-    auto accum_spkr_dist = std::bind(std::plus<float>{}, _1,
-        std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2));
-    const float accum_dist{std::accumulate(conf->Speakers.get(),
-        conf->Speakers.get()+conf->NumSpeakers, 0.0f, accum_spkr_dist)};
-    InitNearFieldCtrl(device, accum_dist / static_cast<float>(conf->NumSpeakers), order,
-        !!(conf->ChanMask&AmbiPeriphonicMask));
-
-    InitDistanceComp(device, conf, speakermap);
+        device->mXOverFreq/static_cast<float>(device->Frequency), std::move(stablizer));
 }
 
 void InitHrtfPanning(ALCdevice *device)
@@ -867,39 +844,49 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         const char *layout{nullptr};
         switch(device->FmtChans)
         {
-            case DevFmtQuad: layout = "quad"; break;
-            case DevFmtX51: /* fall-through */
-            case DevFmtX51Rear: layout = "surround51"; break;
-            case DevFmtX61: layout = "surround61"; break;
-            case DevFmtX71: layout = "surround71"; break;
-            /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
-            case DevFmtMono:
-            case DevFmtStereo:
-            case DevFmtAmbi3D:
-                break;
+        case DevFmtQuad: layout = "quad"; break;
+        case DevFmtX51: /* fall-through */
+        case DevFmtX51Rear: layout = "surround51"; break;
+        case DevFmtX61: layout = "surround61"; break;
+        case DevFmtX71: layout = "surround71"; break;
+        /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
+        case DevFmtMono:
+        case DevFmtStereo:
+        case DevFmtAmbi3D:
+            break;
         }
 
-        uint speakermap[MAX_OUTPUT_CHANNELS];
-        AmbDecConf *pconf{nullptr};
-        AmbDecConf conf{};
+        std::unique_ptr<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>> decoder_store;
+        DecoderView decoder{};
+        float speakerdists[MaxChannels]{};
+        auto load_config = [device,&decoder_store,&decoder,&speakerdists](const char *config)
+        {
+            AmbDecConf conf{};
+            if(auto err = conf.load(config))
+            {
+                ERR("Failed to load layout file %s\n", config);
+                ERR("  %s\n", err->c_str());
+            }
+            else if(conf.NumSpeakers > MAX_OUTPUT_CHANNELS)
+                ERR("Unsupported decoder speaker count %zu (max %d)\n", conf.NumSpeakers,
+                    MAX_OUTPUT_CHANNELS);
+            else if(conf.ChanMask > Ambi3OrderMask)
+                ERR("Unsupported decoder channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
+                    Ambi3OrderMask);
+            else
+            {
+                device->mXOverFreq = clampf(conf.XOverFreq, 100.0f, 1000.0f);
+
+                decoder_store = std::make_unique<decltype(decoder_store)::element_type>();
+                decoder = MakeDecoderView(device, &conf, *decoder_store);
+                for(size_t i{0};i < decoder.mChannels.size();++i)
+                    speakerdists[i] = conf.Speakers[i].Distance;
+            }
+        };
         if(layout)
         {
             if(auto decopt = ConfigValueStr(devname, "decoder", layout))
-            {
-                if(auto err = conf.load(decopt->c_str()))
-                {
-                    ERR("Failed to load layout file %s\n", decopt->c_str());
-                    ERR("  %s\n", err->c_str());
-                }
-                else if(conf.NumSpeakers > MAX_OUTPUT_CHANNELS)
-                    ERR("Unsupported decoder speaker count %zu (max %d)\n", conf.NumSpeakers,
-                        MAX_OUTPUT_CHANNELS);
-                else if(conf.ChanMask > Ambi3OrderMask)
-                    ERR("Unsupported decoder channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
-                        Ambi3OrderMask);
-                else if(MakeSpeakerMap(device, &conf, speakermap))
-                    pconf = &conf;
-            }
+                load_config(decopt->c_str());
         }
 
         /* Enable the stablizer only for formats that have front-left, front-
@@ -910,10 +897,24 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
             && device->RealOut.ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX
             && GetConfigValueBool(devname, nullptr, "front-stablizer", 0) != 0};
         const bool hqdec{GetConfigValueBool(devname, "decoder", "hq-mode", 1) != 0};
-        if(!pconf)
-            InitPanning(device, hqdec, stablize);
-        else
-            InitCustomPanning(device, hqdec, stablize, pconf, speakermap);
+        InitPanning(device, hqdec, stablize, decoder);
+        if(decoder.mOrder > 0)
+        {
+            float accum_dist{0.0f}, spkr_count{0.0f};
+            for(auto dist : speakerdists)
+            {
+                if(dist > 0.0f)
+                {
+                    accum_dist += dist;
+                    spkr_count += 1.0f;
+                }
+            }
+            if(spkr_count > 0)
+            {
+                InitNearFieldCtrl(device, accum_dist / spkr_count, decoder.mOrder, decoder.mIs3D);
+                InitDistanceComp(device, decoder, speakerdists);
+            }
+        }
         if(auto *ambidec{device->AmbiDecoder.get()})
         {
             device->PostProcess = ambidec->hasStablizer() ? &ALCdevice::ProcessAmbiDecStablized

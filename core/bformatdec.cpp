@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "almalloc.h"
-#include "ambdec.h"
 #include "filters/splitter.h"
 #include "front_stablizer.h"
 #include "math_defs.h"
@@ -17,70 +16,9 @@
 #include "opthelpers.h"
 
 
-namespace {
-
-inline auto& GetAmbiScales(AmbDecScale scaletype) noexcept
-{
-    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa();
-    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D();
-    return AmbiScale::FromN3D();
-}
-
-} // namespace
-
-
-BFormatDec::BFormatDec(const AmbDecConf *conf, const bool allow_2band, const size_t inchans,
-    const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
-    std::unique_ptr<FrontStablizer> stablizer)
-    : mStablizer{std::move(stablizer)}, mDualBand{allow_2band && (conf->FreqBands == 2)}
-    , mChannelDec{inchans}
-{
-    const bool periphonic{(conf->ChanMask&AmbiPeriphonicMask) != 0};
-    auto&& coeff_scale = GetAmbiScales(conf->CoeffScale);
-
-    if(!mDualBand)
-    {
-        for(size_t j{0},k{0};j < mChannelDec.size();++j)
-        {
-            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D()[j]};
-            if(!(conf->ChanMask&(1u<<acn))) continue;
-            const size_t order{AmbiIndex::OrderFromChannel()[acn]};
-            const float gain{conf->HFOrderGain[order] / coeff_scale[acn]};
-            for(size_t i{0u};i < conf->NumSpeakers;++i)
-            {
-                const size_t chanidx{chanmap[i]};
-                mChannelDec[j].mGains.Single[chanidx] = conf->Matrix[i][k] * gain;
-            }
-            ++k;
-        }
-    }
-    else
-    {
-        mChannelDec[0].mXOver.init(conf->XOverFreq / static_cast<float>(srate));
-        for(size_t j{1};j < mChannelDec.size();++j)
-            mChannelDec[j].mXOver = mChannelDec[0].mXOver;
-
-        const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
-        for(size_t j{0},k{0};j < mChannelDec.size();++j)
-        {
-            const size_t acn{periphonic ? j : AmbiIndex::FromACN2D()[j]};
-            if(!(conf->ChanMask&(1u<<acn))) continue;
-            const size_t order{AmbiIndex::OrderFromChannel()[acn]};
-            const float hfGain{conf->HFOrderGain[order] * ratio / coeff_scale[acn]};
-            const float lfGain{conf->LFOrderGain[order] / ratio / coeff_scale[acn]};
-            for(size_t i{0u};i < conf->NumSpeakers;++i)
-            {
-                const size_t chanidx{chanmap[i]};
-                mChannelDec[j].mGains.Dual[sHFBand][chanidx] = conf->HFMatrix[i][k] * hfGain;
-                mChannelDec[j].mGains.Dual[sLFBand][chanidx] = conf->LFMatrix[i][k] * lfGain;
-            }
-            ++k;
-        }
-    }
-}
-
 BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,
-    const al::span<const ChannelDec> coeffslf, std::unique_ptr<FrontStablizer> stablizer)
+    const al::span<const ChannelDec> coeffslf, const float xover_f0norm,
+    std::unique_ptr<FrontStablizer> stablizer)
     : mStablizer{std::move(stablizer)}, mDualBand{!coeffslf.empty()}, mChannelDec{inchans}
 {
     if(!mDualBand)
@@ -94,6 +32,10 @@ BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> co
     }
     else
     {
+        mChannelDec[0].mXOver.init(xover_f0norm);
+        for(size_t j{1};j < mChannelDec.size();++j)
+            mChannelDec[j].mXOver = mChannelDec[0].mXOver;
+
         for(size_t j{0};j < mChannelDec.size();++j)
         {
             float *outcoeffs{mChannelDec[j].mGains.Dual[sHFBand]};
@@ -247,17 +189,10 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
 }
 
 
-std::unique_ptr<BFormatDec> BFormatDec::Create(const AmbDecConf *conf, const bool allow_2band,
-    const size_t inchans, const uint srate, const uint (&chanmap)[MAX_OUTPUT_CHANNELS],
-    std::unique_ptr<FrontStablizer> stablizer)
-{
-    return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
-        BFormatDec{conf, allow_2band, inchans, srate, chanmap, std::move(stablizer)}};
-}
 std::unique_ptr<BFormatDec> BFormatDec::Create(const size_t inchans,
     const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf,
-    std::unique_ptr<FrontStablizer> stablizer)
+    const float xover_f0norm, std::unique_ptr<FrontStablizer> stablizer)
 {
     return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
-        BFormatDec{inchans, coeffs, coeffslf, std::move(stablizer)}};
+        BFormatDec{inchans, coeffs, coeffslf, xover_f0norm, std::move(stablizer)}};
 }

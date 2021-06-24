@@ -734,7 +734,6 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
     DirectMode DirectChannels{props->DirectChannels};
     const ChanMap *chans{nullptr};
-    float downmix_gain{1.0f};
     switch(voice->mFmtChannels)
     {
     case FmtMono:
@@ -752,38 +751,14 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             StereoMap[0].angle = WrapRadians(-props->StereoPan[0]);
             StereoMap[1].angle = WrapRadians(-props->StereoPan[1]);
         }
-
         chans = StereoMap;
-        downmix_gain = 1.0f / 2.0f;
         break;
 
-    case FmtRear:
-        chans = RearMap;
-        downmix_gain = 1.0f / 2.0f;
-        break;
-
-    case FmtQuad:
-        chans = QuadMap;
-        downmix_gain = 1.0f / 4.0f;
-        break;
-
-    case FmtX51:
-        chans = X51Map;
-        /* NOTE: Excludes LFE. */
-        downmix_gain = 1.0f / 5.0f;
-        break;
-
-    case FmtX61:
-        chans = X61Map;
-        /* NOTE: Excludes LFE. */
-        downmix_gain = 1.0f / 6.0f;
-        break;
-
-    case FmtX71:
-        chans = X71Map;
-        /* NOTE: Excludes LFE. */
-        downmix_gain = 1.0f / 7.0f;
-        break;
+    case FmtRear: chans = RearMap; break;
+    case FmtQuad: chans = QuadMap; break;
+    case FmtX51: chans = X51Map; break;
+    case FmtX61: chans = X61Map; break;
+    case FmtX71: chans = X71Map; break;
 
     case FmtBFormat2D:
     case FmtBFormat3D:
@@ -995,7 +970,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance, Spread,
                 voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
                 voice->mChans[0].mDryParams.Hrtf.Target.Delay);
-            voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base * downmix_gain;
+            voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base;
 
             /* Remaining channels use the same results as the first. */
             for(size_t c{1};c < num_channels;c++)
@@ -1018,7 +993,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
@@ -1107,12 +1082,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     continue;
                 }
 
-                ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base * downmix_gain,
+                ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
-                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base * downmix_gain,
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }

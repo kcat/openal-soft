@@ -147,6 +147,7 @@ struct DecoderConfig<SingleBand, N> {
     uint8_t mOrder{};
     bool mIs3D{};
     std::array<Channel,N> mChannels{};
+    DevAmbiScaling mScaling{};
     std::array<float,MaxAmbiOrder+1> mOrderGain{};
     std::array<ChannelCoeffs,N> mCoeffs{};
 };
@@ -156,6 +157,7 @@ struct DecoderConfig<DualBand, N> {
     uint8_t mOrder{};
     bool mIs3D{};
     std::array<Channel,N> mChannels{};
+    DevAmbiScaling mScaling{};
     std::array<float,MaxAmbiOrder+1> mOrderGain{};
     std::array<ChannelCoeffs,N> mCoeffs{};
     std::array<float,MaxAmbiOrder+1> mOrderGainLF{};
@@ -167,6 +169,7 @@ struct DecoderConfig<DualBand, 0> {
     uint8_t mOrder{};
     bool mIs3D{};
     al::span<const Channel> mChannels;
+    DevAmbiScaling mScaling{};
     al::span<const float> mOrderGain;
     al::span<const ChannelCoeffs> mCoeffs;
     al::span<const float> mOrderGainLF;
@@ -178,6 +181,7 @@ struct DecoderConfig<DualBand, 0> {
         mOrder = rhs.mOrder;
         mIs3D = rhs.mIs3D;
         mChannels = rhs.mChannels;
+        mScaling = rhs.mScaling;
         mOrderGain = rhs.mOrderGain;
         mCoeffs = rhs.mCoeffs;
         mOrderGainLF = {};
@@ -191,6 +195,7 @@ struct DecoderConfig<DualBand, 0> {
         mOrder = rhs.mOrder;
         mIs3D = rhs.mIs3D;
         mChannels = rhs.mChannels;
+        mScaling = rhs.mScaling;
         mOrderGain = rhs.mOrderGain;
         mCoeffs = rhs.mCoeffs;
         mOrderGainLF = rhs.mOrderGainLF;
@@ -312,6 +317,13 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         (conf->ChanMask > Ambi1OrderMask) ? uint8_t{2} : uint8_t{1};
     decoder.mIs3D = (conf->ChanMask&AmbiPeriphonicMask) != 0;
 
+    switch(conf->CoeffScale)
+    {
+    case AmbDecScale::N3D: decoder.mScaling = DevAmbiScaling::N3D; break;
+    case AmbDecScale::SN3D: decoder.mScaling = DevAmbiScaling::SN3D; break;
+    case AmbDecScale::FuMa: decoder.mScaling = DevAmbiScaling::FuMa; break;
+    }
+
     std::copy_n(std::begin(conf->HFOrderGain),
         std::min(al::size(conf->HFOrderGain), al::size(decoder.mOrderGain)),
         std::begin(decoder.mOrderGain));
@@ -359,7 +371,6 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
             ++elem;
         }
     }
-    auto&& coeffscale = GetAmbiScales(conf->CoeffScale);
     const auto num_coeffs = static_cast<uint>(al::popcount(conf->ChanMask));
     const auto hfmatrix = conf->HFMatrix;
     const auto lfmatrix = conf->LFMatrix;
@@ -415,16 +426,14 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         for(size_t src{0};src < num_coeffs;++src)
         {
             const size_t dst{idx_map[src]};
-            const size_t acn{acnmap[dst]};
-            decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][src] / coeffscale[acn];
+            decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][src];
         }
         if(conf->FreqBands > 1)
         {
             for(size_t src{0};src < num_coeffs;++src)
             {
                 const size_t dst{idx_map[src]};
-                const size_t acn{acnmap[dst]};
-                decoder.mCoeffsLF[chan_count][dst] = lfmatrix[chan_count][src] / coeffscale[acn];
+                decoder.mCoeffsLF[chan_count][dst] = lfmatrix[chan_count][src];
             }
         }
         ++chan_count;
@@ -449,11 +458,13 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
 
 constexpr DecoderConfig<SingleBand, 1> MonoConfig{
     0, false, {{FrontCenter}},
+    DevAmbiScaling::N3D,
     {{1.0f}},
     {{ {{1.0f}} }}
 };
 constexpr DecoderConfig<SingleBand, 2> StereoConfig{
     1, false, {{FrontLeft, FrontRight}},
+    DevAmbiScaling::N3D,
     {{1.0f, 1.0f}},
     {{
         {{5.00000000e-1f,  2.88675135e-1f,  5.52305643e-2f}},
@@ -462,6 +473,7 @@ constexpr DecoderConfig<SingleBand, 2> StereoConfig{
 };
 constexpr DecoderConfig<DualBand, 4> QuadConfig{
     2, false, {{BackLeft, FrontLeft, FrontRight, BackRight}},
+    DevAmbiScaling::N3D,
     /*HF*/{{1.15470054e+0f, 1.00000000e+0f, 5.77350269e-1f}},
     {{
         {{2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f, -1.29099445e-1f, 0.00000000e+0f}},
@@ -479,6 +491,7 @@ constexpr DecoderConfig<DualBand, 4> QuadConfig{
 };
 constexpr DecoderConfig<SingleBand, 4> X51Config{
     2, false, {{SideLeft, FrontLeft, FrontRight, SideRight}},
+    DevAmbiScaling::N3D,
     {{1.0f, 1.0f, 1.0f}},
     {{
         {{3.33000782e-1f,  1.89084803e-1f, -2.00042375e-1f, -2.12307769e-2f, -1.14579885e-2f}},
@@ -489,6 +502,7 @@ constexpr DecoderConfig<SingleBand, 4> X51Config{
 };
 constexpr DecoderConfig<SingleBand, 4> X51RearConfig{
     2, false, {{BackLeft, FrontLeft, FrontRight, BackRight}},
+    DevAmbiScaling::N3D,
     {{1.0f, 1.0f, 1.0f}},
     {{
         {{3.33000782e-1f,  1.89084803e-1f, -2.00042375e-1f, -2.12307769e-2f, -1.14579885e-2f}},
@@ -499,6 +513,7 @@ constexpr DecoderConfig<SingleBand, 4> X51RearConfig{
 };
 constexpr DecoderConfig<SingleBand, 5> X61Config{
     2, false, {{SideLeft, FrontLeft, FrontRight, SideRight, BackCenter}},
+    DevAmbiScaling::N3D,
     {{1.0f, 1.0f, 1.0f}},
     {{
         {{2.04460341e-1f,  2.17177926e-1f, -4.39996780e-2f, -2.60790269e-2f, -6.87239792e-2f}},
@@ -510,6 +525,7 @@ constexpr DecoderConfig<SingleBand, 5> X61Config{
 };
 constexpr DecoderConfig<DualBand, 6> X71Config{
     3, false, {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight}},
+    DevAmbiScaling::N3D,
     /*HF*/{{1.22474487e+0f, 1.13151672e+0f, 8.66025404e-1f, 4.68689571e-1f}},
     {{
         {{1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f,  7.96819073e-2f, 0.00000000e+0f}},
@@ -609,8 +625,10 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         Ambi2DChannelsFromOrder(decoder.mOrder)};
     const al::span<const uint8_t> acnmap{decoder.mIs3D ? AmbiIndex::FromACN().data() :
         AmbiIndex::FromACN2D().data(), ambicount};
+    auto&& coeffscale = GetAmbiScales(decoder.mScaling);
     std::transform(acnmap.begin(), acnmap.end(), std::begin(device->Dry.AmbiMap),
-        [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; });
+        [&coeffscale](const uint8_t &acn) noexcept
+        { return BFChannelConfig{1.0f/coeffscale[acn], acn}; });
     AllocChannels(device, ambicount, device->channelsFromFmt());
 
     std::unique_ptr<FrontStablizer> stablizer;

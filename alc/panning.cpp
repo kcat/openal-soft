@@ -289,13 +289,6 @@ void InitDistanceComp(ALCdevice *device, DecoderView decoder,
 }
 
 
-inline auto& GetAmbiScales(AmbDecScale scaletype) noexcept
-{
-    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa();
-    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D();
-    return AmbiScale::FromN3D();
-}
-
 inline auto& GetAmbiScales(DevAmbiScaling scaletype) noexcept
 {
     if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa();
@@ -489,26 +482,44 @@ constexpr DecoderConfig<DualBand, 4> QuadConfig{
         {{2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f,  1.29099445e-1f, 0.00000000e+0f}},
     }}
 };
-constexpr DecoderConfig<SingleBand, 4> X51Config{
-    2, false, {{SideLeft, FrontLeft, FrontRight, SideRight}},
-    DevAmbiScaling::N3D,
-    {{1.0f, 1.0f, 1.0f}},
+constexpr DecoderConfig<DualBand, 5> X51Config{
+    2, false, {{SideLeft, FrontLeft, FrontCenter, FrontRight, SideRight}},
+    DevAmbiScaling::FuMa,
+    /*HF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
     {{
-        {{3.33000782e-1f,  1.89084803e-1f, -2.00042375e-1f, -2.12307769e-2f, -1.14579885e-2f}},
-        {{1.88542860e-1f,  1.27709292e-1f,  1.66295695e-1f,  7.30571517e-2f,  2.10901184e-2f}},
-        {{1.88542860e-1f, -1.27709292e-1f,  1.66295695e-1f, -7.30571517e-2f,  2.10901184e-2f}},
-        {{3.33000782e-1f, -1.89084803e-1f, -2.00042375e-1f,  2.12307769e-2f, -1.14579885e-2f}},
+        {{5.67316000e-1f,  4.22920000e-1f, -3.15495000e-1f, -6.34490000e-2f, -2.92380000e-2f}},
+        {{3.68584000e-1f,  2.72349000e-1f,  3.21616000e-1f,  1.92645000e-1f,  4.82600000e-2f}},
+        {{1.83579000e-1f,  0.00000000e+0f,  1.99588000e-1f,  0.00000000e+0f,  9.62820000e-2f}},
+        {{3.68584000e-1f, -2.72349000e-1f,  3.21616000e-1f, -1.92645000e-1f,  4.82600000e-2f}},
+        {{5.67316000e-1f, -4.22920000e-1f, -3.15495000e-1f,  6.34490000e-2f, -2.92380000e-2f}},
+    }},
+    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
+    {{
+        {{4.90109850e-1f,  3.77305010e-1f, -3.73106990e-1f, -1.25914530e-1f,  1.45133000e-2f}},
+        {{1.49085730e-1f,  3.03561680e-1f,  1.53290060e-1f,  2.45112480e-1f, -1.50753130e-1f}},
+        {{1.37654920e-1f,  0.00000000e+0f,  4.49417940e-1f,  0.00000000e+0f,  2.57844070e-1f}},
+        {{1.49085730e-1f, -3.03561680e-1f,  1.53290060e-1f, -2.45112480e-1f, -1.50753130e-1f}},
+        {{4.90109850e-1f, -3.77305010e-1f, -3.73106990e-1f,  1.25914530e-1f,  1.45133000e-2f}},
     }}
 };
-constexpr DecoderConfig<SingleBand, 4> X51RearConfig{
-    2, false, {{BackLeft, FrontLeft, FrontRight, BackRight}},
-    DevAmbiScaling::N3D,
-    {{1.0f, 1.0f, 1.0f}},
+constexpr DecoderConfig<DualBand, 5> X51RearConfig{
+    2, false, {{BackLeft, FrontLeft, FrontCenter, FrontRight, BackRight}},
+    DevAmbiScaling::FuMa,
+    /*HF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
     {{
-        {{3.33000782e-1f,  1.89084803e-1f, -2.00042375e-1f, -2.12307769e-2f, -1.14579885e-2f}},
-        {{1.88542860e-1f,  1.27709292e-1f,  1.66295695e-1f,  7.30571517e-2f,  2.10901184e-2f}},
-        {{1.88542860e-1f, -1.27709292e-1f,  1.66295695e-1f, -7.30571517e-2f,  2.10901184e-2f}},
-        {{3.33000782e-1f, -1.89084803e-1f, -2.00042375e-1f,  2.12307769e-2f, -1.14579885e-2f}},
+        {{5.67316000e-1f,  4.22920000e-1f, -3.15495000e-1f, -6.34490000e-2f, -2.92380000e-2f}},
+        {{3.68584000e-1f,  2.72349000e-1f,  3.21616000e-1f,  1.92645000e-1f,  4.82600000e-2f}},
+        {{1.83579000e-1f,  0.00000000e+0f,  1.99588000e-1f,  0.00000000e+0f,  9.62820000e-2f}},
+        {{3.68584000e-1f, -2.72349000e-1f,  3.21616000e-1f, -1.92645000e-1f,  4.82600000e-2f}},
+        {{5.67316000e-1f, -4.22920000e-1f, -3.15495000e-1f,  6.34490000e-2f, -2.92380000e-2f}},
+    }},
+    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
+    {{
+        {{4.90109850e-1f,  3.77305010e-1f, -3.73106990e-1f, -1.25914530e-1f,  1.45133000e-2f}},
+        {{1.49085730e-1f,  3.03561680e-1f,  1.53290060e-1f,  2.45112480e-1f, -1.50753130e-1f}},
+        {{1.37654920e-1f,  0.00000000e+0f,  4.49417940e-1f,  0.00000000e+0f,  2.57844070e-1f}},
+        {{1.49085730e-1f, -3.03561680e-1f,  1.53290060e-1f, -2.45112480e-1f, -1.50753130e-1f}},
+        {{4.90109850e-1f, -3.77305010e-1f, -3.73106990e-1f,  1.25914530e-1f,  1.45133000e-2f}},
     }}
 };
 constexpr DecoderConfig<SingleBand, 5> X61Config{
@@ -618,8 +629,12 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         }
     }
 
-    /* For non-DevFmtAmbi3D, set the ambisonic order. */
+    /* For non-DevFmtAmbi3D, set the ambisonic order and reset the layout and
+     * scale.
+     */
     device->mAmbiOrder = decoder.mOrder;
+    device->mAmbiLayout = DevAmbiLayout::ACN;
+    device->mAmbiScale = DevAmbiScaling::N3D;
 
     const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
         Ambi2DChannelsFromOrder(decoder.mOrder)};

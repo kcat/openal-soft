@@ -72,6 +72,7 @@ include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
 include(CheckStructHasMember)
+include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
 
@@ -1289,7 +1290,7 @@ else()
         target_include_directories(OpenAL
           PUBLIC
             $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
           PRIVATE
             ${OpenAL_SOURCE_DIR}/common
             ${OpenAL_BINARY_DIR}
@@ -1354,7 +1355,10 @@ endif()
 target_include_directories(${IMPL_TARGET}
   PUBLIC
     $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+  INTERFACE
+    $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include/AL>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/AL>
   PRIVATE
     ${INC_PATHS}
     ${OpenAL_BINARY_DIR}
@@ -1421,6 +1425,8 @@ endif()
 
 # Install main library
 if(ALSOFT_INSTALL)
+    configure_package_config_file(OpenALConfig.cmake.in OpenALConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL)
     install(TARGETS OpenAL EXPORT OpenAL
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -1429,15 +1435,17 @@ if(ALSOFT_INSTALL)
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
     export(TARGETS OpenAL
         NAMESPACE OpenAL::
-        FILE OpenALConfig.cmake)
+        FILE OpenALTargets.cmake)
     install(EXPORT OpenAL
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
         NAMESPACE OpenAL::
-        FILE OpenALConfig.cmake)
+        FILE OpenALTargets.cmake)
     install(DIRECTORY include/AL
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
     install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+    install(FILES "${OpenAL_BINARY_DIR}/OpenALConfig.cmake"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL")
     if(TARGET soft_oal)
         install(TARGETS soft_oal
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

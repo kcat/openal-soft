@@ -1427,6 +1427,9 @@ endif()
 if(ALSOFT_INSTALL)
     configure_package_config_file(OpenALConfig.cmake.in OpenALConfig.cmake
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL)
+    write_basic_package_version_file(OpenALConfigVersion.cmake
+        VERSION ${PACKAGE_VERSION}
+        COMPATIBILITY AnyNewerVersion)
     install(TARGETS OpenAL EXPORT OpenAL
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -1444,7 +1447,9 @@ if(ALSOFT_INSTALL)
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
     install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-    install(FILES "${OpenAL_BINARY_DIR}/OpenALConfig.cmake"
+    install(FILES
+        "${OpenAL_BINARY_DIR}/OpenALConfig.cmake"
+        "${OpenAL_BINARY_DIR}/OpenALConfigVersion.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL")
     if(TARGET soft_oal)
         install(TARGETS soft_oal

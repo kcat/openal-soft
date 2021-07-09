@@ -1496,6 +1496,14 @@ if(ALSOFT_UTILS)
         target_compile_options(uhjdecoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjdecoder PUBLIC common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
+
+        add_executable(uhjencoder utils/uhjencoder.cpp)
+        target_compile_definitions(uhjencoder PRIVATE ${CPP_DEFS})
+        target_include_directories(uhjencoder
+            PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
+        target_compile_options(uhjencoder PRIVATE ${C_FLAGS})
+        target_link_libraries(uhjencoder PUBLIC common
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
     endif()
 
     if(MYSOFA_FOUND)

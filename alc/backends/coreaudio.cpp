@@ -369,6 +369,7 @@ void CoreAudioPlayback::open(const char *name)
     }
     mAudioUnit = audioUnit;
 
+#if CAN_ENUMERATE
     if(name)
         mDevice->DeviceName = name;
     else
@@ -382,6 +383,9 @@ void CoreAudioPlayback::open(const char *name)
         if(!devname.empty()) mDevice->DeviceName = std::move(devname);
         else mDevice->DeviceName = "Unknown Device Name";
     }
+#else
+    mDevice->DeviceName = name;
+#endif
 }
 
 bool CoreAudioPlayback::reset()
@@ -910,11 +914,13 @@ bool CoreAudioBackendFactory::querySupport(BackendType type)
 std::string CoreAudioBackendFactory::probe(BackendType type)
 {
     std::string outnames;
+#if CAN_ENUMERATE
     auto append_name = [&outnames](const DeviceEntry &entry) -> void
     {
         /* Includes null char. */
         outnames.append(entry.mName.c_str(), entry.mName.length()+1);
     };
+#endif
 
     switch(type)
     {

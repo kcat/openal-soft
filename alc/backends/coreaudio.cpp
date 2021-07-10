@@ -45,8 +45,16 @@
 
 namespace {
 
+#if TARGET_OS_IOS || TARGET_OS_TV
+#define CAN_ENUMERATE 0
+#else
+#define CAN_ENUMERATE 1
+#endif
+
 static const char ca_device[] = "CoreAudio Default";
 
+
+#if CAN_ENUMERATE
 struct DeviceEntry {
     AudioDeviceID mId;
     std::string mName;
@@ -237,6 +245,7 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     newdevs.shrink_to_fit();
     newdevs.swap(list);
 }
+#endif
 
 
 struct CoreAudioPlayback final : public BackendBase {
@@ -289,13 +298,7 @@ OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTi
 
 void CoreAudioPlayback::open(const char *name)
 {
-#if TARGET_OS_IOS || TARGET_OS_TV
-    if(!name)
-        name = ca_device;
-    else if(strcmp(name, ca_device) != 0)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
-#else
+#if CAN_ENUMERATE
     AudioDeviceID audioDevice{kAudioDeviceUnknown};
     if(!name)
         GetHwProperty(kAudioHardwarePropertyDefaultOutputDevice, sizeof(audioDevice),
@@ -314,16 +317,22 @@ void CoreAudioPlayback::open(const char *name)
 
         audioDevice = devmatch->mId;
     }
+#else
+    if(!name)
+        name = ca_device;
+    else if(strcmp(name, ca_device) != 0)
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
+            name};
 #endif
 
     /* open the default output unit */
     AudioComponentDescription desc{};
     desc.componentType = kAudioUnitType_Output;
-#if TARGET_OS_IOS || TARGET_OS_TV
-    desc.componentSubType = kAudioUnitSubType_RemoteIO;
-#else
+#if CAN_ENUMERATE
     desc.componentSubType = (audioDevice == kAudioDeviceUnknown) ?
         kAudioUnitSubType_DefaultOutput : kAudioUnitSubType_HALOutput;
+#else
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
@@ -339,7 +348,7 @@ void CoreAudioPlayback::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not create component instance: %u", err};
 
-#if !TARGET_OS_IOS && !TARGET_OS_TV
+#if CAN_ENUMERATE
     if(audioDevice != kAudioDeviceUnknown)
         AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
             kAudioUnitScope_Global, 0, &audioDevice, sizeof(AudioDeviceID));
@@ -643,10 +652,10 @@ void CoreAudioCapture::open(const char *name)
             name};
 
     desc.componentType = kAudioUnitType_Output;
-#if TARGET_OS_IOS || TARGET_OS_TV
-    desc.componentSubType = kAudioUnitSubType_RemoteIO;
-#else
+#if CAN_ENUMERATE
     desc.componentSubType = kAudioUnitSubType_HALOutput;
+#else
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
@@ -679,7 +688,7 @@ void CoreAudioCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not enable audio unit input property: %u", err};
 
-#if !TARGET_OS_IOS && !TARGET_OS_TV
+#if CAN_ENUMERATE
     {
         // Get the default input device
         AudioDeviceID defaultId{kAudioDeviceUnknown};
@@ -910,7 +919,7 @@ std::string CoreAudioBackendFactory::probe(BackendType type)
     switch(type)
     {
     case BackendType::Playback:
-#if !TARGET_OS_IOS && !TARGET_OS_TV
+#if CAN_ENUMERATE
         EnumerateDevices(PlaybackList, false);
         std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
         break;

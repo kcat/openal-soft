@@ -97,6 +97,18 @@ struct AmbiScale {
         }};
         return ret;
     }
+    static auto& FromUHJ() noexcept
+    {
+        static constexpr const std::array<float,MaxAmbiChannels> ret{{
+            1.000000000f, /* ACN  0 (W), sqrt(1) */
+            1.224744916f, /* ACN  1 (Y), sqrt(3/2) */
+            1.224744916f, /* ACN  2 (Z), sqrt(3/2) */
+            1.224744916f, /* ACN  3 (X), sqrt(3/2) */
+            /* Higher orders not relevant for UHJ. */
+            1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        }};
+        return ret;
+    }
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint in_order,

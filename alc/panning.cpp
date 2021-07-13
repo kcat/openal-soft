@@ -844,7 +844,7 @@ void InitUhjPanning(ALCdevice *device)
     auto acnmap_begin = AmbiIndex::FromFuMa().begin();
     std::transform(acnmap_begin, acnmap_begin + count, std::begin(device->Dry.AmbiMap),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f/AmbiScale::FromFuMa()[acn], acn}; });
+        { return BFChannelConfig{1.0f/AmbiScale::FromUHJ()[acn], acn}; });
     AllocChannels(device, count, device->channelsFromFmt());
 }
 

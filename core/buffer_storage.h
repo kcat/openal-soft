@@ -40,6 +40,7 @@ enum class AmbiScaling : unsigned char {
     FuMa,
     SN3D,
     N3D,
+    UHJ,
 };
 
 uint BytesFromFmt(FmtType type) noexcept;

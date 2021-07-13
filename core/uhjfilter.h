@@ -25,7 +25,8 @@ struct UhjEncoder {
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
-     * signal. The input must use FuMa channel ordering and scaling.
+     * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
+     * with an additional +3dB boost).
      */
     void encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
         const FloatBufferLine *InSamples, const size_t SamplesToDo);
@@ -51,7 +52,7 @@ struct UhjDecoder {
 
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
-     * channel ordering and scaling. For 3-channel, the 3rd channel may be
+     * channel ordering and UHJ scaling. For 3-channel, the 3rd channel may be
      * attenuated by 'n', where 0 <= n <= 1. So 2-channel UHJ can be decoded by
      * leaving the 3rd channel input silent (n=0).
      */

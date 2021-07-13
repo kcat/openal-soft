@@ -347,8 +347,13 @@ inline uint dither_rng(uint *seed) noexcept
 
 inline auto& GetAmbiScales(AmbiScaling scaletype) noexcept
 {
-    if(scaletype == AmbiScaling::FuMa) return AmbiScale::FromFuMa();
-    if(scaletype == AmbiScaling::SN3D) return AmbiScale::FromSN3D();
+    switch(scaletype)
+    {
+    case AmbiScaling::FuMa: return AmbiScale::FromFuMa();
+    case AmbiScaling::SN3D: return AmbiScale::FromSN3D();
+    case AmbiScaling::UHJ: return AmbiScale::FromUHJ();
+    case AmbiScaling::N3D: break;
+    }
     return AmbiScale::FromN3D();
 }
 

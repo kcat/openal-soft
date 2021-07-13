@@ -499,7 +499,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     voice->mAmbiLayout = (buffer->mChannels == FmtUHJ2 || buffer->mChannels == FmtUHJ3
         || voice->mFmtChannels == FmtUHJ4) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
     voice->mAmbiScaling = (buffer->mChannels == FmtUHJ2 || buffer->mChannels == FmtUHJ3
-        || voice->mFmtChannels == FmtUHJ4) ? AmbiScaling::FuMa : buffer->mAmbiScaling;
+        || voice->mFmtChannels == FmtUHJ4) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
     voice->mAmbiOrder = buffer->mAmbiOrder;
 
     if(buffer->mCallback) voice->mFlags |= VoiceIsCallback;

@@ -43,9 +43,6 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
 void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const FloatBufferLine *InSamples, const size_t SamplesToDo)
 {
-    /* Given FuMa input, a +3dB boost is needed for the expected levels. */
-    static constexpr float sqrt2{1.41421356237f};
-
     ASSUME(SamplesToDo > 0);
 
     float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
@@ -63,14 +60,14 @@ void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Rig
     auto miditer = mS.begin() + sFilterDelay;
     std::transform(winput, winput+SamplesToDo, xinput, miditer,
         [](const float w, const float x) noexcept -> float
-        { return 0.9396926f*sqrt2*w + 0.1855740f*sqrt2*x; });
+        { return 0.9396926f*w + 0.1855740f*x; });
     for(size_t i{0};i < SamplesToDo;++i,++miditer)
         *miditer += left[i] + right[i];
 
     /* D = 0.6554516*Y */
     auto sideiter = mD.begin() + sFilterDelay;
     std::transform(yinput, yinput+SamplesToDo, sideiter,
-        [](const float y) noexcept -> float { return 0.6554516f*sqrt2*y; });
+        [](const float y) noexcept -> float { return 0.6554516f*y; });
     for(size_t i{0};i < SamplesToDo;++i,++sideiter)
         *sideiter += left[i] - right[i];
 
@@ -78,7 +75,7 @@ void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Rig
     auto tmpiter = std::copy(mWXHistory.cbegin(), mWXHistory.cend(), mTemp.begin());
     std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
         [](const float w, const float x) noexcept -> float
-        { return -0.3420201f*sqrt2*w + 0.5098604f*sqrt2*x; });
+        { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory.size(), mWXHistory.begin());
     PShift.processAccum({mD.data(), SamplesToDo}, mTemp.data());
 
@@ -113,9 +110,6 @@ void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Rig
 void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     const size_t samplesToDo, const size_t forwardSamples)
 {
-    /* A -3dB attenuation is needed for FuMa output. */
-    static constexpr float sqrt1_2{0.707106781187f};
-
     ASSUME(samplesToDo > 0);
 
     {
@@ -125,15 +119,15 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
 
         /* S = Left + Right */
         for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
-            mS[i] = (left[i] + right[i]) * sqrt1_2;
+            mS[i] = left[i] + right[i];
 
         /* D = Left - Right */
         for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
-            mD[i] = (left[i] - right[i]) * sqrt1_2;
+            mD[i] = left[i] - right[i];
 
         /* T */
         for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
-            mT[i] = t[i] * sqrt1_2;
+            mT[i] = t[i];
     }
 
     float *RESTRICT woutput{al::assume_aligned<16>(samples[0].data() + offset)};
@@ -169,6 +163,6 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
         float *RESTRICT zoutput{samples[3].data() + offset};
         /* Z = 1.023332*Q */
         for(size_t i{0};i < samplesToDo;++i)
-            zoutput[i] = 1.023332f*sqrt1_2*zoutput[i];
+            zoutput[i] = 1.023332f*zoutput[i];
     }
 }

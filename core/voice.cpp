@@ -830,7 +830,8 @@ void Voice::prepare(DeviceBase *device)
      */
     if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
     {
-        const uint8_t *OrderFromChan{(mFmtChannels == FmtBFormat2D) ?
+        const uint8_t *OrderFromChan{(mFmtChannels == FmtBFormat2D
+            || mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
 

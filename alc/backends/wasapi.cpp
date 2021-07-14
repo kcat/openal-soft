@@ -126,7 +126,7 @@ constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 inline uint RefTime2Samples(const ReferenceTime &val, uint srate)
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return static_cast<uint>(mini64(retval, std::numeric_limits<uint>::max()));
+    return static_cast<uint>(mini64(retval, (std::numeric_limits<uint>::max)()));
 }
 
 
@@ -1399,7 +1399,7 @@ HRESULT WasapiCapture::resetProxy()
 
     // Make sure buffer is at least 100ms in size
     ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
-    buf_time = std::max(buf_time, ReferenceTime{milliseconds{100}});
+    buf_time = (std::max)(buf_time, ReferenceTime{milliseconds{100}});
 
     WAVEFORMATEXTENSIBLE InputType{};
     InputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;

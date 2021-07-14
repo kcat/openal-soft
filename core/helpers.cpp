@@ -451,7 +451,7 @@ void SetRTPriority()
                 if(rlim.rlim_max > umaxtime)
                 {
                     rlim.rlim_max = static_cast<rlim_t>(std::min<ulonglong>(umaxtime,
-                        std::numeric_limits<rlim_t>::max()));
+                        (std::numeric_limits<rlim_t>::max)()));
                     rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
                     if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)
                         return errno;

@@ -217,7 +217,7 @@ uint SampleConverter::availableOut(uint srcframes) const
 
     /* If we have a full prep, we can generate at least one sample. */
     return static_cast<uint>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1,
-        std::numeric_limits<int>::max()));
+        (std::numeric_limits<int>::max)()));
 }
 
 uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint dstframes)

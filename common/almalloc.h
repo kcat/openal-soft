@@ -88,7 +88,7 @@ struct allocator {
 
     T *allocate(std::size_t n)
     {
-        if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
+        if(n > (std::numeric_limits<std::size_t>::max)()/sizeof(T)) throw std::bad_alloc();
         if(auto p = al_malloc(alignment, n*sizeof(T))) return static_cast<T*>(p);
         throw std::bad_alloc();
     }

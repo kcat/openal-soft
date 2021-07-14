@@ -204,7 +204,7 @@ void ContextBase::allocVoices(size_t addcount)
     /* Convert element count to cluster count. */
     addcount = (addcount+(clustersize-1)) / clustersize;
 
-    if(addcount >= std::numeric_limits<int>::max()/clustersize - mVoiceClusters.size())
+    if(addcount >= (std::numeric_limits<int>::max)()/clustersize - mVoiceClusters.size())
         throw std::runtime_error{"Allocating too many voices"};
     const size_t totalcount{(mVoiceClusters.size()+addcount) * clustersize};
     TRACE("Increasing allocated voices to %zu\n", totalcount);

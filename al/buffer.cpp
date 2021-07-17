@@ -322,6 +322,42 @@ ALenum EnumFromAmbiScaling(AmbiScaling scale)
     throw std::runtime_error{"Invalid AmbiScaling: "+std::to_string(int(scale))};
 }
 
+al::optional<FmtChannels> FmtFromUserFmt(UserFmtChannels chans)
+{
+    switch(chans)
+    {
+    case UserFmtMono: return al::make_optional(FmtMono);
+    case UserFmtStereo: return al::make_optional(FmtStereo);
+    case UserFmtRear: return al::make_optional(FmtRear);
+    case UserFmtQuad: return al::make_optional(FmtQuad);
+    case UserFmtX51: return al::make_optional(FmtX51);
+    case UserFmtX61: return al::make_optional(FmtX61);
+    case UserFmtX71: return al::make_optional(FmtX71);
+    case UserFmtBFormat2D: return al::make_optional(FmtBFormat2D);
+    case UserFmtBFormat3D: return al::make_optional(FmtBFormat3D);
+    case UserFmtUHJ2: return al::make_optional(FmtUHJ2);
+    case UserFmtUHJ3: return al::make_optional(FmtUHJ3);
+    case UserFmtUHJ4: return al::make_optional(FmtUHJ4);
+    }
+    return al::nullopt;
+}
+al::optional<FmtType> FmtFromUserFmt(UserFmtType type)
+{
+    switch(type)
+    {
+    case UserFmtUByte: return al::make_optional(FmtUByte);
+    case UserFmtShort: return al::make_optional(FmtShort);
+    case UserFmtFloat: return al::make_optional(FmtFloat);
+    case UserFmtDouble: return al::make_optional(FmtDouble);
+    case UserFmtMulaw: return al::make_optional(FmtMulaw);
+    case UserFmtAlaw: return al::make_optional(FmtAlaw);
+    /* ADPCM not handled here. */
+    case UserFmtIMA4: break;
+    case UserFmtMSADPCM: break;
+    }
+    return al::nullopt;
+}
+
 
 constexpr ALbitfieldSOFT INVALID_STORAGE_MASK{~unsigned(AL_MAP_READ_BIT_SOFT |
     AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT)};
@@ -460,49 +496,26 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
                       ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
-    FmtChannels DstChannels{FmtMono};
-    switch(SrcChannels)
-    {
-    case UserFmtMono: DstChannels = FmtMono; break;
-    case UserFmtStereo: DstChannels = FmtStereo; break;
-    case UserFmtRear: DstChannels = FmtRear; break;
-    case UserFmtQuad: DstChannels = FmtQuad; break;
-    case UserFmtX51: DstChannels = FmtX51; break;
-    case UserFmtX61: DstChannels = FmtX61; break;
-    case UserFmtX71: DstChannels = FmtX71; break;
-    case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
-    case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
-    case UserFmtUHJ2: DstChannels = FmtUHJ2; break;
-    case UserFmtUHJ3: DstChannels = FmtUHJ3; break;
-    case UserFmtUHJ4: DstChannels = FmtUHJ4; break;
-    }
-    if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
+    auto DstChannels = FmtFromUserFmt(SrcChannels);
+    if UNLIKELY(!DstChannels)
         SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
 
-    /* IMA4 and MSADPCM convert to 16-bit short. */
-    FmtType DstType{FmtUByte};
-    switch(SrcType)
-    {
-    case UserFmtUByte: DstType = FmtUByte; break;
-    case UserFmtShort: DstType = FmtShort; break;
-    case UserFmtFloat: DstType = FmtFloat; break;
-    case UserFmtDouble: DstType = FmtDouble; break;
-    case UserFmtAlaw: DstType = FmtAlaw; break;
-    case UserFmtMulaw: DstType = FmtMulaw; break;
-    case UserFmtIMA4: DstType = FmtShort; break;
-    case UserFmtMSADPCM: DstType = FmtShort; break;
-    }
-
-    /* TODO: Currently we can only map samples when they're not converted. To
+    /* IMA4 and MSADPCM convert to 16-bit short.
+     *
+     * TODO: Currently we can only map samples when they're not converted. To
      * allow it would need some kind of double-buffering to hold onto a copy of
      * the original data.
      */
     if((access&MAP_READ_WRITE_FLAGS))
     {
-        if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
+        if UNLIKELY(SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
                 NameFromUserFmtType(SrcType));
     }
+    auto DstType = (SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM)
+        ? al::make_optional(FmtShort) : FmtFromUserFmt(SrcType);
+    if UNLIKELY(!DstType)
+        SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
 
     const ALuint unpackalign{ALBuf->UnpackAlign};
     const ALuint align{SanitizeAlignment(SrcType, unpackalign)};
@@ -510,9 +523,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %u for %s samples",
             unpackalign, NameFromUserFmtType(SrcType));
 
-    const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
+    const ALuint ambiorder{(*DstChannels == FmtBFormat2D || *DstChannels == FmtBFormat3D) ?
         ALBuf->UnpackAmbiOrder :
-        ((DstChannels == FmtUHJ2 || DstChannels == FmtUHJ3 || DstChannels == FmtUHJ4) ? 1 :
+        ((*DstChannels == FmtUHJ2 || *DstChannels == FmtUHJ3 || *DstChannels == FmtUHJ4) ? 1 :
         0)};
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
@@ -546,8 +559,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
      */
-    ALuint NumChannels{ChannelsFromFmt(DstChannels, ambiorder)};
-    ALuint FrameSize{NumChannels * BytesFromFmt(DstType)};
+    ALuint NumChannels{ChannelsFromFmt(*DstChannels, ambiorder)};
+    ALuint FrameSize{NumChannels * BytesFromFmt(*DstType)};
     if UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize)
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
@@ -573,7 +586,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
 
     if(SrcType == UserFmtIMA4)
     {
-        assert(DstType == FmtShort);
+        assert(*DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_int16_ima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
                 NumChannels, frames, align);
@@ -581,7 +594,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     }
     else if(SrcType == UserFmtMSADPCM)
     {
-        assert(DstType == FmtShort);
+        assert(*DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
                 NumChannels, frames, align);
@@ -589,7 +602,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     }
     else
     {
-        assert(static_cast<long>(SrcType) == static_cast<long>(DstType));
+        assert(DstType.has_value());
         if(SrcData != nullptr && !ALBuf->mData.empty())
             std::copy_n(SrcData, frames*FrameSize, ALBuf->mData.begin());
         ALBuf->OriginalAlign = 1;
@@ -600,8 +613,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->Access = access;
 
     ALBuf->mSampleRate = static_cast<ALuint>(freq);
-    ALBuf->mChannels = DstChannels;
-    ALBuf->mType = DstType;
+    ALBuf->mChannels = *DstChannels;
+    ALBuf->mType = *DstType;
     ALBuf->mAmbiOrder = ambiorder;
 
     ALBuf->mCallback = nullptr;
@@ -622,48 +635,22 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
             ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
-    FmtChannels DstChannels{FmtMono};
-    switch(SrcChannels)
-    {
-    case UserFmtMono: DstChannels = FmtMono; break;
-    case UserFmtStereo: DstChannels = FmtStereo; break;
-    case UserFmtRear: DstChannels = FmtRear; break;
-    case UserFmtQuad: DstChannels = FmtQuad; break;
-    case UserFmtX51: DstChannels = FmtX51; break;
-    case UserFmtX61: DstChannels = FmtX61; break;
-    case UserFmtX71: DstChannels = FmtX71; break;
-    case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
-    case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
-    case UserFmtUHJ2: DstChannels = FmtUHJ2; break;
-    case UserFmtUHJ3: DstChannels = FmtUHJ3; break;
-    case UserFmtUHJ4: DstChannels = FmtUHJ4; break;
-    }
-    if UNLIKELY(static_cast<long>(SrcChannels) != static_cast<long>(DstChannels))
+    auto DstChannels = FmtFromUserFmt(SrcChannels);
+    if UNLIKELY(!DstChannels)
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short. Not supported with callbacks. */
-    FmtType DstType{FmtUByte};
-    switch(SrcType)
-    {
-    case UserFmtUByte: DstType = FmtUByte; break;
-    case UserFmtShort: DstType = FmtShort; break;
-    case UserFmtFloat: DstType = FmtFloat; break;
-    case UserFmtDouble: DstType = FmtDouble; break;
-    case UserFmtAlaw: DstType = FmtAlaw; break;
-    case UserFmtMulaw: DstType = FmtMulaw; break;
-    case UserFmtIMA4: DstType = FmtShort; break;
-    case UserFmtMSADPCM: DstType = FmtShort; break;
-    }
-    if UNLIKELY(static_cast<long>(SrcType) != static_cast<long>(DstType))
+    auto DstType = FmtFromUserFmt(SrcType);
+    if UNLIKELY(!DstType)
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
-    const ALuint ambiorder{(DstChannels == FmtBFormat2D || DstChannels == FmtBFormat3D) ?
+    const ALuint ambiorder{(*DstChannels == FmtBFormat2D || *DstChannels == FmtBFormat3D) ?
         ALBuf->UnpackAmbiOrder :
-        ((DstChannels == FmtUHJ2 || DstChannels == FmtUHJ3 || DstChannels == FmtUHJ4) ? 1 :
+        ((*DstChannels == FmtUHJ2 || *DstChannels == FmtUHJ3 || *DstChannels == FmtUHJ4) ? 1 :
         0)};
 
     constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
-    al::vector<al::byte,16>(FrameSizeFromFmt(DstChannels, DstType, ambiorder) *
+    al::vector<al::byte,16>(FrameSizeFromFmt(*DstChannels, *DstType, ambiorder) *
         size_t{line_size}).swap(ALBuf->mData);
 
     ALBuf->mCallback = callback;
@@ -675,8 +662,8 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     ALBuf->Access = 0;
 
     ALBuf->mSampleRate = static_cast<ALuint>(freq);
-    ALBuf->mChannels = DstChannels;
-    ALBuf->mType = DstType;
+    ALBuf->mChannels = *DstChannels;
+    ALBuf->mType = *DstType;
     ALBuf->mAmbiOrder = ambiorder;
 
     ALBuf->mSampleLen = 0;

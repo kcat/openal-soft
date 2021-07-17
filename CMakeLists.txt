@@ -709,7 +709,7 @@ set(CORE_OBJS
 
 set(HAVE_RTKIT 0)
 option(ALSOFT_REQUIRE_RTKIT "Require RTKit/D-Bus support" FALSE)
-find_package(DBus1)
+find_package(DBus1 QUIET)
 if(DBus1_FOUND)
     option(ALSOFT_RTKIT "Enable RTKit support" ON)
     if(ALSOFT_RTKIT)

@@ -68,35 +68,37 @@ constexpr char alsaDevice[] = "ALSA Default";
     MAGIC(snd_pcm_hw_params_free);                                            \
     MAGIC(snd_pcm_hw_params_any);                                             \
     MAGIC(snd_pcm_hw_params_current);                                         \
+    MAGIC(snd_pcm_hw_params_get_access);                                      \
+    MAGIC(snd_pcm_hw_params_get_buffer_size);                                 \
+    MAGIC(snd_pcm_hw_params_get_buffer_time_min);                             \
+    MAGIC(snd_pcm_hw_params_get_buffer_time_max);                             \
+    MAGIC(snd_pcm_hw_params_get_channels);                                    \
+    MAGIC(snd_pcm_hw_params_get_period_size);                                 \
+    MAGIC(snd_pcm_hw_params_get_period_time_max);                             \
+    MAGIC(snd_pcm_hw_params_get_period_time_min);                             \
+    MAGIC(snd_pcm_hw_params_get_periods);                                     \
     MAGIC(snd_pcm_hw_params_set_access);                                      \
-    MAGIC(snd_pcm_hw_params_set_format);                                      \
+    MAGIC(snd_pcm_hw_params_set_buffer_size_min);                             \
+    MAGIC(snd_pcm_hw_params_set_buffer_size_near);                            \
+    MAGIC(snd_pcm_hw_params_set_buffer_time_near);                            \
     MAGIC(snd_pcm_hw_params_set_channels);                                    \
+    MAGIC(snd_pcm_hw_params_set_channels_near);                               \
+    MAGIC(snd_pcm_hw_params_set_format);                                      \
+    MAGIC(snd_pcm_hw_params_set_period_time_near);                            \
+    MAGIC(snd_pcm_hw_params_set_period_size_near);                            \
     MAGIC(snd_pcm_hw_params_set_periods_near);                                \
     MAGIC(snd_pcm_hw_params_set_rate_near);                                   \
     MAGIC(snd_pcm_hw_params_set_rate);                                        \
     MAGIC(snd_pcm_hw_params_set_rate_resample);                               \
-    MAGIC(snd_pcm_hw_params_set_buffer_time_near);                            \
-    MAGIC(snd_pcm_hw_params_set_period_time_near);                            \
-    MAGIC(snd_pcm_hw_params_set_buffer_size_near);                            \
-    MAGIC(snd_pcm_hw_params_set_period_size_near);                            \
-    MAGIC(snd_pcm_hw_params_set_buffer_size_min);                             \
-    MAGIC(snd_pcm_hw_params_get_buffer_time_min);                             \
-    MAGIC(snd_pcm_hw_params_get_buffer_time_max);                             \
-    MAGIC(snd_pcm_hw_params_get_period_time_min);                             \
-    MAGIC(snd_pcm_hw_params_get_period_time_max);                             \
-    MAGIC(snd_pcm_hw_params_get_buffer_size);                                 \
-    MAGIC(snd_pcm_hw_params_get_period_size);                                 \
-    MAGIC(snd_pcm_hw_params_get_access);                                      \
-    MAGIC(snd_pcm_hw_params_get_periods);                                     \
     MAGIC(snd_pcm_hw_params_test_format);                                     \
     MAGIC(snd_pcm_hw_params_test_channels);                                   \
     MAGIC(snd_pcm_hw_params);                                                 \
-    MAGIC(snd_pcm_sw_params_malloc);                                          \
+    MAGIC(snd_pcm_sw_params);                                                 \
     MAGIC(snd_pcm_sw_params_current);                                         \
+    MAGIC(snd_pcm_sw_params_free);                                            \
+    MAGIC(snd_pcm_sw_params_malloc);                                          \
     MAGIC(snd_pcm_sw_params_set_avail_min);                                   \
     MAGIC(snd_pcm_sw_params_set_stop_threshold);                              \
-    MAGIC(snd_pcm_sw_params);                                                 \
-    MAGIC(snd_pcm_sw_params_free);                                            \
     MAGIC(snd_pcm_prepare);                                                   \
     MAGIC(snd_pcm_start);                                                     \
     MAGIC(snd_pcm_resume);                                                    \
@@ -105,7 +107,6 @@ constexpr char alsaDevice[] = "ALSA Default";
     MAGIC(snd_pcm_delay);                                                     \
     MAGIC(snd_pcm_state);                                                     \
     MAGIC(snd_pcm_avail_update);                                              \
-    MAGIC(snd_pcm_areas_silence);                                             \
     MAGIC(snd_pcm_mmap_begin);                                                \
     MAGIC(snd_pcm_mmap_commit);                                               \
     MAGIC(snd_pcm_readi);                                                     \
@@ -150,6 +151,7 @@ ALSA_FUNCS(MAKE_FUNC);
 #define snd_pcm_hw_params_set_access psnd_pcm_hw_params_set_access
 #define snd_pcm_hw_params_set_format psnd_pcm_hw_params_set_format
 #define snd_pcm_hw_params_set_channels psnd_pcm_hw_params_set_channels
+#define snd_pcm_hw_params_set_channels_near psnd_pcm_hw_params_set_channels_near
 #define snd_pcm_hw_params_set_periods_near psnd_pcm_hw_params_set_periods_near
 #define snd_pcm_hw_params_set_rate_near psnd_pcm_hw_params_set_rate_near
 #define snd_pcm_hw_params_set_rate psnd_pcm_hw_params_set_rate
@@ -167,6 +169,7 @@ ALSA_FUNCS(MAKE_FUNC);
 #define snd_pcm_hw_params_get_period_size psnd_pcm_hw_params_get_period_size
 #define snd_pcm_hw_params_get_access psnd_pcm_hw_params_get_access
 #define snd_pcm_hw_params_get_periods psnd_pcm_hw_params_get_periods
+#define snd_pcm_hw_params_get_channels psnd_pcm_hw_params_get_channels
 #define snd_pcm_hw_params_test_format psnd_pcm_hw_params_test_format
 #define snd_pcm_hw_params_test_channels psnd_pcm_hw_params_test_channels
 #define snd_pcm_hw_params psnd_pcm_hw_params
@@ -184,7 +187,6 @@ ALSA_FUNCS(MAKE_FUNC);
 #define snd_pcm_delay psnd_pcm_delay
 #define snd_pcm_state psnd_pcm_state
 #define snd_pcm_avail_update psnd_pcm_avail_update
-#define snd_pcm_areas_silence psnd_pcm_areas_silence
 #define snd_pcm_mmap_begin psnd_pcm_mmap_begin
 #define snd_pcm_mmap_commit psnd_pcm_mmap_commit
 #define snd_pcm_readi psnd_pcm_readi
@@ -424,6 +426,7 @@ struct AlsaPlayback final : public BackendBase {
 
     std::mutex mMutex;
 
+    uint mFrameStep{};
     al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
@@ -445,7 +448,6 @@ int AlsaPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const size_t samplebits{mDevice->bytesFromFmt() * 8};
     const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
     const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
@@ -507,7 +509,7 @@ int AlsaPlayback::mixerProc()
             }
 
             char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
-            mDevice->renderSamples(WritePtr, static_cast<uint>(frames), areas->step/samplebits);
+            mDevice->renderSamples(WritePtr, static_cast<uint>(frames), mFrameStep);
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
             if(commitres < 0 || static_cast<snd_pcm_uframes_t>(commitres) != frames)
@@ -529,7 +531,6 @@ int AlsaPlayback::mixerNoMMapProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const size_t frame_step{mDevice->channelsFromFmt()};
     const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
     const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
@@ -575,7 +576,7 @@ int AlsaPlayback::mixerNoMMapProc()
         al::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         std::lock_guard<std::mutex> _{mMutex};
-        mDevice->renderSamples(WritePtr, static_cast<uint>(avail), frame_step);
+        mDevice->renderSamples(WritePtr, static_cast<uint>(avail), mFrameStep);
         while(avail > 0)
         {
             snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr,
@@ -727,28 +728,16 @@ bool AlsaPlayback::reset()
         }
     }
     CHECK(snd_pcm_hw_params_set_format(mPcmHandle, hp.get(), format));
-    /* test and set channels (implicitly sets frame bits) */
-    if(snd_pcm_hw_params_test_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()) < 0)
+    /* set channels (implicitly sets frame bits) */
+    if(snd_pcm_hw_params_set_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()) < 0)
     {
-        static const DevFmtChannels channellist[] = {
-            DevFmtStereo,
-            DevFmtQuad,
-            DevFmtX51,
-            DevFmtX71,
-            DevFmtMono,
-        };
-
-        for(const auto &chan : channellist)
-        {
-            if(snd_pcm_hw_params_test_channels(mPcmHandle, hp.get(), ChannelsFromDevFmt(chan, 0)) >= 0)
-            {
-                mDevice->FmtChans = chan;
-                mDevice->mAmbiOrder = 0;
-                break;
-            }
-        }
+        uint numchans{2u};
+        CHECK(snd_pcm_hw_params_set_channels_near(mPcmHandle, hp.get(), &numchans));
+        if(numchans < 1)
+            throw al::backend_exception{al::backend_error::DeviceError, "Got 0 device channels"};
+        if(numchans == 1) mDevice->FmtChans = DevFmtMono;
+        else mDevice->FmtChans = DevFmtStereo;
     }
-    CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
     if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", 0)
         || !mDevice->Flags.test(FrequencyRequest))
@@ -776,6 +765,7 @@ bool AlsaPlayback::reset()
     CHECK(snd_pcm_hw_params_get_access(hp.get(), &access));
     CHECK(snd_pcm_hw_params_get_period_size(hp.get(), &periodSizeInFrames, nullptr));
     CHECK(snd_pcm_hw_params_get_buffer_size(hp.get(), &bufferSizeInFrames));
+    CHECK(snd_pcm_hw_params_get_channels(hp.get(), &mFrameStep));
     hp = nullptr;
 
     SwParamsPtr sp{CreateSwParams()};
@@ -813,8 +803,8 @@ void AlsaPlayback::start()
     int (AlsaPlayback::*thread_func)(){};
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        mBuffer.resize(
-            static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, mDevice->UpdateSize)));
+        auto datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->UpdateSize);
+        mBuffer.resize(static_cast<size_t>(datalen));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else

@@ -1890,7 +1890,8 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
 
-    DevFmtType_t<T> *outbase = static_cast<DevFmtType_t<T>*>(OutBuffer) + Offset*FrameStep;
+    DevFmtType_t<T> *outbase{static_cast<DevFmtType_t<T>*>(OutBuffer) + Offset*FrameStep};
+    size_t c{0};
     for(const FloatBufferLine &inbuf : InBuffer)
     {
         DevFmtType_t<T> *out{outbase++};
@@ -1900,6 +1901,16 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
             out += FrameStep;
         };
         std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);
+        ++c;
+    }
+    if(const size_t extra{FrameStep - c})
+    {
+        const auto silence = SampleConv<DevFmtType_t<T>>(0.0f);
+        for(size_t i{0};i < SamplesToDo;++i)
+        {
+            std::fill_n(outbase, extra, silence);
+            outbase += FrameStep;
+        }
     }
 }
 

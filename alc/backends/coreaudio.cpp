@@ -397,10 +397,10 @@ bool CoreAudioPlayback::reset()
 
     /* retrieve default output unit's properties (output side) */
     AudioStreamBasicDescription streamFormat{};
-    auto size = static_cast<UInt32>(sizeof(AudioStreamBasicDescription));
+    UInt32 size{sizeof(streamFormat)};
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
         0, &streamFormat, &size);
-    if(err != noErr || size != sizeof(AudioStreamBasicDescription))
+    if(err != noErr || size != sizeof(streamFormat))
     {
         ERR("AudioUnitGetProperty failed\n");
         return false;
@@ -416,15 +416,9 @@ bool CoreAudioPlayback::reset()
     TRACE("  streamFormat.mSampleRate = %5.0f\n", streamFormat.mSampleRate);
 #endif
 
-    /* set default output unit's input side to match output side */
-    err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-        0, &streamFormat, size);
-    if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed\n");
-        return false;
-    }
-
+    /* Use the sample rate from the output unit's current parameters, but reset
+     * everything else.
+     */
     if(mDevice->Frequency != streamFormat.mSampleRate)
     {
         mDevice->BufferSize = static_cast<uint>(uint64_t{mDevice->BufferSize} *
@@ -433,81 +427,53 @@ bool CoreAudioPlayback::reset()
     }
 
     /* FIXME: How to tell what channels are what in the output device, and how
-     * to specify what we're giving?  eg, 6.0 vs 5.1 */
-    switch(streamFormat.mChannelsPerFrame)
-    {
-        case 1:
-            mDevice->FmtChans = DevFmtMono;
-            break;
-        case 2:
-            mDevice->FmtChans = DevFmtStereo;
-            break;
-        case 4:
-            mDevice->FmtChans = DevFmtQuad;
-            break;
-        case 6:
-            mDevice->FmtChans = DevFmtX51;
-            break;
-        case 7:
-            mDevice->FmtChans = DevFmtX61;
-            break;
-        case 8:
-            mDevice->FmtChans = DevFmtX71;
-            break;
-        default:
-            ERR("Unhandled channel count (%d), using Stereo\n", streamFormat.mChannelsPerFrame);
-            mDevice->FmtChans = DevFmtStereo;
-            streamFormat.mChannelsPerFrame = 2;
-            break;
-    }
-    setDefaultWFXChannelOrder();
+     * to specify what we're giving? e.g. 6.0 vs 5.1
+     */
+    streamFormat.mChannelsPerFrame = mDevice->channelsFromFmt();
 
-    /* use channel count and sample rate from the default output unit's current
-     * parameters, but reset everything else */
     streamFormat.mFramesPerPacket = 1;
-    streamFormat.mFormatFlags = 0;
+    streamFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kLinearPCMFormatFlagIsPacked;
+    streamFormat.mFormatID = kAudioFormatLinearPCM;
     switch(mDevice->FmtType)
     {
         case DevFmtUByte:
             mDevice->FmtType = DevFmtByte;
             /* fall-through */
         case DevFmtByte:
-            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
+            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 8;
             break;
         case DevFmtUShort:
             mDevice->FmtType = DevFmtShort;
             /* fall-through */
         case DevFmtShort:
-            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
+            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 16;
             break;
         case DevFmtUInt:
             mDevice->FmtType = DevFmtInt;
             /* fall-through */
         case DevFmtInt:
-            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger;
+            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 32;
             break;
         case DevFmtFloat:
-            streamFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat;
+            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsFloat;
             streamFormat.mBitsPerChannel = 32;
             break;
     }
-    streamFormat.mBytesPerFrame = streamFormat.mChannelsPerFrame *
-                                  streamFormat.mBitsPerChannel / 8;
-    streamFormat.mBytesPerPacket = streamFormat.mBytesPerFrame;
-    streamFormat.mFormatID = kAudioFormatLinearPCM;
-    streamFormat.mFormatFlags |= kAudioFormatFlagsNativeEndian |
-                                 kLinearPCMFormatFlagIsPacked;
+    streamFormat.mBytesPerFrame = streamFormat.mChannelsPerFrame*streamFormat.mBitsPerChannel/8;
+    streamFormat.mBytesPerPacket = streamFormat.mBytesPerFrame*streamFormat.mFramesPerPacket;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-        0, &streamFormat, sizeof(AudioStreamBasicDescription));
+        0, &streamFormat, sizeof(streamFormat));
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
         return false;
     }
+
+    setDefaultWFXChannelOrder();
 
     /* setup callback */
     mFrameSize = mDevice->frameSizeFromFmt();

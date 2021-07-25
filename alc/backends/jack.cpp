@@ -573,27 +573,25 @@ void JackPlayback::start()
     const char *devname{mDevice->DeviceName.c_str()};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
-        JackPortsPtr ports{jack_get_ports(mClient, mPortPattern.c_str(), JackDefaultAudioType,
+        JackPortsPtr pnames{jack_get_ports(mClient, mPortPattern.c_str(), JackDefaultAudioType,
             JackPortIsInput)};
-        if(!ports)
+        if(!pnames)
         {
             jack_deactivate(mClient);
             throw al::backend_exception{al::backend_error::DeviceError, "No playback ports found"};
         }
-        auto connect_port = [this](const jack_port_t *port, const char *pname) -> bool
+
+        for(size_t i{0};i < al::size(mPort) && mPort[i];++i)
         {
-            if(!port) return false;
-            if(!pname)
+            if(!pnames[i])
             {
-                ERR("No physical playback port for \"%s\"\n", jack_port_name(port));
-                return false;
+                ERR("No physical playback port for \"%s\"\n", jack_port_name(mPort[i]));
+                break;
             }
-            if(jack_connect(mClient, jack_port_name(port), pname))
-                ERR("Failed to connect output port \"%s\" to \"%s\"\n", jack_port_name(port),
-                    pname);
-            return true;
-        };
-        std::mismatch(mPort.begin(), mPort.end(), ports.get(), connect_port);
+            if(jack_connect(mClient, jack_port_name(mPort[i]), pnames[i]))
+                ERR("Failed to connect output port \"%s\" to \"%s\"\n", jack_port_name(mPort[i]),
+                    pnames[i]);
+        }
     }
 
     /* Reconfigure buffer metrics in case the server changed it since the reset

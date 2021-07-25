@@ -40,17 +40,6 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
     assert(numFrames > 0);
     const int32_t numChannels{oboeStream->getChannelCount()};
 
-    if UNLIKELY(numChannels > 2 && mDevice->FmtChans == DevFmtStereo)
-    {
-        /* If the device is only mixing stereo but there's more than two
-         * output channels, there are unused channels that need to be silenced.
-         */
-        if(mStream->getFormat() == oboe::AudioFormat::Float)
-            memset(audioData, 0, static_cast<uint32_t>(numFrames*numChannels)*sizeof(float));
-        else
-            memset(audioData, 0, static_cast<uint32_t>(numFrames*numChannels)*sizeof(int16_t));
-    }
-
     mDevice->renderSamples(audioData, static_cast<uint32_t>(numFrames),
         static_cast<uint32_t>(numChannels));
     return oboe::DataCallbackResult::Continue;

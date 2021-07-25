@@ -135,12 +135,12 @@ void Sdl2Backend::open(const char *name)
     DevFmtType devtype{};
     switch(have.format)
     {
-    case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
-    case AUDIO_S8:     mDevice->FmtType = DevFmtByte;   break;
-    case AUDIO_U16SYS: mDevice->FmtType = DevFmtUShort; break;
-    case AUDIO_S16SYS: mDevice->FmtType = DevFmtShort;  break;
-    case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
-    case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
+    case AUDIO_U8:     devtype = DevFmtUByte;  break;
+    case AUDIO_S8:     devtype = DevFmtByte;   break;
+    case AUDIO_U16SYS: devtype = DevFmtUShort; break;
+    case AUDIO_S16SYS: devtype = DevFmtShort;  break;
+    case AUDIO_S32SYS: devtype = DevFmtInt;    break;
+    case AUDIO_F32SYS: devtype = DevFmtFloat;  break;
     default:
         SDL_CloseAudioDevice(devid);
         throw al::backend_exception{al::backend_error::DeviceError, "Unhandled SDL format: 0x%04x",

@@ -306,6 +306,8 @@ inline auto& GetAmbiLayout(DevAmbiLayout layouttype) noexcept
 DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
     DecoderConfig<DualBand, MAX_OUTPUT_CHANNELS> &decoder)
 {
+    DecoderView ret{};
+
     decoder.mOrder = (conf->ChanMask > Ambi2OrderMask) ? uint8_t{3} :
         (conf->ChanMask > Ambi1OrderMask) ? uint8_t{2} : uint8_t{1};
     decoder.mIs3D = (conf->ChanMask&AmbiPeriphonicMask) != 0;
@@ -324,11 +326,9 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         std::min(al::size(conf->LFOrderGain), al::size(decoder.mOrderGainLF)),
         std::begin(decoder.mOrderGainLF));
 
-    const uint8_t *acnmap{};
     std::array<uint8_t,MaxAmbiChannels> idx_map{};
     if(decoder.mIs3D)
     {
-        acnmap = AmbiIndex::FromACN().data();
         uint flags{conf->ChanMask};
         auto elem = idx_map.begin();
         while(flags)
@@ -342,7 +342,6 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
     }
     else
     {
-        acnmap = AmbiIndex::FromACN2D().data();
         uint flags{conf->ChanMask};
         auto elem = idx_map.begin();
         while(flags)
@@ -359,7 +358,7 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
             case 8: *elem = 4; break;
             case 9: *elem = 5; break;
             case 15: *elem = 6; break;
-            default: return DecoderView{};
+            default: return ret;
             }
             ++elem;
         }
@@ -432,7 +431,6 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         ++chan_count;
     }
 
-    DecoderView ret{};
     if(chan_count > 0)
     {
         ret.mOrder = decoder.mOrder;

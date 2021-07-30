@@ -200,7 +200,7 @@ bool PortPlayback::reset()
         return false;
     }
 
-    if(mParams.channelCount == 2)
+    if(mParams.channelCount >= 2)
         mDevice->FmtChans = DevFmtStereo;
     else if(mParams.channelCount == 1)
         mDevice->FmtChans = DevFmtMono;

@@ -70,6 +70,7 @@ struct SolarisBackend final : public BackendBase {
 
     int mFd{-1};
 
+    uint mFrameStep{};
     al::vector<al::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
@@ -165,12 +166,7 @@ bool SolarisBackend::reset()
     AUDIO_INITINFO(&info);
 
     info.play.sample_rate = mDevice->Frequency;
-
-    if(mDevice->FmtChans != DevFmtMono)
-        mDevice->FmtChans = DevFmtStereo;
-    uint numChannels{mDevice->channelsFromFmt()};
-    info.play.channels = numChannels;
-
+    info.play.channels = mDevice->channelsFromFmt();
     switch(mDevice->FmtType)
     {
     case DevFmtByte:
@@ -192,9 +188,7 @@ bool SolarisBackend::reset()
         info.play.encoding = AUDIO_ENCODING_LINEAR;
         break;
     }
-
-    uint frameSize{numChannels * mDevice->bytesFromFmt()};
-    info.play.buffer_size = mDevice->BufferSize * frameSize;
+    info.play.buffer_size = mDevice->BufferSize * mDevice->frameSizeFromFmt();
 
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
     {
@@ -204,9 +198,13 @@ bool SolarisBackend::reset()
 
     if(mDevice->channelsFromFmt() != info.play.channels)
     {
-        ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
-            info.play.channels);
-        return false;
+        if(info.play.channels >= 2)
+            mDevice->FmtChans = DevFmtStereo;
+        else if(info.play.channels == 1)
+            mDevice->FmtChans = DevFmtMono;
+        else
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Got %u device channels", info.play.channels};
     }
 
     if(info.play.precision == 8 && info.play.encoding == AUDIO_ENCODING_LINEAR8)
@@ -223,13 +221,16 @@ bool SolarisBackend::reset()
         return false;
     }
 
+    uint frame_size{mDevice->bytesFromFmt() * info.play.channels};
+    mFrameStep = info.play.channels;
     mDevice->Frequency = info.play.sample_rate;
-    mDevice->BufferSize = info.play.buffer_size / frameSize;
+    mDevice->BufferSize = info.play.buffer_size / frame_size;
+    /* How to get the actual period size/count? */
     mDevice->UpdateSize = mDevice->BufferSize / 2;
 
     setDefaultChannelOrder();
 
-    mBuffer.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
+    mBuffer.resize(mDevice->UpdateSize * size_t{frame_size});
     std::fill(mBuffer.begin(), mBuffer.end(), al::byte{});
 
     return true;

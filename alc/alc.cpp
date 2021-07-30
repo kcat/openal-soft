@@ -1359,8 +1359,7 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
     case DevFmtMono: return ALC_MONO_SOFT;
     case DevFmtStereo: return ALC_STEREO_SOFT;
     case DevFmtQuad: return ALC_QUAD_SOFT;
-    case DevFmtX51: /* fall-through */
-    case DevFmtX51Rear: return ALC_5POINT1_SOFT;
+    case DevFmtX51: return ALC_5POINT1_SOFT;
     case DevFmtX61: return ALC_6POINT1_SOFT;
     case DevFmtX71: return ALC_7POINT1_SOFT;
     case DevFmtAmbi3D: return ALC_BFORMAT3D_SOFT;
@@ -1442,11 +1441,6 @@ const std::array<InputRemixMap,3> X51Downmix{{
     { BackLeft,   {{{SideLeft, 1.0f}, {SideRight, 0.0f}}} },
     { BackRight,  {{{SideLeft, 0.0f}, {SideRight, 1.0f}}} },
     { BackCenter, {{{SideLeft, 0.5f}, {SideRight, 0.5f}}} },
-}};
-const std::array<InputRemixMap,3> X51RearDownmix{{
-    { SideLeft,   {{{BackLeft, 1.0f}, {BackRight, 0.0f}}} },
-    { SideRight,  {{{BackLeft, 0.0f}, {BackRight, 1.0f}}} },
-    { BackCenter, {{{BackLeft, 0.5f}, {BackRight, 0.5f}}} },
 }};
 const std::array<InputRemixMap,2> X61Downmix{{
     { BackLeft,  {{{BackCenter, 0.5f}, {SideLeft,  0.5f}}} },
@@ -1830,7 +1824,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     case DevFmtStereo: device->RealOut.RemixMap = StereoDownmix; break;
     case DevFmtQuad: device->RealOut.RemixMap = QuadDownmix; break;
     case DevFmtX51: device->RealOut.RemixMap = X51Downmix; break;
-    case DevFmtX51Rear: device->RealOut.RemixMap = X51RearDownmix; break;
     case DevFmtX61: device->RealOut.RemixMap = X61Downmix; break;
     case DevFmtX71: device->RealOut.RemixMap = X71Downmix; break;
     case DevFmtAmbi3D: break;
@@ -3180,7 +3173,7 @@ START_API_FUNC
             { "surround51", DevFmtX51,    0 },
             { "surround61", DevFmtX61,    0 },
             { "surround71", DevFmtX71,    0 },
-            { "surround51rear", DevFmtX51Rear, 0 },
+            { "surround51rear", DevFmtX51, 0 },
             { "ambi1", DevFmtAmbi3D, 1 },
             { "ambi2", DevFmtAmbi3D, 2 },
             { "ambi3", DevFmtAmbi3D, 3 },

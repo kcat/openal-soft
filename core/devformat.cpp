@@ -26,7 +26,6 @@ uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept
     case DevFmtStereo: return 2;
     case DevFmtQuad: return 4;
     case DevFmtX51: return 6;
-    case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
     case DevFmtAmbi3D: return (ambiorder+1) * (ambiorder+1);
@@ -56,7 +55,6 @@ const char *DevFmtChannelsString(DevFmtChannels chans) noexcept
     case DevFmtStereo: return "Stereo";
     case DevFmtQuad: return "Quadraphonic";
     case DevFmtX51: return "5.1 Surround";
-    case DevFmtX51Rear: return "5.1 Surround (Rear)";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
     case DevFmtAmbi3D: return "Ambisonic 3D";

@@ -131,38 +131,15 @@ bool OboePlayback::reset()
         mStream->getBufferCapacityInFrames()));
     TRACE("Got stream with properties:\n%s", oboe::convertToText(mStream.get()));
 
-    switch(mStream->getChannelCount())
+    if(static_cast<uint>(mStream->getChannelCount()) != mDevice->channelsFromFmt())
     {
-    case oboe::ChannelCount::Mono:
-        mDevice->FmtChans = DevFmtMono;
-        break;
-    case oboe::ChannelCount::Stereo:
-        mDevice->FmtChans = DevFmtStereo;
-        break;
-    /* Other potential configurations. Could be wrong, but better than failing.
-     * Assume WFX channel order.
-     */
-    case 4:
-        mDevice->FmtChans = DevFmtQuad;
-        break;
-    case 6:
-        mDevice->FmtChans = DevFmtX51Rear;
-        break;
-    case 7:
-        mDevice->FmtChans = DevFmtX61;
-        break;
-    case 8:
-        mDevice->FmtChans = DevFmtX71;
-        break;
-    default:
-        if(mStream->getChannelCount() < 1)
+        if(mStream->getChannelCount() >= 2)
+            mDevice->FmtChans = DevFmtStereo;
+        else if(mStream->getChannelCount() == 1)
+            mDevice->FmtChans = DevFmtMono;
+        else
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Got unhandled channel count: %d", mStream->getChannelCount()};
-        /* Assume first two channels are front left/right. We can do a stereo
-         * mix and keep the other channels silent.
-         */
-        mDevice->FmtChans = DevFmtStereo;
-        break;
     }
     setDefaultWFXChannelOrder();
 
@@ -252,7 +229,6 @@ void OboeCapture::open(const char *name)
         break;
     case DevFmtQuad:
     case DevFmtX51:
-    case DevFmtX51Rear:
     case DevFmtX61:
     case DevFmtX71:
     case DevFmtAmbi3D:

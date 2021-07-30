@@ -399,9 +399,9 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         else if(speaker.Name == "CE")
             ch = FrontCenter;
         else if(speaker.Name == "LS")
-            ch = (device->FmtChans == DevFmtX51Rear) ? BackLeft : SideLeft;
+            ch = SideLeft;
         else if(speaker.Name == "RS")
-            ch = (device->FmtChans == DevFmtX51Rear) ? BackRight : SideRight;
+            ch = SideRight;
         else if(speaker.Name == "LB")
             ch = (device->FmtChans == DevFmtX51) ? SideLeft : BackLeft;
         else if(speaker.Name == "RB")
@@ -500,26 +500,6 @@ constexpr DecoderConfig<DualBand, 5> X51Config{
         {{4.90109850e-1f, -3.77305010e-1f, -3.73106990e-1f,  1.25914530e-1f,  1.45133000e-2f}},
     }}
 };
-constexpr DecoderConfig<DualBand, 5> X51RearConfig{
-    2, false, {{BackLeft, FrontLeft, FrontCenter, FrontRight, BackRight}},
-    DevAmbiScaling::FuMa,
-    /*HF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{5.67316000e-1f,  4.22920000e-1f, -3.15495000e-1f, -6.34490000e-2f, -2.92380000e-2f}},
-        {{3.68584000e-1f,  2.72349000e-1f,  3.21616000e-1f,  1.92645000e-1f,  4.82600000e-2f}},
-        {{1.83579000e-1f,  0.00000000e+0f,  1.99588000e-1f,  0.00000000e+0f,  9.62820000e-2f}},
-        {{3.68584000e-1f, -2.72349000e-1f,  3.21616000e-1f, -1.92645000e-1f,  4.82600000e-2f}},
-        {{5.67316000e-1f, -4.22920000e-1f, -3.15495000e-1f,  6.34490000e-2f, -2.92380000e-2f}},
-    }},
-    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{4.90109850e-1f,  3.77305010e-1f, -3.73106990e-1f, -1.25914530e-1f,  1.45133000e-2f}},
-        {{1.49085730e-1f,  3.03561680e-1f,  1.53290060e-1f,  2.45112480e-1f, -1.50753130e-1f}},
-        {{1.37654920e-1f,  0.00000000e+0f,  4.49417940e-1f,  0.00000000e+0f,  2.57844070e-1f}},
-        {{1.49085730e-1f, -3.03561680e-1f,  1.53290060e-1f, -2.45112480e-1f, -1.50753130e-1f}},
-        {{4.90109850e-1f, -3.77305010e-1f, -3.73106990e-1f,  1.25914530e-1f,  1.45133000e-2f}},
-    }}
-};
 constexpr DecoderConfig<SingleBand, 5> X61Config{
     2, false, {{SideLeft, FrontLeft, FrontRight, SideRight, BackCenter}},
     DevAmbiScaling::N3D,
@@ -566,7 +546,6 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         case DevFmtStereo: decoder = StereoConfig; break;
         case DevFmtQuad: decoder = QuadConfig; break;
         case DevFmtX51: decoder = X51Config; break;
-        case DevFmtX51Rear: decoder = X51RearConfig; break;
         case DevFmtX61: decoder = X61Config; break;
         case DevFmtX71: decoder = X71Config; break;
         case DevFmtAmbi3D:
@@ -871,8 +850,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         switch(device->FmtChans)
         {
         case DevFmtQuad: layout = "quad"; break;
-        case DevFmtX51: /* fall-through */
-        case DevFmtX51Rear: layout = "surround51"; break;
+        case DevFmtX51: layout = "surround51"; break;
         case DevFmtX61: layout = "surround61"; break;
         case DevFmtX71: layout = "surround71"; break;
         /* Mono, Stereo, and Ambisonics output don't use custom decoders. */

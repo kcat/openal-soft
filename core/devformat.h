@@ -50,9 +50,6 @@ enum DevFmtChannels : unsigned char {
     DevFmtX71,
     DevFmtAmbi3D,
 
-    /* Similar to 5.1, except using rear channels instead of sides */
-    DevFmtX51Rear,
-
     DevFmtChannelsDefault = DevFmtStereo
 };
 #define MAX_OUTPUT_CHANNELS  16

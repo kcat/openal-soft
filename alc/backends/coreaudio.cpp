@@ -760,7 +760,6 @@ void CoreAudioCapture::open(const char *name)
 
     case DevFmtQuad:
     case DevFmtX51:
-    case DevFmtX51Rear:
     case DevFmtX61:
     case DevFmtX71:
     case DevFmtAmbi3D:

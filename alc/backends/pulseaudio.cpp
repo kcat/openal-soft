@@ -785,7 +785,7 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
         { DevFmtX71, X71ChanMap },
         { DevFmtX61, X61ChanMap },
         { DevFmtX51, X51ChanMap },
-        { DevFmtX51Rear, X51RearChanMap },
+        { DevFmtX51, X51RearChanMap },
         { DevFmtQuad, QuadChanMap },
         { DevFmtStereo, StereoChanMap },
         { DevFmtMono, MonoChanMap }
@@ -956,9 +956,6 @@ bool PulsePlayback::reset()
         break;
     case DevFmtX51:
         chanmap = X51ChanMap;
-        break;
-    case DevFmtX51Rear:
-        chanmap = X51RearChanMap;
         break;
     case DevFmtX61:
         chanmap = X61ChanMap;
@@ -1237,9 +1234,6 @@ void PulseCapture::open(const char *name)
         break;
     case DevFmtX51:
         chanmap = X51ChanMap;
-        break;
-    case DevFmtX51Rear:
-        chanmap = X51RearChanMap;
         break;
     case DevFmtX61:
         chanmap = X61ChanMap;

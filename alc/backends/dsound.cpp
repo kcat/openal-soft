@@ -402,10 +402,8 @@ bool DSoundPlayback::reset()
                 mDevice->FmtChans = DevFmtStereo;
             else if(speakers == DSSPEAKER_QUAD)
                 mDevice->FmtChans = DevFmtQuad;
-            else if(speakers == DSSPEAKER_5POINT1_SURROUND)
+            else if(speakers == DSSPEAKER_5POINT1_SURROUND || speakers == DSSPEAKER_5POINT1_BACK)
                 mDevice->FmtChans = DevFmtX51;
-            else if(speakers == DSSPEAKER_5POINT1_BACK)
-                mDevice->FmtChans = DevFmtX51Rear;
             else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
                 mDevice->FmtChans = DevFmtX71;
             else
@@ -422,7 +420,6 @@ bool DSoundPlayback::reset()
         case DevFmtStereo: OutputType.dwChannelMask = STEREO; break;
         case DevFmtQuad: OutputType.dwChannelMask = QUAD; break;
         case DevFmtX51: OutputType.dwChannelMask = X5DOT1; break;
-        case DevFmtX51Rear: OutputType.dwChannelMask = X5DOT1REAR; break;
         case DevFmtX61: OutputType.dwChannelMask = X6DOT1; break;
         case DevFmtX71: OutputType.dwChannelMask = X7DOT1; break;
         }
@@ -639,7 +636,6 @@ void DSoundCapture::open(const char *name)
     case DevFmtStereo: InputType.dwChannelMask = STEREO; break;
     case DevFmtQuad: InputType.dwChannelMask = QUAD; break;
     case DevFmtX51: InputType.dwChannelMask = X5DOT1; break;
-    case DevFmtX51Rear: InputType.dwChannelMask = X5DOT1REAR; break;
     case DevFmtX61: InputType.dwChannelMask = X6DOT1; break;
     case DevFmtX71: InputType.dwChannelMask = X7DOT1; break;
     case DevFmtAmbi3D:

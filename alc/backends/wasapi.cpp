@@ -876,10 +876,9 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
             mDevice->FmtChans = DevFmtX61;
-        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
+        else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
+            || (chanmask&X51RearMask) == X5DOT1REAR))
             mDevice->FmtChans = DevFmtX51;
-        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
-            mDevice->FmtChans = DevFmtX51Rear;
         else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
             mDevice->FmtChans = DevFmtQuad;
         else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
@@ -911,10 +910,6 @@ HRESULT WasapiPlayback::resetProxy()
     case DevFmtX51:
         OutputType.Format.nChannels = 6;
         OutputType.dwChannelMask = X5DOT1;
-        break;
-    case DevFmtX51Rear:
-        OutputType.Format.nChannels = 6;
-        OutputType.dwChannelMask = X5DOT1REAR;
         break;
     case DevFmtX61:
         OutputType.Format.nChannels = 7;
@@ -995,10 +990,9 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
             mDevice->FmtChans = DevFmtX61;
-        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
+        else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
+            || (chanmask&X51RearMask) == X5DOT1REAR))
             mDevice->FmtChans = DevFmtX51;
-        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
-            mDevice->FmtChans = DevFmtX51Rear;
         else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
             mDevice->FmtChans = DevFmtQuad;
         else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
@@ -1421,10 +1415,6 @@ HRESULT WasapiCapture::resetProxy()
         InputType.Format.nChannels = 6;
         InputType.dwChannelMask = X5DOT1;
         break;
-    case DevFmtX51Rear:
-        InputType.Format.nChannels = 6;
-        InputType.dwChannelMask = X5DOT1REAR;
-        break;
     case DevFmtX61:
         InputType.Format.nChannels = 7;
         InputType.dwChannelMask = X6DOT1;
@@ -1509,7 +1499,6 @@ HRESULT WasapiCapture::resetProxy()
                 return (chancount == 4 && (chanmask == 0 || (chanmask&QuadMask) == QUAD));
             /* 5.1 (Side) and 5.1 (Rear) are interchangeable here. */
             case DevFmtX51:
-            case DevFmtX51Rear:
                 return (chancount == 6 && (chanmask == 0 || (chanmask&X51Mask) == X5DOT1
                         || (chanmask&X51RearMask) == X5DOT1REAR));
             case DevFmtX61:

@@ -79,14 +79,6 @@ void BackendBase::setDefaultWFXChannelOrder()
         mDevice->RealOut.ChannelIndex[SideLeft]    = 4;
         mDevice->RealOut.ChannelIndex[SideRight]   = 5;
         break;
-    case DevFmtX51Rear:
-        mDevice->RealOut.ChannelIndex[FrontLeft]   = 0;
-        mDevice->RealOut.ChannelIndex[FrontRight]  = 1;
-        mDevice->RealOut.ChannelIndex[FrontCenter] = 2;
-        mDevice->RealOut.ChannelIndex[LFE]         = 3;
-        mDevice->RealOut.ChannelIndex[BackLeft]    = 4;
-        mDevice->RealOut.ChannelIndex[BackRight]   = 5;
-        break;
     case DevFmtX61:
         mDevice->RealOut.ChannelIndex[FrontLeft]   = 0;
         mDevice->RealOut.ChannelIndex[FrontRight]  = 1;
@@ -117,11 +109,11 @@ void BackendBase::setDefaultChannelOrder()
 
     switch(mDevice->FmtChans)
     {
-    case DevFmtX51Rear:
+    case DevFmtX51:
         mDevice->RealOut.ChannelIndex[FrontLeft]   = 0;
         mDevice->RealOut.ChannelIndex[FrontRight]  = 1;
-        mDevice->RealOut.ChannelIndex[BackLeft]    = 2;
-        mDevice->RealOut.ChannelIndex[BackRight]   = 3;
+        mDevice->RealOut.ChannelIndex[SideLeft]    = 2;
+        mDevice->RealOut.ChannelIndex[SideRight]   = 3;
         mDevice->RealOut.ChannelIndex[FrontCenter] = 4;
         mDevice->RealOut.ChannelIndex[LFE]         = 5;
         return;
@@ -140,7 +132,6 @@ void BackendBase::setDefaultChannelOrder()
     case DevFmtMono:
     case DevFmtStereo:
     case DevFmtQuad:
-    case DevFmtX51:
     case DevFmtX61:
     case DevFmtAmbi3D:
         setDefaultWFXChannelOrder();
@@ -151,6 +142,13 @@ void BackendBase::setDefaultChannelOrder()
 #ifdef _WIN32
 void BackendBase::setChannelOrderFromWFXMask(uint chanmask)
 {
+    constexpr uint x51{SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER
+        | SPEAKER_LOW_FREQUENCY | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT};
+    constexpr uint x51rear{SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER
+        | SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT};
+    /* Swap a 5.1 mask using the back channels for one with the sides. */
+    if(chanmask == x51rear) chanmask = x51;
+
     auto get_channel = [](const DWORD chanbit) noexcept -> al::optional<Channel>
     {
         switch(chanbit)

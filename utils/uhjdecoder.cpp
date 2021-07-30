@@ -112,7 +112,7 @@ using FloatBufferSpan = al::span<float,BufferLineSize>;
 
 
 struct UhjDecoder {
-    constexpr static size_t sFilterDelay{128};
+    constexpr static size_t sFilterDelay{1024};
 
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
@@ -467,12 +467,13 @@ int main(int argc, char **argv)
         auto decmem = al::vector<std::array<float,BufferLineSize>, 16>(outchans);
         auto outmem = std::make_unique<byte4[]>(BufferLineSize*outchans);
 
-        /* The all-pass filter has a lead-in of 127 samples, and a lead-out of
-         * 128 samples. So after reading the last samples from the input, an
-         * additional 255 samples of silence need to be fed through the decoder
-         * for it to finish.
+        /* A number of initial samples need to be skipped to cut the lead-in
+         * from the all-pass filter delay. The same number of samples need to
+         * be fed through the decoder after reaching the end of the input file
+         * to ensure none of the original input is lost.
          */
-        sf_count_t LeadOut{UhjDecoder::sFilterDelay*2 - 1};
+        size_t LeadIn{UhjDecoder::sFilterDelay};
+        sf_count_t LeadOut{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
             sf_count_t sgot{sf_readf_float(infile.get(), inmem.get(), BufferLineSize)};
@@ -490,13 +491,21 @@ int main(int argc, char **argv)
                 decoder->decode(inmem.get(), static_cast<uint>(ininfo.channels), decmem, got);
             else
                 decoder->decode2(inmem.get(), decmem, got);
+            if(LeadIn >= got)
+            {
+                LeadIn -= got;
+                continue;
+            }
+
+            got -= LeadIn;
             for(size_t i{0};i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
                 constexpr float sqrt1_2{0.707106781187f};
                 for(size_t j{0};j < outchans;++j)
-                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][i] * sqrt1_2);
+                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * sqrt1_2);
             }
+            LeadIn = 0;
 
             size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)

@@ -62,7 +62,7 @@ using FloatBufferSpan = al::span<float,BufferLineSize>;
 
 
 struct UhjEncoder {
-    constexpr static size_t sFilterDelay{256};
+    constexpr static size_t sFilterDelay{1024};
 
     /* Delays and processing storage for the unfiltered signal. */
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};

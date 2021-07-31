@@ -1514,10 +1514,9 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 {
-    HrtfRequestMode hrtf_userreq{Hrtf_Default};
-    HrtfRequestMode hrtf_appreq{Hrtf_Default};
     ALCenum gainLimiter{device->LimiterState};
     uint new_sends{device->NumAuxSends};
+    al::optional<bool> hrtfreq{};
     DevFmtChannels oldChans;
     DevFmtType oldType;
     int hrtf_id{-1};
@@ -1602,11 +1601,11 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             case ALC_HRTF_SOFT:
                 TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
                 if(attrList[attrIdx + 1] == ALC_FALSE)
-                    hrtf_appreq = Hrtf_Disable;
+                    hrtfreq = al::make_optional(false);
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
-                    hrtf_appreq = Hrtf_Enable;
+                    hrtfreq = al::make_optional(true);
                 else
-                    hrtf_appreq = Hrtf_Default;
+                    hrtfreq = al::nullopt;
                 break;
 
             case ALC_HRTF_ID_SOFT:
@@ -1761,14 +1760,15 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         {
             const char *hrtf{hrtfopt->c_str()};
             if(al::strcasecmp(hrtf, "true") == 0)
-                hrtf_userreq = Hrtf_Enable;
+                hrtfreq = al::make_optional(true);
             else if(al::strcasecmp(hrtf, "false") == 0)
-                hrtf_userreq = Hrtf_Disable;
+                hrtfreq = al::make_optional(false);
             else if(al::strcasecmp(hrtf, "auto") != 0)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
         }
 
-        if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
+        /* If the app or user wants HRTF, try to set stereo playback. */
+        if(hrtfreq && hrtfreq.value())
         {
             device->FmtChans = DevFmtStereo;
             device->Flags.set(ChannelsRequest);
@@ -1829,7 +1829,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     case DevFmtAmbi3D: break;
     }
 
-    aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
+    aluInitRenderer(device, hrtf_id, hrtfreq);
 
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",

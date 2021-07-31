@@ -827,8 +827,7 @@ void InitUhjPanning(ALCdevice *device)
 
 } // namespace
 
-void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
-    HrtfRequestMode hrtf_userreq)
+void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
@@ -843,7 +842,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
     if(device->FmtChans != DevFmtStereo)
     {
         old_hrtf = nullptr;
-        if(hrtf_appreq == Hrtf_Enable)
+        if(hrtfreq && hrtfreq.value())
             device->mHrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
         const char *layout{nullptr};
@@ -942,76 +941,58 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq
         }
     }
 
-    if(hrtf_userreq == Hrtf_Default)
+    /* If there's no request for HRTF and the device is headphones, or if HRTF
+     * is explicitly requested, try to enable it.
+     */
+    if((!hrtfreq && headphones) || (hrtfreq && hrtfreq.value()))
     {
-        bool usehrtf = (headphones && hrtf_appreq != Hrtf_Disable) ||
-                       (hrtf_appreq == Hrtf_Enable);
-        if(!usehrtf) goto no_hrtf;
+        if(device->mHrtfList.empty())
+            device->enumerateHrtfs();
 
-        device->mHrtfStatus = ALC_HRTF_ENABLED_SOFT;
-        if(headphones && hrtf_appreq != Hrtf_Disable)
-            device->mHrtfStatus = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
-    }
-    else
-    {
-        if(hrtf_userreq != Hrtf_Enable)
+        if(hrtf_id >= 0 && static_cast<uint>(hrtf_id) < device->mHrtfList.size())
         {
-            if(hrtf_appreq == Hrtf_Enable)
-                device->mHrtfStatus = ALC_HRTF_DENIED_SOFT;
-            goto no_hrtf;
-        }
-        device->mHrtfStatus = ALC_HRTF_REQUIRED_SOFT;
-    }
-
-    if(device->mHrtfList.empty())
-        device->enumerateHrtfs();
-
-    if(hrtf_id >= 0 && static_cast<uint>(hrtf_id) < device->mHrtfList.size())
-    {
-        const std::string &hrtfname = device->mHrtfList[static_cast<uint>(hrtf_id)];
-        if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
-        {
-            device->mHrtf = std::move(hrtf);
-            device->mHrtfName = hrtfname;
-        }
-    }
-
-    if(!device->mHrtf)
-    {
-        for(const auto &hrtfname : device->mHrtfList)
-        {
+            const std::string &hrtfname = device->mHrtfList[static_cast<uint>(hrtf_id)];
             if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
             {
                 device->mHrtf = std::move(hrtf);
                 device->mHrtfName = hrtfname;
-                break;
             }
         }
-    }
 
-    if(device->mHrtf)
-    {
-        old_hrtf = nullptr;
-
-        HrtfStore *hrtf{device->mHrtf.get()};
-        device->mIrSize = hrtf->irSize;
-        if(auto hrtfsizeopt = device->configValue<uint>(nullptr, "hrtf-size"))
+        if(!device->mHrtf)
         {
-            if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
-                device->mIrSize = maxu(*hrtfsizeopt, MinIrLength);
+            for(const auto &hrtfname : device->mHrtfList)
+            {
+                if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
+                {
+                    device->mHrtf = std::move(hrtf);
+                    device->mHrtfName = hrtfname;
+                    break;
+                }
+            }
         }
 
-        InitHrtfPanning(device);
-        device->PostProcess = &ALCdevice::ProcessHrtf;
-        return;
-    }
-    device->mHrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+        if(device->mHrtf)
+        {
+            old_hrtf = nullptr;
 
-no_hrtf:
+            HrtfStore *hrtf{device->mHrtf.get()};
+            device->mIrSize = hrtf->irSize;
+            if(auto hrtfsizeopt = device->configValue<uint>(nullptr, "hrtf-size"))
+            {
+                if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
+                    device->mIrSize = maxu(*hrtfsizeopt, MinIrLength);
+            }
+
+            InitHrtfPanning(device);
+            device->PostProcess = &ALCdevice::ProcessHrtf;
+            device->mHrtfStatus = ALC_HRTF_ENABLED_SOFT;
+            return;
+        }
+    }
     old_hrtf = nullptr;
 
     device->mRenderMode = RenderMode::Pairwise;
-
     if(device->Type != DeviceType::Loopback)
     {
         if(auto cflevopt = device->configValue<int>(nullptr, "cf_level"))

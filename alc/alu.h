@@ -1,6 +1,8 @@
 #ifndef ALU_H
 #define ALU_H
 
+#include "aloptional.h"
+
 struct ALCcontext;
 struct ALCdevice;
 struct EffectSlot;
@@ -11,12 +13,6 @@ constexpr float GainMixMax{1000.0f}; /* +60dB */
 constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 
 
-enum HrtfRequestMode {
-    Hrtf_Default = 0,
-    Hrtf_Enable = 1,
-    Hrtf_Disable = 2,
-};
-
 void aluInit(void);
 
 /* aluInitRenderer
@@ -24,8 +20,7 @@ void aluInit(void);
  * Set up the appropriate panning method and mixing method given the device
  * properties.
  */
-void aluInitRenderer(ALCdevice *device, int hrtf_id, HrtfRequestMode hrtf_appreq,
-    HrtfRequestMode hrtf_userreq);
+void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq);
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context);
 

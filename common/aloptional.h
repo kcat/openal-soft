@@ -116,7 +116,7 @@ public:
 
     const T* operator->() const { return std::addressof(mStore.mValue); }
     T* operator->() { return std::addressof(mStore.mValue); }
-    const T& operator*() const& { return this->mValue; }
+    const T& operator*() const& { return mStore.mValue; }
     T& operator*() & { return mStore.mValue; }
     const T&& operator*() const&& { return std::move(mStore.mValue); }
     T&& operator*() && { return std::move(mStore.mValue); }

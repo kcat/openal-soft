@@ -75,6 +75,8 @@ include(CheckStructHasMember)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
+find_package(PkgConfig)
+
 
 option(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
@@ -836,6 +838,7 @@ endif()
 
 set(HAVE_ALSA       0)
 set(HAVE_OSS        0)
+set(HAVE_PIPEWIRE   0)
 set(HAVE_SOLARIS    0)
 set(HAVE_SNDIO      0)
 set(HAVE_DSOUND     0)
@@ -905,6 +908,24 @@ if(OSS_FOUND)
 endif()
 if(ALSOFT_REQUIRE_OSS AND NOT HAVE_OSS)
     message(FATAL_ERROR "Failed to enabled required OSS backend")
+endif()
+
+# Check PipeWire backend
+option(ALSOFT_REQUIRE_PIPEWIRE "Require PipeWire backend" OFF)
+if(PkgConfig_FOUND)
+    pkg_check_modules(PIPEWIRE libpipewire-0.3)
+    if(PIPEWIRE_FOUND)
+        option(ALSOFT_BACKEND_PIPEWIRE "Enable PipeWire backend" ON)
+        if(ALSOFT_BACKEND_PIPEWIRE)
+            set(HAVE_PIPEWIRE 1)
+            set(BACKENDS  "${BACKENDS} PipeWire,")
+            set(ALC_OBJS  ${ALC_OBJS} alc/backends/pipewire.cpp alc/backends/pipewire.h)
+            set(INC_PATHS ${INC_PATHS} ${PIPEWIRE_INCLUDE_DIRS})
+        endif()
+    endif()
+endif()
+if(ALSOFT_REQUIRE_PIPEWIRE AND NOT HAVE_PIPEWIRE)
+    message(FATAL_ERROR "Failed to enabled required PipeWire backend")
 endif()
 
 # Check Solaris backend

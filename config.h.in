@@ -31,6 +31,9 @@
 /* Define if we have the OSS backend */
 #cmakedefine HAVE_OSS
 
+/* Define if we have the PipeWire backend */
+#cmakedefine HAVE_PIPEWIRE
+
 /* Define if we have the Solaris backend */
 #cmakedefine HAVE_SOLARIS
 

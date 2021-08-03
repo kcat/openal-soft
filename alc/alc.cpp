@@ -106,6 +106,9 @@
 #include "backends/base.h"
 #include "backends/null.h"
 #include "backends/loopback.h"
+#ifdef HAVE_PIPEWIRE
+#include "backends/pipewire.h"
+#endif
 #ifdef HAVE_JACK
 #include "backends/jack.h"
 #endif
@@ -240,6 +243,9 @@ BackendInfo BackendList[] = {
     { "sdl2", SDL2BackendFactory::getFactory },
 #endif
 
+#ifdef HAVE_PIPEWIRE
+    { "pipewire", PipeWireBackendFactory::getFactory },
+#endif
     { "null", NullBackendFactory::getFactory },
 #ifdef HAVE_WAVE
     { "wave", WaveBackendFactory::getFactory },

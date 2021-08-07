@@ -1,7 +1,11 @@
 #ifndef BACKENDS_PIPEWIRE_H
 #define BACKENDS_PIPEWIRE_H
 
+#include <string>
+
 #include "base.h"
+
+struct DeviceBase;
 
 struct PipeWireBackendFactory final : public BackendFactory {
 public:

@@ -243,10 +243,10 @@ BackendInfo BackendList[] = {
     { "sdl2", SDL2BackendFactory::getFactory },
 #endif
 
+    { "null", NullBackendFactory::getFactory },
 #ifdef HAVE_PIPEWIRE
     { "pipewire", PipeWireBackendFactory::getFactory },
 #endif
-    { "null", NullBackendFactory::getFactory },
 #ifdef HAVE_WAVE
     { "wave", WaveBackendFactory::getFactory },
 #endif

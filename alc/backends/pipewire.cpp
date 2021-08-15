@@ -594,13 +594,13 @@ void parse_positions(DeviceNode *node, const spa_pod *value)
     constexpr size_t MaxChannels{SPA_AUDIO_MAX_CHANNELS};
 
     auto posdata = std::make_unique<uint32_t[]>(MaxChannels);
-    const al::span<uint32_t,MaxChannels> pos{posdata.get(), MaxChannels};
-    if(auto got = get_param_array<SPA_TYPE_Id>(value, pos))
+    const al::span<uint32_t,MaxChannels> posarray{posdata.get(), MaxChannels};
+    if(auto got = get_param_array<SPA_TYPE_Id>(value, posarray))
     {
-        const al::span<uint32_t> chanmap{pos.first(got)};
+        const al::span<uint32_t> chanmap{posarray.first(got)};
 
         /* TODO: Does 5.1(rear) need to be tracked, or will PipeWire do the
-         * right thing and re-route the Side-lavelled Surround channels to
+         * right thing and re-route the Side-labelled Surround channels to
          * Rear-labelled Surround?
          */
         if(got >= 8 && MatchChannelMap(chanmap, X71Map))

@@ -200,14 +200,8 @@ struct BackendInfo {
 };
 
 BackendInfo BackendList[] = {
-#ifdef HAVE_JACK
-    { "jack", JackBackendFactory::getFactory },
-#endif
 #ifdef HAVE_PULSEAUDIO
     { "pulse", PulseBackendFactory::getFactory },
-#endif
-#ifdef HAVE_ALSA
-    { "alsa", AlsaBackendFactory::getFactory },
 #endif
 #ifdef HAVE_WASAPI
     { "wasapi", WasapiBackendFactory::getFactory },
@@ -226,6 +220,12 @@ BackendInfo BackendList[] = {
 #endif
 #ifdef HAVE_SNDIO
     { "sndio", SndIOBackendFactory::getFactory },
+#endif
+#ifdef HAVE_JACK
+    { "jack", JackBackendFactory::getFactory },
+#endif
+#ifdef HAVE_ALSA
+    { "alsa", AlsaBackendFactory::getFactory },
 #endif
 #ifdef HAVE_OSS
     { "oss", OSSBackendFactory::getFactory },

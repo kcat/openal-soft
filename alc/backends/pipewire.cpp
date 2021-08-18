@@ -26,6 +26,8 @@
 #include <atomic>
 #include <cstring>
 #include <cerrno>
+#include <chrono>
+#include <ctime>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -88,6 +90,8 @@ _Pragma("GCC diagnostic pop")
 
 namespace {
 
+using std::chrono::seconds;
+using std::chrono::nanoseconds;
 using uint = unsigned int;
 
 constexpr char pwireDevice[] = "PipeWire Output";
@@ -111,6 +115,7 @@ constexpr char pwireDevice[] = "PipeWire Output";
     MAGIC(pw_stream_dequeue_buffer)                                           \
     MAGIC(pw_stream_destroy)                                                  \
     MAGIC(pw_stream_get_state)                                                \
+    MAGIC(pw_stream_get_time)                                                 \
     MAGIC(pw_stream_new_simple)                                               \
     MAGIC(pw_stream_queue_buffer)                                             \
     MAGIC(pw_stream_set_active)                                               \
@@ -146,6 +151,7 @@ PWIRE_FUNCS(MAKE_FUNC)
 #define pw_stream_dequeue_buffer ppw_stream_dequeue_buffer
 #define pw_stream_destroy ppw_stream_destroy
 #define pw_stream_get_state ppw_stream_get_state
+#define pw_stream_get_time ppw_stream_get_time
 #define pw_stream_new_simple ppw_stream_new_simple
 #define pw_stream_queue_buffer ppw_stream_queue_buffer
 #define pw_stream_set_active ppw_stream_set_active
@@ -849,9 +855,11 @@ struct PipeWirePlayback final : public BackendBase {
     bool reset() override;
     void start() override;
     void stop() override;
+    ClockLatency getClockLatency() override;
 
-    ThreadMainloop mLoop;
     uint32_t mTargetId{PwIdAny};
+    nanoseconds mTimeBase{0};
+    ThreadMainloop mLoop;
     PwStreamPtr mStream;
     spa_io_rate_match *mRateMatch{};
     std::unique_ptr<float*[]> mChannelPtrs;
@@ -1003,6 +1011,7 @@ bool PipeWirePlayback::reset()
         mStream = nullptr;
     }
     mRateMatch = nullptr;
+    mTimeBase = GetDeviceClockTime(mDevice);
 
     /* If connecting to a specific device, update various device parameters to
      * match its format.
@@ -1141,6 +1150,89 @@ void PipeWirePlayback::stop()
     pw_stream_state state{};
     while((state=pw_stream_get_state(mStream.get(), nullptr)) == PW_STREAM_STATE_STREAMING)
         mLoop.wait();
+}
+
+ClockLatency PipeWirePlayback::getClockLatency()
+{
+    /* Given a real-time low-latency output, this is rather complicated to get
+     * accurate timing. So, here we go.
+     */
+
+    /* First, get the stream time info (tick delay, ticks played, and the
+     * CLOCK_MONOTONIC time closest to when that last tick was played).
+     */
+    pw_time ptime{};
+    {
+        MainloopLockGuard _{mLoop};
+        if(int res{pw_stream_get_time(mStream.get(), &ptime)})
+            ERR("Failed to get PipeWire stream time (res: %d)\n", res);
+    }
+
+    /* Now get the mixer time and the CLOCK_MONOTONIC time atomically (i.e. the
+     * monotonic clock closest to 'now', and the last mixer time at 'now').
+     */
+    nanoseconds mixtime{};
+    timespec tspec{};
+    uint refcount;
+    do {
+        refcount = mDevice->waitForMix();
+        mixtime = GetDeviceClockTime(mDevice);
+        clock_gettime(CLOCK_MONOTONIC, &tspec);
+        std::atomic_thread_fence(std::memory_order_acquire);
+    } while(refcount != ReadRef(mDevice->MixCount));
+
+    /* Convert the monotonic clock, stream ticks, and stream delay to
+     * nanoseconds.
+     */
+    nanoseconds monoclock{seconds{tspec.tv_sec} + nanoseconds{tspec.tv_nsec}};
+    nanoseconds curtic{}, delay{};
+    if UNLIKELY(ptime.rate.denom < 1)
+    {
+        /* If there's no stream rate, the stream hasn't had a chance to get
+         * going and return time info yet. Just use dummy values.
+         */
+        ptime.now = monoclock.count();
+        curtic = mixtime;
+        delay = nanoseconds{seconds{mDevice->BufferSize}} / mDevice->Frequency;
+    }
+    else
+    {
+        /* The stream gets recreated with each reset, so include the time that
+         * had already passed with previous streams.
+         */
+        curtic = mTimeBase;
+        /* More safely scale the ticks to avoid overflowing the pre-division
+         * temporary as it gets larger.
+         */
+        curtic += seconds{ptime.ticks / ptime.rate.denom} * ptime.rate.num;
+        curtic += nanoseconds{seconds{ptime.ticks%ptime.rate.denom} * ptime.rate.num} /
+            ptime.rate.denom;
+
+        /* The delay should be small enough to not worry about overflow. */
+        delay = nanoseconds{seconds{ptime.delay} * ptime.rate.num} / ptime.rate.denom;
+    }
+
+    /* If the mixer time is ahead of the stream time, there's that much more
+     * delay relative to the stream delay.
+     */
+    if(mixtime > curtic)
+        delay += mixtime - curtic;
+    /* Reduce the delay according to how much time has passed since the known
+     * stream time. This isn't 100% accurate since the system monotonic clock
+     * doesn't tick at the exact same rate as the audio device, but it should
+     * be good enough with ptime.now being constantly updated every few
+     * milliseconds with ptime.ticks.
+     */
+    delay -= monoclock - nanoseconds{ptime.now};
+
+    /* Return the mixer time and delay. Clamp the delay to no less than 0,
+     * incase timer drift got that severe.
+     */
+    ClockLatency ret{};
+    ret.ClockTime = mixtime;
+    ret.Latency = std::max(delay, nanoseconds{});
+
+    return ret;
 }
 
 } // namespace

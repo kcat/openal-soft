@@ -837,6 +837,10 @@ struct PipeWirePlayback final : public BackendBase {
         const char *error)
     { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); }
 
+    void ioChangedCallback(uint32_t id, void *area, uint32_t size);
+    static void ioChangedCallbackC(void *data, uint32_t id, void *area, uint32_t size)
+    { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); }
+
     void outputCallback();
     static void outputCallbackC(void *data)
     { static_cast<PipeWirePlayback*>(data)->outputCallback(); }
@@ -849,6 +853,7 @@ struct PipeWirePlayback final : public BackendBase {
     ThreadMainloop mLoop;
     uint32_t mTargetId{PwIdAny};
     PwStreamPtr mStream;
+    spa_io_rate_match *mRateMatch{};
     std::unique_ptr<float*[]> mChannelPtrs;
     uint mNumChannels{};
 
@@ -858,6 +863,7 @@ struct PipeWirePlayback final : public BackendBase {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
         ret.state_changed = &PipeWirePlayback::stateChangedCallbackC;
+        ret.io_changed = &PipeWirePlayback::ioChangedCallbackC;
         ret.process = &PipeWirePlayback::outputCallbackC;
         return ret;
     }
@@ -882,13 +888,24 @@ PipeWirePlayback::~PipeWirePlayback()
 void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
 { mLoop.signal(false); }
 
+void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size)
+{
+    switch(id)
+    {
+    case SPA_IO_RateMatch:
+        if(size >= sizeof(spa_io_rate_match))
+            mRateMatch = static_cast<spa_io_rate_match*>(area);
+        break;
+    }
+}
+
 void PipeWirePlayback::outputCallback()
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
     if UNLIKELY(!pw_buf) return;
 
     spa_buffer *spa_buf{pw_buf->buffer};
-    uint length{mDevice->UpdateSize};
+    uint length{mRateMatch ? mRateMatch->size : mDevice->UpdateSize};
     /* For planar formats, each datas[] seems to contain one channel, so store
      * the pointers in an array. Limit the render length in case the available
      * buffer length in any one channel is smaller than we wanted (shouldn't
@@ -914,6 +931,7 @@ void PipeWirePlayback::outputCallback()
         spa_buf->datas[i].chunk->stride = sizeof(float);
         spa_buf->datas[i].chunk->size   = length * sizeof(float);
     }
+    pw_buf->size = length;
     pw_stream_queue_buffer(mStream.get(), pw_buf);
 }
 
@@ -984,6 +1002,7 @@ bool PipeWirePlayback::reset()
         MainloopLockGuard _{mLoop};
         mStream = nullptr;
     }
+    mRateMatch = nullptr;
 
     /* If connecting to a specific device, update various device parameters to
      * match its format.
@@ -1092,6 +1111,23 @@ void PipeWirePlayback::start()
     if(int res{pw_stream_set_active(mStream.get(), true)})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start PipeWire stream (res: %d)", res};
+
+    /* Wait for the stream to start playing (would be nice to not, but we need
+     * the actual update size which is only available after starting).
+     */
+    pw_stream_state state{};
+    const char *error{};
+    while((state=pw_stream_get_state(mStream.get(), &error)) == PW_STREAM_STATE_PAUSED)
+        mLoop.wait();
+
+    if(state == PW_STREAM_STATE_ERROR)
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "PipeWire stream error: %s", error ? error : "(unknown)"};
+    if(state == PW_STREAM_STATE_STREAMING && mRateMatch && mRateMatch->size)
+    {
+        mDevice->UpdateSize = mRateMatch->size;
+        mDevice->BufferSize = mDevice->UpdateSize * 2;
+    }
 }
 
 void PipeWirePlayback::stop()

@@ -136,6 +136,39 @@ void *pwire_handle;
 PWIRE_FUNCS(MAKE_FUNC)
 #undef MAKE_FUNC
 
+bool pwire_load()
+{
+    if(pwire_handle)
+        return true;
+
+    static constexpr char pwire_library[] = "libpipewire-0.3.so.0";
+    std::string missing_funcs;
+
+    pwire_handle = LoadLib(pwire_library);
+    if(!pwire_handle)
+    {
+        WARN("Failed to load %s\n", pwire_library);
+        return false;
+    }
+
+#define LOAD_FUNC(f) do {                                                     \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pwire_handle, #f));     \
+    if(p##f == nullptr) missing_funcs += "\n" #f;                             \
+} while(0);
+    PWIRE_FUNCS(LOAD_FUNC)
+#undef LOAD_FUNC
+
+    if(!missing_funcs.empty())
+    {
+        WARN("Missing expected functions:%s\n", missing_funcs.c_str());
+        CloseLib(pwire_handle);
+        pwire_handle = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
 #ifndef IN_IDE_PARSER
 #define pw_context_connect ppw_context_connect
 #define pw_context_destroy ppw_context_destroy
@@ -167,48 +200,11 @@ PWIRE_FUNCS(MAKE_FUNC)
 #define pw_thread_loop_unlock ppw_thread_loop_unlock
 #define pw_thread_loop_wait ppw_thread_loop_wait
 #endif
+
+#else
+
+constexpr bool pwire_load() { return true; }
 #endif
-
-
-bool pwire_load()
-{
-    bool error{false};
-
-#ifdef HAVE_DYNLOAD
-    if(!pwire_handle)
-    {
-        static constexpr char pwire_library[] = "libpipewire-0.3.so.0";
-        std::string missing_funcs;
-
-        pwire_handle = LoadLib(pwire_library);
-        if(!pwire_handle)
-        {
-            WARN("Failed to load %s\n", pwire_library);
-            return false;
-        }
-
-        error = false;
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pwire_handle, #f));     \
-    if(p##f == nullptr) {                                                     \
-        error = true;                                                         \
-        missing_funcs += "\n" #f;                                             \
-    }                                                                         \
-} while(0);
-        PWIRE_FUNCS(LOAD_FUNC)
-#undef LOAD_FUNC
-
-        if(error)
-        {
-            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
-            CloseLib(pwire_handle);
-            pwire_handle = nullptr;
-        }
-    }
-#endif
-
-    return !error;
-}
 
 
 class ThreadMainloop {

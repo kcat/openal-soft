@@ -1309,6 +1309,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
      * CLOCK_MONOTONIC time closest to when that last tick was played).
      */
     pw_time ptime{};
+    if(mStream)
     {
         MainloopLockGuard _{mLoop};
         if(int res{pw_stream_get_time(mStream.get(), &ptime)})

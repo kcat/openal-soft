@@ -51,11 +51,13 @@
 _Pragma("GCC diagnostic push")
 _Pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "pipewire/pipewire.h"
+#include "pipewire/extensions/metadata.h"
 #include "spa/buffer/buffer.h"
 #include "spa/param/audio/format-utils.h"
 #include "spa/param/audio/raw.h"
 #include "spa/param/param.h"
 #include "spa/pod/builder.h"
+#include "spa/utils/json.h"
 
 namespace {
 /* Wrap some nasty macros here too... */
@@ -290,12 +292,10 @@ bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&ma
  * their default formats, so playback devices can be configured to match. The
  * device list is updated asynchronously, so it will have the latest list of
  * devices provided by the server.
- *
- * TODO: Find the default sink/source nodes. Also find the "monitor" source
- * nodes relating to sink nodes.
  */
 
 struct NodeProxy;
+struct MetadataProxy;
 
 /* The global thread watching for global events. This particular class responds
  * to objects being added to or removed from the registry.
@@ -312,6 +312,7 @@ struct EventManager {
      * the registry.
      */
     std::vector<NodeProxy*> mProxyList;
+    MetadataProxy *mDefaultMetadata{nullptr};
 
     /* Initialization handling. When init() is called, mInitSeq is set to a
      * SequenceID that marks the end of populating the registry. As objects of
@@ -375,7 +376,7 @@ struct EventManager {
     static constexpr pw_core_events CreateCoreEvents()
     {
         pw_core_events ret{};
-        ret.version = PW_VERSION_NODE_EVENTS;
+        ret.version = PW_VERSION_CORE_EVENTS;
         ret.done = &EventManager::coreCallbackC;
         return ret;
     }
@@ -394,6 +395,7 @@ EventManager gEventHandler;
 constexpr auto InvalidChannelConfig = DevFmtChannels(255);
 struct DeviceNode {
     std::string mName;
+    std::string mDevName;
 
     uint32_t mId{};
     bool mCapture{};
@@ -402,6 +404,8 @@ struct DeviceNode {
     DevFmtChannels mChannels{InvalidChannelConfig};
 };
 std::vector<DeviceNode> DeviceList;
+std::string DefaultSinkDev;
+std::string DefaultSourceDev;
 
 DeviceNode &AddDeviceNode(uint32_t id)
 {
@@ -513,16 +517,19 @@ void NodeProxy::infoCallback(const pw_node_info *info)
             return;
         }
 
+        const char *devName{spa_dict_lookup(info->props, PW_KEY_NODE_NAME)};
         const char *nodeName{spa_dict_lookup(info->props, PW_KEY_NODE_DESCRIPTION)};
-        if(!nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NICK);
-        if(!nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NAME);
+        if(!nodeName || !*nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NICK);
+        if(!nodeName || !*nodeName) nodeName = devName;
 
-        TRACE("Got %s device \"%s\" = ID %u\n", isCapture ? "capture" : "playback",
-            nodeName ? nodeName : "(nil)", info->id);
+        TRACE("Got %s device \"%s\"\n", isCapture ? "capture" : "playback",
+            devName ? devName : "(nil)");
+        TRACE("  \"%s\" = ID %u\n", nodeName ? nodeName : "(nil)", info->id);
 
         DeviceNode &node = AddDeviceNode(info->id);
         if(nodeName && *nodeName) node.mName = nodeName;
         else node.mName = "PipeWire node #"+std::to_string(info->id);
+        node.mDevName = devName ? devName : "";
         node.mCapture = isCapture;
     }
 }
@@ -660,6 +667,103 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
 }
 
 
+/* A metadata proxy object used to query the default sink and source. */
+struct MetadataProxy {
+    uint32_t mId{};
+
+    pw_proxy *mProxy{nullptr};
+    spa_hook mListener{};
+
+    MetadataProxy(uint32_t id, pw_proxy *proxy)
+      : mId{id}, mProxy{proxy}
+    {
+        pw_proxy_add_object_listener(mProxy, &mListener, &sMetadataEvents, this);
+    }
+    ~MetadataProxy()
+    {
+        spa_hook_remove(&mListener);
+        pw_proxy_destroy(mProxy);
+    }
+
+
+    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value);
+    static int propertyCallbackC(void *object, uint32_t id, const char *key, const char *type,
+        const char *value)
+    { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); }
+
+    static const pw_metadata_events sMetadataEvents;
+    static constexpr pw_metadata_events CreateMetadataEvents()
+    {
+        pw_metadata_events ret{};
+        ret.version = PW_VERSION_METADATA_EVENTS;
+        ret.property = &MetadataProxy::propertyCallbackC;
+        return ret;
+    }
+};
+const pw_metadata_events MetadataProxy::sMetadataEvents{MetadataProxy::CreateMetadataEvents()};
+
+int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *type,
+    const char *value)
+{
+    if(id != PW_ID_CORE)
+        return 0;
+
+    bool isCapture{};
+    if(std::strcmp(key, "default.audio.sink") == 0)
+        isCapture = false;
+    else if(std::strcmp(key, "default.audio.source") == 0)
+        isCapture = true;
+    else
+    {
+        TRACE("Skipping property \"%s\"\n", key);
+        return 0;
+    }
+
+    if(std::strcmp(type, "Spa:String:JSON") != 0)
+    {
+        ERR("Unexpected %s property type: %s\n", key, type);
+        return 0;
+    }
+
+    spa_json it[2]{};
+    spa_json_init(&it[0], value, strlen(value));
+    if(spa_json_enter_object(&it[0], &it[1]) <= 0)
+        return 0;
+
+    char k[128]{};
+    while(spa_json_get_string(&it[1], k, sizeof(k)-1) > 0)
+    {
+        if(std::strcmp(k, "name") == 0)
+        {
+            const char *name{};
+            int len{spa_json_next(&it[1], &name)};
+            if(len <= 0) break;
+
+            std::string nametmp;
+            nametmp.resize(static_cast<uint>(len)+1, '\0');
+            if(spa_json_parse_string(name, len, &nametmp[0]) <= 0)
+                break;
+            while(!nametmp.empty() && nametmp.back() == '\0')
+                nametmp.pop_back();
+
+            TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
+                nametmp.c_str());
+            if(!isCapture)
+                DefaultSinkDev = nametmp;
+            else
+                DefaultSourceDev = nametmp;
+        }
+        else
+        {
+            const char *v{};
+            if(spa_json_next(&it[1], &v) <= 0)
+                break;
+        }
+    }
+    return 0;
+}
+
+
 bool EventManager::init()
 {
     mLoop = ThreadMainloop{pw_thread_loop_new("PWEventThread", nullptr)};
@@ -713,7 +817,8 @@ EventManager::~EventManager()
 
     for(NodeProxy *node : mProxyList)
         al::destroy_at(node);
-    mProxyList.clear();
+    if(mDefaultMetadata)
+        al::destroy_at(mDefaultMetadata);
 
     if(mRegistry) pw_proxy_destroy(reinterpret_cast<pw_proxy*>(mRegistry));
     if(mCore) pw_core_disconnect(mCore);
@@ -754,6 +859,35 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         mProxyList.emplace_back(node);
         syncInit();
     }
+    else if(std::strcmp(type, PW_TYPE_INTERFACE_Metadata) == 0)
+    {
+        const char *data_class{spa_dict_lookup(props, "metadata.name")};
+        if(!data_class) return;
+
+        if(std::strcmp(data_class, "default") != 0)
+        {
+            TRACE("Ignoring metadata \"%s\"\n", data_class);
+            return;
+        }
+
+        if(mDefaultMetadata)
+        {
+            ERR("Duplicate default metadata\n");
+            return;
+        }
+
+        auto *proxy = static_cast<pw_proxy*>(pw_registry_bind(mRegistry, id, type, version,
+            sizeof(MetadataProxy)));
+        if(!proxy)
+        {
+            ERR("Failed to create metadata proxy object (errno: %d)\n", errno);
+            return;
+        }
+
+        auto *mdata = ::new(pw_proxy_get_user_data(proxy)) MetadataProxy{id, proxy};
+        mDefaultMetadata = mdata;
+        syncInit();
+    }
 }
 
 void EventManager::removeCallback(uint32_t id)
@@ -771,6 +905,13 @@ void EventManager::removeCallback(uint32_t id)
             continue;
         }
         ++elem;
+    }
+
+    if(mDefaultMetadata && mDefaultMetadata->mId == id)
+    {
+        ERR("Removing default metadata\n");
+        al::destroy_at(mDefaultMetadata);
+        mDefaultMetadata = nullptr;
     }
 }
 
@@ -955,12 +1096,22 @@ void PipeWirePlayback::open(const char *name)
         EventWatcherLockGuard _{gEventHandler};
         gEventHandler.waitForInit();
 
-        auto match_playback = [](const DeviceNode &n) -> bool
-        { return !n.mCapture; };
-        auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_playback);
+        auto match = DeviceList.cend();
+        if(!DefaultSinkDev.empty())
+        {
+            auto match_default = [](const DeviceNode &n) -> bool
+            { return n.mDevName == DefaultSinkDev; };
+            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_default);
+        }
         if(match == DeviceList.cend())
-            throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+        {
+            auto match_playback = [](const DeviceNode &n) -> bool
+            { return !n.mCapture; };
+            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_playback);
+            if(match == DeviceList.cend())
+                throw al::backend_exception{al::backend_error::NoDevice,
+                    "No PipeWire playback device found"};
+        }
 
         targetid = match->mId;
         devname = match->mName;
@@ -1259,16 +1410,28 @@ std::string PipeWireBackendFactory::probe(BackendType type)
 
     EventWatcherLockGuard _{gEventHandler};
     gEventHandler.waitForInit();
+
+    auto match_defsink = [](const DeviceNode &n) -> bool
+    { return n.mDevName == DefaultSinkDev; };
+
+    auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
+    { return lhs.mId < rhs.mId; };
+    std::sort(DeviceList.begin(), DeviceList.end(), sort_devnode);
+
+    auto defmatch = DeviceList.cbegin();
     switch(type)
     {
     case BackendType::Playback:
-        for(const auto &node : DeviceList)
+        defmatch = std::find_if(defmatch, DeviceList.cend(), match_defsink);
+        if(defmatch != DeviceList.cend())
         {
-            if(!node.mCapture)
-            {
-                /* Includes null char. */
-                outnames.append(node.mName.c_str(), node.mName.length()+1);
-            }
+            /* Includes null char. */
+            outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
+        }
+        for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
+        {
+            if(iter != defmatch && !iter->mCapture)
+                outnames.append(iter->mName.c_str(), iter->mName.length()+1);
         }
         break;
     case BackendType::Capture:

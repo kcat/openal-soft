@@ -98,6 +98,8 @@ public:
     void writeAdvance(size_t cnt) noexcept
     { mWritePtr.fetch_add(cnt, std::memory_order_acq_rel); }
 
+    size_t getElemSize() const noexcept { return mElemSize; }
+
     /**
      * Create a new ringbuffer to hold at least `sz' elements of `elem_sz'
      * bytes. The number of elements is rounded up to the next power of two

@@ -46,6 +46,7 @@
 #include "core/logging.h"
 #include "dynload.h"
 #include "opthelpers.h"
+#include "ringbuffer.h"
 
 /* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). */
 _Pragma("GCC diagnostic push")
@@ -97,6 +98,7 @@ using std::chrono::nanoseconds;
 using uint = unsigned int;
 
 constexpr char pwireDevice[] = "PipeWire Output";
+constexpr char pwireInput[] = "PipeWire Input";
 
 
 #ifdef HAVE_DYNLOAD
@@ -937,13 +939,13 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, use_f32p_e use_f32p)
     }
     else switch(device->FmtType)
     {
-    case DevFmtByte: info.format = SPA_AUDIO_FORMAT_S8;
-    case DevFmtUByte: info.format = SPA_AUDIO_FORMAT_U8;
-    case DevFmtShort: info.format = SPA_AUDIO_FORMAT_S16;
-    case DevFmtUShort: info.format = SPA_AUDIO_FORMAT_U16;
-    case DevFmtInt: info.format = SPA_AUDIO_FORMAT_S32;
-    case DevFmtUInt: info.format = SPA_AUDIO_FORMAT_U32;
-    case DevFmtFloat: info.format = SPA_AUDIO_FORMAT_F32;
+    case DevFmtByte: info.format = SPA_AUDIO_FORMAT_S8; break;
+    case DevFmtUByte: info.format = SPA_AUDIO_FORMAT_U8; break;
+    case DevFmtShort: info.format = SPA_AUDIO_FORMAT_S16; break;
+    case DevFmtUShort: info.format = SPA_AUDIO_FORMAT_U16; break;
+    case DevFmtInt: info.format = SPA_AUDIO_FORMAT_S32; break;
+    case DevFmtUInt: info.format = SPA_AUDIO_FORMAT_U32; break;
+    case DevFmtFloat: info.format = SPA_AUDIO_FORMAT_F32; break;
     }
 
     info.rate = device->Frequency;
@@ -971,10 +973,7 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, use_f32p_e use_f32p)
     return info;
 }
 
-struct PipeWirePlayback final : public BackendBase {
-    PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
-    ~PipeWirePlayback();
-
+class PipeWirePlayback final : public BackendBase {
     void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error);
     static void stateChangedCallbackC(void *data, pw_stream_state old, pw_stream_state state,
         const char *error)
@@ -1012,6 +1011,10 @@ struct PipeWirePlayback final : public BackendBase {
         ret.process = &PipeWirePlayback::outputCallbackC;
         return ret;
     }
+
+public:
+    PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    ~PipeWirePlayback();
 
     DEF_NEWDEL(PipeWirePlayback)
 };
@@ -1383,6 +1386,250 @@ ClockLatency PipeWirePlayback::getClockLatency()
     return ret;
 }
 
+
+class PipeWireCapture final : public BackendBase {
+    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error);
+    static void stateChangedCallbackC(void *data, pw_stream_state old, pw_stream_state state,
+        const char *error)
+    { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); }
+
+    void inputCallback();
+    static void inputCallbackC(void *data)
+    { static_cast<PipeWireCapture*>(data)->inputCallback(); }
+
+    void open(const char *name) override;
+    void start() override;
+    void stop() override;
+    void captureSamples(al::byte *buffer, uint samples) override;
+    uint availableSamples() override;
+
+    uint32_t mTargetId{PwIdAny};
+    ThreadMainloop mLoop;
+    PwStreamPtr mStream;
+
+    RingBufferPtr mRing{};
+
+    static const pw_stream_events sEvents;
+    static constexpr pw_stream_events InitEvent()
+    {
+        pw_stream_events ret{};
+        ret.version = PW_VERSION_STREAM_EVENTS;
+        ret.state_changed = &PipeWireCapture::stateChangedCallbackC;
+        ret.process = &PipeWireCapture::inputCallbackC;
+        return ret;
+    }
+
+public:
+    PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    ~PipeWireCapture();
+
+    DEF_NEWDEL(PipeWireCapture)
+};
+const pw_stream_events PipeWireCapture::sEvents{PipeWireCapture::InitEvent()};
+
+PipeWireCapture::~PipeWireCapture()
+{
+    if(mLoop && mStream)
+    {
+        MainloopLockGuard _{mLoop};
+        mStream = nullptr;
+    }
+}
+
+
+void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
+{ mLoop.signal(false); }
+
+void PipeWireCapture::inputCallback()
+{
+    pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
+    if UNLIKELY(!pw_buf) return;
+
+    spa_data *bufdata{pw_buf->buffer->datas};
+    const uint offset{minu(bufdata->chunk->offset, bufdata->maxsize)};
+    const uint size{minu(bufdata->chunk->size, bufdata->maxsize - offset)};
+
+    mRing->write(static_cast<char*>(bufdata->data) + offset, size / mRing->getElemSize());
+
+    pw_stream_queue_buffer(mStream.get(), pw_buf);
+}
+
+
+void PipeWireCapture::open(const char *name)
+{
+    static std::atomic<uint> OpenCount{0};
+
+    uint32_t targetid{PwIdAny};
+    std::string devname{};
+    if(!name)
+    {
+        EventWatcherLockGuard _{gEventHandler};
+        gEventHandler.waitForInit();
+
+        auto match = DeviceList.cend();
+        if(!DefaultSourceDev.empty())
+        {
+            auto match_default = [](const DeviceNode &n) -> bool
+            { return n.mDevName == DefaultSourceDev; };
+            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_default);
+        }
+        if(match == DeviceList.cend())
+        {
+            auto match_capture = [](const DeviceNode &n) -> bool
+            { return n.mCapture; };
+            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_capture);
+        }
+        if(match == DeviceList.cend())
+        {
+            auto match_playback = [](const DeviceNode &n) -> bool
+            { return !n.mCapture; };
+            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_playback);
+            if(match == DeviceList.cend())
+                throw al::backend_exception{al::backend_error::NoDevice,
+                    "No PipeWire capture device found"};
+        }
+
+        targetid = match->mId;
+        if(match->mCapture) devname = match->mName;
+        else devname = "Monitor of "+match->mName;
+    }
+    else
+    {
+        EventWatcherLockGuard _{gEventHandler};
+        gEventHandler.waitForInit();
+
+        auto match_name = [name](const DeviceNode &n) -> bool
+        { return n.mCapture && n.mName == name; };
+        auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
+        if(match == DeviceList.cend() && std::strcmp(name, "Monitor of ") == 0)
+        {
+            const char *sinkname{name + 11};
+            auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
+            { return !n.mCapture && n.mName == sinkname; };
+            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_sinkname);
+        }
+        if(match == DeviceList.cend())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%s\" not found", name};
+
+        targetid = match->mId;
+        devname = name;
+    }
+
+    if(!mLoop)
+    {
+        const uint count{OpenCount.fetch_add(1, std::memory_order_relaxed)};
+        const std::string thread_name{"ALSoftC" + std::to_string(count)};
+        mLoop = ThreadMainloop{pw_thread_loop_new(thread_name.c_str(), nullptr)};
+        if(!mLoop)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to create PipeWire mainloop (errno: %d)", errno};
+        if(int res{mLoop.start()})
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to start PipeWire mainloop (res: %d)", res};
+    }
+
+    /* TODO: Ensure the target ID is still valid/usable and accepts streams. */
+
+    mTargetId = targetid;
+    if(!devname.empty())
+        mDevice->DeviceName = std::move(devname);
+    else
+        mDevice->DeviceName = pwireInput;
+
+
+    spa_audio_info_raw info{make_spa_info(mDevice, UseDevType)};
+
+    constexpr uint32_t pod_buffer_size{1024};
+    auto pod_buffer = std::make_unique<al::byte[]>(pod_buffer_size);
+    spa_pod_builder b{make_pod_builder(pod_buffer.get(), pod_buffer_size)};
+
+    const spa_pod *params[]{spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info)};
+    if(!params[0])
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to set PipeWire audio format parameters"};
+
+    pw_properties *props{pw_properties_new(
+        PW_KEY_MEDIA_TYPE, "Audio",
+        PW_KEY_MEDIA_CATEGORY, "Capture",
+        PW_KEY_MEDIA_ROLE, "Game",
+        PW_KEY_NODE_ALWAYS_PROCESS, "true",
+        nullptr)};
+    if(!props)
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to create PipeWire stream properties (errno: %d)", errno};
+
+    auto&& binary = GetProcBinary();
+    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
+    pw_properties_set(props, PW_KEY_NODE_NAME, appname);
+    pw_properties_set(props, PW_KEY_NODE_DESCRIPTION, appname);
+    /* We don't actually care what the latency/update size is, as long as it's
+     * reasonable. Unfortunately, when unspecified PipeWire seems to default to
+     * around 40ms, which isn't great. So request 20ms instead.
+     */
+    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", (mDevice->Frequency+25) / 50,
+        mDevice->Frequency);
+
+    MainloopUniqueLock plock{mLoop};
+    mStream = PwStreamPtr{pw_stream_new_simple(mLoop.getLoop(), "Capture Stream", props,
+        &sEvents, this)};
+    if(!mStream)
+        throw al::backend_exception{al::backend_error::NoDevice,
+            "Failed to create PipeWire stream (errno: %d)", errno};
+
+    constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
+        | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
+    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, mTargetId, Flags, params, 1)})
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Error connecting PipeWire stream (res: %d)", res};
+
+    /* Wait for the stream to become paused (ready to start streaming). */
+    pw_stream_state state{};
+    const char *error{};
+    while((state=pw_stream_get_state(mStream.get(), &error)) != PW_STREAM_STATE_PAUSED)
+    {
+        if(state == PW_STREAM_STATE_ERROR)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Error connecting PipeWire stream: \"%s\"", error};
+        mLoop.wait();
+    }
+    plock.unlock();
+
+    setDefaultWFXChannelOrder();
+
+    /* Ensure at least a 100ms capture buffer. */
+    mRing = RingBuffer::Create(maxu(mDevice->Frequency/10, mDevice->BufferSize),
+        mDevice->frameSizeFromFmt(), false);
+}
+
+
+void PipeWireCapture::start()
+{
+    MainloopLockGuard _{mLoop};
+    if(int res{pw_stream_set_active(mStream.get(), true)})
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start PipeWire stream (res: %d)", res};
+}
+
+void PipeWireCapture::stop()
+{
+    MainloopLockGuard _{mLoop};
+    if(int res{pw_stream_set_active(mStream.get(), false)})
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to stop PipeWire stream (res: %d)", res};
+
+    /* Wait for the stream to stop playing. */
+    pw_stream_state state{};
+    while((state=pw_stream_get_state(mStream.get(), nullptr)) == PW_STREAM_STATE_STREAMING)
+        mLoop.wait();
+}
+
+uint PipeWireCapture::availableSamples()
+{ return static_cast<uint>(mRing->readSpace()); }
+
+void PipeWireCapture::captureSamples(al::byte *buffer, uint samples)
+{ mRing->read(buffer, samples); }
+
 } // namespace
 
 
@@ -1399,7 +1646,7 @@ bool PipeWireBackendFactory::init()
 }
 
 bool PipeWireBackendFactory::querySupport(BackendType type)
-{ return (type == BackendType::Playback); }
+{ return type == BackendType::Playback || type == BackendType::Capture; }
 
 std::string PipeWireBackendFactory::probe(BackendType type)
 {
@@ -1410,6 +1657,8 @@ std::string PipeWireBackendFactory::probe(BackendType type)
 
     auto match_defsink = [](const DeviceNode &n) -> bool
     { return n.mDevName == DefaultSinkDev; };
+    auto match_defsource = [](const DeviceNode &n) -> bool
+    { return n.mDevName == DefaultSourceDev; };
 
     auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
     { return lhs.mId < rhs.mId; };
@@ -1432,6 +1681,23 @@ std::string PipeWireBackendFactory::probe(BackendType type)
         }
         break;
     case BackendType::Capture:
+        defmatch = std::find_if(defmatch, DeviceList.cend(), match_defsource);
+        if(defmatch != DeviceList.cend())
+        {
+            if(!defmatch->mCapture)
+                outnames.append("Monitor of ");
+            outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
+        }
+        for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
+        {
+            if(iter != defmatch && iter->mCapture)
+                outnames.append(iter->mName.c_str(), iter->mName.length()+1);
+        }
+        for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
+        {
+            if(iter != defmatch && !iter->mCapture)
+                outnames.append("Monitor of ").append(iter->mName.c_str(), iter->mName.length()+1);
+        }
         break;
     }
 
@@ -1442,6 +1708,8 @@ BackendPtr PipeWireBackendFactory::createBackend(DeviceBase *device, BackendType
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PipeWirePlayback{device}};
+    if(type == BackendType::Capture)
+        return BackendPtr{new PipeWireCapture{device}};
     return nullptr;
 }
 

@@ -47,6 +47,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstring>
 #include <deque>
 #include <functional>
 #include <future>
@@ -119,7 +120,8 @@ constexpr DWORD X51RearMask{MaskFromTopBits(X5DOT1REAR)};
 constexpr DWORD X61Mask{MaskFromTopBits(X6DOT1)};
 constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 
-#define DEVNAME_HEAD "OpenAL Soft on "
+constexpr char DevNameHead[] = "OpenAL Soft on ";
+constexpr size_t DevNameHeadLen{al::size(DevNameHead) - 1};
 
 
 /* Scales the given reftime value, rounding the result. */
@@ -190,8 +192,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
 {
     static constexpr char UnknownName[]{"Unknown Device Name"};
     static constexpr char UnknownGuid[]{"Unknown Device GUID"};
-    std::string name{DEVNAME_HEAD};
-    std::string guid;
+    std::string name, guid;
 
     ComPtr<IPropertyStore> ps;
     HRESULT hr = device->OpenPropertyStore(STGM_READ, ps.getPtr());
@@ -751,8 +752,17 @@ void WasapiPlayback::open(const char *name)
 
     if(SUCCEEDED(hr))
     {
-        if(name && PlaybackDevices.empty())
-            pushMessage(MsgType::EnumeratePlayback).wait();
+        if(name)
+        {
+            if(PlaybackDevices.empty())
+                pushMessage(MsgType::EnumeratePlayback);
+            if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
+            {
+                name += DevNameHeadLen;
+                if(*name == '\0')
+                    name = nullptr;
+            }
+        }
 
         if(SUCCEEDED(mOpenStatus))
             hr = pushMessage(MsgType::ReopenDevice, name).get();
@@ -812,8 +822,8 @@ HRESULT WasapiPlayback::openProxy(const char *name)
 
     mClient = nullptr;
     mMMDev = std::move(mmdev);
-    if(name) mDevice->DeviceName = name;
-    else mDevice->DeviceName = get_device_name_and_guid(mMMDev.get()).first;
+    if(name) mDevice->DeviceName = std::string{DevNameHead} + name;
+    else mDevice->DeviceName = DevNameHead + get_device_name_and_guid(mMMDev.get()).first;
 
     return hr;
 }
@@ -1305,8 +1315,17 @@ void WasapiCapture::open(const char *name)
 
     if(SUCCEEDED(hr))
     {
-        if(name && CaptureDevices.empty())
-            pushMessage(MsgType::EnumerateCapture).wait();
+        if(name)
+        {
+            if(CaptureDevices.empty())
+                pushMessage(MsgType::EnumerateCapture);
+            if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
+            {
+                name += DevNameHeadLen;
+                if(*name == '\0')
+                    name = nullptr;
+            }
+        }
         hr = pushMessage(MsgType::OpenDevice, name).get();
     }
     mOpenStatus = hr;
@@ -1366,8 +1385,8 @@ HRESULT WasapiCapture::openProxy(const char *name)
     }
 
     mClient = nullptr;
-    if(name) mDevice->DeviceName = name;
-    else mDevice->DeviceName = get_device_name_and_guid(mMMDev.get()).first;
+    if(name) mDevice->DeviceName = std::string{DevNameHead} + name;
+    else mDevice->DeviceName = DevNameHead + get_device_name_and_guid(mMMDev.get()).first;
 
     return hr;
 }
@@ -1722,24 +1741,23 @@ bool WasapiBackendFactory::querySupport(BackendType type)
 std::string WasapiBackendFactory::probe(BackendType type)
 {
     std::string outnames;
-    auto add_device = [&outnames](const DevMap &entry) -> void
-    {
-        /* +1 to also append the null char (to ensure a null-separated list and
-         * double-null terminated list).
-         */
-        outnames.append(entry.name.c_str(), entry.name.length()+1);
-    };
-
     switch(type)
     {
     case BackendType::Playback:
         WasapiProxy::pushMessageStatic(MsgType::EnumeratePlayback).wait();
-        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        for(const DevMap &entry : PlaybackDevices)
+        {
+            /* +1 to also append the null char (to ensure a null-separated list
+             * and double-null terminated list).
+             */
+            outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+        }
         break;
 
     case BackendType::Capture:
         WasapiProxy::pushMessageStatic(MsgType::EnumerateCapture).wait();
-        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        for(const DevMap &entry : CaptureDevices)
+            outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
         break;
     }
 

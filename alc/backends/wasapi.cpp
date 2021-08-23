@@ -1524,7 +1524,8 @@ HRESULT WasapiCapture::resetProxy()
                 return (chancount == 7 && (chanmask == 0 || (chanmask&X61Mask) == X6DOT1));
             case DevFmtX71:
                 return (chancount == 8 && (chanmask == 0 || (chanmask&X71Mask) == X7DOT1));
-            case DevFmtAmbi3D: return (chanmask == 0 && device->channelsFromFmt());
+            case DevFmtAmbi3D:
+                return (chanmask == 0 && chancount == device->channelsFromFmt());
             }
             return false;
         };

@@ -914,7 +914,6 @@ void EventManager::removeCallback(uint32_t id)
 
     if(mDefaultMetadata && mDefaultMetadata->mId == id)
     {
-        ERR("Removing default metadata\n");
         al::destroy_at(mDefaultMetadata);
         mDefaultMetadata = nullptr;
     }

@@ -717,6 +717,13 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
         return 0;
     }
 
+    if(!type)
+    {
+        TRACE("Default %s device cleared\n", isCapture ? "capture" : "playback");
+        if(!isCapture) DefaultSinkDev.clear();
+        else DefaultSourceDev.clear();
+        return 0;
+    }
     if(std::strcmp(type, "Spa:String:JSON") != 0)
     {
         ERR("Unexpected %s property type: %s\n", key, type);
@@ -859,7 +866,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
     }
     else if(std::strcmp(type, PW_TYPE_INTERFACE_Metadata) == 0)
     {
-        const char *data_class{spa_dict_lookup(props, "metadata.name")};
+        const char *data_class{spa_dict_lookup(props, PW_KEY_METADATA_NAME)};
         if(!data_class) return;
 
         if(std::strcmp(data_class, "default") != 0)

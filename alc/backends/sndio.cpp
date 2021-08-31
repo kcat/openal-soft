@@ -311,6 +311,8 @@ int SndioCapture::recordProc()
 
     const uint frameSize{mDevice->frameSizeFromFmt()};
 
+    mFds.reserve(sio_nfds(mSndHandle));
+
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {

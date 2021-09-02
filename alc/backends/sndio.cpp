@@ -288,7 +288,6 @@ struct SndioCapture final : public BackendBase {
 
     sio_hdl *mSndHandle{nullptr};
 
-    al::vector<struct pollfd> mFds;
     RingBufferPtr mRing;
 
     std::atomic<bool> mKillNow{true};
@@ -312,25 +311,25 @@ int SndioCapture::recordProc()
     const uint frameSize{mDevice->frameSizeFromFmt()};
 
     int nfds_pre{sio_nfds(mSndHandle)};
-    if (nfds_pre <= 0)
+    if(nfds_pre <= 0)
     {
         mDevice->handleDisconnect("Incorrect return value from sio_nfds(): %d", nfds_pre);
         return 1;
     }
 
-    mFds.resize(nfds_pre);
+    auto fds = std::make_unique<pollfd[]>(static_cast<uint>(nfds_pre));
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
         /* Wait until there's some samples to read. */
-        const int nfds{sio_pollfd(mSndHandle, mFds.data(), POLLIN)};
+        const int nfds{sio_pollfd(mSndHandle, fds.get(), POLLIN)};
         if(nfds <= 0)
         {
             mDevice->handleDisconnect("Failed to get polling fds: %d", nfds);
             break;
         }
-        int pollres{::poll(mFds.data(), static_cast<uint>(nfds), 2000)};
+        int pollres{::poll(fds.get(), static_cast<uint>(nfds), 2000)};
         if(pollres < 0)
         {
             if(errno == EINTR) continue;
@@ -340,7 +339,7 @@ int SndioCapture::recordProc()
         if(pollres == 0)
             continue;
 
-        const int revents{sio_revents(mSndHandle, mFds.data())};
+        const int revents{sio_revents(mSndHandle, fds.get())};
         if((revents&POLLHUP))
         {
             mDevice->handleDisconnect("Got POLLHUP from poll events");

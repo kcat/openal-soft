@@ -401,6 +401,8 @@ struct DeviceNode {
     uint mSampleRate{};
     DevFmtChannels mChannels{InvalidChannelConfig};
 };
+constexpr char MonitorPrefix[]{"Monitor of "};
+constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
 std::vector<DeviceNode> DeviceList;
 std::string DefaultSinkDev;
 std::string DefaultSourceDev;
@@ -1497,7 +1499,7 @@ void PipeWireCapture::open(const char *name)
 
         targetid = match->mId;
         if(match->mCapture) devname = match->mName;
-        else devname = "Monitor of "+match->mName;
+        else devname = MonitorPrefix+match->mName;
     }
     else
     {
@@ -1507,7 +1509,7 @@ void PipeWireCapture::open(const char *name)
         auto match_name = [name](const DeviceNode &n) -> bool
         { return n.mCapture && n.mName == name; };
         auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
-        if(match == DeviceList.cend() && std::strncmp(name, "Monitor of ", 11) == 0)
+        if(match == DeviceList.cend() && std::strncmp(name, MonitorPrefix, MonitorPrefixLen) == 0)
         {
             const char *sinkname{name + 11};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
@@ -1691,7 +1693,7 @@ std::string PipeWireBackendFactory::probe(BackendType type)
         if(defmatch != DeviceList.cend())
         {
             if(!defmatch->mCapture)
-                outnames.append("Monitor of ");
+                outnames.append(MonitorPrefix);
             outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
         }
         for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
@@ -1702,7 +1704,7 @@ std::string PipeWireBackendFactory::probe(BackendType type)
         for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
         {
             if(iter != defmatch && !iter->mCapture)
-                outnames.append("Monitor of ").append(iter->mName.c_str(), iter->mName.length()+1);
+                outnames.append(MonitorPrefix).append(iter->mName.c_str(), iter->mName.length()+1);
         }
         break;
     }

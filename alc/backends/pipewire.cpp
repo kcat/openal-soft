@@ -1629,6 +1629,15 @@ void PipeWireCapture::start()
     if(int res{pw_stream_set_active(mStream.get(), true)})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start PipeWire stream (res: %d)", res};
+
+    pw_stream_state state{};
+    const char *error{};
+    while((state=pw_stream_get_state(mStream.get(), &error)) == PW_STREAM_STATE_PAUSED)
+        mLoop.wait();
+
+    if(state == PW_STREAM_STATE_ERROR)
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "PipeWire stream error: %s", error ? error : "(unknown)"};
 }
 
 void PipeWireCapture::stop()
@@ -1638,7 +1647,6 @@ void PipeWireCapture::stop()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to stop PipeWire stream (res: %d)", res};
 
-    /* Wait for the stream to stop playing. */
     pw_stream_state state{};
     while((state=pw_stream_get_state(mStream.get(), nullptr)) == PW_STREAM_STATE_STREAMING)
         mLoop.wait();

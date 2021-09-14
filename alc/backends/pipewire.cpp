@@ -1523,7 +1523,7 @@ void PipeWireCapture::open(const char *name)
         auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
         if(match == DeviceList.cend() && std::strncmp(name, MonitorPrefix, MonitorPrefixLen) == 0)
         {
-            const char *sinkname{name + 11};
+            const char *sinkname{name + MonitorPrefixLen};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
             { return !n.mCapture && n.mName == sinkname; };
             match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_sinkname);

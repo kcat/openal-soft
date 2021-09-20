@@ -386,7 +386,6 @@ const pw_core_events EventManager::sCoreEvents{EventManager::CreateCoreEvents()}
 const pw_registry_events EventManager::sRegistryEvents{EventManager::CreateRegistryEvents()};
 EventManager gEventHandler;
 
-
 /* Enumerated devices. This is updated asynchronously as the app runs, and the
  * gEventHandler thread loop must be locked when accessing the list.
  */
@@ -404,6 +403,8 @@ struct DeviceNode {
 };
 constexpr char MonitorPrefix[]{"Monitor of "};
 constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
+constexpr char AudioSinkClass[]{"Audio/Sink"};
+constexpr char AudioSourceClass[]{"Audio/Source"};
 std::vector<DeviceNode> DeviceList;
 std::string DefaultSinkDev;
 std::string DefaultSourceDev;
@@ -507,9 +508,9 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         if UNLIKELY(!media_class) return;
 
         bool isCapture{};
-        if(al::strcasecmp(media_class, "Audio/Sink") == 0)
+        if(al::strcasecmp(media_class, AudioSinkClass) == 0)
             isCapture = false;
-        else if(al::strcasecmp(media_class, "Audio/Source") == 0)
+        else if(al::strcasecmp(media_class, AudioSourceClass) == 0)
             isCapture = true;
         else
         {
@@ -852,8 +853,8 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         if(!media_class) return;
 
         /* Specifically, audio sinks and sources. */
-        const bool isGood{al::strcasecmp(media_class, "Audio/Sink") == 0
-            || al::strcasecmp(media_class, "Audio/Source") == 0};
+        const bool isGood{al::strcasecmp(media_class, AudioSinkClass) == 0
+            || al::strcasecmp(media_class, AudioSourceClass) == 0};
         if(!isGood)
         {
             TRACE("Skipping node type \"%s\"\n", media_class);

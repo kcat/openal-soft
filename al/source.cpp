@@ -619,6 +619,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
             }
             ++vidx;
         }
+        assert(newvoice != nullptr);
     }
 
     /* Initialize the new voice and set its starting offset.
@@ -737,10 +738,10 @@ ALsource *AllocSource(ALCcontext *context)
 {
     auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
         [](const SourceSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; }
-    );
+        { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(context->mSourceList.begin(), sublist));
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
+    ASSUME(slidx < 64);
 
     ALsource *source{::new(sublist->Sources + slidx) ALsource{}};
 
@@ -3063,6 +3064,7 @@ START_API_FUNC
                 break;
             }
         }
+        assert(voice != nullptr);
 
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);

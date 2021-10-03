@@ -25,12 +25,12 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     std::va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
-    int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
-    if UNLIKELY(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg))
+    const int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
+    if(unlikely(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)))
     {
         dynmsg.resize(static_cast<size_t>(msglen) + 1u);
         str = dynmsg.data();
-        msglen = std::vsnprintf(str, dynmsg.size(), fmt, args2);
+        std::vsnprintf(str, dynmsg.size(), fmt, args2);
     }
     va_end(args2);
     va_end(args);
@@ -59,12 +59,12 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     std::va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
-    int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
-    if UNLIKELY(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg))
+    const int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
+    if(unlikely(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)))
     {
         dynmsg.resize(static_cast<size_t>(msglen) + 1u);
         str = dynmsg.data();
-        msglen = std::vsnprintf(str, dynmsg.size(), fmt, args2);
+        std::vsnprintf(str, dynmsg.size(), fmt, args2);
     }
     va_end(args2);
     va_end(args);

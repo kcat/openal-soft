@@ -355,10 +355,10 @@ ALfilter *AllocFilter(ALCdevice *device)
 {
     auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
         [](const FilterSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; }
-    );
+        { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
+    ASSUME(slidx < 64);
 
     ALfilter *filter{::new(sublist->Filters + slidx) ALfilter{}};
     InitFilterParams(filter, AL_FILTER_NULL);

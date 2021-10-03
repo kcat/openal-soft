@@ -395,11 +395,10 @@ ALbuffer *AllocBuffer(ALCdevice *device)
 {
     auto sublist = std::find_if(device->BufferList.begin(), device->BufferList.end(),
         [](const BufferSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; }
-    );
-
+        { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
+    ASSUME(slidx < 64);
 
     ALbuffer *buffer{::new (sublist->Buffers + slidx) ALbuffer{}};
 

@@ -1318,8 +1318,7 @@ void PipeWirePlayback::stop()
             "Failed to stop PipeWire stream (res: %d)", res};
 
     /* Wait for the stream to stop playing. */
-    pw_stream_state state{};
-    while((state=pw_stream_get_state(mStream.get(), nullptr)) == PW_STREAM_STATE_STREAMING)
+    while(pw_stream_get_state(mStream.get(), nullptr) == PW_STREAM_STATE_STREAMING)
         mLoop.wait();
 }
 
@@ -1648,8 +1647,7 @@ void PipeWireCapture::stop()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to stop PipeWire stream (res: %d)", res};
 
-    pw_stream_state state{};
-    while((state=pw_stream_get_state(mStream.get(), nullptr)) == PW_STREAM_STATE_STREAMING)
+    while(pw_stream_get_state(mStream.get(), nullptr) == PW_STREAM_STATE_STREAMING)
         mLoop.wait();
 }
 

@@ -13,13 +13,17 @@
  * path at the expense of a less optimal false path.
  */
 #define LIKELY(x) (__builtin_expect(!!(x), !false))
+constexpr bool likely(bool expr) { return __builtin_expect(expr, true); }
 /* The opposite of LIKELY, optimizing the case where the condition is false. */
 #define UNLIKELY(x) (__builtin_expect(!!(x), false))
+constexpr bool unlikely(bool expr) { return __builtin_expect(expr, false); }
 
 #else
 
 #define LIKELY(x) (!!(x))
 #define UNLIKELY(x) (!!(x))
+constexpr bool likely(bool expr) { return expr; }
+constexpr bool unlikely(bool expr) { return expr; }
 #endif
 
 #if HAS_BUILTIN(__builtin_assume)

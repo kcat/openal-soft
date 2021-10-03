@@ -333,7 +333,7 @@ struct EventManager {
      */
     void waitForInit()
     {
-        while UNLIKELY(!mInitDone.load(std::memory_order_acquire))
+        while(unlikely(!mInitDone.load(std::memory_order_acquire)))
             mLoop.wait();
     }
 
@@ -505,7 +505,7 @@ void NodeProxy::infoCallback(const pw_node_info *info)
     {
         /* Can this actually change? */
         const char *media_class{spa_dict_lookup(info->props, PW_KEY_MEDIA_CLASS)};
-        if UNLIKELY(!media_class) return;
+        if(unlikely(!media_class)) return;
 
         bool isCapture{};
         if(al::strcasecmp(media_class, AudioSinkClass) == 0)
@@ -665,7 +665,7 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
     if(id == SPA_PARAM_EnumFormat)
     {
         DeviceNode *node{FindDeviceNode(mId)};
-        if UNLIKELY(!node) return;
+        if(unlikely(!node)) return;
 
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_rate)})
             parse_srate(node, &prop->value);
@@ -1069,7 +1069,7 @@ void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size)
 void PipeWirePlayback::outputCallback()
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
-    if UNLIKELY(!pw_buf) return;
+    if(unlikely(!pw_buf)) return;
 
     spa_buffer *spa_buf{pw_buf->buffer};
     uint length{mRateMatch ? mRateMatch->size : mDevice->UpdateSize};
@@ -1358,7 +1358,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
      */
     nanoseconds monoclock{seconds{tspec.tv_sec} + nanoseconds{tspec.tv_nsec}};
     nanoseconds curtic{}, delay{};
-    if UNLIKELY(ptime.rate.denom < 1)
+    if(unlikely(ptime.rate.denom < 1))
     {
         /* If there's no stream rate, the stream hasn't had a chance to get
          * going and return time info yet. Just use dummy values.
@@ -1464,7 +1464,7 @@ void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, con
 void PipeWireCapture::inputCallback()
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
-    if UNLIKELY(!pw_buf) return;
+    if(unlikely(!pw_buf)) return;
 
     spa_data *bufdata{pw_buf->buffer->datas};
     const uint offset{minu(bufdata->chunk->offset, bufdata->maxsize)};

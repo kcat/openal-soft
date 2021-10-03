@@ -85,7 +85,7 @@ AL_API ALenum AL_APIENTRY alGetError(void)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context)
+    if(unlikely(!context))
     {
         constexpr ALenum deferror{AL_INVALID_OPERATION};
         WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);

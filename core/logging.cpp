@@ -45,7 +45,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.
      */
-#ifdef NDEBUG
+#ifndef NDEBUG
     OutputDebugStringW(wstr.c_str());
 #endif
 }

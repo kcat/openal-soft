@@ -41,7 +41,13 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
         fputws(wstr.c_str(), logfile);
         fflush(logfile);
     }
+    /* OutputDebugStringW has no 'level' property to distinguish between
+     * informational, warning, or error debug messages. So only print them for
+     * non-Release builds.
+     */
+#ifdef NDEBUG
     OutputDebugStringW(wstr.c_str());
+#endif
 }
 
 #else

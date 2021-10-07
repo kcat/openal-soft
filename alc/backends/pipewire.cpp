@@ -1071,32 +1071,32 @@ void PipeWirePlayback::outputCallback()
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
     if(unlikely(!pw_buf)) return;
 
-    spa_buffer *spa_buf{pw_buf->buffer};
-    uint length{mRateMatch ? mRateMatch->size : mDevice->UpdateSize};
     /* For planar formats, each datas[] seems to contain one channel, so store
      * the pointers in an array. Limit the render length in case the available
      * buffer length in any one channel is smaller than we wanted (shouldn't
      * be, but just in case).
      */
-    const size_t chancount{minu(mNumChannels, spa_buf->n_datas)};
+    spa_data *datas{pw_buf->buffer->datas};
+    const size_t chancount{minu(mNumChannels, pw_buf->buffer->n_datas)};
+    /* TODO: How many samples should actually be written? 'maxsize' can be 16k
+     * samples, which is excessive (~341ms @ 48khz). SPA_IO_RateMatch contains
+     * a 'size' field that apparently indicates how many samples should be
+     * written per update, but it's not obviously right.
+     */
+    uint length{mRateMatch ? mRateMatch->size : mDevice->UpdateSize};
     for(size_t i{0};i < chancount;++i)
     {
-        length = minu(length, spa_buf->datas[i].maxsize/sizeof(float));
-        mChannelPtrs[i] = static_cast<float*>(spa_buf->datas[i].data);
+        length = minu(length, datas[i].maxsize/sizeof(float));
+        mChannelPtrs[i] = static_cast<float*>(datas[i].data);
     }
 
-    /* TODO: How many samples should actually be written? 'maxsize' can be 16k
-     * samples, which is excessive (~341ms @ 48khz), but aside from what gets
-     * specified with PW_KEY_NODE_LATENCY, there's nothing here saying how much
-     * is needed to keep the stream healthy.
-     */
     mDevice->renderSamples({mChannelPtrs.get(), chancount}, length);
 
     for(size_t i{0};i < chancount;++i)
     {
-        spa_buf->datas[i].chunk->offset = 0;
-        spa_buf->datas[i].chunk->stride = sizeof(float);
-        spa_buf->datas[i].chunk->size   = length * sizeof(float);
+        datas[i].chunk->offset = 0;
+        datas[i].chunk->stride = sizeof(float);
+        datas[i].chunk->size   = length * sizeof(float);
     }
     pw_buf->size = length;
     pw_stream_queue_buffer(mStream.get(), pw_buf);

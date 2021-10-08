@@ -743,7 +743,7 @@ ALsource *AllocSource(ALCcontext *context)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALsource *source{::new(sublist->Sources + slidx) ALsource{}};
+    ALsource *source{al::construct_at(sublist->Sources + slidx)};
 
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;

@@ -873,8 +873,8 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         /* Initialize the NodeProxy to hold the proxy object, add it to the
          * active proxy list, and update the sync point.
          */
-        auto *node = ::new(pw_proxy_get_user_data(proxy)) NodeProxy{id, proxy};
-        mProxyList.emplace_back(node);
+        auto *node = static_cast<NodeProxy*>(pw_proxy_get_user_data(proxy));
+        mProxyList.emplace_back(al::construct_at(node, id, proxy));
         syncInit();
     }
     else if(std::strcmp(type, PW_TYPE_INTERFACE_Metadata) == 0)
@@ -902,8 +902,8 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             return;
         }
 
-        auto *mdata = ::new(pw_proxy_get_user_data(proxy)) MetadataProxy{id, proxy};
-        mDefaultMetadata = mdata;
+        auto *mdata = static_cast<MetadataProxy*>(pw_proxy_get_user_data(proxy));
+        mDefaultMetadata = al::construct_at(mdata, id, proxy);
         syncInit();
     }
 }

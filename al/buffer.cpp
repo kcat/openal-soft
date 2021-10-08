@@ -400,7 +400,7 @@ ALbuffer *AllocBuffer(ALCdevice *device)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALbuffer *buffer{::new (sublist->Buffers + slidx) ALbuffer{}};
+    ALbuffer *buffer{al::construct_at(sublist->Buffers + slidx)};
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;

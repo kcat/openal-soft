@@ -368,19 +368,18 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
     const al::span<const HrtfStore::Elevation> elevs, const HrirArray *coeffs,
     const ubyte2 *delays, const char *filename)
 {
-    std::unique_ptr<HrtfStore> Hrtf;
-
     const size_t irCount{size_t{elevs.back().azCount} + elevs.back().irOffset};
     size_t total{sizeof(HrtfStore)};
     total  = RoundUp(total, alignof(HrtfStore::Field)); /* Align for field infos */
-    total += sizeof(HrtfStore::Field)*fields.size();
+    total += sizeof(std::declval<HrtfStore&>().field[0])*fields.size();
     total  = RoundUp(total, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
-    total += sizeof(Hrtf->elev[0])*elevs.size();
+    total += sizeof(std::declval<HrtfStore&>().elev[0])*elevs.size();
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
-    total += sizeof(Hrtf->coeffs[0])*irCount;
-    total += sizeof(Hrtf->delays[0])*irCount;
+    total += sizeof(std::declval<HrtfStore&>().coeffs[0])*irCount;
+    total += sizeof(std::declval<HrtfStore&>().delays[0])*irCount;
 
-    Hrtf.reset(new (al_calloc(16, total)) HrtfStore{});
+    void *ptr{al_calloc(16, total)};
+    std::unique_ptr<HrtfStore> Hrtf{al::construct_at(static_cast<HrtfStore*>(ptr))};
     if(!Hrtf)
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
@@ -412,10 +411,10 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
         assert(offset == total);
 
         /* Copy input data to storage. */
-        std::copy(fields.cbegin(), fields.cend(), field_);
-        std::copy(elevs.cbegin(), elevs.cend(), elev_);
-        std::copy_n(coeffs, irCount, coeffs_);
-        std::copy_n(delays, irCount, delays_);
+        std::uninitialized_copy(fields.cbegin(), fields.cend(), field_);
+        std::uninitialized_copy(elevs.cbegin(), elevs.cend(), elev_);
+        std::uninitialized_copy_n(coeffs, irCount, coeffs_);
+        std::uninitialized_copy_n(delays, irCount, delays_);
 
         /* Finally, assign the storage pointers. */
         Hrtf->field = field_;

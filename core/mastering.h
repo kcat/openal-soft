@@ -100,5 +100,6 @@ struct Compressor {
         const float ThresholdDb, const float Ratio, const float KneeDb, const float AttackTime,
         const float ReleaseTime);
 };
+using CompressorPtr = std::unique_ptr<Compressor>;
 
 #endif /* CORE_MASTERING_H */

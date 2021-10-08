@@ -104,6 +104,11 @@ bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return 
 template<size_t alignment, typename T>
 [[gnu::assume_aligned(alignment)]] inline T* assume_aligned(T *ptr) noexcept { return ptr; }
 
+
+template<typename T, typename ...Args>
+constexpr T* construct_at(T *ptr, Args&&...args) noexcept(noexcept(T{std::forward<Args>(args)...}))
+{ return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...}; }
+
 /* At least VS 2015 complains that 'ptr' is unused when the given type's
  * destructor is trivial (a no-op). So disable that warning for this call.
  */
@@ -250,7 +255,7 @@ struct FlexArray {
     static std::unique_ptr<FlexArray> Create(index_type count)
     {
         void *ptr{al_calloc(alignof(FlexArray), Sizeof(count))};
-        return std::unique_ptr<FlexArray>{new(ptr) FlexArray{count}};
+        return std::unique_ptr<FlexArray>{al::construct_at(static_cast<FlexArray*>(ptr), count)};
     }
 
     FlexArray(index_type size) : mStore{size} { }

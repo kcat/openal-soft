@@ -468,7 +468,8 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         auto evt_vec = ring->getWriteVector();
         if LIKELY(evt_vec.first.len > 0)
         {
-            AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
+            AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
+                EventType_ReleaseEffectState)};
             evt->u.mEffectState = oldstate;
             ring->writeAdvance(1);
         }
@@ -1556,7 +1557,8 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{::new(evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
+    AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
+        EventType_SourceStateChange)};
     evt->u.srcstate.id = id;
     switch(state)
     {
@@ -2038,7 +2040,7 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
             auto evt_data = ring->getWriteVector().first;
             if(evt_data.len > 0)
             {
-                ::new(evt_data.buf) AsyncEvent{evt};
+                al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
                 ring->writeAdvance(1);
                 ctx->mEventSem.post();
             }

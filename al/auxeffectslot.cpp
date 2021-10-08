@@ -279,7 +279,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffectslot *slot{::new(sublist->EffectSlots + slidx) ALeffectslot{}};
+    ALeffectslot *slot{al::construct_at(sublist->EffectSlots + slidx)};
     aluInitEffectPanning(&slot->mSlot, context);
 
     /* Add 1 to avoid source ID 0. */

@@ -360,7 +360,7 @@ ALfilter *AllocFilter(ALCdevice *device)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALfilter *filter{::new(sublist->Filters + slidx) ALfilter{}};
+    ALfilter *filter{al::construct_at(sublist->Filters + slidx)};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */

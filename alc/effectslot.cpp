@@ -15,7 +15,7 @@ EffectSlotArray *EffectSlot::CreatePtrArray(size_t count) noexcept
      * space to store a sorted list during mixing.
      */
     void *ptr{al_calloc(alignof(EffectSlotArray), EffectSlotArray::Sizeof(count*2))};
-    return new(ptr) EffectSlotArray{count};
+    return al::construct_at(static_cast<EffectSlotArray*>(ptr), count);
 }
 
 EffectSlot::~EffectSlot()

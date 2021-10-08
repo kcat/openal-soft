@@ -58,9 +58,9 @@ class optional {
     storage_t mStore;
 
     template<typename... Args>
-    void doConstruct(Args&& ...args)
+    void doConstruct(Args&& ...args) noexcept(noexcept(al::construct_at(std::declval<T*>(), std::forward<Args>(args)...)))
     {
-        ::new(std::addressof(mStore.mValue)) T{std::forward<Args>(args)...};
+        al::construct_at(std::addressof(mStore.mValue), std::forward<Args>(args)...);
         mStore.mHasValue = true;
     }
 

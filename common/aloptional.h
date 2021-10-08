@@ -16,40 +16,198 @@ constexpr nullopt_t nullopt{};
 constexpr in_place_t in_place{};
 
 
+/* Base storage struct for an optional. Defines a trivial destructor, for types
+ * that can be trivially destructed.
+ */
 template<typename T, bool = std::is_trivially_destructible<T>::value>
-struct optional_storage;
-
-template<typename T>
-struct optional_storage<T, true> {
+struct optstore_base {
     bool mHasValue{false};
     union {
         char mDummy;
         T mValue;
     };
 
-    optional_storage() { }
+    optstore_base() { }
     template<typename ...Args>
-    explicit optional_storage(in_place_t, Args&& ...args)
+    explicit optstore_base(in_place_t, Args&& ...args)
         : mHasValue{true}, mValue{std::forward<Args>(args)...}
     { }
-    ~optional_storage() = default;
+    ~optstore_base() = default;
 };
 
+/* Specialization needing a non-trivial destructor. */
 template<typename T>
-struct optional_storage<T, false> {
+struct optstore_base<T, false> {
     bool mHasValue{false};
     union {
         char mDummy;
         T mValue;
     };
 
-    optional_storage() { }
+    optstore_base() { }
     template<typename ...Args>
-    explicit optional_storage(in_place_t, Args&& ...args)
+    explicit optstore_base(in_place_t, Args&& ...args)
         : mHasValue{true}, mValue{std::forward<Args>(args)...}
     { }
-    ~optional_storage() { if(mHasValue) al::destroy_at(std::addressof(mValue)); }
+    ~optstore_base() { if(mHasValue) al::destroy_at(std::addressof(mValue)); }
 };
+
+/* Next level of storage, which defines helpers to construct and destruct the
+ * stored object.
+ */
+template<typename T>
+struct optstore_helper : public optstore_base<T> {
+    using optstore_base<T>::optstore_base;
+
+    template<typename... Args>
+    void construct(Args&& ...args) noexcept(noexcept(T{std::forward<Args>(args)...}))
+    {
+        al::construct_at(std::addressof(this->mValue), std::forward<Args>(args)...);
+        this->mHasValue = true;
+    }
+
+    void reset() noexcept
+    {
+        if(this->mHasValue)
+            al::destroy_at(std::addressof(this->mValue));
+        this->mHasValue = false;
+    }
+
+    void assign(const optstore_helper &rhs)
+    {
+        if(!rhs.mHasValue)
+            this->reset();
+        else if(this->mHasValue)
+            this->mValue = rhs.mValue;
+        else
+            this->construct(rhs.mValue);
+    }
+
+    void assign(optstore_helper&& rhs)
+    {
+        if(!rhs.mHasValue)
+            this->reset();
+        else if(this->mHasValue)
+            this->mValue = std::move(rhs.mValue);
+        else
+            this->construct(std::move(rhs.mValue));
+    }
+};
+
+/* Define copy and move constructors and assignment operators, which may or may
+ * not be trivial. Default definition is completely trivial.
+ */
+template<typename T, bool trivial_copy = std::is_trivially_copy_constructible<T>::value,
+    bool trivial_move = std::is_trivially_move_constructible<T>::value,
+    /* Trivial assignment is dependent on trivial construction. */
+    bool = trivial_copy && std::is_trivially_copy_assignable<T>::value,
+    bool = trivial_move && std::is_trivially_move_assignable<T>::value>
+struct optional_storage : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage&) = default;
+    optional_storage( optional_storage&&) = default;
+    optional_storage& operator=(const optional_storage&) = default;
+    optional_storage& operator=( optional_storage&&) = default;
+};
+
+/* Non-trivial move assignment. */
+template<typename T>
+struct optional_storage<T, true, true, true, false> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage&) = default;
+    optional_storage(optional_storage&&) = default;
+    optional_storage& operator=(const optional_storage&) = default;
+    optional_storage& operator=(optional_storage&& rhs)
+    { this->assign(std::move(rhs)); return *this; }
+};
+
+/* Non-trivial move construction. */
+template<typename T>
+struct optional_storage<T, true, false, true, false> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage&) = default;
+    optional_storage(optional_storage&& rhs)
+    { if(rhs.mHasValue) this->construct(std::move(rhs.mValue)); }
+    optional_storage& operator=(const optional_storage&) = default;
+    optional_storage& operator=(optional_storage&& rhs)
+    { this->assign(std::move(rhs)); return *this; }
+};
+
+/* Non-trivial copy assignment. */
+template<typename T>
+struct optional_storage<T, true, true, false, true> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage&) = default;
+    optional_storage(optional_storage&&) = default;
+    optional_storage& operator=(const optional_storage &rhs)
+    { this->assign(rhs); return *this; }
+    optional_storage& operator=(optional_storage&&) = default;
+};
+
+/* Non-trivial copy construction. */
+template<typename T>
+struct optional_storage<T, false, true, false, true> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage &rhs)
+    { if(rhs.mHasValue) this->construct(rhs.mValue); }
+    optional_storage(optional_storage&&) = default;
+    optional_storage& operator=(const optional_storage &rhs)
+    { this->assign(rhs); return *this; }
+    optional_storage& operator=(optional_storage&&) = default;
+};
+
+/* Non-trivial assignment. */
+template<typename T>
+struct optional_storage<T, true, true, false, false> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage&) = default;
+    optional_storage(optional_storage&&) = default;
+    optional_storage& operator=(const optional_storage &rhs)
+    { this->assign(rhs); return *this; }
+    optional_storage& operator=(optional_storage&& rhs)
+    { this->assign(std::move(rhs)); return *this; }
+};
+
+/* Non-trivial assignment, non-trivial move construction. */
+template<typename T>
+struct optional_storage<T, true, false, false, false> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage&) = default;
+    optional_storage(optional_storage&& rhs)
+    { if(rhs.mHasValue) this->construct(std::move(rhs.mValue)); }
+    optional_storage& operator=(const optional_storage &rhs)
+    { this->assign(rhs); return *this; }
+    optional_storage& operator=(optional_storage&& rhs)
+    { this->assign(std::move(rhs)); return *this; }
+};
+
+/* Non-trivial assignment, non-trivial copy construction. */
+template<typename T>
+struct optional_storage<T, false, true, false, false> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage &rhs)
+    { if(rhs.mHasValue) this->construct(rhs.mValue); }
+    optional_storage(optional_storage&&) = default;
+    optional_storage& operator=(const optional_storage &rhs)
+    { this->assign(rhs); return *this; }
+    optional_storage& operator=(optional_storage&& rhs)
+    { this->assign(std::move(rhs)); return *this; }
+};
+
+/* Completely non-trivial. */
+template<typename T>
+struct optional_storage<T, false, false, false, false> : optstore_helper<T> {
+    using optstore_helper<T>::optstore_helper;
+    optional_storage(const optional_storage &rhs)
+    { if(rhs.mHasValue) this->construct(rhs.mValue); }
+    optional_storage(optional_storage&& rhs)
+    { if(rhs.mHasValue) this->construct(std::move(rhs.mValue)); }
+    optional_storage& operator=(const optional_storage &rhs)
+    { this->assign(rhs); return *this; }
+    optional_storage& operator=(optional_storage&& rhs)
+    { this->assign(std::move(rhs)); return *this; }
+};
+
 
 template<typename T>
 class optional {
@@ -57,49 +215,24 @@ class optional {
 
     storage_t mStore;
 
-    template<typename... Args>
-    void doConstruct(Args&& ...args) noexcept(noexcept(al::construct_at(std::declval<T*>(), std::forward<Args>(args)...)))
-    {
-        al::construct_at(std::addressof(mStore.mValue), std::forward<Args>(args)...);
-        mStore.mHasValue = true;
-    }
-
 public:
     using value_type = T;
 
     optional() = default;
+    optional(const optional&) = default;
+    optional(optional&&) = default;
     optional(nullopt_t) noexcept { }
-    optional(const optional &rhs) { if(rhs) doConstruct(*rhs); }
-    optional(optional&& rhs) { if(rhs) doConstruct(std::move(*rhs)); }
     template<typename ...Args>
     explicit optional(in_place_t, Args&& ...args)
         : mStore{al::in_place, std::forward<Args>(args)...}
     { }
     ~optional() = default;
 
-    optional& operator=(nullopt_t) noexcept { reset(); return *this; }
     std::enable_if_t<std::is_copy_constructible<T>::value && std::is_copy_assignable<T>::value,
-    optional&> operator=(const optional &rhs)
-    {
-        if(!rhs)
-            reset();
-        else if(*this)
-            mStore.mValue = *rhs;
-        else
-            doConstruct(*rhs);
-        return *this;
-    }
+    optional&> operator=(const optional&) = default;
     std::enable_if_t<std::is_move_constructible<T>::value && std::is_move_assignable<T>::value,
-    optional&> operator=(optional&& rhs)
-    {
-        if(!rhs)
-            reset();
-        else if(*this)
-            mStore.mValue = std::move(*rhs);
-        else
-            doConstruct(std::move(*rhs));
-        return *this;
-    }
+    optional&> operator=(optional&&) = default;
+    optional& operator=(nullopt_t) noexcept { mStore.reset(); return *this; }
     template<typename U=T>
     std::enable_if_t<std::is_constructible<T, U>::value
         && std::is_assignable<T&, U>::value
@@ -107,10 +240,10 @@ public:
         && (!std::is_same<std::decay_t<U>, T>::value || !std::is_scalar<U>::value),
     optional&> operator=(U&& rhs)
     {
-        if(*this)
+        if(mStore.mHasValue)
             mStore.mValue = std::forward<U>(rhs);
         else
-            doConstruct(std::forward<U>(rhs));
+            mStore.construct(std::forward<U>(rhs));
         return *this;
     }
 
@@ -136,12 +269,7 @@ public:
     T value_or(U&& defval) &&
     { return bool{*this} ? std::move(**this) : static_cast<T>(std::forward<U>(defval)); }
 
-    void reset() noexcept
-    {
-        if(mStore.mHasValue)
-            al::destroy_at(std::addressof(mStore.mValue));
-        mStore.mHasValue = false;
-    }
+    void reset() noexcept { mStore.reset(); }
 };
 
 template<typename T>

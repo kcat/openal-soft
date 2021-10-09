@@ -228,10 +228,8 @@ public:
     { }
     ~optional() = default;
 
-    std::enable_if_t<std::is_copy_constructible<T>::value && std::is_copy_assignable<T>::value,
-    optional&> operator=(const optional&) = default;
-    std::enable_if_t<std::is_move_constructible<T>::value && std::is_move_assignable<T>::value,
-    optional&> operator=(optional&&) = default;
+    optional& operator=(const optional&) = default;
+    optional& operator=(optional&&) = default;
     optional& operator=(nullopt_t) noexcept { mStore.reset(); return *this; }
     template<typename U=T>
     std::enable_if_t<std::is_constructible<T, U>::value

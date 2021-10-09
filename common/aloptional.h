@@ -24,7 +24,7 @@ template<typename T, bool = std::is_trivially_destructible<T>::value>
 struct optstore_base {
     bool mHasValue{false};
     union {
-        char mDummy{};
+        char mDummy;
         T mValue;
     };
 
@@ -42,7 +42,7 @@ template<typename T>
 struct optstore_base<T, false> {
     bool mHasValue{false};
     union {
-        char mDummy{};
+        char mDummy;
         T mValue;
     };
 
@@ -109,7 +109,7 @@ template<typename T, bool trivial_copy = std::is_trivially_copy_constructible<T>
     /* Trivial assignment is dependent on trivial construction. */
     bool = trivial_copy && std::is_trivially_copy_assignable<T>::value,
     bool = trivial_move && std::is_trivially_move_assignable<T>::value>
-struct optional_storage : optstore_helper<T> {
+struct optional_storage : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage&) = default;
     optional_storage(optional_storage&&) = default;
@@ -119,7 +119,7 @@ struct optional_storage : optstore_helper<T> {
 
 /* Non-trivial move assignment. */
 template<typename T>
-struct optional_storage<T, true, true, true, false> : optstore_helper<T> {
+struct optional_storage<T, true, true, true, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage&) = default;
     optional_storage(optional_storage&&) = default;
@@ -130,7 +130,7 @@ struct optional_storage<T, true, true, true, false> : optstore_helper<T> {
 
 /* Non-trivial move construction. */
 template<typename T>
-struct optional_storage<T, true, false, true, false> : optstore_helper<T> {
+struct optional_storage<T, true, false, true, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage&) = default;
     optional_storage(optional_storage&& rhs) NOEXCEPT_AS(this->construct(std::move(rhs.mValue)))
@@ -142,7 +142,7 @@ struct optional_storage<T, true, false, true, false> : optstore_helper<T> {
 
 /* Non-trivial copy assignment. */
 template<typename T>
-struct optional_storage<T, true, true, false, true> : optstore_helper<T> {
+struct optional_storage<T, true, true, false, true> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage&) = default;
     optional_storage(optional_storage&&) = default;
@@ -153,7 +153,7 @@ struct optional_storage<T, true, true, false, true> : optstore_helper<T> {
 
 /* Non-trivial copy construction. */
 template<typename T>
-struct optional_storage<T, false, true, false, true> : optstore_helper<T> {
+struct optional_storage<T, false, true, false, true> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage &rhs) NOEXCEPT_AS(this->construct(rhs.mValue))
     { if(rhs.mHasValue) this->construct(rhs.mValue); }
@@ -165,7 +165,7 @@ struct optional_storage<T, false, true, false, true> : optstore_helper<T> {
 
 /* Non-trivial assignment. */
 template<typename T>
-struct optional_storage<T, true, true, false, false> : optstore_helper<T> {
+struct optional_storage<T, true, true, false, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage&) = default;
     optional_storage(optional_storage&&) = default;
@@ -177,7 +177,7 @@ struct optional_storage<T, true, true, false, false> : optstore_helper<T> {
 
 /* Non-trivial assignment, non-trivial move construction. */
 template<typename T>
-struct optional_storage<T, true, false, false, false> : optstore_helper<T> {
+struct optional_storage<T, true, false, false, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage&) = default;
     optional_storage(optional_storage&& rhs) NOEXCEPT_AS(this->construct(std::move(rhs.mValue)))
@@ -190,7 +190,7 @@ struct optional_storage<T, true, false, false, false> : optstore_helper<T> {
 
 /* Non-trivial assignment, non-trivial copy construction. */
 template<typename T>
-struct optional_storage<T, false, true, false, false> : optstore_helper<T> {
+struct optional_storage<T, false, true, false, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage &rhs) NOEXCEPT_AS(this->construct(rhs.mValue))
     { if(rhs.mHasValue) this->construct(rhs.mValue); }
@@ -203,7 +203,7 @@ struct optional_storage<T, false, true, false, false> : optstore_helper<T> {
 
 /* Completely non-trivial. */
 template<typename T>
-struct optional_storage<T, false, false, false, false> : optstore_helper<T> {
+struct optional_storage<T, false, false, false, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     optional_storage(const optional_storage &rhs) NOEXCEPT_AS(this->construct(rhs.mValue))
     { if(rhs.mHasValue) this->construct(rhs.mValue); }
@@ -220,7 +220,7 @@ template<typename T>
 class optional {
     using storage_t = optional_storage<T>;
 
-    storage_t mStore;
+    storage_t mStore{};
 
 public:
     using value_type = T;

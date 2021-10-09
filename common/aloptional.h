@@ -24,12 +24,11 @@ template<typename T, bool = std::is_trivially_destructible<T>::value>
 struct optstore_base {
     bool mHasValue{false};
     union {
-        char mDummy;
+        char mDummy{};
         T mValue;
     };
 
     optstore_base() noexcept { }
-    optstore_base(nullopt_t) noexcept { }
     template<typename ...Args>
     explicit optstore_base(in_place_t, Args&& ...args)
         noexcept(std::is_nothrow_constructible<T, Args...>::value)
@@ -43,12 +42,11 @@ template<typename T>
 struct optstore_base<T, false> {
     bool mHasValue{false};
     union {
-        char mDummy;
+        char mDummy{};
         T mValue;
     };
 
     optstore_base() noexcept { }
-    optstore_base(nullopt_t) noexcept { }
     template<typename ...Args>
     explicit optstore_base(in_place_t, Args&& ...args)
         noexcept(std::is_nothrow_constructible<T, Args...>::value)
@@ -230,7 +228,7 @@ public:
     optional() = default;
     optional(const optional&) = default;
     optional(optional&&) = default;
-    optional(nullopt_t) noexcept : mStore{nullopt} { }
+    optional(nullopt_t) noexcept { }
     template<typename ...Args>
     explicit optional(in_place_t, Args&& ...args)
         : mStore{al::in_place, std::forward<Args>(args)...}

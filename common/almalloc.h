@@ -97,9 +97,9 @@ struct allocator {
     void deallocate(T *p, std::size_t) noexcept { al_free(p); }
 };
 template<typename T, std::size_t N, typename U, std::size_t M>
-bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept { return true; }
+constexpr bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept { return true; }
 template<typename T, std::size_t N, typename U, std::size_t M>
-bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
+constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
 template<size_t alignment, typename T>
 [[gnu::assume_aligned(alignment)]] constexpr T* assume_aligned(T *ptr) noexcept { return ptr; }
@@ -156,6 +156,7 @@ destroy_n(T first, N count) noexcept(noexcept(al::destroy_at(std::addressof(*fir
 template<typename T, typename N>
 inline std::enable_if_t<std::is_integral<N>::value,T>
 uninitialized_default_construct_n(T first, N count)
+    noexcept(std::is_nothrow_default_constructible<typename std::iterator_traits<T>::value_type>::value)
 {
     using ValueT = typename std::iterator_traits<T>::value_type;
     T current{first};
@@ -180,10 +181,7 @@ uninitialized_default_construct_n(T first, N count)
  * trivially destructible.
  */
 template<typename T, size_t alignment, bool = std::is_trivially_destructible<T>::value>
-struct FlexArrayStorage;
-
-template<typename T, size_t alignment>
-struct FlexArrayStorage<T,alignment,true> {
+struct FlexArrayStorage {
     const size_t mSize;
     union {
         char mDummy;
@@ -196,7 +194,8 @@ struct FlexArrayStorage<T,alignment,true> {
             sizeof(FlexArrayStorage)) + base;
     }
 
-    FlexArrayStorage(size_t size) : mSize{size}
+    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_default_constructible<T>::value)
+        : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArrayStorage() = default;
 
@@ -218,7 +217,8 @@ struct FlexArrayStorage<T,alignment,false> {
             sizeof(FlexArrayStorage)) + base;
     }
 
-    FlexArrayStorage(size_t size) : mSize{size}
+    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_default_constructible<T>::value)
+        : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArrayStorage() { al::destroy_n(mArray, mSize); }
 

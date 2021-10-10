@@ -102,11 +102,12 @@ template<typename T, std::size_t N, typename U, std::size_t M>
 bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
 template<size_t alignment, typename T>
-[[gnu::assume_aligned(alignment)]] inline T* assume_aligned(T *ptr) noexcept { return ptr; }
+[[gnu::assume_aligned(alignment)]] constexpr T* assume_aligned(T *ptr) noexcept { return ptr; }
 
 
 template<typename T, typename ...Args>
-constexpr T* construct_at(T *ptr, Args&&...args) noexcept(noexcept(T{std::forward<Args>(args)...}))
+constexpr T* construct_at(T *ptr, Args&& ...args)
+    noexcept(std::is_nothrow_constructible<T, Args...>::value)
 { return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...}; }
 
 /* At least VS 2015 complains that 'ptr' is unused when the given type's
@@ -121,14 +122,14 @@ destroy_at(T *ptr) noexcept(std::is_nothrow_destructible<T>::value)
 DIAGNOSTIC_POP
 template<typename T>
 constexpr std::enable_if_t<std::is_array<T>::value>
-destroy_at(T *ptr) noexcept(std::is_nothrow_destructible<T>::value)
+destroy_at(T *ptr) noexcept(std::is_nothrow_destructible<std::remove_all_extents_t<T>>::value)
 {
     for(auto &elem : *ptr)
         al::destroy_at(std::addressof(elem));
 }
 
 template<typename T>
-constexpr void destroy(T first, T end)
+constexpr void destroy(T first, T end) noexcept(noexcept(al::destroy_at(std::addressof(*first))))
 {
     while(first != end)
     {
@@ -139,7 +140,7 @@ constexpr void destroy(T first, T end)
 
 template<typename T, typename N>
 constexpr std::enable_if_t<std::is_integral<N>::value,T>
-destroy_n(T first, N count)
+destroy_n(T first, N count) noexcept(noexcept(al::destroy_at(std::addressof(*first))))
 {
     if(count != 0)
     {

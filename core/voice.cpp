@@ -165,7 +165,7 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
     if(evt_vec.first.len < 1) return;
 
     AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-        EventType_SourceStateChange)};
+        AsyncEvent::SourceStateChange)};
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = AsyncEvent::SrcState::Stop;
 
@@ -787,14 +787,14 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
     /* Send any events now, after the position/buffer info was updated. */
     const uint enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
-    if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
+    if(buffers_done > 0 && (enabledevt&AsyncEvent::BufferCompleted))
     {
         RingBuffer *ring{Context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0)
         {
             AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-                EventType_BufferCompleted)};
+                AsyncEvent::BufferCompleted)};
             evt->u.bufcomp.id = SourceID;
             evt->u.bufcomp.count = buffers_done;
             ring->writeAdvance(1);
@@ -807,7 +807,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
          * ensures any residual noise fades to 0 amplitude.
          */
         mPlayState.store(Stopping, std::memory_order_release);
-        if((enabledevt&EventType_SourceStateChange))
+        if((enabledevt&AsyncEvent::SourceStateChange))
             SendSourceStoppedEvent(Context, SourceID);
     }
 }

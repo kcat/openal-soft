@@ -54,10 +54,10 @@ static int EventThread(ALCcontext *context)
             al::destroy_at(evt_ptr);
             ring->readAdvance(1);
 
-            quitnow = evt.EnumType == EventType_KillThread;
+            quitnow = evt.EnumType == AsyncEvent::KillThread;
             if(unlikely(quitnow)) break;
 
-            if(evt.EnumType == EventType_ReleaseEffectState)
+            if(evt.EnumType == AsyncEvent::ReleaseEffectState)
             {
                 evt.u.mEffectState->release();
                 continue;
@@ -66,9 +66,9 @@ static int EventThread(ALCcontext *context)
             uint enabledevts{context->mEnabledEvts.load(std::memory_order_acquire)};
             if(!context->mEventCb) continue;
 
-            if(evt.EnumType == EventType_SourceStateChange)
+            if(evt.EnumType == AsyncEvent::SourceStateChange)
             {
-                if(!(enabledevts&EventType_SourceStateChange))
+                if(!(enabledevts&AsyncEvent::SourceStateChange))
                     continue;
                 ALuint state{};
                 std::string msg{"Source ID " + std::to_string(evt.u.srcstate.id)};
@@ -95,9 +95,9 @@ static int EventThread(ALCcontext *context)
                 context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
                     state, static_cast<ALsizei>(msg.length()), msg.c_str(), context->mEventParam);
             }
-            else if(evt.EnumType == EventType_BufferCompleted)
+            else if(evt.EnumType == AsyncEvent::BufferCompleted)
             {
-                if(!(enabledevts&EventType_BufferCompleted))
+                if(!(enabledevts&AsyncEvent::BufferCompleted))
                     continue;
                 std::string msg{std::to_string(evt.u.bufcomp.count)};
                 if(evt.u.bufcomp.count == 1) msg += " buffer completed";
@@ -106,9 +106,9 @@ static int EventThread(ALCcontext *context)
                     evt.u.bufcomp.count, static_cast<ALsizei>(msg.length()), msg.c_str(),
                     context->mEventParam);
             }
-            else if(evt.EnumType == EventType_Disconnected)
+            else if(evt.EnumType == AsyncEvent::Disconnected)
             {
-                if(!(enabledevts&EventType_Disconnected))
+                if(!(enabledevts&AsyncEvent::Disconnected))
                     continue;
                 context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
                     static_cast<ALsizei>(strlen(evt.u.disconnect.msg)), evt.u.disconnect.msg,
@@ -143,7 +143,7 @@ void StopEventThrd(ALCcontext *ctx)
             evt_data = ring->getWriteVector().first;
         } while(evt_data.len == 0);
     }
-    al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), EventType_KillThread);
+    al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), AsyncEvent::KillThread);
     ring->writeAdvance(1);
 
     ctx->mEventSem.post();
@@ -167,11 +167,11 @@ START_API_FUNC
         [&flags](ALenum type) noexcept -> bool
         {
             if(type == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
-                flags |= EventType_BufferCompleted;
+                flags |= AsyncEvent::BufferCompleted;
             else if(type == AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT)
-                flags |= EventType_SourceStateChange;
+                flags |= AsyncEvent::SourceStateChange;
             else if(type == AL_EVENT_TYPE_DISCONNECTED_SOFT)
-                flags |= EventType_Disconnected;
+                flags |= AsyncEvent::Disconnected;
             else
                 return false;
             return true;

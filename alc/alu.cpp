@@ -469,7 +469,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         if LIKELY(evt_vec.first.len > 0)
         {
             AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-                EventType_ReleaseEffectState)};
+                AsyncEvent::ReleaseEffectState)};
             evt->u.mEffectState = oldstate;
             ring->writeAdvance(1);
         }
@@ -1558,7 +1558,7 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
     if(evt_vec.first.len < 1) return;
 
     AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-        EventType_SourceStateChange)};
+        AsyncEvent::SourceStateChange)};
     evt->u.srcstate.id = id;
     switch(state)
     {
@@ -1669,7 +1669,7 @@ void ProcessVoiceChanges(ContextBase *ctx)
             }
             oldvoice->mPendingChange.store(false, std::memory_order_release);
         }
-        if(sendevt && (enabledevt&EventType_SourceStateChange))
+        if(sendevt && (enabledevt&AsyncEvent::SourceStateChange))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
 
         next = cur->mNext.load(std::memory_order_acquire);
@@ -2020,7 +2020,7 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
     if(!Connected.exchange(false, std::memory_order_acq_rel))
         return;
 
-    AsyncEvent evt{EventType_Disconnected};
+    AsyncEvent evt{AsyncEvent::Disconnected};
 
     va_list args;
     va_start(args, msg);
@@ -2034,7 +2034,7 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
     for(ContextBase *ctx : *mContexts.load())
     {
         const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
-        if((enabledevt&EventType_Disconnected))
+        if((enabledevt&AsyncEvent::Disconnected))
         {
             RingBuffer *ring{ctx->mAsyncEvents.get()};
             auto evt_data = ring->getWriteVector().first;

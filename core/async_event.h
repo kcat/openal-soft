@@ -8,20 +8,20 @@ struct EffectState;
 using uint = unsigned int;
 
 
-enum {
-    /* End event thread processing. */
-    EventType_KillThread = 0,
-
-    /* User event types. */
-    EventType_SourceStateChange = 1<<0,
-    EventType_BufferCompleted   = 1<<1,
-    EventType_Disconnected      = 1<<2,
-
-    /* Internal events. */
-    EventType_ReleaseEffectState = 65536,
-};
-
 struct AsyncEvent {
+    enum : uint {
+        /* End event thread processing. */
+        KillThread = 0,
+
+        /* User event types. */
+        SourceStateChange = 1<<0,
+        BufferCompleted   = 1<<1,
+        Disconnected      = 1<<2,
+
+        /* Internal events. */
+        ReleaseEffectState = 65536,
+    };
+
     enum class SrcState {
         Reset,
         Stop,

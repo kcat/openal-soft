@@ -80,8 +80,7 @@ static const struct NameValuePair {
     { "Mono", "mono" },
     { "Stereo", "stereo" },
     { "Quadraphonic", "quad" },
-    { "5.1 Surround (Side)", "surround51" },
-    { "5.1 Surround (Rear)", "surround51rear" },
+    { "5.1 Surround", "surround51" },
     { "6.1 Surround", "surround61" },
     { "7.1 Surround", "surround71" },
 
@@ -635,6 +634,8 @@ void MainWindow::loadConfig(const QString &fname)
     ui->channelConfigCombo->setCurrentIndex(0);
     if(channelconfig.isEmpty() == false)
     {
+        if(channelconfig == "surround51rear")
+            channelconfig = "surround51";
         QString str{getNameFromValue(speakerModeList, channelconfig)};
         if(!str.isEmpty())
         {

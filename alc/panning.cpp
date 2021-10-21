@@ -386,10 +386,8 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
          * CB = Back center
          *
          * Additionally, surround51 will acknowledge back speakers for side
-         * channels, and surround51rear will acknowledge side speakers for
-         * back channels, to avoid issues with an ambdec expecting 5.1 to
-         * use the side channels when the device is configured for back,
-         * and vice-versa.
+         * channels, to avoid issues with an ambdec expecting 5.1 to use the
+         * back channels.
          */
         Channel ch{};
         if(speaker.Name == "LF")

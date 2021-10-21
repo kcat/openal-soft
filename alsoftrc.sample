@@ -48,10 +48,10 @@
 ## channels:
 #  Sets the output channel configuration. If left unspecified, one will try to
 #  be detected from the system, and defaulting to stereo. The available values
-#  are: mono, stereo, quad, surround51, surround51rear, surround61, surround71,
-#  ambi1, ambi2, ambi3. Note that the ambi* configurations provide ambisonic
-#  channels of the given order (using ACN ordering and SN3D normalization by
-#  default), which need to be decoded to play correctly on speakers.
+#  are: mono, stereo, quad, surround51, surround61, surround71, ambi1, ambi2,
+#  ambi3. Note that the ambi* configurations provide ambisonic channels of the
+#  given order (using ACN ordering and SN3D normalization by default), which
+#  need to be decoded to play correctly on speakers.
 #channels =
 
 ## sample-type:

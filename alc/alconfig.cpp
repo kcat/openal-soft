@@ -277,6 +277,52 @@ void LoadConfigFromFile(std::istream &f)
     ConfOpts.shrink_to_fit();
 }
 
+const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName)
+{
+    if(!keyName)
+        return nullptr;
+
+    std::string key;
+    if(blockName && al::strcasecmp(blockName, "general") != 0)
+    {
+        key = blockName;
+        if(devName)
+        {
+            key += '/';
+            key += devName;
+        }
+        key += '/';
+        key += keyName;
+    }
+    else
+    {
+        if(devName)
+        {
+            key = devName;
+            key += '/';
+        }
+        key += keyName;
+    }
+
+    auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
+        [&key](const ConfigEntry &entry) -> bool
+        { return entry.key == key; });
+    if(iter != ConfOpts.cend())
+    {
+        TRACE("Found %s = \"%s\"\n", key.c_str(), iter->value.c_str());
+        if(!iter->value.empty())
+            return iter->value.c_str();
+        return nullptr;
+    }
+
+    if(!devName)
+    {
+        TRACE("Key %s not found\n", key.c_str());
+        return nullptr;
+    }
+    return GetConfigValue(nullptr, blockName, keyName);
+}
+
 } // namespace
 
 
@@ -437,106 +483,46 @@ void ReadALConfig()
 }
 #endif
 
-const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def)
-{
-    if(!keyName)
-        return def;
-
-    std::string key;
-    if(blockName && al::strcasecmp(blockName, "general") != 0)
-    {
-        key = blockName;
-        if(devName)
-        {
-            key += '/';
-            key += devName;
-        }
-        key += '/';
-        key += keyName;
-    }
-    else
-    {
-        if(devName)
-        {
-            key = devName;
-            key += '/';
-        }
-        key += keyName;
-    }
-
-    auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
-        [&key](const ConfigEntry &entry) -> bool
-        { return entry.key == key; }
-    );
-    if(iter != ConfOpts.cend())
-    {
-        TRACE("Found %s = \"%s\"\n", key.c_str(), iter->value.c_str());
-        if(!iter->value.empty())
-            return iter->value.c_str();
-        return def;
-    }
-
-    if(!devName)
-    {
-        TRACE("Key %s not found\n", key.c_str());
-        return def;
-    }
-    return GetConfigValue(nullptr, blockName, keyName, def);
-}
-
-int ConfigValueExists(const char *devName, const char *blockName, const char *keyName)
-{
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-    return val[0] != 0;
-}
-
 al::optional<std::string> ConfigValueStr(const char *devName, const char *blockName, const char *keyName)
 {
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return al::nullopt;
-
-    return al::make_optional<std::string>(val);
+    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+        return al::make_optional<std::string>(val);
+    return al::nullopt;
 }
 
 al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)
 {
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return al::nullopt;
-
-    return al::make_optional(static_cast<int>(std::strtol(val, nullptr, 0)));
+    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+        return al::make_optional(static_cast<int>(std::strtol(val, nullptr, 0)));
+    return al::nullopt;
 }
 
 al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName)
 {
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return al::nullopt;
-
-    return al::make_optional(static_cast<unsigned int>(std::strtoul(val, nullptr, 0)));
+    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+        return al::make_optional(static_cast<unsigned int>(std::strtoul(val, nullptr, 0)));
+    return al::nullopt;
 }
 
 al::optional<float> ConfigValueFloat(const char *devName, const char *blockName, const char *keyName)
 {
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return al::nullopt;
-
-    return al::make_optional(std::strtof(val, nullptr));
+    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+        return al::make_optional(std::strtof(val, nullptr));
+    return al::nullopt;
 }
 
 al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, const char *keyName)
 {
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-    if(!val[0]) return al::nullopt;
-
-    return al::make_optional(
-        al::strcasecmp(val, "true") == 0 || al::strcasecmp(val, "yes") == 0 ||
-        al::strcasecmp(val, "on") == 0 || atoi(val) != 0);
+    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+        return al::make_optional(al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
+            || al::strcasecmp(val, "true")==0 || atoi(val) != 0);
+    return al::nullopt;
 }
 
 int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)
 {
-    const char *val = GetConfigValue(devName, blockName, keyName, "");
-
-    if(!val[0]) return def != 0;
-    return (al::strcasecmp(val, "true") == 0 || al::strcasecmp(val, "yes") == 0 ||
-            al::strcasecmp(val, "on") == 0 || atoi(val) != 0);
+    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+        return (al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
+            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0);
+    return def;
 }

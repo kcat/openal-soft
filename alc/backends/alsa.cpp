@@ -262,29 +262,36 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
     snd_pcm_info_t *pcminfo;
     snd_pcm_info_malloc(&pcminfo);
 
-    devlist.emplace_back(DevMap{alsaDevice,
-        GetConfigValue(nullptr, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ? "device" : "capture",
-            "default")});
+    auto defname = ConfigValueStr(nullptr, "alsa",
+        (stream == SND_PCM_STREAM_PLAYBACK) ? "device" : "capture");
+    devlist.emplace_back(DevMap{alsaDevice, defname ? defname->c_str() : "default"});
 
-    const char *customdevs{GetConfigValue(nullptr, "alsa",
-        (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices" : "custom-captures", "")};
-    while(const char *curdev{customdevs})
+    if(auto customdevs = ConfigValueStr(nullptr, "alsa",
+        (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices" : "custom-captures"))
     {
-        if(!curdev[0]) break;
-        customdevs = strchr(curdev, ';');
-        const char *sep{strchr(curdev, '=')};
-        if(!sep)
+        size_t nextpos{customdevs->find_first_not_of(';')};
+        size_t curpos;
+        while((curpos=nextpos) < customdevs->length())
         {
-            std::string spec{customdevs ? std::string(curdev, customdevs++) : std::string(curdev)};
-            ERR("Invalid ALSA device specification \"%s\"\n", spec.c_str());
-            continue;
-        }
+            nextpos = customdevs->find_first_of(';', curpos+1);
 
-        const char *oldsep{sep++};
-        devlist.emplace_back(DevMap{std::string(curdev, oldsep),
-            customdevs ? std::string(sep, customdevs++) : std::string(sep)});
-        const auto &entry = devlist.back();
-        TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
+            size_t seppos{customdevs->find_first_of('=', curpos)};
+            if(seppos == curpos || seppos >= nextpos)
+            {
+                std::string spec{customdevs->substr(curpos, nextpos-curpos)};
+                ERR("Invalid ALSA device specification \"%s\"\n", spec.c_str());
+            }
+            else
+            {
+                devlist.emplace_back(DevMap{customdevs->substr(curpos, seppos-curpos),
+                    customdevs->substr(seppos+1, nextpos-seppos-1)});
+                const auto &entry = devlist.back();
+                TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
+            }
+
+            if(nextpos < customdevs->length())
+                nextpos = customdevs->find_first_not_of(';', nextpos+1);
+        }
     }
 
     const std::string main_prefix{
@@ -616,16 +623,15 @@ int AlsaPlayback::mixerNoMMapProc()
 
 void AlsaPlayback::open(const char *name)
 {
-    const char *driver{};
+    al::optional<std::string> driveropt;
+    const char *driver{"default"};
     if(name)
     {
         if(PlaybackDevices.empty())
             PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
 
         auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
+            [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%s\" not found", name};
@@ -634,7 +640,8 @@ void AlsaPlayback::open(const char *name)
     else
     {
         name = alsaDevice;
-        driver = GetConfigValue(nullptr, "alsa", "device", "default");
+        if(bool{driveropt = ConfigValueStr(nullptr, "alsa", "device")})
+            driver = driveropt->c_str();
     }
     TRACE("Opening device \"%s\"\n", driver);
 
@@ -889,16 +896,15 @@ AlsaCapture::~AlsaCapture()
 
 void AlsaCapture::open(const char *name)
 {
-    const char *driver{};
+    al::optional<std::string> driveropt;
+    const char *driver{"default"};
     if(name)
     {
         if(CaptureDevices.empty())
             CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
 
         auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
+            [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%s\" not found", name};
@@ -907,7 +913,8 @@ void AlsaCapture::open(const char *name)
     else
     {
         name = alsaDevice;
-        driver = GetConfigValue(nullptr, "alsa", "capture", "default");
+        if(bool{driveropt = ConfigValueStr(nullptr, "alsa", "capture")})
+            driver = driveropt->c_str();
     }
 
     TRACE("Opening device \"%s\"\n", driver);

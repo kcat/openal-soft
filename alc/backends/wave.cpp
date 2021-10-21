@@ -203,8 +203,8 @@ int WaveBackend::mixerProc()
 
 void WaveBackend::open(const char *name)
 {
-    const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
-    if(!fname[0]) throw al::backend_exception{al::backend_error::NoDevice,
+    auto fname = ConfigValueStr(nullptr, "wave", "file");
+    if(!fname) throw al::backend_exception{al::backend_error::NoDevice,
         "No wave output filename"};
 
     if(!name)
@@ -218,15 +218,15 @@ void WaveBackend::open(const char *name)
 
 #ifdef _WIN32
     {
-        std::wstring wname{utf8_to_wstr(fname)};
+        std::wstring wname{utf8_to_wstr(fname->c_str())};
         mFile = _wfopen(wname.c_str(), L"wb");
     }
 #else
-    mFile = fopen(fname, "wb");
+    mFile = fopen(fname->c_str(), "wb");
 #endif
     if(!mFile)
         throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",
-            fname, strerror(errno)};
+            fname->c_str(), strerror(errno)};
 
     mDevice->DeviceName = name;
 }

@@ -562,3 +562,7 @@
 #  Creates AMB format files using first-order ambisonics instead of a standard
 #  single- or multi-channel .wav file.
 #bformat = false
+drivers = alsa,pulse,core,oss
+
+[pulse]
+allow-moves=yes

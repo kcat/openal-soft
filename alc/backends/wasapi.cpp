@@ -1051,8 +1051,7 @@ HRESULT WasapiPlayback::resetProxy()
     mFrameStep = OutputType.Format.nChannels;
 
     const EndpointFormFactor formfactor{get_device_formfactor(mMMDev.get())};
-    mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo
-        && (formfactor == Headphones || formfactor == Headset));
+    mDevice->Flags.set(DirectEar, (formfactor == Headphones || formfactor == Headset));
 
     setChannelOrderFromWFXMask(OutputType.dwChannelMask);
 

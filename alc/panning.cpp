@@ -921,25 +921,11 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
         return;
     }
 
-    bool headphones{device->IsHeadphones};
-    if(device->Type != DeviceType::Loopback)
-    {
-        if(auto modeopt = device->configValue<std::string>(nullptr, "stereo-mode"))
-        {
-            const char *mode{modeopt->c_str()};
-            if(al::strcasecmp(mode, "headphones") == 0)
-                headphones = true;
-            else if(al::strcasecmp(mode, "speakers") == 0)
-                headphones = false;
-            else if(al::strcasecmp(mode, "auto") != 0)
-                ERR("Unexpected stereo-mode: %s\n", mode);
-        }
-    }
 
     /* If there's no request for HRTF and the device is headphones, or if HRTF
      * is explicitly requested, try to enable it.
      */
-    if((!hrtfreq && headphones) || (hrtfreq && hrtfreq.value()))
+    if((!hrtfreq && device->Flags.test(DirectEar)) || hrtfreq.value_or(false))
     {
         if(device->mHrtfList.empty())
             device->enumerateHrtfs();

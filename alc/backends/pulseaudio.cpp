@@ -815,8 +815,8 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
 
     if(info->active_port)
         TRACE("Active port: %s (%s)\n", info->active_port->name, info->active_port->description);
-    mDevice->IsHeadphones = (mDevice->FmtChans == DevFmtStereo
-        && info->active_port && strcmp(info->active_port->name, "analog-output-headphones") == 0);
+    mDevice->Flags.set(DirectEar, (info->active_port
+        && strcmp(info->active_port->name, "analog-output-headphones") == 0));
 }
 
 void PulsePlayback::sinkNameCallback(pa_context*, const pa_sink_info *info, int eol) noexcept

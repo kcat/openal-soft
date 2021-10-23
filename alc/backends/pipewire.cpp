@@ -1185,7 +1185,7 @@ bool PipeWirePlayback::reset()
     /* If connecting to a specific device, update various device parameters to
      * match its format.
      */
-    mDevice->IsHeadphones = false;
+    mDevice->Flags.reset(DirectEar);
     if(mTargetId != PwIdAny)
     {
         EventWatcherLockGuard _{gEventHandler};
@@ -1207,7 +1207,7 @@ bool PipeWirePlayback::reset()
             if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;
             if(match->mChannels == DevFmtStereo && match->mIsHeadphones)
-                mDevice->IsHeadphones = true;
+                mDevice->Flags.set(DirectEar);
         }
     }
     /* Force planar 32-bit float output for playback. This is what PipeWire

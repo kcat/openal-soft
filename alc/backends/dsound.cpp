@@ -409,8 +409,7 @@ bool DSoundPlayback::reset()
             else
                 ERR("Unknown system speaker config: 0x%lx\n", speakers);
         }
-        mDevice->IsHeadphones = mDevice->FmtChans == DevFmtStereo
-            && speakers == DSSPEAKER_HEADPHONE;
+        mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
 
         switch(mDevice->FmtChans)
         {

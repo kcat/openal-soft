@@ -20,7 +20,7 @@ void aluInit(void);
  * Set up the appropriate panning method and mixing method given the device
  * properties.
  */
-void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq);
+void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq, bool useuhj);
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context);
 

@@ -822,7 +822,7 @@ void InitUhjPanning(ALCdevice *device)
 
 } // namespace
 
-void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
+void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq, bool useuhj)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
@@ -922,10 +922,10 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
     }
 
 
-    /* If there's no request for HRTF and the device is headphones, or if HRTF
-     * is explicitly requested, try to enable it.
+    /* If there's no request for HRTF or UHJ and the device is headphones, or
+     * if HRTF is explicitly requested, try to enable it.
      */
-    if((!hrtfreq && device->Flags.test(DirectEar)) || hrtfreq.value_or(false))
+    if((!hrtfreq && !useuhj && device->Flags.test(DirectEar)) || hrtfreq.value_or(false))
     {
         if(device->mHrtfList.empty())
             device->enumerateHrtfs();
@@ -973,6 +973,15 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
     }
     old_hrtf = nullptr;
 
+    if(useuhj)
+    {
+        device->mUhjEncoder = std::make_unique<UhjEncoder>();
+        TRACE("UHJ enabled\n");
+        InitUhjPanning(device);
+        device->PostProcess = &ALCdevice::ProcessUhj;
+        return;
+    }
+
     device->mRenderMode = RenderMode::Pairwise;
     if(device->Type != DeviceType::Loopback)
     {
@@ -989,23 +998,6 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
                 return;
             }
         }
-    }
-
-    if(auto encopt = device->configValue<std::string>(nullptr, "stereo-encoding"))
-    {
-        const char *mode{encopt->c_str()};
-        if(al::strcasecmp(mode, "uhj") == 0)
-            device->mRenderMode = RenderMode::Normal;
-        else if(al::strcasecmp(mode, "panpot") != 0)
-            ERR("Unexpected stereo-encoding: %s\n", mode);
-    }
-    if(device->mRenderMode == RenderMode::Normal)
-    {
-        device->mUhjEncoder = std::make_unique<UhjEncoder>();
-        TRACE("UHJ enabled\n");
-        InitUhjPanning(device);
-        device->PostProcess = &ALCdevice::ProcessUhj;
-        return;
     }
 
     TRACE("Stereo rendering\n");

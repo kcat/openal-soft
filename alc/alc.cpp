@@ -1523,6 +1523,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     ALCenum gainLimiter{device->LimiterState};
     uint new_sends{device->NumAuxSends};
     al::optional<bool> hrtfreq{};
+    al::optional<bool> uhjreq{};
     DevFmtChannels oldChans;
     DevFmtType oldType;
     int hrtf_id{-1};
@@ -1847,9 +1848,20 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             else if(al::strcasecmp(mode, "auto") != 0)
                 ERR("Unexpected stereo-mode: %s\n", mode);
         }
+
+        if(auto encopt = device->configValue<std::string>(nullptr, "stereo-encoding"))
+        {
+            const char *mode{encopt->c_str()};
+            if(al::strcasecmp(mode, "uhj") == 0)
+                uhjreq = al::make_optional(true);
+            else if(al::strcasecmp(mode, "panpot") == 0)
+                uhjreq = al::make_optional(false);
+            else
+                ERR("Unexpected stereo-encoding: %s\n", mode);
+        }
     }
 
-    aluInitRenderer(device, hrtf_id, hrtfreq);
+    aluInitRenderer(device, hrtf_id, hrtfreq, uhjreq.value_or(false));
 
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",

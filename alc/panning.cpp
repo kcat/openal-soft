@@ -433,6 +433,7 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
     {
         ret.mOrder = decoder.mOrder;
         ret.mIs3D = decoder.mIs3D;
+        ret.mScaling = decoder.mScaling;
         ret.mChannels = {decoder.mChannels.data(), chan_count};
         ret.mOrderGain = decoder.mOrderGain;
         ret.mCoeffs = {decoder.mCoeffs.data(), chan_count};

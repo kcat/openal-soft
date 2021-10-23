@@ -605,12 +605,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         }
     }
 
-    /* For non-DevFmtAmbi3D, set the ambisonic order and reset the layout and
-     * scale.
-     */
+    /* For non-DevFmtAmbi3D, set the ambisonic order. */
     device->mAmbiOrder = decoder.mOrder;
-    device->mAmbiLayout = DevAmbiLayout::ACN;
-    device->mAmbiScale = DevAmbiScaling::N3D;
 
     const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
         Ambi2DChannelsFromOrder(decoder.mOrder)};

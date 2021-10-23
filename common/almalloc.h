@@ -154,9 +154,8 @@ destroy_n(T first, N count) noexcept(noexcept(al::destroy_at(std::addressof(*fir
 
 
 template<typename T, typename N>
-inline std::enable_if_t<std::is_integral<N>::value,T>
-uninitialized_default_construct_n(T first, N count)
-    noexcept(std::is_nothrow_default_constructible<typename std::iterator_traits<T>::value_type>::value)
+inline std::enable_if_t<std::is_integral<N>::value,
+T> uninitialized_default_construct_n(T first, N count)
 {
     using ValueT = typename std::iterator_traits<T>::value_type;
     T current{first};
@@ -194,8 +193,7 @@ struct FlexArrayStorage {
             sizeof(FlexArrayStorage)) + base;
     }
 
-    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_default_constructible<T>::value)
-        : mSize{size}
+    FlexArrayStorage(size_t size) : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArrayStorage() = default;
 
@@ -217,8 +215,7 @@ struct FlexArrayStorage<T,alignment,false> {
             sizeof(FlexArrayStorage)) + base;
     }
 
-    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_default_constructible<T>::value)
-        : mSize{size}
+    FlexArrayStorage(size_t size) : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArrayStorage() { al::destroy_n(mArray, mSize); }
 

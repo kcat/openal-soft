@@ -446,8 +446,6 @@ retry_open:
         else
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-        if(mPrimaryBuffer)
-            mPrimaryBuffer->Release();
         mPrimaryBuffer = nullptr;
     }
     else

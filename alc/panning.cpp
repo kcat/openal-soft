@@ -223,7 +223,7 @@ void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d
     std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);
 }
 
-void InitDistanceComp(ALCdevice *device, DecoderView decoder,
+void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
     const al::span<const float,MAX_OUTPUT_CHANNELS> dists)
 {
     const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f, maxf)};
@@ -235,9 +235,9 @@ void InitDistanceComp(ALCdevice *device, DecoderView decoder,
     std::vector<DistanceComp::ChanData> ChanDelay;
     ChanDelay.reserve(device->RealOut.Buffer.size());
     size_t total{0u};
-    for(size_t chidx{0};chidx < decoder.mChannels.size();++chidx)
+    for(size_t chidx{0};chidx < channels.size();++chidx)
     {
-        const Channel ch{decoder.mChannels[chidx]};
+        const Channel ch{channels[chidx]};
         const uint idx{device->RealOut.ChannelIndex[ch]};
         if(idx == INVALID_CHANNEL_INDEX)
             continue;
@@ -914,7 +914,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq)
             if(spkr_count > 0)
             {
                 InitNearFieldCtrl(device, accum_dist / spkr_count, decoder.mOrder, decoder.mIs3D);
-                InitDistanceComp(device, decoder, speakerdists);
+                InitDistanceComp(device, decoder.mChannels, speakerdists);
             }
         }
         if(auto *ambidec{device->AmbiDecoder.get()})

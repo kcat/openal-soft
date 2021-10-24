@@ -822,7 +822,7 @@ void InitUhjPanning(ALCdevice *device)
 
 } // namespace
 
-void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq, bool useuhj)
+void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding> stereomode)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
@@ -837,7 +837,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq,
     if(device->FmtChans != DevFmtStereo)
     {
         old_hrtf = nullptr;
-        if(hrtfreq && hrtfreq.value())
+        if(stereomode && *stereomode == StereoEncoding::Hrtf)
             device->mHrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
         const char *layout{nullptr};
@@ -925,7 +925,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq,
     /* If there's no request for HRTF or UHJ and the device is headphones, or
      * if HRTF is explicitly requested, try to enable it.
      */
-    if((!hrtfreq && !useuhj && device->Flags.test(DirectEar)) || hrtfreq.value_or(false))
+    if((!stereomode && device->Flags.test(DirectEar))
+        || (stereomode && *stereomode == StereoEncoding::Hrtf))
     {
         if(device->mHrtfList.empty())
             device->enumerateHrtfs();
@@ -973,7 +974,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq,
     }
     old_hrtf = nullptr;
 
-    if(useuhj)
+    if(stereomode && *stereomode == StereoEncoding::Uhj)
     {
         device->mUhjEncoder = std::make_unique<UhjEncoder>();
         TRACE("UHJ enabled\n");

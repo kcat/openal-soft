@@ -1522,8 +1522,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 {
     ALCenum gainLimiter{device->LimiterState};
     uint new_sends{device->NumAuxSends};
-    al::optional<bool> hrtfreq{};
-    al::optional<bool> uhjreq{};
+    al::optional<StereoEncoding> stereomode{};
     DevFmtChannels oldChans;
     DevFmtType oldType;
     int hrtf_id{-1};
@@ -1546,6 +1545,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         al::optional<DevFmtType> opttype;
         al::optional<DevAmbiLayout> optlayout;
         al::optional<DevAmbiScaling> optscale;
+        al::optional<bool> opthrtf;
 
         uint aorder{0u};
         uint freq{0u};
@@ -1608,11 +1608,11 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             case ALC_HRTF_SOFT:
                 TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
                 if(attrList[attrIdx + 1] == ALC_FALSE)
-                    hrtfreq = al::make_optional(false);
+                    opthrtf = al::make_optional(false);
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
-                    hrtfreq = al::make_optional(true);
+                    opthrtf = al::make_optional(true);
                 else
-                    hrtfreq = al::nullopt;
+                    opthrtf = al::nullopt;
                 break;
 
             case ALC_HRTF_ID_SOFT:
@@ -1662,6 +1662,12 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->Flags.reset(DeviceRunning);
 
         UpdateClockBase(device);
+
+        if(!stereomode && opthrtf)
+        {
+            auto mode = *opthrtf ? StereoEncoding::Hrtf : StereoEncoding::Normal;
+            stereomode = al::make_optional(mode);
+        }
 
         if(loopback)
         {
@@ -1758,7 +1764,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->DitherSeed = DitherRNGSeed;
 
     /*************************************************************************
-     * Update device format request if HRTF is requested
+     * Update device format request if HRTF or UHJ is requested
      */
     device->mHrtfStatus = ALC_HRTF_DISABLED_SOFT;
     if(device->Type != DeviceType::Loopback)
@@ -1767,15 +1773,18 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         {
             const char *hrtf{hrtfopt->c_str()};
             if(al::strcasecmp(hrtf, "true") == 0)
-                hrtfreq = al::make_optional(true);
+                stereomode = al::make_optional(StereoEncoding::Hrtf);
             else if(al::strcasecmp(hrtf, "false") == 0)
-                hrtfreq = al::make_optional(false);
+            {
+                if(!stereomode || *stereomode == StereoEncoding::Hrtf)
+                    stereomode = al::make_optional(StereoEncoding::Normal);
+            }
             else if(al::strcasecmp(hrtf, "auto") != 0)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
         }
 
-        /* If the app or user wants HRTF, try to set stereo playback. */
-        if(hrtfreq && hrtfreq.value())
+        /* If the app or user wants HRTF or UHJ, try to set stereo playback. */
+        if(stereomode && *stereomode != StereoEncoding::Normal)
         {
             device->FmtChans = DevFmtStereo;
             device->Flags.set(ChannelsRequest);
@@ -1852,16 +1861,18 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         if(auto encopt = device->configValue<std::string>(nullptr, "stereo-encoding"))
         {
             const char *mode{encopt->c_str()};
-            if(al::strcasecmp(mode, "uhj") == 0)
-                uhjreq = al::make_optional(true);
-            else if(al::strcasecmp(mode, "panpot") == 0)
-                uhjreq = al::make_optional(false);
+            if(al::strcasecmp(mode, "panpot") == 0)
+                stereomode = al::make_optional(StereoEncoding::Normal);
+            else if(al::strcasecmp(mode, "uhj") == 0)
+                stereomode = al::make_optional(StereoEncoding::Uhj);
+            else if(al::strcasecmp(mode, "hrtf") == 0)
+                stereomode = al::make_optional(StereoEncoding::Hrtf);
             else
                 ERR("Unexpected stereo-encoding: %s\n", mode);
         }
     }
 
-    aluInitRenderer(device, hrtf_id, hrtfreq, uhjreq.value_or(false));
+    aluInitRenderer(device, hrtf_id, stereomode);
 
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",

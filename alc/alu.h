@@ -7,6 +7,8 @@ struct ALCcontext;
 struct ALCdevice;
 struct EffectSlot;
 
+enum class StereoEncoding : unsigned char;
+
 
 constexpr float GainMixMax{1000.0f}; /* +60dB */
 
@@ -20,7 +22,7 @@ void aluInit(void);
  * Set up the appropriate panning method and mixing method given the device
  * properties.
  */
-void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<bool> hrtfreq, bool useuhj);
+void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding> stereomode);
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context);
 

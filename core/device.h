@@ -57,6 +57,12 @@ enum class RenderMode : unsigned char {
     Hrtf
 };
 
+enum class StereoEncoding : unsigned char {
+    Normal,
+    Uhj,
+    Hrtf
+};
+
 
 struct InputRemixMap {
     struct TargetMix { Channel channel; float mix; };

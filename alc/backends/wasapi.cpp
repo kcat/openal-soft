@@ -996,26 +996,60 @@ HRESULT WasapiPlayback::resetProxy()
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
-        if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
-            mDevice->FmtChans = DevFmtX71;
-        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
-        else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
-            || (chanmask&X51RearMask) == X5DOT1REAR))
-            mDevice->FmtChans = DevFmtX51;
-        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
-        else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
-            mDevice->FmtChans = DevFmtStereo;
-        else if(chancount >= 1 && (chanmask&MonoMask) == MONO)
-            mDevice->FmtChans = DevFmtMono;
-        else
+        /* Don't update the channel format if the requested format fits what's
+         * supported.
+         */
+        bool chansok{false};
+        if(mDevice->Flags.test(ChannelsRequest))
         {
-            ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels,
-                OutputType.dwChannelMask);
-            mDevice->FmtChans = DevFmtStereo;
-            OutputType.Format.nChannels = 2;
-            OutputType.dwChannelMask = STEREO;
+            switch(mDevice->FmtChans)
+            {
+            case DevFmtMono:
+                chansok = (chancount >= 1 && (chanmask&MonoMask) == MONO);
+                break;
+            case DevFmtStereo:
+                chansok = (chancount >= 2 && (chanmask&StereoMask) == STEREO);
+                break;
+            case DevFmtQuad:
+                chansok = (chancount >= 4 && (chanmask&QuadMask) == QUAD);
+                break;
+            case DevFmtX51:
+                chansok = (chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
+                        || (chanmask&X51RearMask) == X5DOT1REAR));
+                break;
+            case DevFmtX61:
+                chansok = (chancount >= 7 && (chanmask&X61Mask) == X6DOT1);
+                break;
+            case DevFmtX71:
+                chansok = (chancount >= 8 && (chanmask&X71Mask) == X7DOT1);
+                break;
+            case DevFmtAmbi3D:
+                break;
+            }
+        }
+        if(!chansok)
+        {
+            if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
+                mDevice->FmtChans = DevFmtX71;
+            else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
+                mDevice->FmtChans = DevFmtX61;
+            else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
+                || (chanmask&X51RearMask) == X5DOT1REAR))
+                mDevice->FmtChans = DevFmtX51;
+            else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
+                mDevice->FmtChans = DevFmtQuad;
+            else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
+                mDevice->FmtChans = DevFmtStereo;
+            else if(chancount >= 1 && (chanmask&MonoMask) == MONO)
+                mDevice->FmtChans = DevFmtMono;
+            else
+            {
+                ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels,
+                    OutputType.dwChannelMask);
+                mDevice->FmtChans = DevFmtStereo;
+                OutputType.Format.nChannels = 2;
+                OutputType.dwChannelMask = STEREO;
+            }
         }
 
         if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))

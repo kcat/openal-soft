@@ -725,10 +725,7 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
     else if(std::strcmp(key, "default.audio.source") == 0)
         isCapture = true;
     else
-    {
-        TRACE("Skipping property \"%s\"\n", key);
         return 0;
-    }
 
     if(!type)
     {
@@ -856,10 +853,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         const bool isGood{al::strcasecmp(media_class, AudioSinkClass) == 0
             || al::strcasecmp(media_class, AudioSourceClass) == 0};
         if(!isGood)
-        {
-            TRACE("Skipping node type \"%s\"\n", media_class);
             return;
-        }
 
         /* Create the proxy object. */
         auto *proxy = static_cast<pw_proxy*>(pw_registry_bind(mRegistry, id, type, version,

@@ -94,6 +94,9 @@
 /* Define if we have initguid.h */
 #cmakedefine HAVE_INITGUID_H
 
+/* Define if we have dispatch.h */
+#cmakedefine HAVE_DISPATCH_H
+
 /* Define if we have GCC's __get_cpuid() */
 #cmakedefine HAVE_GCC_GET_CPUID
 

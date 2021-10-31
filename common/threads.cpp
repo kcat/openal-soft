@@ -114,7 +114,7 @@ void althrd_setname(const char *name)
 void althrd_setname(const char*) { }
 #endif
 
-#ifdef __APPLE__
+#ifdef HAVE_DISPATCH_H
 
 namespace al {
 
@@ -139,7 +139,7 @@ bool semaphore::try_wait() noexcept
 
 } // namespace al
 
-#else /* !__APPLE__ */
+#else /* !HAVE_DISPATCH_H */
 
 #include <cerrno>
 
@@ -171,6 +171,6 @@ bool semaphore::try_wait() noexcept
 
 } // namespace al
 
-#endif /* __APPLE__ */
+#endif /* HAVE_DISPATCH_H */
 
 #endif /* _WIN32 */

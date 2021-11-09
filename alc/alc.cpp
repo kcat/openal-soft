@@ -524,6 +524,11 @@ constexpr struct {
 
     DECL(ALC_OUTPUT_LIMITER_SOFT),
 
+    DECL(ALC_OUTPUT_MODE_SOFT),
+    DECL(ALC_NORMAL_SOFT),
+    DECL(ALC_STEREO_UHJ_SOFT),
+    DECL(ALC_ANY_SOFT),
+
     DECL(ALC_NO_ERROR),
     DECL(ALC_INVALID_DEVICE),
     DECL(ALC_INVALID_CONTEXT),
@@ -933,6 +938,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_loopback "
     "ALC_SOFT_loopback_bformat "
     "ALC_SOFT_output_limiter "
+    "ALC_SOFTX_output_mode "
     "ALC_SOFT_pause_device "
     "ALC_SOFTX_reopen_device";
 constexpr int alcMajorVersion{1};
@@ -1608,9 +1614,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             case ALC_HRTF_SOFT:
                 TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
                 if(attrList[attrIdx + 1] == ALC_FALSE)
-                    opthrtf = al::make_optional(false);
+                    opthrtf = false;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
-                    opthrtf = al::make_optional(true);
+                    opthrtf = true;
                 else
                     opthrtf = al::nullopt;
                 break;
@@ -1623,6 +1629,18 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             case ALC_OUTPUT_LIMITER_SOFT:
                 gainLimiter = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
+                break;
+
+            case ALC_OUTPUT_MODE_SOFT:
+                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
+                if(attrList[attrIdx + 1] == ALC_HRTF_SOFT)
+                    stereomode = StereoEncoding::Hrtf;
+                else if(attrList[attrIdx + 1] == ALC_STEREO_UHJ_SOFT)
+                    stereomode = StereoEncoding::Uhj;
+                else if(attrList[attrIdx + 1] == ALC_NORMAL_SOFT)
+                    stereomode = StereoEncoding::Normal;
+                else
+                    stereomode = al::nullopt;
                 break;
 
             default:
@@ -1664,10 +1682,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         UpdateClockBase(device);
 
         if(!stereomode && opthrtf)
-        {
-            auto mode = *opthrtf ? StereoEncoding::Hrtf : StereoEncoding::Normal;
-            stereomode = al::make_optional(mode);
-        }
+            stereomode = *opthrtf ? StereoEncoding::Hrtf : StereoEncoding::Normal;
 
         if(loopback)
         {
@@ -1773,11 +1788,11 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         {
             const char *hrtf{hrtfopt->c_str()};
             if(al::strcasecmp(hrtf, "true") == 0)
-                stereomode = al::make_optional(StereoEncoding::Hrtf);
+                stereomode = StereoEncoding::Hrtf;
             else if(al::strcasecmp(hrtf, "false") == 0)
             {
                 if(!stereomode || *stereomode == StereoEncoding::Hrtf)
-                    stereomode = al::make_optional(StereoEncoding::Normal);
+                    stereomode = StereoEncoding::Normal;
             }
             else if(al::strcasecmp(hrtf, "auto") != 0)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
@@ -2707,6 +2722,15 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
 
     case ALC_MAX_AMBISONIC_ORDER_SOFT:
         values[0] = MaxAmbiOrder;
+        return 1;
+
+    case ALC_OUTPUT_MODE_SOFT:
+        if(device->mHrtf)
+            values[0] = ALC_HRTF_SOFT;
+        else if(device->mUhjEncoder)
+            values[0] = ALC_STEREO_UHJ_SOFT;
+        else
+            values[0] = ALC_NORMAL_SOFT;
         return 1;
 
     default:

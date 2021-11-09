@@ -94,6 +94,15 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 #define AL_STOP_SOURCES_ON_DISCONNECT_SOFT       0x19AB
 #endif
 
+#ifndef ALC_SOFT_output_mode
+#define ALC_SOFT_output_mode
+#define ALC_OUTPUT_MODE_SOFT                     0x19AC
+#define ALC_NORMAL_SOFT                          0x19AD
+#define ALC_STEREO_UHJ_SOFT                      0x19AE
+/*#define ALC_HRTF_SOFT                            0x1992*/
+#define ALC_ANY_SOFT                             0x19AF
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

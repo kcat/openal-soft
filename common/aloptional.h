@@ -17,6 +17,7 @@ constexpr in_place_t in_place{};
 
 #define NOEXCEPT_AS(...)  noexcept(noexcept(__VA_ARGS__))
 
+namespace detail_ {
 /* Base storage struct for an optional. Defines a trivial destructor, for types
  * that can be trivially destructed.
  */
@@ -102,14 +103,20 @@ struct optstore_helper : public optstore_base<T> {
 };
 
 /* Define copy and move constructors and assignment operators, which may or may
- * not be trivial. Default definition is completely trivial.
+ * not be trivial.
  */
 template<typename T, bool trivial_copy = std::is_trivially_copy_constructible<T>::value,
     bool trivial_move = std::is_trivially_move_constructible<T>::value,
-    /* Trivial assignment is dependent on trivial construction. */
-    bool = trivial_copy && std::is_trivially_copy_assignable<T>::value,
-    bool = trivial_move && std::is_trivially_move_assignable<T>::value>
-struct optional_storage : public optstore_helper<T> {
+    /* Trivial assignment is dependent on trivial construction+destruction. */
+    bool = trivial_copy && std::is_trivially_copy_assignable<T>::value
+        && std::is_trivially_destructible<T>::value,
+    bool = trivial_move && std::is_trivially_move_assignable<T>::value
+        && std::is_trivially_destructible<T>::value>
+struct optional_storage;
+
+/* Completely trivial. */
+template<typename T>
+struct optional_storage<T, true, true, true, true> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     constexpr optional_storage() noexcept = default;
     constexpr optional_storage(const optional_storage&) = default;
@@ -224,10 +231,13 @@ struct optional_storage<T, false, false, false, false> : public optstore_helper<
     { this->assign(std::move(rhs)); return *this; }
 };
 
+} // namespace detail_
+
+#define REQUIRES(...) bool rt_=true, std::enable_if_t<rt_ && (__VA_ARGS__),bool> = true
 
 template<typename T>
 class optional {
-    using storage_t = optional_storage<T>;
+    using storage_t = detail_::optional_storage<T>;
 
     storage_t mStore{};
 
@@ -240,7 +250,22 @@ public:
     constexpr optional(nullopt_t) noexcept { }
     template<typename ...Args>
     constexpr explicit optional(in_place_t, Args&& ...args)
+        NOEXCEPT_AS(storage_t{al::in_place, std::forward<Args>(args)...})
         : mStore{al::in_place, std::forward<Args>(args)...}
+    { }
+    template<typename U, REQUIRES(std::is_constructible<T, U&&>::value
+        && !std::is_same<std::decay_t<U>, al::in_place_t>::value
+        && !std::is_same<std::decay_t<U>, optional<T>>::value
+        && std::is_convertible<U&&, T>::value)>
+    constexpr optional(U&& rhs) NOEXCEPT_AS(storage_t{al::in_place, std::forward<U>(rhs)})
+        : mStore{al::in_place, std::forward<U>(rhs)}
+    { }
+    template<typename U, REQUIRES(std::is_constructible<T, U&&>::value
+        && !std::is_same<std::decay_t<U>, al::in_place_t>::value
+        && !std::is_same<std::decay_t<U>, optional<T>>::value
+        && !std::is_convertible<U&&, T>::value)>
+    constexpr explicit optional(U&& rhs) NOEXCEPT_AS(storage_t{al::in_place, std::forward<U>(rhs)})
+        : mStore{al::in_place, std::forward<U>(rhs)}
     { }
     ~optional() = default;
 
@@ -298,6 +323,7 @@ template<typename T, typename U, typename... Args>
 constexpr optional<T> make_optional(std::initializer_list<U> il, Args&& ...args)
 { return optional<T>{in_place, il, std::forward<Args>(args)...}; }
 
+#undef REQUIRES
 #undef NOEXCEPT_AS
 } // namespace al
 

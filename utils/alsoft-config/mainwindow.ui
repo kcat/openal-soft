@@ -62,7 +62,7 @@
        <rect>
         <x>110</x>
         <y>50</y>
-        <width>76</width>
+        <width>80</width>
         <height>31</height>
        </rect>
       </property>
@@ -111,7 +111,7 @@ float and converted to the output sample type as needed.</string>
        <rect>
         <x>110</x>
         <y>20</y>
-        <width>76</width>
+        <width>80</width>
         <height>31</height>
        </rect>
       </property>
@@ -129,7 +129,7 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>96</width>
+        <width>100</width>
         <height>31</height>
        </rect>
       </property>
@@ -437,12 +437,15 @@ frames needed for each mixing update.</string>
        </property>
        <property name="toolTip">
         <string>Pan Pot uses standard amplitude panning (aka
-pair-wise, stereo pair, etc) between -30 and +30
-degrees, while UHJ creates a stereo-compatible
-two-channel UHJ mix, which encodes some
-surround sound information into stereo output
-that can be decoded with a surround sound
-receiver.</string>
+pair-wise, stereo pair, etc).
+
+UHJ creates a stereo-compatible two-channel
+UHJ mix, which encodes some surround sound
+information into stereo output that can be
+decoded with a surround sound receiver.
+
+Binaural applies HRTF filters to create a sense
+of 3D space with headphones.</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_19">
@@ -631,6 +634,9 @@ appropriate speaker configuration you intend to use.</string>
       </property>
       <property name="text">
        <string>High Quality Mode:</string>
+      </property>
+      <property name="tristate">
+       <bool>true</bool>
       </property>
      </widget>
      <widget class="QCheckBox" name="decoderDistCompCheckBox">
@@ -1442,7 +1448,7 @@ drop-outs.</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>70</y>
+          <y>110</y>
           <width>401</width>
           <height>80</height>
          </rect>
@@ -1450,7 +1456,8 @@ drop-outs.</string>
         <property name="toolTip">
          <string>The update buffer size, in samples, that the backend
 will keep buffered to handle the server's real-time
-processing requests. Must be a power of 2.</string>
+processing requests. Must be a power of 2. Ignored
+when Real-time Mixing is used.</string>
         </property>
         <property name="title">
          <string>Buffer Size</string>
@@ -1511,6 +1518,30 @@ processing requests. Must be a power of 2.</string>
         </property>
         <property name="text">
          <string>AutoConnect Ports</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="jackRtMixCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>70</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Renders samples directly in the real-time
+processing callback. This allows for lower
+latency and less overall CPU utilization, but
+can increase the risk of underruns when
+increasing the amount of processing the
+mixer needs to do.</string>
+        </property>
+        <property name="text">
+         <string>Real-time Mixing</string>
         </property>
         <property name="tristate">
          <bool>true</bool>
@@ -2317,7 +2348,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>131</width>
+        <width>135</width>
         <height>31</height>
        </rect>
       </property>

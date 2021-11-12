@@ -1,3 +1,52 @@
+openal-soft-1.22.0:
+
+    Improved sound positioning when a source is near the listener.
+
+    Improved the default 5.1 output decoder.
+
+    Improved the high frequency response for the HRTF second-order ambisonic
+    decoder.
+
+    Fixed UHJ output on NEON-capable CPUs.
+
+    Fixed redundant effect updates when setting an effect property to the
+    current value.
+
+    Fixed WASAPI capture using really low sample rates, and sources with very
+    high pitch shifts when using a bsinc resampler.
+
+    Implemented a PipeWire backend. Not used by default, as there's no fool-
+    proof way to detect PipeWire is driving the system audio instead of
+    PulseAudio, ALSA, or something else, but it is otherwise functional.
+
+    Implemented enumeration for the JACK and CoreAudio backends.
+
+    Added optional support for RTKit to get real-time priority. Only used as a
+    backup when pthread_setschedparam fails.
+
+    Added an option for JACK playback to render directly in the real-time
+    processing callback. For lower playback latency, on by default.
+
+    Added an option for custom JACK devices.
+
+    Added utilities to encode and decode UHJ audio files. Files are decoded to
+    the .amb format, and are encoded from libsndfile-compatible formats.
+
+    Added an in-progress extension to handle UHJ audio buffers natively.
+
+    Added an in-progress extension to select UHJ output in addition to HRTF.
+
+    Added an in-progress extension to reopen and move devices to different
+    outputs without losing object state.
+
+    Added an in-progress extension to hold sources in a playing state when a
+    device disconnects. Allows devices to be reset or reopened and have sources
+    resume from where they left off.
+
+    Lowered the priority of the JACK backend. To avoid it getting picked when
+    PipeWire is providing JACK compatibility, since the JACK backend is less
+    robust with auto-configuration.
+
 openal-soft-1.21.1:
 
     Improved alext.h's detection of standard types.

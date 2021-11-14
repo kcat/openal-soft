@@ -581,78 +581,85 @@ al::optional<Pod_t<T>> get_param(const spa_pod *value)
 
 void parse_srate(DeviceNode *node, const spa_pod *value)
 {
-    /* TODO: Can this be anything else? Floats? Will the sample rate always be
-     * a range or enum choice of ints?
-     */
-    const uint srateType{get_pod_type(value)};
-    if(srateType == SPA_TYPE_Choice)
+    /* TODO: Can this be anything else? Long, Float, Double? */
+    uint32_t nvals{}, choiceType{};
+    value = spa_pod_get_values(value, &nvals, &choiceType);
+
+    const uint podType{get_pod_type(value)};
+    if(podType != SPA_TYPE_Int)
     {
-        uint32_t nvals{}, choiceType{};
-        value = spa_pod_get_values(value, &nvals, &choiceType);
-
-        const uint podtype{get_pod_type(value)};
-        if(podtype != SPA_TYPE_Int)
-        {
-            WARN("Unhandled sample rate POD type: %u\n", podtype);
-            return;
-        }
-
-        if(choiceType == SPA_CHOICE_Range)
-        {
-            if(nvals != 3)
-            {
-                WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
-                return;
-            }
-            std::array<int32_t,3> srates{};
-            std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
-
-            /* [0] is the default, [1] is the min, and [2] is the max. */
-            TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", node->mId, srates[0],
-                srates[1], srates[2]);
-            srates[0] = clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
-            node->mSampleRate = static_cast<uint>(srates[0]);
-            return;
-        }
-
-        if(choiceType == SPA_CHOICE_Enum)
-        {
-            if(nvals == 0)
-            {
-                WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
-                return;
-            }
-
-            auto srates = std::vector<int32_t>(nvals);
-            std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
-
-            /* [0] is the default, [1...size()-1] are available selections. */
-            std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
-            for(size_t i{2};i < srates.size();++i)
-            {
-                others += ", ";
-                others += std::to_string(srates[i]);
-            }
-            TRACE("Device ID %u sample rate: %d (%s)\n", node->mId, srates[0], others.c_str());
-            /* Pick the first rate listed that's within the allowed range
-             * (default rate if possible).
-             */
-            for(const auto &rate : srates)
-            {
-                if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
-                {
-                    node->mSampleRate = static_cast<uint>(rate);
-                    break;
-                }
-            }
-            return;
-        }
-
-        WARN("Unhandled sample rate choice type: %u\n", choiceType);
+        WARN("Unhandled sample rate POD type: %u\n", podType);
         return;
     }
 
-    WARN("Unhandled sample rate type: %u\n", srateType);
+    if(choiceType == SPA_CHOICE_Range)
+    {
+        if(nvals != 3)
+        {
+            WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
+            return;
+        }
+        std::array<int32_t,3> srates{};
+        std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
+
+        /* [0] is the default, [1] is the min, and [2] is the max. */
+        TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", node->mId, srates[0], srates[1],
+            srates[2]);
+        srates[0] = clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
+        node->mSampleRate = static_cast<uint>(srates[0]);
+        return;
+    }
+
+    if(choiceType == SPA_CHOICE_Enum)
+    {
+        if(nvals == 0)
+        {
+            WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
+            return;
+        }
+
+        auto srates = std::vector<int32_t>(nvals);
+        std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
+
+        /* [0] is the default, [1...size()-1] are available selections. */
+        std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
+        for(size_t i{2};i < srates.size();++i)
+        {
+            others += ", ";
+            others += std::to_string(srates[i]);
+        }
+        TRACE("Device ID %u sample rate: %d (%s)\n", node->mId, srates[0], others.c_str());
+        /* Pick the first rate listed that's within the allowed range (default
+         * rate if possible).
+         */
+        for(const auto &rate : srates)
+        {
+            if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
+            {
+                node->mSampleRate = static_cast<uint>(rate);
+                break;
+            }
+        }
+        return;
+    }
+
+    if(choiceType == SPA_CHOICE_None)
+    {
+        if(nvals != 1)
+        {
+            WARN("Unexpected SPA_CHOICE_None count: %u\n", nvals);
+            return;
+        }
+
+        int32_t srate{*get_pod_body<int32_t>(value)};
+
+        TRACE("Device ID %u sample rate: %d\n", node->mId, srate);
+        srate = clampi(srate, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
+        node->mSampleRate = static_cast<uint>(srate);
+        return;
+    }
+
+    WARN("Unhandled sample rate choice type: %u\n", choiceType);
 }
 
 void parse_positions(DeviceNode *node, const spa_pod *value)

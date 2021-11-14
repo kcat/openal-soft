@@ -114,6 +114,11 @@ template<typename T, bool trivial_copy = std::is_trivially_copy_constructible<T>
         && std::is_trivially_destructible<T>::value>
 struct optional_storage;
 
+/* Some versions of GCC have issues with 'this' in the following noexcept(...)
+ * statements, so this macro is a workaround.
+ */
+#define _this std::declval<optional_storage*>()
+
 /* Completely trivial. */
 template<typename T>
 struct optional_storage<T, true, true, true, true> : public optstore_helper<T> {
@@ -133,7 +138,7 @@ struct optional_storage<T, true, true, true, false> : public optstore_helper<T> 
     constexpr optional_storage(const optional_storage&) = default;
     constexpr optional_storage(optional_storage&&) = default;
     constexpr optional_storage& operator=(const optional_storage&) = default;
-    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(this->assign(std::move(rhs)))
+    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(_this->assign(std::move(rhs)))
     { this->assign(std::move(rhs)); return *this; }
 };
 
@@ -143,10 +148,10 @@ struct optional_storage<T, true, false, true, false> : public optstore_helper<T>
     using optstore_helper<T>::optstore_helper;
     constexpr optional_storage() noexcept = default;
     constexpr optional_storage(const optional_storage&) = default;
-    constexpr optional_storage(optional_storage&& rhs) NOEXCEPT_AS(this->construct(std::move(rhs.mValue)))
+    constexpr optional_storage(optional_storage&& rhs) NOEXCEPT_AS(_this->construct(std::move(rhs.mValue)))
     { if(rhs.mHasValue) this->construct(std::move(rhs.mValue)); }
     constexpr optional_storage& operator=(const optional_storage&) = default;
-    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(this->assign(std::move(rhs)))
+    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(_this->assign(std::move(rhs)))
     { this->assign(std::move(rhs)); return *this; }
 };
 
@@ -157,7 +162,7 @@ struct optional_storage<T, true, true, false, true> : public optstore_helper<T> 
     constexpr optional_storage() noexcept = default;
     constexpr optional_storage(const optional_storage&) = default;
     constexpr optional_storage(optional_storage&&) = default;
-    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(this->assign(rhs))
+    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(_this->assign(rhs))
     { this->assign(rhs); return *this; }
     constexpr optional_storage& operator=(optional_storage&&) = default;
 };
@@ -167,10 +172,10 @@ template<typename T>
 struct optional_storage<T, false, true, false, true> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     constexpr optional_storage() noexcept = default;
-    constexpr optional_storage(const optional_storage &rhs) NOEXCEPT_AS(this->construct(rhs.mValue))
+    constexpr optional_storage(const optional_storage &rhs) NOEXCEPT_AS(_this->construct(rhs.mValue))
     { if(rhs.mHasValue) this->construct(rhs.mValue); }
     constexpr optional_storage(optional_storage&&) = default;
-    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(this->assign(rhs))
+    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(_this->assign(rhs))
     { this->assign(rhs); return *this; }
     constexpr optional_storage& operator=(optional_storage&&) = default;
 };
@@ -182,9 +187,9 @@ struct optional_storage<T, true, true, false, false> : public optstore_helper<T>
     constexpr optional_storage() noexcept = default;
     constexpr optional_storage(const optional_storage&) = default;
     constexpr optional_storage(optional_storage&&) = default;
-    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(this->assign(rhs))
+    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(_this->assign(rhs))
     { this->assign(rhs); return *this; }
-    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(this->assign(std::move(rhs)))
+    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(_this->assign(std::move(rhs)))
     { this->assign(std::move(rhs)); return *this; }
 };
 
@@ -194,11 +199,11 @@ struct optional_storage<T, true, false, false, false> : public optstore_helper<T
     using optstore_helper<T>::optstore_helper;
     constexpr optional_storage() noexcept = default;
     constexpr optional_storage(const optional_storage&) = default;
-    constexpr optional_storage(optional_storage&& rhs) NOEXCEPT_AS(this->construct(std::move(rhs.mValue)))
+    constexpr optional_storage(optional_storage&& rhs) NOEXCEPT_AS(_this->construct(std::move(rhs.mValue)))
     { if(rhs.mHasValue) this->construct(std::move(rhs.mValue)); }
-    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(this->assign(rhs))
+    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(_this->assign(rhs))
     { this->assign(rhs); return *this; }
-    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(this->assign(std::move(rhs)))
+    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(_this->assign(std::move(rhs)))
     { this->assign(std::move(rhs)); return *this; }
 };
 
@@ -207,12 +212,12 @@ template<typename T>
 struct optional_storage<T, false, true, false, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     constexpr optional_storage() noexcept = default;
-    constexpr optional_storage(const optional_storage &rhs) NOEXCEPT_AS(this->construct(rhs.mValue))
+    constexpr optional_storage(const optional_storage &rhs) NOEXCEPT_AS(_this->construct(rhs.mValue))
     { if(rhs.mHasValue) this->construct(rhs.mValue); }
     constexpr optional_storage(optional_storage&&) = default;
-    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(this->assign(rhs))
+    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(_this->assign(rhs))
     { this->assign(rhs); return *this; }
-    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(this->assign(std::move(rhs)))
+    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(_this->assign(std::move(rhs)))
     { this->assign(std::move(rhs)); return *this; }
 };
 
@@ -221,15 +226,17 @@ template<typename T>
 struct optional_storage<T, false, false, false, false> : public optstore_helper<T> {
     using optstore_helper<T>::optstore_helper;
     constexpr optional_storage() noexcept = default;
-    constexpr optional_storage(const optional_storage &rhs) NOEXCEPT_AS(this->construct(rhs.mValue))
+    constexpr optional_storage(const optional_storage &rhs) NOEXCEPT_AS(_this->construct(rhs.mValue))
     { if(rhs.mHasValue) this->construct(rhs.mValue); }
-    constexpr optional_storage(optional_storage&& rhs) NOEXCEPT_AS(this->construct(std::move(rhs.mValue)))
+    constexpr optional_storage(optional_storage&& rhs) NOEXCEPT_AS(_this->construct(std::move(rhs.mValue)))
     { if(rhs.mHasValue) this->construct(std::move(rhs.mValue)); }
-    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(this->assign(rhs))
+    constexpr optional_storage& operator=(const optional_storage &rhs) NOEXCEPT_AS(_this->assign(rhs))
     { this->assign(rhs); return *this; }
-    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(this->assign(std::move(rhs)))
+    constexpr optional_storage& operator=(optional_storage&& rhs) NOEXCEPT_AS(_this->assign(std::move(rhs)))
     { this->assign(std::move(rhs)); return *this; }
 };
+
+#undef _this
 
 } // namespace detail_
 

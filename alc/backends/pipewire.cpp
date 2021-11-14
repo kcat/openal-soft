@@ -564,38 +564,6 @@ struct PodInfo<SPA_TYPE_Id> {
 template<uint32_t T>
 using Pod_t = typename PodInfo<T>::Type;
 
-template<uint32_t T>
-uint32_t get_param_range(const spa_pod *value, const al::span<Pod_t<T>,3> vals)
-{
-    uint32_t nvals{}, choice{};
-    value = spa_pod_get_values(value, &nvals, &choice);
-
-    if(get_pod_type(value) == T && nvals >= vals.size() && choice == SPA_CHOICE_Range)
-    {
-        std::copy_n(get_pod_body<Pod_t<T>>(value), vals.size(), vals.begin());
-        return nvals;
-    }
-
-    return 0;
-}
-
-template<uint32_t T>
-std::vector<Pod_t<T>> get_param_enum(const spa_pod *value)
-{
-    std::vector<Pod_t<T>> vals;
-
-    uint32_t nvals{}, choice{};
-    value = spa_pod_get_values(value, &nvals, &choice);
-
-    if(get_pod_type(value) == T && nvals > 0 && choice == SPA_CHOICE_Enum)
-    {
-        vals.resize(nvals);
-        std::copy_n(get_pod_body<Pod_t<T>>(value), vals.size(), vals.begin());
-    }
-
-    return vals;
-}
-
 template<uint32_t T, size_t N>
 uint32_t get_param_array(const spa_pod *value, const al::span<Pod_t<T>,N> vals)
 {
@@ -607,7 +575,7 @@ al::optional<Pod_t<T>> get_param(const spa_pod *value)
 {
     Pod_t<T> val{};
     if(PodInfo<T>::get_value(value, &val) == 0)
-        return al::make_optional(val);
+        return val;
     return al::nullopt;
 }
 
@@ -616,22 +584,48 @@ void parse_srate(DeviceNode *node, const spa_pod *value)
     /* TODO: Can this be anything else? Floats? Will the sample rate always be
      * a range or enum choice of ints?
      */
-    if(get_pod_type(value) == SPA_TYPE_Choice)
+    const uint srateType{get_pod_type(value)};
+    if(srateType == SPA_TYPE_Choice)
     {
-        int32_t srate[3]{};
-        if(get_param_range<SPA_TYPE_Int>(value, al::span<int32_t,3>{srate}) > 0)
+        uint32_t nvals{}, choiceType{};
+        value = spa_pod_get_values(value, &nvals, &choiceType);
+
+        const uint podtype{get_pod_type(value)};
+        if(podtype != SPA_TYPE_Int)
         {
-            /* [0] is the default, [1] is the min, and [2] is the max. */
-            TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", node->mId, srate[0], srate[1],
-                srate[2]);
-            srate[0] = clampi(srate[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
-            node->mSampleRate = static_cast<uint>(srate[0]);
+            WARN("Unhandled sample rate POD type: %u\n", podtype);
             return;
         }
 
-        auto srates = get_param_enum<SPA_TYPE_Int>(value);
-        if(!srates.empty())
+        if(choiceType == SPA_CHOICE_Range)
         {
+            if(nvals != 3)
+            {
+                WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
+                return;
+            }
+            std::array<int32_t,3> srates{};
+            std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
+
+            /* [0] is the default, [1] is the min, and [2] is the max. */
+            TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", node->mId, srates[0],
+                srates[1], srates[2]);
+            srates[0] = clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
+            node->mSampleRate = static_cast<uint>(srates[0]);
+            return;
+        }
+
+        if(choiceType == SPA_CHOICE_Enum)
+        {
+            if(nvals == 0)
+            {
+                WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
+                return;
+            }
+
+            auto srates = std::vector<int32_t>(nvals);
+            std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
+
             /* [0] is the default, [1...size()-1] are available selections. */
             std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
             for(size_t i{2};i < srates.size();++i)
@@ -640,6 +634,9 @@ void parse_srate(DeviceNode *node, const spa_pod *value)
                 others += std::to_string(srates[i]);
             }
             TRACE("Device ID %u sample rate: %d (%s)\n", node->mId, srates[0], others.c_str());
+            /* Pick the first rate listed that's within the allowed range
+             * (default rate if possible).
+             */
             for(const auto &rate : srates)
             {
                 if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
@@ -650,7 +647,12 @@ void parse_srate(DeviceNode *node, const spa_pod *value)
             }
             return;
         }
+
+        WARN("Unhandled sample rate choice type: %u\n", choiceType);
+        return;
     }
+
+    WARN("Unhandled sample rate type: %u\n", srateType);
 }
 
 void parse_positions(DeviceNode *node, const spa_pod *value)

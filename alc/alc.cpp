@@ -2454,6 +2454,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 0;
     }
 
+    std::lock_guard<std::mutex> _{device->StateLock};
     if(device->Type == DeviceType::Capture)
     {
         constexpr int MaxCaptureAttributes{9};
@@ -2468,7 +2469,6 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
                 alcSetError(device, ALC_INVALID_VALUE);
             else
             {
-                std::lock_guard<std::mutex> _{device->StateLock};
                 values[i++] = ALC_MAJOR_VERSION;
                 values[i++] = alcMajorVersion;
                 values[i++] = ALC_MINOR_VERSION;
@@ -2490,17 +2490,11 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             return 1;
 
         case ALC_CAPTURE_SAMPLES:
-            {
-                std::lock_guard<std::mutex> _{device->StateLock};
-                values[0] = static_cast<int>(device->Backend->availableSamples());
-            }
+            values[0] = static_cast<int>(device->Backend->availableSamples());
             return 1;
 
         case ALC_CONNECTED:
-            {
-                std::lock_guard<std::mutex> _{device->StateLock};
-                values[0] = device->Connected.load(std::memory_order_acquire);
-            }
+            values[0] = device->Connected.load(std::memory_order_acquire);
             return 1;
 
         default:
@@ -2528,7 +2522,6 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             alcSetError(device, ALC_INVALID_VALUE);
         else
         {
-            std::lock_guard<std::mutex> _{device->StateLock};
             values[i++] = ALC_MAJOR_VERSION;
             values[i++] = alcMajorVersion;
             values[i++] = ALC_MINOR_VERSION;
@@ -2620,10 +2613,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        {
-            std::lock_guard<std::mutex> _{device->StateLock};
-            values[0] = static_cast<int>(device->Frequency / device->UpdateSize);
-        }
+        values[0] = static_cast<int>(device->Frequency / device->UpdateSize);
         return 1;
 
     case ALC_SYNC:
@@ -2693,10 +2683,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_CONNECTED:
-        {
-            std::lock_guard<std::mutex> _{device->StateLock};
-            values[0] = device->Connected.load(std::memory_order_acquire);
-        }
+        values[0] = device->Connected.load(std::memory_order_acquire);
         return 1;
 
     case ALC_HRTF_SOFT:
@@ -2708,12 +2695,9 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_NUM_HRTF_SPECIFIERS_SOFT:
-        {
-            std::lock_guard<std::mutex> _{device->StateLock};
-            device->enumerateHrtfs();
-            values[0] = static_cast<int>(minz(device->mHrtfList.size(),
-                std::numeric_limits<int>::max()));
-        }
+        device->enumerateHrtfs();
+        values[0] = static_cast<int>(minz(device->mHrtfList.size(),
+            std::numeric_limits<int>::max()));
         return 1;
 
     case ALC_OUTPUT_LIMITER_SOFT:
@@ -2773,6 +2757,7 @@ START_API_FUNC
             return 39;
         return 33;
     };
+    std::lock_guard<std::mutex> _{dev->StateLock};
     switch(pname)
     {
     case ALC_ATTRIBUTES_SIZE:
@@ -2784,7 +2769,6 @@ START_API_FUNC
             alcSetError(dev.get(), ALC_INVALID_VALUE);
         else
         {
-            std::lock_guard<std::mutex> _{dev->StateLock};
             size_t i{0};
             values[i++] = ALC_FREQUENCY;
             values[i++] = dev->Frequency;
@@ -2849,7 +2833,6 @@ START_API_FUNC
 
     case ALC_DEVICE_CLOCK_SOFT:
         {
-            std::lock_guard<std::mutex> _{dev->StateLock};
             uint samplecount, refcount;
             nanoseconds basecount;
             do {
@@ -2863,11 +2846,7 @@ START_API_FUNC
         break;
 
     case ALC_DEVICE_LATENCY_SOFT:
-        {
-            std::lock_guard<std::mutex> _{dev->StateLock};
-            ClockLatency clock{GetClockLatency(dev.get())};
-            *values = clock.Latency.count();
-        }
+        *values = GetClockLatency(dev.get()).Latency.count();
         break;
 
     case ALC_DEVICE_CLOCK_LATENCY_SOFT:
@@ -2875,7 +2854,6 @@ START_API_FUNC
             alcSetError(dev.get(), ALC_INVALID_VALUE);
         else
         {
-            std::lock_guard<std::mutex> _{dev->StateLock};
             ClockLatency clock{GetClockLatency(dev.get())};
             values[0] = clock.ClockTime.count();
             values[1] = clock.Latency.count();

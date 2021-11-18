@@ -83,8 +83,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     al::vector<std::string> mHrtfList;
     ALCenum mHrtfStatus{ALC_FALSE};
 
-    ALCenum LimiterState{ALC_DONT_CARE_SOFT};
-
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 
     // Map of Buffers for this device

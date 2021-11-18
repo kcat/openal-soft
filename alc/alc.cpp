@@ -1526,19 +1526,15 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 {
-    ALCenum gainLimiter{device->LimiterState};
-    uint new_sends{device->NumAuxSends};
-    al::optional<StereoEncoding> stereomode{};
-    DevFmtChannels oldChans;
-    DevFmtType oldType;
-    int hrtf_id{-1};
-    uint oldFreq;
-
     if((!attrList || !attrList[0]) && device->Type == DeviceType::Loopback)
     {
         WARN("Missing attributes for loopback device\n");
         return ALC_INVALID_VALUE;
     }
+
+    al::optional<StereoEncoding> stereomode{};
+    al::optional<bool> optlimit{};
+    int hrtf_id{-1};
 
     // Check for attributes
     if(attrList && attrList[0])
@@ -1617,7 +1613,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     opthrtf = false;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
                     opthrtf = true;
-                else
+                else if(attrList[attrIdx + 1] == ALC_DONT_CARE_SOFT)
                     opthrtf = al::nullopt;
                 break;
 
@@ -1627,8 +1623,13 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 break;
 
             case ALC_OUTPUT_LIMITER_SOFT:
-                gainLimiter = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
+                TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, attrList[attrIdx + 1]);
+                if(attrList[attrIdx + 1] == ALC_FALSE)
+                    optlimit = false;
+                else if(attrList[attrIdx + 1] == ALC_TRUE)
+                    optlimit = true;
+                else if(attrList[attrIdx + 1] == ALC_DONT_CARE_SOFT)
+                    optlimit = al::nullopt;
                 break;
 
             case ALC_OUTPUT_MODE_SOFT:
@@ -1639,7 +1640,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     stereomode = StereoEncoding::Uhj;
                 else if(attrList[attrIdx + 1] == ALC_NORMAL_SOFT)
                     stereomode = StereoEncoding::Normal;
-                else
+                else if(attrList[attrIdx + 1] == ALC_ANY_SOFT)
                     stereomode = al::nullopt;
                 break;
 
@@ -1744,9 +1745,10 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         device->NumStereoSources = numStereo;
 
         if(auto sendsopt = device->configValue<int>(nullptr, "sends"))
-            new_sends = minu(numSends, static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
+            device->NumAuxSends = minu(numSends,
+                static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
         else
-            new_sends = numSends;
+            device->NumAuxSends = numSends;
     }
 
     if(device->Flags.test(DeviceRunning))
@@ -1806,16 +1808,15 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         }
     }
 
-    oldFreq  = device->Frequency;
-    oldChans = device->FmtChans;
-    oldType  = device->FmtType;
-
     TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u / %u buffer\n",
         device->Flags.test(ChannelsRequest)?"*":"", DevFmtChannelsString(device->FmtChans),
         device->Flags.test(SampleTypeRequest)?"*":"", DevFmtTypeString(device->FmtType),
         device->Flags.test(FrequencyRequest)?"*":"", device->Frequency,
         device->UpdateSize, device->BufferSize);
 
+    const uint oldFreq{device->Frequency};
+    const DevFmtChannels oldChans{device->FmtChans};
+    const DevFmtType oldType{device->FmtType};
     try {
         auto backend = device->Backend.get();
         if(!backend->reset())
@@ -1889,7 +1890,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
     aluInitRenderer(device, hrtf_id, stereomode);
 
-    device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",
         device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
         device->AuxiliaryEffectSlotMax, device->NumAuxSends);
@@ -1939,51 +1939,48 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         TRACE("Dithering enabled (%d-bit, %g)\n", float2int(std::log2(device->DitherDepth)+0.5f)+1,
               device->DitherDepth);
 
-    device->LimiterState = gainLimiter;
     if(auto limopt = device->configValue<bool>(nullptr, "output-limiter"))
-        gainLimiter = *limopt ? ALC_TRUE : ALC_FALSE;
+        optlimit = limopt;
 
-    /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
-     * ALC_FALSE. For ALC_DONT_CARE_SOFT, use the limiter for integer-based
-     * output (where samples must be clamped), and don't for floating-point
-     * (which can take unclamped samples).
+    /* If the gain limiter is unset, use the limiter for integer-based output
+     * (where samples must be clamped), and don't for floating-point (which can
+     * take unclamped samples).
      */
-    if(gainLimiter == ALC_DONT_CARE_SOFT)
+    if(!optlimit)
     {
         switch(device->FmtType)
         {
-            case DevFmtByte:
-            case DevFmtUByte:
-            case DevFmtShort:
-            case DevFmtUShort:
-            case DevFmtInt:
-            case DevFmtUInt:
-                gainLimiter = ALC_TRUE;
-                break;
-            case DevFmtFloat:
-                gainLimiter = ALC_FALSE;
-                break;
+        case DevFmtByte:
+        case DevFmtUByte:
+        case DevFmtShort:
+        case DevFmtUShort:
+        case DevFmtInt:
+        case DevFmtUInt:
+            optlimit = true;
+            break;
+        case DevFmtFloat:
+            break;
         }
     }
-    if(gainLimiter == ALC_FALSE)
+    if(optlimit.value_or(false) == false)
         TRACE("Output limiter disabled\n");
     else
     {
         float thrshld{1.0f};
         switch(device->FmtType)
         {
-            case DevFmtByte:
-            case DevFmtUByte:
-                thrshld = 127.0f / 128.0f;
-                break;
-            case DevFmtShort:
-            case DevFmtUShort:
-                thrshld = 32767.0f / 32768.0f;
-                break;
-            case DevFmtInt:
-            case DevFmtUInt:
-            case DevFmtFloat:
-                break;
+        case DevFmtByte:
+        case DevFmtUByte:
+            thrshld = 127.0f / 128.0f;
+            break;
+        case DevFmtShort:
+        case DevFmtUShort:
+            thrshld = 32767.0f / 32768.0f;
+            break;
+        case DevFmtInt:
+        case DevFmtUInt:
+        case DevFmtFloat:
+            break;
         }
         if(device->DitherDepth > 0.0f)
             thrshld -= 1.0f / device->DitherDepth;

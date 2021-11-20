@@ -15,7 +15,7 @@
 # Options marked as "(global)" are not influenced by the device.
 #
 # The system-wide settings can be put in /etc/openal/alsoft.conf and user-
-# specific override settings in $HOME/.alsoftrc.
+# specific override settings in $HOME/.alsoftrc or $XDG_CONFIG_HOME/openal/alsoft.conf (~/.config/openal/alsoft.conf).
 # For Windows, these settings should go into $AppData\alsoft.ini
 #
 # Option and block names are case-senstive. The supplied values are only hints

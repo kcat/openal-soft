@@ -1923,7 +1923,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         values[0] = GetSourceSecOffset(Source, Context, &srcclock);
         {
             std::lock_guard<std::mutex> _{device->StateLock};
-            clocktime = GetClockLatency(device);
+            clocktime = GetClockLatency(device, device->Backend.get());
         }
         if(srcclock == clocktime.ClockTime)
             values[1] = static_cast<double>(clocktime.Latency.count()) / 1000000000.0;
@@ -2216,7 +2216,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
         values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
         {
             std::lock_guard<std::mutex> _{device->StateLock};
-            clocktime = GetClockLatency(device);
+            clocktime = GetClockLatency(device, device->Backend.get());
         }
         if(srcclock == clocktime.ClockTime)
             values[1] = clocktime.Latency.count();

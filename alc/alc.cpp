@@ -2817,7 +2817,7 @@ START_API_FUNC
             values[i++] = ALC_OUTPUT_LIMITER_SOFT;
             values[i++] = dev->Limiter ? ALC_TRUE : ALC_FALSE;
 
-            ClockLatency clock{GetClockLatency(dev.get())};
+            ClockLatency clock{GetClockLatency(dev.get(), dev->Backend.get())};
             values[i++] = ALC_DEVICE_CLOCK_SOFT;
             values[i++] = clock.ClockTime.count();
 
@@ -2843,7 +2843,7 @@ START_API_FUNC
         break;
 
     case ALC_DEVICE_LATENCY_SOFT:
-        *values = GetClockLatency(dev.get()).Latency.count();
+        *values = GetClockLatency(dev.get(), dev->Backend.get()).Latency.count();
         break;
 
     case ALC_DEVICE_CLOCK_LATENCY_SOFT:
@@ -2851,7 +2851,7 @@ START_API_FUNC
             alcSetError(dev.get(), ALC_INVALID_VALUE);
         else
         {
-            ClockLatency clock{GetClockLatency(dev.get())};
+            ClockLatency clock{GetClockLatency(dev.get(), dev->Backend.get())};
             values[0] = clock.ClockTime.count();
             values[1] = clock.Latency.count();
         }

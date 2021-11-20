@@ -24,7 +24,6 @@
 #include "uhjfilter.h"
 #include "vector.h"
 
-struct BackendBase;
 class BFormatDec;
 struct bs2b;
 struct Compressor;
@@ -239,13 +238,6 @@ struct DeviceBase {
 
     // Contexts created on this device
     std::atomic<al::FlexArray<ContextBase*>*> mContexts{nullptr};
-
-    /* This lock protects the device state (format, update size, etc) from
-     * being from being changed in multiple threads, or being accessed while
-     * being changed. It's also used to serialize calls to the backend.
-     */
-    std::mutex StateLock;
-    std::unique_ptr<BackendBase> Backend;
 
 
     DeviceBase(DeviceType type);

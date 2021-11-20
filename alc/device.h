@@ -2,6 +2,7 @@
 #define ALC_DEVICE_H
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <stdint.h>
 #include <string>
@@ -20,6 +21,7 @@
 struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
+struct BackendBase;
 
 using uint = unsigned int;
 
@@ -71,6 +73,13 @@ struct FilterSubList {
 
 
 struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
+    /* This lock protects the device state (format, update size, etc) from
+     * being from being changed in multiple threads, or being accessed while
+     * being changed. It's also used to serialize calls to the backend.
+     */
+    std::mutex StateLock;
+    std::unique_ptr<BackendBase> Backend;
+
     ALCuint NumMonoSources{};
     ALCuint NumStereoSources{};
 
@@ -98,7 +107,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     al::vector<FilterSubList> FilterList;
 
 
-    ALCdevice(DeviceType type) : DeviceBase{type} { }
+    ALCdevice(DeviceType type);
     ~ALCdevice();
 
     void enumerateHrtfs();

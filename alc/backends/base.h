@@ -70,9 +70,8 @@ inline std::chrono::nanoseconds GetDeviceClockTime(DeviceBase *device)
 /* Helper to get the device latency from the backend, including any fixed
  * latency from post-processing.
  */
-inline ClockLatency GetClockLatency(DeviceBase *device)
+inline ClockLatency GetClockLatency(DeviceBase *device, BackendBase *backend)
 {
-    BackendBase *backend{device->Backend.get()};
     ClockLatency ret{backend->getClockLatency()};
     ret.Latency += device->FixedLatency;
     return ret;

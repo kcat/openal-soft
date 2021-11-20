@@ -25,17 +25,8 @@ using voidp = void*;
 } // namespace
 
 
-/* This should be in core/device.cpp. */
-DeviceBase::DeviceBase(DeviceType type) : Type{type}, mContexts{&sEmptyContextArray}
-{
-}
-
-DeviceBase::~DeviceBase()
-{
-    auto *oldarray = mContexts.exchange(nullptr, std::memory_order_relaxed);
-    if(oldarray != &sEmptyContextArray) delete oldarray;
-}
-
+ALCdevice::ALCdevice(DeviceType type) : DeviceBase{type}
+{ }
 
 ALCdevice::~ALCdevice()
 {

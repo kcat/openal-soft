@@ -3815,24 +3815,36 @@ START_API_FUNC
         return ALC_FALSE;
     }
     std::lock_guard<std::mutex> _{dev->StateLock};
-    auto backend = dev->Backend.get();
 
     /* Force the backend to stop mixing first since we're reopening. */
     if(dev->Flags.test(DeviceRunning))
+    {
+        auto backend = dev->Backend.get();
         backend->stop();
-    dev->Flags.reset(DeviceRunning);
+        dev->Flags.reset(DeviceRunning);
+    }
 
+    BackendPtr newbackend;
     try {
-        backend->open(deviceName);
+        newbackend = PlaybackFactory->createBackend(dev.get(), BackendType::Playback);
+        newbackend->open(deviceName);
     }
     catch(al::backend_exception &e) {
+        listlock.unlock();
+        newbackend = nullptr;
+
         WARN("Failed to reopen playback device: %s\n", e.what());
         alcSetError(dev.get(), (e.errorCode() == al::backend_error::OutOfMemory)
             ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
+
+        /* If the device is connected, not paused, and has contexts, ensure it
+         * continues playing.
+         */
         if(dev->Connected.load(std::memory_order_relaxed) && !dev->Flags.test(DevicePaused)
             && !dev->mContexts.load(std::memory_order_relaxed)->empty())
         {
             try {
+                auto backend = dev->Backend.get();
                 backend->start();
                 dev->Flags.set(DeviceRunning);
             }
@@ -3844,8 +3856,21 @@ START_API_FUNC
         return ALC_FALSE;
     }
     listlock.unlock();
+    dev->Backend = std::move(newbackend);
     TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->DeviceName.c_str());
 
-    return ResetDeviceParams(dev.get(), attribs) ? ALC_TRUE : ALC_FALSE;
+    /* Always return true even if resetting fails. It shouldn't fail, but this
+     * is primarily to avoid confusion by the app seeing the function return
+     * false while the device is on the new output anyway. We could try to
+     * restore the old backend if this fails, but the configuration would be
+     * changed with the new backend and would need to be reset again with the
+     * old one, and the provided attributes may not be appropriate or desirable
+     * for the old device.
+     *
+     * In this way, we essentially act as if the function succeeded, but
+     * immediately disconnects following it.
+     */
+    ResetDeviceParams(dev.get(), attribs);
+    return ALC_TRUE;
 }
 END_API_FUNC

@@ -750,10 +750,10 @@ bool AlsaPlayback::reset()
         || !mDevice->Flags.test(FrequencyRequest))
     {
         if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 0) < 0)
-            ERR("Failed to disable ALSA resampler\n");
+            WARN("Failed to disable ALSA resampler\n");
     }
     else if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 1) < 0)
-        ERR("Failed to enable ALSA resampler\n");
+        WARN("Failed to enable ALSA resampler\n");
     CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp.get(), &rate, nullptr));
     /* set period time (implicitly constrains period/buffer parameters) */
     if((err=snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp.get(), &periodLen, nullptr)) < 0)

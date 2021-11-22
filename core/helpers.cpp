@@ -508,7 +508,7 @@ void SetRTPriority()
     else
         WARN("D-Bus not available\n");
 #endif
-    ERR("Could not set elevated priority: %s (%d)\n", std::strerror(err), err);
+    WARN("Could not set elevated priority: %s (%d)\n", std::strerror(err), err);
 }
 
 #endif

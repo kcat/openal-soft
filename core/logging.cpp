@@ -35,10 +35,9 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     va_end(args2);
     va_end(args);
 
-    std::wstring wstr{utf8_to_wstr(str)};
     if(gLogLevel >= level)
     {
-        fputws(wstr.c_str(), logfile);
+        fputs(str, logfile);
         fflush(logfile);
     }
     /* OutputDebugStringW has no 'level' property to distinguish between
@@ -46,6 +45,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
      * non-Release builds.
      */
 #ifndef NDEBUG
+    std::wstring wstr{utf8_to_wstr(str)};
     OutputDebugStringW(wstr.c_str());
 #endif
 }

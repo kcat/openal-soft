@@ -109,9 +109,9 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     ASSUME(samplesToDo > 0);
 
     {
-        const float *RESTRICT left{al::assume_aligned<16>(samples[0].data() + offset)};
-        const float *RESTRICT right{al::assume_aligned<16>(samples[1].data() + offset)};
-        const float *RESTRICT t{al::assume_aligned<16>(samples[2].data() + offset)};
+        const float *RESTRICT left{samples[0].data() + offset};
+        const float *RESTRICT right{samples[1].data() + offset};
+        const float *RESTRICT t{samples[2].data() + offset};
 
         /* S = Left + Right */
         for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
@@ -126,9 +126,9 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
             mT[i] = t[i];
     }
 
-    float *RESTRICT woutput{al::assume_aligned<16>(samples[0].data() + offset)};
-    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1].data() + offset)};
-    float *RESTRICT youtput{al::assume_aligned<16>(samples[2].data() + offset)};
+    float *RESTRICT woutput{samples[0].data() + offset};
+    float *RESTRICT xoutput{samples[1].data() + offset};
+    float *RESTRICT youtput{samples[2].data() + offset};
 
     /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());

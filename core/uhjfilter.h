@@ -8,12 +8,14 @@
 #include "resampler_limits.h"
 
 
-struct UhjEncoder {
+struct UhjFilterBase {
     /* The filter delay is half it's effective size, so a delay of 128 has a
      * FIR length of 256.
      */
-    constexpr static size_t sFilterDelay{128};
+    static constexpr size_t sFilterDelay{128};
+};
 
+struct UhjEncoder : public UhjFilterBase {
     /* Delays and processing storage for the unfiltered signal. */
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
@@ -35,10 +37,8 @@ struct UhjEncoder {
 };
 
 
-struct UhjDecoder {
-    constexpr static size_t sFilterDelay{128};
-
-    constexpr static size_t sLineSize{BufferLineSize+MaxResamplerPadding+sFilterDelay};
+struct UhjDecoder : public UhjFilterBase {
+    static constexpr size_t sLineSize{BufferLineSize+MaxResamplerPadding+sFilterDelay};
     using BufferLine = std::array<float,sLineSize>;
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
@@ -53,8 +53,10 @@ struct UhjDecoder {
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
      * channel ordering and UHJ scaling. For 3-channel, the 3rd channel may be
-     * attenuated by 'n', where 0 <= n <= 1. So 2-channel UHJ can be decoded by
-     * leaving the 3rd channel input silent (n=0).
+     * attenuated by 'n', where 0 <= n <= 1. So to decode 2-channel UHJ, supply
+     * 3 channels with the 3rd channel silent (n=0). The B-Format signal
+     * reconstructed from 2-channel UHJ should not be run through a normal
+     * B-Format decoder, as it needs different shelf filters.
      */
     void decode(const al::span<BufferLine> samples, const size_t offset, const size_t samplesToDo,
         const size_t forwardSamples);

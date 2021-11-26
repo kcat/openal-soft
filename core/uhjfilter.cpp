@@ -14,11 +14,9 @@
 
 namespace {
 
-static_assert(UhjEncoder::sFilterDelay==UhjDecoder::sFilterDelay, "UHJ filter delays mismatch");
-
 using complex_d = std::complex<double>;
 
-const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
+const PhaseShifterT<UhjFilterBase::sFilterDelay*2> PShift{};
 
 } // namespace
 
@@ -33,11 +31,11 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
  * T = j(-0.1432*W + 0.6511746*X) - 0.7071068*Y
  * Q = 0.9772*Z
  *
- * where j is a wide-band +90 degree phase shift. T is excluded from 2-channel
- * output, and Q is excluded from 2- and 3-channel output.
+ * where j is a wide-band +90 degree phase shift. 3-channel UHJ excludes Q,
+ * while 2-channel excludes Q and T.
  *
- * The phase shift is done using a FIR filter derived from an FFT'd impulse
- * with the desired shift.
+ * The phase shift is done using a linear FIR filter derived from an FFT'd
+ * impulse with the desired shift.
  */
 
 void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
@@ -103,9 +101,7 @@ void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan Rig
  * Z = 1.023332*Q
  *
  * where j is a +90 degree phase shift. 3-channel UHJ excludes Q, while 2-
- * channel excludes Q and T. The B-Format signal reconstructed from 2-channel
- * UHJ should not be run through a normal B-Format decoder, as it needs
- * different shelf filters.
+ * channel excludes Q and T.
  */
 void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     const size_t samplesToDo, const size_t forwardSamples)

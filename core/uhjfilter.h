@@ -30,8 +30,8 @@ struct UhjEncoder : public UhjFilterBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-        const FloatBufferLine *InSamples, const size_t SamplesToDo);
+    void encode(float *LeftOut, float *RightOut, const FloatBufferLine *InSamples,
+        const size_t SamplesToDo);
 
     DEF_NEWDEL(UhjEncoder)
 };

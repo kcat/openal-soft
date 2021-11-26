@@ -313,8 +313,8 @@ void DeviceBase::ProcessUhj(const size_t SamplesToDo)
     const uint ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
-    mUhjEncoder->encode(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer.data(),
-        SamplesToDo);
+    mUhjEncoder->encode(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
+        Dry.Buffer.data(), SamplesToDo);
 }
 
 void DeviceBase::ProcessBs2b(const size_t SamplesToDo)

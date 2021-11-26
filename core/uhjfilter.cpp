@@ -38,13 +38,13 @@ const PhaseShifterT<UhjFilterBase::sFilterDelay*2> PShift{};
  * impulse with the desired shift.
  */
 
-void UhjEncoder::encode(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const FloatBufferLine *InSamples, const size_t SamplesToDo)
+void UhjEncoder::encode(float *LeftOut, float *RightOut, const FloatBufferLine *InSamples,
+    const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
-    float *RESTRICT right{al::assume_aligned<16>(RightOut.data())};
+    float *RESTRICT left{al::assume_aligned<16>(LeftOut)};
+    float *RESTRICT right{al::assume_aligned<16>(RightOut)};
 
     const float *RESTRICT winput{al::assume_aligned<16>(InSamples[0].data())};
     const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1].data())};

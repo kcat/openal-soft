@@ -28,6 +28,9 @@ static const struct {
 #ifdef HAVE_JACK
     { "jack", "JACK" },
 #endif
+#ifdef HAVE_PIPEWIRE
+    { "pipewire", "PipeWire" },
+#endif
 #ifdef HAVE_PULSEAUDIO
     { "pulse", "PulseAudio" },
 #endif

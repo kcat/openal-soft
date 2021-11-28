@@ -89,7 +89,7 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
  *
  * Left = (S + D)/2.0
  * Right = (S - D)/2.0
- * T = j(-0.1432*W + 0.6511746*X) - 0.7071068*Y
+ * T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y
  * Q = 0.9772*Z
  *
  * where j is a wide-band +90 degree phase shift. T is excluded from 2-channel

@@ -28,7 +28,7 @@ const PhaseShifterT<UhjFilterBase::sFilterDelay*2> PShift{};
  *
  * Left = (S + D)/2.0
  * Right = (S - D)/2.0
- * T = j(-0.1432*W + 0.6511746*X) - 0.7071068*Y
+ * T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y
  * Q = 0.9772*Z
  *
  * where j is a wide-band +90 degree phase shift. 3-channel UHJ excludes Q,
@@ -95,9 +95,9 @@ void UhjEncoder::encode(float *LeftOut, float *RightOut, const FloatBufferLine *
  * S = Left + Right
  * D = Left - Right
  *
- * W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T)
- * X = 0.418504*S - j(0.828347*D + 0.767835*T)
- * Y = 0.795954*D - 0.676406*T + j(0.186626*S)
+ * W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T)
+ * X = 0.418496*S - j(0.828331*D + 0.767820*T)
+ * Y = 0.795968*D - 0.676392*T + j(0.186633*S)
  * Z = 1.023332*Q
  *
  * where j is a +90 degree phase shift. 3-channel UHJ excludes Q, while 2-
@@ -130,19 +130,19 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     float *RESTRICT xoutput{samples[1].data() + offset};
     float *RESTRICT youtput{samples[2].data() + offset};
 
-    /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
+    /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::transform(mD.cbegin(), mD.cbegin()+samplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
-        [](const float d, const float t) noexcept { return 0.828347f*d + 0.767835f*t; });
+        [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     std::copy_n(mTemp.cbegin()+forwardSamples, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, samplesToDo}, mTemp.data());
 
-    /* W = 0.981530*S + 0.197484*j(0.828347*D + 0.767835*T) */
+    /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.981530f*mS[i] + 0.197484f*xoutput[i];
-    /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
+        woutput[i] = 0.981532f*mS[i] + 0.197484f*xoutput[i];
+    /* X = 0.418496*S - j(0.828331*D + 0.767820*T) */
     for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.418504f*mS[i] - xoutput[i];
+        xoutput[i] = 0.418496f*mS[i] - xoutput[i];
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
@@ -150,9 +150,9 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
     std::copy_n(mTemp.cbegin()+forwardSamples, mSHistory.size(), mSHistory.begin());
     PShift.process({youtput, samplesToDo}, mTemp.data());
 
-    /* Y = 0.795954*D - 0.676406*T + j(0.186626*S) */
+    /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = 0.795954f*mD[i] - 0.676406f*mT[i] + 0.186626f*youtput[i];
+        youtput[i] = 0.795968f*mD[i] - 0.676392f*mT[i] + 0.186633f*youtput[i];
 
     if(samples.size() > 3)
     {

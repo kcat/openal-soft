@@ -1379,7 +1379,6 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             break;
 
         case DistanceModel::Disable:
-            ClampedDist = props->RefDistance;
             break;
     }
 

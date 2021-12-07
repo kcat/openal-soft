@@ -7,6 +7,8 @@ openal-soft-1.22.0:
     Improved the high frequency response for the HRTF second-order ambisonic
     decoder.
 
+    Improved SoundIO capture behavior.
+
     Fixed UHJ output on NEON-capable CPUs.
 
     Fixed redundant effect updates when setting an effect property to the

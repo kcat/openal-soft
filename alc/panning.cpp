@@ -735,6 +735,19 @@ void InitHrtfPanning(ALCdevice *device)
     static_assert(al::size(AmbiPoints1O) == al::size(AmbiMatrix1O), "First-Order Ambisonic HRTF mismatch");
     static_assert(al::size(AmbiPoints2O) == al::size(AmbiMatrix2O), "Second-Order Ambisonic HRTF mismatch");
 
+    /* A 700hz crossover frequency provides tighter sound imaging at the sweet
+     * spot with ambisonic decoding, as the distance between the ears is closer
+     * to half this frequency wavelength, which is the optimal point where the
+     * response should change between optimizing phase vs volume. Normally this
+     * tighter imaging is at the cost of a smaller sweet spot, but since the
+     * listener is fixed in the center of the HRTF responses for the decoder,
+     * we don't have to worry about ever being out of the sweet spot.
+     *
+     * A better option here may be to have the head radius as part of the HRTF
+     * data set and calculate the optimal crossover frequency from that.
+     */
+    device->mXOverFreq = 700.0f;
+
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
      */

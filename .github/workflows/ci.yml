@@ -34,11 +34,9 @@ jobs:
               -DALSOFT_REQUIRE_OSS=ON \
               -DALSOFT_REQUIRE_PORTAUDIO=ON \
               -DALSOFT_REQUIRE_PULSEAUDIO=ON \
-              -DALSOFT_REQUIRE_PIPEWIRE=ON \
               -DALSOFT_REQUIRE_JACK=ON",
             deps_cmdline: "sudo apt update && sudo apt-get install -qq \
               libpulse-dev \
-              libpipewire-0.3-dev \
               portaudio19-dev \
               libasound2-dev \
               libjack-dev \

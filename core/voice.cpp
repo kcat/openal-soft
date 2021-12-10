@@ -647,8 +647,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 {Device->ResampledData, DstBufferSize})};
             ++voiceSamples;
             if((mFlags&VoiceIsAmbisonic))
-                chandata.mAmbiSplitter.processHfScale({ResampledData, DstBufferSize},
-                    chandata.mAmbiScale);
+                chandata.mAmbiSplitter.processScale({ResampledData, DstBufferSize},
+                    chandata.mAmbiHFScale, chandata.mAmbiLFScale);
 
             /* Now filter and mix to the appropriate outputs. */
             const al::span<float,BufferLineSize> FilterBuf{Device->FilteredData};
@@ -840,11 +840,49 @@ void Voice::prepare(DeviceBase *device)
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
         for(auto &chandata : mChans)
         {
-            chandata.mAmbiScale = scales[*(OrderFromChan++)];
+            chandata.mAmbiHFScale = scales[*(OrderFromChan++)];
+            chandata.mAmbiLFScale = 1.0f;
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
+        /* 2-channel UHJ needs different shelf filters. However, we can't just
+         * use different shelf filters after mixing it and with any old speaker
+         * setup the user has. To make this work, we apply the expected shelf
+         * filters for decoding UHJ2 to quad (only needs LF scaling), and act
+         * as if those 4 channels are encoded back onto first-order B-Format,
+         * which then upsamples to higher order as normal (only needs HF
+         * scaling).
+         *
+         * This isn't perfect, but without an entirely separate and limited
+         * UHJ2 path, it's better than nothing.
+         */
+        if(mFmtChannels == FmtUHJ2)
+        {
+            mChans[0].mAmbiLFScale = 0.661f;
+            mChans[1].mAmbiLFScale = 1.293f;
+            mChans[2].mAmbiLFScale = 1.293f;
+        }
+        mFlags |= VoiceIsAmbisonic;
+    }
+    else if(mFmtChannels == FmtUHJ2 && !device->mUhjEncoder)
+    {
+        /* 2-channel UHJ with first-order output also needs the shelf filter
+         * correction applied, except with UHJ output (UHJ2->B-Format->UHJ2 is
+         * identity, so don't mess with it).
+         */
+        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
+        for(auto &chandata : mChans)
+        {
+            chandata.mAmbiHFScale = 1.0f;
+            chandata.mAmbiLFScale = 1.0f;
+            chandata.mAmbiSplitter = splitter;
+            chandata.mDryParams = DirectParams{};
+            std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
+        }
+        mChans[0].mAmbiLFScale = 0.661f;
+        mChans[1].mAmbiLFScale = 1.293f;
+        mChans[2].mAmbiLFScale = 1.293f;
         mFlags |= VoiceIsAmbisonic;
     }
     else

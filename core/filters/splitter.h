@@ -24,6 +24,7 @@ public:
     void process(const al::span<const Real> input, Real *hpout, Real *lpout);
 
     void processHfScale(const al::span<Real> samples, const Real hfscale);
+    void processScale(const al::span<Real> samples, const Real hfscale, const Real lfscale);
 
     /* The all-pass portion of the band splitter. Applies the same phase shift
      * without splitting the signal. Note that each use of this method is

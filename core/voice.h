@@ -241,7 +241,7 @@ struct Voice {
     al::vector<HistoryLine,16> mPrevSamples{2};
 
     struct ChannelData {
-        float mAmbiScale;
+        float mAmbiHFScale, mAmbiLFScale;
         BandSplitter mAmbiSplitter;
 
         DirectParams mDryParams;

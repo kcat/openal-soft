@@ -162,3 +162,83 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
             zoutput[i] = 1.023332f*zoutput[i];
     }
 }
+
+
+/* Super Stereo processing is done as:
+ *
+ * S = Left + Right
+ * D = Left - Right
+ *
+ * W = 0.6098637*S - 0.6896511*j*w*D
+ * X = 0.8624776*S + 0.7626955*j*w*D
+ * Y = 1.6822415*w*D - 0.2156194*j*S
+ *
+ * where j is a +90 degree phase shift. w is a variable control for the
+ * resulting stereo width, with the range 0 <= w <= 0.7.
+ *
+ */
+void UhjDecoder::decodeStereo(const al::span<BufferLine> samples, const size_t offset,
+    const size_t samplesToDo, const size_t forwardSamples)
+{
+    ASSUME(samplesToDo > 0);
+
+    {
+        const float *RESTRICT left{samples[0].data() + offset};
+        const float *RESTRICT right{samples[1].data() + offset};
+
+        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+            mS[i] = left[i] + right[i];
+
+        /* Pre-apply the width factor to the difference signal D. Smoothly
+         * interpolate when it changes.
+         */
+        const float wtarget{mWidthControl};
+        const float wcurrent{unlikely(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
+        const float wstep{(wtarget - wcurrent) / static_cast<float>(forwardSamples)};
+        if(likely(wstep < 0.00001f))
+        {
+            for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+                mD[i] = (left[i] - right[i]) * wtarget;
+        }
+        else
+        {
+            float fi{0.0f};
+            size_t i{0};
+            for(;i < forwardSamples;++i)
+            {
+                mD[i] = (left[i] - right[i]) * (wcurrent + wstep*fi);
+                fi += 1.0f;
+            }
+            for(;i < samplesToDo+sFilterDelay;++i)
+                mD[i] = (left[i] - right[i]) * wtarget;
+        }
+        mCurrentWidth = wtarget;
+    }
+
+    float *RESTRICT woutput{samples[0].data() + offset};
+    float *RESTRICT xoutput{samples[1].data() + offset};
+    float *RESTRICT youtput{samples[2].data() + offset};
+
+    /* Precompute j*D and store in xoutput. */
+    auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
+    std::copy_n(mD.cbegin(), samplesToDo+sFilterDelay, tmpiter);
+    std::copy_n(mTemp.cbegin()+forwardSamples, mDTHistory.size(), mDTHistory.begin());
+    PShift.process({xoutput, samplesToDo}, mTemp.data());
+
+    /* W = 0.6098637*S - 0.6896511*j*w*D */
+    for(size_t i{0};i < samplesToDo;++i)
+        woutput[i] = 0.6098637f*mS[i] - 0.6896511f*xoutput[i];
+    /* X = 0.8624776*S + 0.7626955*j*w*D */
+    for(size_t i{0};i < samplesToDo;++i)
+        xoutput[i] = 0.8624776f*mS[i] + 0.7626955f*xoutput[i];
+
+    /* Precompute j*S and store in youtput. */
+    tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
+    std::copy_n(mS.cbegin(), samplesToDo+sFilterDelay, tmpiter);
+    std::copy_n(mTemp.cbegin()+forwardSamples, mSHistory.size(), mSHistory.begin());
+    PShift.process({youtput, samplesToDo}, mTemp.data());
+
+    /* Y = 1.6822415*w*D - 0.2156194*j*S */
+    for(size_t i{0};i < samplesToDo;++i)
+        youtput[i] = 1.6822415f*mD[i] - 0.2156194f*youtput[i];
+}

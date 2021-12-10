@@ -14,8 +14,6 @@
 
 namespace {
 
-using complex_d = std::complex<double>;
-
 const PhaseShifterT<UhjFilterBase::sFilterDelay*2> PShift{};
 
 } // namespace
@@ -175,7 +173,6 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
  *
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
- *
  */
 void UhjDecoder::decodeStereo(const al::span<BufferLine> samples, const size_t offset,
     const size_t samplesToDo, const size_t forwardSamples)

@@ -193,6 +193,6 @@ std::unique_ptr<BFormatDec> BFormatDec::Create(const size_t inchans,
     const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf,
     const float xover_f0norm, std::unique_ptr<FrontStablizer> stablizer)
 {
-    return std::unique_ptr<BFormatDec>{new(FamCount(inchans))
-        BFormatDec{inchans, coeffs, coeffslf, xover_f0norm, std::move(stablizer)}};
+    return std::make_unique<BFormatDec>(inchans, coeffs, coeffslf, xover_f0norm,
+        std::move(stablizer));
 }

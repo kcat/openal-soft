@@ -777,11 +777,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 
     voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
-    if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D
-        || voice->mFmtChannels == FmtUHJ2 || voice->mFmtChannels == FmtUHJ3
-        || voice->mFmtChannels == FmtUHJ4 || voice->mFmtChannels == FmtSuperStereo)
+    if(IsAmbisonic(voice->mFmtChannels))
     {
-        /* Special handling for B-Format sources. */
+        /* Special handling for B-Format and UHJ sources. */
 
         if(Device->AvgSpeakerDist > 0.0f && voice->mFmtChannels != FmtUHJ2
             && voice->mFmtChannels != FmtSuperStereo)
@@ -883,9 +881,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Convert the rotation matrix for input ordering and scaling, and
              * whether input is 2D or 3D.
              */
-            const uint8_t *index_map{
-                (voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtUHJ2
-                    || voice->mFmtChannels == FmtUHJ3 || voice->mFmtChannels == FmtSuperStereo) ?
+            const uint8_t *index_map{Is2DAmbisonic(voice->mFmtChannels) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 

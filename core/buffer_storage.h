@@ -66,6 +66,12 @@ constexpr bool IsUHJ(FmtChannels chans) noexcept
 constexpr bool IsAmbisonic(FmtChannels chans) noexcept
 { return IsBFormat(chans) || IsUHJ(chans); }
 
+constexpr bool Is2DAmbisonic(FmtChannels chans) noexcept
+{
+    return chans == FmtBFormat2D || chans == FmtUHJ2 || chans == FmtUHJ3
+        || chans == FmtSuperStereo;
+}
+
 
 using CallbackType = int(*)(void*, void*, int);
 

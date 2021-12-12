@@ -839,9 +839,7 @@ void Voice::prepare(DeviceBase *device)
      */
     if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
     {
-        const uint8_t *OrderFromChan{(mFmtChannels == FmtBFormat2D
-            || mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3
-            || mFmtChannels == FmtSuperStereo) ?
+        const uint8_t *OrderFromChan{Is2DAmbisonic(mFmtChannels) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
 

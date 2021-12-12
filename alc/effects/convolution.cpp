@@ -410,7 +410,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         (*mChans)[0].Target[lidx] = gain;
         (*mChans)[1].Target[ridx] = gain;
     }
-    else if(mChannels == FmtBFormat3D || mChannels == FmtBFormat2D)
+    else if(IsBFormat(mChannels))
     {
         DeviceBase *device{context->mDevice};
         if(device->mAmbiOrder > mAmbiOrder)

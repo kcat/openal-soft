@@ -852,6 +852,7 @@ void Voice::prepare(DeviceBase *device)
             chandata.mAmbiLFScale = 1.0f;
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};
+            chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
         /* 2-channel UHJ needs different shelf filters. However, we can't just
@@ -886,6 +887,7 @@ void Voice::prepare(DeviceBase *device)
             chandata.mAmbiLFScale = 1.0f;
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};
+            chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
         mChans[0].mAmbiLFScale = 0.661f;
@@ -898,16 +900,9 @@ void Voice::prepare(DeviceBase *device)
         for(auto &chandata : mChans)
         {
             chandata.mDryParams = DirectParams{};
+            chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
         mFlags &= ~VoiceIsAmbisonic;
-    }
-
-    if(device->AvgSpeakerDist > 0.0f)
-    {
-        const float w1{SpeedOfSoundMetersPerSec /
-            (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
-        for(auto &chandata : mChans)
-            chandata.mDryParams.NFCtrlFilter.init(w1);
     }
 }

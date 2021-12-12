@@ -218,6 +218,10 @@ void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d
     device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
     TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
+    const float w1{SpeedOfSoundMetersPerSec /
+        (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
+    device->mNFCtrlFilter.init(w1);
+
     auto iter = std::copy_n(is3d ? chans_per_order3d : chans_per_order2d, order+1u,
         std::begin(device->NumChannelsPerOrder));
     std::fill(iter, std::end(device->NumChannelsPerOrder), 0u);

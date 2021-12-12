@@ -1755,6 +1755,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         return ALC_NO_ERROR;
 
     device->AvgSpeakerDist = 0.0f;
+    device->mNFCtrlFilter = NfcFilter{};
     device->mUhjEncoder = nullptr;
     device->AmbiDecoder = nullptr;
     device->Bs2b = nullptr;

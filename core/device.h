@@ -15,8 +15,9 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
-#include "core/bufferline.h"
+#include "bufferline.h"
 #include "devformat.h"
+#include "filters/nfc.h"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
@@ -30,7 +31,6 @@ struct Compressor;
 struct ContextBase;
 struct DirectHrtfState;
 struct HrtfStore;
-struct UhjEncoder;
 
 using uint = unsigned int;
 
@@ -170,6 +170,11 @@ struct DeviceBase {
      * HRTF data set, or the NFC-HOA reference delay. Only used for NFC.
      */
     float AvgSpeakerDist{0.0f};
+
+    /* The default NFC filter. Not used directly, but is pre-initialized with
+     * the control distance from AvgSpeakerDist.
+     */
+    NfcFilter mNFCtrlFilter{};
 
     uint SamplesDone{0u};
     std::chrono::nanoseconds ClockBase{0};

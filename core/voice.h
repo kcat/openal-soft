@@ -214,6 +214,7 @@ struct Voice {
     uint mAmbiOrder;
 
     std::unique_ptr<UhjDecoder> mDecoder;
+    UhjDecoder::DecoderFunc mDecoderFunc{};
 
     /** Current target parameters used for mixing. */
     uint mStep{0};

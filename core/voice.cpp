@@ -207,7 +207,7 @@ void LoadSamples(const al::span<DeviceBase::MixerBufferLine> dstSamples, const s
 #define HANDLE_FMT(T) case T:                                                 \
     {                                                                         \
         constexpr size_t sampleSize{sizeof(al::FmtTypeTraits<T>::Type)};      \
-        if(srcchans == FmtUHJ2)                                               \
+        if(srcchans == FmtUHJ2 || srcchans == FmtSuperStereo)                 \
         {                                                                     \
             src += srcOffset*2u*sampleSize;                                   \
             al::LoadSampleArray<T>(dstSamples[0].data() + dstOffset, src,     \
@@ -510,8 +510,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         Device->mSampleData.data() + Device->mSampleData.size() - mChans.size(),
         mChans.size()};
     const uint PostPadding{MaxResamplerEdge +
-        ((mFmtChannels==FmtUHJ2 || mFmtChannels==FmtUHJ3 || mFmtChannels==FmtUHJ4)
-            ? uint{UhjDecoder::sFilterDelay} : 0u)};
+        (mDecoder ? uint{UhjDecoder::sFilterDelay} : 0u)};
     uint buffers_done{0u};
     uint OutPos{0u};
     do {
@@ -628,7 +627,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
             {
                 const size_t srcOffset{(increment*DstBufferSize + DataPosFrac)>>MixerFracBits};
                 SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
-                mDecoder->decode(MixingSamples, MaxResamplerEdge, SrcBufferSize, srcOffset);
+                ((*mDecoder).*mDecoderFunc)(MixingSamples, MaxResamplerEdge, SrcBufferSize,
+                    srcOffset);
             }
         }
 
@@ -814,10 +814,17 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
 void Voice::prepare(DeviceBase *device)
 {
-    if((mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3 || mFmtChannels==FmtUHJ4) && !mDecoder)
+    if(IsUHJ(mFmtChannels))
+    {
         mDecoder = std::make_unique<UhjDecoder>();
-    else if(mFmtChannels != FmtUHJ2 && mFmtChannels != FmtUHJ3 && mFmtChannels != FmtUHJ4)
+        mDecoderFunc = (mFmtChannels == FmtSuperStereo) ? &UhjDecoder::decodeStereo
+            : &UhjDecoder::decode;
+    }
+    else
+    {
         mDecoder = nullptr;
+        mDecoderFunc = nullptr;
+    }
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
      * until the update gets applied.
@@ -833,7 +840,8 @@ void Voice::prepare(DeviceBase *device)
     if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
     {
         const uint8_t *OrderFromChan{(mFmtChannels == FmtBFormat2D
-            || mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3) ?
+            || mFmtChannels == FmtUHJ2 || mFmtChannels == FmtUHJ3
+            || mFmtChannels == FmtSuperStereo) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
 
@@ -850,9 +858,9 @@ void Voice::prepare(DeviceBase *device)
          * use different shelf filters after mixing it and with any old speaker
          * setup the user has. To make this work, we apply the expected shelf
          * filters for decoding UHJ2 to quad (only needs LF scaling), and act
-         * as if those 4 channels are encoded back onto first-order B-Format,
-         * which then upsamples to higher order as normal (only needs HF
-         * scaling).
+         * as if those 4 quad channels are encoded right back onto first-order
+         * B-Format, which then upsamples to higher order as normal (only needs
+         * HF scaling).
          *
          * This isn't perfect, but without an entirely separate and limited
          * UHJ2 path, it's better than nothing.

@@ -78,6 +78,9 @@ struct UhjDecoder : public UhjFilterBase {
     void decodeStereo(const al::span<BufferLine> samples, const size_t offset,
         const size_t samplesToDo, const size_t forwardSamples);
 
+    using DecoderFunc = void (UhjDecoder::*)(const al::span<BufferLine> samples,
+        const size_t offset, const size_t samplesToDo, const size_t forwardSamples);
+
     DEF_NEWDEL(UhjDecoder)
 };
 

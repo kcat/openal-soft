@@ -771,6 +771,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     case FmtUHJ2:
     case FmtUHJ3:
     case FmtUHJ4:
+    case FmtSuperStereo:
         DirectChannels = DirectMode::Off;
         break;
     }
@@ -778,11 +779,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
     if(voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtBFormat3D
         || voice->mFmtChannels == FmtUHJ2 || voice->mFmtChannels == FmtUHJ3
-        || voice->mFmtChannels == FmtUHJ4)
+        || voice->mFmtChannels == FmtUHJ4 || voice->mFmtChannels == FmtSuperStereo)
     {
         /* Special handling for B-Format sources. */
 
-        if(Device->AvgSpeakerDist > 0.0f && voice->mFmtChannels != FmtUHJ2)
+        if(Device->AvgSpeakerDist > 0.0f && voice->mFmtChannels != FmtUHJ2
+            && voice->mFmtChannels != FmtSuperStereo)
         {
             if(!(Distance > std::numeric_limits<float>::epsilon()))
             {
@@ -883,7 +885,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              */
             const uint8_t *index_map{
                 (voice->mFmtChannels == FmtBFormat2D || voice->mFmtChannels == FmtUHJ2
-                    || voice->mFmtChannels == FmtUHJ3) ?
+                    || voice->mFmtChannels == FmtUHJ3 || voice->mFmtChannels == FmtSuperStereo) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 
@@ -1539,10 +1541,8 @@ void CalcSourceParams(Voice *voice, ContextBase *context, bool force)
     }
 
     if((voice->mProps.DirectChannels != DirectMode::Off && voice->mFmtChannels != FmtMono
-            && voice->mFmtChannels != FmtBFormat2D && voice->mFmtChannels != FmtBFormat3D
-            && voice->mFmtChannels != FmtUHJ2 && voice->mFmtChannels != FmtUHJ3
-            && voice->mFmtChannels != FmtUHJ3)
-        || voice->mProps.mSpatializeMode==SpatializeMode::Off
+            && !IsAmbisonic(voice->mFmtChannels))
+        || voice->mProps.mSpatializeMode == SpatializeMode::Off
         || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && voice->mFmtChannels != FmtMono))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);
     else

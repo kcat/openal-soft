@@ -36,6 +36,7 @@ uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
     case FmtUHJ2: return 2;
     case FmtUHJ3: return 3;
     case FmtUHJ4: return 4;
+    case FmtSuperStereo: return 2;
     }
     return 0;
 }

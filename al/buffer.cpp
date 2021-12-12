@@ -522,10 +522,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %u for %s samples",
             unpackalign, NameFromUserFmtType(SrcType));
 
-    const ALuint ambiorder{(*DstChannels == FmtBFormat2D || *DstChannels == FmtBFormat3D) ?
-        ALBuf->UnpackAmbiOrder :
-        ((*DstChannels == FmtUHJ2 || *DstChannels == FmtUHJ3 || *DstChannels == FmtUHJ4) ? 1 :
-        0)};
+    const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
+        (IsUHJ(*DstChannels) ? 1 : 0)};
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
@@ -643,10 +641,8 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     if UNLIKELY(!DstType)
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
-    const ALuint ambiorder{(*DstChannels == FmtBFormat2D || *DstChannels == FmtBFormat3D) ?
-        ALBuf->UnpackAmbiOrder :
-        ((*DstChannels == FmtUHJ2 || *DstChannels == FmtUHJ3 || *DstChannels == FmtUHJ4) ? 1 :
-        0)};
+    const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
+        (IsUHJ(*DstChannels) ? 1 : 0)};
 
     constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
     al::vector<al::byte,16>(FrameSizeFromFmt(*DstChannels, *DstType, ambiorder) *

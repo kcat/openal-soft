@@ -101,9 +101,9 @@ struct AmbiScale {
     {
         static constexpr const std::array<float,MaxAmbiChannels> ret{{
             1.000000000f, /* ACN  0 (W), sqrt(1) */
-            1.224744916f, /* ACN  1 (Y), sqrt(3/2) */
-            1.224744916f, /* ACN  2 (Z), sqrt(3/2) */
-            1.224744916f, /* ACN  3 (X), sqrt(3/2) */
+            1.224744871f, /* ACN  1 (Y), sqrt(3/2) */
+            1.224744871f, /* ACN  2 (Z), sqrt(3/2) */
+            1.224744871f, /* ACN  3 (X), sqrt(3/2) */
             /* Higher orders not relevant for UHJ. */
             1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         }};

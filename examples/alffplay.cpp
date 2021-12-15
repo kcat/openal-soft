@@ -97,6 +97,10 @@ typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, AL
 #define AL_FORMAT_UHJ4CHN8_SOFT                  0x19A8
 #define AL_FORMAT_UHJ4CHN16_SOFT                 0x19A9
 #define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
+#define AL_STEREO_MODE_SOFT                      0x19B0
+#define AL_NORMAL_SOFT                           0x0000
+#define AL_SUPER_STEREO_SOFT                     0x0001
+#define AL_SUPER_STEREO_WIDTH_SOFT               0x19B1
 #endif
 #endif /* ALLOW_EXPERIMENTAL_EXTS */
 }
@@ -122,6 +126,7 @@ const std::string AppName{"alffplay"};
 ALenum DirectOutMode{AL_FALSE};
 bool EnableWideStereo{false};
 bool EnableUhjDecode{false};
+bool EnableSuperStereo{false};
 bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
@@ -1249,6 +1254,10 @@ int AudioState::handler()
         }
     }
 #endif
+#ifdef AL_SOFT_UHJ
+    if(EnableSuperStereo)
+        alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
+#endif
 
     if(alGetError() != AL_NO_ERROR)
         goto finish;
@@ -2053,6 +2062,20 @@ int main(int argc, char *argv[])
             }
 #else
             std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
+#endif
+        }
+        else if(strcmp(argv[fileidx], "-superstereo") == 0)
+        {
+#ifdef AL_SOFT_UHJ
+            if(!alIsExtensionPresent("AL_SOFTX_UHJ"))
+                std::cerr<< "AL_SOFT_UHJ not supported for Super Stereo decoding" <<std::endl;
+            else
+            {
+                std::cout<< "Found AL_SOFT_UHJ" <<std::endl;
+                EnableSuperStereo = true;
+            }
+#else
+            std::cerr<< "AL_SOFT_UHJ not supported for Super Stereo decoding" <<std::endl;
 #endif
         }
         else if(strcmp(argv[fileidx], "-novideo") == 0)

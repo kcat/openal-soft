@@ -13,6 +13,7 @@
 
 #include "alc/alu.h"
 #include "alc/context.h"
+#include "alc/inprogext.h"
 #include "aldeque.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -24,6 +25,11 @@
 struct ALbuffer;
 struct ALeffectslot;
 
+
+enum class SourceStereo : bool {
+    Normal = AL_NORMAL_SOFT,
+    Enhanced = AL_SUPER_STEREO_SOFT
+};
 
 #define DEFAULT_SENDS  2
 
@@ -59,6 +65,7 @@ struct ALsource {
     Resampler mResampler{ResamplerDefault};
     DirectMode DirectChannels{DirectMode::Off};
     SpatializeMode mSpatialize{SpatializeMode::Auto};
+    SourceStereo mStereoMode{SourceStereo::Normal};
 
     bool DryGainHFAuto{true};
     bool WetGainAuto{true};
@@ -75,6 +82,7 @@ struct ALsource {
     std::array<float,2> StereoPan{{Deg2Rad( 30.0f), Deg2Rad(-30.0f)}};
 
     float Radius{0.0f};
+    float EnhWidth{0.593f};
 
     /** Direct filter and auxiliary send info. */
     struct {

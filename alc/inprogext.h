@@ -87,6 +87,11 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 #define AL_FORMAT_UHJ4CHN8_SOFT                  0x19A8
 #define AL_FORMAT_UHJ4CHN16_SOFT                 0x19A9
 #define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
+
+#define AL_STEREO_MODE_SOFT                      0x19B0
+#define AL_NORMAL_SOFT                           0x0000
+#define AL_SUPER_STEREO_SOFT                     0x0001
+#define AL_SUPER_STEREO_WIDTH_SOFT               0x19B1
 #endif
 
 #ifndef AL_SOFT_hold_on_disconnect

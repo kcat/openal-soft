@@ -777,6 +777,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 
     voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
+    if(auto *decoder{voice->mDecoder.get()})
+        decoder->mWidthControl = props->EnhWidth;
+
     if(IsAmbisonic(voice->mFmtChannels))
     {
         /* Special handling for B-Format and UHJ sources. */

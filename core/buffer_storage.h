@@ -93,14 +93,7 @@ struct BufferStorage {
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }
     inline uint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
 
-    inline uint mixerChannelsFromFmt() const noexcept
-    {
-        if(mChannels == FmtUHJ2 || mChannels == FmtSuperStereo) return 3;
-        return ChannelsFromFmt(mChannels, minu(mAmbiOrder, MaxAmbiOrder));
-    }
-
     inline bool isBFormat() const noexcept { return IsBFormat(mChannels); }
-    inline bool isUhj() const noexcept { return IsUHJ(mChannels); }
 };
 
 #endif /* CORE_BUFFER_STORAGE_H */

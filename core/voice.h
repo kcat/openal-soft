@@ -138,6 +138,7 @@ struct VoiceProps {
     std::array<float,2> StereoPan;
 
     float Radius;
+    float EnhWidth;
 
     /** Direct filter and auxiliary send info. */
     struct {

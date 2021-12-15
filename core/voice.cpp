@@ -814,6 +814,27 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
 void Voice::prepare(DeviceBase *device)
 {
+    /* Even if storing really high order ambisonics, we only mix channels for
+     * orders up to MaxAmbiOrder. The rest are simply dropped.
+     */
+    uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
+        ChannelsFromFmt(mFmtChannels, minu(mAmbiOrder, MaxAmbiOrder))};
+    if(unlikely(num_channels > device->mSampleData.size()))
+    {
+        ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
+            device->mSampleData.size(), mFmtChannels, mAmbiOrder);
+        num_channels = static_cast<uint>(device->mSampleData.size());
+    }
+    if(mChans.capacity() > 2 && num_channels < mChans.capacity())
+    {
+        decltype(mChans){}.swap(mChans);
+        decltype(mPrevSamples){}.swap(mPrevSamples);
+    }
+    mChans.reserve(maxu(2, num_channels));
+    mChans.resize(num_channels);
+    mPrevSamples.reserve(maxu(2, num_channels));
+    mPrevSamples.resize(num_channels);
+
     if(IsUHJ(mFmtChannels))
     {
         mDecoder = std::make_unique<UhjDecoder>();

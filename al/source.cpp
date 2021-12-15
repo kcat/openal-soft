@@ -143,6 +143,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     props->StereoPan = source->StereoPan;
 
     props->Radius = source->Radius;
+    props->EnhWidth = source->EnhWidth;
 
     props->Direct.Gain = source->Direct.Gain;
     props->Direct.GainHF = source->Direct.GainHF;
@@ -492,37 +493,19 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 
     ALbuffer *buffer{BufferList->mBuffer};
     voice->mFrequency = buffer->mSampleRate;
-    voice->mFmtChannels = buffer->mChannels;
+    voice->mFmtChannels =
+        (buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced) ?
+        FmtSuperStereo : buffer->mChannels;
     voice->mFmtType = buffer->mType;
     voice->mNumChannels = buffer->channelsFromFmt();
     voice->mFrameSize = buffer->frameSizeFromFmt();
-    voice->mAmbiLayout = buffer->isUhj() ? AmbiLayout::FuMa : buffer->mAmbiLayout;
-    voice->mAmbiScaling = buffer->isUhj() ? AmbiScaling::UHJ : buffer->mAmbiScaling;
+    voice->mAmbiLayout = IsUHJ(voice->mFmtChannels) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
+    voice->mAmbiScaling = IsUHJ(voice->mFmtChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
     voice->mAmbiOrder = buffer->mAmbiOrder;
 
     if(buffer->mCallback) voice->mFlags |= VoiceIsCallback;
     else if(source->SourceType == AL_STATIC) voice->mFlags |= VoiceIsStatic;
     voice->mNumCallbackSamples = 0;
-
-    /* Even if storing really high order ambisonics, we only mix channels for
-     * orders up to MaxAmbiOrder. The rest are simply dropped.
-     */
-    ALuint num_channels{buffer->mixerChannelsFromFmt()};
-    if UNLIKELY(num_channels > device->mSampleData.size())
-    {
-        ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
-            device->mSampleData.size(), buffer->mChannels, buffer->mAmbiOrder);
-        num_channels = static_cast<ALuint>(device->mSampleData.size());
-    }
-    if(voice->mChans.capacity() > 2 && num_channels < voice->mChans.capacity())
-    {
-        decltype(voice->mChans){}.swap(voice->mChans);
-        decltype(voice->mPrevSamples){}.swap(voice->mPrevSamples);
-    }
-    voice->mChans.reserve(maxu(2, num_channels));
-    voice->mChans.resize(num_channels);
-    voice->mPrevSamples.reserve(maxu(2, num_channels));
-    voice->mPrevSamples.resize(num_channels);
 
     voice->prepare(device);
 
@@ -832,6 +815,26 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 }
 
 
+al::optional<SourceStereo> StereoModeFromEnum(ALenum mode)
+{
+    switch(mode)
+    {
+    case AL_NORMAL_SOFT: return al::make_optional(SourceStereo::Normal);
+    case AL_SUPER_STEREO_SOFT: return al::make_optional(SourceStereo::Enhanced);
+    }
+    WARN("Unsupported stereo mode: 0x%04x\n", mode);
+    return al::nullopt;
+}
+ALenum EnumFromStereoMode(SourceStereo mode)
+{
+    switch(mode)
+    {
+    case SourceStereo::Normal: return AL_NORMAL_SOFT;
+    case SourceStereo::Enhanced: return AL_SUPER_STEREO_SOFT;
+    }
+    throw std::runtime_error{"Invalid SourceStereo: "+std::to_string(int(mode))};
+}
+
 al::optional<SpatializeMode> SpatializeModeFromEnum(ALenum mode)
 {
     switch(mode)
@@ -976,6 +979,10 @@ enum SourceProp : ALenum {
     /* ALC_SOFT_device_clock */
     srcSampleOffsetClockSOFT = AL_SAMPLE_OFFSET_CLOCK_SOFT,
     srcSecOffsetClockSOFT = AL_SEC_OFFSET_CLOCK_SOFT,
+
+    /* AL_SOFT_UHJ */
+    srcStereoMode = AL_STEREO_MODE_SOFT,
+    srcSuperStereoWidth = AL_SUPER_STEREO_WIDTH_SOFT,
 };
 
 
@@ -1019,6 +1026,8 @@ ALuint FloatValsByProp(ALenum prop)
     case AL_BYTE_LENGTH_SOFT:
     case AL_SAMPLE_LENGTH_SOFT:
     case AL_SEC_LENGTH_SOFT:
+    case AL_STEREO_MODE_SOFT:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
         return 1;
 
     case AL_STEREO_ANGLES:
@@ -1084,6 +1093,8 @@ ALuint DoubleValsByProp(ALenum prop)
     case AL_BYTE_LENGTH_SOFT:
     case AL_SAMPLE_LENGTH_SOFT:
     case AL_SEC_LENGTH_SOFT:
+    case AL_STEREO_MODE_SOFT:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
         return 1;
 
     case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1277,6 +1288,13 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Radius = values[0];
         return UpdateSourceProps(Source, Context);
 
+    case AL_SUPER_STEREO_WIDTH_SOFT:
+        CHECKSIZE(values, 1);
+        CHECKVAL(values[0] >= 0.0f && values[0] <= 1.0f);
+
+        Source->EnhWidth = values[0];
+        return UpdateSourceProps(Source, Context);
+
     case AL_STEREO_ANGLES:
         CHECKSIZE(values, 2);
         CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]));
@@ -1340,6 +1358,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SOURCE_SPATIALIZE_SOFT:
     case AL_BYTE_LENGTH_SOFT:
     case AL_SAMPLE_LENGTH_SOFT:
+    case AL_STEREO_MODE_SOFT:
         CHECKSIZE(values, 1);
         ival = static_cast<int>(values[0]);
         return SetSourceiv(Source, Context, prop, {&ival, 1u});
@@ -1575,6 +1594,21 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             values[0]);
         return false;
 
+    case AL_STEREO_MODE_SOFT:
+        CHECKSIZE(values, 1);
+        {
+            const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
+            if(state == AL_PLAYING || state == AL_PAUSED)
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                    "Setting buffer on playing or paused source %u", Source->id);
+        }
+        if(auto mode = StereoModeFromEnum(values[0]))
+        {
+            Source->mStereoMode = *mode;
+            return true;
+        }
+        return false;
+
     case AL_AUXILIARY_SEND_FILTER:
         CHECKSIZE(values, 3);
         slotlock = std::unique_lock<std::mutex>{Context->mEffectSlotLock};
@@ -1651,6 +1685,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_SOURCE_RADIUS:
     case AL_SEC_LENGTH_SOFT:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
         CHECKSIZE(values, 1);
         fvals[0] = static_cast<float>(values[0]);
         return SetSourcefv(Source, Context, prop, {fvals, 1u});
@@ -1721,6 +1756,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_DISTANCE_MODEL:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_STEREO_MODE_SOFT:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] <= INT_MAX && values[0] >= INT_MIN);
 
@@ -1764,6 +1800,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_SOURCE_RADIUS:
     case AL_SEC_LENGTH_SOFT:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
         CHECKSIZE(values, 1);
         fvals[0] = static_cast<float>(values[0]);
         return SetSourcefv(Source, Context, prop, {fvals, 1u});
@@ -1899,6 +1936,11 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         values[0] = Source->Radius;
         return true;
 
+    case AL_SUPER_STEREO_WIDTH_SOFT:
+        CHECKSIZE(values, 1);
+        values[0] = Source->EnhWidth;
+        return true;
+
     case AL_BYTE_LENGTH_SOFT:
     case AL_SAMPLE_LENGTH_SOFT:
     case AL_SEC_LENGTH_SOFT:
@@ -1986,6 +2028,7 @@ bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_DISTANCE_MODEL:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_STEREO_MODE_SOFT:
         CHECKSIZE(values, 1);
         if((err=GetSourceiv(Source, Context, prop, {ivals, 1u})) != false)
             values[0] = static_cast<double>(ivals[0]);
@@ -2117,6 +2160,11 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         values[0] = EnumFromSpatializeMode(Source->mSpatialize);
         return true;
 
+    case AL_STEREO_MODE_SOFT:
+        CHECKSIZE(values, 1);
+        values[0] = EnumFromStereoMode(Source->mStereoMode);
+        return true;
+
     /* 1x float/double */
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
@@ -2136,6 +2184,7 @@ bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_CONE_OUTER_GAINHF:
     case AL_SOURCE_RADIUS:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
         CHECKSIZE(values, 1);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 1u})) != false)
             values[0] = static_cast<int>(dvals[0]);
@@ -2252,6 +2301,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_CONE_OUTER_GAINHF:
     case AL_SOURCE_RADIUS:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
         CHECKSIZE(values, 1);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 1u})) != false)
             values[0] = static_cast<int64_t>(dvals[0]);
@@ -2298,6 +2348,7 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_DISTANCE_MODEL:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_STEREO_MODE_SOFT:
         CHECKSIZE(values, 1);
         if((err=GetSourceiv(Source, Context, prop, {ivals, 1u})) != false)
             values[0] = ivals[0];

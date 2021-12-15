@@ -497,7 +497,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
         (buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced) ?
         FmtSuperStereo : buffer->mChannels;
     voice->mFmtType = buffer->mType;
-    voice->mNumChannels = buffer->channelsFromFmt();
+    voice->mFrameStep = buffer->channelsFromFmt();
     voice->mFrameSize = buffer->frameSizeFromFmt();
     voice->mAmbiLayout = IsUHJ(voice->mFmtChannels) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
     voice->mAmbiScaling = IsUHJ(voice->mFmtChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;

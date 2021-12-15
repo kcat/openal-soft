@@ -591,8 +591,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 ++prevSamples;
             }
             if((mFlags&VoiceIsStatic))
-                LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, mFmtChannels,
-                    mNumChannels, SrcBufferSize, MixingSamples);
+                LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType,
+                    mFmtChannels, mFrameStep, SrcBufferSize, MixingSamples);
             else if((mFlags&VoiceIsCallback))
             {
                 if(!(mFlags&VoiceCallbackStopped))
@@ -617,11 +617,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                     }
                 }
                 LoadBufferCallback(BufferListItem, mNumCallbackSamples, mFmtType, mFmtChannels,
-                    mNumChannels, SrcBufferSize, MixingSamples);
+                    mFrameStep, SrcBufferSize, MixingSamples);
             }
             else
                 LoadBufferQueue(BufferListItem, BufferLoopItem, DataPosInt, mFmtType, mFmtChannels,
-                    mNumChannels, SrcBufferSize, MixingSamples);
+                    mFrameStep, SrcBufferSize, MixingSamples);
 
             if(mDecoder)
             {

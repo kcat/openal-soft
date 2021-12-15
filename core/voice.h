@@ -208,8 +208,8 @@ struct Voice {
     FmtChannels mFmtChannels;
     FmtType mFmtType;
     uint mFrequency;
-    uint mNumChannels;
-    uint mFrameSize;
+    uint mFrameStep; /**< In steps of the sample type size. */
+    uint mFrameSize; /**< In bytes. */
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;
     uint mAmbiOrder;

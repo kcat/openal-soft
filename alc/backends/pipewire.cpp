@@ -1289,6 +1289,7 @@ bool PipeWirePlayback::reset()
     pw_properties_set(props, PW_KEY_NODE_DESCRIPTION, appname);
     pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice->UpdateSize,
         mDevice->Frequency);
+    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->Frequency);
 
     MainloopUniqueLock plock{mLoop};
     /* The stream takes overship of 'props', even in the case of failure. */

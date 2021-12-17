@@ -521,7 +521,7 @@ VoiceChange *GetVoiceChanger(ALCcontext *ctx)
     VoiceChange *vchg{ctx->mVoiceChangeTail};
     if UNLIKELY(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire))
     {
-        ctx->allocVoiceChanges(1);
+        ctx->allocVoiceChanges();
         vchg = ctx->mVoiceChangeTail;
     }
 

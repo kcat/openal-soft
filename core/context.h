@@ -121,7 +121,7 @@ struct ContextBase {
     VoiceChange *mVoiceChangeTail{};
     std::atomic<VoiceChange*> mCurrentVoiceChange{};
 
-    void allocVoiceChanges(size_t addcount);
+    void allocVoiceChanges();
     void allocVoiceProps();
 
 

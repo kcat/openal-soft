@@ -171,21 +171,17 @@ ContextBase::~ContextBase()
     }
 }
 
-void ContextBase::allocVoiceChanges(size_t addcount)
+void ContextBase::allocVoiceChanges()
 {
     constexpr size_t clustersize{128};
-    /* Convert element count to cluster count. */
-    addcount = (addcount+(clustersize-1)) / clustersize;
-    while(addcount)
-    {
-        VoiceChangeCluster cluster{std::make_unique<VoiceChange[]>(clustersize)};
-        for(size_t i{1};i < clustersize;++i)
-            cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
-        cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
-        mVoiceChangeClusters.emplace_back(std::move(cluster));
-        mVoiceChangeTail = mVoiceChangeClusters.back().get();
-        --addcount;
-    }
+
+    VoiceChangeCluster cluster{std::make_unique<VoiceChange[]>(clustersize)};
+    for(size_t i{1};i < clustersize;++i)
+        cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
+    cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
+
+    mVoiceChangeClusters.emplace_back(std::move(cluster));
+    mVoiceChangeTail = mVoiceChangeClusters.back().get();
 }
 
 void ContextBase::allocVoiceProps()
@@ -287,7 +283,7 @@ void ALCcontext::init()
     }
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 
-    allocVoiceChanges(1);
+    allocVoiceChanges();
     {
         VoiceChange *cur{mVoiceChangeTail};
         while(VoiceChange *next{cur->mNext.load(std::memory_order_relaxed)})

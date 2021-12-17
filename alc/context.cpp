@@ -133,16 +133,6 @@ ContextBase::~ContextBase()
         delete curarray;
     }
 
-    count = 0;
-    VoicePropsItem *vprops{mFreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
-    while(vprops)
-    {
-        std::unique_ptr<VoicePropsItem> old{vprops};
-        vprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu voice property object%s\n", count, (count==1)?"":"s");
-
     delete mVoices.exchange(nullptr, std::memory_order_relaxed);
 
     count = 0;
@@ -196,6 +186,25 @@ void ContextBase::allocVoiceChanges(size_t addcount)
         mVoiceChangeTail = mVoiceChangeClusters.back().get();
         --addcount;
     }
+}
+
+void ContextBase::allocVoiceProps()
+{
+    constexpr size_t clustersize{32};
+
+    TRACE("Increasing allocated voice properties to %zu\n",
+        (mVoicePropClusters.size()+1) * clustersize);
+
+    VoicePropsCluster cluster{std::make_unique<VoicePropsItem[]>(clustersize)};
+    for(size_t i{1};i < clustersize;++i)
+        cluster[i-1].next.store(std::addressof(cluster[i]), std::memory_order_relaxed);
+    mVoicePropClusters.emplace_back(std::move(cluster));
+
+    VoicePropsItem *oldhead{mFreeVoiceProps.load(std::memory_order_acquire)};
+    do {
+        mVoicePropClusters.back()[clustersize-1].next.store(oldhead, std::memory_order_relaxed);
+    } while(mFreeVoiceProps.compare_exchange_weak(oldhead, mVoicePropClusters.back().get(),
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }
 
 void ContextBase::allocVoices(size_t addcount)

@@ -122,6 +122,7 @@ struct ContextBase {
     std::atomic<VoiceChange*> mCurrentVoiceChange{};
 
     void allocVoiceChanges(size_t addcount);
+    void allocVoiceProps();
 
 
     ContextParams mParams;
@@ -161,6 +162,9 @@ struct ContextBase {
 
     using VoiceCluster = std::unique_ptr<Voice[]>;
     al::vector<VoiceCluster> mVoiceClusters;
+
+    using VoicePropsCluster = std::unique_ptr<VoicePropsItem[]>;
+    al::vector<VoicePropsCluster> mVoicePropClusters;
 
 
     ContextBase(DeviceBase *device);

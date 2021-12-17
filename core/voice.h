@@ -252,7 +252,7 @@ struct Voice {
     al::vector<ChannelData> mChans{2};
 
     Voice() = default;
-    ~Voice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
+    ~Voice() = default;
 
     Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;

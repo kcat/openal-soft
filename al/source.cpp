@@ -100,15 +100,15 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     /* Get an unused property container, or allocate a new one as needed. */
     VoicePropsItem *props{context->mFreeVoiceProps.load(std::memory_order_acquire)};
     if(!props)
-        props = new VoicePropsItem{};
-    else
     {
-        VoicePropsItem *next;
-        do {
-            next = props->next.load(std::memory_order_relaxed);
-        } while(context->mFreeVoiceProps.compare_exchange_weak(props, next,
-                std::memory_order_acq_rel, std::memory_order_acquire) == 0);
+        context->allocVoiceProps();
+        props = context->mFreeVoiceProps.load(std::memory_order_acquire);
     }
+    VoicePropsItem *next;
+    do {
+        next = props->next.load(std::memory_order_relaxed);
+    } while(unlikely(context->mFreeVoiceProps.compare_exchange_weak(props, next,
+        std::memory_order_acq_rel, std::memory_order_acquire) == false));
 
     props->Pitch = source->Pitch;
     props->Gain = source->Gain;

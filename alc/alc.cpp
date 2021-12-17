@@ -2082,18 +2082,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             }
         }
 
-        /* Clear any pre-existing voice property structs, in case the number of
-         * auxiliary sends is changing. Active sources will have updates
-         * respecified in UpdateAllSourceProps.
-         */
-        VoicePropsItem *vprops{context->mFreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel)};
-        while(vprops)
-        {
-            VoicePropsItem *next = vprops->next.load(std::memory_order_relaxed);
-            delete vprops;
-            vprops = next;
-        }
-
         auto voicelist = context->getVoicesSpan();
         for(Voice *voice : voicelist)
         {
@@ -2108,7 +2096,8 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     SendParams{});
             }
 
-            delete voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel);
+            if(VoicePropsItem *props{voice->mUpdate.exchange(nullptr, std::memory_order_relaxed)})
+                AtomicReplaceHead(context->mFreeVoiceProps, props);
 
             /* Force the voice to stopped if it was stopping. */
             Voice::State vstate{Voice::Stopping};
@@ -2119,6 +2108,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
             voice->prepare(device);
         }
+        /* Clear all voice props to let them get allocated again. */
+        context->mVoicePropClusters.clear();
+        context->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
         srclock.unlock();
 
         context->mPropsDirty.test_and_clear(std::memory_order_release);
@@ -2172,6 +2164,9 @@ bool ResetDeviceParams(ALCdevice *device, const int *attrList)
             while(auto *next = vchg->mNext.load(std::memory_order_acquire))
                 vchg = next;
             ctx->mCurrentVoiceChange.store(vchg, std::memory_order_release);
+
+            ctx->mVoicePropClusters.clear();
+            ctx->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
 
             ctx->mVoiceClusters.clear();
             ctx->allocVoices(std::max<size_t>(256,

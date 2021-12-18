@@ -733,18 +733,24 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         }
         else if((mFlags&VoiceIsCallback))
         {
-            if(SrcSamplesDone < mNumCallbackSamples)
+            /* Don't use up the stored callback samples when stopping (pausing)
+             * since they'll be replayed when resuming.
+             */
+            if(likely(vstate == Playing))
             {
-                const size_t byteOffset{SrcSamplesDone*mFrameSize};
-                const size_t byteEnd{mNumCallbackSamples*mFrameSize};
-                al::byte *data{BufferListItem->mSamples};
-                std::copy(data+byteOffset, data+byteEnd, data);
-                mNumCallbackSamples -= SrcSamplesDone;
-            }
-            else
-            {
-                BufferListItem = nullptr;
-                mNumCallbackSamples = 0;
+                if(SrcSamplesDone < mNumCallbackSamples)
+                {
+                    const size_t byteOffset{SrcSamplesDone*mFrameSize};
+                    const size_t byteEnd{mNumCallbackSamples*mFrameSize};
+                    al::byte *data{BufferListItem->mSamples};
+                    std::copy(data+byteOffset, data+byteEnd, data);
+                    mNumCallbackSamples -= SrcSamplesDone;
+                }
+                else
+                {
+                    BufferListItem = nullptr;
+                    mNumCallbackSamples = 0;
+                }
             }
         }
         else

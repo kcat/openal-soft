@@ -8,23 +8,23 @@
 #endif
 
 #if defined(__GNUC__) || HAS_BUILTIN(__builtin_expect)
-/* LIKELY optimizes the case where the condition is true. The condition is not
- * required to be true, but it can result in more optimal code for the true
- * path at the expense of a less optimal false path.
+/* likely() optimizes for the case where the condition is true. The condition
+ * is not required to be true, but it can result in more optimal code for the
+ * true path at the expense of a less optimal false path.
  */
-#define LIKELY(x) (__builtin_expect(!!(x), !false))
 constexpr bool likely(bool expr) { return __builtin_expect(expr, true); }
-/* The opposite of LIKELY, optimizing the case where the condition is false. */
-#define UNLIKELY(x) (__builtin_expect(!!(x), false))
+/* The opposite of likely(), optimizing for the case where the condition is
+ * false.
+ */
 constexpr bool unlikely(bool expr) { return __builtin_expect(expr, false); }
 
 #else
 
-#define LIKELY(x) (!!(x))
-#define UNLIKELY(x) (!!(x))
 constexpr bool likely(bool expr) { return expr; }
 constexpr bool unlikely(bool expr) { return expr; }
 #endif
+#define LIKELY(x) (likely(x))
+#define UNLIKELY(x) (unlikely(x))
 
 #if HAS_BUILTIN(__builtin_assume)
 /* Unlike LIKELY, ASSUME requires the condition to be true or else it invokes

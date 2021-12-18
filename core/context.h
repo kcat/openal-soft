@@ -10,7 +10,7 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "atomic.h"
-#include "core/bufferline.h"
+#include "bufferline.h"
 #include "threads.h"
 #include "vecmat.h"
 #include "vector.h"

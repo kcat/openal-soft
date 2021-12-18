@@ -3,11 +3,90 @@
 
 #include <memory>
 
+#include "async_event.h"
 #include "context.h"
 #include "device.h"
+#include "effectslot.h"
 #include "logging.h"
+#include "ringbuffer.h"
 #include "voice.h"
 #include "voice_change.h"
+
+
+ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
+{ }
+
+ContextBase::~ContextBase()
+{
+    size_t count{0};
+    ContextProps *cprops{mParams.ContextUpdate.exchange(nullptr, std::memory_order_relaxed)};
+    if(cprops)
+    {
+        ++count;
+        delete cprops;
+    }
+    cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
+    while(cprops)
+    {
+        std::unique_ptr<ContextProps> old{cprops};
+        cprops = old->next.load(std::memory_order_relaxed);
+        ++count;
+    }
+    TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
+
+    count = 0;
+    EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
+    while(eprops)
+    {
+        std::unique_ptr<EffectSlotProps> old{eprops};
+        eprops = old->next.load(std::memory_order_relaxed);
+        ++count;
+    }
+    TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
+
+    if(EffectSlotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
+    {
+        al::destroy_n(curarray->end(), curarray->size());
+        delete curarray;
+    }
+
+    delete mVoices.exchange(nullptr, std::memory_order_relaxed);
+
+    count = 0;
+    ListenerProps *lprops{mParams.ListenerUpdate.exchange(nullptr, std::memory_order_relaxed)};
+    if(lprops)
+    {
+        ++count;
+        delete lprops;
+    }
+    lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
+    while(lprops)
+    {
+        std::unique_ptr<ListenerProps> old{lprops};
+        lprops = old->next.load(std::memory_order_relaxed);
+        ++count;
+    }
+    TRACE("Freed %zu listener property object%s\n", count, (count==1)?"":"s");
+
+    if(mAsyncEvents)
+    {
+        count = 0;
+        auto evt_vec = mAsyncEvents->getReadVector();
+        if(evt_vec.first.len > 0)
+        {
+            al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf), evt_vec.first.len);
+            count += evt_vec.first.len;
+        }
+        if(evt_vec.second.len > 0)
+        {
+            al::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf), evt_vec.second.len);
+            count += evt_vec.second.len;
+        }
+        if(count > 0)
+            TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");
+        mAsyncEvents->readAdvance(count);
+    }
+}
 
 
 void ContextBase::allocVoiceChanges()

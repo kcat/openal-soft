@@ -21,11 +21,11 @@
 #include "alc/alu.h"
 #include "core/async_event.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/logging.h"
 #include "core/voice.h"
 #include "core/voice_change.h"
 #include "device.h"
-#include "effectslot.h"
 #include "ringbuffer.h"
 #include "vecmat.h"
 

@@ -1,10 +1,10 @@
-#ifndef EFFECTSLOT_H
-#define EFFECTSLOT_H
+#ifndef CORE_EFFECTSLOT_H
+#define CORE_EFFECTSLOT_H
 
 #include <atomic>
 
 #include "almalloc.h"
-#include "core/device.h"
+#include "device.h"
 #include "effects/base.h"
 #include "intrusive_ptr.h"
 
@@ -85,4 +85,4 @@ struct EffectSlot {
     DISABLE_ALLOC()
 };
 
-#endif /* EFFECTSLOT_H */
+#endif /* CORE_EFFECTSLOT_H */

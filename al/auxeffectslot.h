@@ -9,10 +9,10 @@
 #include "AL/efx.h"
 
 #include "alc/device.h"
-#include "alc/effectslot.h"
 #include "alc/effects/base.h"
 #include "almalloc.h"
 #include "atomic.h"
+#include "core/effectslot.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 

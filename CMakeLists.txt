@@ -678,6 +678,9 @@ set(CORE_OBJS
     core/devformat.h
     core/device.cpp
     core/device.h
+    core/effects/base.h
+    core/effectslot.cpp
+    core/effectslot.h
     core/except.cpp
     core/except.h
     core/filters/biquad.h
@@ -792,8 +795,6 @@ set(ALC_OBJS
     alc/context.h
     alc/device.cpp
     alc/device.h
-    alc/effectslot.cpp
-    alc/effectslot.h
     alc/effects/base.h
     alc/effects/autowah.cpp
     alc/effects/chorus.cpp

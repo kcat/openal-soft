@@ -27,7 +27,6 @@
 #include <utility>
 
 #include "alc/effects/base.h"
-#include "alc/effectslot.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -36,6 +35,7 @@
 #include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
 #include "math_defs.h"

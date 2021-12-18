@@ -348,7 +348,8 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 
 
 void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &parms,
-    const float TargetGain, const uint Counter, uint OutPos, DeviceBase *Device)
+    const float TargetGain, const uint Counter, uint OutPos, const bool IsPlaying,
+    DeviceBase *Device)
 {
     const uint IrSize{Device->mIrSize};
     auto &HrtfSamples = Device->HrtfSourceData;
@@ -362,8 +363,9 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
         std::begin(HrtfSamples));
     std::copy_n(samples, DstBufferSize, src_iter);
     /* Copy the last used samples back into the history buffer for later. */
-    std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.History.size(),
-        parms.Hrtf.History.begin());
+    if(likely(IsPlaying))
+        std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.History.size(),
+            parms.Hrtf.History.begin());
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
     uint fademix{0u};
@@ -628,7 +630,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 const size_t srcOffset{(increment*DstBufferSize + DataPosFrac)>>MixerFracBits};
                 SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
                 ((*mDecoder).*mDecoderFunc)(MixingSamples, MaxResamplerEdge, SrcBufferSize,
-                    srcOffset);
+                    srcOffset * likely(vstate == Playing));
             }
         }
 
@@ -638,7 +640,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         for(auto &chandata : mChans)
         {
             /* Store the last source samples used for next time. */
-            std::copy_n(voiceSamples->data()+srcOffset, MaxResamplerPadding, prevSamples->data());
+            if(likely(vstate == Playing))
+                std::copy_n(voiceSamples->data()+srcOffset, MaxResamplerPadding,
+                    prevSamples->data());
             ++prevSamples;
 
             /* Resample, then apply ambisonic upsampling as needed. */
@@ -659,23 +663,20 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
                 if((mFlags&VoiceHasHrtf))
                 {
-                    const float TargetGain{UNLIKELY(vstate == Stopping) ? 0.0f :
-                        parms.Hrtf.Target.Gain};
-                    DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos, Device);
-                }
-                else if((mFlags&VoiceHasNfc))
-                {
-                    const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
-                        : parms.Gains.Target.data()};
-                    DoNfcMix({samples, DstBufferSize}, mDirect.Buffer.data(), parms, TargetGains,
-                        Counter, OutPos, Device);
+                    const float TargetGain{parms.Hrtf.Target.Gain * likely(vstate == Playing)};
+                    DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos,
+                        (vstate == Playing), Device);
                 }
                 else
                 {
-                    const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
-                        : parms.Gains.Target.data()};
-                    MixSamples({samples, DstBufferSize}, mDirect.Buffer,
-                        parms.Gains.Current.data(), TargetGains, Counter, OutPos);
+                    const float *TargetGains{likely(vstate == Playing) ? parms.Gains.Target.data()
+                        : SilentTarget.data()};
+                    if((mFlags&VoiceHasNfc))
+                        DoNfcMix({samples, DstBufferSize}, mDirect.Buffer.data(), parms,
+                            TargetGains, Counter, OutPos, Device);
+                    else
+                        MixSamples({samples, DstBufferSize}, mDirect.Buffer,
+                            parms.Gains.Current.data(), TargetGains, Counter, OutPos);
                 }
             }
 
@@ -688,8 +689,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
                     {ResampledData, DstBufferSize}, mSend[send].FilterType)};
 
-                const float *TargetGains{UNLIKELY(vstate == Stopping) ? SilentTarget.data()
-                    : parms.Gains.Target.data()};
+                const float *TargetGains{likely(vstate == Playing) ? parms.Gains.Target.data()
+                    : SilentTarget.data()};
                 MixSamples({samples, DstBufferSize}, mSend[send].Buffer,
                     parms.Gains.Current.data(), TargetGains, Counter, OutPos);
             }
@@ -703,7 +704,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         OutPos += DstBufferSize;
         Counter = maxu(DstBufferSize, Counter) - DstBufferSize;
 
-        if UNLIKELY(!BufferListItem)
+        if(unlikely(!BufferListItem))
         {
             /* Do nothing extra when there's no buffers. */
         }
@@ -760,12 +761,12 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 if(!BufferListItem) BufferListItem = BufferLoopItem;
             } while(BufferListItem);
         }
-    } while(OutPos < SamplesToDo);
+    } while(OutPos < SamplesToDo && likely(vstate == Playing));
 
     mFlags |= VoiceIsFading;
 
     /* Don't update positions and buffers if we were stopping. */
-    if UNLIKELY(vstate == Stopping)
+    if(unlikely(vstate == Stopping))
     {
         mPlayState.store(Stopped, std::memory_order_release);
         return;

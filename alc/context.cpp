@@ -96,6 +96,13 @@ thread_local ALCcontext::ThreadCtx ALCcontext::sThreadContext;
 ALeffect ALCcontext::sDefaultEffect;
 
 
+#ifdef __MINGW32__
+ALCcontext *ALCcontext::getThreadContext() noexcept
+{ return sLocalContext; }
+void ALCcontext::setThreadContext(ALCcontext *context) noexcept
+{ sThreadContext.set(context); }
+#endif
+
 ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
   : ContextBase{device.get()}, mALDevice{std::move(device)}
 {

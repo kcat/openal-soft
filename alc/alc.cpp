@@ -2218,7 +2218,7 @@ ContextRef VerifyContext(ALCcontext *context)
 /** Returns a new reference to the currently active context for this thread. */
 ContextRef GetContextRef(void)
 {
-    ALCcontext *context{ALCcontext::sLocalContext};
+    ALCcontext *context{ALCcontext::getThreadContext()};
     if(context)
         context->add_ref();
     else
@@ -3062,7 +3062,7 @@ END_API_FUNC
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 START_API_FUNC
 {
-    ALCcontext *Context{ALCcontext::sLocalContext};
+    ALCcontext *Context{ALCcontext::getThreadContext()};
     if(!Context) Context = ALCcontext::sGlobalContext.load();
     return Context;
 }
@@ -3071,7 +3071,7 @@ END_API_FUNC
 /** Returns the currently active thread-local context. */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 START_API_FUNC
-{ return ALCcontext::sLocalContext; }
+{ return ALCcontext::getThreadContext(); }
 END_API_FUNC
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
@@ -3098,8 +3098,8 @@ START_API_FUNC
      * thread-local context. Take ownership of the thread-local context
      * reference (if any), clearing the storage to null.
      */
-    ctx = ContextRef{ALCcontext::sLocalContext};
-    if(ctx) ALCcontext::sThreadContext.set(nullptr);
+    ctx = ContextRef{ALCcontext::getThreadContext()};
+    if(ctx) ALCcontext::setThreadContext(nullptr);
     /* Reset (decrement) the previous thread-local reference. */
 
     return ALC_TRUE;
@@ -3122,8 +3122,8 @@ START_API_FUNC
         }
     }
     /* context's reference count is already incremented */
-    ContextRef old{ALCcontext::sLocalContext};
-    ALCcontext::sThreadContext.set(ctx.release());
+    ContextRef old{ALCcontext::getThreadContext()};
+    ALCcontext::setThreadContext(ctx.release());
 
     return ALC_TRUE;
 }

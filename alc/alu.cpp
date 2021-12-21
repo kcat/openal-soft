@@ -915,7 +915,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
         }
     }
-    else if(DirectChannels != DirectMode::Off && Device->FmtChans != DevFmtAmbi3D)
+    else if(DirectChannels != DirectMode::Off && !Device->RealOut.RemixMap.empty())
     {
         /* Direct source channels always play local. Skip the virtual channels
          * and write inputs to the matching real outputs.
@@ -934,6 +934,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 auto remap = std::find_if(Device->RealOut.RemixMap.cbegin(),
                     Device->RealOut.RemixMap.cend(), match_channel);
                 if(remap != Device->RealOut.RemixMap.cend())
+                {
                     for(const auto &target : remap->targets)
                     {
                         idx = GetChannelIdxByName(Device->RealOut, target.channel);
@@ -941,6 +942,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                             voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base *
                                 target.mix;
                     }
+                }
             }
         }
 

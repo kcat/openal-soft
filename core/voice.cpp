@@ -482,7 +482,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
     ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
                            Resample_<CopyTag,CTag> : mResampler};
 
-    uint Counter{(mFlags&VoiceIsFading) ? SamplesToDo : 0};
+    uint Counter{mFlags.test(VoiceIsFading) ? SamplesToDo : 0};
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
@@ -490,7 +490,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         {
             {
                 DirectParams &parms = chandata.mDryParams;
-                if(!(mFlags&VoiceHasHrtf))
+                if(!mFlags.test(VoiceHasHrtf))
                     parms.Gains.Current = parms.Gains.Target;
                 else
                     parms.Hrtf.Old = parms.Hrtf.Target;
@@ -592,12 +592,12 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 std::copy_n(prevSamples->data(), MaxResamplerEdge, chanbuffer.data());
                 ++prevSamples;
             }
-            if((mFlags&VoiceIsStatic))
+            if(mFlags.test(VoiceIsStatic))
                 LoadBufferStatic(BufferListItem, BufferLoopItem, DataPosInt, mFmtType,
                     mFmtChannels, mFrameStep, SrcBufferSize, MixingSamples);
-            else if((mFlags&VoiceIsCallback))
+            else if(mFlags.test(VoiceIsCallback))
             {
-                if(!(mFlags&VoiceCallbackStopped))
+                if(!mFlags.test(VoiceCallbackStopped))
                 {
                     if(SrcBufferSize > mNumCallbackSamples)
                     {
@@ -607,10 +607,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                         const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
                             &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
                         if(gotBytes < 0)
-                            mFlags |= VoiceCallbackStopped;
+                            mFlags.set(VoiceCallbackStopped);
                         else if(static_cast<uint>(gotBytes) < needBytes)
                         {
-                            mFlags |= VoiceCallbackStopped;
+                            mFlags.set(VoiceCallbackStopped);
                             mNumCallbackSamples += static_cast<uint>(static_cast<uint>(gotBytes) /
                                 mFrameSize);
                         }
@@ -650,7 +650,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 voiceSamples->data() + MaxResamplerEdge, DataPosFrac, increment,
                 {Device->ResampledData, DstBufferSize})};
             ++voiceSamples;
-            if((mFlags&VoiceIsAmbisonic))
+            if(mFlags.test(VoiceIsAmbisonic))
                 chandata.mAmbiSplitter.processScale({ResampledData, DstBufferSize},
                     chandata.mAmbiHFScale, chandata.mAmbiLFScale);
 
@@ -661,7 +661,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
                     {ResampledData, DstBufferSize}, mDirect.FilterType)};
 
-                if((mFlags&VoiceHasHrtf))
+                if(mFlags.test(VoiceHasHrtf))
                 {
                     const float TargetGain{parms.Hrtf.Target.Gain * likely(vstate == Playing)};
                     DoHrtfMix(samples, DstBufferSize, parms, TargetGain, Counter, OutPos,
@@ -671,7 +671,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 {
                     const float *TargetGains{likely(vstate == Playing) ? parms.Gains.Target.data()
                         : SilentTarget.data()};
-                    if((mFlags&VoiceHasNfc))
+                    if(mFlags.test(VoiceHasNfc))
                         DoNfcMix({samples, DstBufferSize}, mDirect.Buffer.data(), parms,
                             TargetGains, Counter, OutPos, Device);
                     else
@@ -708,7 +708,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         {
             /* Do nothing extra when there's no buffers. */
         }
-        else if((mFlags&VoiceIsStatic))
+        else if(mFlags.test(VoiceIsStatic))
         {
             if(BufferLoopItem)
             {
@@ -731,7 +731,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 }
             }
         }
-        else if((mFlags&VoiceIsCallback))
+        else if(mFlags.test(VoiceIsCallback))
         {
             /* Don't use up the stored callback samples when stopping (pausing)
              * since they'll be replayed when resuming.
@@ -769,7 +769,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         }
     } while(OutPos < SamplesToDo && likely(vstate == Playing));
 
-    mFlags |= VoiceIsFading;
+    mFlags.set(VoiceIsFading);
 
     /* Don't update positions and buffers if we were stopping. */
     if(unlikely(vstate == Stopping))
@@ -898,7 +898,7 @@ void Voice::prepare(DeviceBase *device)
             mChans[1].mAmbiLFScale = 1.293f;
             mChans[2].mAmbiLFScale = 1.293f;
         }
-        mFlags |= VoiceIsAmbisonic;
+        mFlags.set(VoiceIsAmbisonic);
     }
     else if(mFmtChannels == FmtUHJ2 && !device->mUhjEncoder)
     {
@@ -919,7 +919,7 @@ void Voice::prepare(DeviceBase *device)
         mChans[0].mAmbiLFScale = 0.661f;
         mChans[1].mAmbiLFScale = 1.293f;
         mChans[2].mAmbiLFScale = 1.293f;
-        mFlags |= VoiceIsAmbisonic;
+        mFlags.set(VoiceIsAmbisonic);
     }
     else
     {
@@ -929,6 +929,6 @@ void Voice::prepare(DeviceBase *device)
             chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
-        mFlags &= ~VoiceIsAmbisonic;
+        mFlags.reset(VoiceIsAmbisonic);
     }
 }

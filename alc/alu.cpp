@@ -776,7 +776,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         break;
     }
 
-    voice->mFlags &= ~(VoiceHasHrtf | VoiceHasNfc);
+    voice->mFlags.reset(VoiceHasHrtf).reset(VoiceHasNfc);
     if(auto *decoder{voice->mDecoder.get()})
         decoder->mWidthControl = props->EnhWidth;
 
@@ -807,7 +807,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
             }
 
-            voice->mFlags |= VoiceHasNfc;
+            voice->mFlags.set(VoiceHasNfc);
         }
 
         /* Panning a B-Format sound toward some direction is easy. Just pan the
@@ -1040,7 +1040,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
         }
 
-        voice->mFlags |= VoiceHasHrtf;
+        voice->mFlags.set(VoiceHasHrtf);
     }
     else
     {
@@ -1061,7 +1061,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
-                voice->mFlags |= VoiceHasNfc;
+                voice->mFlags.set(VoiceHasNfc);
             }
 
             /* Calculate the directional coefficients once, which apply to all
@@ -1112,7 +1112,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
-                voice->mFlags |= VoiceHasNfc;
+                voice->mFlags.set(VoiceHasNfc);
             }
 
             for(size_t c{0};c < num_channels;c++)

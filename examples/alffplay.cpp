@@ -164,7 +164,7 @@ enum class SyncMaster {
     Video,
     External,
 
-    Default = External
+    Default = Audio
 };
 
 
@@ -349,8 +349,11 @@ struct AudioState {
     }
 
 #ifdef AL_SOFT_events
-    static void AL_APIENTRY EventCallback(ALenum eventType, ALuint object, ALuint param,
-        ALsizei length, const ALchar *message, void *userParam);
+    static void AL_APIENTRY eventCallbackC(ALenum eventType, ALuint object, ALuint param,
+        ALsizei length, const ALchar *message, void *userParam)
+    { static_cast<AudioState*>(userParam)->eventCallback(eventType, object, param, length, message); }
+    void eventCallback(ALenum eventType, ALuint object, ALuint param, ALsizei length,
+        const ALchar *message);
 #endif
 #ifdef AL_SOFT_callback_buffer
     static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size)
@@ -887,22 +890,20 @@ void AudioState::readAudio(int sample_skip)
 
 
 #ifdef AL_SOFT_events
-void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALuint param,
-    ALsizei length, const ALchar *message, void *userParam)
+void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALuint param,
+    ALsizei length, const ALchar *message)
 {
-    auto self = static_cast<AudioState*>(userParam);
-
     if(eventType == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
     {
         /* Temporarily lock the source mutex to ensure it's not between
          * checking the processed count and going to sleep.
          */
-        std::unique_lock<std::mutex>{self->mSrcMutex}.unlock();
-        self->mSrcCond.notify_one();
+        std::unique_lock<std::mutex>{mSrcMutex}.unlock();
+        mSrcCond.notify_one();
         return;
     }
 
-    std::cout<< "\n---- AL Event on AudioState "<<self<<" ----\nEvent: ";
+    std::cout<< "\n---- AL Event on AudioState "<<this<<" ----\nEvent: ";
     switch(eventType)
     {
     case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
@@ -921,10 +922,10 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
     if(eventType == AL_EVENT_TYPE_DISCONNECTED_SOFT)
     {
         {
-            std::lock_guard<std::mutex> lock{self->mSrcMutex};
-            self->mConnected.clear(std::memory_order_release);
+            std::lock_guard<std::mutex> lock{mSrcMutex};
+            mConnected.clear(std::memory_order_release);
         }
-        self->mSrcCond.notify_one();
+        mSrcCond.notify_one();
     }
 }
 #endif
@@ -963,15 +964,32 @@ int AudioState::handler()
     milliseconds sleep_time{AudioBufferTime / 3};
 
 #ifdef AL_SOFT_events
-    const std::array<ALenum,3> evt_types{{
-        AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
-        AL_EVENT_TYPE_DISCONNECTED_SOFT}};
-    if(alEventControlSOFT)
-    {
-        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
-        alEventCallbackSOFT(EventCallback, this);
-        sleep_time = AudioBufferTotalTime;
-    }
+    struct EventControlManager {
+        const std::array<ALenum,3> evt_types{{
+            AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
+            AL_EVENT_TYPE_DISCONNECTED_SOFT}};
+
+        EventControlManager(milliseconds &sleep_time)
+        {
+            if(alEventControlSOFT)
+            {
+                alEventControlSOFT(static_cast<ALsizei>(evt_types.size()), evt_types.data(),
+                    AL_TRUE);
+                alEventCallbackSOFT(&AudioState::eventCallbackC, this);
+                sleep_time = AudioBufferTotalTime;
+            }
+        }
+        ~EventControlManager()
+        {
+            if(alEventControlSOFT)
+            {
+                alEventControlSOFT(static_cast<ALsizei>(evt_types.size()), evt_types.data(),
+                    AL_FALSE);
+                alEventCallbackSOFT(nullptr, nullptr);
+            }
+        }
+    };
+    EventControlManager event_controller{sleep_time};
 #endif
 #ifdef AL_SOFT_bformat_ex
     const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
@@ -990,6 +1008,9 @@ int AudioState::handler()
         FormatStereo32F = AL_FORMAT_UHJ2CHN_FLOAT32_SOFT;
     }
 #endif
+
+    std::unique_ptr<uint8_t[]> samples;
+    ALsizei buffer_len{0};
 
     /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
@@ -1164,8 +1185,6 @@ int AudioState::handler()
             mFormat = FormatStereo16;
         }
     }
-    void *samples{nullptr};
-    ALsizei buffer_len{0};
 
     mSamples = nullptr;
     mSamplesMax = 0;
@@ -1176,7 +1195,7 @@ int AudioState::handler()
     if(!mDecodedFrame)
     {
         std::cerr<< "Failed to allocate audio frame" <<std::endl;
-        goto finish;
+        return 0;
     }
 
     if(!mDstChanLayout)
@@ -1231,7 +1250,7 @@ int AudioState::handler()
     if(!mSwresCtx || swr_init(mSwresCtx.get()) != 0)
     {
         std::cerr<< "Failed to initialize audio converter" <<std::endl;
-        goto finish;
+        return 0;
     }
 
     alGenBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
@@ -1260,9 +1279,10 @@ int AudioState::handler()
 #endif
 
     if(alGetError() != AL_NO_ERROR)
-        goto finish;
+        return 0;
 
 #ifdef AL_SOFT_callback_buffer
+    bool callback_ok{false};
     if(alBufferCallbackSOFT)
     {
         alBufferCallbackSOFT(mBuffers[0], mFormat, mCodecCtx->sample_rate, bufferCallbackC, this,
@@ -1272,28 +1292,29 @@ int AudioState::handler()
         {
             fprintf(stderr, "Failed to set buffer callback\n");
             alSourcei(mSource, AL_BUFFER, 0);
-            buffer_len = static_cast<int>(duration_cast<seconds>(mCodecCtx->sample_rate *
-                AudioBufferTime).count() * mFrameSize);
         }
         else
         {
             mBufferDataSize = static_cast<size_t>(duration_cast<seconds>(mCodecCtx->sample_rate *
                 AudioBufferTotalTime).count()) * mFrameSize;
-            mBufferData.reset(new uint8_t[mBufferDataSize]);
+            mBufferData = std::make_unique<uint8_t[]>(mBufferDataSize);
+            std::fill_n(mBufferData.get(), mBufferDataSize, uint8_t{});
+
             mReadPos.store(0, std::memory_order_relaxed);
-            mWritePos.store(0, std::memory_order_relaxed);
+            mWritePos.store(mBufferDataSize/mFrameSize/2*mFrameSize, std::memory_order_relaxed);
 
             ALCint refresh{};
             alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);
             sleep_time = milliseconds{seconds{1}} / refresh;
+            callback_ok = true;
         }
     }
-    else
+    if(!callback_ok)
 #endif
         buffer_len = static_cast<int>(duration_cast<seconds>(mCodecCtx->sample_rate *
             AudioBufferTime).count() * mFrameSize);
     if(buffer_len > 0)
-        samples = av_malloc(static_cast<ALuint>(buffer_len));
+        samples = std::make_unique<uint8_t[]>(static_cast<ALuint>(buffer_len));
 
     /* Prefill the codec buffer. */
     do {
@@ -1351,14 +1372,14 @@ int AudioState::handler()
                 /* Read the next chunk of data, filling the buffer, and queue
                  * it on the source.
                  */
-                const bool got_audio{readAudio(static_cast<uint8_t*>(samples),
-                    static_cast<ALuint>(buffer_len), sync_skip)};
+                const bool got_audio{readAudio(samples.get(), static_cast<ALuint>(buffer_len),
+                    sync_skip)};
                 if(!got_audio) break;
 
                 const ALuint bufid{mBuffers[mBufferIdx]};
                 mBufferIdx = static_cast<ALuint>((mBufferIdx+1) % mBuffers.size());
 
-                alBufferData(bufid, mFormat, samples, buffer_len, mCodecCtx->sample_rate);
+                alBufferData(bufid, mFormat, samples.get(), buffer_len, mCodecCtx->sample_rate);
                 alSourceQueueBuffers(mSource, 1, &bufid);
                 ++queued;
             }
@@ -1402,17 +1423,6 @@ int AudioState::handler()
     alSourceRewind(mSource);
     alSourcei(mSource, AL_BUFFER, 0);
     srclock.unlock();
-
-finish:
-    av_freep(&samples);
-
-#ifdef AL_SOFT_events
-    if(alEventControlSOFT)
-    {
-        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
-        alEventCallbackSOFT(nullptr, nullptr);
-    }
-#endif
 
     return 0;
 }
@@ -1753,9 +1763,9 @@ nanoseconds MovieState::getClock()
 
 nanoseconds MovieState::getMasterClock()
 {
-    if(mAVSyncType == SyncMaster::Video)
+    if(mAVSyncType == SyncMaster::Video && mVideo.mStream)
         return mVideo.getClock();
-    if(mAVSyncType == SyncMaster::Audio)
+    if(mAVSyncType == SyncMaster::Audio && mAudio.mStream)
         return mAudio.getClock();
     return getClock();
 }

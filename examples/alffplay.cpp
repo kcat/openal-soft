@@ -125,20 +125,19 @@ const std::string AppName{"alffplay"};
 
 ALenum DirectOutMode{AL_FALSE};
 bool EnableWideStereo{false};
-bool EnableUhjDecode{false};
 bool EnableSuperStereo{false};
 bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
-
-#ifdef AL_SOFT_events
 LPALEVENTCONTROLSOFT alEventControlSOFT;
 LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
-#endif
 
 #ifdef AL_SOFT_callback_buffer
 LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
 #endif
+ALenum FormatStereo8{AL_FORMAT_STEREO8};
+ALenum FormatStereo16{AL_FORMAT_STEREO16};
+ALenum FormatStereo32F{AL_FORMAT_STEREO_FLOAT32};
 
 const seconds AVNoSyncThreshold{10};
 
@@ -348,13 +347,12 @@ struct AudioState {
         av_freep(&mSamples);
     }
 
-#ifdef AL_SOFT_events
     static void AL_APIENTRY eventCallbackC(ALenum eventType, ALuint object, ALuint param,
         ALsizei length, const ALchar *message, void *userParam)
     { static_cast<AudioState*>(userParam)->eventCallback(eventType, object, param, length, message); }
     void eventCallback(ALenum eventType, ALuint object, ALuint param, ALsizei length,
         const ALchar *message);
-#endif
+
 #ifdef AL_SOFT_callback_buffer
     static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size)
     { return static_cast<AudioState*>(userptr)->bufferCallback(data, size); }
@@ -889,7 +887,6 @@ void AudioState::readAudio(int sample_skip)
 }
 
 
-#ifdef AL_SOFT_events
 void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALuint param,
     ALsizei length, const ALchar *message)
 {
@@ -928,7 +925,6 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
         mSrcCond.notify_one();
     }
 }
-#endif
 
 #ifdef AL_SOFT_callback_buffer
 ALsizei AudioState::bufferCallback(void *data, ALsizei size)
@@ -963,7 +959,6 @@ int AudioState::handler()
     std::unique_lock<std::mutex> srclock{mSrcMutex, std::defer_lock};
     milliseconds sleep_time{AudioBufferTime / 3};
 
-#ifdef AL_SOFT_events
     struct EventControlManager {
         const std::array<ALenum,3> evt_types{{
             AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
@@ -990,24 +985,10 @@ int AudioState::handler()
         }
     };
     EventControlManager event_controller{sleep_time};
-#endif
-#ifdef AL_SOFT_bformat_ex
+
     const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
     ALenum ambi_layout{AL_FUMA_SOFT};
     ALenum ambi_scale{AL_FUMA_SOFT};
-#endif
-
-    ALenum FormatStereo8{AL_FORMAT_STEREO8};
-    ALenum FormatStereo16{AL_FORMAT_STEREO16};
-    ALenum FormatStereo32F{AL_FORMAT_STEREO_FLOAT32};
-#ifdef AL_SOFT_UHJ
-    if(EnableUhjDecode)
-    {
-        FormatStereo8 = AL_FORMAT_UHJ2CHN8_SOFT;
-        FormatStereo16 = AL_FORMAT_UHJ2CHN16_SOFT;
-        FormatStereo32F = AL_FORMAT_UHJ2CHN_FLOAT32_SOFT;
-    }
-#endif
 
     std::unique_ptr<uint8_t[]> samples;
     ALsizei buffer_len{0};
@@ -1213,7 +1194,6 @@ int AudioState::handler()
          * defacto-standard. This is not true for .amb files, which use FuMa.
          */
         std::vector<double> mtx(64*64, 0.0);
-#ifdef AL_SOFT_bformat_ex
         ambi_layout = AL_ACN_SOFT;
         ambi_scale = AL_SN3D_SOFT;
         if(has_bfmt_ex)
@@ -1226,7 +1206,6 @@ int AudioState::handler()
             mtx[3 + 3*64] = 1.0;
         }
         else
-#endif
         {
             std::cout<< "Found AL_EXT_BFORMAT" <<std::endl;
             /* Without AL_SOFT_bformat_ex, OpenAL only supports FuMa channel
@@ -1263,7 +1242,6 @@ int AudioState::handler()
         const float angles[2]{static_cast<float>(M_PI / 3.0), static_cast<float>(-M_PI / 3.0)};
         alSourcefv(mSource, AL_STEREO_ANGLES, angles);
     }
-#ifdef AL_SOFT_bformat_ex
     if(has_bfmt_ex)
     {
         for(ALuint bufid : mBuffers)
@@ -1272,7 +1250,6 @@ int AudioState::handler()
             alBufferi(bufid, AL_AMBISONIC_SCALING_SOFT, ambi_scale);
         }
     }
-#endif
 #ifdef AL_SOFT_UHJ
     if(EnableSuperStereo)
         alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
@@ -2013,7 +1990,6 @@ int main(int argc, char *argv[])
             alGetProcAddress("alGetSourcei64vSOFT")
         );
     }
-#ifdef AL_SOFT_events
     if(alIsExtensionPresent("AL_SOFT_events"))
     {
         std::cout<< "Found AL_SOFT_events" <<std::endl;
@@ -2022,7 +1998,6 @@ int main(int argc, char *argv[])
         alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
             alGetProcAddress("alEventCallbackSOFT"));
     }
-#endif
 #ifdef AL_SOFT_callback_buffer
     if(alIsExtensionPresent("AL_SOFTX_callback_buffer"))
     {
@@ -2068,7 +2043,9 @@ int main(int argc, char *argv[])
             else
             {
                 std::cout<< "Found AL_SOFT_UHJ" <<std::endl;
-                EnableUhjDecode = true;
+                FormatStereo8 = AL_FORMAT_UHJ2CHN8_SOFT;
+                FormatStereo16 = AL_FORMAT_UHJ2CHN16_SOFT;
+                FormatStereo32F = AL_FORMAT_UHJ2CHN_FLOAT32_SOFT;
             }
 #else
             std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
@@ -2081,7 +2058,7 @@ int main(int argc, char *argv[])
                 std::cerr<< "AL_SOFT_UHJ not supported for Super Stereo decoding" <<std::endl;
             else
             {
-                std::cout<< "Found AL_SOFT_UHJ" <<std::endl;
+                std::cout<< "Found AL_SOFT_UHJ (Super Stereo)" <<std::endl;
                 EnableSuperStereo = true;
             }
 #else

@@ -38,6 +38,13 @@ using voidp = void*;
 
 /* Default context extensions */
 constexpr ALchar alExtList[] =
+#if ALSOFT_EAX
+	"EAX2.0 "
+	"EAX3.0 "
+	"EAX4.0 "
+	"EAX5.0 "
+	"EAX-RAM "
+#endif // ALSOFT_EAX
     "AL_EXT_ALAW "
     "AL_EXT_BFORMAT "
     "AL_EXT_DOUBLE "

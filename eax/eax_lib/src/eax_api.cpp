@@ -1,0 +1,1207 @@
+/*
+
+EAX OpenAL Extension
+
+Copyright (c) 2020-2021 Boris I. Bendovsky (bibendovsky@hotmail.com) and Contributors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
+
+//
+// EAX API.
+//
+// Based on headers eax4.h and eax5.h included into Doom 3 source:
+// http://github.com/id-Software/DOOM-3/tree/master/neo/openal/include
+//
+
+
+#include <algorithm>
+
+#include "eax_api.h"
+
+
+bool operator==(
+	const ::GUID& lhs,
+	const ::GUID& rhs) noexcept
+{
+	return
+		lhs.Data1 == rhs.Data1 &&
+		lhs.Data2 == rhs.Data2 &&
+		lhs.Data3 == rhs.Data3 &&
+		lhs.Data4[0] == rhs.Data4[0] &&
+		lhs.Data4[1] == rhs.Data4[1] &&
+		lhs.Data4[2] == rhs.Data4[2] &&
+		lhs.Data4[3] == rhs.Data4[3] &&
+		lhs.Data4[4] == rhs.Data4[4] &&
+		lhs.Data4[5] == rhs.Data4[5] &&
+		lhs.Data4[6] == rhs.Data4[6] &&
+		lhs.Data4[7] == rhs.Data4[7]
+	;
+}
+
+bool operator!=(
+	const ::GUID& lhs,
+	const ::GUID& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
+
+
+const ::GUID DSPROPSETID_EAX20_ListenerProperties =
+{
+	0x306A6A8,
+	0xB224,
+	0x11D2,
+	{0x99, 0xE5, 0x00, 0x00, 0xE8, 0xD8, 0xC7, 0x22}
+};
+
+const ::GUID DSPROPSETID_EAX20_BufferProperties =
+{
+	0x306A6A7,
+	0xB224,
+	0x11D2,
+	{0x99, 0xE5, 0x00, 0x00, 0xE8, 0xD8, 0xC7, 0x22}
+};
+
+const ::GUID DSPROPSETID_EAX30_ListenerProperties =
+{
+	0xA8FA6882,
+	0xB476,
+	0x11D3,
+	{0xBD, 0xB9, 0x00, 0xC0, 0xF0, 0x2D, 0xDF, 0x87}
+};
+
+const ::GUID DSPROPSETID_EAX30_BufferProperties =
+{
+	0xA8FA6881,
+	0xB476,
+	0x11D3,
+	{0xBD, 0xB9, 0x00, 0xC0, 0xF0, 0x2D, 0xDF, 0x87}
+};
+
+const ::GUID EAX_NULL_GUID =
+{
+	0x00000000,
+	0x0000,
+	0x0000,
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+};
+
+const ::GUID EAX_PrimaryFXSlotID =
+{
+	0xF317866D,
+	0x924C,
+	0x450C,
+	{0x86, 0x1B, 0xE6, 0xDA, 0xA2, 0x5E, 0x7C, 0x20}
+};
+
+const ::GUID EAXPROPERTYID_EAX40_Context =
+{
+	0x1D4870AD,
+	0xDEF,
+	0x43C0,
+	{0xA4, 0xC, 0x52, 0x36, 0x32, 0x29, 0x63, 0x42}
+};
+
+const ::GUID EAXPROPERTYID_EAX50_Context =
+{
+	0x57E13437,
+	0xB932,
+	0x4AB2,
+	{0xB8, 0xBD, 0x52, 0x66, 0xC1, 0xA8, 0x87, 0xEE}
+};
+
+const ::GUID EAXPROPERTYID_EAX40_FXSlot0 =
+{
+	0xC4D79F1E,
+	0xF1AC,
+	0x436B,
+	{0xA8, 0x1D, 0xA7, 0x38, 0xE7, 0x04, 0x54, 0x69}
+};
+
+const ::GUID EAXPROPERTYID_EAX50_FXSlot0 =
+{
+	0x91F9590F,
+	0xC388,
+	0x407A,
+	{0x84, 0xB0, 0x1B, 0xAE, 0xE, 0xF7, 0x1A, 0xBC}
+};
+
+const ::GUID EAXPROPERTYID_EAX40_FXSlot1 =
+{
+	0x8C00E96,
+	0x74BE,
+	0x4491,
+	{0x93, 0xAA, 0xE8, 0xAD, 0x35, 0xA4, 0x91, 0x17}
+};
+
+const ::GUID EAXPROPERTYID_EAX50_FXSlot1 =
+{
+	0x8F5F7ACA,
+	0x9608,
+	0x4965,
+	{0x81, 0x37, 0x82, 0x13, 0xC7, 0xB9, 0xD9, 0xDE}
+};
+
+const ::GUID EAXPROPERTYID_EAX40_FXSlot2 =
+{
+	0x1D433B88,
+	0xF0F6,
+	0x4637,
+	{0x91, 0x9F, 0x60, 0xE7, 0xE0, 0x6B, 0x5E, 0xDD}
+};
+
+const ::GUID EAXPROPERTYID_EAX50_FXSlot2 =
+{
+	0x3C0F5252,
+	0x9834,
+	0x46F0,
+	{0xA1, 0xD8, 0x5B, 0x95, 0xC4, 0xA0, 0xA, 0x30}
+};
+
+const ::GUID EAXPROPERTYID_EAX40_FXSlot3 =
+{
+	0xEFFF08EA,
+	0xC7D8,
+	0x44AB,
+	{0x93, 0xAD, 0x6D, 0xBD, 0x5F, 0x91, 0x00, 0x64}
+};
+
+const ::GUID EAXPROPERTYID_EAX50_FXSlot3 =
+{
+	0xE2EB0EAA,
+	0xE806,
+	0x45E7,
+	{0x9F, 0x86, 0x06, 0xC1, 0x57, 0x1A, 0x6F, 0xA3}
+};
+
+const ::GUID EAXPROPERTYID_EAX40_Source =
+{
+	0x1B86B823,
+	0x22DF,
+	0x4EAE,
+	{0x8B, 0x3C, 0x12, 0x78, 0xCE, 0x54, 0x42, 0x27}
+};
+
+const ::GUID EAXPROPERTYID_EAX50_Source =
+{
+	0x5EDF82F0,
+	0x24A7,
+	0x4F38,
+	{0x8E, 0x64, 0x2F, 0x09, 0xCA, 0x05, 0xDE, 0xE1}
+};
+
+const ::GUID EAX_REVERB_EFFECT =
+{
+	0xCF95C8F,
+	0xA3CC,
+	0x4849,
+	{0xB0, 0xB6, 0x83, 0x2E, 0xCC, 0x18, 0x22, 0xDF}
+};
+
+const ::GUID EAX_AGCCOMPRESSOR_EFFECT =
+{
+	0xBFB7A01E,
+	0x7825,
+	0x4039,
+	{0x92, 0x7F, 0x03, 0xAA, 0xBD, 0xA0, 0xC5, 0x60}
+};
+
+const ::GUID EAX_AUTOWAH_EFFECT =
+{
+	0xEC3130C0,
+	0xAC7A,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_CHORUS_EFFECT =
+{
+	0xDE6D6FE0,
+	0xAC79,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_DISTORTION_EFFECT =
+{
+	0x975A4CE0,
+	0xAC7E,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_ECHO_EFFECT =
+{
+	0xE9F1BC0,
+	0xAC82,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_EQUALIZER_EFFECT =
+{
+	0x65F94CE0,
+	0x9793,
+	0x11D3,
+	{0x93, 0x9D, 0x00, 0xC0, 0xF0, 0x2D, 0xD6, 0xF0}
+};
+
+const ::GUID EAX_FLANGER_EFFECT =
+{
+	0xA70007C0,
+	0x7D2,
+	0x11D3,
+	{0x9B, 0x1E, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_FREQUENCYSHIFTER_EFFECT =
+{
+	0xDC3E1880,
+	0x9212,
+	0x11D3,
+	{0x93, 0x9D, 0x00, 0xC0, 0xF0, 0x2D, 0xD6, 0xF0}
+};
+
+const ::GUID EAX_VOCALMORPHER_EFFECT =
+{
+	0xE41CF10C,
+	0x3383,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_PITCHSHIFTER_EFFECT =
+{
+	0xE7905100,
+	0xAFB2,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+const ::GUID EAX_RINGMODULATOR_EFFECT =
+{
+	0xB89FE60,
+	0xAFB5,
+	0x11D2,
+	{0x88, 0xDD, 0x00, 0xA0, 0x24, 0xD1, 0x3C, 0xE1}
+};
+
+
+bool operator==(
+	const ::EAXVECTOR& lhs,
+	const ::EAXVECTOR& rhs) noexcept
+{
+	return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+}
+
+bool operator!=(
+	const ::EAXVECTOR& lhs,
+	const ::EAXVECTOR& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
+
+
+bool operator==(
+	const ::EAX40CONTEXTPROPERTIES& lhs,
+	const ::EAX40CONTEXTPROPERTIES& rhs) noexcept
+{
+	return
+		lhs.guidPrimaryFXSlotID == rhs.guidPrimaryFXSlotID &&
+		lhs.flDistanceFactor == rhs.flDistanceFactor &&
+		lhs.flAirAbsorptionHF == rhs.flAirAbsorptionHF &&
+		lhs.flHFReference == rhs.flHFReference;
+}
+
+bool operator==(
+	const ::EAX50CONTEXTPROPERTIES& lhs,
+	const ::EAX50CONTEXTPROPERTIES& rhs) noexcept
+{
+	return
+		static_cast<const ::EAX40CONTEXTPROPERTIES&>(lhs) == static_cast<const ::EAX40CONTEXTPROPERTIES&>(rhs) &&
+		lhs.flMacroFXFactor == rhs.flMacroFXFactor;
+}
+
+
+const ::GUID EAXCONTEXT_DEFAULTPRIMARYFXSLOTID = ::EAXPROPERTYID_EAX40_FXSlot0;
+
+bool operator==(
+	const EAX40FXSLOTPROPERTIES& lhs,
+	const EAX40FXSLOTPROPERTIES& rhs) noexcept
+{
+	return
+		lhs.guidLoadEffect == rhs.guidLoadEffect &&
+		lhs.lVolume == rhs.lVolume &&
+		lhs.lLock == rhs.lLock &&
+		lhs.ulFlags == rhs.ulFlags;
+}
+
+bool operator==(
+	const EAX50FXSLOTPROPERTIES& lhs,
+	const EAX50FXSLOTPROPERTIES& rhs) noexcept
+{
+	return
+		static_cast<const EAX40FXSLOTPROPERTIES&>(lhs) == static_cast<const EAX40FXSLOTPROPERTIES&>(rhs) &&
+		lhs.lOcclusion == rhs.lOcclusion &&
+		lhs.flOcclusionLFRatio == rhs.flOcclusionLFRatio;
+}
+
+const ::EAX50ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID = ::EAX50ACTIVEFXSLOTS
+{{
+		::EAX_NULL_GUID,
+		::EAXPROPERTYID_EAX40_FXSlot0,
+}};
+
+bool operator==(
+	const ::EAX50ACTIVEFXSLOTS& lhs,
+	const ::EAX50ACTIVEFXSLOTS& rhs) noexcept
+{
+	return std::equal(
+		std::cbegin(lhs.guidActiveFXSlots),
+		std::cend(lhs.guidActiveFXSlots),
+		std::begin(rhs.guidActiveFXSlots)
+	);
+}
+
+bool operator!=(
+	const ::EAX50ACTIVEFXSLOTS& lhs,
+	const ::EAX50ACTIVEFXSLOTS& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
+
+
+const ::EAX50ACTIVEFXSLOTS EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID = ::EAX50ACTIVEFXSLOTS
+{{
+	::EAX_NULL_GUID,
+	::EAX_PrimaryFXSlotID,
+	::EAX_NULL_GUID,
+	::EAX_NULL_GUID,
+}};
+
+
+const ::EAX50ACTIVEFXSLOTS EAX50SOURCE_2DDEFAULTACTIVEFXSLOTID = ::EAX50ACTIVEFXSLOTS
+{{
+	::EAX_NULL_GUID,
+	::EAX_NULL_GUID,
+	::EAX_NULL_GUID,
+	::EAX_NULL_GUID,
+}};
+
+bool operator==(
+	const ::EAXREVERBPROPERTIES& lhs,
+	const ::EAXREVERBPROPERTIES& rhs) noexcept
+{
+	return
+		lhs.ulEnvironment == rhs.ulEnvironment &&
+		lhs.flEnvironmentSize == rhs.flEnvironmentSize &&
+		lhs.flEnvironmentDiffusion == rhs.flEnvironmentDiffusion &&
+		lhs.lRoom == rhs.lRoom &&
+		lhs.lRoomHF == rhs.lRoomHF &&
+		lhs.lRoomLF == rhs.lRoomLF &&
+		lhs.flDecayTime == rhs.flDecayTime &&
+		lhs.flDecayHFRatio == rhs.flDecayHFRatio &&
+		lhs.flDecayLFRatio == rhs.flDecayLFRatio &&
+		lhs.lReflections == rhs.lReflections &&
+		lhs.flReflectionsDelay == rhs.flReflectionsDelay &&
+		lhs.vReflectionsPan == rhs.vReflectionsPan &&
+		lhs.lReverb == rhs.lReverb &&
+		lhs.flReverbDelay == rhs.flReverbDelay &&
+		lhs.vReverbPan == rhs.vReverbPan &&
+		lhs.flEchoTime == rhs.flEchoTime &&
+		lhs.flEchoDepth == rhs.flEchoDepth &&
+		lhs.flModulationTime == rhs.flModulationTime &&
+		lhs.flModulationDepth == rhs.flModulationDepth &&
+		lhs.flAirAbsorptionHF == rhs.flAirAbsorptionHF &&
+		lhs.flHFReference == rhs.flHFReference &&
+		lhs.flLFReference == rhs.flLFReference &&
+		lhs.flRoomRolloffFactor == rhs.flRoomRolloffFactor &&
+		lhs.ulFlags == rhs.ulFlags
+	;
+}
+
+bool operator!=(
+	const ::EAXREVERBPROPERTIES& lhs,
+	const ::EAXREVERBPROPERTIES& rhs) noexcept
+{
+	return !(lhs == rhs);
+}
+
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_GENERIC =
+{
+	::EAXREVERB_DEFAULTENVIRONMENT,
+	::EAXREVERB_DEFAULTENVIRONMENTSIZE,
+	::EAXREVERB_DEFAULTENVIRONMENTDIFFUSION,
+	::EAXREVERB_DEFAULTROOM,
+	::EAXREVERB_DEFAULTROOMHF,
+	::EAXREVERB_DEFAULTROOMLF,
+	::EAXREVERB_DEFAULTDECAYTIME,
+	::EAXREVERB_DEFAULTDECAYHFRATIO,
+	::EAXREVERB_DEFAULTDECAYLFRATIO,
+	::EAXREVERB_DEFAULTREFLECTIONS,
+	::EAXREVERB_DEFAULTREFLECTIONSDELAY,
+	::EAXREVERB_DEFAULTREFLECTIONSPAN,
+	::EAXREVERB_DEFAULTREVERB,
+	::EAXREVERB_DEFAULTREVERBDELAY,
+	::EAXREVERB_DEFAULTREVERBPAN,
+	::EAXREVERB_DEFAULTECHOTIME,
+	::EAXREVERB_DEFAULTECHODEPTH,
+	::EAXREVERB_DEFAULTMODULATIONTIME,
+	::EAXREVERB_DEFAULTMODULATIONDEPTH,
+	::EAXREVERB_DEFAULTAIRABSORPTIONHF,
+	::EAXREVERB_DEFAULTHFREFERENCE,
+	::EAXREVERB_DEFAULTLFREFERENCE,
+	::EAXREVERB_DEFAULTROOMROLLOFFFACTOR,
+	::EAXREVERB_DEFAULTFLAGS,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_PADDEDCELL =
+{
+	::EAX_ENVIRONMENT_PADDEDCELL,
+	1.4F,
+	1.0F,
+	-1'000,
+	-6'000,
+	0,
+	0.17F,
+	0.10F,
+	1.0F,
+	-1'204,
+	0.001F,
+	::EAXVECTOR{},
+	207,
+	0.002F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_ROOM =
+{
+	::EAX_ENVIRONMENT_ROOM,
+	1.9F,
+	1.0F,
+	-1'000,
+	-454,
+	0,
+	0.40F,
+	0.83F,
+	1.0F,
+	-1'646,
+	0.002F,
+	::EAXVECTOR{},
+	53,
+	0.003F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_BATHROOM =
+{
+	::EAX_ENVIRONMENT_BATHROOM,
+	1.4F,
+	1.0F,
+	-1'000,
+	-1'200,
+	0,
+	1.49F,
+	0.54F,
+	1.0F,
+	-370,
+	0.007F,
+	::EAXVECTOR{},
+	1'030,
+	0.011F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_LIVINGROOM =
+{
+	::EAX_ENVIRONMENT_LIVINGROOM,
+	2.5F,
+	1.0F,
+	-1'000,
+	-6'000,
+	0,
+	0.50F,
+	0.10F,
+	1.0F,
+	-1'376,
+	0.003F,
+	::EAXVECTOR{},
+	-1'104,
+	0.004F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_STONEROOM =
+{
+	::EAX_ENVIRONMENT_STONEROOM,
+	11.6F,
+	1.0F,
+	-1'000,
+	-300,
+	0,
+	2.31F,
+	0.64F,
+	1.0F,
+	-711,
+	0.012F,
+	::EAXVECTOR{},
+	83,
+	0.017F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_AUDITORIUM =
+{
+	::EAX_ENVIRONMENT_AUDITORIUM,
+	21.6F,
+	1.0F,
+	-1'000,
+	-476,
+	0,
+	4.32F,
+	0.59F,
+	1.0F,
+	-789,
+	0.020F,
+	::EAXVECTOR{},
+	-289,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_CONCERTHALL =
+{
+	::EAX_ENVIRONMENT_CONCERTHALL,
+	19.6F,
+	1.0F,
+	-1'000,
+	-500,
+	0,
+	3.92F,
+	0.70F,
+	1.0F,
+	-1'230,
+	0.020F,
+	::EAXVECTOR{},
+	-2,
+	0.029F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_CAVE =
+{
+	::EAX_ENVIRONMENT_CAVE,
+	14.6F,
+	1.0F,
+	-1'000,
+	0,
+	0,
+	2.91F,
+	1.30F,
+	1.0F,
+	-602,
+	0.015F,
+	::EAXVECTOR{},
+	-302,
+	0.022F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x1F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_ARENA =
+{
+	::EAX_ENVIRONMENT_ARENA,
+	36.2F,
+	1.0F,
+	-1'000,
+	-698,
+	0,
+	7.24F,
+	0.33F,
+	1.0F,
+	-1'166,
+	0.020F,
+	::EAXVECTOR{},
+	16,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_HANGAR =
+{
+	::EAX_ENVIRONMENT_HANGAR,
+	50.3F,
+	1.0F,
+	-1'000,
+	-1'000,
+	0,
+	10.05F,
+	0.23F,
+	1.0F,
+	-602,
+	0.020F,
+	::EAXVECTOR{},
+	198,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_CARPETTEDHALLWAY =
+{
+	::EAX_ENVIRONMENT_CARPETEDHALLWAY,
+	1.9F,
+	1.0F,
+	-1'000,
+	-4'000,
+	0,
+	0.30F,
+	0.10F,
+	1.0F,
+	-1'831,
+	0.002F,
+	::EAXVECTOR{},
+	-1'630,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_HALLWAY =
+{
+	::EAX_ENVIRONMENT_HALLWAY,
+	1.8F,
+	1.0F,
+	-1'000,
+	-300,
+	0,
+	1.49F,
+	0.59F,
+	1.0F,
+	-1'219,
+	0.007F,
+	::EAXVECTOR{},
+	441,
+	0.011F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_STONECORRIDOR =
+{
+	::EAX_ENVIRONMENT_STONECORRIDOR,
+	13.5F,
+	1.0F,
+	-1'000,
+	-237,
+	0,
+	2.70F,
+	0.79F,
+	1.0F,
+	-1'214,
+	0.013F,
+	::EAXVECTOR{},
+	395,
+	0.020F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_ALLEY =
+{
+	::EAX_ENVIRONMENT_ALLEY,
+	7.5F,
+	0.300F,
+	-1'000,
+	-270,
+	0,
+	1.49F,
+	0.86F,
+	1.0F,
+	-1'204,
+	0.007F,
+	::EAXVECTOR{},
+	-4,
+	0.011F,
+	::EAXVECTOR{},
+	0.125F,
+	0.950F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_FOREST =
+{
+	::EAX_ENVIRONMENT_FOREST,
+	38.0F,
+	0.300F,
+	-1'000,
+	-3'300,
+	0,
+	1.49F,
+	0.54F,
+	1.0F,
+	-2'560,
+	0.162F,
+	::EAXVECTOR{},
+	-229,
+	0.088F,
+	::EAXVECTOR{},
+	0.125F,
+	1.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_CITY =
+{
+	::EAX_ENVIRONMENT_CITY,
+	7.5F,
+	0.500F,
+	-1'000,
+	-800,
+	0,
+	1.49F,
+	0.67F,
+	1.0F,
+	-2'273,
+	0.007F,
+	::EAXVECTOR{},
+	-1'691,
+	0.011F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_MOUNTAINS =
+{
+	::EAX_ENVIRONMENT_MOUNTAINS,
+	100.0F,
+	0.270F,
+	-1'000,
+	-2'500,
+	0,
+	1.49F,
+	0.21F,
+	1.0F,
+	-2'780,
+	0.300F,
+	::EAXVECTOR{},
+	-1'434,
+	0.100F,
+	::EAXVECTOR{},
+	0.250F,
+	1.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x1F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_QUARRY =
+{
+	::EAX_ENVIRONMENT_QUARRY,
+	17.5F,
+	1.0F,
+	-1'000,
+	-1'000,
+	0,
+	1.49F,
+	0.83F,
+	1.0F,
+	-10'000,
+	0.061F,
+	::EAXVECTOR{},
+	500,
+	0.025F,
+	::EAXVECTOR{},
+	0.125F,
+	0.700F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_PLAIN =
+{
+	::EAX_ENVIRONMENT_PLAIN,
+	42.5F,
+	0.210F,
+	-1'000,
+	-2'000,
+	0,
+	1.49F,
+	0.50F,
+	1.0F,
+	-2'466,
+	0.179F,
+	::EAXVECTOR{},
+	-1'926,
+	0.100F,
+	::EAXVECTOR{},
+	0.250F,
+	1.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_PARKINGLOT =
+{
+	::EAX_ENVIRONMENT_PARKINGLOT,
+	8.3F,
+	1.0F,
+	-1'000,
+	0,
+	0,
+	1.65F,
+	1.50F,
+	1.0F,
+	-1'363,
+	0.008F,
+	::EAXVECTOR{},
+	-1'153,
+	0.012F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x1F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_SEWERPIPE =
+{
+	::EAX_ENVIRONMENT_SEWERPIPE,
+	1.7F,
+	0.800F,
+	-1'000,
+	-1'000,
+	0,
+	2.81F,
+	0.14F,
+	1.0F,
+	429,
+	0.014F,
+	::EAXVECTOR{},
+	1'023,
+	0.021F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	0.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_UNDERWATER =
+{
+	::EAX_ENVIRONMENT_UNDERWATER,
+	1.8F,
+	1.0F,
+	-1'000,
+	-4'000,
+	0,
+	1.49F,
+	0.10F,
+	1.0F,
+	-449,
+	0.007F,
+	::EAXVECTOR{},
+	1'700,
+	0.011F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	1.180F,
+	0.348F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x3F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_DRUGGED =
+{
+	::EAX_ENVIRONMENT_DRUGGED,
+	1.9F,
+	0.500F,
+	-1'000,
+	0,
+	0,
+	8.39F,
+	1.39F,
+	1.0F,
+	-115,
+	0.002F,
+	::EAXVECTOR{},
+	985,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	0.250F,
+	1.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x1F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_DIZZY =
+{
+	::EAX_ENVIRONMENT_DIZZY,
+	1.8F,
+	0.600F,
+	-1'000,
+	-400,
+	0,
+	17.23F,
+	0.56F,
+	1.0F,
+	-1'713,
+	0.020F,
+	::EAXVECTOR{},
+	-613,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	1.0F,
+	0.810F,
+	0.310F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x1F,
+};
+
+const ::EAXREVERBPROPERTIES EAXREVERB_PRESET_PSYCHOTIC =
+{
+	::EAX_ENVIRONMENT_PSYCHOTIC,
+	1.0F,
+	0.500F,
+	-1'000,
+	-151,
+	0,
+	7.56F,
+	0.91F,
+	1.0F,
+	-626,
+	0.020F,
+	::EAXVECTOR{},
+	774,
+	0.030F,
+	::EAXVECTOR{},
+	0.250F,
+	0.0F,
+	4.0F,
+	1.0F,
+	-5.0F,
+	5'000.0F,
+	250.0F,
+	0.0F,
+	0x1F,
+};
+
+
+const ::EaxReverbPresets EAXREVERB_PRESETS =
+{
+	::EAXREVERB_PRESET_GENERIC,
+	::EAXREVERB_PRESET_PADDEDCELL,
+	::EAXREVERB_PRESET_ROOM,
+	::EAXREVERB_PRESET_BATHROOM,
+	::EAXREVERB_PRESET_LIVINGROOM,
+	::EAXREVERB_PRESET_STONEROOM,
+	::EAXREVERB_PRESET_AUDITORIUM,
+	::EAXREVERB_PRESET_CONCERTHALL,
+	::EAXREVERB_PRESET_CAVE,
+	::EAXREVERB_PRESET_ARENA,
+	::EAXREVERB_PRESET_HANGAR,
+	::EAXREVERB_PRESET_CARPETTEDHALLWAY,
+	::EAXREVERB_PRESET_HALLWAY,
+	::EAXREVERB_PRESET_STONECORRIDOR,
+	::EAXREVERB_PRESET_ALLEY,
+	::EAXREVERB_PRESET_FOREST,
+	::EAXREVERB_PRESET_CITY,
+	::EAXREVERB_PRESET_MOUNTAINS,
+	::EAXREVERB_PRESET_QUARRY,
+	::EAXREVERB_PRESET_PLAIN,
+	::EAXREVERB_PRESET_PARKINGLOT,
+	::EAXREVERB_PRESET_SEWERPIPE,
+	::EAXREVERB_PRESET_UNDERWATER,
+	::EAXREVERB_PRESET_DRUGGED,
+	::EAXREVERB_PRESET_DIZZY,
+	::EAXREVERB_PRESET_PSYCHOTIC,
+};

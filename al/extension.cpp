@@ -32,10 +32,19 @@
 #include "core/except.h"
 #include "opthelpers.h"
 
+#if ALSOFT_EAX
+#include "eax_al_api.h"
+#include "eax_globals.h"
+#endif // ALSOFT_EAX
+
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    {
+#endif // ALSOFT_EAX
+
     ContextRef context{GetContextRef()};
     if(unlikely(!context)) return AL_FALSE;
 
@@ -57,6 +66,16 @@ START_API_FUNC
         }
     }
 
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        return eax::g_al_api.on_alIsExtensionPresent(extName);
+    }
+    else
+#endif // ALSOFT_EAX
     return AL_FALSE;
 }
 END_API_FUNC
@@ -66,7 +85,24 @@ AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 START_API_FUNC
 {
     if(!funcName) return nullptr;
+
+#if ALSOFT_EAX
+    ::ALvoid* alc_address = nullptr;
+
+    {
+        alc_address = alcGetProcAddress(nullptr, funcName);
+    }
+
+    if (!eax::g_is_disable && !alc_address)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        alc_address = eax::g_al_api.on_alGetProcAddress(funcName);
+    }
+
+    return alc_address;
+#else
     return alcGetProcAddress(nullptr, funcName);
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 

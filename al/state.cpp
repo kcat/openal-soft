@@ -46,6 +46,11 @@
 #include "opthelpers.h"
 #include "strutils.h"
 
+#if ALSOFT_EAX
+#include "eax_al_api.h"
+#include "eax_globals.h"
+#endif // ALSOFT_EAX
+
 
 namespace {
 
@@ -428,6 +433,19 @@ START_API_FUNC
         break;
 
     default:
+#if ALSOFT_EAX
+        if (!eax::g_is_disable)
+        {
+            const auto eax_lock = eax::g_al_api.get_lock();
+            value = eax::g_al_api.on_alGetInteger(pname);
+
+            if (value != 0)
+            {
+                break;
+            }
+        }
+#endif // ALSOFT_EAX
+
         context->setError(AL_INVALID_VALUE, "Invalid integer property 0x%04x", pname);
     }
 

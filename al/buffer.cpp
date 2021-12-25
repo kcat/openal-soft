@@ -56,6 +56,11 @@
 #include "core/voice.h"
 #include "opthelpers.h"
 
+#if ALSOFT_EAX
+#include "eax_al_api.h"
+#include "eax_globals.h"
+#endif // ALSOFT_EAX
+
 
 namespace {
 
@@ -490,6 +495,19 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData,
     ALbitfieldSOFT access)
 {
+#if ALSOFT_EAX
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        const auto x_ram_result = eax::g_al_api.on_alBufferData_1(ALBuf->id, size);
+
+        if (x_ram_result != AL_NO_ERROR)
+        {
+            SETERR_RETURN(context, AL_INVALID_VALUE, , "X-RAM failed.");
+        }
+    }
+#endif // ALSOFT_EAX
+
     if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
                       ALBuf->id);
@@ -620,6 +638,14 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mSampleLen = frames;
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
+
+#if ALSOFT_EAX
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alBufferData_2();
+    }
+#endif // ALSOFT_EAX
 }
 
 /** Prepares the buffer to use the specified callback, using the specified format. */
@@ -759,6 +785,12 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
 AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    const auto eax_n = n;
+
+    {
+#endif // ALSOFT_EAX
+
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -793,12 +825,26 @@ START_API_FUNC
         } while(--n);
         std::copy(ids.begin(), ids.end(), buffers);
     }
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alGenBuffers(eax_n, buffers);
+    }
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    {
+#endif // ALSOFT_EAX
+
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -837,6 +883,16 @@ START_API_FUNC
         if(buffer) FreeBuffer(device, buffer);
     };
     std::for_each(buffers, buffers_end, delete_buffer);
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alDeleteBuffers(n, buffers);
+    }
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 

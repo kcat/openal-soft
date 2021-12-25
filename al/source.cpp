@@ -73,6 +73,11 @@
 #include "ringbuffer.h"
 #include "threads.h"
 
+#if ALSOFT_EAX
+#include "eax_al_api.h"
+#include "eax_globals.h"
+#endif // ALSOFT_EAX
+
 
 namespace {
 
@@ -2390,6 +2395,12 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    const auto eax_n = n;
+
+    {
+#endif // ALSOFT_EAX
+
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -2426,12 +2437,26 @@ START_API_FUNC
         } while(--n);
         std::copy(ids.cbegin(), ids.cend(), sources);
     }
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alGenSources(eax_n, sources);
+    }
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    {
+#endif // ALSOFT_EAX
+
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -2459,6 +2484,16 @@ START_API_FUNC
         if(src) FreeSource(context.get(), src);
     };
     std::for_each(sources, sources_end, delete_source);
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alDeleteSources(n, sources);
+    }
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 

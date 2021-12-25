@@ -95,6 +95,8 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
+option(ALSOFT_EAX "Enable EAX extension" ON)
+
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
     set(CMAKE_INSTALL_DATADIR "${SHARE_INSTALL_DIR}")
@@ -1284,6 +1286,11 @@ configure_file(
     @ONLY)
 
 
+if (ALSOFT_EAX)
+	add_subdirectory(eax)
+endif ()
+
+
 add_library(common STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
 target_include_directories(common PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/include)
 target_compile_definitions(common PRIVATE ${CPP_DEFS})
@@ -1298,7 +1305,11 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 if(LIBTYPE STREQUAL "STATIC")
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
+    if (ALSOFT_EAX)
+        target_link_libraries(${IMPL_TARGET} PRIVATE eax::eax_lib)
+    endif ()
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+
     if(WIN32)
         # This option is for static linking OpenAL Soft into another project
         # that already defines the IDs. It is up to that project to ensure all
@@ -1351,6 +1362,9 @@ else()
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
+    if (ALSOFT_EAX)
+        target_link_libraries(${IMPL_TARGET} PRIVATE eax::eax_lib)
+    endif ()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(APPLE AND ALSOFT_OSX_FRAMEWORK)
@@ -1409,6 +1423,7 @@ set_target_properties(${IMPL_TARGET} PROPERTIES OUTPUT_NAME ${LIBNAME}
 target_compile_definitions(${IMPL_TARGET}
     PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
     ${CPP_DEFS})
+target_compile_definitions(${IMPL_TARGET} PRIVATE "ALSOFT_EAX=$<BOOL:${ALSOFT_EAX}>")
 target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
 
 if(TARGET build_version)

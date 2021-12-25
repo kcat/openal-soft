@@ -578,3 +578,16 @@
 #  Creates AMB format files using first-order ambisonics instead of a standard
 #  single- or multi-channel .wav file.
 #bformat = false
+
+##
+## EAX extensions stuff
+##
+[eax]
+##disable:
+#  Sets whether to disable EAX extensions or not.
+#disable = false
+
+##disable_patches:
+#  Sets whether to not apply EAX patches for the current process.
+#  Applicable for Windows only.
+#disable_patches = false

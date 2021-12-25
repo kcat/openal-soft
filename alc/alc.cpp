@@ -155,6 +155,13 @@
 #include "backends/wave.h"
 #endif
 
+#if ALSOFT_EAX
+#include "eax_al_api.h"
+#include "eax_api.h"
+#include "eax_globals.h"
+#include "eax_utils.h"
+#endif // ALSOFT_EAX
+
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG
@@ -964,6 +971,72 @@ al::vector<ALCcontext*> ContextList;
 std::recursive_mutex ListLock;
 
 
+#if ALSOFT_EAX
+extern ALCboolean ALC_APIENTRY alcMakeContextCurrent_internal(ALCcontext *context);
+
+
+class EaxLogger final :
+	public eax::Logger
+{
+public:
+    EaxLogger() = default;
+
+
+    void write(
+        eax::LoggerMessageType message_type,
+        const char* message) noexcept override
+    {
+        assert(message);
+
+#define EAX_LOGGER_WRITE_FORMAT "[EAX] %s\n"
+
+        switch (message_type)
+        {
+            case eax::LoggerMessageType::info:
+                TRACE(EAX_LOGGER_WRITE_FORMAT, message);
+                break;
+
+            case eax::LoggerMessageType::warning:
+                WARN(EAX_LOGGER_WRITE_FORMAT, message);
+                break;
+
+            case eax::LoggerMessageType::error:
+                ERR(EAX_LOGGER_WRITE_FORMAT, message);
+                break;
+
+            default:
+                assert(false && "Unsupported message type.");
+                break;
+        }
+
+#undef EAX_LOGGER_WRITE_FORMAT
+    }
+
+
+    void info(
+        const char* message) noexcept override
+    {
+        write(eax::LoggerMessageType::info, message);
+    }
+
+    void warning(
+        const char* message) noexcept override
+    {
+        write(eax::LoggerMessageType::warning, message);
+    }
+
+    void error(
+        const char* message) noexcept override
+    {
+        write(eax::LoggerMessageType::error, message);
+    }
+}; // EaxLogger
+
+
+EaxLogger g_eax_logger;
+#endif // ALSOFT_EAX
+
+
 void alc_initconfig(void)
 {
     if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
@@ -1244,6 +1317,67 @@ void alc_initconfig(void)
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
     if(defrevopt || (defrevopt=ConfigValueStr(nullptr, nullptr, "default-reverb")))
         LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
+
+#if ALSOFT_EAX
+    {
+        constexpr auto eax_block_name = "eax";
+
+        auto is_disable = false;
+
+        {
+            const auto eax_disable_opt = ::ConfigValueBool(nullptr, eax_block_name, "disable");
+
+            is_disable = false;
+
+            if (eax_disable_opt)
+            {
+                is_disable = *eax_disable_opt;
+            }
+
+            if (is_disable)
+            {
+                ::g_eax_logger.info("Disabling EAX.");
+            }
+        }
+
+        auto is_disable_patches = false;
+
+        if (!is_disable)
+        {
+            const auto eax_disable_patches_opt = ::ConfigValueBool(nullptr, eax_block_name, "disable_patches");
+
+            if (eax_disable_patches_opt)
+            {
+                is_disable_patches = *eax_disable_patches_opt;
+            }
+
+            if (is_disable_patches)
+            {
+                ::g_eax_logger.info("Disabling patches.");
+            }
+        }
+
+        if (!is_disable)
+        {
+            try
+            {
+                auto init_param = eax::AlApiInitParam{};
+                init_param.logger = &::g_eax_logger;
+                init_param.alcMakeContextCurrent_internal = ::alcMakeContextCurrent_internal;
+                init_param.is_disable_patches = is_disable_patches;
+
+                eax::g_al_api.initialize(init_param);
+            }
+            catch (...)
+            {
+                is_disable = true;
+                eax::utils::log_exception(::g_eax_logger);
+            }
+        }
+
+        eax::g_is_disable = is_disable;
+    }
+#endif // ALSOFT_EAX
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
 
@@ -2916,6 +3050,10 @@ END_API_FUNC
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    {
+#endif // ALSOFT_EAX
+
     if(!enumName)
     {
         DeviceRef dev{VerifyDevice(device)};
@@ -2929,7 +3067,22 @@ START_API_FUNC
                 return enm.value;
         }
     }
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        return eax::g_al_api.on_alGetEnumValue(enumName);
+    }
+    else
+    {
+        return AL_NONE;
+    }
+#else
     return 0;
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
@@ -2937,6 +3090,12 @@ END_API_FUNC
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    ::ALCcontext* alc_context = nullptr;
+
+    {
+#endif // ALSOFT_EAX
+
     /* Explicitly hold the list lock while taking the StateLock in case the
      * device is asynchronously destroyed, to ensure this new context is
      * properly cleaned up after being made.
@@ -3023,13 +3182,40 @@ START_API_FUNC
     }
 
     TRACE("Created context %p\n", voidp{context.get()});
+
+#if ALSOFT_EAX
+    alc_context = context.release();
+#else
     return context.release();
+#endif // ALSOFT_EAX
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alcCreateContext(device, alc_context);
+    }
+
+    return alc_context;
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alcDestroyContext(context);
+    }
+
+    {
+#endif // ALSOFT_EAX
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
     if(iter == ContextList.end() || *iter != context)
@@ -3038,6 +3224,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return;
     }
+
     /* Hold a reference to this context so it remains valid until the ListLock
      * is released.
      */
@@ -3052,6 +3239,10 @@ START_API_FUNC
         Device->Backend->stop();
         Device->Flags.reset(DeviceRunning);
     }
+
+#if ALSOFT_EAX
+    }
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
@@ -3071,8 +3262,12 @@ START_API_FUNC
 { return ALCcontext::getThreadContext(); }
 END_API_FUNC
 
-ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
-START_API_FUNC
+
+namespace
+{
+
+
+ALCboolean ALC_APIENTRY alcMakeContextCurrent_internal(ALCcontext *context)
 {
     /* context must be valid or nullptr */
     ContextRef ctx;
@@ -3100,6 +3295,26 @@ START_API_FUNC
     /* Reset (decrement) the previous thread-local reference. */
 
     return ALC_TRUE;
+}
+
+
+} // namespace
+
+
+ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
+START_API_FUNC
+{
+    const auto alc_result = ::alcMakeContextCurrent_internal(context);
+
+#if ALSOFT_EAX
+    if (alc_result == ALC_TRUE && !eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alcMakeContextCurrent(context);
+    }
+#endif // ALSOFT_EAX
+
+    return alc_result;
 }
 END_API_FUNC
 
@@ -3144,6 +3359,12 @@ END_API_FUNC
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 START_API_FUNC
 {
+#if ALSOFT_EAX
+    ::ALCdevice* alc_device = nullptr;
+
+    {
+#endif // ALSOFT_EAX
+
     DO_INITCONFIG();
 
     if(!PlaybackFactory)
@@ -3185,6 +3406,10 @@ START_API_FUNC
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
+
+#if ALSOFT_EAX
+    device->NumAuxSends = ::EAX_MAX_FXSLOTS;
+#endif // ALSOFT_EAX
 
     try {
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
@@ -3351,7 +3576,24 @@ START_API_FUNC
     }
 
     TRACE("Created device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
+
+#if ALSOFT_EAX
+    alc_device = device.release();
+#else
     return device.release();
+#endif // ALSOFT_EAX
+
+#if ALSOFT_EAX
+    }
+
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alcOpenDevice(alc_device);
+    }
+
+    return alc_device;
+#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
@@ -3400,6 +3642,14 @@ START_API_FUNC
     if(dev->Flags.test(DeviceRunning))
         dev->Backend->stop();
     dev->Flags.reset(DeviceRunning);
+
+#if ALSOFT_EAX
+    if (!eax::g_is_disable)
+    {
+        const auto eax_lock = eax::g_al_api.get_lock();
+        eax::g_al_api.on_alcCloseDevice(device);
+    }
+#endif // ALSOFT_EAX
 
     return ALC_TRUE;
 }

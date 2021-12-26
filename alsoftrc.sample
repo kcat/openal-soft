@@ -352,6 +352,21 @@
 #boost = 0
 
 ##
+## PipeWire backend stuff
+##
+[pipewire]
+
+## assume-audio: (global)
+#  Causes the backend to succeed initialization even if PipeWire reports no
+#  audio support. Currently, audio support is detected by the presence of audio
+#  source or sink nodes, although this can cause false negatives in cases where
+#  device availability during library initialization is spotty. Future versions
+#  of PipeWire are expected to have a more robust method to test audio support,
+#  but in the mean time this can be set to true to assume PipeWire has audio
+#  support even when no nodes may be reported at initialization time.
+#assume-audio = false
+
+##
 ## PulseAudio backend stuff
 ##
 [pulse]

@@ -35,6 +35,7 @@
 #include <utility>
 
 #include "albyte.h"
+#include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "aloptional.h"
@@ -319,10 +320,13 @@ struct EventManager {
      * corresponding to it is reached, mInitDone will be set to true.
      */
     std::atomic<bool> mInitDone{false};
+    std::atomic<bool> mHasAudio{false};
     int mInitSeq{};
 
     bool init();
     ~EventManager();
+
+    void kill();
 
     auto lock() const { return mLoop.lock(); }
     auto unlock() const { return mLoop.unlock(); }
@@ -335,6 +339,23 @@ struct EventManager {
     {
         while(unlikely(!mInitDone.load(std::memory_order_acquire)))
             mLoop.wait();
+    }
+
+    /**
+     * Waits for audio support to be detected, or initialization to finish,
+     * whichever is first. Returns true if audio support was detected. The
+     * event manager must *NOT* be locked when calling this.
+     */
+    bool waitForAudio()
+    {
+        MainloopLockGuard _{mLoop};
+        bool has_audio{mHasAudio.load(std::memory_order_acquire)};
+        while(unlikely(!has_audio && !mInitDone.load(std::memory_order_acquire)))
+        {
+            mLoop.wait();
+            has_audio = mHasAudio.load(std::memory_order_acquire);
+        }
+        return has_audio;
     }
 
     void syncInit()
@@ -889,6 +910,30 @@ EventManager::~EventManager()
     if(mContext) pw_context_destroy(mContext);
 }
 
+void EventManager::kill()
+{
+    if(mLoop) mLoop.stop();
+
+    for(NodeProxy *node : mProxyList)
+        al::destroy_at(node);
+    mProxyList.clear();
+    if(mDefaultMetadata)
+        al::destroy_at(mDefaultMetadata);
+    mDefaultMetadata = nullptr;
+
+    if(mRegistry)
+        pw_proxy_destroy(reinterpret_cast<pw_proxy*>(mRegistry));
+    mRegistry = nullptr;
+    if(mCore)
+        pw_core_disconnect(mCore);
+    mCore = nullptr;
+    if(mContext)
+        pw_context_destroy(mContext);
+    mContext = nullptr;
+
+    mLoop = ThreadMainloop{};
+}
+
 void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t version,
     const spa_dict *props)
 {
@@ -919,6 +964,12 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         auto *node = static_cast<NodeProxy*>(pw_proxy_get_user_data(proxy));
         mProxyList.emplace_back(al::construct_at(node, id, proxy));
         syncInit();
+
+        /* Signal any waiters that we have found a source or sink for audio
+         * support.
+         */
+        if(!mHasAudio.exchange(true, std::memory_order_acq_rel))
+            mLoop.signal(false);
     }
     else if(std::strcmp(type, PW_TYPE_INTERFACE_Metadata) == 0)
     {
@@ -1710,10 +1761,20 @@ bool PipeWireBackendFactory::init()
         return false;
 
     pw_init(0, nullptr);
+    if(!gEventHandler.init())
+        return false;
 
-    /* TODO: Check that audio devices are supported. */
-
-    return gEventHandler.init();
+    if(!GetConfigValueBool(nullptr, "pipewire", "assume-audio", false)
+        && !gEventHandler.waitForAudio())
+    {
+        gEventHandler.kill();
+        /* TODO: Temporary warning, until PipeWire gets a proper way to report
+         * audio support.
+         */
+        WARN("No audio support detected in PipeWire. See the PipeWire options in alsoftrc.sample if this is wrong.\n");
+        return false;
+    }
+    return true;
 }
 
 bool PipeWireBackendFactory::querySupport(BackendType type)

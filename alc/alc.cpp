@@ -200,6 +200,9 @@ struct BackendInfo {
 };
 
 BackendInfo BackendList[] = {
+#ifdef HAVE_PIPEWIRE
+    { "pipewire", PipeWireBackendFactory::getFactory },
+#endif
 #ifdef HAVE_PULSEAUDIO
     { "pulse", PulseBackendFactory::getFactory },
 #endif
@@ -221,14 +224,14 @@ BackendInfo BackendList[] = {
 #ifdef HAVE_SNDIO
     { "sndio", SndIOBackendFactory::getFactory },
 #endif
-#ifdef HAVE_JACK
-    { "jack", JackBackendFactory::getFactory },
-#endif
 #ifdef HAVE_ALSA
     { "alsa", AlsaBackendFactory::getFactory },
 #endif
 #ifdef HAVE_OSS
     { "oss", OSSBackendFactory::getFactory },
+#endif
+#ifdef HAVE_JACK
+    { "jack", JackBackendFactory::getFactory },
 #endif
 #ifdef HAVE_DSOUND
     { "dsound", DSoundBackendFactory::getFactory },
@@ -244,9 +247,6 @@ BackendInfo BackendList[] = {
 #endif
 
     { "null", NullBackendFactory::getFactory },
-#ifdef HAVE_PIPEWIRE
-    { "pipewire", PipeWireBackendFactory::getFactory },
-#endif
 #ifdef HAVE_WAVE
     { "wave", WaveBackendFactory::getFactory },
 #endif

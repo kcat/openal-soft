@@ -448,6 +448,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pulseFixRateCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->pulseAdjLatencyCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
 
+    connect(ui->pwireAssumeAudioCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+
     connect(ui->jackAutospawnCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackConnectPortsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackRtMixCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
@@ -922,6 +924,9 @@ void MainWindow::loadConfig(const QString &fname)
     ui->pulseFixRateCheckBox->setCheckState(getCheckState(settings.value("pulse/fix-rate")));
     ui->pulseAdjLatencyCheckBox->setCheckState(getCheckState(settings.value("pulse/adjust-latency")));
 
+    ui->pwireAssumeAudioCheckBox->setCheckState(settings.value("pipewire/assume-audio").toBool()
+        ? Qt::Checked : Qt::Unchecked);
+
     ui->jackAutospawnCheckBox->setCheckState(getCheckState(settings.value("jack/spawn-server")));
     ui->jackConnectPortsCheckBox->setCheckState(getCheckState(settings.value("jack/connect-ports")));
     ui->jackRtMixCheckBox->setCheckState(getCheckState(settings.value("jack/rt-mix")));
@@ -1130,6 +1135,9 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("pulse/allow-moves", getCheckValue(ui->pulseAllowMovesCheckBox));
     settings.setValue("pulse/fix-rate", getCheckValue(ui->pulseFixRateCheckBox));
     settings.setValue("pulse/adjust-latency", getCheckValue(ui->pulseAdjLatencyCheckBox));
+
+    settings.setValue("pipewire/assume-audio", ui->pwireAssumeAudioCheckBox->isChecked()
+        ? QString{"true"} : QString{/*"false"*/});
 
     settings.setValue("jack/spawn-server", getCheckValue(ui->jackAutospawnCheckBox));
     settings.setValue("jack/connect-ports", getCheckValue(ui->jackConnectPortsCheckBox));

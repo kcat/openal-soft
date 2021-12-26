@@ -1227,6 +1227,11 @@ application or system to determine if it should be used.</string>
       </item>
       <item>
        <property name="text">
+        <string>PipeWire</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
         <string>JACK</string>
        </property>
       </item>
@@ -1424,6 +1429,26 @@ drop-outs.</string>
         </property>
         <property name="tristate">
          <bool>true</bool>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_8">
+       <widget class="QCheckBox" name="pwireAssumeAudioCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>10</y>
+          <width>161</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Assumes PipeWire has support for audio, allowing
+the backend to initialize even when no audio devices
+are reported.</string>
+        </property>
+        <property name="text">
+         <string>Assume audio support</string>
         </property>
        </widget>
       </widget>

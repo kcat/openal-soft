@@ -2127,6 +2127,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             device->handleDisconnect("%s", e.what());
             return ALC_INVALID_DEVICE;
         }
+        TRACE("Post-start: %s, %s, %uhz, %u / %u buffer\n",
+            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+            device->Frequency, device->UpdateSize, device->BufferSize);
     }
 
     return ALC_NO_ERROR;
@@ -3725,7 +3728,11 @@ START_API_FUNC
         ERR("%s\n", e.what());
         dev->handleDisconnect("%s", e.what());
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
+        return;
     }
+    TRACE("Post-resume: %s, %s, %uhz, %u / %u buffer\n",
+        DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+        device->Frequency, device->UpdateSize, device->BufferSize);
 }
 END_API_FUNC
 

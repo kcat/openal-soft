@@ -293,7 +293,7 @@ public:
     {
         {
             std::unique_lock<std::mutex> lock{mPacketMutex};
-            if(mTotalSize >= SizeLimit)
+            if(mTotalSize >= SizeLimit || mFinished)
                 return false;
 
             mPackets.push_back(AVPacketPtr{av_packet_alloc()});
@@ -478,7 +478,7 @@ struct MovieState {
     { }
     ~MovieState()
     {
-        mQuit = true;
+        stop();
         if(mParseThread.joinable())
             mParseThread.join();
     }
@@ -486,6 +486,7 @@ struct MovieState {
     static int decode_interrupt_cb(void *ctx);
     bool prepare();
     void setTitle(SDL_Window *window);
+    void stop();
 
     nanoseconds getClock();
 
@@ -1890,11 +1891,6 @@ int MovieState::parse_handler()
 
         av_packet_unref(packet.get());
     }
-    if(mQuit.load(std::memory_order_relaxed))
-    {
-        video_queue.flush();
-        audio_queue.flush();
-    }
     /* Finish the queues so the receivers know nothing more is coming. */
     video_queue.setFinished();
     audio_queue.setFinished();
@@ -1916,6 +1912,13 @@ int MovieState::parse_handler()
     SDL_PushEvent(&evt);
 
     return 0;
+}
+
+void MovieState::stop()
+{
+    mQuit = true;
+    mAudio.mQueue.flush();
+    mVideo.mQueue.flush();
 }
 
 
@@ -2161,12 +2164,12 @@ int main(int argc, char *argv[])
                 switch(event.key.keysym.sym)
                 {
                 case SDLK_ESCAPE:
-                    movState->mQuit = true;
+                    movState->stop();
                     eom_action = EomAction::Quit;
                     break;
 
                 case SDLK_n:
-                    movState->mQuit = true;
+                    movState->stop();
                     eom_action = EomAction::Next;
                     break;
 
@@ -2194,7 +2197,7 @@ int main(int argc, char *argv[])
                 break;
 
             case SDL_QUIT:
-                movState->mQuit = true;
+                movState->stop();
                 eom_action = EomAction::Quit;
                 break;
 

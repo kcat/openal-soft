@@ -1709,6 +1709,7 @@ void PipeWireCapture::open(const char *name)
      */
     pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", (mDevice->Frequency+25) / 50,
         mDevice->Frequency);
+    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->Frequency);
 
     MainloopUniqueLock plock{mLoop};
     static constexpr pw_stream_events streamEvents{CreateEvents()};

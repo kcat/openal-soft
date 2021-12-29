@@ -285,42 +285,6 @@ constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) no
 { return static_cast<pw_stream_flags>(lhs | std::underlying_type_t<pw_stream_flags>{rhs}); }
 
 
-const spa_audio_channel MonoMap[]{
-    SPA_AUDIO_CHANNEL_MONO
-}, StereoMap[] {
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR
-}, QuadMap[]{
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR
-}, X51Map[]{
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
-    SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-}, X51RearMap[]{
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
-    SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR
-}, X61Map[]{
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
-    SPA_AUDIO_CHANNEL_RC, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-}, X71Map[]{
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
-    SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-};
-
-/**
- * Checks if every channel in 'map1' exists in 'map0' (that is, map0 is equal
- * to or a superset of map1).
- */
-template<size_t N>
-bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&map1)[N])
-{
-    for(const spa_audio_channel chid : map1)
-    {
-        if(std::find(map0.begin(), map0.end(), chid) == map0.end())
-            return false;
-    }
-    return true;
-}
-
-
 /* There's quite a mess here, but the purpose is to track active devices and
  * their default formats, so playback devices can be configured to match. The
  * device list is updated asynchronously, so it will have the latest list of
@@ -414,7 +378,6 @@ struct EventManager {
     static void removeCallbackC(void *object, uint32_t id)
     { static_cast<EventManager*>(object)->removeCallback(id); }
 
-    static const pw_registry_events sRegistryEvents;
     static constexpr pw_registry_events CreateRegistryEvents()
     {
         pw_registry_events ret{};
@@ -428,7 +391,6 @@ struct EventManager {
     static void coreCallbackC(void *object, uint32_t id, int seq)
     { static_cast<EventManager*>(object)->coreCallback(id, seq); }
 
-    static const pw_core_events sCoreEvents;
     static constexpr pw_core_events CreateCoreEvents()
     {
         pw_core_events ret{};
@@ -440,8 +402,6 @@ struct EventManager {
 using EventWatcherUniqueLock = std::unique_lock<EventManager>;
 using EventWatcherLockGuard = std::lock_guard<EventManager>;
 
-const pw_core_events EventManager::sCoreEvents{EventManager::CreateCoreEvents()};
-const pw_registry_events EventManager::sRegistryEvents{EventManager::CreateRegistryEvents()};
 EventManager gEventHandler;
 
 /* Enumerated devices. This is updated asynchronously as the app runs, and the
@@ -500,6 +460,42 @@ void RemoveDevice(uint32_t id)
 
     auto end = std::remove_if(DeviceList.begin(), DeviceList.end(), match_id);
     DeviceList.erase(end, DeviceList.end());
+}
+
+
+const spa_audio_channel MonoMap[]{
+    SPA_AUDIO_CHANNEL_MONO
+}, StereoMap[] {
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR
+}, QuadMap[]{
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR
+}, X51Map[]{
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
+    SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
+}, X51RearMap[]{
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
+    SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR
+}, X61Map[]{
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
+    SPA_AUDIO_CHANNEL_RC, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
+}, X71Map[]{
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
+    SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
+};
+
+/**
+ * Checks if every channel in 'map1' exists in 'map0' (that is, map0 is equal
+ * to or a superset of map1).
+ */
+template<size_t N>
+bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&map1)[N])
+{
+    for(const spa_audio_channel chid : map1)
+    {
+        if(std::find(map0.begin(), map0.end(), chid) == map0.end())
+            return false;
+    }
+    return true;
 }
 
 
@@ -916,8 +912,11 @@ bool EventManager::init()
         return false;
     }
 
-    ppw_registry_add_listener(mRegistry.get(), &mRegistryListener, &sRegistryEvents, this);
-    ppw_core_add_listener(mCore.get(), &mCoreListener, &sCoreEvents, this);
+    static constexpr pw_core_events coreEvents{CreateCoreEvents()};
+    static constexpr pw_registry_events registryEvents{CreateRegistryEvents()};
+
+    ppw_core_add_listener(mCore.get(), &mCoreListener, &coreEvents, this);
+    ppw_registry_add_listener(mRegistry.get(), &mRegistryListener, &registryEvents, this);
 
     /* Set an initial sequence ID for initialization, to trigger after the
      * registry is first populated.
@@ -1140,8 +1139,7 @@ class PipeWirePlayback final : public BackendBase {
     std::unique_ptr<float*[]> mChannelPtrs;
     uint mNumChannels{};
 
-    static const pw_stream_events sEvents;
-    static constexpr pw_stream_events InitEvent()
+    static constexpr pw_stream_events CreateEvents()
     {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
@@ -1157,7 +1155,6 @@ public:
 
     DEF_NEWDEL(PipeWirePlayback)
 };
-const pw_stream_events PipeWirePlayback::sEvents{PipeWirePlayback::InitEvent()};
 
 PipeWirePlayback::~PipeWirePlayback()
 {
@@ -1368,9 +1365,10 @@ bool PipeWirePlayback::reset()
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->Frequency);
 
     MainloopUniqueLock plock{mLoop};
+    static constexpr pw_stream_events streamEvents{CreateEvents()};
     /* The stream takes overship of 'props', even in the case of failure. */
     mStream = PwStreamPtr{pw_stream_new_simple(mLoop.getLoop(), "Playback Stream", props,
-        &sEvents, this)};
+        &streamEvents, this)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Failed to create PipeWire stream (errno: %d)", errno};
@@ -1554,8 +1552,7 @@ class PipeWireCapture final : public BackendBase {
 
     RingBufferPtr mRing{};
 
-    static const pw_stream_events sEvents;
-    static constexpr pw_stream_events InitEvent()
+    static constexpr pw_stream_events CreateEvents()
     {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
@@ -1570,7 +1567,6 @@ public:
 
     DEF_NEWDEL(PipeWireCapture)
 };
-const pw_stream_events PipeWireCapture::sEvents{PipeWireCapture::InitEvent()};
 
 PipeWireCapture::~PipeWireCapture()
 {
@@ -1715,8 +1711,9 @@ void PipeWireCapture::open(const char *name)
         mDevice->Frequency);
 
     MainloopUniqueLock plock{mLoop};
+    static constexpr pw_stream_events streamEvents{CreateEvents()};
     mStream = PwStreamPtr{pw_stream_new_simple(mLoop.getLoop(), "Capture Stream", props,
-        &sEvents, this)};
+        &streamEvents, this)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Failed to create PipeWire stream (errno: %d)", errno};

@@ -274,6 +274,11 @@ struct PwRegistryDeleter {
 };
 using PwRegistryPtr = std::unique_ptr<pw_registry,PwRegistryDeleter>;
 
+struct PwProxyDeleter {
+    void operator()(pw_proxy *proxy) const { pw_proxy_destroy(proxy); }
+};
+using PwProxyPtr = std::unique_ptr<pw_proxy,PwProxyDeleter>;
+
 struct PwStreamDeleter {
     void operator()(pw_stream *stream) const { pw_stream_destroy(stream); }
 };
@@ -424,8 +429,8 @@ constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
 constexpr char AudioSourceClass[]{"Audio/Source"};
 std::vector<DeviceNode> DeviceList;
-std::string DefaultSinkDev;
-std::string DefaultSourceDev;
+std::string DefaultSinkDevice;
+std::string DefaultSourceDevice;
 
 DeviceNode &AddDeviceNode(uint32_t id)
 {
@@ -503,27 +508,34 @@ bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&ma
  * source nodes.
  */
 struct NodeProxy {
+    static constexpr pw_node_events CreateNodeEvents()
+    {
+        pw_node_events ret{};
+        ret.version = PW_VERSION_NODE_EVENTS;
+        ret.info = &NodeProxy::infoCallbackC;
+        ret.param = &NodeProxy::paramCallbackC;
+        return ret;
+    }
+
     uint32_t mId{};
 
-    pw_proxy *mProxy{nullptr};
+    PwProxyPtr mProxy{};
     spa_hook mNodeListener{};
 
-    NodeProxy(uint32_t id, pw_proxy *proxy)
-      : mId{id}, mProxy{proxy}
+    NodeProxy(uint32_t id, PwProxyPtr proxy)
+      : mId{id}, mProxy{std::move(proxy)}
     {
-        pw_proxy_add_object_listener(mProxy, &mNodeListener, &sNodeEvents, this);
+        static constexpr pw_node_events nodeEvents{CreateNodeEvents()};
+        pw_proxy_add_object_listener(mProxy.get(), &mNodeListener, &nodeEvents, this);
 
         /* Track changes to the enumerable formats (indicates the default
          * format, which is what we're interested in).
          */
         uint32_t fmtids[]{SPA_PARAM_EnumFormat};
-        ppw_node_subscribe_params(mProxy, al::data(fmtids), al::size(fmtids));
+        ppw_node_subscribe_params(mProxy.get(), al::data(fmtids), al::size(fmtids));
     }
     ~NodeProxy()
-    {
-        spa_hook_remove(&mNodeListener);
-        pw_proxy_destroy(mProxy);
-    }
+    { spa_hook_remove(&mNodeListener); }
 
 
     void infoCallback(const pw_node_info *info);
@@ -534,18 +546,7 @@ struct NodeProxy {
     static void paramCallbackC(void *object, int seq, uint32_t id, uint32_t index, uint32_t next,
         const spa_pod *param)
     { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); }
-
-    static const pw_node_events sNodeEvents;
-    static constexpr pw_node_events CreateNodeEvents()
-    {
-        pw_node_events ret{};
-        ret.version = PW_VERSION_NODE_EVENTS;
-        ret.info = &NodeProxy::infoCallbackC;
-        ret.param = &NodeProxy::paramCallbackC;
-        return ret;
-    }
 };
-const pw_node_events NodeProxy::sNodeEvents{NodeProxy::CreateNodeEvents()};
 
 void NodeProxy::infoCallback(const pw_node_info *info)
 {
@@ -783,29 +784,6 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
 
 /* A metadata proxy object used to query the default sink and source. */
 struct MetadataProxy {
-    uint32_t mId{};
-
-    pw_proxy *mProxy{nullptr};
-    spa_hook mListener{};
-
-    MetadataProxy(uint32_t id, pw_proxy *proxy)
-      : mId{id}, mProxy{proxy}
-    {
-        pw_proxy_add_object_listener(mProxy, &mListener, &sMetadataEvents, this);
-    }
-    ~MetadataProxy()
-    {
-        spa_hook_remove(&mListener);
-        pw_proxy_destroy(mProxy);
-    }
-
-
-    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value);
-    static int propertyCallbackC(void *object, uint32_t id, const char *key, const char *type,
-        const char *value)
-    { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); }
-
-    static const pw_metadata_events sMetadataEvents;
     static constexpr pw_metadata_events CreateMetadataEvents()
     {
         pw_metadata_events ret{};
@@ -813,8 +791,27 @@ struct MetadataProxy {
         ret.property = &MetadataProxy::propertyCallbackC;
         return ret;
     }
+
+    uint32_t mId{};
+
+    PwProxyPtr mProxy{};
+    spa_hook mListener{};
+
+    MetadataProxy(uint32_t id, PwProxyPtr proxy)
+      : mId{id}, mProxy{std::move(proxy)}
+    {
+        static constexpr pw_metadata_events metadataEvents{CreateMetadataEvents()};
+        pw_proxy_add_object_listener(mProxy.get(), &mListener, &metadataEvents, this);
+    }
+    ~MetadataProxy()
+    { spa_hook_remove(&mListener); }
+
+
+    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value);
+    static int propertyCallbackC(void *object, uint32_t id, const char *key, const char *type,
+        const char *value)
+    { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); }
 };
-const pw_metadata_events MetadataProxy::sMetadataEvents{MetadataProxy::CreateMetadataEvents()};
 
 int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *type,
     const char *value)
@@ -833,8 +830,8 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
     if(!type)
     {
         TRACE("Default %s device cleared\n", isCapture ? "capture" : "playback");
-        if(!isCapture) DefaultSinkDev.clear();
-        else DefaultSourceDev.clear();
+        if(!isCapture) DefaultSinkDevice.clear();
+        else DefaultSourceDevice.clear();
         return 0;
     }
     if(std::strcmp(type, "Spa:String:JSON") != 0)
@@ -867,9 +864,9 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
             TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
                 nametmp.c_str());
             if(!isCapture)
-                DefaultSinkDev = nametmp;
+                DefaultSinkDevice = nametmp;
             else
-                DefaultSourceDev = nametmp;
+                DefaultSourceDevice = nametmp;
         }
         else
         {
@@ -975,8 +972,8 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             return;
 
         /* Create the proxy object. */
-        auto *proxy = static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type, version,
-            sizeof(NodeProxy)));
+        auto proxy = PwProxyPtr{static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type,
+            version, sizeof(NodeProxy)))};
         if(!proxy)
         {
             ERR("Failed to create node proxy object (errno: %d)\n", errno);
@@ -986,8 +983,8 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         /* Initialize the NodeProxy to hold the proxy object, add it to the
          * active proxy list, and update the sync point.
          */
-        auto *node = static_cast<NodeProxy*>(pw_proxy_get_user_data(proxy));
-        mProxyList.emplace_back(al::construct_at(node, id, proxy));
+        auto *node = static_cast<NodeProxy*>(pw_proxy_get_user_data(proxy.get()));
+        mProxyList.emplace_back(al::construct_at(node, id, std::move(proxy)));
         syncInit();
 
         /* Signal any waiters that we have found a source or sink for audio
@@ -1013,16 +1010,16 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             return;
         }
 
-        auto *proxy = static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type, version,
-            sizeof(MetadataProxy)));
+        auto proxy = PwProxyPtr{static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type,
+            version, sizeof(MetadataProxy)))};
         if(!proxy)
         {
             ERR("Failed to create metadata proxy object (errno: %d)\n", errno);
             return;
         }
 
-        auto *mdata = static_cast<MetadataProxy*>(pw_proxy_get_user_data(proxy));
-        mDefaultMetadata = al::construct_at(mdata, id, proxy);
+        auto *mdata = static_cast<MetadataProxy*>(pw_proxy_get_user_data(proxy.get()));
+        mDefaultMetadata = al::construct_at(mdata, id, std::move(proxy));
         syncInit();
     }
 }
@@ -1158,14 +1155,8 @@ public:
 
 PipeWirePlayback::~PipeWirePlayback()
 {
-    if(mLoop && mStream)
-    {
-        /* The main loop needs to be locked when accessing/destroying the
-         * stream from user threads.
-         */
-        MainloopLockGuard _{mLoop};
-        mStream = nullptr;
-    }
+    /* Stop the mainloop so the stream can be properly destroyed. */
+    if(mLoop) mLoop.stop();
 }
 
 
@@ -1232,10 +1223,10 @@ void PipeWirePlayback::open(const char *name)
         EventWatcherLockGuard _{gEventHandler};
 
         auto match = DeviceList.cend();
-        if(!DefaultSinkDev.empty())
+        if(!DefaultSinkDevice.empty())
         {
             auto match_default = [](const DeviceNode &n) -> bool
-            { return n.mDevName == DefaultSinkDev; };
+            { return n.mDevName == DefaultSinkDevice; };
             match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_default);
         }
         if(match == DeviceList.cend())
@@ -1569,13 +1560,7 @@ public:
 };
 
 PipeWireCapture::~PipeWireCapture()
-{
-    if(mLoop && mStream)
-    {
-        MainloopLockGuard _{mLoop};
-        mStream = nullptr;
-    }
-}
+{ if(mLoop) mLoop.stop(); }
 
 
 void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
@@ -1608,10 +1593,10 @@ void PipeWireCapture::open(const char *name)
         EventWatcherLockGuard _{gEventHandler};
 
         auto match = DeviceList.cend();
-        if(!DefaultSourceDev.empty())
+        if(!DefaultSourceDevice.empty())
         {
             auto match_default = [](const DeviceNode &n) -> bool
-            { return n.mDevName == DefaultSourceDev; };
+            { return n.mDevName == DefaultSourceDevice; };
             match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_default);
         }
         if(match == DeviceList.cend())
@@ -1819,9 +1804,9 @@ std::string PipeWireBackendFactory::probe(BackendType type)
     EventWatcherLockGuard _{gEventHandler};
 
     auto match_defsink = [](const DeviceNode &n) -> bool
-    { return n.mDevName == DefaultSinkDev; };
+    { return n.mDevName == DefaultSinkDevice; };
     auto match_defsource = [](const DeviceNode &n) -> bool
-    { return n.mDevName == DefaultSourceDev; };
+    { return n.mDevName == DefaultSourceDevice; };
 
     auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
     { return lhs.mId < rhs.mId; };

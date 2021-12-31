@@ -82,8 +82,11 @@ constexpr auto get_pod_type(const spa_pod *pod) noexcept
 { return SPA_POD_TYPE(pod); }
 
 template<typename T>
+constexpr auto get_pod_body(const spa_pod *pod, size_t count) noexcept
+{ return al::span<T>{static_cast<T*>(SPA_POD_BODY(pod)), count}; }
+template<typename T, size_t N>
 constexpr auto get_pod_body(const spa_pod *pod) noexcept
-{ return static_cast<T*>(SPA_POD_BODY(pod)); }
+{ return al::span<T,N>{static_cast<T*>(SPA_POD_BODY(pod)), N}; }
 
 constexpr auto make_pod_builder(void *data, uint32_t size) noexcept
 { return SPA_POD_BUILDER_INIT(data, size); }
@@ -654,8 +657,7 @@ void parse_srate(DeviceNode *node, const spa_pod *value)
             WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
             return;
         }
-        std::array<int32_t,3> srates{};
-        std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
+        auto srates = get_pod_body<int32_t,3>(value);
 
         /* [0] is the default, [1] is the min, and [2] is the max. */
         TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", node->mId, srates[0], srates[1],
@@ -672,9 +674,7 @@ void parse_srate(DeviceNode *node, const spa_pod *value)
             WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
             return;
         }
-
-        auto srates = std::vector<int32_t>(nvals);
-        std::copy_n(get_pod_body<int32_t>(value), srates.size(), srates.begin());
+        auto srates = get_pod_body<int32_t>(value, nvals);
 
         /* [0] is the default, [1...size()-1] are available selections. */
         std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
@@ -705,11 +705,10 @@ void parse_srate(DeviceNode *node, const spa_pod *value)
             WARN("Unexpected SPA_CHOICE_None count: %u\n", nvals);
             return;
         }
+        auto srates = get_pod_body<int32_t,1>(value);
 
-        int32_t srate{*get_pod_body<int32_t>(value)};
-
-        TRACE("Device ID %u sample rate: %d\n", node->mId, srate);
-        srate = clampi(srate, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
+        TRACE("Device ID %u sample rate: %d\n", node->mId, srates[0]);
+        int srate{clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE)};
         node->mSampleRate = static_cast<uint>(srate);
         return;
     }

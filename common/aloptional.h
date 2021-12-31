@@ -315,6 +315,22 @@ public:
     constexpr T value_or(U&& defval) &&
     { return bool{*this} ? std::move(**this) : static_cast<T>(std::forward<U>(defval)); }
 
+    template<typename ...Args>
+    constexpr T& emplace(Args&& ...args)
+    {
+        mStore.reset();
+        mStore.construct(std::forward<Args>(args)...);
+        return mStore.mValue;
+    }
+    template<typename U, typename ...Args>
+    constexpr std::enable_if_t<std::is_constructible<T, std::initializer_list<U>&, Args&&...>::value,
+    T&> emplace(std::initializer_list<U> il, Args&& ...args)
+    {
+        mStore.reset();
+        mStore.construct(il, std::forward<Args>(args)...);
+        return mStore.mValue;
+    }
+
     constexpr void reset() noexcept { mStore.reset(); }
 };
 

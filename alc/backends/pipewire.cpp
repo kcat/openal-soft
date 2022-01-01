@@ -844,28 +844,34 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
     if(spa_json_enter_object(&it[0], &it[1]) <= 0)
         return 0;
 
-    char k[128]{};
-    while(spa_json_get_string(&it[1], k, sizeof(k)-1) > 0)
+    auto get_json_string = [](spa_json *iter)
     {
-        if(std::strcmp(k, "name") == 0)
-        {
-            const char *name{};
-            int len{spa_json_next(&it[1], &name)};
-            if(len <= 0) break;
+        al::optional<std::string> str;
 
-            std::string nametmp;
-            nametmp.resize(static_cast<uint>(len)+1, '\0');
-            if(spa_json_parse_string(name, len, &nametmp[0]) <= 0)
-                break;
-            while(!nametmp.empty() && nametmp.back() == '\0')
-                nametmp.pop_back();
+        const char *val{};
+        int len{spa_json_next(iter, &val)};
+        if(len <= 0) return str;
+
+        str.emplace().resize(static_cast<uint>(len), '\0');
+        if(spa_json_parse_string(val, len, &str->front()) <= 0)
+            str.reset();
+        else while(!str->empty() && str->back() == '\0')
+            str->pop_back();
+        return str;
+    };
+    while(auto propKey = get_json_string(&it[1]))
+    {
+        if(*propKey == "name")
+        {
+            auto propValue = get_json_string(&it[1]);
+            if(!propValue) break;
 
             TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
-                nametmp.c_str());
+                propValue->c_str());
             if(!isCapture)
-                DefaultSinkDevice = nametmp;
+                DefaultSinkDevice = std::move(*propValue);
             else
-                DefaultSourceDevice = nametmp;
+                DefaultSourceDevice = std::move(*propValue);
         }
         else
         {

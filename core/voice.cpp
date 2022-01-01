@@ -53,6 +53,7 @@ struct CopyTag;
 
 static_assert(!(sizeof(DeviceBase::MixerBufferLine)&15),
     "DeviceBase::MixerBufferLine must be a multiple of 16 bytes");
+static_assert(!(MaxResamplerEdge&3), "MaxResamplerEdge is not a multiple of 4");
 
 Resampler ResamplerDefault{Resampler::Linear};
 
@@ -627,9 +628,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
             if(mDecoder)
             {
+                std::array<float*,DeviceBase::MixerChannelsMax> chanptrs;
+                std::transform(MixingSamples.begin(), MixingSamples.end(), chanptrs.begin(),
+                    [](DeviceBase::MixerBufferLine &bufline) noexcept -> float*
+                    { return bufline.data() + MaxResamplerEdge; });
                 const size_t srcOffset{(increment*DstBufferSize + DataPosFrac)>>MixerFracBits};
                 SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
-                ((*mDecoder).*mDecoderFunc)(MixingSamples, MaxResamplerEdge, SrcBufferSize,
+                ((*mDecoder).*mDecoderFunc)({chanptrs.data(), MixingSamples.size()}, SrcBufferSize,
                     srcOffset * likely(vstate == Playing));
             }
         }

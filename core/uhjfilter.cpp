@@ -101,15 +101,15 @@ void UhjEncoder::encode(float *LeftOut, float *RightOut, const FloatBufferLine *
  * where j is a +90 degree phase shift. 3-channel UHJ excludes Q, while 2-
  * channel excludes Q and T.
  */
-void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
-    const size_t samplesToDo, const size_t forwardSamples)
+void UhjDecoder::decode(const al::span<float*> samples, const size_t samplesToDo,
+    const size_t forwardSamples)
 {
     ASSUME(samplesToDo > 0);
 
     {
-        const float *RESTRICT left{samples[0].data() + offset};
-        const float *RESTRICT right{samples[1].data() + offset};
-        const float *RESTRICT t{samples[2].data() + offset};
+        const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
+        const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
+        const float *RESTRICT t{al::assume_aligned<16>(samples[2])};
 
         /* S = Left + Right */
         for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
@@ -124,9 +124,9 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
             mT[i] = t[i];
     }
 
-    float *RESTRICT woutput{samples[0].data() + offset};
-    float *RESTRICT xoutput{samples[1].data() + offset};
-    float *RESTRICT youtput{samples[2].data() + offset};
+    float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
+    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
+    float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -154,7 +154,7 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
 
     if(samples.size() > 3)
     {
-        float *RESTRICT zoutput{samples[3].data() + offset};
+        float *RESTRICT zoutput{al::assume_aligned<16>(samples[3])};
         /* Z = 1.023332*Q */
         for(size_t i{0};i < samplesToDo;++i)
             zoutput[i] = 1.023332f*zoutput[i];
@@ -174,14 +174,14 @@ void UhjDecoder::decode(const al::span<BufferLine> samples, const size_t offset,
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
  */
-void UhjDecoder::decodeStereo(const al::span<BufferLine> samples, const size_t offset,
-    const size_t samplesToDo, const size_t forwardSamples)
+void UhjDecoder::decodeStereo(const al::span<float*> samples, const size_t samplesToDo,
+    const size_t forwardSamples)
 {
     ASSUME(samplesToDo > 0);
 
     {
-        const float *RESTRICT left{samples[0].data() + offset};
-        const float *RESTRICT right{samples[1].data() + offset};
+        const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
+        const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
 
         for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
             mS[i] = left[i] + right[i];
@@ -212,9 +212,9 @@ void UhjDecoder::decodeStereo(const al::span<BufferLine> samples, const size_t o
         mCurrentWidth = wtarget;
     }
 
-    float *RESTRICT woutput{samples[0].data() + offset};
-    float *RESTRICT xoutput{samples[1].data() + offset};
-    float *RESTRICT youtput{samples[2].data() + offset};
+    float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
+    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
+    float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());

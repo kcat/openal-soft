@@ -66,7 +66,7 @@ struct UhjDecoder : public UhjFilterBase {
      * reconstructed from 2-channel UHJ should not be run through a normal
      * B-Format decoder, as it needs different shelf filters.
      */
-    void decode(const al::span<BufferLine> samples, const size_t offset, const size_t samplesToDo,
+    void decode(const al::span<float*> samples, const size_t samplesToDo,
         const size_t forwardSamples);
 
     /**
@@ -75,11 +75,11 @@ struct UhjDecoder : public UhjFilterBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decodeStereo(const al::span<BufferLine> samples, const size_t offset,
-        const size_t samplesToDo, const size_t forwardSamples);
+    void decodeStereo(const al::span<float*> samples, const size_t samplesToDo,
+        const size_t forwardSamples);
 
-    using DecoderFunc = void (UhjDecoder::*)(const al::span<BufferLine> samples,
-        const size_t offset, const size_t samplesToDo, const size_t forwardSamples);
+    using DecoderFunc = void (UhjDecoder::*)(const al::span<float*> samples,
+        const size_t samplesToDo, const size_t forwardSamples);
 
     DEF_NEWDEL(UhjDecoder)
 };

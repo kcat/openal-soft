@@ -242,7 +242,8 @@ void EaxxFxSlot::set_fx_slot_flags(
 	set_fx_slot_flags();
 }
 
-[[nodiscard]] bool EaxxFxSlot::set_fx_slot_occlusion(
+// [[nodiscard]]
+bool EaxxFxSlot::set_fx_slot_occlusion(
 	long eax_occlusion)
 {
 	if (eax_.fx_slot.lOcclusion == eax_occlusion)
@@ -255,7 +256,8 @@ void EaxxFxSlot::set_fx_slot_flags(
 	return true;
 }
 
-[[nodiscard]] bool EaxxFxSlot::set_fx_slot_occlusion_lf_ratio(
+// [[nodiscard]]
+bool EaxxFxSlot::set_fx_slot_occlusion_lf_ratio(
 	float eax_occlusion_lf_ratio)
 {
 	if (eax_.fx_slot.flOcclusionLFRatio == eax_occlusion_lf_ratio)
@@ -277,7 +279,8 @@ void EaxxFxSlot::set_fx_slot_all(
 	set_fx_slot_flags(eax_fx_slot.ulFlags);
 }
 
-[[nodiscard]] bool EaxxFxSlot::set_fx_slot_all(
+// [[nodiscard]]
+bool EaxxFxSlot::set_fx_slot_all(
 	const EAX50FXSLOTPROPERTIES& eax_fx_slot)
 {
 	set_fx_slot_all(static_cast<const EAX40FXSLOTPROPERTIES&>(eax_fx_slot));
@@ -288,7 +291,8 @@ void EaxxFxSlot::set_fx_slot_all(
 	return is_occlusion_modified || is_occlusion_lf_ratio_modified;
 }
 
-[[nodiscard]] bool EaxxFxSlot::dispatch(
+// [[nodiscard]]
+bool EaxxFxSlot::dispatch(
 	const EaxxEaxCall& eax_call)
 {
 	if (eax_call.is_get())
@@ -634,7 +638,7 @@ void EaxxFxSlot::set_fx_slot_flags(
 	set_fx_slot_flags(eax_flags);
 }
 
-[[nodiscard]]
+// [[nodiscard]]
 bool EaxxFxSlot::set_fx_slot_occlusion(
 	const EaxxEaxCall& eax_call)
 {
@@ -646,7 +650,7 @@ bool EaxxFxSlot::set_fx_slot_occlusion(
 	return set_fx_slot_occlusion(eax_occlusion);
 }
 
-[[nodiscard]]
+// [[nodiscard]]
 bool EaxxFxSlot::set_fx_slot_occlusion_lf_ratio(
 	const EaxxEaxCall& eax_call)
 {
@@ -658,7 +662,8 @@ bool EaxxFxSlot::set_fx_slot_occlusion_lf_ratio(
 	return set_fx_slot_occlusion_lf_ratio(eax_occlusion_lf_ratio);
 }
 
-[[nodiscard]] bool EaxxFxSlot::set_fx_slot_all(
+// [[nodiscard]]
+bool EaxxFxSlot::set_fx_slot_all(
 	const EaxxEaxCall& eax_call)
 {
 	switch (eax_call.get_version())
@@ -729,7 +734,7 @@ bool EaxxFxSlot::set_fx_slot(
 	}
 }
 
-[[nodiscard]]
+// [[nodiscard]]
 bool EaxxFxSlot::set(
 	const EaxxEaxCall& eax_call)
 {

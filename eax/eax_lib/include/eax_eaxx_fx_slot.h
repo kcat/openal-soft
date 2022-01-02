@@ -59,7 +59,8 @@ public:
 	const EAX50FXSLOTPROPERTIES& get_eax_fx_slot() const noexcept;
 
 
-	[[nodiscard]] bool dispatch(
+	// [[nodiscard]]
+	bool dispatch(
 		const EaxxEaxCall& eax_call);
 
 
@@ -204,16 +205,19 @@ private:
 	void set_fx_slot_flags(
 		unsigned long eax_flags);
 
-	[[nodiscard]] bool set_fx_slot_occlusion(
+	// [[nodiscard]]
+	bool set_fx_slot_occlusion(
 		long eax_occlusion);
 
-	[[nodiscard]] bool set_fx_slot_occlusion_lf_ratio(
+	// [[nodiscard]]
+	bool set_fx_slot_occlusion_lf_ratio(
 		float eax_occlusion_lf_ratio);
 
 	void set_fx_slot_all(
 		const EAX40FXSLOTPROPERTIES& eax_fx_slot);
 
-	[[nodiscard]] bool set_fx_slot_all(
+	// [[nodiscard]]
+	bool set_fx_slot_all(
 		const EAX50FXSLOTPROPERTIES& eax_fx_slot);
 
 
@@ -229,22 +233,22 @@ private:
 	void set_fx_slot_flags(
 		const EaxxEaxCall& eax_call);
 
-	[[nodiscard]]
+	// [[nodiscard]]
 	bool set_fx_slot_occlusion(
 		const EaxxEaxCall& eax_call);
 
-	[[nodiscard]]
+	// [[nodiscard]]
 	bool set_fx_slot_occlusion_lf_ratio(
 		const EaxxEaxCall& eax_call);
 
-	[[nodiscard]]
+	// [[nodiscard]]
 	bool set_fx_slot_all(
 		const EaxxEaxCall& eax_call);
 
 	bool set_fx_slot(
 		const EaxxEaxCall& eax_call);
 
-	[[nodiscard]]
+	// [[nodiscard]]
 	bool set(
 		const EaxxEaxCall& eax_call);
 

@@ -29,7 +29,7 @@ constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
 {
-    const __m128 lrlr{_mm_setr_ps(left, right, left, right)};
+    const __m128 lrlr = _mm_setr_ps(left, right, left, right);
 
     ASSUME(IrSize >= MinIrLength);
     /* This isn't technically correct to test alignment, but it's true for
@@ -39,8 +39,8 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     if(reinterpret_cast<intptr_t>(Values)&0x8)
     {
         __m128 imp0, imp1;
-        __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
-        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
+        __m128 coeffs = _mm_load_ps(&Coeffs[0][0]);
+        __m128 vals = _mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]));
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
@@ -65,8 +65,8 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     {
         for(size_t i{0};i < IrSize;i += 2)
         {
-            const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
-            __m128 vals{_mm_load_ps(&Values[i][0])};
+            const __m128 coeffs = _mm_load_ps(&Coeffs[i][0]);
+            __m128 vals = _mm_load_ps(&Values[i][0]);
             vals = MLA4(vals, lrlr, coeffs);
             _mm_store_ps(&Values[i][0], vals);
         }
@@ -80,7 +80,7 @@ float *Resample_<BSincTag,SSETag>(const InterpState *state, float *RESTRICT src,
     uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
-    const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
+    const __m128 sf4 = _mm_set1_ps(state->bsinc.sf);
     const size_t m{state->bsinc.m};
     ASSUME(m > 0);
 
@@ -92,9 +92,9 @@ float *Resample_<BSincTag,SSETag>(const InterpState *state, float *RESTRICT src,
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
-        __m128 r4{_mm_setzero_ps()};
+        __m128 r4 = _mm_setzero_ps();
         {
-            const __m128 pf4{_mm_set1_ps(pf)};
+            const __m128 pf4 = _mm_set1_ps(pf);
             const float *RESTRICT fil{filter + m*pi*2};
             const float *RESTRICT phd{fil + m};
             const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
@@ -139,9 +139,9 @@ float *Resample_<FastBSincTag,SSETag>(const InterpState *state, float *RESTRICT 
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
-        __m128 r4{_mm_setzero_ps()};
+        __m128 r4 = _mm_setzero_ps();
         {
-            const __m128 pf4{_mm_set1_ps(pf)};
+            const __m128 pf4 = _mm_set1_ps(pf);
             const float *RESTRICT fil{filter + m*pi*2};
             const float *RESTRICT phd{fil + m};
             size_t td{m >> 2};
@@ -213,13 +213,13 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(size_t todo{(min_len-pos) >> 2})
             {
-                const __m128 four4{_mm_set1_ps(4.0f)};
-                const __m128 step4{_mm_set1_ps(step)};
-                const __m128 gain4{_mm_set1_ps(gain)};
-                __m128 step_count4{_mm_setr_ps(0.0f, 1.0f, 2.0f, 3.0f)};
+                const __m128 four4 = _mm_set1_ps(4.0f);
+                const __m128 step4 = _mm_set1_ps(step);
+                const __m128 gain4 = _mm_set1_ps(gain);
+                __m128 step_count4 = _mm_setr_ps(0.0f, 1.0f, 2.0f, 3.0f);
                 do {
-                    const __m128 val4{_mm_load_ps(&InSamples[pos])};
-                    __m128 dry4{_mm_load_ps(&dst[pos])};
+                    const __m128 val4 = _mm_load_ps(&InSamples[pos]);
+                    __m128 dry4 = _mm_load_ps(&dst[pos]);
 
                     /* dry += val * (gain + step*step_count) */
                     dry4 = MLA4(dry4, val4, MLA4(gain4, step4, step_count4));
@@ -257,10 +257,10 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
             continue;
         if(size_t todo{(InSamples.size()-pos) >> 2})
         {
-            const __m128 gain4{_mm_set1_ps(gain)};
+            const __m128 gain4 = _mm_set1_ps(gain);
             do {
-                const __m128 val4{_mm_load_ps(&InSamples[pos])};
-                __m128 dry4{_mm_load_ps(&dst[pos])};
+                const __m128 val4 = _mm_load_ps(&InSamples[pos]);
+                __m128 dry4 = _mm_load_ps(&dst[pos]);
                 dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
                 _mm_store_ps(&dst[pos], dry4);
                 pos += 4;

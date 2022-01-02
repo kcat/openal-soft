@@ -131,11 +131,11 @@ void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *REST
 #ifdef HAVE_SSE_INTRINSICS
     for(float &output : dst)
     {
-        __m128 r4{_mm_setzero_ps()};
+        __m128 r4 = _mm_setzero_ps();
         for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
         {
-            const __m128 coeffs{_mm_load_ps(&filter[j])};
-            const __m128 s{_mm_loadu_ps(&src[j])};
+            const __m128 coeffs = _mm_load_ps(&filter[j]);
+            const __m128 s = _mm_loadu_ps(&src[j]);
 
             r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
         }
@@ -150,7 +150,7 @@ void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *REST
 
     for(float &output : dst)
     {
-        float32x4_t r4{vdupq_n_f32(0.0f)};
+        float32x4_t r4 = vdupq_n_f32(0.0f);
         for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
             r4 = vmlaq_f32(r4, vld1q_f32(&src[j]), vld1q_f32(&filter[j]));
         r4 = vaddq_f32(r4, vrev64q_f32(r4));

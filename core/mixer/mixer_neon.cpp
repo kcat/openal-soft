@@ -24,7 +24,7 @@ namespace {
 
 inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
 {
-    float32x4_t ret{vmovq_n_f32(l0)};
+    float32x4_t ret = vmovq_n_f32(l0);
     ret = vsetq_lane_f32(l1, ret, 1);
     ret = vsetq_lane_f32(l2, ret, 2);
     ret = vsetq_lane_f32(l3, ret, 3);
@@ -79,13 +79,13 @@ float *Resample_<LerpTag,NEONTag>(const InterpState*, float *RESTRICT src, uint 
         const int pos1{vgetq_lane_s32(pos4, 1)};
         const int pos2{vgetq_lane_s32(pos4, 2)};
         const int pos3{vgetq_lane_s32(pos4, 3)};
-        const float32x4_t val1{set_f4(src[pos0], src[pos1], src[pos2], src[pos3])};
-        const float32x4_t val2{set_f4(src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1])};
+        const float32x4_t val1 = set_f4(src[pos0], src[pos1], src[pos2], src[pos3]);
+        const float32x4_t val2 = set_f4(src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1]);
 
         /* val1 + (val2-val1)*mu */
-        const float32x4_t r0{vsubq_f32(val2, val1)};
-        const float32x4_t mu{vmulq_f32(vcvtq_f32_s32(frac4), fracOne4)};
-        const float32x4_t out{vmlaq_f32(val1, mu, r0)};
+        const float32x4_t r0 = vsubq_f32(val2, val1);
+        const float32x4_t mu = vmulq_f32(vcvtq_f32_s32(frac4), fracOne4);
+        const float32x4_t out = vmlaq_f32(val1, mu, r0);
 
         vst1q_f32(dst_iter, out);
         dst_iter += 4;
@@ -116,7 +116,7 @@ float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src
     uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
-    const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
+    const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
     const size_t m{state->bsinc.m};
     ASSUME(m > 0);
 
@@ -128,9 +128,9 @@ float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
-        float32x4_t r4{vdupq_n_f32(0.0f)};
+        float32x4_t r4 = vdupq_n_f32(0.0f);
         {
-            const float32x4_t pf4{vdupq_n_f32(pf)};
+            const float32x4_t pf4 = vdupq_n_f32(pf);
             const float *RESTRICT fil{filter + m*pi*2};
             const float *RESTRICT phd{fil + m};
             const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
@@ -174,9 +174,9 @@ float *Resample_<FastBSincTag,NEONTag>(const InterpState *state, float *RESTRICT
         const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
-        float32x4_t r4{vdupq_n_f32(0.0f)};
+        float32x4_t r4 = vdupq_n_f32(0.0f);
         {
-            const float32x4_t pf4{vdupq_n_f32(pf)};
+            const float32x4_t pf4 = vdupq_n_f32(pf);
             const float *RESTRICT fil{filter + m*pi*2};
             const float *RESTRICT phd{fil + m};
             size_t td{m >> 2};
@@ -247,10 +247,10 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(size_t todo{(min_len-pos) >> 2})
             {
-                const float32x4_t four4{vdupq_n_f32(4.0f)};
-                const float32x4_t step4{vdupq_n_f32(step)};
-                const float32x4_t gain4{vdupq_n_f32(gain)};
-                float32x4_t step_count4{vdupq_n_f32(0.0f)};
+                const float32x4_t four4 = vdupq_n_f32(4.0f);
+                const float32x4_t step4 = vdupq_n_f32(step);
+                const float32x4_t gain4 = vdupq_n_f32(gain);
+                float32x4_t step_count4 = vdupq_n_f32(0.0f);
                 step_count4 = vsetq_lane_f32(1.0f, step_count4, 1);
                 step_count4 = vsetq_lane_f32(2.0f, step_count4, 2);
                 step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);

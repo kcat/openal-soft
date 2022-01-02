@@ -828,10 +828,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 void Voice::prepare(DeviceBase *device)
 {
     /* Even if storing really high order ambisonics, we only mix channels for
-     * orders up to MaxAmbiOrder. The rest are simply dropped.
+     * orders up to the device order. The rest are simply dropped.
      */
     uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
-        ChannelsFromFmt(mFmtChannels, minu(mAmbiOrder, MaxAmbiOrder))};
+        ChannelsFromFmt(mFmtChannels, minu(mAmbiOrder, device->mAmbiOrder))};
     if(unlikely(num_channels > device->mSampleData.size()))
     {
         ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,

@@ -30,9 +30,4 @@ project (eax_solution VERSION 1.0.0 LANGUAGES NONE)
 
 
 add_subdirectory (eax_sys_lib)
-add_subdirectory (eax_patch_lib)
 add_subdirectory (eax_lib)
-
-if (ALSOFT_UTILS)
-	add_subdirectory (eax_app_patcher)
-endif ()

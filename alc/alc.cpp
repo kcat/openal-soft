@@ -1340,23 +1340,6 @@ void alc_initconfig(void)
             }
         }
 
-        auto is_disable_patches = false;
-
-        if (!is_disable)
-        {
-            const auto eax_disable_patches_opt = ::ConfigValueBool(nullptr, eax_block_name, "disable_patches");
-
-            if (eax_disable_patches_opt)
-            {
-                is_disable_patches = *eax_disable_patches_opt;
-            }
-
-            if (is_disable_patches)
-            {
-                ::g_eax_logger.info("Disabling patches.");
-            }
-        }
-
         if (!is_disable)
         {
             try
@@ -1364,7 +1347,6 @@ void alc_initconfig(void)
                 auto init_param = eax::AlApiInitParam{};
                 init_param.logger = &::g_eax_logger;
                 init_param.alcMakeContextCurrent_internal = ::alcMakeContextCurrent_internal;
-                init_param.is_disable_patches = is_disable_patches;
 
                 eax::g_al_api.initialize(init_param);
             }

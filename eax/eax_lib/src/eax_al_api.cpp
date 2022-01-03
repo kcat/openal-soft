@@ -48,11 +48,6 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 #include "eax_moveable_mutex_lock.h"
 #include "eax_utils.h"
 
-#ifdef _WIN32
-#include "eax_patch.h"
-#include "eax_patch_collection.h"
-#endif // _WIN32
-
 #include "eax_eaxx.h"
 
 
@@ -229,9 +224,6 @@ public:
 
 
 private:
-	static constexpr auto min_string_buffer_capacity = 4 * 1'024;
-
-
 	struct Buffer
 	{
 		::ALsizei size{};
@@ -286,15 +278,11 @@ private:
 	XRamAlBufferDataContext x_ram_al_buffer_data_context_{};
 	::LPALCMAKECONTEXTCURRENT alcMakeContextCurrent_internal_{};
 
-	std::string string_buffer_{};
-
 
 	[[noreturn]]
 	static void fail(
 		const char* message);
 
-
-	void apply_patch_collection() noexcept;
 
 	void initialize(
 		const AlApiInitParam& param) override;
@@ -889,52 +877,6 @@ void AlApiImpl::fail(
 	throw AlApiException{message};
 }
 
-#ifdef _WIN32
-void AlApiImpl::apply_patch_collection() noexcept
-try
-{
-	const auto patch_collection = make_patch_collection();
-
-	for (const auto& patch : patch_collection)
-	{
-		const auto process_patcher = make_process_patcher(patch);
-
-		const auto status = process_patcher->get_status();
-
-		switch (status)
-		{
-			case PatchStatus::unpatched:
-				{
-					const auto message = std::string{} + "Patching " + patch.name + ".";
-					logger_->info(message.c_str());
-					process_patcher->apply();
-				}
-
-				break;
-
-			case PatchStatus::patched:
-				{
-					const auto message = std::string{} + patch.name + " is already patched.";
-					logger_->info(message.c_str());
-				}
-
-				break;
-
-			default:
-				break;
-		}
-	}
-}
-catch (...)
-{
-	utils::log_exception(get_logger(), __func__);
-}
-#else
-void AlApiImpl::apply_patch_collection() noexcept
-{
-}
-#endif // _WIN32
-
 void AlApiImpl::initialize(
 	const AlApiInitParam& param)
 {
@@ -945,12 +887,6 @@ void AlApiImpl::initialize(
 	alcMakeContextCurrent_internal_ = param.alcMakeContextCurrent_internal;
 
 	mutex_ = std::make_unique<std::mutex>();
-	string_buffer_.reserve(min_string_buffer_capacity);
-
-	if (!param.is_disable_patches)
-	{
-		apply_patch_collection();
-	}
 
 	get_lock_func_ = &AlApiImpl::get_lock_initialized;
 }

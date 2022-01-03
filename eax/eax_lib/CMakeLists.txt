@@ -113,8 +113,6 @@ target_link_libraries (
 	${PROJECT_NAME}
 	PUBLIC
 		eax::sys_lib
-	PRIVATE
-		eax::patch_lib
 )
 
 if (ALSOFT_STATIC_LIBGCC)

@@ -45,8 +45,6 @@ struct AlApiInitParam
 {
 	Logger* logger{};
 	::LPALCMAKECONTEXTCURRENT alcMakeContextCurrent_internal{};
-
-	bool is_disable_patches{};
 }; // AlApiInitParam
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

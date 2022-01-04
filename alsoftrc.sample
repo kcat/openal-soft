@@ -586,8 +586,3 @@
 ##disable:
 #  Sets whether to disable EAX extensions or not.
 #disable = false
-
-##disable_patches:
-#  Sets whether to not apply EAX patches for the current process.
-#  Applicable for Windows only.
-#disable_patches = false

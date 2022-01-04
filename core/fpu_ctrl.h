@@ -8,7 +8,7 @@ class FPUCtl {
     bool in_mode{};
 
 public:
-    FPUCtl() noexcept { enter(); in_mode = true; };
+    FPUCtl() noexcept { enter(); in_mode = true; }
     ~FPUCtl() { if(in_mode) leave(); }
 
     FPUCtl(const FPUCtl&) = delete;

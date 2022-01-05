@@ -10,20 +10,12 @@
 namespace al {
 
 template<typename T>
-constexpr auto size(T &cont) noexcept(noexcept(cont.size())) -> decltype(cont.size())
-{ return cont.size(); }
-
-template<typename T>
 constexpr auto size(const T &cont) noexcept(noexcept(cont.size())) -> decltype(cont.size())
 { return cont.size(); }
 
 template<typename T, size_t N>
-constexpr size_t size(T (&)[N]) noexcept
+constexpr size_t size(const T (&)[N]) noexcept
 { return N; }
-
-template<typename T>
-constexpr size_t size(std::initializer_list<T> list) noexcept
-{ return list.size(); }
 
 
 template<typename T>

@@ -1,6 +1,10 @@
 #ifndef AL_NUMERIC_H
 #define AL_NUMERIC_H
 
+#if ALSOFT_EAX
+#include <cmath>
+#endif // ALSOFT_EAX
+
 #include <cstddef>
 #include <cstdint>
 #ifdef HAVE_INTRIN_H
@@ -270,5 +274,46 @@ inline float fast_roundf(float f) noexcept
     return f - ilim[sign];
 #endif
 }
+
+#if ALSOFT_EAX
+template<
+    typename T
+>
+inline constexpr const T& clamp(
+    const T& value,
+    const T& min_value,
+    const T& max_value) noexcept
+{
+    return value < min_value ? min_value : (value > max_value ? max_value : value);
+}
+
+// Converts level (mB) to gain.
+inline float level_mb_to_gain(
+	float x)
+{
+	if (x <= -10'000.0F)
+	{
+		return 0.0F;
+	}
+	else
+	{
+		return std::pow(10.0F, x / 2'000.0F);
+	}
+}
+
+// Converts gain to level (mB).
+inline float gain_to_level_mb(
+	float x)
+{
+	if (x <= 0.0F)
+	{
+		return -10'000.0F;
+	}
+	else
+	{
+		return std::log10(x * 2'000.0F);
+	}
+}
+#endif // ALSOFT_EAX
 
 #endif /* AL_NUMERIC_H */

@@ -95,7 +95,7 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
-option(ALSOFT_EAX "Enable EAX extension" ON)
+option(ALSOFT_EAX "Enable EAX extensions." ON)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -766,6 +766,7 @@ set(OPENAL_OBJS
     al/effects/dedicated.cpp
     al/effects/distortion.cpp
     al/effects/echo.cpp
+	al/effects/effects.cpp
     al/effects/effects.h
     al/effects/equalizer.cpp
     al/effects/fshifter.cpp
@@ -814,6 +815,30 @@ set(ALC_OBJS
     alc/effects/vmorpher.cpp
     alc/inprogext.h
     alc/panning.cpp)
+
+if (ALSOFT_EAX)
+    set(OPENAL_OBJS
+        ${OPENAL_OBJS}
+        al/eax_api.cpp
+        al/eax_api.h
+        al/eax_eax_call.cpp
+        al/eax_eax_call.h
+        al/eax_effect.cpp
+        al/eax_effect.h
+        al/eax_exception.cpp
+        al/eax_exception.h
+        al/eax_fx_slot_index.cpp
+        al/eax_fx_slot_index.h
+        al/eax_fx_slots.cpp
+        al/eax_fx_slots.h
+        al/eax_globals.cpp
+        al/eax_globals.h
+        al/eax_utils.cpp
+        al/eax_utils.h
+        al/eax_x_ram.cpp
+        al/eax_x_ram.h
+)
+endif ()
 
 # Include SIMD mixers
 set(CPU_EXTS "Default")
@@ -1286,16 +1311,12 @@ configure_file(
     @ONLY)
 
 
-if (ALSOFT_EAX)
-	add_subdirectory(eax)
-endif ()
-
-
 add_library(common STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
 target_include_directories(common PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/include)
 target_compile_definitions(common PRIVATE ${CPP_DEFS})
 target_compile_options(common PRIVATE ${C_FLAGS})
 set_target_properties(common PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+target_compile_definitions(common PRIVATE "ALSOFT_EAX=$<BOOL:${ALSOFT_EAX}>")
 
 
 unset(HAS_ROUTER)
@@ -1305,9 +1326,6 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 if(LIBTYPE STREQUAL "STATIC")
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
-    if (ALSOFT_EAX)
-        target_link_libraries(${IMPL_TARGET} PRIVATE eax::eax_lib)
-    endif ()
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(WIN32)
@@ -1362,9 +1380,6 @@ else()
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
-    if (ALSOFT_EAX)
-        target_link_libraries(${IMPL_TARGET} PRIVATE eax::eax_lib)
-    endif ()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(APPLE AND ALSOFT_OSX_FRAMEWORK)

@@ -57,8 +57,8 @@
 #include "opthelpers.h"
 
 #if ALSOFT_EAX
-#include "eax_al_api.h"
 #include "eax_globals.h"
+#include "eax_x_ram.h"
 #endif // ALSOFT_EAX
 
 
@@ -417,6 +417,15 @@ ALbuffer *AllocBuffer(ALCdevice *device)
 
 void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
 {
+#if ALSOFT_EAX
+    if (buffer->eax_x_ram_is_hardware)
+    {
+        const auto buffer_size = static_cast<ALsizei>(buffer->OriginalSize);
+        assert((device->eax_x_ram_free_size + buffer_size) <= eax_x_ram_max_size);
+        device->eax_x_ram_free_size += buffer_size;
+    }
+#endif // ALSOFT_EAX
+
     const ALuint id{buffer->id - 1};
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
@@ -490,24 +499,107 @@ const ALchar *NameFromUserFmtType(UserFmtType type)
     return "<internal type error>";
 }
 
+#if ALSOFT_EAX
+bool eax_x_ram_validate_buffer(
+    ALCdevice& al_device,
+    ALbuffer& al_buffer)
+{
+    switch (al_buffer.eax_x_ram_mode)
+    {
+        case AL_STORAGE_HARDWARE:
+            if (al_buffer.OriginalSize > static_cast<ALuint>(al_device.eax_x_ram_free_size))
+            {
+                return false;
+            }
+
+            break;
+
+        case AL_STORAGE_AUTOMATIC:
+        case AL_STORAGE_ACCESSIBLE:
+            break;
+
+        default:
+            assert(false && "Unsupported X-RAM mode.");
+            return false;
+	}
+
+    return true;
+}
+
+void eax_x_ram_update_buffer(
+    ALCdevice& al_device,
+    ALbuffer& al_buffer)
+{
+    const auto buffer_size = static_cast<ALsizei>(al_buffer.OriginalSize);
+
+    auto is_hardware = al_buffer.eax_x_ram_is_hardware;
+    auto size_delta = ALsizei{};
+
+    switch (al_buffer.eax_x_ram_mode)
+    {
+        case AL_STORAGE_AUTOMATIC:
+            if (!al_buffer.eax_x_ram_is_dirty)
+            {
+                // First usage.
+
+                if (buffer_size <= al_device.eax_x_ram_free_size)
+                {
+                    // Have enough X-RAM memory.
+
+                    is_hardware = true;
+                    size_delta = -buffer_size;
+                }
+            }
+            else
+            {
+                // Used at least once.
+                // From now on, use only system memory.
+
+                is_hardware = false;
+
+                if (al_buffer.eax_x_ram_is_hardware)
+                {
+                    // First allocation was in X-RAM.
+                    // Free that block.
+
+                    size_delta = buffer_size;
+                }
+            }
+
+            break;
+
+        case AL_STORAGE_HARDWARE:
+            is_hardware = true;
+            size_delta = buffer_size;
+
+            break;
+
+        case AL_STORAGE_ACCESSIBLE:
+            // Always use system memory.
+            is_hardware = false;
+            break;
+
+        default:
+            break;
+	}
+
+    al_buffer.eax_x_ram_is_hardware = is_hardware;
+    al_buffer.eax_x_ram_is_dirty = true;
+
+    assert(
+        (al_device.eax_x_ram_free_size + size_delta) >= eax_x_ram_min_size &&
+        (al_device.eax_x_ram_free_size + size_delta) <= eax_x_ram_max_size
+    );
+
+    al_device.eax_x_ram_free_size += size_delta;
+}
+#endif // ALSOFT_EAX
+
 /** Loads the specified data into the buffer, using the specified format. */
 void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData,
     ALbitfieldSOFT access)
 {
-#if ALSOFT_EAX
-    if (!eax::g_is_disable)
-    {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        const auto x_ram_result = eax::g_al_api.on_alBufferData_1(ALBuf->id, size);
-
-        if (x_ram_result != AL_NO_ERROR)
-        {
-            SETERR_RETURN(context, AL_INVALID_VALUE, , "X-RAM failed.");
-        }
-    }
-#endif // ALSOFT_EAX
-
     if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
                       ALBuf->id);
@@ -640,10 +732,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
 #if ALSOFT_EAX
-    if (!eax::g_is_disable)
+    if (eax_g_is_enabled)
     {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        eax::g_al_api.on_alBufferData_2();
+        eax_x_ram_update_buffer(*context->mALDevice, *ALBuf);
     }
 #endif // ALSOFT_EAX
 }
@@ -785,12 +876,6 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
 AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 START_API_FUNC
 {
-#if ALSOFT_EAX
-    const auto eax_n = n;
-
-    {
-#endif // ALSOFT_EAX
-
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -825,26 +910,12 @@ START_API_FUNC
         } while(--n);
         std::copy(ids.begin(), ids.end(), buffers);
     }
-
-#if ALSOFT_EAX
-    }
-
-    if (!eax::g_is_disable)
-    {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        eax::g_al_api.on_alGenBuffers(eax_n, buffers);
-    }
-#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 START_API_FUNC
 {
-#if ALSOFT_EAX
-    {
-#endif // ALSOFT_EAX
-
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -883,16 +954,6 @@ START_API_FUNC
         if(buffer) FreeBuffer(device, buffer);
     };
     std::for_each(buffers, buffers_end, delete_buffer);
-
-#if ALSOFT_EAX
-    }
-
-    if (!eax::g_is_disable)
-    {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        eax::g_al_api.on_alDeleteBuffers(n, buffers);
-    }
-#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
@@ -945,8 +1006,24 @@ START_API_FUNC
         if UNLIKELY(!usrfmt)
             context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
+#if ALSOFT_EAX
+        {
+            if (eax_g_is_enabled)
+            {
+                const auto is_buffer_valid = eax_x_ram_validate_buffer(*device, *albuf);
+
+                if (!is_buffer_valid)
+                {
+                    context->setError(AL_OUT_OF_MEMORY, "Out of X-RAM memory.");
+                    return;
+                }
+            }
+#endif // ALSOFT_EAX
             LoadData(context.get(), albuf, freq, static_cast<ALuint>(size), usrfmt->channels,
                 usrfmt->type, static_cast<const al::byte*>(data), flags);
+#if ALSOFT_EAX
+        }
+#endif // ALSOFT_EAX
     }
 }
 END_API_FUNC
@@ -1698,3 +1775,162 @@ BufferSubList::~BufferSubList()
     al_free(Buffers);
     Buffers = nullptr;
 }
+
+
+#if ALSOFT_EAX
+ALboolean AL_APIENTRY EAXSetBufferMode(
+    ALsizei n,
+    const ALuint* buffers,
+    ALint value)
+START_API_FUNC
+{
+#define EAX_PREFIX "[EAXSetBufferMode] "
+
+    if (n == 0)
+    {
+        return ALC_TRUE;
+    }
+
+    if (n < 0)
+    {
+        ERR(EAX_PREFIX "Buffer count %d out of range.\n", n);
+        return ALC_FALSE;
+    }
+
+    if (!buffers)
+    {
+        ERR(EAX_PREFIX "%s\n", "Null AL buffers.");
+        return ALC_FALSE;
+    }
+
+    switch (value)
+    {
+        case AL_STORAGE_AUTOMATIC:
+        case AL_STORAGE_HARDWARE:
+        case AL_STORAGE_ACCESSIBLE:
+            break;
+
+	    default:
+            ERR(EAX_PREFIX "Unsupported X-RAM mode %d.\n", value);
+            return ALC_FALSE;
+    }
+
+    const auto context = ContextRef{GetContextRef()};
+
+    if (!context)
+    {
+        ERR(EAX_PREFIX "%s\n", "No current context.");
+        return ALC_FALSE;
+    }
+
+    if (!eax_g_is_enabled)
+    {
+        ERR(EAX_PREFIX "%s\n", "EAX not enabled.");
+        return ALC_FALSE;
+    }
+
+    auto device = context->mALDevice.get();
+    std::lock_guard<std::mutex> device_lock{device->BufferLock};
+
+    // Validate the buffers.
+    //
+    for (auto i = 0; i < n; ++i)
+    {
+        const auto buffer = buffers[i];
+
+        if (buffer == AL_NONE)
+        {
+            continue;
+        }
+
+        const auto al_buffer = LookupBuffer(device, buffer);
+
+        if (!al_buffer)
+        {
+            ERR(EAX_PREFIX "Invalid buffer ID %u.\n", buffer);
+            return ALC_FALSE;
+        }
+
+        if (al_buffer->eax_x_ram_is_dirty)
+        {
+            ERR(EAX_PREFIX "Buffer %u has audio data.\n", buffer);
+            return ALC_FALSE;
+        }
+    }
+
+    // Update the mode.
+    //
+    for (auto i = 0; i < n; ++i)
+    {
+        const auto buffer = buffers[i];
+
+        if (buffer == AL_NONE)
+        {
+            continue;
+        }
+
+        const auto al_buffer = LookupBuffer(device, buffer);
+        assert(al_buffer);
+        assert(!al_buffer->eax_x_ram_is_dirty);
+
+        al_buffer->eax_x_ram_mode = value;
+    }
+
+    return AL_TRUE;
+
+#undef EAX_PREFIX
+}
+END_API_FUNC
+
+ALenum AL_APIENTRY EAXGetBufferMode(
+    ALuint buffer,
+    ALint* pReserved)
+START_API_FUNC
+{
+#define EAX_PREFIX "[EAXGetBufferMode] "
+
+    if (buffer == AL_NONE)
+	{
+        ERR(EAX_PREFIX "%s\n", "Null AL buffer.");
+        return AL_NONE;
+	}
+
+	if (pReserved)
+	{
+        ERR(EAX_PREFIX "%s\n", "Non-null reserved parameter.");
+        return AL_NONE;
+	}
+
+    const auto context = ContextRef{GetContextRef()};
+
+    if (!context)
+    {
+        ERR(EAX_PREFIX "%s\n", "No current context.");
+        return AL_NONE;
+    }
+
+    if (!eax_g_is_enabled)
+    {
+        ERR(EAX_PREFIX "%s\n", "EAX not enabled.");
+        return AL_NONE;
+    }
+
+    auto device = context->mALDevice.get();
+    std::lock_guard<std::mutex> device_lock{device->BufferLock};
+
+    const auto al_buffer = LookupBuffer(device, buffer);
+
+    if (!al_buffer)
+    {
+        ERR(EAX_PREFIX "Invalid buffer ID %u.\n", buffer);
+        return AL_NONE;
+    }
+
+    return al_buffer->eax_x_ram_mode;
+
+#undef EAX_PREFIX
+}
+END_API_FUNC
+
+
+#endif // ALSOFT_EAX

@@ -19,6 +19,49 @@
 #include "intrusive_ptr.h"
 #include "vector.h"
 
+#if ALSOFT_EAX
+#include "al/filter.h"
+
+#include "al/eax_eax_call.h"
+#include "al/eax_fx_slot_index.h"
+#include "al/eax_fx_slots.h"
+#include "al/eax_utils.h"
+#endif // ALSOFT_EAX
+
+
+#if ALSOFT_EAX
+using EaxContextSharedDirtyFlagsValue = std::uint_least8_t;
+
+struct EaxContextSharedDirtyFlags
+{
+    using EaxIsBitFieldStruct = bool;
+
+    EaxContextSharedDirtyFlagsValue primary_fx_slot_id : 1;
+    EaxContextSharedDirtyFlagsValue air_absorption_hf : 1;
+}; // EaxContextSharedDirtyFlags
+
+
+using ContextDirtyFlagsValue = std::uint_least8_t;
+
+struct ContextDirtyFlags
+{
+    using EaxIsBitFieldStruct = bool;
+
+    ContextDirtyFlagsValue guidPrimaryFXSlotID : 1;
+    ContextDirtyFlagsValue flDistanceFactor : 1;
+    ContextDirtyFlagsValue flAirAbsorptionHF : 1;
+    ContextDirtyFlagsValue flHFReference : 1;
+    ContextDirtyFlagsValue flMacroFXFactor : 1;
+}; // ContextDirtyFlags
+
+
+struct EaxAlIsExtensionPresentResult
+{
+    ALboolean is_present;
+    bool is_return;
+}; // EaxAlIsExtensionPresentResult
+#endif // ALSOFT_EAX
+
 struct ALeffect;
 struct ALeffectslot;
 struct ALsource;
@@ -162,6 +205,332 @@ public:
     static ALeffect sDefaultEffect;
 
     DEF_NEWDEL(ALCcontext)
+
+#if ALSOFT_EAX
+public:
+    bool has_eax() const noexcept;
+
+    bool eax_is_capable() const noexcept;
+
+
+    void eax_uninitialize() noexcept;
+
+    void eax_initialize_source(
+        ALsource& al_source) noexcept;
+
+
+    ALenum eax_eax_set(
+        const GUID* property_set_id,
+        ALuint property_id,
+        ALuint property_source_id,
+        ALvoid* property_value,
+        ALuint property_value_size);
+
+    ALenum eax_eax_get(
+        const GUID* property_set_id,
+        ALuint property_id,
+        ALuint property_source_id,
+        ALvoid* property_value,
+        ALuint property_value_size);
+
+
+    void eax_update_filters();
+
+
+    void eax_set_last_error() noexcept;
+
+
+    float eax_get_max_filter_gain() const noexcept;
+
+    float eax_get_air_absorption_factor() const noexcept;
+
+    EaxFxSlotIndex eax_get_previous_primary_fx_slot_index() const noexcept;
+
+    EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept;
+
+    const ALeffectslot& eax_get_fx_slot(
+        EaxFxSlotIndexValue fx_slot_index) const;
+
+    ALeffectslot& eax_get_fx_slot(
+        EaxFxSlotIndexValue fx_slot_index);
+
+
+private:
+    using SourceList = al::vector<SourceSubList>;
+
+
+    struct SourceListIteratorBeginTag{};
+    struct SourceListIteratorEndTag{};
+
+    class SourceListIterator
+    {
+    public:
+        SourceListIterator(
+            SourceList& sources,
+            SourceListIteratorBeginTag) noexcept;
+
+        SourceListIterator(
+            SourceList& sources,
+            SourceListIteratorEndTag) noexcept;
+
+        SourceListIterator(
+            const SourceListIterator& rhs);
+
+        SourceListIterator& operator=(
+            const SourceListIterator& rhs) = delete;
+
+        SourceListIterator& operator++();
+
+        ALsource& operator*() noexcept;
+
+        bool operator==(
+            const SourceListIterator& rhs) const noexcept;
+
+        bool operator!=(
+            const SourceListIterator& rhs) const noexcept;
+
+
+    private:
+        SourceList::iterator sub_list_iterator_;
+        SourceList::iterator sub_list_end_iterator_;
+        std::uint64_t sub_list_item_index_;
+    }; // SourceListIterator
+
+    class SourceListEnumerator
+    {
+    public:
+        explicit SourceListEnumerator(
+            SourceList& sources) noexcept;
+
+        SourceListEnumerator(
+            const SourceListEnumerator& rhs) = delete;
+
+        SourceListEnumerator& operator=(
+            const SourceListEnumerator& rhs) = delete;
+
+        SourceListIterator begin() noexcept;
+
+        SourceListIterator end() noexcept;
+
+
+    private:
+        SourceList& sources_;
+    }; // SourceListEnumerator
+
+
+    struct Eax
+    {
+        EAX50CONTEXTPROPERTIES context{};
+    }; // Eax
+
+
+    bool eax_is_initialized_{};
+    bool eax_is_tried_{};
+
+    long eax_last_error_{};
+    unsigned long eax_speaker_config_{};
+
+    float eax_max_filter_gain_{};
+    float eax_air_absorption_factor_{};
+    EaxFxSlotIndex eax_previous_primary_fx_slot_index_{};
+    EaxFxSlotIndex eax_primary_fx_slot_index_{};
+    EaxFxSlots eax_fx_slots_{};
+
+    EaxContextSharedDirtyFlags eax_context_shared_dirty_flags_{};
+
+    EaxAlFilterUPtr eax_al_filter_{};
+    Eax eax_{};
+    Eax eax_d_{};
+    EAXSESSIONPROPERTIES eax_session_{};
+
+    ContextDirtyFlags eax_context_dirty_flags_{};
+
+    std::string eax_extension_list_{};
+
+
+    [[noreturn]]
+    static void eax_fail(
+        const char* message);
+
+
+    void eax_initialize_extensions();
+
+    void eax_initialize();
+
+
+    bool eax_has_no_default_effect_slot() const noexcept;
+
+    void eax_ensure_no_default_effect_slot() const;
+
+    bool eax_has_enough_aux_sends() const noexcept;
+
+    void eax_ensure_enough_aux_sends() const;
+
+    bool eax_has_eax_reverb_effect() const noexcept;
+
+    void eax_ensure_eax_reverb_effect() const;
+
+    void eax_ensure_compatibility();
+
+
+    void eax_initialize_filter_gain();
+
+    void eax_set_last_error_defaults() noexcept;
+
+    void eax_set_speaker_config_defaults() noexcept;
+
+    void eax_set_session_defaults() noexcept;
+
+    void eax_set_context_defaults() noexcept;
+
+    void eax_set_defaults() noexcept;
+
+    void eax_initialize_filter();
+
+    void eax_initialize_sources();
+
+
+    void eax_dispatch_fx_slot(
+        const EaxEaxCall& eax_call);
+
+    void eax_dispatch_source(
+        const EaxEaxCall& eax_call);
+
+
+    void eax_get_primary_fx_slot_id(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_distance_factor(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_air_absorption_hf(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_hf_reference(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_last_error(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_speaker_config(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_session(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_macro_fx_factor(
+        const EaxEaxCall& eax_call);
+
+    void eax_get_context_all(
+        const EaxEaxCall& eax_call);
+
+    void eax_get(
+        const EaxEaxCall& eax_call);
+
+
+    void eax_set_primary_fx_slot_id();
+
+    void eax_set_distance_factor();
+
+    void eax_set_air_absorbtion_hf();
+
+    void eax_set_hf_reference();
+
+    void eax_set_macro_fx_factor();
+
+    void eax_set_context();
+
+    void eax_initialize_fx_slots();
+
+
+    void eax_update_sources();
+
+
+    void eax_validate_primary_fx_slot_id(
+        const GUID& primary_fx_slot_id);
+
+    void eax_validate_distance_factor(
+        float distance_factor);
+
+    void eax_validate_air_absorption_hf(
+        float air_absorption_hf);
+
+    void eax_validate_hf_reference(
+        float hf_reference);
+
+    void eax_validate_speaker_config(
+        unsigned long speaker_config);
+
+    void eax_validate_session_eax_version(
+        unsigned long eax_version);
+
+    void eax_validate_session_max_active_sends(
+        unsigned long max_active_sends);
+
+    void eax_validate_session(
+        const EAXSESSIONPROPERTIES& eax_session);
+
+    void eax_validate_macro_fx_factor(
+        float macro_fx_factor);
+
+    void eax_validate_context_all(
+        const EAX40CONTEXTPROPERTIES& context_all);
+
+    void eax_validate_context_all(
+        const EAX50CONTEXTPROPERTIES& context_all);
+
+
+    void eax_defer_primary_fx_slot_id(
+        const GUID& primary_fx_slot_id);
+
+    void eax_defer_distance_factor(
+        float distance_factor);
+
+    void eax_defer_air_absorption_hf(
+        float air_absorption_hf);
+
+    void eax_defer_hf_reference(
+        float hf_reference);
+
+    void eax_defer_macro_fx_factor(
+        float macro_fx_factor);
+
+    void eax_defer_context_all(
+        const EAX40CONTEXTPROPERTIES& context_all);
+
+    void eax_defer_context_all(
+        const EAX50CONTEXTPROPERTIES& context_all);
+
+
+    void eax_defer_context_all(
+        const EaxEaxCall& eax_call);
+
+    void eax_defer_primary_fx_slot_id(
+        const EaxEaxCall& eax_call);
+
+    void eax_defer_distance_factor(
+        const EaxEaxCall& eax_call);
+
+    void eax_defer_air_absorption_hf(
+        const EaxEaxCall& eax_call);
+
+    void eax_defer_hf_reference(
+        const EaxEaxCall& eax_call);
+
+    void eax_set_speaker_config(
+        const EaxEaxCall& eax_call);
+
+    void eax_set_session(
+        const EaxEaxCall& eax_call);
+
+    void eax_defer_macro_fx_factor(
+        const EaxEaxCall& eax_call);
+
+    void eax_set(
+        const EaxEaxCall& eax_call);
+
+    void eax_apply_deferred();
+#endif // ALSOFT_EAX
 };
 
 #define SETERR_RETURN(ctx, err, retval, ...) do {                             \
@@ -178,5 +547,22 @@ void UpdateContextProps(ALCcontext *context);
 
 
 extern bool TrapALError;
+
+
+#if ALSOFT_EAX
+AL_API ALenum AL_APIENTRY EAXSet(
+	const GUID* property_set_id,
+	ALuint property_id,
+	ALuint property_source_id,
+	ALvoid* property_value,
+	ALuint property_value_size) noexcept;
+
+AL_API ALenum AL_APIENTRY EAXGet(
+	const GUID* property_set_id,
+	ALuint property_id,
+	ALuint property_source_id,
+	ALvoid* property_value,
+	ALuint property_value_size) noexcept;
+#endif // ALSOFT_EAX
 
 #endif /* ALC_CONTEXT_H */

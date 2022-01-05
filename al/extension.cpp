@@ -33,18 +33,13 @@
 #include "opthelpers.h"
 
 #if ALSOFT_EAX
-#include "eax_al_api.h"
 #include "eax_globals.h"
+#include "eax_x_ram.h"
 #endif // ALSOFT_EAX
-
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 START_API_FUNC
 {
-#if ALSOFT_EAX
-    {
-#endif // ALSOFT_EAX
-
     ContextRef context{GetContextRef()};
     if(unlikely(!context)) return AL_FALSE;
 
@@ -52,6 +47,22 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
 
     size_t len{strlen(extName)};
+#if ALSOFT_EAX
+    if (al::strncasecmp(eax_v2_0_ext_name, extName, len) == 0 ||
+        al::strncasecmp(eax_v3_0_ext_name, extName, len) == 0 ||
+        al::strncasecmp(eax_v4_0_ext_name, extName, len) == 0 ||
+        al::strncasecmp(eax_v5_0_ext_name, extName, len) == 0)
+    {
+        const auto is_present = eax_g_is_enabled && context->eax_is_capable();
+        return is_present ? AL_TRUE : AL_FALSE;
+    }
+
+    if (al::strncasecmp(eax_x_ram_ext_name, extName, len) == 0)
+    {
+        const auto is_present = eax_g_is_enabled;
+        return is_present ? AL_TRUE : AL_FALSE;
+    }
+#endif // ALSOFT_EAX
     const char *ptr{context->mExtensionList};
     while(ptr && *ptr)
     {
@@ -66,16 +77,6 @@ START_API_FUNC
         }
     }
 
-#if ALSOFT_EAX
-    }
-
-    if (!eax::g_is_disable)
-    {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        return eax::g_al_api.on_alIsExtensionPresent(extName);
-    }
-    else
-#endif // ALSOFT_EAX
     return AL_FALSE;
 }
 END_API_FUNC
@@ -85,24 +86,76 @@ AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 START_API_FUNC
 {
     if(!funcName) return nullptr;
-
 #if ALSOFT_EAX
-    ::ALvoid* alc_address = nullptr;
-
+    if (al::strcasecmp(funcName, eax_eax_set_func_name) == 0)
     {
-        alc_address = alcGetProcAddress(nullptr, funcName);
+        if (!eax_g_is_enabled)
+        {
+            return nullptr;
+        }
+
+        ContextRef context{GetContextRef()};
+
+        if (!context || !context->eax_is_capable())
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<ALvoid*>(EAXSet);
     }
 
-    if (!eax::g_is_disable && !alc_address)
+    if (al::strcasecmp(funcName, eax_eax_get_func_name) == 0)
     {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        alc_address = eax::g_al_api.on_alGetProcAddress(funcName);
+        if (!eax_g_is_enabled)
+        {
+            return nullptr;
+        }
+
+        ContextRef context{GetContextRef()};
+
+        if (!context || !context->eax_is_capable())
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<ALvoid*>(EAXGet);
     }
 
-    return alc_address;
-#else
-    return alcGetProcAddress(nullptr, funcName);
+    if (al::strcasecmp(funcName, eax_eax_set_buffer_mode_func_name) == 0)
+    {
+        if (!eax_g_is_enabled)
+        {
+            return nullptr;
+        }
+
+        ContextRef context{GetContextRef()};
+
+        if (!context)
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<ALvoid*>(EAXSetBufferMode);
+    }
+
+    if (al::strcasecmp(funcName, eax_eax_get_buffer_mode_func_name) == 0)
+    {
+        if (!eax_g_is_enabled)
+        {
+            return nullptr;
+        }
+
+        ContextRef context{GetContextRef()};
+
+        if (!context)
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<ALvoid*>(EAXGetBufferMode);
+    }
 #endif // ALSOFT_EAX
+    return alcGetProcAddress(nullptr, funcName);
 }
 END_API_FUNC
 
@@ -110,6 +163,34 @@ AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 START_API_FUNC
 {
     if(!enumName) return static_cast<ALenum>(0);
+#if ALSOFT_EAX
+    if (eax_g_is_enabled)
+    {
+        struct Descriptor
+        {
+            const char* name;
+            ALenum value;
+        }; // Descriptor
+
+        constexpr Descriptor descriptors[] =
+        {
+            Descriptor{AL_EAX_RAM_SIZE_NAME, AL_EAX_RAM_SIZE},
+            Descriptor{AL_EAX_RAM_FREE_NAME, AL_EAX_RAM_FREE},
+
+            Descriptor{AL_STORAGE_AUTOMATIC_NAME, AL_STORAGE_AUTOMATIC},
+            Descriptor{AL_STORAGE_HARDWARE_NAME, AL_STORAGE_HARDWARE},
+            Descriptor{AL_STORAGE_ACCESSIBLE_NAME, AL_STORAGE_ACCESSIBLE},
+        }; // descriptors
+
+        for (const auto& descriptor : descriptors)
+        {
+            if (strcmp(descriptor.name, enumName) == 0)
+            {
+                return descriptor.value;
+            }
+        }
+    }
+#endif // ALSOFT_EAX
     return alcGetEnumValue(nullptr, enumName);
 }
 END_API_FUNC

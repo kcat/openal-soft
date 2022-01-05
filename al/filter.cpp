@@ -45,6 +45,10 @@
 #include "opthelpers.h"
 #include "vector.h"
 
+#if ALSOFT_EAX
+#include "core/logging.h"
+#endif // ALSOFT_EAX
+
 
 namespace {
 
@@ -717,3 +721,80 @@ FilterSubList::~FilterSubList()
     al_free(Filters);
     Filters = nullptr;
 }
+
+
+#if ALSOFT_EAX
+EaxAlFilterDeleter::EaxAlFilterDeleter(
+    ALCcontext& context)
+    :
+    context_{&context}
+{
+}
+
+void EaxAlFilterDeleter::operator()(
+    ALfilter* filter)
+{
+    eax_delete_low_pass_filter(*context_, *filter);
+}
+
+EaxAlFilterUPtr eax_create_al_low_pass_filter(
+    ALCcontext& context)
+{
+#define EAX_PREFIX "[EAX_MAKE_LOW_PASS_FILTER] "
+
+    auto& device = *context.mALDevice;
+    std::lock_guard<std::mutex> filter_lock{device.FilterLock};
+
+    if (!EnsureFilters(&device, 1))
+    {
+        ERR(EAX_PREFIX "%s\n", "Failed to ensure.");
+        return nullptr;
+    }
+
+    auto filter = EaxAlFilterUPtr{AllocFilter(&device), EaxAlFilterDeleter{context}};
+
+    if (!filter)
+    {
+        ERR(EAX_PREFIX "%s\n", "Failed to allocate.");
+        return nullptr;
+    }
+
+    InitFilterParams(filter.get(), AL_FILTER_LOWPASS);
+
+    return filter;
+
+#undef EAX_PREFIX
+}
+
+void eax_delete_low_pass_filter(
+    ALCcontext& context,
+    ALfilter& filter)
+{
+    auto& device = *context.mALDevice;
+    std::lock_guard<std::mutex> filter_lock{device.FilterLock};
+
+    FreeFilter(&device, &filter);
+}
+
+void ALfilter::eax_set_low_pass_params(
+    ALCcontext& context,
+    const EaxAlLowPassParam& param)
+{
+#define EAX_PREFIX "[EAX_SET_LOW_PASS_FILTER_PARAMS] "
+
+    auto& device = *context.mALDevice;
+    std::lock_guard<std::mutex> filter_lock{device.FilterLock};
+
+    try
+    {
+        setParamf(AL_LOWPASS_GAIN, param.gain);
+        setParamf(AL_LOWPASS_GAINHF, param.gain_hf);
+    }
+    catch (const filter_exception &e)
+    {
+        ERR(EAX_PREFIX "%s\n", e.what());
+    }
+
+#undef EAX_PREFIX
+}
+#endif // ALSOFT_EAX

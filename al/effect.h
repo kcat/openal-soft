@@ -7,6 +7,12 @@
 #include "al/effects/effects.h"
 #include "alc/effects/base.h"
 
+#if ALSOFT_EAX
+#include <memory>
+
+#include "eax_effect.h"
+#endif // ALSOFT_EAX
+
 
 enum {
     EAXREVERB_EFFECT = 0,
@@ -51,10 +57,48 @@ struct ALeffect {
     ALuint id{0u};
 
     DISABLE_ALLOC()
+
+
+#if ALSOFT_EAX
+public:
+    EaxEffectUPtr eax_effect{};
+
+
+    void eax_initialize();
+#endif // ALSOFT_EAX
 };
 
 void InitEffect(ALeffect *effect);
 
 void LoadReverbPreset(const char *name, ALeffect *effect);
+
+#if ALSOFT_EAX
+class EaxAlEffectDeleter
+{
+public:
+    EaxAlEffectDeleter() noexcept = default;
+
+    EaxAlEffectDeleter(
+        ALCcontext& context) noexcept;
+
+    void operator()(
+        ALeffect* effect) const;
+
+
+private:
+    ALCcontext* context_{};
+}; // EaxAlEffectDeleter
+
+using EaxAlEffectUPtr = std::unique_ptr<ALeffect, EaxAlEffectDeleter>;
+
+
+EaxAlEffectUPtr eax_create_al_effect(
+    ALCcontext& context,
+    ALenum effect_type);
+
+void eax_al_delete_effect(
+    ALCcontext& context,
+    ALeffect& effect);
+#endif // ALSOFT_EAX
 
 #endif

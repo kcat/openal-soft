@@ -74,10 +74,9 @@
 #include "threads.h"
 
 #if ALSOFT_EAX
-#include "eax_al_api.h"
+#include "eax_exception.h"
 #include "eax_globals.h"
 #endif // ALSOFT_EAX
-
 
 namespace {
 
@@ -2395,12 +2394,6 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 START_API_FUNC
 {
-#if ALSOFT_EAX
-    const auto eax_n = n;
-
-    {
-#endif // ALSOFT_EAX
-
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -2426,37 +2419,59 @@ START_API_FUNC
     {
         ALsource *source{AllocSource(context.get())};
         sources[0] = source->id;
+
+#if ALSOFT_EAX
+        if (context->has_eax())
+        {
+            std::unique_lock<std::mutex> prop_lock{context->mPropLock};
+            context->eax_initialize_source(*source);
+        }
+#endif // ALSOFT_EAX
     }
     else
     {
+#if ALSOFT_EAX
+        auto eax_sources = al::vector<ALsource*>{};
+
+        if (context->has_eax())
+        {
+            eax_sources.reserve(static_cast<ALuint>(n));
+        }
+#endif // ALSOFT_EAX
+
         al::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
             ALsource *source{AllocSource(context.get())};
             ids.emplace_back(source->id);
-        } while(--n);
-        std::copy(ids.cbegin(), ids.cend(), sources);
-    }
 
 #if ALSOFT_EAX
-    }
-
-    if (!eax::g_is_disable)
-    {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        eax::g_al_api.on_alGenSources(eax_n, sources);
-    }
+            if (context->has_eax())
+            {
+                eax_sources.emplace_back(source);
+            }
 #endif // ALSOFT_EAX
+        } while(--n);
+        std::copy(ids.cbegin(), ids.cend(), sources);
+
+#if ALSOFT_EAX
+        if (context->has_eax())
+        {
+            std::unique_lock<std::mutex> prop_lock{context->mPropLock};
+
+            for (auto& eax_source : eax_sources)
+            {
+                context->eax_initialize_source(*eax_source);
+            }
+        }
+#endif // ALSOFT_EAX
+    }
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
-#if ALSOFT_EAX
-    {
-#endif // ALSOFT_EAX
-
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
@@ -2484,16 +2499,6 @@ START_API_FUNC
         if(src) FreeSource(context.get(), src);
     };
     std::for_each(sources, sources_end, delete_source);
-
-#if ALSOFT_EAX
-    }
-
-    if (!eax::g_is_disable)
-    {
-        const auto eax_lock = eax::g_al_api.get_lock();
-        eax::g_al_api.on_alDeleteSources(n, sources);
-    }
-#endif // ALSOFT_EAX
 }
 END_API_FUNC
 
@@ -3591,6 +3596,10 @@ ALsource::ALsource()
 
 ALsource::~ALsource()
 {
+#if ALSOFT_EAX
+    eax_uninitialize();
+#endif // ALSOFT_EAX
+
     for(auto &item : mQueue)
     {
         if(ALbuffer *buffer{item.mBuffer})
@@ -3633,3 +3642,2447 @@ SourceSubList::~SourceSubList()
     al_free(Sources);
     Sources = nullptr;
 }
+
+
+#if ALSOFT_EAX
+class EaxSourceException :
+    public EaxException
+{
+public:
+    explicit EaxSourceException(
+        const char* message)
+        :
+        EaxException{"EAX_SOURCE", message}
+    {
+    }
+}; // EaxSourceException
+
+
+class EaxSourceActiveFxSlotsException :
+    public EaxException
+{
+public:
+    explicit EaxSourceActiveFxSlotsException(
+        const char* message)
+        :
+        EaxException{"EAX_SOURCE_ACTIVE_FX_SLOTS", message}
+    {
+    }
+}; // EaxSourceActiveFxSlotsException
+
+
+class EaxSourceSendException :
+    public EaxException
+{
+public:
+    explicit EaxSourceSendException(
+        const char* message)
+        :
+        EaxException{"EAX_SOURCE_SEND", message}
+    {
+    }
+}; // EaxSourceSendException
+
+
+void ALsource::eax_initialize(
+    const EaxSourceInitParam& param) noexcept
+{
+    eax_validate_init_param(param);
+    eax_copy_init_param(param);
+    eax_set_defaults();
+    eax_initialize_fx_slots();
+
+    eax_d_ = eax_;
+}
+
+void ALsource::eax_uninitialize()
+{
+    if (!eax_al_context_)
+    {
+        return;
+    }
+
+    if (eax_al_context_->has_eax())
+    {
+        for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
+        {
+            eax_al_source_3i(
+                AL_AUXILIARY_SEND_FILTER,
+                AL_EFFECTSLOT_NULL,
+                static_cast<ALint>(i),
+                AL_FILTER_NULL
+            );
+        }
+    }
+
+    eax_al_context_ = nullptr;
+}
+
+void ALsource::eax_dispatch(
+    const EaxEaxCall& eax_call)
+{
+    if (eax_call.is_get())
+    {
+        eax_get(eax_call);
+    }
+    else
+    {
+        eax_set(eax_call);
+    }
+}
+
+void ALsource::eax_update_filters()
+{
+    eax_update_filters_internal();
+}
+
+void ALsource::eax_update(
+    EaxContextSharedDirtyFlags dirty_flags)
+{
+    if (dirty_flags.primary_fx_slot_id)
+    {
+        if (eax_uses_primary_id_)
+        {
+            eax_update_primary_fx_slot_id();
+        }
+    }
+
+    if (dirty_flags.air_absorption_hf)
+    {
+        eax_set_air_absorption_factor();
+    }
+}
+
+ALsource* ALsource::eax_lookup_source(
+    ALCcontext& al_context,
+    ALuint source_id) noexcept
+{
+    return LookupSource(&al_context, source_id);
+}
+
+[[noreturn]]
+void ALsource::eax_fail(
+    const char* message)
+{
+    throw EaxSourceException{message};
+}
+
+void ALsource::eax_validate_init_param(
+    const EaxSourceInitParam& param)
+{
+    if (!param.al_context)
+    {
+        eax_fail("Null context.");
+    }
+
+    if (!param.al_filter)
+    {
+        eax_fail("Null filter.");
+    }
+}
+
+void ALsource::eax_copy_init_param(
+    const EaxSourceInitParam& param)
+{
+    eax_al_context_ = param.al_context;
+    eax_al_filter_ = param.al_filter;
+}
+
+void ALsource::eax_set_source_defaults()
+{
+    eax_.source.lDirect = EAXSOURCE_DEFAULTDIRECT;
+    eax_.source.lDirectHF = EAXSOURCE_DEFAULTDIRECTHF;
+    eax_.source.lRoom = EAXSOURCE_DEFAULTROOM;
+    eax_.source.lRoomHF = EAXSOURCE_DEFAULTROOMHF;
+    eax_.source.lObstruction = EAXSOURCE_DEFAULTOBSTRUCTION;
+    eax_.source.flObstructionLFRatio = EAXSOURCE_DEFAULTOBSTRUCTIONLFRATIO;
+    eax_.source.lOcclusion = EAXSOURCE_DEFAULTOCCLUSION;
+    eax_.source.flOcclusionLFRatio = EAXSOURCE_DEFAULTOCCLUSIONLFRATIO;
+    eax_.source.flOcclusionRoomRatio = EAXSOURCE_DEFAULTOCCLUSIONROOMRATIO;
+    eax_.source.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
+    eax_.source.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
+    eax_.source.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
+    eax_.source.lOutsideVolumeHF = EAXSOURCE_DEFAULTOUTSIDEVOLUMEHF;
+    eax_.source.flDopplerFactor = EAXSOURCE_DEFAULTDOPPLERFACTOR;
+    eax_.source.flRolloffFactor = EAXSOURCE_DEFAULTROLLOFFFACTOR;
+    eax_.source.flRoomRolloffFactor = EAXSOURCE_DEFAULTROOMROLLOFFFACTOR;
+    eax_.source.flAirAbsorptionFactor = EAXSOURCE_DEFAULTAIRABSORPTIONFACTOR;
+    eax_.source.ulFlags = EAXSOURCE_DEFAULTFLAGS;
+}
+
+void ALsource::eax_set_active_fx_slots_defaults()
+{
+    eax_.active_fx_slots = EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID;
+}
+
+void ALsource::eax_set_send_defaults(
+    EAXSOURCEALLSENDPROPERTIES& eax_send)
+{
+    eax_send.guidReceivingFXSlotID = EAX_NULL_GUID;
+    eax_send.lSend = EAXSOURCE_DEFAULTSEND;
+    eax_send.lSendHF = EAXSOURCE_DEFAULTSENDHF;
+    eax_send.lOcclusion = EAXSOURCE_DEFAULTOCCLUSION;
+    eax_send.flOcclusionLFRatio = EAXSOURCE_DEFAULTOCCLUSIONLFRATIO;
+    eax_send.flOcclusionRoomRatio = EAXSOURCE_DEFAULTOCCLUSIONROOMRATIO;
+    eax_send.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
+    eax_send.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
+    eax_send.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
+}
+
+void ALsource::eax_set_sends_defaults()
+{
+    for (auto& eax_send : eax_.sends)
+    {
+        eax_set_send_defaults(eax_send);
+    }
+}
+
+void ALsource::eax_set_speaker_levels_defaults()
+{
+    std::fill(eax_.speaker_levels.begin(), eax_.speaker_levels.end(), EAXSOURCE_DEFAULTSPEAKERLEVEL);
+}
+
+void ALsource::eax_set_defaults()
+{
+    eax_set_source_defaults();
+    eax_set_active_fx_slots_defaults();
+    eax_set_sends_defaults();
+    eax_set_speaker_levels_defaults();
+}
+
+float ALsource::eax_calculate_dst_occlusion_mb(
+    long src_occlusion_mb,
+    float path_ratio,
+    float lf_ratio) noexcept
+{
+    const auto ratio_1 = path_ratio + lf_ratio - 1.0F;
+    const auto ratio_2 = path_ratio * lf_ratio;
+    const auto ratio = (ratio_2 > ratio_1) ? ratio_2 : ratio_1;
+    const auto dst_occlustion_mb = static_cast<float>(src_occlusion_mb) * ratio;
+
+    return dst_occlustion_mb;
+}
+
+EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
+{
+    auto gain_mb =
+        static_cast<float>(eax_.source.lDirect) +
+
+        (static_cast<float>(eax_.source.lObstruction) * eax_.source.flObstructionLFRatio) +
+
+        eax_calculate_dst_occlusion_mb(
+            eax_.source.lOcclusion,
+            eax_.source.flOcclusionDirectRatio,
+            eax_.source.flOcclusionLFRatio);
+
+    auto gain_hf_mb =
+        static_cast<float>(eax_.source.lDirectHF) +
+
+        static_cast<float>(eax_.source.lObstruction) +
+
+        (static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionDirectRatio);
+
+    for (auto i = std::size_t{}; i < EAX_MAX_FXSLOTS; ++i)
+    {
+        if (eax_active_fx_slots_[i])
+        {
+            const auto& send = eax_.sends[i];
+
+            gain_mb += eax_calculate_dst_occlusion_mb(
+                send.lOcclusion,
+                send.flOcclusionDirectRatio,
+                send.flOcclusionLFRatio);
+
+            gain_hf_mb += static_cast<float>(send.lOcclusion) * send.flOcclusionDirectRatio;
+        }
+    }
+
+    const auto max_gain = eax_al_context_->eax_get_max_filter_gain();
+
+    const auto al_low_pass_param = EaxAlLowPassParam
+    {
+        clamp(level_mb_to_gain(gain_mb), 0.0F, max_gain),
+        clamp(level_mb_to_gain(gain_hf_mb), 0.0F, max_gain)
+    };
+
+    return al_low_pass_param;
+}
+
+EaxAlLowPassParam ALsource::eax_create_room_filter_param(
+    const ALeffectslot& fx_slot,
+    const EAXSOURCEALLSENDPROPERTIES& send) const noexcept
+{
+    const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
+
+    const auto gain_mb =
+        static_cast<float>(
+            eax_.source.lRoom +
+            send.lSend) +
+
+        eax_calculate_dst_occlusion_mb(
+            eax_.source.lOcclusion,
+            eax_.source.flOcclusionRoomRatio,
+            eax_.source.flOcclusionLFRatio
+        ) +
+
+        eax_calculate_dst_occlusion_mb(
+            send.lOcclusion,
+            send.flOcclusionRoomRatio,
+            send.flOcclusionLFRatio
+        ) +
+
+        (static_cast<float>(eax_.source.lExclusion) * eax_.source.flExclusionLFRatio) +
+        (static_cast<float>(send.lExclusion) * send.flExclusionLFRatio) +
+
+        0.0F;
+
+    const auto gain_hf_mb =
+        static_cast<float>(
+            eax_.source.lRoomHF +
+            send.lSendHF) +
+
+        (static_cast<float>(fx_slot_eax.lOcclusion + eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio) +
+        (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio) +
+
+        static_cast<float>(
+            eax_.source.lExclusion +
+            send.lExclusion) +
+
+        0.0F;
+
+    const auto max_gain = eax_al_context_->eax_get_max_filter_gain();
+
+    const auto al_low_pass_param = EaxAlLowPassParam
+    {
+        clamp(level_mb_to_gain(gain_mb), 0.0F, max_gain),
+        clamp(level_mb_to_gain(gain_hf_mb), 0.0F, max_gain)
+    };
+
+    return al_low_pass_param;
+}
+
+void ALsource::eax_set_al_filter_parameters(
+    const EaxAlLowPassParam& al_low_pass_param) const noexcept
+{
+    eax_al_filter_->eax_set_low_pass_params(*eax_al_context_, al_low_pass_param);
+}
+
+void ALsource::eax_set_fx_slots()
+{
+    eax_uses_primary_id_ = false;
+    eax_has_active_fx_slots_ = false;
+
+    for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
+    {
+        const auto& eax_active_fx_slot_id = eax_.active_fx_slots.guidActiveFXSlots[i];
+
+        auto fx_slot_index = EaxFxSlotIndex{};
+
+        if (eax_active_fx_slot_id == EAX_PrimaryFXSlotID)
+        {
+            eax_uses_primary_id_ = true;
+            fx_slot_index = eax_al_context_->eax_get_primary_fx_slot_index();
+        }
+        else
+        {
+            fx_slot_index = eax_active_fx_slot_id;
+        }
+
+        if (fx_slot_index.has_value())
+        {
+            eax_has_active_fx_slots_ = true;
+            eax_active_fx_slots_[fx_slot_index] = true;
+        }
+    }
+
+    for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
+    {
+        if (!eax_active_fx_slots_[static_cast<std::size_t>(i)])
+        {
+            eax_al_source_3i(
+                AL_AUXILIARY_SEND_FILTER,
+                AL_EFFECTSLOT_NULL,
+                i,
+                AL_FILTER_NULL);
+        }
+    }
+}
+
+void ALsource::eax_initialize_fx_slots()
+{
+    eax_set_fx_slots();
+    eax_update_filters_internal();
+}
+
+void ALsource::eax_update_direct_filter_internal()
+{
+    const auto& direct_param = eax_create_direct_filter_param();
+    eax_set_al_filter_parameters(direct_param);
+
+    eax_al_source_i(
+        AL_DIRECT_FILTER,
+        static_cast<ALint>(eax_al_filter_->id));
+}
+
+void ALsource::eax_update_room_filters_internal()
+{
+    if (!eax_has_active_fx_slots_)
+    {
+        return;
+    }
+
+    for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
+    {
+        if (eax_active_fx_slots_[static_cast<std::size_t>(i)])
+        {
+            const auto& fx_slot = eax_al_context_->eax_get_fx_slot(static_cast<std::size_t>(i));
+            const auto& send = eax_.sends[static_cast<std::size_t>(i)];
+            const auto& room_param = eax_create_room_filter_param(fx_slot, send);
+
+            eax_set_al_filter_parameters(room_param);
+
+            eax_al_source_3i(
+                AL_AUXILIARY_SEND_FILTER,
+                static_cast<ALint>(fx_slot.id),
+                i,
+                static_cast<ALint>(eax_al_filter_->id)
+            );
+        }
+    }
+}
+
+void ALsource::eax_update_filters_internal()
+{
+    eax_update_direct_filter_internal();
+    eax_update_room_filters_internal();
+}
+
+void ALsource::eax_update_primary_fx_slot_id()
+{
+    const auto& previous_primary_fx_slot_index = eax_al_context_->eax_get_previous_primary_fx_slot_index();
+    const auto& primary_fx_slot_index = eax_al_context_->eax_get_primary_fx_slot_index();
+
+    if (previous_primary_fx_slot_index == primary_fx_slot_index)
+    {
+        return;
+    }
+
+    if (previous_primary_fx_slot_index.has_value())
+    {
+        const auto fx_slot_index = previous_primary_fx_slot_index.get();
+        eax_active_fx_slots_[fx_slot_index] = false;
+
+        eax_al_source_3i(
+            AL_AUXILIARY_SEND_FILTER,
+            AL_EFFECTSLOT_NULL,
+            static_cast<ALint>(fx_slot_index),
+            static_cast<ALint>(AL_FILTER_NULL));
+    }
+
+    if (primary_fx_slot_index.has_value())
+    {
+        const auto fx_slot_index = primary_fx_slot_index.get();
+        eax_active_fx_slots_[fx_slot_index] = true;
+
+        const auto& fx_slot = eax_al_context_->eax_get_fx_slot(fx_slot_index);
+        const auto& send = eax_.sends[fx_slot_index];
+        const auto& room_param = eax_create_room_filter_param(fx_slot, send);
+
+        eax_set_al_filter_parameters(room_param);
+
+        eax_al_source_3i(
+            AL_AUXILIARY_SEND_FILTER,
+            static_cast<ALint>(fx_slot.id),
+            static_cast<ALint>(fx_slot_index),
+            static_cast<ALint>(eax_al_filter_->id));
+    }
+
+    eax_has_active_fx_slots_ = std::any_of(
+        eax_active_fx_slots_.cbegin(),
+        eax_active_fx_slots_.cend(),
+        [](const auto& item)
+        {
+            return item;
+        }
+    );
+}
+
+void ALsource::eax_defer_active_fx_slots(
+    const EaxEaxCall& eax_call)
+{
+    const auto active_fx_slots_span =
+        eax_call.get_values<EaxSourceActiveFxSlotsException, const GUID>();
+
+    const auto fx_slot_count = active_fx_slots_span.size();
+
+    if (fx_slot_count <= 0 || fx_slot_count > EAX_MAX_FXSLOTS)
+    {
+        throw EaxSourceActiveFxSlotsException{"Count out of range."};
+    }
+
+    for (auto i = std::size_t{}; i < fx_slot_count; ++i)
+    {
+        const auto& fx_slot_guid = active_fx_slots_span[i];
+
+        if (fx_slot_guid != EAX_NULL_GUID &&
+            fx_slot_guid != EAX_PrimaryFXSlotID &&
+            fx_slot_guid != EAXPROPERTYID_EAX40_FXSlot0 &&
+            fx_slot_guid != EAXPROPERTYID_EAX50_FXSlot0 &&
+            fx_slot_guid != EAXPROPERTYID_EAX40_FXSlot1 &&
+            fx_slot_guid != EAXPROPERTYID_EAX50_FXSlot1 &&
+            fx_slot_guid != EAXPROPERTYID_EAX40_FXSlot2 &&
+            fx_slot_guid != EAXPROPERTYID_EAX50_FXSlot2 &&
+            fx_slot_guid != EAXPROPERTYID_EAX40_FXSlot3 &&
+            fx_slot_guid != EAXPROPERTYID_EAX50_FXSlot3)
+        {
+            throw EaxSourceActiveFxSlotsException{"Unsupported GUID."};
+        }
+    }
+
+    for (auto i = std::size_t{}; i < fx_slot_count; ++i)
+    {
+        eax_d_.active_fx_slots.guidActiveFXSlots[i] = active_fx_slots_span[i];
+    }
+
+    for (auto i = fx_slot_count; i < EAX_MAX_FXSLOTS; ++i)
+    {
+        eax_d_.active_fx_slots.guidActiveFXSlots[i] = EAX_NULL_GUID;
+    }
+
+    eax_are_active_fx_slots_dirty_ = (eax_d_.active_fx_slots != eax_.active_fx_slots);
+}
+
+
+const char* ALsource::eax_get_exclusion_name() noexcept
+{
+    return "Exclusion";
+}
+
+const char* ALsource::eax_get_exclusion_lf_ratio_name() noexcept
+{
+    return "Exclusion LF Ratio";
+}
+
+const char* ALsource::eax_get_occlusion_name() noexcept
+{
+    return "Occlusion";
+}
+
+const char* ALsource::eax_get_occlusion_lf_ratio_name() noexcept
+{
+    return "Occlusion LF Ratio";
+}
+
+const char* ALsource::eax_get_occlusion_direct_ratio_name() noexcept
+{
+    return "Occlusion Direct Ratio";
+}
+
+const char* ALsource::eax_get_occlusion_room_ratio_name() noexcept
+{
+    return "Occlusion Room Ratio";
+}
+
+
+void ALsource::eax_validate_send_receiving_fx_slot_guid(
+    const GUID& guidReceivingFXSlotID)
+{
+    if (guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot2 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot2 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot3 &&
+        guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot3)
+    {
+        throw EaxSourceSendException{"Unsupported receiving FX slot GUID."};
+    }
+}
+
+void ALsource::eax_validate_send_send(
+    long lSend)
+{
+    eax_validate_range<EaxSourceSendException>(
+        "Send",
+        lSend,
+        EAXSOURCE_MINSEND,
+        EAXSOURCE_MAXSEND);
+}
+
+void ALsource::eax_validate_send_send_hf(
+    long lSendHF)
+{
+    eax_validate_range<EaxSourceSendException>(
+        "Send HF",
+        lSendHF,
+        EAXSOURCE_MINSENDHF,
+        EAXSOURCE_MAXSENDHF);
+}
+
+void ALsource::eax_validate_send_occlusion(
+    long lOcclusion)
+{
+    eax_validate_range<EaxSourceSendException>(
+        eax_get_occlusion_name(),
+        lOcclusion,
+        EAXSOURCE_MINOCCLUSION,
+        EAXSOURCE_MAXOCCLUSION);
+}
+
+void ALsource::eax_validate_send_occlusion_lf_ratio(
+    float flOcclusionLFRatio)
+{
+    eax_validate_range<EaxSourceSendException>(
+        eax_get_occlusion_lf_ratio_name(),
+        flOcclusionLFRatio,
+        EAXSOURCE_MINOCCLUSIONLFRATIO,
+        EAXSOURCE_MAXOCCLUSIONLFRATIO);
+}
+
+void ALsource::eax_validate_send_occlusion_room_ratio(
+    float flOcclusionRoomRatio)
+{
+    eax_validate_range<EaxSourceSendException>(
+        eax_get_occlusion_room_ratio_name(),
+        flOcclusionRoomRatio,
+        EAXSOURCE_MINOCCLUSIONROOMRATIO,
+        EAXSOURCE_MAXOCCLUSIONROOMRATIO);
+}
+
+void ALsource::eax_validate_send_occlusion_direct_ratio(
+    float flOcclusionDirectRatio)
+{
+    eax_validate_range<EaxSourceSendException>(
+        eax_get_occlusion_direct_ratio_name(),
+        flOcclusionDirectRatio,
+        EAXSOURCE_MINOCCLUSIONDIRECTRATIO,
+        EAXSOURCE_MAXOCCLUSIONDIRECTRATIO);
+}
+
+void ALsource::eax_validate_send_exclusion(
+    long lExclusion)
+{
+    eax_validate_range<EaxSourceSendException>(
+        eax_get_exclusion_name(),
+        lExclusion,
+        EAXSOURCE_MINEXCLUSION,
+        EAXSOURCE_MAXEXCLUSION);
+}
+
+void ALsource::eax_validate_send_exclusion_lf_ratio(
+    float flExclusionLFRatio)
+{
+    eax_validate_range<EaxSourceSendException>(
+        eax_get_exclusion_lf_ratio_name(),
+        flExclusionLFRatio,
+        EAXSOURCE_MINEXCLUSIONLFRATIO,
+        EAXSOURCE_MAXEXCLUSIONLFRATIO);
+}
+
+void ALsource::eax_validate_send(
+    const EAXSOURCESENDPROPERTIES& all)
+{
+    eax_validate_send_receiving_fx_slot_guid(all.guidReceivingFXSlotID);
+    eax_validate_send_send(all.lSend);
+    eax_validate_send_send_hf(all.lSendHF);
+}
+
+void ALsource::eax_validate_send_exclusion_all(
+    const EAXSOURCEEXCLUSIONSENDPROPERTIES& all)
+{
+    eax_validate_send_receiving_fx_slot_guid(all.guidReceivingFXSlotID);
+    eax_validate_send_exclusion(all.lExclusion);
+    eax_validate_send_exclusion_lf_ratio(all.flExclusionLFRatio);
+}
+
+void ALsource::eax_validate_send_occlusion_all(
+    const EAXSOURCEOCCLUSIONSENDPROPERTIES& all)
+{
+    eax_validate_send_receiving_fx_slot_guid(all.guidReceivingFXSlotID);
+    eax_validate_send_occlusion(all.lOcclusion);
+    eax_validate_send_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_validate_send_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_validate_send_occlusion_direct_ratio(all.flOcclusionDirectRatio);
+}
+
+void ALsource::eax_validate_send_all(
+    const EAXSOURCEALLSENDPROPERTIES& all)
+{
+    eax_validate_send_receiving_fx_slot_guid(all.guidReceivingFXSlotID);
+    eax_validate_send_send(all.lSend);
+    eax_validate_send_send_hf(all.lSendHF);
+    eax_validate_send_occlusion(all.lOcclusion);
+    eax_validate_send_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_validate_send_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_validate_send_occlusion_direct_ratio(all.flOcclusionDirectRatio);
+    eax_validate_send_exclusion(all.lExclusion);
+    eax_validate_send_exclusion_lf_ratio(all.flExclusionLFRatio);
+}
+
+EaxFxSlotIndexValue ALsource::eax_get_send_index(
+    const GUID& send_guid)
+{
+    if (false)
+    {
+    }
+    else if (send_guid == EAXPROPERTYID_EAX40_FXSlot0 || send_guid == EAXPROPERTYID_EAX50_FXSlot0)
+    {
+        return 0;
+    }
+    else if (send_guid == EAXPROPERTYID_EAX40_FXSlot1 || send_guid == EAXPROPERTYID_EAX50_FXSlot1)
+    {
+        return 1;
+    }
+    else if (send_guid == EAXPROPERTYID_EAX40_FXSlot2 || send_guid == EAXPROPERTYID_EAX50_FXSlot2)
+    {
+        return 2;
+    }
+    else if (send_guid == EAXPROPERTYID_EAX40_FXSlot3 || send_guid == EAXPROPERTYID_EAX50_FXSlot3)
+    {
+        return 3;
+    }
+    else
+    {
+        throw EaxSourceSendException{"Unsupported receiving FX slot GUID."};
+    }
+}
+
+void ALsource::eax_defer_send_send(
+    long lSend,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].lSend = lSend;
+
+    eax_sends_dirty_flags_.sends[index].lSend =
+        (eax_.sends[index].lSend != eax_d_.sends[index].lSend);
+}
+
+void ALsource::eax_defer_send_send_hf(
+    long lSendHF,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].lSendHF = lSendHF;
+
+    eax_sends_dirty_flags_.sends[index].lSendHF =
+        (eax_.sends[index].lSendHF != eax_d_.sends[index].lSendHF);
+}
+
+void ALsource::eax_defer_send_occlusion(
+    long lOcclusion,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].lOcclusion = lOcclusion;
+
+    eax_sends_dirty_flags_.sends[index].lOcclusion =
+        (eax_.sends[index].lOcclusion != eax_d_.sends[index].lOcclusion);
+}
+
+void ALsource::eax_defer_send_occlusion_lf_ratio(
+    float flOcclusionLFRatio,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].flOcclusionLFRatio = flOcclusionLFRatio;
+
+    eax_sends_dirty_flags_.sends[index].flOcclusionLFRatio =
+        (eax_.sends[index].flOcclusionLFRatio != eax_d_.sends[index].flOcclusionLFRatio);
+}
+
+void ALsource::eax_defer_send_occlusion_room_ratio(
+    float flOcclusionRoomRatio,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].flOcclusionRoomRatio = flOcclusionRoomRatio;
+
+    eax_sends_dirty_flags_.sends[index].flOcclusionRoomRatio =
+        (eax_.sends[index].flOcclusionRoomRatio != eax_d_.sends[index].flOcclusionRoomRatio);
+}
+
+void ALsource::eax_defer_send_occlusion_direct_ratio(
+    float flOcclusionDirectRatio,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].flOcclusionDirectRatio = flOcclusionDirectRatio;
+
+    eax_sends_dirty_flags_.sends[index].flOcclusionDirectRatio =
+        (eax_.sends[index].flOcclusionDirectRatio != eax_d_.sends[index].flOcclusionDirectRatio);
+}
+
+void ALsource::eax_defer_send_exclusion(
+    long lExclusion,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].lExclusion = lExclusion;
+
+    eax_sends_dirty_flags_.sends[index].lExclusion =
+        (eax_.sends[index].lExclusion != eax_d_.sends[index].lExclusion);
+}
+
+void ALsource::eax_defer_send_exclusion_lf_ratio(
+    float flExclusionLFRatio,
+    EaxFxSlotIndexValue index)
+{
+    eax_d_.sends[index].flExclusionLFRatio = flExclusionLFRatio;
+
+    eax_sends_dirty_flags_.sends[index].flExclusionLFRatio =
+        (eax_.sends[index].flExclusionLFRatio != eax_d_.sends[index].flExclusionLFRatio);
+}
+
+void ALsource::eax_defer_send(
+    const EAXSOURCESENDPROPERTIES& all,
+    EaxFxSlotIndexValue index)
+{
+    eax_defer_send_send(all.lSend, index);
+    eax_defer_send_send_hf(all.lSendHF, index);
+}
+
+void ALsource::eax_defer_send_exclusion_all(
+    const EAXSOURCEEXCLUSIONSENDPROPERTIES& all,
+    EaxFxSlotIndexValue index)
+{
+    eax_defer_send_exclusion(all.lExclusion, index);
+    eax_defer_send_exclusion_lf_ratio(all.flExclusionLFRatio, index);
+}
+
+void ALsource::eax_defer_send_occlusion_all(
+    const EAXSOURCEOCCLUSIONSENDPROPERTIES& all,
+    EaxFxSlotIndexValue index)
+{
+    eax_defer_send_occlusion(all.lOcclusion, index);
+    eax_defer_send_occlusion_lf_ratio(all.flOcclusionLFRatio, index);
+    eax_defer_send_occlusion_room_ratio(all.flOcclusionRoomRatio, index);
+    eax_defer_send_occlusion_direct_ratio(all.flOcclusionDirectRatio, index);
+}
+
+void ALsource::eax_defer_send_all(
+    const EAXSOURCEALLSENDPROPERTIES& all,
+    EaxFxSlotIndexValue index)
+{
+    eax_defer_send_send(all.lSend, index);
+    eax_defer_send_send_hf(all.lSendHF, index);
+    eax_defer_send_occlusion(all.lOcclusion, index);
+    eax_defer_send_occlusion_lf_ratio(all.flOcclusionLFRatio, index);
+    eax_defer_send_occlusion_room_ratio(all.flOcclusionRoomRatio, index);
+    eax_defer_send_occlusion_direct_ratio(all.flOcclusionDirectRatio, index);
+    eax_defer_send_exclusion(all.lExclusion, index);
+    eax_defer_send_exclusion_lf_ratio(all.flExclusionLFRatio, index);
+}
+
+void ALsource::eax_defer_send(
+    const EaxEaxCall& eax_call)
+{
+    const auto eax_all_span =
+        eax_call.get_values<EaxSourceException, const EAXSOURCESENDPROPERTIES>();
+
+    const auto count = eax_all_span.size();
+
+    if (count <= 0 || count > EAX_MAX_FXSLOTS)
+    {
+        throw EaxSourceSendException{"Send count out of range."};
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        eax_validate_send(all);
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        const auto send_index = eax_get_send_index(all.guidReceivingFXSlotID);
+        eax_defer_send(all, send_index);
+    }
+}
+
+void ALsource::eax_defer_send_exclusion_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto eax_all_span =
+        eax_call.get_values<EaxSourceException, const EAXSOURCEEXCLUSIONSENDPROPERTIES>();
+
+    const auto count = eax_all_span.size();
+
+    if (count <= 0 || count > EAX_MAX_FXSLOTS)
+    {
+        throw EaxSourceSendException{"Send exclusion all count out of range."};
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        eax_validate_send_exclusion_all(all);
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        const auto send_index = eax_get_send_index(all.guidReceivingFXSlotID);
+        eax_defer_send_exclusion_all(all, send_index);
+    }
+}
+
+void ALsource::eax_defer_send_occlusion_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto eax_all_span =
+        eax_call.get_values<EaxSourceException, const EAXSOURCEOCCLUSIONSENDPROPERTIES>();
+
+    const auto count = eax_all_span.size();
+
+    if (count <= 0 || count > EAX_MAX_FXSLOTS)
+    {
+        throw EaxSourceSendException{"Send occlusion all count out of range."};
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        eax_validate_send_occlusion_all(all);
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        const auto send_index = eax_get_send_index(all.guidReceivingFXSlotID);
+        eax_defer_send_occlusion_all(all, send_index);
+    }
+}
+
+void ALsource::eax_defer_send_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto eax_all_span =
+        eax_call.get_values<EaxSourceException, const EAXSOURCEALLSENDPROPERTIES>();
+
+    const auto count = eax_all_span.size();
+
+    if (count <= 0 || count > EAX_MAX_FXSLOTS)
+    {
+        throw EaxSourceSendException{"Send all count out of range."};
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        eax_validate_send_all(all);
+    }
+
+    for (auto i = std::size_t{}; i < count; ++i)
+    {
+        const auto& all = eax_all_span[i];
+        const auto send_index = eax_get_send_index(all.guidReceivingFXSlotID);
+        eax_defer_send_all(all, send_index);
+    }
+}
+
+
+void ALsource::eax_validate_source_direct(
+    long direct)
+{
+    eax_validate_range<EaxSourceException>(
+        "Direct",
+        direct,
+        EAXSOURCE_MINDIRECT,
+        EAXSOURCE_MAXDIRECT);
+}
+
+void ALsource::eax_validate_source_direct_hf(
+    long direct_hf)
+{
+    eax_validate_range<EaxSourceException>(
+        "Direct HF",
+        direct_hf,
+        EAXSOURCE_MINDIRECTHF,
+        EAXSOURCE_MAXDIRECTHF);
+}
+
+void ALsource::eax_validate_source_room(
+    long room)
+{
+    eax_validate_range<EaxSourceException>(
+        "Room",
+        room,
+        EAXSOURCE_MINROOM,
+        EAXSOURCE_MAXROOM);
+}
+
+void ALsource::eax_validate_source_room_hf(
+    long room_hf)
+{
+    eax_validate_range<EaxSourceException>(
+        "Room HF",
+        room_hf,
+        EAXSOURCE_MINROOMHF,
+        EAXSOURCE_MAXROOMHF);
+}
+
+void ALsource::eax_validate_source_obstruction(
+    long obstruction)
+{
+    eax_validate_range<EaxSourceException>(
+        "Obstruction",
+        obstruction,
+        EAXSOURCE_MINOBSTRUCTION,
+        EAXSOURCE_MAXOBSTRUCTION);
+}
+
+void ALsource::eax_validate_source_obstruction_lf_ratio(
+    float obstruction_lf_ratio)
+{
+    eax_validate_range<EaxSourceException>(
+        "Obstruction LF Ratio",
+        obstruction_lf_ratio,
+        EAXSOURCE_MINOBSTRUCTIONLFRATIO,
+        EAXSOURCE_MAXOBSTRUCTIONLFRATIO);
+}
+
+void ALsource::eax_validate_source_occlusion(
+    long occlusion)
+{
+    eax_validate_range<EaxSourceException>(
+        eax_get_occlusion_name(),
+        occlusion,
+        EAXSOURCE_MINOCCLUSION,
+        EAXSOURCE_MAXOCCLUSION);
+}
+
+void ALsource::eax_validate_source_occlusion_lf_ratio(
+    float occlusion_lf_ratio)
+{
+    eax_validate_range<EaxSourceException>(
+        eax_get_occlusion_lf_ratio_name(),
+        occlusion_lf_ratio,
+        EAXSOURCE_MINOCCLUSIONLFRATIO,
+        EAXSOURCE_MAXOCCLUSIONLFRATIO);
+}
+
+void ALsource::eax_validate_source_occlusion_room_ratio(
+    float occlusion_room_ratio)
+{
+    eax_validate_range<EaxSourceException>(
+        eax_get_occlusion_room_ratio_name(),
+        occlusion_room_ratio,
+        EAXSOURCE_MINOCCLUSIONROOMRATIO,
+        EAXSOURCE_MAXOCCLUSIONROOMRATIO);
+}
+
+void ALsource::eax_validate_source_occlusion_direct_ratio(
+    float occlusion_direct_ratio)
+{
+    eax_validate_range<EaxSourceException>(
+        eax_get_occlusion_direct_ratio_name(),
+        occlusion_direct_ratio,
+        EAXSOURCE_MINOCCLUSIONDIRECTRATIO,
+        EAXSOURCE_MAXOCCLUSIONDIRECTRATIO);
+}
+
+void ALsource::eax_validate_source_exclusion(
+    long exclusion)
+{
+    eax_validate_range<EaxSourceException>(
+        eax_get_exclusion_name(),
+        exclusion,
+        EAXSOURCE_MINEXCLUSION,
+        EAXSOURCE_MAXEXCLUSION);
+}
+
+void ALsource::eax_validate_source_exclusion_lf_ratio(
+    float exclusion_lf_ratio)
+{
+    eax_validate_range<EaxSourceException>(
+        eax_get_exclusion_lf_ratio_name(),
+        exclusion_lf_ratio,
+        EAXSOURCE_MINEXCLUSIONLFRATIO,
+        EAXSOURCE_MAXEXCLUSIONLFRATIO);
+}
+
+void ALsource::eax_validate_source_outside_volume_hf(
+    long outside_volume_hf)
+{
+    eax_validate_range<EaxSourceException>(
+        "Outside Volume HF",
+        outside_volume_hf,
+        EAXSOURCE_MINOUTSIDEVOLUMEHF,
+        EAXSOURCE_MAXOUTSIDEVOLUMEHF);
+}
+
+void ALsource::eax_validate_source_doppler_factor(
+    float doppler_factor)
+{
+    eax_validate_range<EaxSourceException>(
+        "Doppler Factor",
+        doppler_factor,
+        EAXSOURCE_MINDOPPLERFACTOR,
+        EAXSOURCE_MAXDOPPLERFACTOR);
+}
+
+void ALsource::eax_validate_source_rolloff_factor(
+    float rolloff_factor)
+{
+    eax_validate_range<EaxSourceException>(
+        "Rolloff Factor",
+        rolloff_factor,
+        EAXSOURCE_MINROLLOFFFACTOR,
+        EAXSOURCE_MAXROLLOFFFACTOR);
+}
+
+void ALsource::eax_validate_source_room_rolloff_factor(
+    float room_rolloff_factor)
+{
+    eax_validate_range<EaxSourceException>(
+        "Room Rolloff Factor",
+        room_rolloff_factor,
+        EAXSOURCE_MINROOMROLLOFFFACTOR,
+        EAXSOURCE_MAXROOMROLLOFFFACTOR);
+}
+
+void ALsource::eax_validate_source_air_absorption_factor(
+    float air_absorption_factor)
+{
+    eax_validate_range<EaxSourceException>(
+        "Air Absorption Factor",
+        air_absorption_factor,
+        EAXSOURCE_MINAIRABSORPTIONFACTOR,
+        EAXSOURCE_MAXAIRABSORPTIONFACTOR);
+}
+
+void ALsource::eax_validate_source_flags(
+    unsigned long flags,
+    int eax_version)
+{
+    eax_validate_range<EaxSourceException>(
+        "Flags",
+        flags,
+        0UL,
+        ~((eax_version == 5) ? EAX50SOURCEFLAGS_RESERVED : EAX20SOURCEFLAGS_RESERVED));
+}
+
+void ALsource::eax_validate_source_macro_fx_factor(
+    float macro_fx_factor)
+{
+    eax_validate_range<EaxSourceException>(
+        "Macro FX Factor",
+        macro_fx_factor,
+        EAXSOURCE_MINMACROFXFACTOR,
+        EAXSOURCE_MAXMACROFXFACTOR);
+}
+
+void ALsource::eax_validate_source_2d_all(
+    const EAXSOURCE2DPROPERTIES& all,
+    int eax_version)
+{
+    eax_validate_source_direct(all.lDirect);
+    eax_validate_source_direct_hf(all.lDirectHF);
+    eax_validate_source_room(all.lRoom);
+    eax_validate_source_room_hf(all.lRoomHF);
+    eax_validate_source_flags(all.ulFlags, eax_version);
+}
+
+void ALsource::eax_validate_source_obstruction_all(
+    const EAXOBSTRUCTIONPROPERTIES& all)
+{
+    eax_validate_source_obstruction(all.lObstruction);
+    eax_validate_source_obstruction_lf_ratio(all.flObstructionLFRatio);
+}
+
+void ALsource::eax_validate_source_exclusion_all(
+    const EAXEXCLUSIONPROPERTIES& all)
+{
+    eax_validate_source_exclusion(all.lExclusion);
+    eax_validate_source_exclusion_lf_ratio(all.flExclusionLFRatio);
+}
+
+void ALsource::eax_validate_source_occlusion_all(
+    const EAXOCCLUSIONPROPERTIES& all)
+{
+    eax_validate_source_occlusion(all.lOcclusion);
+    eax_validate_source_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_validate_source_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_validate_source_occlusion_direct_ratio(all.flOcclusionDirectRatio);
+}
+
+void ALsource::eax_validate_source_all(
+    const EAX20BUFFERPROPERTIES& all,
+    int eax_version)
+{
+    eax_validate_source_direct(all.lDirect);
+    eax_validate_source_direct_hf(all.lDirectHF);
+    eax_validate_source_room(all.lRoom);
+    eax_validate_source_room_hf(all.lRoomHF);
+    eax_validate_source_obstruction(all.lObstruction);
+    eax_validate_source_obstruction_lf_ratio(all.flObstructionLFRatio);
+    eax_validate_source_occlusion(all.lOcclusion);
+    eax_validate_source_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_validate_source_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_validate_source_outside_volume_hf(all.lOutsideVolumeHF);
+    eax_validate_source_room_rolloff_factor(all.flRoomRolloffFactor);
+    eax_validate_source_air_absorption_factor(all.flAirAbsorptionFactor);
+    eax_validate_source_flags(all.dwFlags, eax_version);
+}
+
+void ALsource::eax_validate_source_all(
+    const EAX30SOURCEPROPERTIES& all,
+    int eax_version)
+{
+    eax_validate_source_direct(all.lDirect);
+    eax_validate_source_direct_hf(all.lDirectHF);
+    eax_validate_source_room(all.lRoom);
+    eax_validate_source_room_hf(all.lRoomHF);
+    eax_validate_source_obstruction(all.lObstruction);
+    eax_validate_source_obstruction_lf_ratio(all.flObstructionLFRatio);
+    eax_validate_source_occlusion(all.lOcclusion);
+    eax_validate_source_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_validate_source_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_validate_source_occlusion_direct_ratio(all.flOcclusionDirectRatio);
+    eax_validate_source_exclusion(all.lExclusion);
+    eax_validate_source_exclusion_lf_ratio(all.flExclusionLFRatio);
+    eax_validate_source_outside_volume_hf(all.lOutsideVolumeHF);
+    eax_validate_source_doppler_factor(all.flDopplerFactor);
+    eax_validate_source_rolloff_factor(all.flRolloffFactor);
+    eax_validate_source_room_rolloff_factor(all.flRoomRolloffFactor);
+    eax_validate_source_air_absorption_factor(all.flAirAbsorptionFactor);
+    eax_validate_source_flags(all.ulFlags, eax_version);
+}
+
+void ALsource::eax_validate_source_all(
+    const EAX50SOURCEPROPERTIES& all,
+    int eax_version)
+{
+    eax_validate_source_all(static_cast<EAX30SOURCEPROPERTIES>(all), eax_version);
+    eax_validate_source_macro_fx_factor(all.flMacroFXFactor);
+}
+
+void ALsource::eax_validate_source_speaker_id(
+    long speaker_id)
+{
+    eax_validate_range<EaxSourceException>(
+        "Speaker Id",
+        speaker_id,
+        static_cast<long>(EAXSPEAKER_FRONT_LEFT),
+        static_cast<long>(EAXSPEAKER_LOW_FREQUENCY));
+}
+
+void ALsource::eax_validate_source_speaker_level(
+    long speaker_level)
+{
+    eax_validate_range<EaxSourceException>(
+        "Speaker Level",
+        speaker_level,
+        EAXSOURCE_MINSPEAKERLEVEL,
+        EAXSOURCE_MAXSPEAKERLEVEL);
+}
+
+void ALsource::eax_validate_source_speaker_level_all(
+    const EAXSPEAKERLEVELPROPERTIES& all)
+{
+    eax_validate_source_speaker_id(all.lSpeakerID);
+    eax_validate_source_speaker_level(all.lLevel);
+}
+
+void ALsource::eax_defer_source_direct(
+    long lDirect)
+{
+    eax_d_.source.lDirect = lDirect;
+    eax_source_dirty_filter_flags_.lDirect = (eax_.source.lDirect != eax_d_.source.lDirect);
+}
+
+void ALsource::eax_defer_source_direct_hf(
+    long lDirectHF)
+{
+    eax_d_.source.lDirectHF = lDirectHF;
+    eax_source_dirty_filter_flags_.lDirectHF = (eax_.source.lDirectHF != eax_d_.source.lDirectHF);
+}
+
+void ALsource::eax_defer_source_room(
+    long lRoom)
+{
+    eax_d_.source.lRoom = lRoom;
+    eax_source_dirty_filter_flags_.lRoom = (eax_.source.lRoom != eax_d_.source.lRoom);
+}
+
+void ALsource::eax_defer_source_room_hf(
+    long lRoomHF)
+{
+    eax_d_.source.lRoomHF = lRoomHF;
+    eax_source_dirty_filter_flags_.lRoomHF = (eax_.source.lRoomHF != eax_d_.source.lRoomHF);
+}
+
+void ALsource::eax_defer_source_obstruction(
+    long lObstruction)
+{
+    eax_d_.source.lObstruction = lObstruction;
+    eax_source_dirty_filter_flags_.lObstruction = (eax_.source.lObstruction != eax_d_.source.lObstruction);
+}
+
+void ALsource::eax_defer_source_obstruction_lf_ratio(
+    float flObstructionLFRatio)
+{
+    eax_d_.source.flObstructionLFRatio = flObstructionLFRatio;
+    eax_source_dirty_filter_flags_.flObstructionLFRatio = (eax_.source.flObstructionLFRatio != eax_d_.source.flObstructionLFRatio);
+}
+
+void ALsource::eax_defer_source_occlusion(
+    long lOcclusion)
+{
+    eax_d_.source.lOcclusion = lOcclusion;
+    eax_source_dirty_filter_flags_.lOcclusion = (eax_.source.lOcclusion != eax_d_.source.lOcclusion);
+}
+
+void ALsource::eax_defer_source_occlusion_lf_ratio(
+    float flOcclusionLFRatio)
+{
+    eax_d_.source.flOcclusionLFRatio = flOcclusionLFRatio;
+    eax_source_dirty_filter_flags_.flOcclusionLFRatio = (eax_.source.flOcclusionLFRatio != eax_d_.source.flOcclusionLFRatio);
+}
+
+void ALsource::eax_defer_source_occlusion_room_ratio(
+    float flOcclusionRoomRatio)
+{
+    eax_d_.source.flOcclusionRoomRatio = flOcclusionRoomRatio;
+    eax_source_dirty_filter_flags_.flOcclusionRoomRatio = (eax_.source.flOcclusionRoomRatio != eax_d_.source.flOcclusionRoomRatio);
+}
+
+void ALsource::eax_defer_source_occlusion_direct_ratio(
+    float flOcclusionDirectRatio)
+{
+    eax_d_.source.flOcclusionDirectRatio = flOcclusionDirectRatio;
+    eax_source_dirty_filter_flags_.flOcclusionDirectRatio = (eax_.source.flOcclusionDirectRatio != eax_d_.source.flOcclusionDirectRatio);
+}
+
+void ALsource::eax_defer_source_exclusion(
+    long lExclusion)
+{
+    eax_d_.source.lExclusion = lExclusion;
+    eax_source_dirty_filter_flags_.lExclusion = (eax_.source.lExclusion != eax_d_.source.lExclusion);
+}
+
+void ALsource::eax_defer_source_exclusion_lf_ratio(
+    float flExclusionLFRatio)
+{
+    eax_d_.source.flExclusionLFRatio = flExclusionLFRatio;
+    eax_source_dirty_filter_flags_.flExclusionLFRatio = (eax_.source.flExclusionLFRatio != eax_d_.source.flExclusionLFRatio);
+}
+
+void ALsource::eax_defer_source_outside_volume_hf(
+    long lOutsideVolumeHF)
+{
+    eax_d_.source.lOutsideVolumeHF = lOutsideVolumeHF;
+    eax_source_dirty_misc_flags_.lOutsideVolumeHF = (eax_.source.lOutsideVolumeHF != eax_d_.source.lOutsideVolumeHF);
+}
+
+void ALsource::eax_defer_source_doppler_factor(
+    float flDopplerFactor)
+{
+    eax_d_.source.flDopplerFactor = flDopplerFactor;
+    eax_source_dirty_misc_flags_.flDopplerFactor = (eax_.source.flDopplerFactor != eax_d_.source.flDopplerFactor);
+}
+
+void ALsource::eax_defer_source_rolloff_factor(
+    float flRolloffFactor)
+{
+    eax_d_.source.flRolloffFactor = flRolloffFactor;
+    eax_source_dirty_misc_flags_.flRolloffFactor = (eax_.source.flRolloffFactor != eax_d_.source.flRolloffFactor);
+}
+
+void ALsource::eax_defer_source_room_rolloff_factor(
+    float flRoomRolloffFactor)
+{
+    eax_d_.source.flRoomRolloffFactor = flRoomRolloffFactor;
+    eax_source_dirty_misc_flags_.flRoomRolloffFactor = (eax_.source.flRoomRolloffFactor != eax_d_.source.flRoomRolloffFactor);
+}
+
+void ALsource::eax_defer_source_air_absorption_factor(
+    float flAirAbsorptionFactor)
+{
+    eax_d_.source.flAirAbsorptionFactor = flAirAbsorptionFactor;
+    eax_source_dirty_misc_flags_.flAirAbsorptionFactor = (eax_.source.flAirAbsorptionFactor != eax_d_.source.flAirAbsorptionFactor);
+}
+
+void ALsource::eax_defer_source_flags(
+    unsigned long ulFlags)
+{
+    eax_d_.source.ulFlags = ulFlags;
+    eax_source_dirty_misc_flags_.ulFlags = (eax_.source.ulFlags != eax_d_.source.ulFlags);
+}
+
+void ALsource::eax_defer_source_macro_fx_factor(
+    float flMacroFXFactor)
+{
+    eax_d_.source.flMacroFXFactor = flMacroFXFactor;
+    eax_source_dirty_misc_flags_.flMacroFXFactor = (eax_.source.flMacroFXFactor != eax_d_.source.flMacroFXFactor);
+}
+
+void ALsource::eax_defer_source_2d_all(
+    const EAXSOURCE2DPROPERTIES& all)
+{
+    eax_defer_source_direct(all.lDirect);
+    eax_defer_source_direct_hf(all.lDirectHF);
+    eax_defer_source_room(all.lRoom);
+    eax_defer_source_room_hf(all.lRoomHF);
+    eax_defer_source_flags(all.ulFlags);
+}
+
+void ALsource::eax_defer_source_obstruction_all(
+    const EAXOBSTRUCTIONPROPERTIES& all)
+{
+    eax_defer_source_obstruction(all.lObstruction);
+    eax_defer_source_obstruction_lf_ratio(all.flObstructionLFRatio);
+}
+
+void ALsource::eax_defer_source_exclusion_all(
+    const EAXEXCLUSIONPROPERTIES& all)
+{
+    eax_defer_source_exclusion(all.lExclusion);
+    eax_defer_source_exclusion_lf_ratio(all.flExclusionLFRatio);
+}
+
+void ALsource::eax_defer_source_occlusion_all(
+    const EAXOCCLUSIONPROPERTIES& all)
+{
+    eax_defer_source_occlusion(all.lOcclusion);
+    eax_defer_source_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_defer_source_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_defer_source_occlusion_direct_ratio(all.flOcclusionDirectRatio);
+}
+
+void ALsource::eax_defer_source_all(
+    const EAX20BUFFERPROPERTIES& all)
+{
+    eax_defer_source_direct(all.lDirect);
+    eax_defer_source_direct_hf(all.lDirectHF);
+    eax_defer_source_room(all.lRoom);
+    eax_defer_source_room_hf(all.lRoomHF);
+    eax_defer_source_obstruction(all.lObstruction);
+    eax_defer_source_obstruction_lf_ratio(all.flObstructionLFRatio);
+    eax_defer_source_occlusion(all.lOcclusion);
+    eax_defer_source_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_defer_source_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_defer_source_outside_volume_hf(all.lOutsideVolumeHF);
+    eax_defer_source_room_rolloff_factor(all.flRoomRolloffFactor);
+    eax_defer_source_air_absorption_factor(all.flAirAbsorptionFactor);
+    eax_defer_source_flags(all.dwFlags);
+}
+
+void ALsource::eax_defer_source_all(
+    const EAX30SOURCEPROPERTIES& all)
+{
+    eax_defer_source_direct(all.lDirect);
+    eax_defer_source_direct_hf(all.lDirectHF);
+    eax_defer_source_room(all.lRoom);
+    eax_defer_source_room_hf(all.lRoomHF);
+    eax_defer_source_obstruction(all.lObstruction);
+    eax_defer_source_obstruction_lf_ratio(all.flObstructionLFRatio);
+    eax_defer_source_occlusion(all.lOcclusion);
+    eax_defer_source_occlusion_lf_ratio(all.flOcclusionLFRatio);
+    eax_defer_source_occlusion_room_ratio(all.flOcclusionRoomRatio);
+    eax_defer_source_occlusion_direct_ratio(all.flOcclusionDirectRatio);
+    eax_defer_source_exclusion(all.lExclusion);
+    eax_defer_source_exclusion_lf_ratio(all.flExclusionLFRatio);
+    eax_defer_source_outside_volume_hf(all.lOutsideVolumeHF);
+    eax_defer_source_doppler_factor(all.flDopplerFactor);
+    eax_defer_source_rolloff_factor(all.flRolloffFactor);
+    eax_defer_source_room_rolloff_factor(all.flRoomRolloffFactor);
+    eax_defer_source_air_absorption_factor(all.flAirAbsorptionFactor);
+    eax_defer_source_flags(all.ulFlags);
+}
+
+void ALsource::eax_defer_source_all(
+    const EAX50SOURCEPROPERTIES& all)
+{
+    eax_defer_source_all(static_cast<const EAX30SOURCEPROPERTIES&>(all));
+    eax_defer_source_macro_fx_factor(all.flMacroFXFactor);
+}
+
+void ALsource::eax_defer_source_speaker_level_all(
+    const EAXSPEAKERLEVELPROPERTIES& all)
+{
+    const auto speaker_index = static_cast<std::size_t>(all.lSpeakerID - 1);
+    auto& speaker_level_d = eax_d_.speaker_levels[speaker_index];
+    const auto& speaker_level = eax_.speaker_levels[speaker_index];
+
+    if (speaker_level != speaker_level_d)
+    {
+        eax_source_dirty_misc_flags_.speaker_levels = true;
+    }
+}
+
+void ALsource::eax_defer_source_direct(
+    const EaxEaxCall& eax_call)
+{
+    const auto direct =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lDirect)>();
+
+    eax_validate_source_direct(direct);
+    eax_defer_source_direct(direct);
+}
+
+void ALsource::eax_defer_source_direct_hf(
+    const EaxEaxCall& eax_call)
+{
+    const auto direct_hf =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lDirectHF)>();
+
+    eax_validate_source_direct_hf(direct_hf);
+    eax_defer_source_direct_hf(direct_hf);
+}
+
+void ALsource::eax_defer_source_room(
+    const EaxEaxCall& eax_call)
+{
+    const auto room =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lRoom)>();
+
+    eax_validate_source_room(room);
+    eax_defer_source_room(room);
+}
+
+void ALsource::eax_defer_source_room_hf(
+    const EaxEaxCall& eax_call)
+{
+    const auto room_hf =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lRoomHF)>();
+
+    eax_validate_source_room_hf(room_hf);
+    eax_defer_source_room_hf(room_hf);
+}
+
+void ALsource::eax_defer_source_obstruction(
+    const EaxEaxCall& eax_call)
+{
+    const auto obstruction =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lObstruction)>();
+
+    eax_validate_source_obstruction(obstruction);
+    eax_defer_source_obstruction(obstruction);
+}
+
+void ALsource::eax_defer_source_obstruction_lf_ratio(
+    const EaxEaxCall& eax_call)
+{
+    const auto obstruction_lf_ratio =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flObstructionLFRatio)>();
+
+    eax_validate_source_obstruction_lf_ratio(obstruction_lf_ratio);
+    eax_defer_source_obstruction_lf_ratio(obstruction_lf_ratio);
+}
+
+void ALsource::eax_defer_source_occlusion(
+    const EaxEaxCall& eax_call)
+{
+    const auto occlusion =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lOcclusion)>();
+
+    eax_validate_source_occlusion(occlusion);
+    eax_defer_source_occlusion(occlusion);
+}
+
+void ALsource::eax_defer_source_occlusion_lf_ratio(
+    const EaxEaxCall& eax_call)
+{
+    const auto occlusion_lf_ratio =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flOcclusionLFRatio)>();
+
+    eax_validate_source_occlusion_lf_ratio(occlusion_lf_ratio);
+    eax_defer_source_occlusion_lf_ratio(occlusion_lf_ratio);
+}
+
+void ALsource::eax_defer_source_occlusion_room_ratio(
+    const EaxEaxCall& eax_call)
+{
+    const auto occlusion_room_ratio =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flOcclusionRoomRatio)>();
+
+    eax_validate_source_occlusion_room_ratio(occlusion_room_ratio);
+    eax_defer_source_occlusion_room_ratio(occlusion_room_ratio);
+}
+
+void ALsource::eax_defer_source_occlusion_direct_ratio(
+    const EaxEaxCall& eax_call)
+{
+    const auto occlusion_direct_ratio =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flOcclusionDirectRatio)>();
+
+    eax_validate_source_occlusion_direct_ratio(occlusion_direct_ratio);
+    eax_defer_source_occlusion_direct_ratio(occlusion_direct_ratio);
+}
+
+void ALsource::eax_defer_source_exclusion(
+    const EaxEaxCall& eax_call)
+{
+    const auto exclusion =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lExclusion)>();
+
+    eax_validate_source_exclusion(exclusion);
+    eax_defer_source_exclusion(exclusion);
+}
+
+void ALsource::eax_defer_source_exclusion_lf_ratio(
+    const EaxEaxCall& eax_call)
+{
+    const auto exclusion_lf_ratio =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flExclusionLFRatio)>();
+
+    eax_validate_source_exclusion_lf_ratio(exclusion_lf_ratio);
+    eax_defer_source_exclusion_lf_ratio(exclusion_lf_ratio);
+}
+
+void ALsource::eax_defer_source_outside_volume_hf(
+    const EaxEaxCall& eax_call)
+{
+    const auto outside_volume_hf =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::lOutsideVolumeHF)>();
+
+    eax_validate_source_outside_volume_hf(outside_volume_hf);
+    eax_defer_source_outside_volume_hf(outside_volume_hf);
+}
+
+void ALsource::eax_defer_source_doppler_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto doppler_factor =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flDopplerFactor)>();
+
+    eax_validate_source_doppler_factor(doppler_factor);
+    eax_defer_source_doppler_factor(doppler_factor);
+}
+
+void ALsource::eax_defer_source_rolloff_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto rolloff_factor =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flRolloffFactor)>();
+
+    eax_validate_source_rolloff_factor(rolloff_factor);
+    eax_defer_source_rolloff_factor(rolloff_factor);
+}
+
+void ALsource::eax_defer_source_room_rolloff_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto room_rolloff_factor =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flRoomRolloffFactor)>();
+
+    eax_validate_source_room_rolloff_factor(room_rolloff_factor);
+    eax_defer_source_room_rolloff_factor(room_rolloff_factor);
+}
+
+void ALsource::eax_defer_source_air_absorption_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto air_absorption_factor =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::flAirAbsorptionFactor)>();
+
+    eax_validate_source_air_absorption_factor(air_absorption_factor);
+    eax_defer_source_air_absorption_factor(air_absorption_factor);
+}
+
+void ALsource::eax_defer_source_flags(
+    const EaxEaxCall& eax_call)
+{
+    const auto flags =
+        eax_call.get_value<EaxSourceException, const decltype(EAX30SOURCEPROPERTIES::ulFlags)>();
+
+    eax_validate_source_flags(flags, eax_call.get_version());
+    eax_defer_source_flags(flags);
+}
+
+void ALsource::eax_defer_source_macro_fx_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto macro_fx_factor =
+        eax_call.get_value<EaxSourceException, const decltype(EAX50SOURCEPROPERTIES::flMacroFXFactor)>();
+
+    eax_validate_source_macro_fx_factor(macro_fx_factor);
+    eax_defer_source_macro_fx_factor(macro_fx_factor);
+}
+
+void ALsource::eax_defer_source_2d_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto all = eax_call.get_value<EaxSourceException, const EAXSOURCE2DPROPERTIES>();
+
+    eax_validate_source_2d_all(all, eax_call.get_version());
+    eax_defer_source_2d_all(all);
+}
+
+void ALsource::eax_defer_source_obstruction_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto all = eax_call.get_value<EaxSourceException, const EAXOBSTRUCTIONPROPERTIES>();
+
+    eax_validate_source_obstruction_all(all);
+    eax_defer_source_obstruction_all(all);
+}
+
+void ALsource::eax_defer_source_exclusion_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto all = eax_call.get_value<EaxSourceException, const EAXEXCLUSIONPROPERTIES>();
+
+    eax_validate_source_exclusion_all(all);
+    eax_defer_source_exclusion_all(all);
+}
+
+void ALsource::eax_defer_source_occlusion_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto all = eax_call.get_value<EaxSourceException, const EAXOCCLUSIONPROPERTIES>();
+
+    eax_validate_source_occlusion_all(all);
+    eax_defer_source_occlusion_all(all);
+}
+
+void ALsource::eax_defer_source_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto eax_version = eax_call.get_version();
+
+    if (eax_version == 2)
+    {
+        const auto all = eax_call.get_value<EaxSourceException, const EAX20BUFFERPROPERTIES>();
+
+        eax_validate_source_all(all, eax_version);
+        eax_defer_source_all(all);
+    }
+    else if (eax_version < 5)
+    {
+        const auto all = eax_call.get_value<EaxSourceException, const EAX30SOURCEPROPERTIES>();
+
+        eax_validate_source_all(all, eax_version);
+        eax_defer_source_all(all);
+    }
+    else
+    {
+        const auto all = eax_call.get_value<EaxSourceException, const EAX50SOURCEPROPERTIES>();
+
+        eax_validate_source_all(all, eax_version);
+        eax_defer_source_all(all);
+    }
+}
+
+void ALsource::eax_defer_source_speaker_level_all(
+    const EaxEaxCall& eax_call)
+{
+    const auto speaker_level_properties = eax_call.get_value<EaxSourceException, const EAXSPEAKERLEVELPROPERTIES>();
+
+    eax_validate_source_speaker_level_all(speaker_level_properties);
+    eax_defer_source_speaker_level_all(speaker_level_properties);
+}
+
+void ALsource::eax_set_outside_volume_hf()
+{
+    const auto efx_gain_hf = clamp(
+        level_mb_to_gain(static_cast<float>(eax_.source.lOutsideVolumeHF)),
+        AL_MIN_CONE_OUTER_GAINHF,
+        AL_MAX_CONE_OUTER_GAINHF
+    );
+
+    eax_al_source_f(
+        AL_CONE_OUTER_GAINHF,
+        efx_gain_hf
+    );
+}
+
+void ALsource::eax_set_doppler_factor()
+{
+    eax_al_source_f(
+        AL_DOPPLER_FACTOR,
+        eax_.source.flDopplerFactor
+    );
+}
+
+void ALsource::eax_set_rolloff_factor()
+{
+    eax_al_source_f(
+        AL_ROLLOFF_FACTOR,
+        eax_.source.flRolloffFactor
+    );
+}
+
+void ALsource::eax_set_room_rolloff_factor()
+{
+    eax_al_source_f(
+        AL_ROOM_ROLLOFF_FACTOR,
+        eax_.source.flRoomRolloffFactor
+    );
+}
+
+void ALsource::eax_set_air_absorption_factor()
+{
+    const auto air_absorption_factor =
+        eax_al_context_->eax_get_air_absorption_factor() * eax_.source.flAirAbsorptionFactor;
+
+    eax_al_source_f(
+        AL_AIR_ABSORPTION_FACTOR,
+        air_absorption_factor
+    );
+}
+
+void ALsource::eax_set_direct_hf_auto_flag()
+{
+    const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_DIRECTHFAUTO) != 0;
+    const auto al_value = static_cast<ALint>(is_enable ? AL_TRUE : AL_FALSE);
+
+    eax_al_source_i(
+        AL_DIRECT_FILTER_GAINHF_AUTO,
+        al_value
+    );
+}
+
+void ALsource::eax_set_room_auto_flag()
+{
+    const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMAUTO) != 0;
+    const auto al_value = static_cast<ALint>(is_enable ? AL_TRUE : AL_FALSE);
+
+    eax_al_source_i(
+        AL_AUXILIARY_SEND_FILTER_GAIN_AUTO,
+        al_value
+    );
+}
+
+void ALsource::eax_set_room_hf_auto_flag()
+{
+    const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0;
+    const auto al_value = static_cast<ALint>(is_enable ? AL_TRUE : AL_FALSE);
+
+    eax_al_source_i(
+        AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO,
+        al_value
+    );
+}
+
+void ALsource::eax_set_flags()
+{
+    eax_set_direct_hf_auto_flag();
+    eax_set_room_auto_flag();
+    eax_set_room_hf_auto_flag();
+    eax_set_speaker_levels();
+}
+
+void ALsource::eax_set_macro_fx_factor()
+{
+    // TODO
+}
+
+void ALsource::eax_set_speaker_levels()
+{
+    // TODO
+}
+
+void ALsource::eax_apply_deferred()
+{
+    if (!eax_are_active_fx_slots_dirty_ &&
+        eax_sends_dirty_flags_ == EaxSourceSendsDirtyFlags{} &&
+        eax_source_dirty_filter_flags_ == EaxSourceSourceFilterDirtyFlags{} &&
+        eax_source_dirty_misc_flags_ == EaxSourceSourceMiscDirtyFlags{})
+    {
+        return;
+    }
+
+    eax_ = eax_d_;
+
+    if (eax_are_active_fx_slots_dirty_)
+    {
+        eax_are_active_fx_slots_dirty_ = false;
+        eax_set_fx_slots();
+        eax_update_filters_internal();
+    }
+    else if (eax_has_active_fx_slots_)
+    {
+        if (eax_source_dirty_filter_flags_ != EaxSourceSourceFilterDirtyFlags{})
+        {
+            eax_update_filters_internal();
+        }
+        else if (eax_sends_dirty_flags_ != EaxSourceSendsDirtyFlags{})
+        {
+            for (auto i = std::size_t{}; i < EAX_MAX_FXSLOTS; ++i)
+            {
+                if (eax_active_fx_slots_[i])
+                {
+                    if (eax_sends_dirty_flags_.sends[i] != EaxSourceSendDirtyFlags{})
+                    {
+                        eax_update_filters_internal();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (eax_source_dirty_misc_flags_ != EaxSourceSourceMiscDirtyFlags{})
+    {
+        if (eax_source_dirty_misc_flags_.lOutsideVolumeHF)
+        {
+            eax_set_outside_volume_hf();
+        }
+
+        if (eax_source_dirty_misc_flags_.flDopplerFactor)
+        {
+            eax_set_doppler_factor();
+        }
+
+        if (eax_source_dirty_misc_flags_.flRolloffFactor)
+        {
+            eax_set_rolloff_factor();
+        }
+
+        if (eax_source_dirty_misc_flags_.flRoomRolloffFactor)
+        {
+            eax_set_room_rolloff_factor();
+        }
+
+        if (eax_source_dirty_misc_flags_.flAirAbsorptionFactor)
+        {
+            eax_set_air_absorption_factor();
+        }
+
+        if (eax_source_dirty_misc_flags_.ulFlags)
+        {
+            eax_set_flags();
+        }
+
+        if (eax_source_dirty_misc_flags_.flMacroFXFactor)
+        {
+            eax_set_macro_fx_factor();
+        }
+
+        eax_source_dirty_misc_flags_ = EaxSourceSourceMiscDirtyFlags{};
+    }
+
+    eax_sends_dirty_flags_ = EaxSourceSendsDirtyFlags{};
+    eax_source_dirty_filter_flags_ = EaxSourceSourceFilterDirtyFlags{};
+}
+
+void ALsource::eax_set(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case EAXSOURCE_NONE:
+            break;
+
+        case EAXSOURCE_ALLPARAMETERS:
+            eax_defer_source_all(eax_call);
+            break;
+
+        case EAXSOURCE_OBSTRUCTIONPARAMETERS:
+            eax_defer_source_obstruction_all(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONPARAMETERS:
+            eax_defer_source_occlusion_all(eax_call);
+            break;
+
+        case EAXSOURCE_EXCLUSIONPARAMETERS:
+            eax_defer_source_exclusion_all(eax_call);
+            break;
+
+        case EAXSOURCE_DIRECT:
+            eax_defer_source_direct(eax_call);
+            break;
+
+        case EAXSOURCE_DIRECTHF:
+            eax_defer_source_direct_hf(eax_call);
+            break;
+
+        case EAXSOURCE_ROOM:
+            eax_defer_source_room(eax_call);
+            break;
+
+        case EAXSOURCE_ROOMHF:
+            eax_defer_source_room_hf(eax_call);
+            break;
+
+        case EAXSOURCE_OBSTRUCTION:
+            eax_defer_source_obstruction(eax_call);
+            break;
+
+        case EAXSOURCE_OBSTRUCTIONLFRATIO:
+            eax_defer_source_obstruction_lf_ratio(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSION:
+            eax_defer_source_occlusion(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONLFRATIO:
+            eax_defer_source_occlusion_lf_ratio(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONROOMRATIO:
+            eax_defer_source_occlusion_room_ratio(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONDIRECTRATIO:
+            eax_defer_source_occlusion_direct_ratio(eax_call);
+            break;
+
+        case EAXSOURCE_EXCLUSION:
+            eax_defer_source_exclusion(eax_call);
+            break;
+
+        case EAXSOURCE_EXCLUSIONLFRATIO:
+            eax_defer_source_exclusion_lf_ratio(eax_call);
+            break;
+
+        case EAXSOURCE_OUTSIDEVOLUMEHF:
+            eax_defer_source_outside_volume_hf(eax_call);
+            break;
+
+        case EAXSOURCE_DOPPLERFACTOR:
+            eax_defer_source_doppler_factor(eax_call);
+            break;
+
+        case EAXSOURCE_ROLLOFFFACTOR:
+            eax_defer_source_rolloff_factor(eax_call);
+            break;
+
+        case EAXSOURCE_ROOMROLLOFFFACTOR:
+            eax_defer_source_room_rolloff_factor(eax_call);
+            break;
+
+        case EAXSOURCE_AIRABSORPTIONFACTOR:
+            eax_defer_source_air_absorption_factor(eax_call);
+            break;
+
+        case EAXSOURCE_FLAGS:
+            eax_defer_source_flags(eax_call);
+            break;
+
+        case EAXSOURCE_SENDPARAMETERS:
+            eax_defer_send(eax_call);
+            break;
+
+        case EAXSOURCE_ALLSENDPARAMETERS:
+            eax_defer_send_all(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
+            eax_defer_send_occlusion_all(eax_call);
+            break;
+
+        case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
+            eax_defer_send_exclusion_all(eax_call);
+            break;
+
+        case EAXSOURCE_ACTIVEFXSLOTID:
+            eax_defer_active_fx_slots(eax_call);
+            break;
+
+        case EAXSOURCE_MACROFXFACTOR:
+            eax_defer_source_macro_fx_factor(eax_call);
+            break;
+
+        case EAXSOURCE_SPEAKERLEVELS:
+            eax_defer_source_speaker_level_all(eax_call);
+            break;
+
+        case EAXSOURCE_ALL2DPARAMETERS:
+            eax_defer_source_2d_all(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+
+    if (!eax_call.is_deferred())
+    {
+        eax_apply_deferred();
+    }
+}
+
+const GUID& ALsource::eax_get_send_fx_slot_guid(
+    int eax_version,
+    EaxFxSlotIndexValue fx_slot_index)
+{
+    switch (eax_version)
+    {
+        case 4:
+            switch (fx_slot_index)
+            {
+                case 0:
+                    return EAXPROPERTYID_EAX40_FXSlot0;
+
+                case 1:
+                    return EAXPROPERTYID_EAX40_FXSlot1;
+
+                case 2:
+                    return EAXPROPERTYID_EAX40_FXSlot2;
+
+                case 3:
+                    return EAXPROPERTYID_EAX40_FXSlot3;
+
+                default:
+                    eax_fail("FX slot index out of range.");
+            }
+
+        case 5:
+            switch (fx_slot_index)
+            {
+                case 0:
+                    return EAXPROPERTYID_EAX50_FXSlot0;
+
+                case 1:
+                    return EAXPROPERTYID_EAX50_FXSlot1;
+
+                case 2:
+                    return EAXPROPERTYID_EAX50_FXSlot2;
+
+                case 3:
+                    return EAXPROPERTYID_EAX50_FXSlot3;
+
+                default:
+                    eax_fail("FX slot index out of range.");
+            }
+
+        default:
+            eax_fail("Unsupported EAX version.");
+    }
+}
+
+void ALsource::eax_copy_send(
+    const EAXSOURCEALLSENDPROPERTIES& src_send,
+    EAXSOURCESENDPROPERTIES& dst_send)
+{
+    dst_send.lSend = src_send.lSend;
+    dst_send.lSendHF = src_send.lSendHF;
+}
+
+void ALsource::eax_copy_send(
+    const EAXSOURCEALLSENDPROPERTIES& src_send,
+    EAXSOURCEALLSENDPROPERTIES& dst_send)
+{
+    dst_send = src_send;
+}
+
+void ALsource::eax_copy_send(
+    const EAXSOURCEALLSENDPROPERTIES& src_send,
+    EAXSOURCEOCCLUSIONSENDPROPERTIES& dst_send)
+{
+    dst_send.lOcclusion = src_send.lOcclusion;
+    dst_send.flOcclusionLFRatio = src_send.flOcclusionLFRatio;
+    dst_send.flOcclusionRoomRatio = src_send.flOcclusionRoomRatio;
+    dst_send.flOcclusionDirectRatio = src_send.flOcclusionDirectRatio;
+}
+
+void ALsource::eax_copy_send(
+    const EAXSOURCEALLSENDPROPERTIES& src_send,
+    EAXSOURCEEXCLUSIONSENDPROPERTIES& dst_send)
+{
+    dst_send.lExclusion = src_send.lExclusion;
+    dst_send.flExclusionLFRatio = src_send.flExclusionLFRatio;
+}
+
+void ALsource::eax_api_get_source_all_v2(
+    const EaxEaxCall& eax_call)
+{
+    auto eax_2_all = EAX20BUFFERPROPERTIES{};
+    eax_2_all.lDirect = eax_.source.lDirect;
+    eax_2_all.lDirectHF = eax_.source.lDirectHF;
+    eax_2_all.lRoom = eax_.source.lRoom;
+    eax_2_all.lRoomHF = eax_.source.lRoomHF;
+    eax_2_all.flRoomRolloffFactor = eax_.source.flRoomRolloffFactor;
+    eax_2_all.lObstruction = eax_.source.lObstruction;
+    eax_2_all.flObstructionLFRatio = eax_.source.flObstructionLFRatio;
+    eax_2_all.lOcclusion = eax_.source.lOcclusion;
+    eax_2_all.flOcclusionLFRatio = eax_.source.flOcclusionLFRatio;
+    eax_2_all.flOcclusionRoomRatio = eax_.source.flOcclusionRoomRatio;
+    eax_2_all.lOutsideVolumeHF = eax_.source.lOutsideVolumeHF;
+    eax_2_all.flAirAbsorptionFactor = eax_.source.flAirAbsorptionFactor;
+    eax_2_all.dwFlags = eax_.source.ulFlags;
+
+    eax_call.set_value<EaxSourceException>(eax_2_all);
+}
+
+void ALsource::eax_api_get_source_all_v3(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<EaxSourceException>(static_cast<const EAX30SOURCEPROPERTIES&>(eax_.source));
+}
+
+void ALsource::eax_api_get_source_all_v5(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<EaxSourceException>(eax_.source);
+}
+
+void ALsource::eax_api_get_source_all(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_version())
+    {
+        case 2:
+            eax_api_get_source_all_v2(eax_call);
+            break;
+
+        case 3:
+        case 4:
+            eax_api_get_source_all_v3(eax_call);
+            break;
+
+        case 5:
+            eax_api_get_source_all_v5(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported EAX version.");
+    }
+}
+
+void ALsource::eax_api_get_source_all_obstruction(
+    const EaxEaxCall& eax_call)
+{
+    static_assert(
+        offsetof(EAXOBSTRUCTIONPROPERTIES, flObstructionLFRatio) - offsetof(EAXOBSTRUCTIONPROPERTIES, lObstruction) ==
+        offsetof(EAX30SOURCEPROPERTIES, flObstructionLFRatio) - offsetof(EAX30SOURCEPROPERTIES, lObstruction),
+        "Type size."
+    );
+
+    const auto eax_obstruction_all = *reinterpret_cast<const EAXOBSTRUCTIONPROPERTIES*>(&eax_.source.lObstruction);
+
+    eax_call.set_value<EaxSourceException>(eax_obstruction_all);
+}
+
+void ALsource::eax_api_get_source_all_occlusion(
+    const EaxEaxCall& eax_call)
+{
+    static_assert(
+        offsetof(EAXOCCLUSIONPROPERTIES, flOcclusionLFRatio) - offsetof(EAXOCCLUSIONPROPERTIES, lOcclusion) ==
+        offsetof(EAX30SOURCEPROPERTIES, flOcclusionLFRatio) - offsetof(EAX30SOURCEPROPERTIES, lOcclusion) &&
+
+        offsetof(EAXOCCLUSIONPROPERTIES, flOcclusionRoomRatio) - offsetof(EAXOCCLUSIONPROPERTIES, lOcclusion) ==
+        offsetof(EAX30SOURCEPROPERTIES, flOcclusionRoomRatio) - offsetof(EAX30SOURCEPROPERTIES, lOcclusion) &&
+
+        offsetof(EAXOCCLUSIONPROPERTIES, flOcclusionDirectRatio) - offsetof(EAXOCCLUSIONPROPERTIES, lOcclusion) ==
+        offsetof(EAX30SOURCEPROPERTIES, flOcclusionDirectRatio) - offsetof(EAX30SOURCEPROPERTIES, lOcclusion),
+
+        "Type size."
+    );
+
+    const auto eax_occlusion_all = *reinterpret_cast<const EAXOCCLUSIONPROPERTIES*>(&eax_.source.lOcclusion);
+
+    eax_call.set_value<EaxSourceException>(eax_occlusion_all);
+}
+
+void ALsource::eax_api_get_source_all_exclusion(
+    const EaxEaxCall& eax_call)
+{
+    static_assert(
+        offsetof(EAXEXCLUSIONPROPERTIES, flExclusionLFRatio) - offsetof(EAXEXCLUSIONPROPERTIES, lExclusion) ==
+        offsetof(EAX30SOURCEPROPERTIES, flExclusionLFRatio) - offsetof(EAX30SOURCEPROPERTIES, lExclusion),
+
+        "Type size."
+    );
+
+    const auto eax_exclusion_all = *reinterpret_cast<const EAXEXCLUSIONPROPERTIES*>(&eax_.source.lExclusion);
+
+    eax_call.set_value<EaxSourceException>(eax_exclusion_all);
+}
+
+void ALsource::eax_api_get_source_active_fx_slot_id(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_version())
+    {
+        case 4:
+            {
+                const auto& active_fx_slots = reinterpret_cast<const EAX40ACTIVEFXSLOTS&>(eax_.active_fx_slots);
+                eax_call.set_value<EaxSourceException>(active_fx_slots);
+            }
+            break;
+
+        case 5:
+            {
+                const auto& active_fx_slots = reinterpret_cast<const EAX50ACTIVEFXSLOTS&>(eax_.active_fx_slots);
+                eax_call.set_value<EaxSourceException>(active_fx_slots);
+            }
+            break;
+
+        default:
+            eax_fail("Unsupported EAX version.");
+    }
+}
+
+void ALsource::eax_api_get_source_all_2d(
+    const EaxEaxCall& eax_call)
+{
+    auto eax_2d_all = EAXSOURCE2DPROPERTIES{};
+    eax_2d_all.lDirect = eax_.source.lDirect;
+    eax_2d_all.lDirectHF = eax_.source.lDirectHF;
+    eax_2d_all.lRoom = eax_.source.lRoom;
+    eax_2d_all.lRoomHF = eax_.source.lRoomHF;
+    eax_2d_all.ulFlags = eax_.source.ulFlags;
+
+    eax_call.set_value<EaxSourceException>(eax_2d_all);
+}
+
+void ALsource::eax_api_get_source_speaker_level_all(
+    const EaxEaxCall& eax_call)
+{
+    auto& all = eax_call.get_value<EaxSourceException, EAXSPEAKERLEVELPROPERTIES>();
+
+    eax_validate_source_speaker_id(all.lSpeakerID);
+    const auto speaker_index = static_cast<std::size_t>(all.lSpeakerID - 1);
+    all.lLevel = eax_.speaker_levels[speaker_index];
+}
+
+void ALsource::eax_get(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case EAXSOURCE_NONE:
+            break;
+
+        case EAXSOURCE_ALLPARAMETERS:
+            eax_api_get_source_all(eax_call);
+            break;
+
+        case EAXSOURCE_OBSTRUCTIONPARAMETERS:
+            eax_api_get_source_all_obstruction(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONPARAMETERS:
+            eax_api_get_source_all_occlusion(eax_call);
+            break;
+
+        case EAXSOURCE_EXCLUSIONPARAMETERS:
+            eax_api_get_source_all_exclusion(eax_call);
+            break;
+
+        case EAXSOURCE_DIRECT:
+            eax_call.set_value<EaxSourceException>(eax_.source.lDirect);
+            break;
+
+        case EAXSOURCE_DIRECTHF:
+            eax_call.set_value<EaxSourceException>(eax_.source.lDirectHF);
+            break;
+
+        case EAXSOURCE_ROOM:
+            eax_call.set_value<EaxSourceException>(eax_.source.lRoom);
+            break;
+
+        case EAXSOURCE_ROOMHF:
+            eax_call.set_value<EaxSourceException>(eax_.source.lRoomHF);
+            break;
+
+        case EAXSOURCE_OBSTRUCTION:
+            eax_call.set_value<EaxSourceException>(eax_.source.lObstruction);
+            break;
+
+        case EAXSOURCE_OBSTRUCTIONLFRATIO:
+            eax_call.set_value<EaxSourceException>(eax_.source.flObstructionLFRatio);
+            break;
+
+        case EAXSOURCE_OCCLUSION:
+            eax_call.set_value<EaxSourceException>(eax_.source.lOcclusion);
+            break;
+
+        case EAXSOURCE_OCCLUSIONLFRATIO:
+            eax_call.set_value<EaxSourceException>(eax_.source.flOcclusionLFRatio);
+            break;
+
+        case EAXSOURCE_OCCLUSIONROOMRATIO:
+            eax_call.set_value<EaxSourceException>(eax_.source.flOcclusionRoomRatio);
+            break;
+
+        case EAXSOURCE_OCCLUSIONDIRECTRATIO:
+            eax_call.set_value<EaxSourceException>(eax_.source.flOcclusionDirectRatio);
+            break;
+
+        case EAXSOURCE_EXCLUSION:
+            eax_call.set_value<EaxSourceException>(eax_.source.lExclusion);
+            break;
+
+        case EAXSOURCE_EXCLUSIONLFRATIO:
+            eax_call.set_value<EaxSourceException>(eax_.source.flExclusionLFRatio);
+            break;
+
+        case EAXSOURCE_OUTSIDEVOLUMEHF:
+            eax_call.set_value<EaxSourceException>(eax_.source.lOutsideVolumeHF);
+            break;
+
+        case EAXSOURCE_DOPPLERFACTOR:
+            eax_call.set_value<EaxSourceException>(eax_.source.flDopplerFactor);
+            break;
+
+        case EAXSOURCE_ROLLOFFFACTOR:
+            eax_call.set_value<EaxSourceException>(eax_.source.flRolloffFactor);
+            break;
+
+        case EAXSOURCE_ROOMROLLOFFFACTOR:
+            eax_call.set_value<EaxSourceException>(eax_.source.flRoomRolloffFactor);
+            break;
+
+        case EAXSOURCE_AIRABSORPTIONFACTOR:
+            eax_call.set_value<EaxSourceException>(eax_.source.flAirAbsorptionFactor);
+            break;
+
+        case EAXSOURCE_FLAGS:
+            eax_call.set_value<EaxSourceException>(eax_.source.ulFlags);
+            break;
+
+        case EAXSOURCE_SENDPARAMETERS:
+            eax_api_get_send_properties<EaxSourceException, EAXSOURCESENDPROPERTIES>(eax_call);
+            break;
+
+        case EAXSOURCE_ALLSENDPARAMETERS:
+            eax_api_get_send_properties<EaxSourceException, EAXSOURCEALLSENDPROPERTIES>(eax_call);
+            break;
+
+        case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
+            eax_api_get_send_properties<EaxSourceException, EAXSOURCEOCCLUSIONSENDPROPERTIES>(eax_call);
+            break;
+
+        case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
+            eax_api_get_send_properties<EaxSourceException, EAXSOURCEEXCLUSIONSENDPROPERTIES>(eax_call);
+            break;
+
+        case EAXSOURCE_ACTIVEFXSLOTID:
+            eax_api_get_source_active_fx_slot_id(eax_call);
+            break;
+
+        case EAXSOURCE_MACROFXFACTOR:
+            eax_call.set_value<EaxSourceException>(eax_.source.flMacroFXFactor);
+            break;
+
+        case EAXSOURCE_SPEAKERLEVELS:
+            eax_api_get_source_speaker_level_all(eax_call);
+            break;
+
+        case EAXSOURCE_ALL2DPARAMETERS:
+            eax_api_get_source_all_2d(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+}
+
+void ALsource::eax_al_source_i(
+    ALenum param,
+    ALint value)
+{
+    SetSourceiv(this, eax_al_context_, static_cast<SourceProp>(param), {&value, 1});
+}
+
+void ALsource::eax_al_source_f(
+    ALenum param,
+    ALfloat value)
+{
+    SetSourcefv(this, eax_al_context_, static_cast<SourceProp>(param), {&value, 1});
+}
+
+void ALsource::eax_al_source_3i(
+    ALenum param,
+    ALint value1,
+    ALint value2,
+    ALint value3)
+{
+    const ALint values[3] = {value1, value2, value3};
+    SetSourceiv(this, eax_al_context_, static_cast<SourceProp>(param), values);
+}
+
+
+#endif // ALSOFT_EAX

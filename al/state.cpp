@@ -47,8 +47,10 @@
 #include "strutils.h"
 
 #if ALSOFT_EAX
-#include "eax_al_api.h"
+#include "alc/device.h"
+
 #include "eax_globals.h"
+#include "eax_x_ram.h"
 #endif // ALSOFT_EAX
 
 
@@ -432,20 +434,42 @@ START_API_FUNC
         value = static_cast<int>(ResamplerDefault);
         break;
 
-    default:
 #if ALSOFT_EAX
-        if (!eax::g_is_disable)
-        {
-            const auto eax_lock = eax::g_al_api.get_lock();
-            value = eax::g_al_api.on_alGetInteger(pname);
 
-            if (value != 0)
-            {
-                break;
-            }
+#define EAX_ERROR "[alGetInteger] EAX not enabled."
+
+    case AL_EAX_RAM_SIZE:
+        if (eax_g_is_enabled)
+        {
+            value = eax_x_ram_max_size;
         }
+        else
+        {
+            context->setError(AL_INVALID_VALUE, EAX_ERROR);
+        }
+
+        break;
+
+    case AL_EAX_RAM_FREE:
+        if (eax_g_is_enabled)
+        {
+            auto device = context->mALDevice.get();
+            std::lock_guard<std::mutex> device_lock{device->BufferLock};
+
+            value = device->eax_x_ram_free_size;
+        }
+        else
+        {
+            context->setError(AL_INVALID_VALUE, EAX_ERROR);
+        }
+
+        break;
+
+#undef EAX_ERROR
+
 #endif // ALSOFT_EAX
 
+    default:
         context->setError(AL_INVALID_VALUE, "Invalid integer property 0x%04x", pname);
     }
 

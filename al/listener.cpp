@@ -450,3 +450,25 @@ void UpdateListenerProps(ALCcontext *context)
         AtomicReplaceHead(context->mFreeListenerProps, props);
     }
 }
+
+#if ALSOFT_EAX
+// `alListenerf(AL_METERS_PER_UNIT, value)`
+void eax_set_al_listener_meters_per_unit(
+    ALCcontext& al_context,
+    ALfloat meters_per_unit)
+{
+    auto context = EaxAlContextWrapper{al_context};
+
+    auto& listener = context->mListener;
+
+    if (meters_per_unit < AL_MIN_METERS_PER_UNIT ||
+        meters_per_unit > AL_MAX_METERS_PER_UNIT)
+    {
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
+    }
+
+    listener.mMetersPerUnit = meters_per_unit;
+
+    DO_UPDATEPROPS();
+}
+#endif // ALSOFT_EAX

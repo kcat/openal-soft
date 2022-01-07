@@ -204,7 +204,11 @@ static QStringList getAllDataPaths(const QString &append)
     QString paths = qgetenv("XDG_DATA_DIRS");
     if(paths.isEmpty())
         paths = "/usr/local/share/:/usr/share/";
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     list += paths.split(QChar(':'), Qt::SkipEmptyParts);
+#else
+    list += paths.split(QChar(':'), QString::SkipEmptyParts);
+#endif
 #endif
     QStringList::iterator iter = list.begin();
     while(iter != list.end())

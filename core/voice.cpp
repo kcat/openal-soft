@@ -564,6 +564,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                      * to a multiple of 4 samples to maintain alignment.
                      */
                     DstBufferSize = static_cast<uint>(DataSize64) & ~3u;
+                    /* If the voice is stopping, only one mixing iteration will
+                     * be done, so ensure it fades out completely this mix.
+                     */
+                    if(unlikely(vstate == Stopping))
+                        Counter = std::min(Counter, DstBufferSize);
                 }
                 ASSUME(DstBufferSize > 0);
             }
@@ -571,13 +576,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
 
         if(unlikely(!BufferListItem))
         {
+            const size_t srcOffset{(increment*DstBufferSize + DataPosFrac)>>MixerFracBits};
             auto prevSamples = mPrevSamples.data();
             SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
             for(auto *chanbuffer : MixingSamples)
             {
                 auto srcend = std::copy_n(prevSamples->data(), MaxResamplerPadding,
                     chanbuffer-MaxResamplerEdge);
-                ++prevSamples;
 
                 /* When loading from a voice that ended prematurely, only take
                  * the samples that get closest to 0 amplitude. This helps
@@ -588,6 +593,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 auto srciter = std::min_element(chanbuffer, srcend, abs_lt);
 
                 std::fill(srciter+1, chanbuffer + SrcBufferSize, *srciter);
+
+                std::copy_n(chanbuffer-MaxResamplerEdge+srcOffset, prevSamples->size(),
+                    prevSamples->data());
+                ++prevSamples;
             }
         }
         else
@@ -701,6 +710,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                     parms.Gains.Current.data(), TargetGains, Counter, OutPos);
             }
         }
+        /* If the voice is stopping, we're now done. */
+        if(unlikely(vstate == Stopping))
+            break;
+
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;
         const uint SrcSamplesDone{DataPosFrac>>MixerFracBits};
@@ -739,24 +752,19 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         }
         else if(mFlags.test(VoiceIsCallback))
         {
-            /* Don't use up the stored callback samples when stopping (pausing)
-             * since they'll be replayed when resuming.
-             */
-            if(likely(vstate == Playing))
+            /* Handle callback buffer source */
+            if(SrcSamplesDone < mNumCallbackSamples)
             {
-                if(SrcSamplesDone < mNumCallbackSamples)
-                {
-                    const size_t byteOffset{SrcSamplesDone*mFrameSize};
-                    const size_t byteEnd{mNumCallbackSamples*mFrameSize};
-                    al::byte *data{BufferListItem->mSamples};
-                    std::copy(data+byteOffset, data+byteEnd, data);
-                    mNumCallbackSamples -= SrcSamplesDone;
-                }
-                else
-                {
-                    BufferListItem = nullptr;
-                    mNumCallbackSamples = 0;
-                }
+                const size_t byteOffset{SrcSamplesDone*mFrameSize};
+                const size_t byteEnd{mNumCallbackSamples*mFrameSize};
+                al::byte *data{BufferListItem->mSamples};
+                std::copy(data+byteOffset, data+byteEnd, data);
+                mNumCallbackSamples -= SrcSamplesDone;
+            }
+            else
+            {
+                BufferListItem = nullptr;
+                mNumCallbackSamples = 0;
             }
         }
         else
@@ -773,7 +781,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 if(!BufferListItem) BufferListItem = BufferLoopItem;
             } while(BufferListItem);
         }
-    } while(OutPos < SamplesToDo && likely(vstate == Playing));
+    } while(OutPos < SamplesToDo);
 
     mFlags.set(VoiceIsFading);
 

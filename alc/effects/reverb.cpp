@@ -97,20 +97,28 @@ constexpr float MODULATION_DEPTH_COEFF{0.05f};
  * in the future, true opposites can be used.
  */
 alignas(16) constexpr float B2A[NUM_LINES][NUM_LINES]{
-    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
+    { 0.5f,  0.5f,  0.5f,  0.5f },
+    { 0.5f, -0.5f, -0.5f,  0.5f },
+    { 0.5f,  0.5f, -0.5f, -0.5f },
+    { 0.5f, -0.5f,  0.5f, -0.5f }
 };
 
-/* Converts A-Format to B-Format. */
-alignas(16) constexpr float A2B[NUM_LINES][NUM_LINES]{
-    { 0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f },
-    { 0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f },
-    { 0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f },
-    { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
+/* Converts A-Format to B-Format for early reflections. */
+alignas(16) constexpr float EarlyA2B[NUM_LINES][NUM_LINES]{
+    { 0.5f,  0.5f,  0.5f,  0.5f },
+    { 0.5f, -0.5f,  0.5f, -0.5f },
+    { 0.5f, -0.5f, -0.5f,  0.5f },
+    { 0.5f,  0.5f, -0.5f, -0.5f }
 };
 
+/* Converts A-Format to B-Format for late reverb. */
+constexpr float Sqrt1_2{7.07106781e-01f/*1.0f/std::sqrt(2.0f)*/};
+alignas(16) constexpr float LateA2B[NUM_LINES][NUM_LINES]{
+    { 0.5f,  0.5f,  0.5f,  0.5f },
+    { Sqrt1_2, -Sqrt1_2,  0.0f,  0.0f },
+    { 0.0f,  0.0f,  Sqrt1_2, -Sqrt1_2 },
+    { 0.5f,  0.5f, -0.5f, -0.5f }
+};
 
 /* The all-pass and delay lines have a variable length dependent on the
  * effect's density parameter, which helps alter the perceived environment
@@ -484,13 +492,13 @@ struct ReverbState final : public EffectState {
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            DoMixRow(tmpspan, A2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
+            DoMixRow(tmpspan, EarlyA2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
             MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], counter,
                 offset);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            DoMixRow(tmpspan, A2B[c], mLateSamples[0].data(), mLateSamples[0].size());
+            DoMixRow(tmpspan, LateA2B[c], mLateSamples[0].data(), mLateSamples[0].size());
             MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], counter,
                 offset);
         }
@@ -504,7 +512,7 @@ struct ReverbState final : public EffectState {
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            DoMixRow(tmpspan, A2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
+            DoMixRow(tmpspan, EarlyA2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
 
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
@@ -517,7 +525,7 @@ struct ReverbState final : public EffectState {
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            DoMixRow(tmpspan, A2B[c], mLateSamples[0].data(), mLateSamples[0].size());
+            DoMixRow(tmpspan, LateA2B[c], mLateSamples[0].data(), mLateSamples[0].size());
 
             const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             mAmbiSplitter[1][c].processHfScale(tmpspan, hfscale);

@@ -130,8 +130,9 @@ static const struct NameValuePair {
 }, ambiFormatList[] = {
     { "Default", "" },
     { "AmbiX (ACN, SN3D)", "ambix" },
-    { "ACN, N3D", "acn+n3d" },
     { "Furse-Malham", "fuma" },
+    { "ACN, N3D", "acn+n3d" },
+    { "ACN, FuMa", "acn+fuma" },
 
     { "", "" }
 }, hrtfModeList[] = {

@@ -3315,6 +3315,21 @@ START_API_FUNC
                 device->mAmbiScale = DevAmbiScaling::FuMa;
             }
         }
+        else if(al::strcasecmp(fmt, "acn+fuma") == 0)
+        {
+            if(device->mAmbiOrder > 3)
+                ERR("FuMa is incompatible with %d%s order ambisonics (up to third-order only)\n",
+                    device->mAmbiOrder,
+                    (((device->mAmbiOrder%100)/10) == 1) ? "th" :
+                    ((device->mAmbiOrder%10) == 1) ? "st" :
+                    ((device->mAmbiOrder%10) == 2) ? "nd" :
+                    ((device->mAmbiOrder%10) == 3) ? "rd" : "th");
+            else
+            {
+                device->mAmbiLayout = DevAmbiLayout::ACN;
+                device->mAmbiScale = DevAmbiScaling::FuMa;
+            }
+        }
         else if(al::strcasecmp(fmt, "ambix") == 0 || al::strcasecmp(fmt, "acn+sn3d") == 0)
         {
             device->mAmbiLayout = DevAmbiLayout::ACN;

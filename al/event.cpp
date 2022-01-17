@@ -201,7 +201,7 @@ START_API_FUNC
         /* Wait to ensure the event handler sees the changed flags before
          * returning.
          */
-        std::lock_guard<std::mutex>{context->mEventCbLock};
+        std::lock_guard<std::mutex> _{context->mEventCbLock};
     }
 }
 END_API_FUNC

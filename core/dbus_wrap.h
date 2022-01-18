@@ -39,7 +39,7 @@ void PrepareDBus();
 inline auto HasDBus()
 {
     static std::once_flag init_dbus{};
-    std::call_once(init_dbus, PrepareDBus);
+    std::call_once(init_dbus, []{ PrepareDBus(); });
     return dbus_handle;
 }
 

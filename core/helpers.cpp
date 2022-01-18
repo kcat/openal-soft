@@ -512,6 +512,12 @@ bool SetRTPriorityRTKit(int prio)
         err = std::abs(err);
         WARN("Failed to set real-time priority: %s (%d)\n", std::strerror(err), err);
     }
+    /* Don't try to set the niceness for non-Linux systems. Standard POSIX has
+     * niceness as a per-process attribute, while the intent here is for the
+     * audio processing thread only to get a priority boost. Currently only
+     * Linux is known to have per-thread niceness.
+     */
+#ifdef __linux__
     if(nicemin < 0)
     {
         TRACE("Making high priority with niceness %d\n", nicemin);
@@ -521,7 +527,10 @@ bool SetRTPriorityRTKit(int prio)
         err = std::abs(err);
         WARN("Failed to set high priority: %s (%d)\n", std::strerror(err), err);
     }
+#endif /* __linux__ */
+
 #else
+
     WARN("D-Bus not supported\n");
 #endif
     return false;

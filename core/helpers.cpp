@@ -447,7 +447,7 @@ bool SetRTPriorityRTKit(int prio)
         return false;
     }
     dbus::Error error;
-    dbus::ConnectionPtr conn{(*pdbus_bus_get)(DBUS_BUS_SYSTEM, &error.get())};
+    dbus::ConnectionPtr conn{dbus_bus_get(DBUS_BUS_SYSTEM, &error.get())};
     if(!conn)
     {
         WARN("D-Bus connection failed with %s: %s\n", error->name, error->message);
@@ -455,7 +455,7 @@ bool SetRTPriorityRTKit(int prio)
     }
 
     /* Don't stupidly exit if the connection dies while doing this. */
-    (*pdbus_connection_set_exit_on_disconnect)(conn.get(), false);
+    dbus_connection_set_exit_on_disconnect(conn.get(), false);
 
     auto limit_rttime = [](DBusConnection *c) -> int
     {

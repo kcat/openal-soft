@@ -12,7 +12,7 @@
 
 
 void *dbus_handle{nullptr};
-#define DECL_FUNC(x) decltype(x) *p##x{};
+#define DECL_FUNC(x) decltype(p##x) p##x{};
 DBUS_FUNCTIONS(DECL_FUNC)
 #undef DECL_FUNC
 

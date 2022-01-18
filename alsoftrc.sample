@@ -183,12 +183,12 @@
 #resampler = linear
 
 ## rt-prio: (global)
-#  Sets real-time priority for the mixing thread. Not all drivers may use this
-#  (eg. PortAudio) as they already control the priority of the mixing thread.
-#  0 and negative values will disable it. Note that this may constitute a
-#  security risk since a real-time priority thread can indefinitely block
-#  normal-priority threads if it fails to wait. Disable this if it turns out to
-#  be a problem.
+#  Sets the real-time priority value for the mixing thread. Not all drivers may
+#  use this (eg. PortAudio) as those APIs already control the priority of the
+#  mixing thread. 0 and negative values will disable real-time priority. Note
+#  that this may constitute a security risk since a real-time priority thread
+#  can indefinitely block normal-priority threads if it fails to wait. Disable
+#  this if it turns out to be a problem.
 #rt-prio = 1
 
 ## rt-time-limit: (global)

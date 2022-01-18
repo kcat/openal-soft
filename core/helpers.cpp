@@ -15,6 +15,7 @@
 
 #include "almalloc.h"
 #include "alfstream.h"
+#include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -409,106 +410,134 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     return results;
 }
 
-void SetRTPriority()
-{
-    if(RTPrioLevel <= 0)
-        return;
+namespace {
 
-    int err{-ENOTSUP};
+bool SetRTPriorityPthread(int prio)
+{
+    int err{ENOTSUP};
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-    struct sched_param param{};
-    /* Use the minimum real-time priority possible for now (on Linux this
-     * should be 1 for SCHED_RR).
+    /* Get the min and max priority for SCHED_RR. Limit the max priority to
+     * half, for now, to ensure the thread can't take the highest priority and
+     * go rogue.
      */
-    param.sched_priority = sched_get_priority_min(SCHED_RR);
+    int rtmin{sched_get_priority_min(SCHED_RR)};
+    int rtmax{sched_get_priority_max(SCHED_RR)};
+    rtmax = (rtmax-rtmin)/2 + rtmin;
+
+    struct sched_param param{};
+    param.sched_priority = clampi(prio, rtmin, rtmax);
 #ifdef SCHED_RESET_ON_FORK
     err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
     if(err == EINVAL)
 #endif
         err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
-    if(err == 0) return;
+    if(err == 0) return true;
+#endif
 
     WARN("pthread_setschedparam failed: %s (%d)\n", std::strerror(err), err);
-#endif
+    return false;
+}
+
+bool SetRTPriorityRTKit(int prio)
+{
 #ifdef HAVE_RTKIT
-    if(HasDBus())
+    if(!HasDBus())
     {
-        dbus::Error error;
-        if(dbus::ConnectionPtr conn{(*pdbus_bus_get)(DBUS_BUS_SYSTEM, &error.get())})
-        {
-            using ulonglong = unsigned long long;
-            auto limit_rttime = [](DBusConnection *c) -> int
-            {
-                long long maxrttime{rtkit_get_rttime_usec_max(c)};
-                if(maxrttime <= 0) return static_cast<int>(std::abs(maxrttime));
-                const ulonglong umaxtime{static_cast<ulonglong>(maxrttime)};
-
-                struct rlimit rlim{};
-                if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
-                    return errno;
-                TRACE("RTTime max: %llu (hard: %llu, soft: %llu)\n", umaxtime,
-                    ulonglong{rlim.rlim_max}, ulonglong{rlim.rlim_cur});
-                if(rlim.rlim_max > umaxtime)
-                {
-                    rlim.rlim_max = static_cast<rlim_t>(std::min<ulonglong>(umaxtime,
-                        std::numeric_limits<rlim_t>::max()));
-                    rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
-                    if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)
-                        return errno;
-                }
-                return 0;
-            };
-
-            /* Don't stupidly exit if the connection dies while doing this. */
-            (*pdbus_connection_set_exit_on_disconnect)(conn.get(), false);
-
-            int nicemin{};
-            err = rtkit_get_min_nice_level(conn.get(), &nicemin);
-            if(err == -ENOENT)
-            {
-                err = std::abs(err);
-                ERR("Could not query RTKit: %s (%d)\n", std::strerror(err), err);
-                return;
-            }
-            int rtmax{rtkit_get_max_realtime_priority(conn.get())};
-            TRACE("Maximum real-time priority: %d, minimum niceness: %d\n", rtmax, nicemin);
-
-            err = EINVAL;
-            if(rtmax > 0)
-            {
-                if(AllowRTTimeLimit)
-                {
-                    err = limit_rttime(conn.get());
-                    if(err != 0)
-                        WARN("Failed to set RLIMIT_RTTIME for RTKit: %s (%d)\n",
-                            std::strerror(err), err);
-                }
-
-                /* Use half the maximum real-time priority allowed. */
-                TRACE("Making real-time with priority %d\n", (rtmax+1)/2);
-                err = rtkit_make_realtime(conn.get(), 0, (rtmax+1)/2);
-                if(err == 0) return;
-
-                err = std::abs(err);
-                WARN("Failed to set real-time priority: %s (%d)\n", std::strerror(err), err);
-            }
-            if(nicemin < 0)
-            {
-                TRACE("Making high priority with niceness %d\n", nicemin);
-                err = rtkit_make_high_priority(conn.get(), 0, nicemin);
-                if(err == 0) return;
-
-                err = std::abs(err);
-                WARN("Failed to set high priority: %s (%d)\n", std::strerror(err), err);
-            }
-        }
-        else
-            WARN("D-Bus connection failed with %s: %s\n", error->name, error->message);
-    }
-    else
         WARN("D-Bus not available\n");
+        return false;
+    }
+    dbus::Error error;
+    dbus::ConnectionPtr conn{(*pdbus_bus_get)(DBUS_BUS_SYSTEM, &error.get())};
+    if(!conn)
+    {
+        WARN("D-Bus connection failed with %s: %s\n", error->name, error->message);
+        return false;
+    }
+
+    /* Don't stupidly exit if the connection dies while doing this. */
+    (*pdbus_connection_set_exit_on_disconnect)(conn.get(), false);
+
+    auto limit_rttime = [](DBusConnection *c) -> int
+    {
+        using ulonglong = unsigned long long;
+        long long maxrttime{rtkit_get_rttime_usec_max(c)};
+        if(maxrttime <= 0) return static_cast<int>(std::abs(maxrttime));
+        const ulonglong umaxtime{static_cast<ulonglong>(maxrttime)};
+
+        struct rlimit rlim{};
+        if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
+            return errno;
+
+        TRACE("RTTime max: %llu (hard: %llu, soft: %llu)\n", umaxtime, ulonglong{rlim.rlim_max},
+            ulonglong{rlim.rlim_cur});
+        if(rlim.rlim_max > umaxtime)
+        {
+            rlim.rlim_max = static_cast<rlim_t>(umaxtime);
+            rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
+            if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)
+                return errno;
+        }
+        return 0;
+    };
+
+    int nicemin{};
+    int err{rtkit_get_min_nice_level(conn.get(), &nicemin)};
+    if(err == -ENOENT)
+    {
+        err = std::abs(err);
+        ERR("Could not query RTKit: %s (%d)\n", std::strerror(err), err);
+        return false;
+    }
+    int rtmax{rtkit_get_max_realtime_priority(conn.get())};
+    TRACE("Maximum real-time priority: %d, minimum niceness: %d\n", rtmax, nicemin);
+
+    if(rtmax > 0)
+    {
+        if(AllowRTTimeLimit)
+        {
+            err = limit_rttime(conn.get());
+            if(err != 0)
+                WARN("Failed to set RLIMIT_RTTIME for RTKit: %s (%d)\n",
+                    std::strerror(err), err);
+        }
+
+        /* Limit the maximum real-time priority to half. */
+        rtmax = (rtmax+1)/2;
+        prio = clampi(prio, 1, rtmax);
+
+        TRACE("Making real-time with priority %d (max: %d)\n", prio, rtmax);
+        err = rtkit_make_realtime(conn.get(), 0, prio);
+        if(err == 0) return true;
+
+        err = std::abs(err);
+        WARN("Failed to set real-time priority: %s (%d)\n", std::strerror(err), err);
+    }
+    if(nicemin < 0)
+    {
+        TRACE("Making high priority with niceness %d\n", nicemin);
+        err = rtkit_make_high_priority(conn.get(), 0, nicemin);
+        if(err == 0) return true;
+
+        err = std::abs(err);
+        WARN("Failed to set high priority: %s (%d)\n", std::strerror(err), err);
+    }
+#else
+    WARN("D-Bus not supported\n");
 #endif
-    WARN("Could not set elevated priority: %s (%d)\n", std::strerror(err), err);
+    return false;
+}
+
+} // namespace
+
+void SetRTPriority()
+{
+    if(RTPrioLevel <= 0)
+        return;
+
+    if(SetRTPriorityPthread(RTPrioLevel))
+        return;
+    if(SetRTPriorityRTKit(RTPrioLevel))
+        return;
 }
 
 #endif

@@ -120,12 +120,13 @@ constexpr char pwireInput[] = "PipeWire Input";
     MAGIC(pw_proxy_add_object_listener)                                       \
     MAGIC(pw_proxy_destroy)                                                   \
     MAGIC(pw_proxy_get_user_data)                                             \
+    MAGIC(pw_stream_add_listener)                                             \
     MAGIC(pw_stream_connect)                                                  \
     MAGIC(pw_stream_dequeue_buffer)                                           \
     MAGIC(pw_stream_destroy)                                                  \
     MAGIC(pw_stream_get_state)                                                \
     MAGIC(pw_stream_get_time)                                                 \
-    MAGIC(pw_stream_new_simple)                                               \
+    MAGIC(pw_stream_new)                                                      \
     MAGIC(pw_stream_queue_buffer)                                             \
     MAGIC(pw_stream_set_active)                                               \
     MAGIC(pw_thread_loop_new)                                                 \
@@ -189,12 +190,13 @@ bool pwire_load()
 #define pw_proxy_add_object_listener ppw_proxy_add_object_listener
 #define pw_proxy_destroy ppw_proxy_destroy
 #define pw_proxy_get_user_data ppw_proxy_get_user_data
+#define pw_stream_add_listener ppw_stream_add_listener
 #define pw_stream_connect ppw_stream_connect
 #define pw_stream_dequeue_buffer ppw_stream_dequeue_buffer
 #define pw_stream_destroy ppw_stream_destroy
 #define pw_stream_get_state ppw_stream_get_state
 #define pw_stream_get_time ppw_stream_get_time
-#define pw_stream_new_simple ppw_stream_new_simple
+#define pw_stream_new ppw_stream_new
 #define pw_stream_queue_buffer ppw_stream_queue_buffer
 #define pw_stream_set_active ppw_stream_set_active
 #define pw_thread_loop_destroy ppw_thread_loop_destroy
@@ -893,7 +895,8 @@ bool EventManager::init()
         return false;
     }
 
-    mContext = PwContextPtr{pw_context_new(mLoop.getLoop(), nullptr, 0)};
+    mContext = PwContextPtr{pw_context_new(mLoop.getLoop(),
+        pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr), 0)};
     if(!mContext)
     {
         ERR("Failed to create PipeWire event context (errno: %d)\n", errno);
@@ -1136,7 +1139,10 @@ class PipeWirePlayback final : public BackendBase {
     uint32_t mTargetId{PwIdAny};
     nanoseconds mTimeBase{0};
     ThreadMainloop mLoop;
+    PwContextPtr mContext;
+    PwCorePtr mCore;
     PwStreamPtr mStream;
+    spa_hook mStreamListener{};
     spa_io_rate_match *mRateMatch{};
     std::unique_ptr<float*[]> mChannelPtrs;
     uint mNumChannels{};
@@ -1153,16 +1159,14 @@ class PipeWirePlayback final : public BackendBase {
 
 public:
     PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
-    ~PipeWirePlayback();
+    ~PipeWirePlayback()
+    {
+        /* Stop the mainloop so the stream can be properly destroyed. */
+        if(mLoop) mLoop.stop();
+    }
 
     DEF_NEWDEL(PipeWirePlayback)
 };
-
-PipeWirePlayback::~PipeWirePlayback()
-{
-    /* Stop the mainloop so the stream can be properly destroyed. */
-    if(mLoop) mLoop.stop();
-}
 
 
 void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
@@ -1274,6 +1278,23 @@ void PipeWirePlayback::open(const char *name)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to start PipeWire mainloop (res: %d)", res};
     }
+    MainloopUniqueLock mlock{mLoop};
+    if(!mContext)
+    {
+        pw_properties *cprops{pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr)};
+        mContext = PwContextPtr{pw_context_new(mLoop.getLoop(), cprops, 0)};
+        if(!mContext)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to create PipeWire event context (errno: %d)\n", errno};
+    }
+    if(!mCore)
+    {
+        mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
+        if(!mCore)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to connect PipeWire event context (errno: %d)\n", errno};
+    }
+    mlock.unlock();
 
     /* TODO: Ensure the target ID is still valid/usable and accepts streams. */
 
@@ -1291,6 +1312,7 @@ bool PipeWirePlayback::reset()
         MainloopLockGuard _{mLoop};
         mStream = nullptr;
     }
+    mStreamListener = {};
     mRateMatch = nullptr;
     mTimeBase = GetDeviceClockTime(mDevice);
 
@@ -1363,11 +1385,11 @@ bool PipeWirePlayback::reset()
     MainloopUniqueLock plock{mLoop};
     static constexpr pw_stream_events streamEvents{CreateEvents()};
     /* The stream takes overship of 'props', even in the case of failure. */
-    mStream = PwStreamPtr{pw_stream_new_simple(mLoop.getLoop(), "Playback Stream", props,
-        &streamEvents, this)};
+    mStream = PwStreamPtr{pw_stream_new(mCore.get(), "Playback Stream", props)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Failed to create PipeWire stream (errno: %d)", errno};
+    pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
     constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
@@ -1544,7 +1566,10 @@ class PipeWireCapture final : public BackendBase {
 
     uint32_t mTargetId{PwIdAny};
     ThreadMainloop mLoop;
+    PwContextPtr mContext;
+    PwCorePtr mCore;
     PwStreamPtr mStream;
+    spa_hook mStreamListener{};
 
     RingBufferPtr mRing{};
 
@@ -1559,13 +1584,10 @@ class PipeWireCapture final : public BackendBase {
 
 public:
     PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
-    ~PipeWireCapture();
+    ~PipeWireCapture() { if(mLoop) mLoop.stop(); }
 
     DEF_NEWDEL(PipeWireCapture)
 };
-
-PipeWireCapture::~PipeWireCapture()
-{ if(mLoop) mLoop.stop(); }
 
 
 void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
@@ -1658,6 +1680,23 @@ void PipeWireCapture::open(const char *name)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to start PipeWire mainloop (res: %d)", res};
     }
+    MainloopUniqueLock mlock{mLoop};
+    if(!mContext)
+    {
+        pw_properties *cprops{pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr)};
+        mContext = PwContextPtr{pw_context_new(mLoop.getLoop(), cprops, 0)};
+        if(!mContext)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to create PipeWire event context (errno: %d)\n", errno};
+    }
+    if(!mCore)
+    {
+        mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
+        if(!mCore)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to connect PipeWire event context (errno: %d)\n", errno};
+    }
+    mlock.unlock();
 
     /* TODO: Ensure the target ID is still valid/usable and accepts streams. */
 
@@ -1703,11 +1742,11 @@ void PipeWireCapture::open(const char *name)
 
     MainloopUniqueLock plock{mLoop};
     static constexpr pw_stream_events streamEvents{CreateEvents()};
-    mStream = PwStreamPtr{pw_stream_new_simple(mLoop.getLoop(), "Capture Stream", props,
-        &streamEvents, this)};
+    mStream = PwStreamPtr{pw_stream_new(mCore.get(), "Capture Stream", props)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Failed to create PipeWire stream (errno: %d)", errno};
+    pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
     constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};

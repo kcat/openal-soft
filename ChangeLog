@@ -17,9 +17,7 @@ openal-soft-1.22.0:
     Fixed WASAPI capture using really low sample rates, and sources with very
     high pitch shifts when using a bsinc resampler.
 
-    Implemented a PipeWire backend. Not used by default, as there's no fool-
-    proof way to detect PipeWire is driving the system audio instead of
-    PulseAudio, ALSA, or something else, but it is otherwise functional.
+    Implemented a PipeWire backend.
 
     Implemented enumeration for the JACK and CoreAudio backends.
 

@@ -417,13 +417,16 @@ EventManager gEventHandler;
 /* Enumerated devices. This is updated asynchronously as the app runs, and the
  * gEventHandler thread loop must be locked when accessing the list.
  */
+enum class NodeType : unsigned char {
+    Sink, Source, Duplex
+};
 constexpr auto InvalidChannelConfig = DevFmtChannels(255);
 struct DeviceNode {
     std::string mName;
     std::string mDevName;
 
     uint32_t mId{};
-    bool mCapture{};
+    NodeType mType{};
     bool mIsHeadphones{};
 
     uint mSampleRate{};
@@ -433,9 +436,22 @@ constexpr char MonitorPrefix[]{"Monitor of "};
 constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
 constexpr char AudioSourceClass[]{"Audio/Source"};
+constexpr char AudioDuplexClass[]{"Audio/Duplex"};
 std::vector<DeviceNode> DeviceList;
 std::string DefaultSinkDevice;
 std::string DefaultSourceDevice;
+
+const char *AsString(NodeType type) noexcept
+{
+    switch(type)
+    {
+    case NodeType::Sink: return "sink";
+    case NodeType::Source: return "source";
+    case NodeType::Duplex: return "duplex";
+    }
+    return "<unknown>";
+}
+
 
 DeviceNode &AddDeviceNode(uint32_t id)
 {
@@ -567,11 +583,13 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         const char *media_class{spa_dict_lookup(info->props, PW_KEY_MEDIA_CLASS)};
         if(unlikely(!media_class)) return;
 
-        bool isCapture{};
+        NodeType ntype{};
         if(al::strcasecmp(media_class, AudioSinkClass) == 0)
-            isCapture = false;
+            ntype = NodeType::Sink;
         else if(al::strcasecmp(media_class, AudioSourceClass) == 0)
-            isCapture = true;
+            ntype = NodeType::Source;
+        else if(al::strcasecmp(media_class, AudioDuplexClass) == 0)
+            ntype = NodeType::Duplex;
         else
         {
             TRACE("Dropping device node %u which became type \"%s\"\n", info->id, media_class);
@@ -592,15 +610,15 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         if(!nodeName || !*nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NICK);
         if(!nodeName || !*nodeName) nodeName = devName;
 
-        TRACE("Got %s device \"%s\"%s\n", isCapture ? "capture" : "playback",
-            devName ? devName : "(nil)", isHeadphones ? " (headphones)" : "");
+        TRACE("Got %s device \"%s\"%s\n", AsString(ntype), devName ? devName : "(nil)",
+            isHeadphones ? " (headphones)" : "");
         TRACE("  \"%s\" = ID %u\n", nodeName ? nodeName : "(nil)", info->id);
 
         DeviceNode &node = AddDeviceNode(info->id);
         if(nodeName && *nodeName) node.mName = nodeName;
         else node.mName = "PipeWire node #"+std::to_string(info->id);
         node.mDevName = devName ? devName : "";
-        node.mCapture = isCapture;
+        node.mType = ntype;
         node.mIsHeadphones = isHeadphones;
     }
 }
@@ -973,11 +991,16 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         const char *media_class{spa_dict_lookup(props, PW_KEY_MEDIA_CLASS)};
         if(!media_class) return;
 
-        /* Specifically, audio sinks and sources. */
+        /* Specifically, audio sinks and sources (and duplexes). */
         const bool isGood{al::strcasecmp(media_class, AudioSinkClass) == 0
-            || al::strcasecmp(media_class, AudioSourceClass) == 0};
+            || al::strcasecmp(media_class, AudioSourceClass) == 0
+            || al::strcasecmp(media_class, AudioDuplexClass) == 0};
         if(!isGood)
+        {
+            if(std::strstr(media_class, "/Video") == nullptr)
+                TRACE("Ignoring node class %s\n", media_class);
             return;
+        }
 
         /* Create the proxy object. */
         auto proxy = PwProxyPtr{static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type,
@@ -1241,7 +1264,7 @@ void PipeWirePlayback::open(const char *name)
         if(match == DeviceList.cend())
         {
             auto match_playback = [](const DeviceNode &n) -> bool
-            { return !n.mCapture; };
+            { return n.mType != NodeType::Source; };
             match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_playback);
             if(match == DeviceList.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
@@ -1256,7 +1279,7 @@ void PipeWirePlayback::open(const char *name)
         EventWatcherLockGuard _{gEventHandler};
 
         auto match_name = [name](const DeviceNode &n) -> bool
-        { return !n.mCapture && n.mName == name; };
+        { return n.mType != NodeType::Source && n.mName == name; };
         auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
         if(match == DeviceList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
@@ -1629,21 +1652,19 @@ void PipeWireCapture::open(const char *name)
         if(match == DeviceList.cend())
         {
             auto match_capture = [](const DeviceNode &n) -> bool
-            { return n.mCapture; };
+            { return n.mType != NodeType::Sink; };
             match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_capture);
         }
         if(match == DeviceList.cend())
         {
-            auto match_playback = [](const DeviceNode &n) -> bool
-            { return !n.mCapture; };
-            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_playback);
+            match = DeviceList.cbegin();
             if(match == DeviceList.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
                     "No PipeWire capture device found"};
         }
 
         targetid = match->mId;
-        if(match->mCapture) devname = match->mName;
+        if(match->mType != NodeType::Sink) devname = match->mName;
         else devname = MonitorPrefix+match->mName;
     }
     else
@@ -1651,13 +1672,13 @@ void PipeWireCapture::open(const char *name)
         EventWatcherLockGuard _{gEventHandler};
 
         auto match_name = [name](const DeviceNode &n) -> bool
-        { return n.mCapture && n.mName == name; };
+        { return n.mType != NodeType::Sink && n.mName == name; };
         auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
         if(match == DeviceList.cend() && std::strncmp(name, MonitorPrefix, MonitorPrefixLen) == 0)
         {
             const char *sinkname{name + MonitorPrefixLen};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
-            { return !n.mCapture && n.mName == sinkname; };
+            { return n.mType == NodeType::Sink && n.mName == sinkname; };
             match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_sinkname);
         }
         if(match == DeviceList.cend())
@@ -1868,7 +1889,7 @@ std::string PipeWireBackendFactory::probe(BackendType type)
         }
         for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
         {
-            if(iter != defmatch && !iter->mCapture)
+            if(iter != defmatch && iter->mType != NodeType::Source)
                 outnames.append(iter->mName.c_str(), iter->mName.length()+1);
         }
         break;
@@ -1876,18 +1897,18 @@ std::string PipeWireBackendFactory::probe(BackendType type)
         defmatch = std::find_if(defmatch, DeviceList.cend(), match_defsource);
         if(defmatch != DeviceList.cend())
         {
-            if(!defmatch->mCapture)
+            if(defmatch->mType == NodeType::Sink)
                 outnames.append(MonitorPrefix);
             outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
         }
         for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
         {
-            if(iter != defmatch && iter->mCapture)
+            if(iter != defmatch && iter->mType != NodeType::Sink)
                 outnames.append(iter->mName.c_str(), iter->mName.length()+1);
         }
         for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
         {
-            if(iter != defmatch && !iter->mCapture)
+            if(iter != defmatch && iter->mType == NodeType::Sink)
                 outnames.append(MonitorPrefix).append(iter->mName.c_str(), iter->mName.length()+1);
         }
         break;

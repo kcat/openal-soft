@@ -71,11 +71,17 @@ template<typename ...Args>
 auto ppw_core_sync(pw_core *core, Args&& ...args)
 { return pw_core_sync(core, std::forward<Args>(args)...); }
 template<typename ...Args>
-auto ppw_node_subscribe_params(pw_proxy *proxy, Args&& ...args)
-{ return pw_node_subscribe_params(proxy, std::forward<Args>(args)...); }
-template<typename ...Args>
 auto ppw_registry_add_listener(pw_registry *reg, Args&& ...args)
 { return pw_registry_add_listener(reg, std::forward<Args>(args)...); }
+template<typename ...Args>
+auto ppw_node_add_listener(pw_node *node, Args&& ...args)
+{ return pw_node_add_listener(node, std::forward<Args>(args)...); }
+template<typename ...Args>
+auto ppw_node_subscribe_params(pw_node *node, Args&& ...args)
+{ return pw_node_subscribe_params(node, std::forward<Args>(args)...); }
+template<typename ...Args>
+auto ppw_metadata_add_listener(pw_metadata *mdata, Args&& ...args)
+{ return pw_metadata_add_listener(mdata, std::forward<Args>(args)...); }
 
 
 constexpr auto get_pod_type(const spa_pod *pod) noexcept
@@ -215,6 +221,28 @@ bool pwire_load()
 constexpr bool pwire_load() { return true; }
 #endif
 
+/* Internally, PipeWire types "inherit" from each other, but this is hidden
+ * from the API and the caller is expected to C-style cast to inherited types
+ * as needed. It's also not made very clear what types a given type can be
+ * casted to. To make it a bit safer, this as() method allows casting pw_*
+ * types to known inherited types, generating a compile-time error for
+ * unexpected/invalid casts.
+ */
+template<typename To, typename From>
+To as(From) noexcept = delete;
+
+/* pw_proxy
+ * - pw_registry
+ * - pw_node
+ * - pw_metadata
+ */
+template<>
+pw_proxy* as(pw_registry *reg) noexcept { return reinterpret_cast<pw_proxy*>(reg); }
+template<>
+pw_proxy* as(pw_node *node) noexcept { return reinterpret_cast<pw_proxy*>(node); }
+template<>
+pw_proxy* as(pw_metadata *mdata) noexcept { return reinterpret_cast<pw_proxy*>(mdata); }
+
 
 class ThreadMainloop {
     pw_thread_loop *mLoop{};
@@ -275,14 +303,19 @@ struct PwCoreDeleter {
 using PwCorePtr = std::unique_ptr<pw_core,PwCoreDeleter>;
 
 struct PwRegistryDeleter {
-    void operator()(pw_registry *reg) const { pw_proxy_destroy(reinterpret_cast<pw_proxy*>(reg)); }
+    void operator()(pw_registry *reg) const { pw_proxy_destroy(as<pw_proxy*>(reg)); }
 };
 using PwRegistryPtr = std::unique_ptr<pw_registry,PwRegistryDeleter>;
 
-struct PwProxyDeleter {
-    void operator()(pw_proxy *proxy) const { pw_proxy_destroy(proxy); }
+struct PwNodeDeleter {
+    void operator()(pw_node *node) const { pw_proxy_destroy(as<pw_proxy*>(node)); }
 };
-using PwProxyPtr = std::unique_ptr<pw_proxy,PwProxyDeleter>;
+using PwNodePtr = std::unique_ptr<pw_node,PwNodeDeleter>;
+
+struct PwMetadataDeleter {
+    void operator()(pw_metadata *mdata) const { pw_proxy_destroy(as<pw_proxy*>(mdata)); }
+};
+using PwMetadataPtr = std::unique_ptr<pw_metadata,PwMetadataDeleter>;
 
 struct PwStreamDeleter {
     void operator()(pw_stream *stream) const { pw_stream_destroy(stream); }
@@ -318,7 +351,7 @@ struct EventManager {
     /* A list of proxy objects watching for events about changes to objects in
      * the registry.
      */
-    std::vector<NodeProxy*> mProxyList;
+    std::vector<NodeProxy*> mNodeList;
     MetadataProxy *mDefaultMetadata{nullptr};
 
     /* Initialization handling. When init() is called, mInitSeq is set to a
@@ -540,23 +573,23 @@ struct NodeProxy {
 
     uint32_t mId{};
 
-    PwProxyPtr mProxy{};
-    spa_hook mNodeListener{};
+    PwNodePtr mNode{};
+    spa_hook mListener{};
 
-    NodeProxy(uint32_t id, PwProxyPtr proxy)
-      : mId{id}, mProxy{std::move(proxy)}
+    NodeProxy(uint32_t id, PwNodePtr node)
+      : mId{id}, mNode{std::move(node)}
     {
         static constexpr pw_node_events nodeEvents{CreateNodeEvents()};
-        pw_proxy_add_object_listener(mProxy.get(), &mNodeListener, &nodeEvents, this);
+        ppw_node_add_listener(mNode.get(), &mListener, &nodeEvents, this);
 
         /* Track changes to the enumerable formats (indicates the default
          * format, which is what we're interested in).
          */
         uint32_t fmtids[]{SPA_PARAM_EnumFormat};
-        ppw_node_subscribe_params(mProxy.get(), al::data(fmtids), al::size(fmtids));
+        ppw_node_subscribe_params(mNode.get(), al::data(fmtids), al::size(fmtids));
     }
     ~NodeProxy()
-    { spa_hook_remove(&mNodeListener); }
+    { spa_hook_remove(&mListener); }
 
 
     void infoCallback(const pw_node_info *info);
@@ -813,14 +846,14 @@ struct MetadataProxy {
 
     uint32_t mId{};
 
-    PwProxyPtr mProxy{};
+    PwMetadataPtr mMetadata{};
     spa_hook mListener{};
 
-    MetadataProxy(uint32_t id, PwProxyPtr proxy)
-      : mId{id}, mProxy{std::move(proxy)}
+    MetadataProxy(uint32_t id, PwMetadataPtr mdata)
+      : mId{id}, mMetadata{std::move(mdata)}
     {
         static constexpr pw_metadata_events metadataEvents{CreateMetadataEvents()};
-        pw_proxy_add_object_listener(mProxy.get(), &mListener, &metadataEvents, this);
+        ppw_metadata_add_listener(mMetadata.get(), &mListener, &metadataEvents, this);
     }
     ~MetadataProxy()
     { spa_hook_remove(&mListener); }
@@ -959,7 +992,7 @@ EventManager::~EventManager()
 {
     if(mLoop) mLoop.stop();
 
-    for(NodeProxy *node : mProxyList)
+    for(NodeProxy *node : mNodeList)
         al::destroy_at(node);
     if(mDefaultMetadata)
         al::destroy_at(mDefaultMetadata);
@@ -969,9 +1002,9 @@ void EventManager::kill()
 {
     if(mLoop) mLoop.stop();
 
-    for(NodeProxy *node : mProxyList)
+    for(NodeProxy *node : mNodeList)
         al::destroy_at(node);
-    mProxyList.clear();
+    mNodeList.clear();
     if(mDefaultMetadata)
         al::destroy_at(mDefaultMetadata);
     mDefaultMetadata = nullptr;
@@ -1003,19 +1036,19 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         }
 
         /* Create the proxy object. */
-        auto proxy = PwProxyPtr{static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type,
+        auto node = PwNodePtr{static_cast<pw_node*>(pw_registry_bind(mRegistry.get(), id, type,
             version, sizeof(NodeProxy)))};
-        if(!proxy)
+        if(!node)
         {
             ERR("Failed to create node proxy object (errno: %d)\n", errno);
             return;
         }
 
-        /* Initialize the NodeProxy to hold the proxy object, add it to the
-         * active proxy list, and update the sync point.
+        /* Initialize the NodeProxy to hold the node object, add it to the
+         * active node list, and update the sync point.
          */
-        auto *node = static_cast<NodeProxy*>(pw_proxy_get_user_data(proxy.get()));
-        mProxyList.emplace_back(al::construct_at(node, id, std::move(proxy)));
+        auto *proxy = static_cast<NodeProxy*>(pw_proxy_get_user_data(as<pw_proxy*>(node.get())));
+        mNodeList.emplace_back(al::construct_at(proxy, id, std::move(node)));
         syncInit();
 
         /* Signal any waiters that we have found a source or sink for audio
@@ -1041,16 +1074,17 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             return;
         }
 
-        auto proxy = PwProxyPtr{static_cast<pw_proxy*>(pw_registry_bind(mRegistry.get(), id, type,
-            version, sizeof(MetadataProxy)))};
-        if(!proxy)
+        auto mdata = PwMetadataPtr{static_cast<pw_metadata*>(pw_registry_bind(mRegistry.get(), id,
+            type, version, sizeof(MetadataProxy)))};
+        if(!mdata)
         {
             ERR("Failed to create metadata proxy object (errno: %d)\n", errno);
             return;
         }
 
-        auto *mdata = static_cast<MetadataProxy*>(pw_proxy_get_user_data(proxy.get()));
-        mDefaultMetadata = al::construct_at(mdata, id, std::move(proxy));
+        auto *proxy = static_cast<MetadataProxy*>(
+            pw_proxy_get_user_data(as<pw_proxy*>(mdata.get())));
+        mDefaultMetadata = al::construct_at(proxy, id, std::move(mdata));
         syncInit();
     }
 }
@@ -1059,14 +1093,14 @@ void EventManager::removeCallback(uint32_t id)
 {
     RemoveDevice(id);
 
-    auto elem = mProxyList.begin();
-    while(elem != mProxyList.end())
+    auto elem = mNodeList.begin();
+    while(elem != mNodeList.end())
     {
         NodeProxy *node{*elem};
         if(node->mId == id)
         {
             al::destroy_at(node);
-            elem = mProxyList.erase(elem);
+            elem = mNodeList.erase(elem);
             continue;
         }
         ++elem;

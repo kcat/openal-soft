@@ -1104,18 +1104,15 @@ void EventManager::removeCallback(uint32_t id)
 {
     DeviceNode::Remove(id);
 
-    auto elem = mNodeList.begin();
-    while(elem != mNodeList.end())
+    auto clear_node = [id](NodeProxy *node) noexcept
     {
-        NodeProxy *node{*elem};
-        if(node->mId == id)
-        {
-            al::destroy_at(node);
-            elem = mNodeList.erase(elem);
-            continue;
-        }
-        ++elem;
-    }
+        if(node->mId != id)
+            return false;
+        al::destroy_at(node);
+        return true;
+    };
+    auto node_end = std::remove_if(mNodeList.begin(), mNodeList.end(), clear_node);
+    mNodeList.erase(node_end, mNodeList.end());
 
     if(mDefaultMetadata && mDefaultMetadata->mId == id)
     {

@@ -97,6 +97,9 @@ constexpr auto get_pod_body(const spa_pod *pod) noexcept
 constexpr auto make_pod_builder(void *data, uint32_t size) noexcept
 { return SPA_POD_BUILDER_INIT(data, size); }
 
+constexpr auto get_array_value_type(const spa_pod *pod) noexcept
+{ return SPA_POD_ARRAY_VALUE_TYPE(pod); }
+
 constexpr auto PwIdAny = PW_ID_ANY;
 
 } // namespace
@@ -220,6 +223,46 @@ bool pwire_load()
 
 constexpr bool pwire_load() { return true; }
 #endif
+
+/* Helpers for retrieving values from params */
+template<uint32_t T> struct PodInfo { };
+
+template<>
+struct PodInfo<SPA_TYPE_Int> {
+    using Type = int32_t;
+    static auto get_value(const spa_pod *pod, int32_t *val)
+    { return spa_pod_get_int(pod, val); }
+};
+template<>
+struct PodInfo<SPA_TYPE_Id> {
+    using Type = uint32_t;
+    static auto get_value(const spa_pod *pod, uint32_t *val)
+    { return spa_pod_get_id(pod, val); }
+};
+
+template<uint32_t T>
+using Pod_t = typename PodInfo<T>::Type;
+
+template<uint32_t T>
+al::span<Pod_t<T>> get_array_span(const spa_pod *pod)
+{
+    uint32_t nvals;
+    if(void *v{spa_pod_get_array(pod, &nvals)})
+    {
+        if(get_array_value_type(pod) == T)
+            return {static_cast<Pod_t<T>*>(v), nvals};
+    }
+    return {};
+}
+
+template<uint32_t T>
+al::optional<Pod_t<T>> get_value(const spa_pod *value)
+{
+    Pod_t<T> val{};
+    if(PodInfo<T>::get_value(value, &val) == 0)
+        return val;
+    return al::nullopt;
+}
 
 /* Internally, PipeWire types "inherit" from each other, but this is hidden
  * from the API and the caller is expected to C-style cast to inherited types
@@ -464,13 +507,18 @@ struct DeviceNode {
 
     uint mSampleRate{};
     DevFmtChannels mChannels{InvalidChannelConfig};
+
+    static std::vector<DeviceNode> sList;
+    static DeviceNode &Add(uint32_t id);
+    static DeviceNode *Find(uint32_t id);
+    static void Remove(uint32_t id);
+    static std::vector<DeviceNode> &GetList() noexcept { return sList; }
+
+    void parseSampleRate(const spa_pod *value) noexcept;
+    void parsePositions(const spa_pod *value) noexcept;
+    void parseChannelCount(const spa_pod *value) noexcept;
 };
-constexpr char MonitorPrefix[]{"Monitor of "};
-constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
-constexpr char AudioSinkClass[]{"Audio/Sink"};
-constexpr char AudioSourceClass[]{"Audio/Source"};
-constexpr char AudioDuplexClass[]{"Audio/Duplex"};
-std::vector<DeviceNode> DeviceList;
+std::vector<DeviceNode> DeviceNode::sList;
 std::string DefaultSinkDevice;
 std::string DefaultSourceDevice;
 
@@ -485,40 +533,39 @@ const char *AsString(NodeType type) noexcept
     return "<unknown>";
 }
 
-
-DeviceNode &AddDeviceNode(uint32_t id)
+DeviceNode &DeviceNode::Add(uint32_t id)
 {
     auto match_id = [id](DeviceNode &n) noexcept -> bool
     { return n.mId == id; };
 
     /* If the node is already in the list, return the existing entry. */
-    auto match = std::find_if(DeviceList.begin(), DeviceList.end(), match_id);
-    if(match != DeviceList.end()) return *match;
+    auto match = std::find_if(sList.begin(), sList.end(), match_id);
+    if(match != sList.end()) return *match;
 
-    DeviceList.emplace_back();
-    auto &n = DeviceList.back();
+    sList.emplace_back();
+    auto &n = sList.back();
     n.mId = id;
     return n;
 }
 
-DeviceNode *FindDeviceNode(uint32_t id)
+DeviceNode *DeviceNode::Find(uint32_t id)
 {
     auto match_id = [id](DeviceNode &n) noexcept -> bool
     { return n.mId == id; };
 
-    auto match = std::find_if(DeviceList.begin(), DeviceList.end(), match_id);
-    if(match != DeviceList.end()) return std::addressof(*match);
+    auto match = std::find_if(sList.begin(), sList.end(), match_id);
+    if(match != sList.end()) return std::addressof(*match);
 
     return nullptr;
 }
 
-void RemoveDevice(uint32_t id)
+void DeviceNode::Remove(uint32_t id)
 {
     auto match_id = [id](DeviceNode &n) noexcept -> bool
     { return n.mId == id; };
 
-    auto end = std::remove_if(DeviceList.begin(), DeviceList.end(), match_id);
-    DeviceList.erase(end, DeviceList.end());
+    auto end = std::remove_if(sList.begin(), sList.end(), match_id);
+    sList.erase(end, sList.end());
 }
 
 
@@ -549,6 +596,8 @@ const spa_audio_channel MonoMap[]{
 template<size_t N>
 bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&map1)[N])
 {
+    if(map0.size() < N)
+        return false;
     for(const spa_audio_channel chid : map1)
     {
         if(std::find(map0.begin(), map0.end(), chid) == map0.end())
@@ -557,6 +606,128 @@ bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&ma
     return true;
 }
 
+void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
+{
+    /* TODO: Can this be anything else? Long, Float, Double? */
+    uint32_t nvals{}, choiceType{};
+    value = spa_pod_get_values(value, &nvals, &choiceType);
+
+    const uint podType{get_pod_type(value)};
+    if(podType != SPA_TYPE_Int)
+    {
+        WARN("Unhandled sample rate POD type: %u\n", podType);
+        return;
+    }
+
+    if(choiceType == SPA_CHOICE_Range)
+    {
+        if(nvals != 3)
+        {
+            WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
+            return;
+        }
+        auto srates = get_pod_body<int32_t,3>(value);
+
+        /* [0] is the default, [1] is the min, and [2] is the max. */
+        TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", mId, srates[0], srates[1],
+            srates[2]);
+        mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
+        return;
+    }
+
+    if(choiceType == SPA_CHOICE_Enum)
+    {
+        if(nvals == 0)
+        {
+            WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
+            return;
+        }
+        auto srates = get_pod_body<int32_t>(value, nvals);
+
+        /* [0] is the default, [1...size()-1] are available selections. */
+        std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
+        for(size_t i{2};i < srates.size();++i)
+        {
+            others += ", ";
+            others += std::to_string(srates[i]);
+        }
+        TRACE("Device ID %u sample rate: %d (%s)\n", mId, srates[0], others.c_str());
+        /* Pick the first rate listed that's within the allowed range (default
+         * rate if possible).
+         */
+        for(const auto &rate : srates)
+        {
+            if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
+            {
+                mSampleRate = static_cast<uint>(rate);
+                break;
+            }
+        }
+        return;
+    }
+
+    if(choiceType == SPA_CHOICE_None)
+    {
+        if(nvals != 1)
+        {
+            WARN("Unexpected SPA_CHOICE_None count: %u\n", nvals);
+            return;
+        }
+        auto srates = get_pod_body<int32_t,1>(value);
+
+        TRACE("Device ID %u sample rate: %d\n", mId, srates[0]);
+        mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
+        return;
+    }
+
+    WARN("Unhandled sample rate choice type: %u\n", choiceType);
+}
+
+void DeviceNode::parsePositions(const spa_pod *value) noexcept
+{
+    const auto chanmap = get_array_span<SPA_TYPE_Id>(value);
+    if(chanmap.empty()) return;
+
+    /* TODO: Does 5.1(rear) need to be tracked, or will PipeWire do the right
+     * thing and re-route the Side-labelled Surround channels to Rear-labelled
+     * Surround?
+     */
+    if(MatchChannelMap(chanmap, X71Map))
+        mChannels = DevFmtX71;
+    else if(MatchChannelMap(chanmap, X61Map))
+        mChannels = DevFmtX61;
+    else if(MatchChannelMap(chanmap, X51Map) || MatchChannelMap(chanmap, X51RearMap))
+        mChannels = DevFmtX51;
+    else if(MatchChannelMap(chanmap, QuadMap))
+        mChannels = DevFmtQuad;
+    else if(MatchChannelMap(chanmap, StereoMap))
+        mChannels = DevFmtStereo;
+    else
+        mChannels = DevFmtMono;
+    TRACE("Device ID %u got %zu position%s for %s\n", mId, chanmap.size(),
+        (chanmap.size()==1)?"":"s", DevFmtChannelsString(mChannels));
+}
+
+void DeviceNode::parseChannelCount(const spa_pod *value) noexcept
+{
+    /* As a fallback with just a channel count, just assume mono or stereo. */
+    if(auto chans = get_value<SPA_TYPE_Int>(value))
+    {
+        if(*chans >= 2)
+            mChannels = DevFmtStereo;
+        else if(*chans >= 1)
+            mChannels = DevFmtMono;
+        TRACE("Device ID %u got %d channel%s for %s\n", mId, *chans, (*chans==1)?"":"s",
+            DevFmtChannelsString(mChannels));
+    }
+}
+
+
+constexpr char MonitorPrefix[]{"Monitor of "};
+constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
+constexpr char AudioSinkClass[]{"Audio/Sink"};
+constexpr char AudioSourceClass[]{"Audio/Source"};
+constexpr char AudioDuplexClass[]{"Audio/Duplex"};
 
 /* A generic PipeWire node proxy object used to track changes to sink and
  * source nodes.
@@ -626,7 +797,7 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         else
         {
             TRACE("Dropping device node %u which became type \"%s\"\n", info->id, media_class);
-            RemoveDevice(info->id);
+            DeviceNode::Remove(info->id);
             return;
         }
 
@@ -647,7 +818,7 @@ void NodeProxy::infoCallback(const pw_node_info *info)
             isHeadphones ? " (headphones)" : "");
         TRACE("  \"%s\" = ID %u\n", nodeName ? nodeName : "(nil)", info->id);
 
-        DeviceNode &node = AddDeviceNode(info->id);
+        DeviceNode &node = DeviceNode::Add(info->id);
         if(nodeName && *nodeName) node.mName = nodeName;
         else node.mName = "PipeWire node #"+std::to_string(info->id);
         node.mDevName = devName ? devName : "";
@@ -656,180 +827,20 @@ void NodeProxy::infoCallback(const pw_node_info *info)
     }
 }
 
-/* Helpers for retrieving values from params */
-template<uint32_t T> struct PodInfo { };
-
-template<>
-struct PodInfo<SPA_TYPE_Int> {
-    using Type = int32_t;
-    static auto get_value(const spa_pod *pod, int32_t *val)
-    { return spa_pod_get_int(pod, val); }
-};
-template<>
-struct PodInfo<SPA_TYPE_Id> {
-    using Type = uint32_t;
-    static auto get_value(const spa_pod *pod, uint32_t *val)
-    { return spa_pod_get_id(pod, val); }
-};
-
-template<uint32_t T>
-using Pod_t = typename PodInfo<T>::Type;
-
-template<uint32_t T, size_t N>
-uint32_t get_param_array(const spa_pod *value, const al::span<Pod_t<T>,N> vals)
-{
-    return spa_pod_copy_array(value, T, vals.data(), static_cast<uint32_t>(vals.size()));
-}
-
-template<uint32_t T>
-al::optional<Pod_t<T>> get_param(const spa_pod *value)
-{
-    Pod_t<T> val{};
-    if(PodInfo<T>::get_value(value, &val) == 0)
-        return val;
-    return al::nullopt;
-}
-
-void parse_srate(DeviceNode *node, const spa_pod *value)
-{
-    /* TODO: Can this be anything else? Long, Float, Double? */
-    uint32_t nvals{}, choiceType{};
-    value = spa_pod_get_values(value, &nvals, &choiceType);
-
-    const uint podType{get_pod_type(value)};
-    if(podType != SPA_TYPE_Int)
-    {
-        WARN("Unhandled sample rate POD type: %u\n", podType);
-        return;
-    }
-
-    if(choiceType == SPA_CHOICE_Range)
-    {
-        if(nvals != 3)
-        {
-            WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
-            return;
-        }
-        auto srates = get_pod_body<int32_t,3>(value);
-
-        /* [0] is the default, [1] is the min, and [2] is the max. */
-        TRACE("Device ID %u sample rate: %d (range: %d -> %d)\n", node->mId, srates[0], srates[1],
-            srates[2]);
-        srates[0] = clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
-        node->mSampleRate = static_cast<uint>(srates[0]);
-        return;
-    }
-
-    if(choiceType == SPA_CHOICE_Enum)
-    {
-        if(nvals == 0)
-        {
-            WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
-            return;
-        }
-        auto srates = get_pod_body<int32_t>(value, nvals);
-
-        /* [0] is the default, [1...size()-1] are available selections. */
-        std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
-        for(size_t i{2};i < srates.size();++i)
-        {
-            others += ", ";
-            others += std::to_string(srates[i]);
-        }
-        TRACE("Device ID %u sample rate: %d (%s)\n", node->mId, srates[0], others.c_str());
-        /* Pick the first rate listed that's within the allowed range (default
-         * rate if possible).
-         */
-        for(const auto &rate : srates)
-        {
-            if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
-            {
-                node->mSampleRate = static_cast<uint>(rate);
-                break;
-            }
-        }
-        return;
-    }
-
-    if(choiceType == SPA_CHOICE_None)
-    {
-        if(nvals != 1)
-        {
-            WARN("Unexpected SPA_CHOICE_None count: %u\n", nvals);
-            return;
-        }
-        auto srates = get_pod_body<int32_t,1>(value);
-
-        TRACE("Device ID %u sample rate: %d\n", node->mId, srates[0]);
-        int srate{clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE)};
-        node->mSampleRate = static_cast<uint>(srate);
-        return;
-    }
-
-    WARN("Unhandled sample rate choice type: %u\n", choiceType);
-}
-
-void parse_positions(DeviceNode *node, const spa_pod *value)
-{
-    constexpr size_t MaxChannels{SPA_AUDIO_MAX_CHANNELS};
-
-    auto posdata = std::make_unique<uint32_t[]>(MaxChannels);
-    const al::span<uint32_t,MaxChannels> posarray{posdata.get(), MaxChannels};
-    if(auto got = get_param_array<SPA_TYPE_Id>(value, posarray))
-    {
-        const al::span<uint32_t> chanmap{posarray.first(got)};
-
-        /* TODO: Does 5.1(rear) need to be tracked, or will PipeWire do the
-         * right thing and re-route the Side-labelled Surround channels to
-         * Rear-labelled Surround?
-         */
-        if(got >= 8 && MatchChannelMap(chanmap, X71Map))
-            node->mChannels = DevFmtX71;
-        else if(got >= 7 && MatchChannelMap(chanmap, X61Map))
-            node->mChannels = DevFmtX61;
-        else if(got >= 6 && MatchChannelMap(chanmap, X51Map))
-            node->mChannels = DevFmtX51;
-        else if(got >= 6 && MatchChannelMap(chanmap, X51RearMap))
-            node->mChannels = DevFmtX51;
-        else if(got >= 4 && MatchChannelMap(chanmap, QuadMap))
-            node->mChannels = DevFmtQuad;
-        else if(got >= 2 && MatchChannelMap(chanmap, StereoMap))
-            node->mChannels = DevFmtStereo;
-        else if(got >= 1)
-            node->mChannels = DevFmtMono;
-        TRACE("Device ID %u got %u position%s for %s\n", node->mId, got, (got==1)?"":"s",
-            DevFmtChannelsString(node->mChannels));
-    }
-}
-
-void parse_channels(DeviceNode *node, const spa_pod *value)
-{
-    /* As a fallback with just a channel count, just assume mono or stereo. */
-    if(auto chans = get_param<SPA_TYPE_Int>(value))
-    {
-        if(*chans >= 2)
-            node->mChannels = DevFmtStereo;
-        else if(*chans >= 1)
-            node->mChannels = DevFmtMono;
-        TRACE("Device ID %u got %d channel%s for %s\n", node->mId, *chans, (*chans==1)?"":"s",
-            DevFmtChannelsString(node->mChannels));
-    }
-}
-
 void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_pod *param)
 {
     if(id == SPA_PARAM_EnumFormat)
     {
-        DeviceNode *node{FindDeviceNode(mId)};
+        DeviceNode *node{DeviceNode::Find(mId)};
         if(unlikely(!node)) return;
 
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_rate)})
-            parse_srate(node, &prop->value);
+            node->parseSampleRate(&prop->value);
 
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_position)})
-            parse_positions(node, &prop->value);
+            node->parsePositions(&prop->value);
         else if((prop=spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_channels)) != nullptr)
-            parse_channels(node, &prop->value);
+            node->parseChannelCount(&prop->value);
     }
 }
 
@@ -1091,7 +1102,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
 
 void EventManager::removeCallback(uint32_t id)
 {
-    RemoveDevice(id);
+    DeviceNode::Remove(id);
 
     auto elem = mNodeList.begin();
     while(elem != mNodeList.end())
@@ -1287,20 +1298,21 @@ void PipeWirePlayback::open(const char *name)
     if(!name)
     {
         EventWatcherLockGuard _{gEventHandler};
+        auto&& devlist = DeviceNode::GetList();
 
-        auto match = DeviceList.cend();
+        auto match = devlist.cend();
         if(!DefaultSinkDevice.empty())
         {
             auto match_default = [](const DeviceNode &n) -> bool
             { return n.mDevName == DefaultSinkDevice; };
-            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_default);
+            match = std::find_if(devlist.cbegin(), devlist.cend(), match_default);
         }
-        if(match == DeviceList.cend())
+        if(match == devlist.cend())
         {
             auto match_playback = [](const DeviceNode &n) -> bool
             { return n.mType != NodeType::Source; };
-            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_playback);
-            if(match == DeviceList.cend())
+            match = std::find_if(devlist.cbegin(), devlist.cend(), match_playback);
+            if(match == devlist.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
                     "No PipeWire playback device found"};
         }
@@ -1311,11 +1323,12 @@ void PipeWirePlayback::open(const char *name)
     else
     {
         EventWatcherLockGuard _{gEventHandler};
+        auto&& devlist = DeviceNode::GetList();
 
         auto match_name = [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Source && n.mName == name; };
-        auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
-        if(match == DeviceList.cend())
+        auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
+        if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%s\" not found", name};
 
@@ -1380,11 +1393,12 @@ bool PipeWirePlayback::reset()
     if(mTargetId != PwIdAny)
     {
         EventWatcherLockGuard _{gEventHandler};
+        auto&& devlist = DeviceNode::GetList();
 
         auto match_id = [targetid=mTargetId](const DeviceNode &n) -> bool
         { return targetid == n.mId; };
-        auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_id);
-        if(match != DeviceList.cend())
+        auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_id);
+        if(match != devlist.cend())
         {
             if(!mDevice->Flags.test(FrequencyRequest) && match->mSampleRate > 0)
             {
@@ -1675,24 +1689,25 @@ void PipeWireCapture::open(const char *name)
     if(!name)
     {
         EventWatcherLockGuard _{gEventHandler};
+        auto&& devlist = DeviceNode::GetList();
 
-        auto match = DeviceList.cend();
+        auto match = devlist.cend();
         if(!DefaultSourceDevice.empty())
         {
             auto match_default = [](const DeviceNode &n) -> bool
             { return n.mDevName == DefaultSourceDevice; };
-            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_default);
+            match = std::find_if(devlist.cbegin(), devlist.cend(), match_default);
         }
-        if(match == DeviceList.cend())
+        if(match == devlist.cend())
         {
             auto match_capture = [](const DeviceNode &n) -> bool
             { return n.mType != NodeType::Sink; };
-            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_capture);
+            match = std::find_if(devlist.cbegin(), devlist.cend(), match_capture);
         }
-        if(match == DeviceList.cend())
+        if(match == devlist.cend())
         {
-            match = DeviceList.cbegin();
-            if(match == DeviceList.cend())
+            match = devlist.cbegin();
+            if(match == devlist.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
                     "No PipeWire capture device found"};
         }
@@ -1704,18 +1719,19 @@ void PipeWireCapture::open(const char *name)
     else
     {
         EventWatcherLockGuard _{gEventHandler};
+        auto&& devlist = DeviceNode::GetList();
 
         auto match_name = [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Sink && n.mName == name; };
-        auto match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_name);
-        if(match == DeviceList.cend() && std::strncmp(name, MonitorPrefix, MonitorPrefixLen) == 0)
+        auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
+        if(match == devlist.cend() && std::strncmp(name, MonitorPrefix, MonitorPrefixLen) == 0)
         {
             const char *sinkname{name + MonitorPrefixLen};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
             { return n.mType == NodeType::Sink && n.mName == sinkname; };
-            match = std::find_if(DeviceList.cbegin(), DeviceList.cend(), match_sinkname);
+            match = std::find_if(devlist.cbegin(), devlist.cend(), match_sinkname);
         }
-        if(match == DeviceList.cend())
+        if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%s\" not found", name};
 
@@ -1901,6 +1917,7 @@ std::string PipeWireBackendFactory::probe(BackendType type)
 
     gEventHandler.waitForInit();
     EventWatcherLockGuard _{gEventHandler};
+    auto&& devlist = DeviceNode::GetList();
 
     auto match_defsink = [](const DeviceNode &n) -> bool
     { return n.mDevName == DefaultSinkDevice; };
@@ -1909,41 +1926,40 @@ std::string PipeWireBackendFactory::probe(BackendType type)
 
     auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
     { return lhs.mId < rhs.mId; };
-    std::sort(DeviceList.begin(), DeviceList.end(), sort_devnode);
+    std::sort(devlist.begin(), devlist.end(), sort_devnode);
 
-    auto defmatch = DeviceList.cbegin();
+    auto defmatch = devlist.cbegin();
     switch(type)
     {
     case BackendType::Playback:
-        defmatch = std::find_if(defmatch, DeviceList.cend(), match_defsink);
-        if(defmatch != DeviceList.cend())
+        defmatch = std::find_if(defmatch, devlist.cend(), match_defsink);
+        if(defmatch != devlist.cend())
         {
             /* Includes null char. */
             outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
         }
-        for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
+        for(auto iter = devlist.cbegin();iter != devlist.cend();++iter)
         {
             if(iter != defmatch && iter->mType != NodeType::Source)
                 outnames.append(iter->mName.c_str(), iter->mName.length()+1);
         }
         break;
     case BackendType::Capture:
-        defmatch = std::find_if(defmatch, DeviceList.cend(), match_defsource);
-        if(defmatch != DeviceList.cend())
+        defmatch = std::find_if(defmatch, devlist.cend(), match_defsource);
+        if(defmatch != devlist.cend())
         {
             if(defmatch->mType == NodeType::Sink)
                 outnames.append(MonitorPrefix);
             outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
         }
-        for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
+        for(auto iter = devlist.cbegin();iter != devlist.cend();++iter)
         {
-            if(iter != defmatch && iter->mType != NodeType::Sink)
+            if(iter != defmatch)
+            {
+                if(iter->mType == NodeType::Sink)
+                    outnames.append(MonitorPrefix);
                 outnames.append(iter->mName.c_str(), iter->mName.length()+1);
-        }
-        for(auto iter = DeviceList.cbegin();iter != DeviceList.cend();++iter)
-        {
-            if(iter != defmatch && iter->mType == NodeType::Sink)
-                outnames.append(MonitorPrefix).append(iter->mName.c_str(), iter->mName.length()+1);
+            }
         }
         break;
     }

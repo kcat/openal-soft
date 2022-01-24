@@ -1424,7 +1424,7 @@ void eax_fail_get(
 } // namespace
 
 
-AL_API ALenum AL_APIENTRY EAXSet(
+ALenum AL_APIENTRY EAXSet(
     const GUID* property_set_id,
     ALuint property_id,
     ALuint property_source_id,
@@ -1455,7 +1455,7 @@ catch (...)
     return AL_INVALID_OPERATION;
 }
 
-AL_API ALenum AL_APIENTRY EAXGet(
+ALenum AL_APIENTRY EAXGet(
     const GUID* property_set_id,
     ALuint property_id,
     ALuint property_source_id,

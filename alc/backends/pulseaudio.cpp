@@ -236,78 +236,6 @@ constexpr pa_channel_map MonoChanMap{
     }
 };
 
-al::optional<Channel> ChannelFromPulse(pa_channel_position_t chan)
-{
-    switch(chan)
-    {
-    case PA_CHANNEL_POSITION_INVALID: break;
-    case PA_CHANNEL_POSITION_MONO: return al::make_optional(FrontCenter);
-    case PA_CHANNEL_POSITION_FRONT_LEFT: return al::make_optional(FrontLeft);
-    case PA_CHANNEL_POSITION_FRONT_RIGHT: return al::make_optional(FrontRight);
-    case PA_CHANNEL_POSITION_FRONT_CENTER: return al::make_optional(FrontCenter);
-    case PA_CHANNEL_POSITION_REAR_CENTER: return al::make_optional(BackCenter);
-    case PA_CHANNEL_POSITION_REAR_LEFT: return al::make_optional(BackLeft);
-    case PA_CHANNEL_POSITION_REAR_RIGHT: return al::make_optional(BackRight);
-    case PA_CHANNEL_POSITION_LFE: return al::make_optional(LFE);
-    case PA_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER: break;
-    case PA_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER: break;
-    case PA_CHANNEL_POSITION_SIDE_LEFT: return al::make_optional(SideLeft);
-    case PA_CHANNEL_POSITION_SIDE_RIGHT: return al::make_optional(SideRight);
-    case PA_CHANNEL_POSITION_AUX0: break;
-    case PA_CHANNEL_POSITION_AUX1: break;
-    case PA_CHANNEL_POSITION_AUX2: break;
-    case PA_CHANNEL_POSITION_AUX3: break;
-    case PA_CHANNEL_POSITION_AUX4: break;
-    case PA_CHANNEL_POSITION_AUX5: break;
-    case PA_CHANNEL_POSITION_AUX6: break;
-    case PA_CHANNEL_POSITION_AUX7: break;
-    case PA_CHANNEL_POSITION_AUX8: break;
-    case PA_CHANNEL_POSITION_AUX9: break;
-    case PA_CHANNEL_POSITION_AUX10: break;
-    case PA_CHANNEL_POSITION_AUX11: break;
-    case PA_CHANNEL_POSITION_AUX12: break;
-    case PA_CHANNEL_POSITION_AUX13: break;
-    case PA_CHANNEL_POSITION_AUX14: break;
-    case PA_CHANNEL_POSITION_AUX15: break;
-    case PA_CHANNEL_POSITION_AUX16: break;
-    case PA_CHANNEL_POSITION_AUX17: break;
-    case PA_CHANNEL_POSITION_AUX18: break;
-    case PA_CHANNEL_POSITION_AUX19: break;
-    case PA_CHANNEL_POSITION_AUX20: break;
-    case PA_CHANNEL_POSITION_AUX21: break;
-    case PA_CHANNEL_POSITION_AUX22: break;
-    case PA_CHANNEL_POSITION_AUX23: break;
-    case PA_CHANNEL_POSITION_AUX24: break;
-    case PA_CHANNEL_POSITION_AUX25: break;
-    case PA_CHANNEL_POSITION_AUX26: break;
-    case PA_CHANNEL_POSITION_AUX27: break;
-    case PA_CHANNEL_POSITION_AUX28: break;
-    case PA_CHANNEL_POSITION_AUX29: break;
-    case PA_CHANNEL_POSITION_AUX30: break;
-    case PA_CHANNEL_POSITION_AUX31: break;
-    case PA_CHANNEL_POSITION_TOP_CENTER: return al::make_optional(TopCenter);
-    case PA_CHANNEL_POSITION_TOP_FRONT_LEFT: return al::make_optional(TopFrontLeft);
-    case PA_CHANNEL_POSITION_TOP_FRONT_RIGHT: return al::make_optional(TopFrontRight);
-    case PA_CHANNEL_POSITION_TOP_FRONT_CENTER: return al::make_optional(TopFrontCenter);
-    case PA_CHANNEL_POSITION_TOP_REAR_LEFT: return al::make_optional(TopBackLeft);
-    case PA_CHANNEL_POSITION_TOP_REAR_RIGHT: return al::make_optional(TopBackRight);
-    case PA_CHANNEL_POSITION_TOP_REAR_CENTER: return al::make_optional(TopBackCenter);
-    case PA_CHANNEL_POSITION_MAX: break;
-    }
-    WARN("Unexpected channel enum %d (%s)\n", chan, pa_channel_position_to_string(chan));
-    return al::nullopt;
-}
-
-void SetChannelOrderFromMap(DeviceBase *device, const pa_channel_map &chanmap)
-{
-    device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
-    for(uint i{0};i < chanmap.channels;++i)
-    {
-        if(auto label = ChannelFromPulse(chanmap.map[i]))
-            device->RealOut.ChannelIndex[*label] = i;
-    }
-}
-
 
 /* *grumble* Don't use enums for bitflags. */
 constexpr inline pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
@@ -708,6 +636,7 @@ struct PulsePlayback final : public BackendBase {
 
     al::optional<std::string> mDeviceName{al::nullopt};
 
+    bool mIs51Rear{false};
     pa_buffer_attr mAttr;
     pa_sample_spec mSpec;
 
@@ -780,15 +709,16 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
     struct ChannelMap {
         DevFmtChannels fmt;
         pa_channel_map map;
+        bool is_51rear;
     };
     static constexpr std::array<ChannelMap,7> chanmaps{{
-        { DevFmtX71, X71ChanMap },
-        { DevFmtX61, X61ChanMap },
-        { DevFmtX51, X51ChanMap },
-        { DevFmtX51, X51RearChanMap },
-        { DevFmtQuad, QuadChanMap },
-        { DevFmtStereo, StereoChanMap },
-        { DevFmtMono, MonoChanMap }
+        { DevFmtX71, X71ChanMap, false },
+        { DevFmtX61, X61ChanMap, false },
+        { DevFmtX51, X51ChanMap, false },
+        { DevFmtX51, X51RearChanMap, true },
+        { DevFmtQuad, QuadChanMap, false },
+        { DevFmtStereo, StereoChanMap, false },
+        { DevFmtMono, MonoChanMap, false }
     }};
 
     if(eol)
@@ -805,9 +735,11 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
     {
         if(!mDevice->Flags.test(ChannelsRequest))
             mDevice->FmtChans = chaniter->fmt;
+        mIs51Rear = chaniter->is_51rear;
     }
     else
     {
+        mIs51Rear = false;
         char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX]{};
         pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
         WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
@@ -955,7 +887,7 @@ bool PulsePlayback::reset()
         chanmap = QuadChanMap;
         break;
     case DevFmtX51:
-        chanmap = X51ChanMap;
+        chanmap = (mIs51Rear ? X51RearChanMap : X51ChanMap);
         break;
     case DevFmtX61:
         chanmap = X61ChanMap;
@@ -964,7 +896,7 @@ bool PulsePlayback::reset()
         chanmap = X71ChanMap;
         break;
     }
-    SetChannelOrderFromMap(mDevice, chanmap);
+    setDefaultWFXChannelOrder();
 
     switch(mDevice->FmtType)
     {
@@ -1245,7 +1177,7 @@ void PulseCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError, "%s capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
-    SetChannelOrderFromMap(mDevice, chanmap);
+    setDefaultWFXChannelOrder();
 
     switch(mDevice->FmtType)
     {

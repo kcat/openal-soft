@@ -244,13 +244,13 @@ template<uint32_t T>
 using Pod_t = typename PodInfo<T>::Type;
 
 template<uint32_t T>
-al::span<Pod_t<T>> get_array_span(const spa_pod *pod)
+al::span<const Pod_t<T>> get_array_span(const spa_pod *pod)
 {
     uint32_t nvals;
     if(void *v{spa_pod_get_array(pod, &nvals)})
     {
         if(get_array_value_type(pod) == T)
-            return {static_cast<Pod_t<T>*>(v), nvals};
+            return {static_cast<const Pod_t<T>*>(v), nvals};
     }
     return {};
 }
@@ -504,6 +504,7 @@ struct DeviceNode {
     uint32_t mId{};
     NodeType mType{};
     bool mIsHeadphones{};
+    bool mIs51Rear{};
 
     uint mSampleRate{};
     DevFmtChannels mChannels{InvalidChannelConfig};
@@ -594,7 +595,7 @@ const spa_audio_channel MonoMap[]{
  * to or a superset of map1).
  */
 template<size_t N>
-bool MatchChannelMap(const al::span<uint32_t> map0, const spa_audio_channel (&map1)[N])
+bool MatchChannelMap(const al::span<const uint32_t> map0, const spa_audio_channel (&map1)[N])
 {
     if(map0.size() < N)
         return false;
@@ -685,41 +686,46 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
 
 void DeviceNode::parsePositions(const spa_pod *value) noexcept
 {
+    mIs51Rear = false;
+
     const auto chanmap = get_array_span<SPA_TYPE_Id>(value);
     if(chanmap.empty()) return;
 
-    /* TODO: Does 5.1(rear) need to be tracked, or will PipeWire do the right
-     * thing and re-route the Side-labelled Surround channels to Rear-labelled
-     * Surround?
-     */
     if(MatchChannelMap(chanmap, X71Map))
         mChannels = DevFmtX71;
     else if(MatchChannelMap(chanmap, X61Map))
         mChannels = DevFmtX61;
-    else if(MatchChannelMap(chanmap, X51Map) || MatchChannelMap(chanmap, X51RearMap))
+    else if(MatchChannelMap(chanmap, X51Map))
         mChannels = DevFmtX51;
+    else if(MatchChannelMap(chanmap, X51RearMap))
+    {
+        mChannels = DevFmtX51;
+        mIs51Rear = true;
+    }
     else if(MatchChannelMap(chanmap, QuadMap))
         mChannels = DevFmtQuad;
     else if(MatchChannelMap(chanmap, StereoMap))
         mChannels = DevFmtStereo;
     else
         mChannels = DevFmtMono;
-    TRACE("Device ID %u got %zu position%s for %s\n", mId, chanmap.size(),
-        (chanmap.size()==1)?"":"s", DevFmtChannelsString(mChannels));
+    TRACE("Device ID %u got %zu position%s for %s%s\n", mId, chanmap.size(),
+        (chanmap.size()==1)?"":"s", DevFmtChannelsString(mChannels), mIs51Rear?"(rear)":"");
 }
 
 void DeviceNode::parseChannelCount(const spa_pod *value) noexcept
 {
+    mIs51Rear = false;
+
     /* As a fallback with just a channel count, just assume mono or stereo. */
-    if(auto chans = get_value<SPA_TYPE_Int>(value))
-    {
-        if(*chans >= 2)
-            mChannels = DevFmtStereo;
-        else if(*chans >= 1)
-            mChannels = DevFmtMono;
-        TRACE("Device ID %u got %d channel%s for %s\n", mId, *chans, (*chans==1)?"":"s",
-            DevFmtChannelsString(mChannels));
-    }
+    const auto chancount = get_value<SPA_TYPE_Int>(value);
+    if(!chancount) return;
+
+    if(*chancount >= 2)
+        mChannels = DevFmtStereo;
+    else if(*chancount >= 1)
+        mChannels = DevFmtMono;
+    TRACE("Device ID %u got %d channel%s for %s\n", mId, *chancount, (*chancount==1)?"":"s",
+        DevFmtChannelsString(mChannels));
 }
 
 
@@ -1137,7 +1143,7 @@ void EventManager::coreCallback(uint32_t id, int seq)
 
 
 enum use_f32p_e : bool { UseDevType=false, ForceF32Planar=true };
-spa_audio_info_raw make_spa_info(DeviceBase *device, use_f32p_e use_f32p)
+spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e use_f32p)
 {
     spa_audio_info_raw info{};
     if(use_f32p)
@@ -1164,7 +1170,10 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, use_f32p_e use_f32p)
     case DevFmtMono: map = MonoMap; break;
     case DevFmtStereo: map = StereoMap; break;
     case DevFmtQuad: map = QuadMap; break;
-    case DevFmtX51: map = X51Map; break;
+    case DevFmtX51:
+        if(is51rear) map = X51RearMap;
+        else map = X51Map;
+        break;
     case DevFmtX61: map = X61Map; break;
     case DevFmtX71: map = X71Map; break;
     case DevFmtAmbi3D:
@@ -1386,6 +1395,7 @@ bool PipeWirePlayback::reset()
     /* If connecting to a specific device, update various device parameters to
      * match its format.
      */
+    bool is51rear{false};
     mDevice->Flags.reset(DirectEar);
     if(mTargetId != PwIdAny)
     {
@@ -1410,12 +1420,13 @@ bool PipeWirePlayback::reset()
                 mDevice->FmtChans = match->mChannels;
             if(match->mChannels == DevFmtStereo && match->mIsHeadphones)
                 mDevice->Flags.set(DirectEar);
+            is51rear = match->mIs51Rear;
         }
     }
     /* Force planar 32-bit float output for playback. This is what PipeWire
      * handles internally, and it's easier for us too.
      */
-    spa_audio_info_raw info{make_spa_info(mDevice, ForceF32Planar)};
+    spa_audio_info_raw info{make_spa_info(mDevice, is51rear, ForceF32Planar)};
 
     /* TODO: How to tell what an appropriate size is? Examples just use this
      * magic value.
@@ -1775,7 +1786,19 @@ void PipeWireCapture::open(const char *name)
         mDevice->DeviceName = pwireInput;
 
 
-    spa_audio_info_raw info{make_spa_info(mDevice, UseDevType)};
+    bool is51rear{false};
+    if(mTargetId != PwIdAny)
+    {
+        EventWatcherLockGuard _{gEventHandler};
+        auto&& devlist = DeviceNode::GetList();
+
+        auto match_id = [targetid=mTargetId](const DeviceNode &n) -> bool
+        { return targetid == n.mId; };
+        auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_id);
+        if(match != devlist.cend())
+            is51rear = match->mIs51Rear;
+    }
+    spa_audio_info_raw info{make_spa_info(mDevice, is51rear, UseDevType)};
 
     constexpr uint32_t pod_buffer_size{1024};
     auto pod_buffer = std::make_unique<al::byte[]>(pod_buffer_size);

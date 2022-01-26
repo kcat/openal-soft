@@ -324,7 +324,7 @@ public:
 };
 struct MainloopUniqueLock : public std::unique_lock<ThreadMainloop> {
     using std::unique_lock<ThreadMainloop>::unique_lock;
-    using std::unique_lock<ThreadMainloop>::operator=;
+    MainloopUniqueLock& operator=(MainloopUniqueLock&&) = default;
 
     auto wait() const -> void
     { pw_thread_loop_wait(mutex()->mLoop); }

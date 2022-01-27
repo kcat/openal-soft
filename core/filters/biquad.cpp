@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 
+#include "alnumbers.h"
 #include "opthelpers.h"
 
 
@@ -16,7 +17,7 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Rea
     // Limit gain to -100dB
     assert(gain > 0.00001f);
 
-    const Real w0{al::MathDefs<Real>::Tau() * f0norm};
+    const Real w0{al::numbers::pi_v<Real>*2.0f * f0norm};
     const Real sin_w0{std::sin(w0)};
     const Real cos_w0{std::cos(w0)};
     const Real alpha{sin_w0/2.0f * rcpQ};

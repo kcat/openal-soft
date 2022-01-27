@@ -37,6 +37,7 @@
 #include "albyte.h"
 #include "alcomplex.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alspan.h"
 #include "vector.h"
 #include "opthelpers.h"
@@ -501,7 +502,7 @@ int main(int argc, char **argv)
             for(size_t i{0};i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
-                constexpr float sqrt1_2{0.707106781187f};
+                constexpr auto sqrt1_2 = static_cast<float>(1.0/al::numbers::sqrt2);
                 for(size_t j{0};j < outchans;++j)
                     outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * sqrt1_2);
             }

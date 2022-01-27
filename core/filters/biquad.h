@@ -6,8 +6,8 @@
 #include <cstddef>
 #include <utility>
 
+#include "alnumbers.h"
 #include "alspan.h"
-#include "math_defs.h"
 
 
 /* Filters implementation is based on the "Cookbook formulae for audio
@@ -40,11 +40,11 @@ enum class BiquadType {
 template<typename Real>
 class BiquadFilterR {
     /* Last two delayed components for direct form II. */
-    Real mZ1{0.0f}, mZ2{0.0f};
+    Real mZ1{0}, mZ2{0};
     /* Transfer function coefficients "b" (numerator) */
-    Real mB0{1.0f}, mB1{0.0f}, mB2{0.0f};
+    Real mB0{1}, mB1{0}, mB2{0};
     /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
-    Real mA1{0.0f}, mA2{0.0f};
+    Real mA1{0}, mA2{0};
 
     void setParams(BiquadType type, Real f0norm, Real gain, Real rcpQ);
 
@@ -55,7 +55,7 @@ class BiquadFilterR {
      * \param slope 0 < slope <= 1
      */
     static Real rcpQFromSlope(Real gain, Real slope)
-    { return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
+    { return std::sqrt((gain + Real{1}/gain)*(Real{1}/slope - Real{1}) + Real{2}); }
 
     /**
      * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the
@@ -65,12 +65,12 @@ class BiquadFilterR {
      */
     static Real rcpQFromBandwidth(Real f0norm, Real bandwidth)
     {
-        const Real w0{al::MathDefs<Real>::Tau() * f0norm};
-        return 2.0f*std::sinh(std::log(Real{2.0f})/2.0f*bandwidth*w0/std::sin(w0));
+        const Real w0{al::numbers::pi_v<Real>*Real{2} * f0norm};
+        return 2.0f*std::sinh(std::log(Real{2})/Real{2}*bandwidth*w0/std::sin(w0));
     }
 
 public:
-    void clear() noexcept { mZ1 = mZ2 = 0.0f; }
+    void clear() noexcept { mZ1 = mZ2 = Real{0}; }
 
     /**
      * Sets the filter state for the specified filter type and its parameters.

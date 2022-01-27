@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "math_defs.h"
+#include "alnumbers.h"
 #include "opthelpers.h"
 
 
@@ -21,9 +21,9 @@ using uint = unsigned int;
  */
 double Sinc(const double x)
 {
-    if UNLIKELY(std::abs(x) < Epsilon)
+    if(unlikely(std::abs(x) < Epsilon))
         return 1.0;
-    return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
+    return std::sin(al::numbers::pi*x) / (al::numbers::pi*x);
 }
 
 /* The zero-order modified Bessel function of the first kind, used for the
@@ -95,7 +95,7 @@ constexpr uint Gcd(uint x, uint y)
  */
 constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 {
-    const double w_t{2.0 * al::MathDefs<double>::Pi() * transition};
+    const double w_t{2.0 * al::numbers::pi * transition};
     if LIKELY(rejection > 21.0)
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));

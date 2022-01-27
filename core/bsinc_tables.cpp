@@ -9,8 +9,8 @@
 #include <memory>
 #include <stdexcept>
 
+#include "alnumbers.h"
 #include "core/mixer/defs.h"
-#include "math_defs.h"
 
 
 namespace {
@@ -28,7 +28,7 @@ constexpr double Sinc(const double x)
     constexpr double epsilon{std::numeric_limits<double>::epsilon()};
     if(!(x > epsilon || x < -epsilon))
         return 1.0;
-    return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
+    return std::sin(al::numbers::pi*x) / (al::numbers::pi*x);
 }
 
 /* The zero-order modified Bessel function of the first kind, used for the
@@ -87,9 +87,9 @@ constexpr double Kaiser(const double beta, const double k, const double besseli_
 constexpr double CalcKaiserWidth(const double rejection, const uint order) noexcept
 {
     if(rejection > 21.19)
-        return (rejection - 7.95) / (order * 2.285 * al::MathDefs<double>::Tau());
+        return (rejection - 7.95) / (2.285 * al::numbers::pi*2.0 * order);
     /* This enforces a minimum rejection of just above 21.18dB */
-    return 5.79 / (order * al::MathDefs<double>::Tau());
+    return 5.79 / (al::numbers::pi*2.0 * order);
 }
 
 /* Calculates the beta value of the Kaiser window. Rejection is in dB. */

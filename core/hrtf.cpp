@@ -23,6 +23,7 @@
 #include "albyte.h"
 #include "alfstream.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
@@ -30,7 +31,6 @@
 #include "filters/splitter.h"
 #include "helpers.h"
 #include "logging.h"
-#include "math_defs.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
 #include "polyphase_resampler.h"
@@ -79,7 +79,7 @@ constexpr char magicMarker03[8]{'M','i','n','P','H','R','0','3'};
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr float PassthruCoeff{0.707106781187f/*sqrt(0.5)*/};
+constexpr auto PassthruCoeff = static_cast<float>(1.0/al::numbers::sqrt2);
 
 std::mutex LoadedHrtfLock;
 al::vector<LoadedHrtf> LoadedHrtfs;
@@ -164,8 +164,8 @@ struct IdxBlend { uint idx; float blend; };
  */
 IdxBlend CalcEvIndex(uint evcount, float ev)
 {
-    ev = (al::MathDefs<float>::Pi()*0.5f + ev) * static_cast<float>(evcount-1) /
-        al::MathDefs<float>::Pi();
+    ev = (al::numbers::pi_v<float>*0.5f + ev) * static_cast<float>(evcount-1) /
+        al::numbers::pi_v<float>;
     uint idx{float2uint(ev)};
 
     return IdxBlend{minu(idx, evcount-1), ev-static_cast<float>(idx)};
@@ -176,8 +176,8 @@ IdxBlend CalcEvIndex(uint evcount, float ev)
  */
 IdxBlend CalcAzIndex(uint azcount, float az)
 {
-    az = (al::MathDefs<float>::Tau()+az) * static_cast<float>(azcount) /
-        al::MathDefs<float>::Tau();
+    az = (al::numbers::pi_v<float>*2.0f + az) * static_cast<float>(azcount) /
+        (al::numbers::pi_v<float>*2.0f);
     uint idx{float2uint(az)};
 
     return IdxBlend{idx%azcount, az-static_cast<float>(idx)};
@@ -192,7 +192,7 @@ IdxBlend CalcAzIndex(uint azcount, float az)
 void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
     float spread, HrirArray &coeffs, const al::span<uint,2> delays)
 {
-    const float dirfact{1.0f - (spread / al::MathDefs<float>::Tau())};
+    const float dirfact{1.0f - (al::numbers::inv_pi_v<float>/2.0f * spread)};
 
     const auto *field = Hrtf->field;
     const auto *field_end = field + Hrtf->fdCount-1;

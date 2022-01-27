@@ -30,6 +30,7 @@
 #include "alc/effects/base.h"
 #include "alcomplex.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/bufferline.h"
@@ -40,7 +41,6 @@
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 
 
 namespace {
@@ -61,7 +61,7 @@ std::array<double,HIL_SIZE> InitHannWindow()
     /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
     for(size_t i{0};i < HIL_SIZE>>1;i++)
     {
-        constexpr double scale{al::MathDefs<double>::Pi() / double{HIL_SIZE}};
+        constexpr double scale{al::numbers::pi / double{HIL_SIZE}};
         const double val{std::sin(static_cast<double>(i+1) * scale)};
         ret[i] = ret[HIL_SIZE-1-i] = val * val;
     }
@@ -217,7 +217,7 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         uint phase_idx{mPhase[c]};
         for(size_t k{0};k < samplesToDo;++k)
         {
-            const double phase{phase_idx * ((1.0/MixerFracOne) * al::MathDefs<double>::Tau())};
+            const double phase{phase_idx * (al::numbers::pi*2.0 / MixerFracOne)};
             BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
                 mOutdata[k].imag()*std::sin(phase)*mSign[c]);
 

@@ -68,7 +68,6 @@
 #include "core/voice_change.h"
 #include "event.h"
 #include "filter.h"
-#include "math_defs.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"

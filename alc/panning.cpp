@@ -42,6 +42,7 @@
 #include "alconfig.h"
 #include "alc/context.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "aloptional.h"
 #include "alspan.h"
@@ -57,7 +58,6 @@
 #include "core/logging.h"
 #include "core/uhjfilter.h"
 #include "device.h"
-#include "math_defs.h"
 #include "opthelpers.h"
 
 
@@ -658,7 +658,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
 void InitHrtfPanning(ALCdevice *device)
 {
-    constexpr float Deg180{al::MathDefs<float>::Pi()};
+    constexpr float Deg180{al::numbers::pi_v<float>};
     constexpr float Deg_90{Deg180 / 2.0f /* 90 degrees*/};
     constexpr float Deg_45{Deg_90 / 2.0f /* 45 degrees*/};
     constexpr float Deg135{Deg_45 * 3.0f /*135 degrees*/};

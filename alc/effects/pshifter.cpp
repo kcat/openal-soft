@@ -30,6 +30,7 @@
 #include "alc/effects/base.h"
 #include "alcomplex.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/bufferline.h"
@@ -39,7 +40,6 @@
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 
 struct ContextBase;
 
@@ -63,7 +63,7 @@ std::array<double,STFT_SIZE> InitHannWindow()
     /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
     for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
-        constexpr double scale{al::MathDefs<double>::Pi() / double{STFT_SIZE}};
+        constexpr double scale{al::numbers::pi / double{STFT_SIZE}};
         const double val{std::sin(static_cast<double>(i+1) * scale)};
         ret[i] = ret[STFT_SIZE-1-i] = val * val;
     }
@@ -155,7 +155,7 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
     /* Cycle offset per update expected of each frequency bin (bin 0 is none,
      * bin 1 is x1, bin 2 is x2, etc).
      */
-    constexpr double expected_cycles{al::MathDefs<double>::Tau() / OVERSAMP};
+    constexpr double expected_cycles{al::numbers::pi*2.0 / OVERSAMP};
 
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -198,8 +198,8 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
             double tmp{(phase - mLastPhase[k]) - static_cast<double>(k)*expected_cycles};
 
             /* Map delta phase into +/- Pi interval */
-            int qpd{double2int(tmp / al::MathDefs<double>::Pi())};
-            tmp -= al::MathDefs<double>::Pi() * (qpd + (qpd%2));
+            int qpd{double2int(tmp / al::numbers::pi)};
+            tmp -= al::numbers::pi * (qpd + (qpd%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected_cycles;

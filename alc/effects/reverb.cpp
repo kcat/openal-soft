@@ -44,7 +44,6 @@
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 #include "opthelpers.h"
 #include "vecmat.h"
 #include "vector.h"
@@ -113,7 +112,7 @@ alignas(16) constexpr float EarlyA2B[NUM_LINES][NUM_LINES]{
 };
 
 /* Converts A-Format to B-Format for late reverb. */
-constexpr float Sqrt1_2{7.07106781e-01f/*1.0f/std::sqrt(2.0f)*/};
+constexpr auto Sqrt1_2 = static_cast<float>(1.0/al::numbers::sqrt2);
 alignas(16) constexpr float LateA2B[NUM_LINES][NUM_LINES]{
     { 0.5f,  0.5f,  0.5f,  0.5f },
     { Sqrt1_2, -Sqrt1_2,  0.0f,  0.0f },
@@ -795,10 +794,8 @@ void T60Filter::calcCoeffs(const float length, const float lfDecayTime,
 void EarlyReflections::updateLines(const float density_mult, const float diffusion,
     const float decayTime, const float frequency)
 {
-    constexpr float sqrt1_2{0.70710678118654752440f/*1.0f/std::sqrt(2.0f)*/};
-
     /* Calculate the all-pass feed-back/forward coefficient. */
-    VecAp.Coeff = diffusion*diffusion * sqrt1_2;
+    VecAp.Coeff = diffusion*diffusion * Sqrt1_2;
 
     for(size_t i{0u};i < NUM_LINES;i++)
     {
@@ -888,8 +885,7 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
     DensityGain[1] = CalcDensityGain(CalcDecayCoeff(length, decayTimeWeighted));
 
     /* Calculate the all-pass feed-back/forward coefficient. */
-    constexpr float sqrt1_2{0.70710678118654752440f/*1.0f/std::sqrt(2.0f)*/};
-    VecAp.Coeff = diffusion*diffusion * sqrt1_2;
+    VecAp.Coeff = diffusion*diffusion * Sqrt1_2;
 
     for(size_t i{0u};i < NUM_LINES;i++)
     {
@@ -1431,7 +1427,7 @@ void ReverbState::earlyFaded(const size_t offset, const size_t todo, const float
 
 void Modulation::calcDelays(size_t todo)
 {
-    constexpr float inv_scale{MOD_FRACONE / al::MathDefs<float>::Tau()};
+    constexpr float inv_scale{MOD_FRACONE / al::numbers::pi_v<float> / 2.0f};
     uint idx{Index};
     const uint step{Step};
     const float depth{Depth[0]};
@@ -1446,7 +1442,7 @@ void Modulation::calcDelays(size_t todo)
 
 void Modulation::calcFadedDelays(size_t todo, float fadeCount, float fadeStep)
 {
-    constexpr float inv_scale{MOD_FRACONE / al::MathDefs<float>::Tau()};
+    constexpr float inv_scale{MOD_FRACONE / al::numbers::pi_v<float> / 2.0f};
     uint idx{Index};
     const uint step{Step};
     const float depth{Depth[0]};

@@ -27,6 +27,7 @@
 
 #include "alc/effects/base.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -38,7 +39,6 @@
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 
 
 namespace {
@@ -53,7 +53,7 @@ using uint = unsigned int;
 
 inline float Sin(uint index)
 {
-    constexpr float scale{al::MathDefs<float>::Tau() / WAVEFORM_FRACONE};
+    constexpr float scale{al::numbers::pi_v<float>*2.0f / WAVEFORM_FRACONE};
     return std::sin(static_cast<float>(index) * scale);
 }
 

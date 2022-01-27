@@ -19,7 +19,6 @@
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/voice.h"
-#include "math_defs.h"
 #include "vector.h"
 
 struct ALbuffer;
@@ -79,7 +78,7 @@ struct ALsource {
     /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
      * rather than clockwise.
      */
-    std::array<float,2> StereoPan{{Deg2Rad( 30.0f), Deg2Rad(-30.0f)}};
+    std::array<float,2> StereoPan{{al::numbers::pi_v<float>/6.0f, -al::numbers::pi_v<float>/6.0f}};
 
     float Radius{0.0f};
     float EnhWidth{0.593f};

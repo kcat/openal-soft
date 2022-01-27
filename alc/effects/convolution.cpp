@@ -35,7 +35,6 @@
 #include "core/fmt_traits.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 #include "polyphase_resampler.h"
 #include "vector.h"
 
@@ -120,6 +119,10 @@ struct ChanMap {
     float angle;
     float elevation;
 };
+
+constexpr float Deg2Rad(float x) noexcept
+{ return static_cast<float>(al::numbers::pi / 180.0 * x); }
+
 
 using complex_d = std::complex<double>;
 
@@ -346,7 +349,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
      * to have its own output target since the main mixing buffer won't have an
      * LFE channel (due to being B-Format).
      */
-    static const ChanMap MonoMap[1]{
+    static constexpr ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
     }, StereoMap[2]{
         { FrontLeft,  Deg2Rad(-45.0f), Deg2Rad(0.0f) },

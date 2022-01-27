@@ -637,7 +637,6 @@ set(COMMON_OBJS
     common/dynload.cpp
     common/dynload.h
     common/intrusive_ptr.h
-    common/math_defs.h
     common/opthelpers.h
     common/phase_shifter.h
     common/polyphase_resampler.cpp

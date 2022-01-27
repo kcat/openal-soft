@@ -34,8 +34,8 @@
 #include <vector>
 
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alspan.h"
-#include "math_defs.h"
 #include "opthelpers.h"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -146,61 +146,61 @@ struct SpeakerPos {
 };
 
 /* Azimuth is counter-clockwise. */
-const SpeakerPos StereoMap[2]{
-    { SF_CHANNEL_MAP_LEFT,  Deg2Rad( 30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_RIGHT, Deg2Rad(-30.0f), Deg2Rad(0.0f) },
+constexpr SpeakerPos StereoMap[2]{
+    { SF_CHANNEL_MAP_LEFT,   30.0f, 0.0f },
+    { SF_CHANNEL_MAP_RIGHT, -30.0f, 0.0f },
 }, QuadMap[4]{
-    { SF_CHANNEL_MAP_LEFT,       Deg2Rad(  45.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_RIGHT,      Deg2Rad( -45.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_REAR_LEFT,  Deg2Rad( 135.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_REAR_RIGHT, Deg2Rad(-135.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_LEFT,         45.0f, 0.0f },
+    { SF_CHANNEL_MAP_RIGHT,       -45.0f, 0.0f },
+    { SF_CHANNEL_MAP_REAR_LEFT,   135.0f, 0.0f },
+    { SF_CHANNEL_MAP_REAR_RIGHT, -135.0f, 0.0f },
 }, X51Map[6]{
-    { SF_CHANNEL_MAP_LEFT,       Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_RIGHT,      Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_CENTER,     Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
+    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
+    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
     { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,  Deg2Rad( 110.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_SIDE_RIGHT, Deg2Rad(-110.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_SIDE_LEFT,   110.0f, 0.0f },
+    { SF_CHANNEL_MAP_SIDE_RIGHT, -110.0f, 0.0f },
 }, X51RearMap[6]{
-    { SF_CHANNEL_MAP_LEFT,       Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_RIGHT,      Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_CENTER,     Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
+    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
+    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
     { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,  Deg2Rad( 110.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_REAR_RIGHT, Deg2Rad(-110.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_REAR_LEFT,   110.0f, 0.0f },
+    { SF_CHANNEL_MAP_REAR_RIGHT, -110.0f, 0.0f },
 }, X71Map[8]{
-    { SF_CHANNEL_MAP_LEFT,       Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_RIGHT,      Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_CENTER,     Deg2Rad(   0.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
+    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
+    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
     { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,  Deg2Rad( 150.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_REAR_RIGHT, Deg2Rad(-150.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_SIDE_LEFT,  Deg2Rad(  90.0f), Deg2Rad(0.0f) },
-    { SF_CHANNEL_MAP_SIDE_RIGHT, Deg2Rad( -90.0f), Deg2Rad(0.0f) },
+    { SF_CHANNEL_MAP_REAR_LEFT,   150.0f, 0.0f },
+    { SF_CHANNEL_MAP_REAR_RIGHT, -150.0f, 0.0f },
+    { SF_CHANNEL_MAP_SIDE_LEFT,    90.0f, 0.0f },
+    { SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f, 0.0f },
 }, X714Map[12]{
-    { SF_CHANNEL_MAP_LEFT,       Deg2Rad(  30.0f), Deg2Rad( 0.0f) },
-    { SF_CHANNEL_MAP_RIGHT,      Deg2Rad( -30.0f), Deg2Rad( 0.0f) },
-    { SF_CHANNEL_MAP_CENTER,     Deg2Rad(   0.0f), Deg2Rad( 0.0f) },
+    { SF_CHANNEL_MAP_LEFT,         30.0f,  0.0f },
+    { SF_CHANNEL_MAP_RIGHT,       -30.0f,  0.0f },
+    { SF_CHANNEL_MAP_CENTER,        0.0f,  0.0f },
     { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,  Deg2Rad( 150.0f), Deg2Rad( 0.0f) },
-    { SF_CHANNEL_MAP_REAR_RIGHT, Deg2Rad(-150.0f), Deg2Rad( 0.0f) },
-    { SF_CHANNEL_MAP_SIDE_LEFT,  Deg2Rad(  90.0f), Deg2Rad( 0.0f) },
-    { SF_CHANNEL_MAP_SIDE_RIGHT, Deg2Rad( -90.0f), Deg2Rad( 0.0f) },
-    { SF_CHANNEL_MAP_TOP_FRONT_LEFT,  Deg2Rad(  45.0f), Deg2Rad(35.0f) },
-    { SF_CHANNEL_MAP_TOP_FRONT_RIGHT, Deg2Rad( -45.0f), Deg2Rad(35.0f) },
-    { SF_CHANNEL_MAP_TOP_REAR_LEFT,   Deg2Rad( 135.0f), Deg2Rad(35.0f) },
-    { SF_CHANNEL_MAP_TOP_REAR_RIGHT,  Deg2Rad(-135.0f), Deg2Rad(35.0f) },
+    { SF_CHANNEL_MAP_REAR_LEFT,   150.0f,  0.0f },
+    { SF_CHANNEL_MAP_REAR_RIGHT, -150.0f,  0.0f },
+    { SF_CHANNEL_MAP_SIDE_LEFT,    90.0f,  0.0f },
+    { SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f,  0.0f },
+    { SF_CHANNEL_MAP_TOP_FRONT_LEFT,    45.0f, 35.0f },
+    { SF_CHANNEL_MAP_TOP_FRONT_RIGHT,  -45.0f, 35.0f },
+    { SF_CHANNEL_MAP_TOP_REAR_LEFT,    135.0f, 35.0f },
+    { SF_CHANNEL_MAP_TOP_REAR_RIGHT,  -135.0f, 35.0f },
 };
 
-inline std::array<float,4> GenCoeffs(float x /*+front*/, float y /*+left*/, float z /*+up*/)
+constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up*/) noexcept
 {
     /* Coefficients are +3dB of FuMa. */
-    std::array<float,4> coeffs;
-    coeffs[0] = 1.0f;
-    coeffs[1] = 1.41421356237f * x;
-    coeffs[2] = 1.41421356237f * y;
-    coeffs[3] = 1.41421356237f * z;
-    return coeffs;
+    return std::array<float,4>{{
+        1.0f,
+        static_cast<float>(al::numbers::sqrt2 * x),
+        static_cast<float>(al::numbers::sqrt2 * y),
+        static_cast<float>(al::numbers::sqrt2 * z)
+    }};
 }
 
 } // namespace
@@ -382,7 +382,7 @@ int main(int argc, char **argv)
                 /* B-Format is already in the correct order. It just needs a
                  * +3dB boost.
                  */
-                constexpr float scale{1.41421356237f};
+                constexpr float scale{al::numbers::sqrt2_v<float>};
                 const size_t chans{std::min<size_t>(static_cast<uint>(ininfo.channels), 4u)};
                 for(size_t c{0};c < chans;++c)
                 {
@@ -404,10 +404,11 @@ int main(int argc, char **argv)
                     srcmem[i] = inmem[i * static_cast<uint>(ininfo.channels)];
                 ++inmem;
 
+                constexpr auto Deg2Rad = al::numbers::pi / 180.0;
                 const auto coeffs = GenCoeffs(
-                    std::cos(spkr.mAzimuth) * std::cos(spkr.mElevation),
-                    std::sin(spkr.mAzimuth) * std::cos(spkr.mElevation),
-                    std::sin(spkr.mElevation));
+                    std::cos(spkr.mAzimuth*Deg2Rad) * std::cos(spkr.mElevation*Deg2Rad),
+                    std::sin(spkr.mAzimuth*Deg2Rad) * std::cos(spkr.mElevation*Deg2Rad),
+                    std::sin(spkr.mElevation*Deg2Rad));
                 for(size_t c{0};c < 4;++c)
                 {
                     for(size_t i{0};i < got;++i)

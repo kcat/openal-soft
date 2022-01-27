@@ -72,7 +72,6 @@
 #include "core/voice.h"
 #include "core/voice_change.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "strutils.h"
@@ -678,6 +677,9 @@ void AmbiRotator(std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> &
 /* End ambisonic rotation helpers. */
 
 
+constexpr float Deg2Rad(float x) noexcept
+{ return static_cast<float>(al::numbers::pi / 180.0 * x); }
+
 struct GainTriplet { float Base, HF, LF; };
 
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
@@ -685,7 +687,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
     const VoiceProps *props, const ContextParams &Context, const DeviceBase *Device)
 {
-    static const ChanMap MonoMap[1]{
+    static constexpr ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
     }, RearMap[2]{
         { BackLeft,  Deg2Rad(-150.0f), Deg2Rad(0.0f) },

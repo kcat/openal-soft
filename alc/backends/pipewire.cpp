@@ -287,6 +287,40 @@ template<>
 pw_proxy* as(pw_metadata *mdata) noexcept { return reinterpret_cast<pw_proxy*>(mdata); }
 
 
+struct PwContextDeleter {
+    void operator()(pw_context *context) const { pw_context_destroy(context); }
+};
+using PwContextPtr = std::unique_ptr<pw_context,PwContextDeleter>;
+
+struct PwCoreDeleter {
+    void operator()(pw_core *core) const { pw_core_disconnect(core); }
+};
+using PwCorePtr = std::unique_ptr<pw_core,PwCoreDeleter>;
+
+struct PwRegistryDeleter {
+    void operator()(pw_registry *reg) const { pw_proxy_destroy(as<pw_proxy*>(reg)); }
+};
+using PwRegistryPtr = std::unique_ptr<pw_registry,PwRegistryDeleter>;
+
+struct PwNodeDeleter {
+    void operator()(pw_node *node) const { pw_proxy_destroy(as<pw_proxy*>(node)); }
+};
+using PwNodePtr = std::unique_ptr<pw_node,PwNodeDeleter>;
+
+struct PwMetadataDeleter {
+    void operator()(pw_metadata *mdata) const { pw_proxy_destroy(as<pw_proxy*>(mdata)); }
+};
+using PwMetadataPtr = std::unique_ptr<pw_metadata,PwMetadataDeleter>;
+
+struct PwStreamDeleter {
+    void operator()(pw_stream *stream) const { pw_stream_destroy(stream); }
+};
+using PwStreamPtr = std::unique_ptr<pw_stream,PwStreamDeleter>;
+
+/* Enums for bitflags... again... *sigh* */
+constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
+{ return static_cast<pw_stream_flags>(lhs | std::underlying_type_t<pw_stream_flags>{rhs}); }
+
 class ThreadMainloop {
     pw_thread_loop *mLoop{};
 
@@ -320,6 +354,12 @@ public:
 
     auto signal(bool wait) const { return pw_thread_loop_signal(mLoop, wait); }
 
+    auto newContext(pw_properties *props=nullptr, size_t user_data_size=0)
+    { return PwContextPtr{pw_context_new(getLoop(), props, user_data_size)}; }
+
+    static auto Create(const char *name, spa_dict *props=nullptr)
+    { return ThreadMainloop{pw_thread_loop_new(name, props)}; }
+
     friend struct MainloopUniqueLock;
 };
 struct MainloopUniqueLock : public std::unique_lock<ThreadMainloop> {
@@ -334,41 +374,6 @@ struct MainloopUniqueLock : public std::unique_lock<ThreadMainloop> {
     { while(!done_waiting()) wait(); }
 };
 using MainloopLockGuard = std::lock_guard<ThreadMainloop>;
-
-struct PwContextDeleter {
-    void operator()(pw_context *context) const { pw_context_destroy(context); }
-};
-using PwContextPtr = std::unique_ptr<pw_context,PwContextDeleter>;
-
-struct PwCoreDeleter {
-    void operator()(pw_core *core) const { pw_core_disconnect(core); }
-};
-using PwCorePtr = std::unique_ptr<pw_core,PwCoreDeleter>;
-
-struct PwRegistryDeleter {
-    void operator()(pw_registry *reg) const { pw_proxy_destroy(as<pw_proxy*>(reg)); }
-};
-using PwRegistryPtr = std::unique_ptr<pw_registry,PwRegistryDeleter>;
-
-struct PwNodeDeleter {
-    void operator()(pw_node *node) const { pw_proxy_destroy(as<pw_proxy*>(node)); }
-};
-using PwNodePtr = std::unique_ptr<pw_node,PwNodeDeleter>;
-
-struct PwMetadataDeleter {
-    void operator()(pw_metadata *mdata) const { pw_proxy_destroy(as<pw_proxy*>(mdata)); }
-};
-using PwMetadataPtr = std::unique_ptr<pw_metadata,PwMetadataDeleter>;
-
-struct PwStreamDeleter {
-    void operator()(pw_stream *stream) const { pw_stream_destroy(stream); }
-};
-using PwStreamPtr = std::unique_ptr<pw_stream,PwStreamDeleter>;
-
-
-/* Enums for bitflags... again... *sigh* */
-constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
-{ return static_cast<pw_stream_flags>(lhs | std::underlying_type_t<pw_stream_flags>{rhs}); }
 
 
 /* There's quite a mess here, but the purpose is to track active devices and
@@ -956,15 +961,14 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
 
 bool EventManager::init()
 {
-    mLoop = ThreadMainloop{pw_thread_loop_new("PWEventThread", nullptr)};
+    mLoop = ThreadMainloop::Create("PWEventThread");
     if(!mLoop)
     {
         ERR("Failed to create PipeWire event thread loop (errno: %d)\n", errno);
         return false;
     }
 
-    mContext = PwContextPtr{pw_context_new(mLoop.getLoop(),
-        pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr), 0)};
+    mContext = mLoop.newContext(pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr));
     if(!mContext)
     {
         ERR("Failed to create PipeWire event context (errno: %d)\n", errno);
@@ -1346,7 +1350,7 @@ void PipeWirePlayback::open(const char *name)
     {
         const uint count{OpenCount.fetch_add(1, std::memory_order_relaxed)};
         const std::string thread_name{"ALSoftP" + std::to_string(count)};
-        mLoop = ThreadMainloop{pw_thread_loop_new(thread_name.c_str(), nullptr)};
+        mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to create PipeWire mainloop (errno: %d)", errno};
@@ -1358,7 +1362,7 @@ void PipeWirePlayback::open(const char *name)
     if(!mContext)
     {
         pw_properties *cprops{pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr)};
-        mContext = PwContextPtr{pw_context_new(mLoop.getLoop(), cprops, 0)};
+        mContext = mLoop.newContext(cprops);
         if(!mContext)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to create PipeWire event context (errno: %d)\n", errno};
@@ -1751,7 +1755,7 @@ void PipeWireCapture::open(const char *name)
     {
         const uint count{OpenCount.fetch_add(1, std::memory_order_relaxed)};
         const std::string thread_name{"ALSoftC" + std::to_string(count)};
-        mLoop = ThreadMainloop{pw_thread_loop_new(thread_name.c_str(), nullptr)};
+        mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to create PipeWire mainloop (errno: %d)", errno};
@@ -1763,7 +1767,7 @@ void PipeWireCapture::open(const char *name)
     if(!mContext)
     {
         pw_properties *cprops{pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr)};
-        mContext = PwContextPtr{pw_context_new(mLoop.getLoop(), cprops, 0)};
+        mContext = mLoop.newContext(cprops);
         if(!mContext)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to create PipeWire event context (errno: %d)\n", errno};

@@ -20,6 +20,7 @@
 #include "albyte.h"
 #include "alcomplex.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "base.h"
@@ -464,9 +465,10 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         {
             auto ScaleAzimuthFront = [](float azimuth, float scale) -> float
             {
+                constexpr float half_pi{al::numbers::pi_v<float>*0.5f};
                 const float abs_azi{std::fabs(azimuth)};
-                if(!(abs_azi >= al::MathDefs<float>::Pi()*0.5f))
-                    return std::copysign(minf(abs_azi*scale, al::MathDefs<float>::Pi()*0.5f), azimuth);
+                if(!(abs_azi >= half_pi))
+                    return std::copysign(minf(abs_azi*scale, half_pi), azimuth);
                 return azimuth;
             };
 

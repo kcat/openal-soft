@@ -5,9 +5,9 @@
 
 #include <cmath>
 
+#include "alnumbers.h"
 #include "devformat.h"
 #include "device.h"
-#include "math_defs.h"
 #include "mixer/defs.h"
 
 struct CTag;
@@ -24,9 +24,9 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
     /* Zeroth-order */
     coeffs[0]  = 1.0f; /* ACN 0 = 1 */
     /* First-order */
-    coeffs[1]  = 1.732050808f * y; /* ACN 1 = sqrt(3) * Y */
-    coeffs[2]  = 1.732050808f * z; /* ACN 2 = sqrt(3) * Z */
-    coeffs[3]  = 1.732050808f * x; /* ACN 3 = sqrt(3) * X */
+    coeffs[1]  = al::numbers::sqrt3_v<float> * y; /* ACN 1 = sqrt(3) * Y */
+    coeffs[2]  = al::numbers::sqrt3_v<float> * z; /* ACN 2 = sqrt(3) * Z */
+    coeffs[3]  = al::numbers::sqrt3_v<float> * x; /* ACN 3 = sqrt(3) * X */
     /* Second-order */
     const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
     coeffs[4]  = 3.872983346f * xy;               /* ACN 4 = sqrt(15) * X * Y */
@@ -81,7 +81,7 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
          */
         const float ca{std::cos(spread * 0.5f)};
         /* Increase the source volume by up to +3dB for a full spread. */
-        const float scale{std::sqrt(1.0f + spread/al::MathDefs<float>::Tau())};
+        const float scale{std::sqrt(1.0f + al::numbers::inv_pi_v<float>/2.0f*spread)};
 
         const float ZH0_norm{scale};
         const float ZH1_norm{scale * 0.5f * (ca+1.f)};

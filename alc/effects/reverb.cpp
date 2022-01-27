@@ -30,6 +30,7 @@
 
 #include "alc/effects/base.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -745,7 +746,7 @@ inline float CalcDensityGain(const float a)
 inline void CalcMatrixCoeffs(const float diffusion, float *x, float *y)
 {
     /* The matrix is of order 4, so n is sqrt(4 - 1). */
-    constexpr float n{1.73205080756887719318f/*std::sqrt(3.0f)*/};
+    constexpr float n{al::numbers::sqrt3_v<float>};
     const float t{diffusion * std::atan(n)};
 
     /* Calculate the first mixing matrix coefficient. */
@@ -947,8 +948,6 @@ void ReverbState::updateDelayLine(const float earlyDelay, const float lateDelay,
  */
 alu::Matrix GetTransformFromVector(const float *vec)
 {
-    constexpr float sqrt3{1.73205080756887719318f};
-
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
      * to B-Format also requires negating X (ACN 1) and Z (ACN 3). Note however
@@ -960,9 +959,9 @@ alu::Matrix GetTransformFromVector(const float *vec)
     float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
-        norm[0] = vec[0] / mag * -sqrt3;
-        norm[1] = vec[1] / mag * sqrt3;
-        norm[2] = vec[2] / mag * sqrt3;
+        norm[0] = vec[0] / mag * -al::numbers::sqrt3_v<float>;
+        norm[1] = vec[1] / mag * al::numbers::sqrt3_v<float>;
+        norm[2] = vec[2] / mag * al::numbers::sqrt3_v<float>;
         mag = 1.0f;
     }
     else
@@ -971,9 +970,9 @@ alu::Matrix GetTransformFromVector(const float *vec)
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] = vec[0] * -sqrt3;
-        norm[1] = vec[1] * sqrt3;
-        norm[2] = vec[2] * sqrt3;
+        norm[0] = vec[0] * -al::numbers::sqrt3_v<float>;
+        norm[1] = vec[1] * al::numbers::sqrt3_v<float>;
+        norm[2] = vec[2] * al::numbers::sqrt3_v<float>;
     }
 
     return alu::Matrix{

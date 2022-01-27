@@ -10,8 +10,8 @@
 #include <utility>
 
 #include "albit.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
-#include "math_defs.h"
 #include "opthelpers.h"
 
 
@@ -123,7 +123,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     size_t step2{1u};
     for(size_t i{0};i < log2_size;++i)
     {
-        const double arg{al::MathDefs<double>::Pi() / static_cast<double>(step2)};
+        const double arg{al::numbers::pi / static_cast<double>(step2)};
 
         const std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
         std::complex<double> u{1.0, 0.0};

@@ -120,12 +120,14 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
         std::swap(buffer[rev.first], buffer[rev.second]);
 
     /* Iterative form of Danielson-Lanczos lemma */
+    const double pi{al::numbers::pi * sign};
     size_t step2{1u};
     for(size_t i{0};i < log2_size;++i)
     {
-        const double arg{al::numbers::pi / static_cast<double>(step2)};
+        const double arg{pi / static_cast<double>(step2)};
 
-        const std::complex<double> w{std::cos(arg), std::sin(arg)*sign};
+        /* TODO: Would std::polar(1.0, arg) be any better? */
+        const std::complex<double> w{std::cos(arg), std::sin(arg)};
         std::complex<double> u{1.0, 0.0};
         const size_t step{step2 << 1};
         for(size_t j{0};j < step2;j++)

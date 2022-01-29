@@ -53,6 +53,8 @@
 
 #if ALSOFT_EAX
 #include <cassert>
+
+#include "eax_exception.h"
 #endif // ALSOFT_EAX
 
 const EffectList gEffectList[16]{
@@ -750,9 +752,61 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
 }
 
 #if ALSOFT_EAX
+namespace
+{
+
+class EaxAlEffectException :
+    public EaxException
+{
+public:
+    explicit EaxAlEffectException(
+        const char* message)
+        :
+        EaxException{"[EAX_AL_EFFECT]", message}
+    {
+    }
+}; // EaxAlEffectException
+
+
+} // namespace
+
+
 void ALeffect::eax_initialize()
 {
+    eax_effect = nullptr;
     eax_effect = eax_create_eax_effect(type, Props);
+}
+
+void ALeffect::eax_al_set_effect(
+    ALenum al_effect_type)
+{
+    if (al_effect_type != AL_EFFECT_NULL)
+    {
+        auto has_effect = false;
+
+        for (const auto &effect_item : gEffectList)
+        {
+            if (al_effect_type == effect_item.val && !DisabledEffects[effect_item.type])
+            {
+                has_effect = true;
+                break;
+            }
+        }
+
+        if (!has_effect)
+        {
+            eax_fail("Effect not available.");
+        }
+    }
+
+    InitEffectParams(this, al_effect_type);
+}
+
+[[noreturn]]
+void ALeffect::eax_fail(
+    const char* message)
+{
+    throw EaxAlEffectException{message};
 }
 
 EaxAlEffectDeleter::EaxAlEffectDeleter(

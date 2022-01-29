@@ -1,6 +1,8 @@
 #if ALSOFT_EAX
 
 
+#include <cassert>
+
 #include "AL/efx.h"
 
 #include "effects.h"
@@ -93,6 +95,7 @@ EaxEffectUPtr eax_create_eax_effect(
             return eax_create_eax_reverb_effect(al_effect_props);
 
         default:
+            assert(false && "Unsupported AL effect type.");
             return nullptr;
     }
 

@@ -96,29 +96,15 @@ private:
 
     EAX50FXSLOTPROPERTIES eax_eax_fx_slot_{};
 
-    ALeffect* eax_al_effect_{};
-
-    EaxAlEffectUPtr eax_null_effect_{};
-    EaxAlEffectUPtr eax_auto_wah_effect_{};
-    EaxAlEffectUPtr eax_chorus_effect_{};
-    EaxAlEffectUPtr eax_compressor_effect_{};
-    EaxAlEffectUPtr eax_distortion_effect_{};
-    EaxAlEffectUPtr eax_eax_reverb_effect_{};
-    EaxAlEffectUPtr eax_echo_effect_{};
-    EaxAlEffectUPtr eax_equalizer_effect_{};
-    EaxAlEffectUPtr eax_flanger_effect_{};
-    EaxAlEffectUPtr eax_frequency_shifter_effect_{};
-    EaxAlEffectUPtr eax_pitch_shifter_effect_{};
-    EaxAlEffectUPtr eax_ring_modulator_effect_{};
-    EaxAlEffectUPtr eax_vocal_morpher_effect_{};
+    EaxAlEffectUPtr eax_al_effect_{};
 
 
     [[noreturn]]
-    static void fail(
+    static void eax_fail(
         const char* message);
 
 
-    void set_eax_fx_slot_defaults();
+    void eax_set_eax_fx_slot_defaults();
 
     void eax_initialize_eax();
 
@@ -145,11 +131,7 @@ private:
 
 
     void eax_set_fx_slot_effect(
-        EaxAlEffectUPtr& effect);
-
-    void eax_set_fx_slot_effect(
-        ALenum effect_type,
-        EaxAlEffectUPtr& effect);
+        ALenum effect_type);
 
     void eax_set_fx_slot_effect();
 

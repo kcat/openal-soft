@@ -65,6 +65,15 @@ public:
 
 
     void eax_initialize();
+
+    void eax_al_set_effect(
+        ALenum al_effect_type);
+
+
+private:
+    [[noreturn]]
+    static void eax_fail(
+        const char* message);
 #endif // ALSOFT_EAX
 };
 

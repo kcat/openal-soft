@@ -1482,6 +1482,11 @@ if(FPMATH_SET)
 ")
 endif()
 
+if(ALSOFT_EAX)
+    message(STATUS "Building with deprecated EAX extensions
+")
+endif()
+
 if(ALSOFT_EMBED_HRTF_DATA)
     message(STATUS "Embedding HRTF datasets
 ")

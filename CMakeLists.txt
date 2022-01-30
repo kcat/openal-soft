@@ -490,6 +490,11 @@ if(NOT HAVE_GUIDDEF_H)
     check_include_file(initguid.h HAVE_INITGUID_H)
 endif()
 
+# cpuid.h throws build error on Android non-x86 targets
+if(ANDROID AND NOT ANDROID_ABI STREQUAL "x86" AND NOT ANDROID_ABI STREQUAL "x86_64")
+    set(HAVE_CPUID_H OFF)
+endif()
+
 # Some systems need libm for some math functions to work
 set(MATH_LIB )
 check_library_exists(m pow "" HAVE_LIBM)

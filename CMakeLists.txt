@@ -1487,6 +1487,11 @@ if(ALSOFT_EMBED_HRTF_DATA)
 ")
 endif()
 
+if(ALSOFT_EAX)
+    message(STATUS "Enabled deprecated EAX extensions
+")
+endif()
+
 # Install main library
 if(ALSOFT_INSTALL)
     configure_package_config_file(OpenALConfig.cmake.in OpenALConfig.cmake

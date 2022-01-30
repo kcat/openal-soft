@@ -12,6 +12,9 @@
 #include "core/buffer_storage.h"
 #include "vector.h"
 
+#if ALSOFT_EAX
+#include "eax_x_ram.h"
+#endif // ALSOFT_EAX
 
 /* User formats */
 enum UserFmtType : unsigned char {
@@ -68,6 +71,12 @@ struct ALbuffer : public BufferStorage {
     ALuint id{0};
 
     DISABLE_ALLOC()
+
+#if ALSOFT_EAX
+    ALenum eax_x_ram_mode{AL_STORAGE_AUTOMATIC};
+    bool eax_x_ram_is_hardware{};
+    bool eax_x_ram_is_dirty{};
+#endif // ALSOFT_EAX
 };
 
 #endif

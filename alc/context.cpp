@@ -29,6 +29,14 @@
 #include "ringbuffer.h"
 #include "vecmat.h"
 
+#if ALSOFT_EAX
+#include <cassert>
+#include <cstring>
+
+#include "alstring.h"
+#include "al/eax_exception.h"
+#include "al/eax_globals.h"
+#endif // ALSOFT_EAX
 
 namespace {
 
@@ -121,6 +129,10 @@ ALCcontext::~ALCcontext()
     mSourceList.clear();
     mNumSources = 0;
 
+#if ALSOFT_EAX
+    eax_uninitialize();
+#endif // ALSOFT_EAX
+
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
@@ -160,6 +172,9 @@ void ALCcontext::init()
 
     mExtensionList = alExtList;
 
+#if ALSOFT_EAX
+    eax_initialize_extensions();
+#endif // ALSOFT_EAX
 
     mParams.Position = alu::Vector{0.0f, 0.0f, 0.0f, 1.0f};
     mParams.Matrix = alu::Matrix::Identity();
@@ -258,3 +273,1216 @@ void ALCcontext::processUpdates()
         mHoldUpdates.store(false, std::memory_order_release);
     }
 }
+
+#if ALSOFT_EAX
+namespace
+{
+
+
+class ContextException :
+    public EaxException
+{
+public:
+    explicit ContextException(
+        const char* message)
+        :
+        EaxException{"EAX_CONTEXT", message}
+    {
+    }
+}; // ContextException
+
+
+} // namespace
+
+
+ALCcontext::SourceListIterator::SourceListIterator(
+    SourceList& sources,
+    SourceListIteratorBeginTag) noexcept
+    :
+    sub_list_iterator_{sources.begin()},
+    sub_list_end_iterator_{sources.end()},
+    sub_list_item_index_{}
+{
+    // Search for first non-free item.
+    //
+    while (true)
+    {
+        if (sub_list_iterator_ == sub_list_end_iterator_)
+        {
+            // End of list.
+
+            sub_list_item_index_ = 0;
+            return;
+        }
+
+        if ((~sub_list_iterator_->FreeMask) == 0_u64)
+        {
+            // All sub-list's items are free.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        if (sub_list_item_index_ >= 64_u64)
+        {
+            // Sub-list item's index beyond the last one.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        if ((sub_list_iterator_->FreeMask & (1_u64 << sub_list_item_index_)) == 0_u64)
+        {
+            // Found non-free item.
+
+            break;
+        }
+
+        sub_list_item_index_ += 1;
+    }
+}
+
+ALCcontext::SourceListIterator::SourceListIterator(
+    SourceList& sources,
+    SourceListIteratorEndTag) noexcept
+    :
+    sub_list_iterator_{sources.end()},
+    sub_list_end_iterator_{sources.end()},
+    sub_list_item_index_{}
+{
+}
+
+ALCcontext::SourceListIterator::SourceListIterator(
+    const SourceListIterator& rhs)
+    :
+    sub_list_iterator_{rhs.sub_list_iterator_},
+    sub_list_end_iterator_{rhs.sub_list_end_iterator_},
+    sub_list_item_index_{rhs.sub_list_item_index_}
+{
+}
+
+ALCcontext::SourceListIterator& ALCcontext::SourceListIterator::operator++()
+{
+    while (true)
+    {
+        if (sub_list_iterator_ == sub_list_end_iterator_)
+        {
+            // End of list.
+
+            sub_list_item_index_ = 0;
+            break;
+        }
+
+        if ((~sub_list_iterator_->FreeMask) == 0_u64)
+        {
+            // All sub-list's items are free.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        sub_list_item_index_ += 1;
+
+        if (sub_list_item_index_ >= 64_u64)
+        {
+            // Sub-list item's index beyond the last one.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        if ((sub_list_iterator_->FreeMask & (1_u64 << sub_list_item_index_)) == 0_u64)
+        {
+            // Found non-free item.
+
+            break;
+        }
+    }
+
+    return *this;
+}
+
+ALsource& ALCcontext::SourceListIterator::operator*() noexcept
+{
+    assert(sub_list_iterator_ != sub_list_end_iterator_);
+    return (*sub_list_iterator_).Sources[sub_list_item_index_];
+}
+
+bool ALCcontext::SourceListIterator::operator==(
+    const SourceListIterator& rhs) const noexcept
+{
+    return
+        sub_list_iterator_ == rhs.sub_list_iterator_ &&
+        sub_list_end_iterator_ == rhs.sub_list_end_iterator_ &&
+        sub_list_item_index_ == rhs.sub_list_item_index_;
+}
+
+bool ALCcontext::SourceListIterator::operator!=(
+    const SourceListIterator& rhs) const noexcept
+{
+    return !((*this) == rhs);
+}
+
+
+ALCcontext::SourceListEnumerator::SourceListEnumerator(
+    ALCcontext::SourceList& sources) noexcept
+    :
+    sources_{sources}
+{
+}
+
+ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::begin() noexcept
+{
+    return SourceListIterator{sources_, SourceListIteratorBeginTag{}};
+}
+
+ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::end() noexcept
+{
+    return SourceListIterator{sources_, SourceListIteratorEndTag{}};
+}
+
+
+bool ALCcontext::has_eax() const noexcept
+{
+    return eax_is_initialized_;
+}
+
+bool ALCcontext::eax_is_capable() const noexcept
+{
+    return
+        eax_has_enough_aux_sends() &&
+        eax_has_eax_reverb_effect();
+}
+
+void ALCcontext::eax_uninitialize() noexcept
+{
+    if (!eax_is_initialized_)
+    {
+        return;
+    }
+
+    eax_is_initialized_ = true;
+    eax_is_tried_ = false;
+
+    eax_fx_slots_.uninitialize();
+    eax_al_filter_ = nullptr;
+}
+
+void ALCcontext::eax_initialize_source(
+    ALsource& al_source) noexcept
+try
+{
+    auto param = EaxSourceInitParam{};
+    param.al_context = this;
+    param.al_filter = eax_al_filter_.get();
+
+    al_source.eax_initialize(param);
+}
+catch (...)
+{
+    eax_log_exception("Failed to initialize a source.");
+}
+
+ALenum ALCcontext::eax_eax_set(
+    const GUID* property_set_id,
+    ALuint property_id,
+    ALuint property_source_id,
+    ALvoid* property_value,
+    ALuint property_value_size)
+{
+    eax_initialize();
+
+    const auto eax_call = create_eax_call(
+        false,
+        property_set_id,
+        property_id,
+        property_source_id,
+        property_value,
+        property_value_size
+    );
+
+    switch (eax_call.get_property_set_id())
+    {
+        case EaxEaxCallPropertySetId::context:
+            eax_set(eax_call);
+            break;
+
+        case EaxEaxCallPropertySetId::fx_slot:
+        case EaxEaxCallPropertySetId::fx_slot_effect:
+            eax_dispatch_fx_slot(eax_call);
+            break;
+
+        case EaxEaxCallPropertySetId::source:
+            eax_dispatch_source(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property set id.");
+    }
+
+    return AL_NO_ERROR;
+}
+
+ALenum ALCcontext::eax_eax_get(
+    const GUID* property_set_id,
+    ALuint property_id,
+    ALuint property_source_id,
+    ALvoid* property_value,
+    ALuint property_value_size)
+{
+    eax_initialize();
+
+    const auto eax_call = create_eax_call(
+        true,
+        property_set_id,
+        property_id,
+        property_source_id,
+        property_value,
+        property_value_size
+    );
+
+    switch (eax_call.get_property_set_id())
+    {
+        case EaxEaxCallPropertySetId::context:
+            eax_get(eax_call);
+            break;
+
+        case EaxEaxCallPropertySetId::fx_slot:
+        case EaxEaxCallPropertySetId::fx_slot_effect:
+            eax_dispatch_fx_slot(eax_call);
+            break;
+
+        case EaxEaxCallPropertySetId::source:
+            eax_dispatch_source(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property set id.");
+    }
+
+    return AL_NO_ERROR;
+}
+
+void ALCcontext::eax_update_filters()
+{
+    for (auto& source : SourceListEnumerator{mSourceList})
+    {
+        source.eax_update_filters();
+    }
+}
+
+void ALCcontext::eax_set_last_error() noexcept
+{
+    eax_last_error_ = EAXERR_INVALID_OPERATION;
+}
+
+float ALCcontext::eax_get_max_filter_gain() const noexcept
+{
+    return eax_max_filter_gain_;
+}
+
+float ALCcontext::eax_get_air_absorption_factor() const noexcept
+{
+    return eax_air_absorption_factor_;
+}
+
+EaxFxSlotIndex ALCcontext::eax_get_previous_primary_fx_slot_index() const noexcept
+{
+    return eax_previous_primary_fx_slot_index_;
+}
+
+EaxFxSlotIndex ALCcontext::eax_get_primary_fx_slot_index() const noexcept
+{
+    return eax_primary_fx_slot_index_;
+}
+
+const ALeffectslot& ALCcontext::eax_get_fx_slot(
+    EaxFxSlotIndexValue fx_slot_index) const
+{
+    return eax_fx_slots_.get(fx_slot_index);
+}
+
+ALeffectslot& ALCcontext::eax_get_fx_slot(
+    EaxFxSlotIndexValue fx_slot_index)
+{
+    return eax_fx_slots_.get(fx_slot_index);
+}
+
+[[noreturn]]
+void ALCcontext::eax_fail(
+    const char* message)
+{
+    throw ContextException{message};
+}
+
+void ALCcontext::eax_initialize_extensions()
+{
+    if (!eax_g_is_enabled)
+    {
+        return;
+    }
+
+    const auto string_max_capacity =
+        std::strlen(mExtensionList) + 1 +
+        std::strlen(eax_v2_0_ext_name) + 1 +
+        std::strlen(eax_v3_0_ext_name) + 1 +
+        std::strlen(eax_v4_0_ext_name) + 1 +
+        std::strlen(eax_v5_0_ext_name) + 1 +
+        std::strlen(eax_x_ram_ext_name) + 1 +
+        0;
+
+    eax_extension_list_.reserve(string_max_capacity);
+
+    if (eax_is_capable())
+    {
+        eax_extension_list_ += eax_v2_0_ext_name;
+        eax_extension_list_ += ' ';
+
+        eax_extension_list_ += eax_v3_0_ext_name;
+        eax_extension_list_ += ' ';
+
+        eax_extension_list_ += eax_v4_0_ext_name;
+        eax_extension_list_ += ' ';
+
+        eax_extension_list_ += eax_v5_0_ext_name;
+        eax_extension_list_ += ' ';
+    }
+
+    eax_extension_list_ += eax_x_ram_ext_name;
+    eax_extension_list_ += ' ';
+
+    eax_extension_list_ += mExtensionList;
+    mExtensionList = eax_extension_list_.c_str();
+}
+
+void ALCcontext::eax_initialize()
+{
+    if (eax_is_initialized_)
+    {
+        return;
+    }
+
+    if (eax_is_tried_)
+    {
+        eax_fail("No EAX.");
+    }
+
+    eax_is_tried_ = true;
+
+    if (!eax_g_is_enabled)
+    {
+        eax_fail("EAX disabled by a configuration.");
+    }
+
+    eax_ensure_compatibility();
+    eax_initialize_filter_gain();
+    eax_initialize_filter();
+    eax_set_defaults();
+    eax_set_air_absorbtion_hf();
+    eax_initialize_fx_slots();
+    eax_initialize_sources();
+
+    eax_is_initialized_ = true;
+}
+
+bool ALCcontext::eax_has_no_default_effect_slot() const noexcept
+{
+    return mDefaultSlot == nullptr;
+}
+
+void ALCcontext::eax_ensure_no_default_effect_slot() const
+{
+    if (!eax_has_no_default_effect_slot())
+    {
+        eax_fail("There is a default effect slot in the context.");
+    }
+}
+
+bool ALCcontext::eax_has_enough_aux_sends() const noexcept
+{
+    return mALDevice->NumAuxSends >= EAX_MAX_FXSLOTS;
+}
+
+void ALCcontext::eax_ensure_enough_aux_sends() const
+{
+    if (!eax_has_enough_aux_sends())
+    {
+        eax_fail("Not enough aux sends.");
+    }
+}
+
+bool ALCcontext::eax_has_eax_reverb_effect() const noexcept
+{
+    return !DisabledEffects[EAXREVERB_EFFECT];
+}
+
+void ALCcontext::eax_ensure_eax_reverb_effect() const
+{
+    if (!eax_has_eax_reverb_effect())
+    {
+        eax_fail("Disabled EAX Reverb Effect.");
+    }
+}
+
+void ALCcontext::eax_ensure_compatibility()
+{
+    eax_ensure_enough_aux_sends();
+    eax_ensure_eax_reverb_effect();
+}
+
+void ALCcontext::eax_initialize_filter_gain()
+{
+    eax_max_filter_gain_ = level_mb_to_gain(GainMixMax / mGainBoost);
+}
+
+void ALCcontext::eax_set_last_error_defaults() noexcept
+{
+    eax_last_error_ = EAX_OK;
+}
+
+void ALCcontext::eax_set_speaker_config_defaults() noexcept
+{
+    eax_speaker_config_ = HEADPHONES;
+}
+
+void ALCcontext::eax_set_session_defaults() noexcept
+{
+    eax_session_.ulEAXVersion = EAXCONTEXT_MINEAXSESSION;
+    eax_session_.ulMaxActiveSends = EAXCONTEXT_DEFAULTMAXACTIVESENDS;
+}
+
+void ALCcontext::eax_set_context_defaults() noexcept
+{
+    eax_.context.guidPrimaryFXSlotID = EAXCONTEXT_DEFAULTPRIMARYFXSLOTID;
+    eax_.context.flDistanceFactor = EAXCONTEXT_DEFAULTDISTANCEFACTOR;
+    eax_.context.flAirAbsorptionHF = EAXCONTEXT_DEFAULTAIRABSORPTIONHF;
+    eax_.context.flHFReference = EAXCONTEXT_DEFAULTHFREFERENCE;
+}
+
+void ALCcontext::eax_set_defaults() noexcept
+{
+    eax_set_last_error_defaults();
+    eax_set_speaker_config_defaults();
+    eax_set_session_defaults();
+    eax_set_context_defaults();
+
+    eax_d_ = eax_;
+}
+
+void ALCcontext::eax_initialize_filter()
+{
+    eax_al_filter_ = eax_create_al_low_pass_filter(*this);
+
+    if (!eax_al_filter_)
+    {
+        eax_fail("Failed to make a low-pass filter.");
+    }
+}
+
+void ALCcontext::eax_dispatch_fx_slot(
+    const EaxEaxCall& eax_call)
+{
+    auto& fx_slot = eax_get_fx_slot(eax_call.get_fx_slot_index());
+
+    if (fx_slot.eax_dispatch(eax_call))
+    {
+        std::lock_guard<std::mutex> source_lock{mSourceLock};
+
+        eax_update_filters();
+    }
+}
+
+void ALCcontext::eax_dispatch_source(
+    const EaxEaxCall& eax_call)
+{
+    const auto source_id = eax_call.get_property_al_name();
+
+    std::lock_guard<std::mutex> source_lock{mSourceLock};
+
+    const auto source = ALsource::eax_lookup_source(*this, source_id);
+
+    if (!source)
+    {
+        eax_fail("Source not found.");
+    }
+
+    source->eax_dispatch(eax_call);
+}
+
+void ALCcontext::eax_get_primary_fx_slot_id(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_.context.guidPrimaryFXSlotID);
+}
+
+void ALCcontext::eax_get_distance_factor(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_.context.flDistanceFactor);
+}
+
+void ALCcontext::eax_get_air_absorption_hf(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_.context.flAirAbsorptionHF);
+}
+
+void ALCcontext::eax_get_hf_reference(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_.context.flHFReference);
+}
+
+void ALCcontext::eax_get_last_error(
+    const EaxEaxCall& eax_call)
+{
+    const auto eax_last_error = eax_last_error_;
+    eax_last_error_ = EAX_OK;
+    eax_call.set_value<ContextException>(eax_last_error);
+}
+
+void ALCcontext::eax_get_speaker_config(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_speaker_config_);
+}
+
+void ALCcontext::eax_get_session(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_session_);
+}
+
+void ALCcontext::eax_get_macro_fx_factor(
+    const EaxEaxCall& eax_call)
+{
+    eax_call.set_value<ContextException>(eax_.context.flMacroFXFactor);
+}
+
+void ALCcontext::eax_get_context_all(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_version())
+    {
+        case 4:
+            eax_call.set_value<ContextException>(static_cast<const EAX40CONTEXTPROPERTIES&>(eax_.context));
+            break;
+
+        case 5:
+            eax_call.set_value<ContextException>(static_cast<const EAX50CONTEXTPROPERTIES&>(eax_.context));
+            break;
+
+        default:
+            eax_fail("Unsupported EAX version.");
+    }
+}
+
+void ALCcontext::eax_get(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case EAXCONTEXT_NONE:
+            break;
+
+        case EAXCONTEXT_ALLPARAMETERS:
+            eax_get_context_all(eax_call);
+            break;
+
+        case EAXCONTEXT_PRIMARYFXSLOTID:
+            eax_get_primary_fx_slot_id(eax_call);
+            break;
+
+        case EAXCONTEXT_DISTANCEFACTOR:
+            eax_get_distance_factor(eax_call);
+            break;
+
+        case EAXCONTEXT_AIRABSORPTIONHF:
+            eax_get_air_absorption_hf(eax_call);
+            break;
+
+        case EAXCONTEXT_HFREFERENCE:
+            eax_get_hf_reference(eax_call);
+            break;
+
+        case EAXCONTEXT_LASTERROR:
+            eax_get_last_error(eax_call);
+            break;
+
+        case EAXCONTEXT_SPEAKERCONFIG:
+            eax_get_speaker_config(eax_call);
+            break;
+
+        case EAXCONTEXT_EAXSESSION:
+            eax_get_session(eax_call);
+            break;
+
+        case EAXCONTEXT_MACROFXFACTOR:
+            eax_get_macro_fx_factor(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+}
+
+void ALCcontext::eax_set_primary_fx_slot_id()
+{
+    eax_previous_primary_fx_slot_index_ = eax_primary_fx_slot_index_;
+    eax_primary_fx_slot_index_ = eax_.context.guidPrimaryFXSlotID;
+}
+
+void ALCcontext::eax_set_distance_factor()
+{
+    eax_set_al_listener_meters_per_unit(*this, eax_.context.flDistanceFactor);
+}
+
+void ALCcontext::eax_set_air_absorbtion_hf()
+{
+    eax_air_absorption_factor_ = eax_.context.flAirAbsorptionHF / EAXCONTEXT_DEFAULTAIRABSORPTIONHF;
+}
+
+void ALCcontext::eax_set_hf_reference()
+{
+    // TODO
+}
+
+void ALCcontext::eax_set_macro_fx_factor()
+{
+    // TODO
+}
+
+void ALCcontext::eax_set_context()
+{
+    eax_set_primary_fx_slot_id();
+    eax_set_distance_factor();
+    eax_set_air_absorbtion_hf();
+    eax_set_hf_reference();
+}
+
+void ALCcontext::eax_initialize_fx_slots()
+{
+    eax_fx_slots_.initialize(*this);
+    eax_previous_primary_fx_slot_index_ = eax_.context.guidPrimaryFXSlotID;
+    eax_primary_fx_slot_index_ = eax_.context.guidPrimaryFXSlotID;
+}
+
+void ALCcontext::eax_initialize_sources()
+{
+    std::unique_lock<std::mutex> source_lock{mSourceLock};
+
+    for (auto& source : SourceListEnumerator{mSourceList})
+    {
+        eax_initialize_source(source);
+    }
+}
+
+void ALCcontext::eax_update_sources()
+{
+    std::unique_lock<std::mutex> source_lock{mSourceLock};
+
+    for (auto& source : SourceListEnumerator{mSourceList})
+    {
+        source.eax_update(eax_context_shared_dirty_flags_);
+    }
+}
+
+void ALCcontext::eax_validate_primary_fx_slot_id(
+    const GUID& primary_fx_slot_id)
+{
+    if (primary_fx_slot_id != EAX_NULL_GUID &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX40_FXSlot0 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX50_FXSlot0 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX40_FXSlot1 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX50_FXSlot1 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX40_FXSlot2 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX50_FXSlot2 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX40_FXSlot3 &&
+        primary_fx_slot_id != EAXPROPERTYID_EAX50_FXSlot3)
+    {
+        eax_fail("Unsupported primary FX slot id.");
+    }
+}
+
+void ALCcontext::eax_validate_distance_factor(
+    float distance_factor)
+{
+    eax_validate_range<ContextException>(
+        "Distance Factor",
+        distance_factor,
+        EAXCONTEXT_MINDISTANCEFACTOR,
+        EAXCONTEXT_MAXDISTANCEFACTOR);
+}
+
+void ALCcontext::eax_validate_air_absorption_hf(
+    float air_absorption_hf)
+{
+    eax_validate_range<ContextException>(
+        "Air Absorption HF",
+        air_absorption_hf,
+        EAXCONTEXT_MINAIRABSORPTIONHF,
+        EAXCONTEXT_MAXAIRABSORPTIONHF);
+}
+
+void ALCcontext::eax_validate_hf_reference(
+    float hf_reference)
+{
+    eax_validate_range<ContextException>(
+        "HF Reference",
+        hf_reference,
+        EAXCONTEXT_MINHFREFERENCE,
+        EAXCONTEXT_MAXHFREFERENCE);
+}
+
+void ALCcontext::eax_validate_speaker_config(
+    unsigned long speaker_config)
+{
+    switch (speaker_config)
+    {
+        case HEADPHONES:
+        case SPEAKERS_2:
+        case SPEAKERS_4:
+        case SPEAKERS_5:
+        case SPEAKERS_6:
+        case SPEAKERS_7:
+            break;
+
+        default:
+            eax_fail("Unsupported speaker configuration.");
+    }
+}
+
+void ALCcontext::eax_validate_session_eax_version(
+    unsigned long eax_version)
+{
+    switch (eax_version)
+    {
+        case EAX_40:
+        case EAX_50:
+            break;
+
+        default:
+            eax_fail("Unsupported session EAX version.");
+    }
+}
+
+void ALCcontext::eax_validate_session_max_active_sends(
+    unsigned long max_active_sends)
+{
+    eax_validate_range<ContextException>(
+        "Max Active Sends",
+        max_active_sends,
+        EAXCONTEXT_MINMAXACTIVESENDS,
+        EAXCONTEXT_MAXMAXACTIVESENDS);
+}
+
+void ALCcontext::eax_validate_session(
+    const EAXSESSIONPROPERTIES& eax_session)
+{
+    eax_validate_session_eax_version(eax_session.ulEAXVersion);
+    eax_validate_session_max_active_sends(eax_session.ulMaxActiveSends);
+}
+
+void ALCcontext::eax_validate_macro_fx_factor(
+    float macro_fx_factor)
+{
+    eax_validate_range<ContextException>(
+        "Macro FX Factor",
+        macro_fx_factor,
+        EAXCONTEXT_MINMACROFXFACTOR,
+        EAXCONTEXT_MAXMACROFXFACTOR);
+}
+
+void ALCcontext::eax_validate_context_all(
+    const EAX40CONTEXTPROPERTIES& context_all)
+{
+    eax_validate_primary_fx_slot_id(context_all.guidPrimaryFXSlotID);
+    eax_validate_distance_factor(context_all.flDistanceFactor);
+    eax_validate_air_absorption_hf(context_all.flAirAbsorptionHF);
+    eax_validate_hf_reference(context_all.flHFReference);
+}
+
+void ALCcontext::eax_validate_context_all(
+    const EAX50CONTEXTPROPERTIES& context_all)
+{
+    eax_validate_context_all(static_cast<const EAX40CONTEXTPROPERTIES>(context_all));
+    eax_validate_macro_fx_factor(context_all.flMacroFXFactor);
+}
+
+void ALCcontext::eax_defer_primary_fx_slot_id(
+    const GUID& primary_fx_slot_id)
+{
+    eax_d_.context.guidPrimaryFXSlotID = primary_fx_slot_id;
+
+    eax_context_dirty_flags_.guidPrimaryFXSlotID =
+        (eax_.context.guidPrimaryFXSlotID != eax_d_.context.guidPrimaryFXSlotID);
+}
+
+void ALCcontext::eax_defer_distance_factor(
+    float distance_factor)
+{
+    eax_d_.context.flDistanceFactor = distance_factor;
+
+    eax_context_dirty_flags_.flDistanceFactor =
+        (eax_.context.flDistanceFactor != eax_d_.context.flDistanceFactor);
+}
+
+void ALCcontext::eax_defer_air_absorption_hf(
+    float air_absorption_hf)
+{
+    eax_d_.context.flAirAbsorptionHF = air_absorption_hf;
+
+    eax_context_dirty_flags_.flAirAbsorptionHF =
+        (eax_.context.flAirAbsorptionHF != eax_d_.context.flAirAbsorptionHF);
+}
+
+void ALCcontext::eax_defer_hf_reference(
+    float hf_reference)
+{
+    eax_d_.context.flHFReference = hf_reference;
+
+    eax_context_dirty_flags_.flHFReference =
+        (eax_.context.flHFReference != eax_d_.context.flHFReference);
+}
+
+void ALCcontext::eax_defer_macro_fx_factor(
+    float macro_fx_factor)
+{
+    eax_d_.context.flMacroFXFactor = macro_fx_factor;
+
+    eax_context_dirty_flags_.flMacroFXFactor =
+        (eax_.context.flMacroFXFactor != eax_d_.context.flMacroFXFactor);
+}
+
+void ALCcontext::eax_defer_context_all(
+    const EAX40CONTEXTPROPERTIES& context_all)
+{
+    eax_defer_primary_fx_slot_id(context_all.guidPrimaryFXSlotID);
+    eax_defer_distance_factor(context_all.flDistanceFactor);
+    eax_defer_air_absorption_hf(context_all.flAirAbsorptionHF);
+    eax_defer_hf_reference(context_all.flHFReference);
+}
+
+void ALCcontext::eax_defer_context_all(
+    const EAX50CONTEXTPROPERTIES& context_all)
+{
+    eax_defer_context_all(static_cast<const EAX40CONTEXTPROPERTIES&>(context_all));
+    eax_defer_macro_fx_factor(context_all.flMacroFXFactor);
+}
+
+void ALCcontext::eax_defer_context_all(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_version())
+    {
+        case 4:
+            {
+                const auto& context_all =
+                    eax_call.get_value<ContextException, EAX40CONTEXTPROPERTIES>();
+
+                eax_validate_context_all(context_all);
+            }
+
+            break;
+
+        case 5:
+            {
+                const auto& context_all =
+                    eax_call.get_value<ContextException, EAX50CONTEXTPROPERTIES>();
+
+                eax_validate_context_all(context_all);
+            }
+
+            break;
+
+        default:
+            eax_fail("Unsupported EAX version.");
+    }
+}
+
+void ALCcontext::eax_defer_primary_fx_slot_id(
+    const EaxEaxCall& eax_call)
+{
+    const auto& primary_fx_slot_id =
+        eax_call.get_value<ContextException, const decltype(EAX50CONTEXTPROPERTIES::guidPrimaryFXSlotID)>();
+
+    eax_validate_primary_fx_slot_id(primary_fx_slot_id);
+    eax_defer_primary_fx_slot_id(primary_fx_slot_id);
+}
+
+void ALCcontext::eax_defer_distance_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto& distance_factor =
+        eax_call.get_value<ContextException, const decltype(EAX50CONTEXTPROPERTIES::flDistanceFactor)>();
+
+    eax_validate_distance_factor(distance_factor);
+    eax_defer_distance_factor(distance_factor);
+}
+
+void ALCcontext::eax_defer_air_absorption_hf(
+    const EaxEaxCall& eax_call)
+{
+    const auto& air_absorption_hf =
+        eax_call.get_value<ContextException, const decltype(EAX50CONTEXTPROPERTIES::flAirAbsorptionHF)>();
+
+    eax_validate_air_absorption_hf(air_absorption_hf);
+    eax_defer_air_absorption_hf(air_absorption_hf);
+}
+
+void ALCcontext::eax_defer_hf_reference(
+    const EaxEaxCall& eax_call)
+{
+    const auto& hf_reference =
+        eax_call.get_value<ContextException, const decltype(EAX50CONTEXTPROPERTIES::flHFReference)>();
+
+    eax_validate_hf_reference(hf_reference);
+    eax_defer_hf_reference(hf_reference);
+}
+
+void ALCcontext::eax_set_speaker_config(
+    const EaxEaxCall& eax_call)
+{
+    const auto speaker_config =
+        eax_call.get_value<ContextException, const unsigned long>();
+
+    eax_validate_speaker_config(speaker_config);
+
+    eax_speaker_config_ = speaker_config;
+}
+
+void ALCcontext::eax_set_session(
+    const EaxEaxCall& eax_call)
+{
+    const auto& eax_session =
+        eax_call.get_value<ContextException, const EAXSESSIONPROPERTIES>();
+
+    eax_validate_session(eax_session);
+
+    eax_session_ = eax_session;
+}
+
+void ALCcontext::eax_defer_macro_fx_factor(
+    const EaxEaxCall& eax_call)
+{
+    const auto& macro_fx_factor =
+        eax_call.get_value<ContextException, const decltype(EAX50CONTEXTPROPERTIES::flMacroFXFactor)>();
+
+    eax_validate_macro_fx_factor(macro_fx_factor);
+    eax_defer_macro_fx_factor(macro_fx_factor);
+}
+
+void ALCcontext::eax_set(
+    const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case EAXCONTEXT_NONE:
+            break;
+
+        case EAXCONTEXT_ALLPARAMETERS:
+            eax_defer_context_all(eax_call);
+            break;
+
+        case EAXCONTEXT_PRIMARYFXSLOTID:
+            eax_defer_primary_fx_slot_id(eax_call);
+            break;
+
+        case EAXCONTEXT_DISTANCEFACTOR:
+            eax_defer_distance_factor(eax_call);
+            break;
+
+        case EAXCONTEXT_AIRABSORPTIONHF:
+            eax_defer_air_absorption_hf(eax_call);
+            break;
+
+        case EAXCONTEXT_HFREFERENCE:
+            eax_defer_hf_reference(eax_call);
+            break;
+
+        case EAXCONTEXT_LASTERROR:
+            eax_fail("Setting last error not supported.");
+
+        case EAXCONTEXT_SPEAKERCONFIG:
+            eax_set_speaker_config(eax_call);
+            break;
+
+        case EAXCONTEXT_EAXSESSION:
+            eax_set_session(eax_call);
+            break;
+
+        case EAXCONTEXT_MACROFXFACTOR:
+            eax_defer_macro_fx_factor(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+
+    if (!eax_call.is_deferred())
+    {
+        eax_apply_deferred();
+    }
+}
+
+void ALCcontext::eax_apply_deferred()
+{
+    if (eax_context_dirty_flags_ == ContextDirtyFlags{})
+    {
+        return;
+    }
+
+    eax_ = eax_d_;
+
+    if (eax_context_dirty_flags_.guidPrimaryFXSlotID)
+    {
+        eax_context_shared_dirty_flags_.primary_fx_slot_id = true;
+        eax_set_primary_fx_slot_id();
+    }
+
+    if (eax_context_dirty_flags_.flDistanceFactor)
+    {
+        eax_set_distance_factor();
+    }
+
+    if (eax_context_dirty_flags_.flAirAbsorptionHF)
+    {
+        eax_context_shared_dirty_flags_.air_absorption_hf = true;
+        eax_set_air_absorbtion_hf();
+    }
+
+    if (eax_context_dirty_flags_.flHFReference)
+    {
+        eax_set_hf_reference();
+    }
+
+    if (eax_context_dirty_flags_.flMacroFXFactor)
+    {
+        eax_set_macro_fx_factor();
+    }
+
+    if (eax_context_shared_dirty_flags_ != EaxContextSharedDirtyFlags{})
+    {
+        eax_update_sources();
+    }
+
+    eax_context_shared_dirty_flags_ = EaxContextSharedDirtyFlags{};
+    eax_context_dirty_flags_ = ContextDirtyFlags{};
+}
+
+
+namespace
+{
+
+
+class EaxSetException :
+    public EaxException
+{
+public:
+    explicit EaxSetException(
+        const char* message)
+        :
+        EaxException{"EAX_SET", message}
+    {
+    }
+}; // EaxSetException
+
+
+[[noreturn]]
+void eax_fail_set(
+    const char* message)
+{
+    throw EaxSetException{message};
+}
+
+
+class EaxGetException :
+    public EaxException
+{
+public:
+    explicit EaxGetException(
+        const char* message)
+        :
+        EaxException{"EAX_GET", message}
+    {
+    }
+}; // EaxGetException
+
+
+[[noreturn]]
+void eax_fail_get(
+    const char* message)
+{
+    throw EaxGetException{message};
+}
+
+
+} // namespace
+
+
+ALenum AL_APIENTRY EAXSet(
+    const GUID* property_set_id,
+    ALuint property_id,
+    ALuint property_source_id,
+    ALvoid* property_value,
+    ALuint property_value_size) noexcept
+try
+{
+    auto context = GetContextRef();
+
+    if (!context)
+    {
+        eax_fail_set("No current context.");
+    }
+
+    std::lock_guard<std::mutex> prop_lock{context->mPropLock};
+
+    return context->eax_eax_set(
+        property_set_id,
+        property_id,
+        property_source_id,
+        property_value,
+        property_value_size
+    );
+}
+catch (...)
+{
+    eax_log_exception(__func__);
+    return AL_INVALID_OPERATION;
+}
+
+ALenum AL_APIENTRY EAXGet(
+    const GUID* property_set_id,
+    ALuint property_id,
+    ALuint property_source_id,
+    ALvoid* property_value,
+    ALuint property_value_size) noexcept
+try
+{
+    auto context = GetContextRef();
+
+    if (!context)
+    {
+        eax_fail_get("No current context.");
+    }
+
+    std::lock_guard<std::mutex> prop_lock{context->mPropLock};
+
+    return context->eax_eax_get(
+        property_set_id,
+        property_id,
+        property_source_id,
+        property_value,
+        property_value_size
+    );
+}
+catch (...)
+{
+    eax_log_exception(__func__);
+    return AL_INVALID_OPERATION;
+}
+#endif // ALSOFT_EAX

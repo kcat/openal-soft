@@ -578,3 +578,11 @@
 #  Creates AMB format files using first-order ambisonics instead of a standard
 #  single- or multi-channel .wav file.
 #bformat = false
+
+##
+## EAX extensions stuff
+##
+[eax]
+##enable:
+#  Sets whether to enable EAX extensions or not.
+#enable = true

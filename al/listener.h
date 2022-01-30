@@ -29,4 +29,11 @@ struct ALlistener {
 
 void UpdateListenerProps(ALCcontext *context);
 
+#if ALSOFT_EAX
+// `alListenerf(AL_METERS_PER_UNIT, value)`
+void eax_set_al_listener_meters_per_unit(
+    ALCcontext& al_context,
+    ALfloat meters_per_unit);
+#endif // ALSOFT_EAX
+
 #endif

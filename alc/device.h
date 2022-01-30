@@ -18,6 +18,10 @@
 #include "intrusive_ptr.h"
 #include "vector.h"
 
+#if ALSOFT_EAX
+#include "al/eax_x_ram.h"
+#endif // ALSOFT_EAX
+
 struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
@@ -105,6 +109,10 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     // Map of Filters for this device
     std::mutex FilterLock;
     al::vector<FilterSubList> FilterList;
+
+#if ALSOFT_EAX
+    ALsizei eax_x_ram_free_size{eax_x_ram_max_size};
+#endif // ALSOFT_EAX
 
 
     ALCdevice(DeviceType type);

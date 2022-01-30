@@ -155,6 +155,11 @@
 #include "backends/wave.h"
 #endif
 
+#if ALSOFT_EAX
+#include "al/eax_globals.h"
+#include "al/eax_x_ram.h"
+#endif // ALSOFT_EAX
+
 
 FILE *gLogFile{stderr};
 #ifdef _DEBUG
@@ -875,6 +880,14 @@ constexpr struct {
     DECL(AL_SUPER_STEREO_WIDTH_SOFT),
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
+
+#if ALSOFT_EAX
+    DECL(AL_EAX_RAM_SIZE),
+    DECL(AL_EAX_RAM_FREE),
+    DECL(AL_STORAGE_AUTOMATIC),
+    DECL(AL_STORAGE_HARDWARE),
+    DECL(AL_STORAGE_ACCESSIBLE),
+#endif // ALSOFT_EAX
 };
 #undef DECL
 
@@ -1244,6 +1257,28 @@ void alc_initconfig(void)
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
     if(defrevopt || (defrevopt=ConfigValueStr(nullptr, nullptr, "default-reverb")))
         LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
+
+#if ALSOFT_EAX
+    {
+        constexpr auto eax_block_name = "eax";
+
+        const auto eax_enable_opt = ConfigValueBool(nullptr, eax_block_name, "enable");
+
+        if (eax_enable_opt)
+        {
+            eax_g_is_enabled = *eax_enable_opt;
+
+            if (!eax_g_is_enabled)
+            {
+                TRACE("%s\n", "EAX disabled by a configuration.");
+            }
+        }
+        else
+        {
+            eax_g_is_enabled = true;
+        }
+    }
+#endif // ALSOFT_EAX
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
 
@@ -2929,6 +2964,7 @@ START_API_FUNC
                 return enm.value;
         }
     }
+
     return 0;
 }
 END_API_FUNC
@@ -3038,6 +3074,7 @@ START_API_FUNC
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return;
     }
+
     /* Hold a reference to this context so it remains valid until the ListLock
      * is released.
      */
@@ -3185,6 +3222,13 @@ START_API_FUNC
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
+
+#if ALSOFT_EAX
+    if (eax_g_is_enabled)
+    {
+        device->NumAuxSends = EAX_MAX_FXSLOTS;
+    }
+#endif // ALSOFT_EAX
 
     try {
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);

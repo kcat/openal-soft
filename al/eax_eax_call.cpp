@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "al/eax_eax_call.h"
 
 #include "al/eax_exception.h"

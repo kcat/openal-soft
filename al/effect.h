@@ -7,7 +7,7 @@
 #include "al/effects/effects.h"
 #include "alc/effects/base.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <memory>
 
 #include "eax_effect.h"
@@ -59,7 +59,7 @@ struct ALeffect {
     DISABLE_ALLOC()
 
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 public:
     EaxEffectUPtr eax_effect{};
 
@@ -81,9 +81,8 @@ void InitEffect(ALeffect *effect);
 
 void LoadReverbPreset(const char *name, ALeffect *effect);
 
-#if ALSOFT_EAX
-class EaxAlEffectDeleter
-{
+#ifdef ALSOFT_EAX
+class EaxAlEffectDeleter {
 public:
     EaxAlEffectDeleter() noexcept = default;
 

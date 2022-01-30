@@ -51,7 +51,7 @@
 #include "opthelpers.h"
 #include "vector.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <cassert>
 
 #include "eax_exception.h"
@@ -751,9 +751,8 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
     WARN("Reverb preset '%s' not found\n", name);
 }
 
-#if ALSOFT_EAX
-namespace
-{
+#ifdef ALSOFT_EAX
+namespace {
 
 class EaxAlEffectException :
     public EaxException

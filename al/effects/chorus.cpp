@@ -11,7 +11,7 @@
 #include "core/logging.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <cassert>
 
 #include "alnumeric.h"
@@ -290,10 +290,8 @@ DEFINE_ALEFFECT_VTABLE(Flanger);
 const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
 
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 void eax_set_efx_waveform(
     ALenum waveform,
@@ -1507,15 +1505,12 @@ bool EaxFlangerEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_flanger_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<EaxFlangerEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

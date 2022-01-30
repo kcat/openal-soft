@@ -10,7 +10,7 @@
 #include "aloptional.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <cassert>
 
 #include "alnumeric.h"
@@ -138,10 +138,8 @@ DEFINE_ALEFFECT_VTABLE(Fshifter);
 
 const EffectProps FshifterEffectProps{genDefaultProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxFrequencyShifterEffectDirtyFlagsValue = std::uint_least8_t;
 
@@ -530,15 +528,12 @@ bool EaxFrequencyShifterEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_frequency_shifter_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<EaxFrequencyShifterEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

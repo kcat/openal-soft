@@ -12,7 +12,7 @@
 #include "core/buffer_storage.h"
 #include "vector.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "eax_x_ram.h"
 #endif // ALSOFT_EAX
 
@@ -72,7 +72,7 @@ struct ALbuffer : public BufferStorage {
 
     DISABLE_ALLOC()
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     ALenum eax_x_ram_mode{AL_STORAGE_AUTOMATIC};
     bool eax_x_ram_is_hardware{};
     bool eax_x_ram_is_dirty{};

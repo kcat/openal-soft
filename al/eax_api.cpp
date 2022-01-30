@@ -5,6 +5,7 @@
 // https://github.com/id-Software/DOOM-3/tree/master/neo/openal/include
 //
 
+#include "config.h"
 
 #include <algorithm>
 

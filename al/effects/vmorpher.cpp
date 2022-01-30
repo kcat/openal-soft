@@ -10,7 +10,7 @@
 #include "aloptional.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <cassert>
 
 #include "alnumeric.h"
@@ -257,10 +257,8 @@ DEFINE_ALEFFECT_VTABLE(Vmorpher);
 
 const EffectProps VmorpherEffectProps{genDefaultProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxVocalMorpherEffectDirtyFlagsValue = std::uint_least8_t;
 
@@ -859,7 +857,6 @@ bool EaxVocalMorpherEffect::set(
     return false;
 }
 
-
 } // namespace
 
 
@@ -868,6 +865,5 @@ EaxEffectUPtr eax_create_eax_vocal_morpher_effect(
 {
     return std::make_unique<EaxVocalMorpherEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

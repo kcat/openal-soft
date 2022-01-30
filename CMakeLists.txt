@@ -95,7 +95,7 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
-option(ALSOFT_EAX "Enable EAX extensions." ON)
+option(ALSOFT_EAX "Enable EAX extensions." $<BOOL:WIN32>)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -1316,7 +1316,6 @@ target_include_directories(common PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_D
 target_compile_definitions(common PRIVATE ${CPP_DEFS})
 target_compile_options(common PRIVATE ${C_FLAGS})
 set_target_properties(common PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-target_compile_definitions(common PRIVATE "ALSOFT_EAX=$<BOOL:${ALSOFT_EAX}>")
 
 
 unset(HAS_ROUTER)
@@ -1438,7 +1437,6 @@ set_target_properties(${IMPL_TARGET} PROPERTIES OUTPUT_NAME ${LIBNAME}
 target_compile_definitions(${IMPL_TARGET}
     PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
     ${CPP_DEFS})
-target_compile_definitions(${IMPL_TARGET} PRIVATE "ALSOFT_EAX=$<BOOL:${ALSOFT_EAX}>")
 target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
 
 if(TARGET build_version)

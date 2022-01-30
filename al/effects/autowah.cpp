@@ -11,7 +11,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "alnumeric.h"
 
 #include "al/eax_exception.h"
@@ -116,10 +116,8 @@ DEFINE_ALEFFECT_VTABLE(Autowah);
 
 const EffectProps AutowahEffectProps{genDefaultProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxAutoWahEffectDirtyFlagsValue = std::uint_least8_t;
 
@@ -566,15 +564,12 @@ bool EaxAutoWahEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_auto_wah_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<::EaxAutoWahEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

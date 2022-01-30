@@ -1,11 +1,13 @@
-#if ALSOFT_EAX
 
+#include "config.h"
+
+#ifdef ALSOFT_EAX
+
+#include "effects.h"
 
 #include <cassert>
 
 #include "AL/efx.h"
-
-#include "effects.h"
 
 
 EaxEffectUPtr eax_create_eax_null_effect();
@@ -101,6 +103,5 @@ EaxEffectUPtr eax_create_eax_effect(
 
 #undef EAX_PREFIX
 }
-
 
 #endif // ALSOFT_EAX

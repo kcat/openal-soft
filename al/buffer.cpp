@@ -56,7 +56,7 @@
 #include "core/voice.h"
 #include "opthelpers.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "eax_globals.h"
 #include "eax_x_ram.h"
 #endif // ALSOFT_EAX
@@ -417,7 +417,7 @@ ALbuffer *AllocBuffer(ALCdevice *device)
 
 void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
 {
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     if (buffer->eax_x_ram_is_hardware)
     {
         const auto buffer_size = static_cast<ALsizei>(buffer->OriginalSize);
@@ -499,7 +499,7 @@ const ALchar *NameFromUserFmtType(UserFmtType type)
     return "<internal type error>";
 }
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 bool eax_x_ram_validate_buffer(
     ALCdevice& al_device,
     ALbuffer& al_buffer)
@@ -731,7 +731,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     if (eax_g_is_enabled)
     {
         eax_x_ram_update_buffer(*context->mALDevice, *ALBuf);
@@ -1006,8 +1006,8 @@ START_API_FUNC
         if UNLIKELY(!usrfmt)
             context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
-#if ALSOFT_EAX
         {
+#ifdef ALSOFT_EAX
             if (eax_g_is_enabled)
             {
                 const auto is_buffer_valid = eax_x_ram_validate_buffer(*device, *albuf);
@@ -1021,9 +1021,7 @@ START_API_FUNC
 #endif // ALSOFT_EAX
             LoadData(context.get(), albuf, freq, static_cast<ALuint>(size), usrfmt->channels,
                 usrfmt->type, static_cast<const al::byte*>(data), flags);
-#if ALSOFT_EAX
         }
-#endif // ALSOFT_EAX
     }
 }
 END_API_FUNC
@@ -1777,7 +1775,7 @@ BufferSubList::~BufferSubList()
 }
 
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 ALboolean AL_APIENTRY EAXSetBufferMode(
     ALsizei n,
     const ALuint* buffers,
@@ -1931,6 +1929,5 @@ START_API_FUNC
 #undef EAX_PREFIX
 }
 END_API_FUNC
-
 
 #endif // ALSOFT_EAX

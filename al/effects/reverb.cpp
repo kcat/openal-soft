@@ -9,7 +9,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <tuple>
 
 #include "alnumeric.h"
@@ -564,10 +564,8 @@ DEFINE_ALEFFECT_VTABLE(StdReverb);
 
 const EffectProps StdReverbEffectProps{genDefaultStdProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxReverbEffectDirtyFlagsValue = std::uint_least32_t;
 
@@ -2464,15 +2462,12 @@ bool EaxReverbEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_reverb_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<EaxReverbEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

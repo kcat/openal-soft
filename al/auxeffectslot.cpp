@@ -50,7 +50,7 @@
 #include "effect.h"
 #include "opthelpers.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "eax_exception.h"
 #include "eax_utils.h"
 #endif // ALSOFT_EAX
@@ -1047,10 +1047,8 @@ EffectSlotSubList::~EffectSlotSubList()
     EffectSlots = nullptr;
 }
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 class EaxFxSlotException :
     public EaxException

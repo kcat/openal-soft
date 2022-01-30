@@ -32,7 +32,7 @@
 #include "core/except.h"
 #include "opthelpers.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "eax_globals.h"
 #include "eax_x_ram.h"
 #endif // ALSOFT_EAX
@@ -47,7 +47,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
 
     size_t len{strlen(extName)};
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     if (al::strncasecmp(eax_v2_0_ext_name, extName, len) == 0 ||
         al::strncasecmp(eax_v3_0_ext_name, extName, len) == 0 ||
         al::strncasecmp(eax_v4_0_ext_name, extName, len) == 0 ||
@@ -86,7 +86,7 @@ AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 START_API_FUNC
 {
     if(!funcName) return nullptr;
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     if (al::strcasecmp(funcName, eax_eax_set_func_name) == 0)
     {
         if (!eax_g_is_enabled)
@@ -163,7 +163,7 @@ AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 START_API_FUNC
 {
     if(!enumName) return static_cast<ALenum>(0);
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     if (eax_g_is_enabled)
     {
         struct Descriptor

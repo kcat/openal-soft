@@ -8,7 +8,7 @@
 
 #include "almalloc.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <memory>
 
 #include "eax_utils.h"
@@ -54,7 +54,7 @@ struct ALfilter {
 
     DISABLE_ALLOC()
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 public:
     void eax_set_low_pass_params(
         ALCcontext& context,
@@ -62,9 +62,8 @@ public:
 #endif // ALSOFT_EAX
 };
 
-#if ALSOFT_EAX
-class EaxAlFilterDeleter
-{
+#ifdef ALSOFT_EAX
+class EaxAlFilterDeleter {
 public:
     EaxAlFilterDeleter() noexcept = default;
 

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "eax_exception.h"
 
 #include <cassert>

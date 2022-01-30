@@ -7,7 +7,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "al/eax_exception.h"
 #endif // ALSOFT_EAX
 
@@ -97,10 +97,8 @@ DEFINE_ALEFFECT_VTABLE(Null);
 const EffectProps NullEffectProps{genDefaultProps()};
 
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 class EaxNullEffect final :
     public EaxEffect
@@ -137,14 +135,11 @@ bool EaxNullEffect::dispatch(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_null_effect()
 {
     return std::make_unique<EaxNullEffect>();
 }
-
 
 #endif // ALSOFT_EAX

@@ -46,7 +46,7 @@
 #include "opthelpers.h"
 #include "strutils.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "alc/device.h"
 
 #include "eax_globals.h"
@@ -434,7 +434,7 @@ START_API_FUNC
         value = static_cast<int>(ResamplerDefault);
         break;
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 
 #define EAX_ERROR "[alGetInteger] EAX not enabled."
 

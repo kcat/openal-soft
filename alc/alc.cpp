@@ -155,7 +155,7 @@
 #include "backends/wave.h"
 #endif
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "al/eax_globals.h"
 #include "al/eax_x_ram.h"
 #endif // ALSOFT_EAX
@@ -881,7 +881,7 @@ constexpr struct {
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     DECL(AL_EAX_RAM_SIZE),
     DECL(AL_EAX_RAM_FREE),
     DECL(AL_STORAGE_AUTOMATIC),
@@ -1258,7 +1258,7 @@ void alc_initconfig(void)
     if(defrevopt || (defrevopt=ConfigValueStr(nullptr, nullptr, "default-reverb")))
         LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     {
         constexpr auto eax_block_name = "eax";
 
@@ -3223,7 +3223,7 @@ START_API_FUNC
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     if (eax_g_is_enabled)
     {
         device->NumAuxSends = EAX_MAX_FXSLOTS;

@@ -16,7 +16,7 @@
 #include "intrusive_ptr.h"
 #include "vector.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <memory>
 
 #include "al/effect.h"
@@ -72,7 +72,7 @@ struct ALeffectslot {
     DEF_NEWDEL(ALeffectslot)
 
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 public:
     void eax_initialize(
         ALCcontext& al_context,
@@ -258,7 +258,7 @@ private:
 
 void UpdateAllEffectSlotProps(ALCcontext *context);
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 class EaxAlEffectSlotDeleter
 {
 public:

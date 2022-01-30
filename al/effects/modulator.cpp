@@ -10,7 +10,7 @@
 #include "aloptional.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <cassert>
 
 #include "alnumeric.h"
@@ -144,10 +144,8 @@ DEFINE_ALEFFECT_VTABLE(Modulator);
 
 const EffectProps ModulatorEffectProps{genDefaultProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxRingModulatorEffectDirtyFlagsValue = std::uint_least8_t;
 
@@ -533,15 +531,12 @@ bool EaxRingModulatorEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_ring_modulator_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<EaxRingModulatorEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

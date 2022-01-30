@@ -19,17 +19,15 @@
 #include "intrusive_ptr.h"
 #include "vector.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "al/filter.h"
 
 #include "al/eax_eax_call.h"
 #include "al/eax_fx_slot_index.h"
 #include "al/eax_fx_slots.h"
 #include "al/eax_utils.h"
-#endif // ALSOFT_EAX
 
 
-#if ALSOFT_EAX
 using EaxContextSharedDirtyFlagsValue = std::uint_least8_t;
 
 struct EaxContextSharedDirtyFlags
@@ -206,7 +204,7 @@ public:
 
     DEF_NEWDEL(ALCcontext)
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 public:
     bool has_eax() const noexcept;
 
@@ -549,20 +547,20 @@ void UpdateContextProps(ALCcontext *context);
 extern bool TrapALError;
 
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 ALenum AL_APIENTRY EAXSet(
-	const GUID* property_set_id,
-	ALuint property_id,
-	ALuint property_source_id,
-	ALvoid* property_value,
-	ALuint property_value_size) noexcept;
+    const GUID* property_set_id,
+    ALuint property_id,
+    ALuint property_source_id,
+    ALvoid* property_value,
+    ALuint property_value_size) noexcept;
 
 ALenum AL_APIENTRY EAXGet(
-	const GUID* property_set_id,
-	ALuint property_id,
-	ALuint property_source_id,
-	ALvoid* property_value,
-	ALuint property_value_size) noexcept;
+    const GUID* property_set_id,
+    ALuint property_id,
+    ALuint property_source_id,
+    ALvoid* property_value,
+    ALuint property_value_size) noexcept;
 #endif // ALSOFT_EAX
 
 #endif /* ALC_CONTEXT_H */

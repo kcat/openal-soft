@@ -72,7 +72,7 @@
 #include "ringbuffer.h"
 #include "threads.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "eax_exception.h"
 #include "eax_globals.h"
 #endif // ALSOFT_EAX
@@ -2419,7 +2419,7 @@ START_API_FUNC
         ALsource *source{AllocSource(context.get())};
         sources[0] = source->id;
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
         if (context->has_eax())
         {
             std::unique_lock<std::mutex> prop_lock{context->mPropLock};
@@ -2429,7 +2429,7 @@ START_API_FUNC
     }
     else
     {
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
         auto eax_sources = al::vector<ALsource*>{};
 
         if (context->has_eax())
@@ -2444,7 +2444,7 @@ START_API_FUNC
             ALsource *source{AllocSource(context.get())};
             ids.emplace_back(source->id);
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
             if (context->has_eax())
             {
                 eax_sources.emplace_back(source);
@@ -2453,7 +2453,7 @@ START_API_FUNC
         } while(--n);
         std::copy(ids.cbegin(), ids.cend(), sources);
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
         if (context->has_eax())
         {
             std::unique_lock<std::mutex> prop_lock{context->mPropLock};
@@ -3595,7 +3595,7 @@ ALsource::ALsource()
 
 ALsource::~ALsource()
 {
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     eax_uninitialize();
 #endif // ALSOFT_EAX
 
@@ -3643,7 +3643,7 @@ SourceSubList::~SourceSubList()
 }
 
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 class EaxSourceException :
     public EaxException
 {
@@ -6082,6 +6082,5 @@ void ALsource::eax_al_source_3i(
     const ALint values[3] = {value1, value2, value3};
     SetSourceiv(this, eax_al_context_, static_cast<SourceProp>(param), values);
 }
-
 
 #endif // ALSOFT_EAX

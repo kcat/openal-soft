@@ -7,7 +7,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "alnumeric.h"
 
 #include "al/eax_exception.h"
@@ -78,10 +78,8 @@ DEFINE_ALEFFECT_VTABLE(Compressor);
 
 const EffectProps CompressorEffectProps{genDefaultProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxCompressorEffectDirtyFlagsValue = std::uint_least8_t;
 
@@ -330,15 +328,12 @@ bool EaxCompressorEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_compressor_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<EaxCompressorEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

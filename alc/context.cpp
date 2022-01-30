@@ -29,7 +29,7 @@
 #include "ringbuffer.h"
 #include "vecmat.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include <cassert>
 #include <cstring>
 
@@ -129,7 +129,7 @@ ALCcontext::~ALCcontext()
     mSourceList.clear();
     mNumSources = 0;
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     eax_uninitialize();
 #endif // ALSOFT_EAX
 
@@ -172,7 +172,7 @@ void ALCcontext::init()
 
     mExtensionList = alExtList;
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
     eax_initialize_extensions();
 #endif // ALSOFT_EAX
 
@@ -274,10 +274,8 @@ void ALCcontext::processUpdates()
     }
 }
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 class ContextException :
     public EaxException

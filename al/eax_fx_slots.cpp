@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "eax_fx_slots.h"
 
 #include <array>

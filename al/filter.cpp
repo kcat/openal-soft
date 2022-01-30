@@ -45,7 +45,7 @@
 #include "opthelpers.h"
 #include "vector.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "core/logging.h"
 #endif // ALSOFT_EAX
 
@@ -723,7 +723,7 @@ FilterSubList::~FilterSubList()
 }
 
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 EaxAlFilterDeleter::EaxAlFilterDeleter(
     ALCcontext& context)
     :

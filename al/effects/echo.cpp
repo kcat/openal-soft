@@ -7,7 +7,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "alnumeric.h"
 
 #include "al/eax_exception.h"
@@ -117,10 +117,8 @@ DEFINE_ALEFFECT_VTABLE(Echo);
 
 const EffectProps EchoEffectProps{genDefaultProps()};
 
-#if ALSOFT_EAX
-namespace
-{
-
+#ifdef ALSOFT_EAX
+namespace {
 
 using EaxEchoEffectDirtyFlagsValue = std::uint_least8_t;
 
@@ -631,15 +629,12 @@ bool EaxEchoEffect::set(
     return false;
 }
 
-
 } // namespace
-
 
 EaxEffectUPtr eax_create_eax_echo_effect(
     EffectProps& al_effect_props)
 {
     return std::make_unique<EaxEchoEffect>(al_effect_props);
 }
-
 
 #endif // ALSOFT_EAX

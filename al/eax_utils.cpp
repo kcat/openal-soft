@@ -1,7 +1,8 @@
+#include "config.h"
+
 #include "eax_utils.h"
 
 #include <cassert>
-
 #include <exception>
 
 #include "core/logging.h"

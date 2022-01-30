@@ -1,3 +1,6 @@
+/* Define if deprecated EAX extensions are enabled */
+#cmakedefine ALSOFT_EAX
+
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 

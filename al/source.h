@@ -21,7 +21,7 @@
 #include "core/voice.h"
 #include "vector.h"
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 #include "eax_eax_call.h"
 #include "eax_fx_slot_index.h"
 #include "eax_utils.h"
@@ -47,11 +47,10 @@ struct ALbufferQueueItem : public VoiceBufferItem {
 };
 
 
-#if ALSOFT_EAX
-struct EaxSourceInitParam
-{
-	ALCcontext* al_context{};
-	ALfilter* al_filter{};
+#ifdef ALSOFT_EAX
+struct EaxSourceInitParam {
+    ALCcontext* al_context{};
+    ALfilter* al_filter{};
 }; // EaxSourceInitParam
 
 
@@ -213,7 +212,7 @@ struct ALsource {
 
     DISABLE_ALLOC()
 
-#if ALSOFT_EAX
+#ifdef ALSOFT_EAX
 public:
     void eax_initialize(
         const EaxSourceInitParam& param) noexcept;

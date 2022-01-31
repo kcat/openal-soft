@@ -48,16 +48,16 @@ START_API_FUNC
 
     size_t len{strlen(extName)};
 #ifdef ALSOFT_EAX
-    if (al::strncasecmp(eax_v2_0_ext_name, extName, len) == 0 ||
-        al::strncasecmp(eax_v3_0_ext_name, extName, len) == 0 ||
-        al::strncasecmp(eax_v4_0_ext_name, extName, len) == 0 ||
-        al::strncasecmp(eax_v5_0_ext_name, extName, len) == 0)
+    if (al::strcasecmp(eax_v2_0_ext_name, extName) == 0 ||
+        al::strcasecmp(eax_v3_0_ext_name, extName) == 0 ||
+        al::strcasecmp(eax_v4_0_ext_name, extName) == 0 ||
+        al::strcasecmp(eax_v5_0_ext_name, extName) == 0)
     {
         const auto is_present = eax_g_is_enabled && context->eax_is_capable();
         return is_present ? AL_TRUE : AL_FALSE;
     }
 
-    if (al::strncasecmp(eax_x_ram_ext_name, extName, len) == 0)
+    if (al::strcasecmp(eax_x_ram_ext_name, extName) == 0)
     {
         const auto is_present = eax_g_is_enabled;
         return is_present ? AL_TRUE : AL_FALSE;

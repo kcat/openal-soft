@@ -502,9 +502,9 @@ int main(int argc, char **argv)
             for(size_t i{0};i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
-                constexpr auto sqrt1_2 = static_cast<float>(1.0/al::numbers::sqrt2);
+                constexpr auto inv_sqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
                 for(size_t j{0};j < outchans;++j)
-                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * sqrt1_2);
+                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * inv_sqrt2);
             }
             LeadIn = 0;
 

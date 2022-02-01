@@ -112,11 +112,11 @@ alignas(16) constexpr float EarlyA2B[NUM_LINES][NUM_LINES]{
 };
 
 /* Converts A-Format to B-Format for late reverb. */
-constexpr auto Sqrt1_2 = static_cast<float>(1.0/al::numbers::sqrt2);
+constexpr auto InvSqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
 alignas(16) constexpr float LateA2B[NUM_LINES][NUM_LINES]{
     { 0.5f,  0.5f,  0.5f,  0.5f },
-    { Sqrt1_2, -Sqrt1_2,  0.0f,  0.0f },
-    { 0.0f,  0.0f,  Sqrt1_2, -Sqrt1_2 },
+    { InvSqrt2, -InvSqrt2,  0.0f,  0.0f },
+    { 0.0f,  0.0f,  InvSqrt2, -InvSqrt2 },
     { 0.5f,  0.5f, -0.5f, -0.5f }
 };
 
@@ -795,7 +795,7 @@ void EarlyReflections::updateLines(const float density_mult, const float diffusi
     const float decayTime, const float frequency)
 {
     /* Calculate the all-pass feed-back/forward coefficient. */
-    VecAp.Coeff = diffusion*diffusion * Sqrt1_2;
+    VecAp.Coeff = diffusion*diffusion * InvSqrt2;
 
     for(size_t i{0u};i < NUM_LINES;i++)
     {
@@ -885,7 +885,7 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
     DensityGain[1] = CalcDensityGain(CalcDecayCoeff(length, decayTimeWeighted));
 
     /* Calculate the all-pass feed-back/forward coefficient. */
-    VecAp.Coeff = diffusion*diffusion * Sqrt1_2;
+    VecAp.Coeff = diffusion*diffusion * InvSqrt2;
 
     for(size_t i{0u};i < NUM_LINES;i++)
     {

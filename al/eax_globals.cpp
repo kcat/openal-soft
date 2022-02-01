@@ -6,7 +6,8 @@
 bool eax_g_is_enabled = true;
 
 
-const char* eax_v2_0_ext_name = "EAX2.0";
+const char* eax_v2_0_ext_name_1 = "EAX";
+const char* eax_v2_0_ext_name_2 = "EAX2.0";
 const char* eax_v3_0_ext_name = "EAX3.0";
 const char* eax_v4_0_ext_name = "EAX4.0";
 const char* eax_v5_0_ext_name = "EAX5.0";

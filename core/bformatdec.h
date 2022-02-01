@@ -50,7 +50,7 @@ public:
         const al::span<const ChannelDec> coeffslf, const float xover_f0norm,
         std::unique_ptr<FrontStablizer> stablizer);
 
-    bool hasStablizer() const noexcept { return mStablizer != nullptr; };
+    bool hasStablizer() const noexcept { return mStablizer != nullptr; }
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,

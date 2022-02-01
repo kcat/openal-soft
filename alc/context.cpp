@@ -626,7 +626,8 @@ void ALCcontext::eax_initialize_extensions()
 
     const auto string_max_capacity =
         std::strlen(mExtensionList) + 1 +
-        std::strlen(eax_v2_0_ext_name) + 1 +
+        std::strlen(eax_v2_0_ext_name_1) + 1 +
+        std::strlen(eax_v2_0_ext_name_2) + 1 +
         std::strlen(eax_v3_0_ext_name) + 1 +
         std::strlen(eax_v4_0_ext_name) + 1 +
         std::strlen(eax_v5_0_ext_name) + 1 +
@@ -637,7 +638,10 @@ void ALCcontext::eax_initialize_extensions()
 
     if (eax_is_capable())
     {
-        eax_extension_list_ += eax_v2_0_ext_name;
+        eax_extension_list_ += eax_v2_0_ext_name_1;
+        eax_extension_list_ += ' ';
+
+        eax_extension_list_ += eax_v2_0_ext_name_2;
         eax_extension_list_ += ' ';
 
         eax_extension_list_ += eax_v3_0_ext_name;

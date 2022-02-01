@@ -48,7 +48,8 @@ START_API_FUNC
 
     size_t len{strlen(extName)};
 #ifdef ALSOFT_EAX
-    if (al::strcasecmp(eax_v2_0_ext_name, extName) == 0 ||
+    if (al::strcasecmp(eax_v2_0_ext_name_1, extName) == 0 ||
+        al::strcasecmp(eax_v2_0_ext_name_2, extName) == 0 ||
         al::strcasecmp(eax_v3_0_ext_name, extName) == 0 ||
         al::strcasecmp(eax_v4_0_ext_name, extName) == 0 ||
         al::strcasecmp(eax_v5_0_ext_name, extName) == 0)

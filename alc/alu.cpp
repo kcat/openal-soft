@@ -1392,7 +1392,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        constexpr float Rad2Deg{5.72957795130823229e+01f/*180/pi*/};
+        constexpr float Rad2Deg{static_cast<float>(180.0 / al::numbers::pi)};
         const float Angle{Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale};
 
         float ConeGain, ConeHF;

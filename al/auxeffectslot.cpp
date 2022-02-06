@@ -308,13 +308,14 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
 }
 
 
-#define DO_UPDATEPROPS() do {                                                 \
-    if(!context->mDeferUpdates.load(std::memory_order_acquire)                \
-        && slot->mState == SlotState::Playing)                                \
-        slot->updateProps(context.get());                                     \
-    else                                                                      \
-        slot->mPropsDirty.set(std::memory_order_release);                     \
-} while(0)
+inline void UpdateProps(ALeffectslot *slot, ALCcontext *context)
+{
+    if(!context->mDeferUpdates.load(std::memory_order_acquire)
+        && slot->mState == SlotState::Playing)
+        slot->updateProps(context);
+    else
+        slot->mPropsDirty.set(std::memory_order_release);
+}
 
 } // namespace
 
@@ -689,7 +690,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid effect slot integer property 0x%04x",
             param);
     }
-    DO_UPDATEPROPS();
+    UpdateProps(slot, context.get());
 }
 END_API_FUNC
 
@@ -750,7 +751,7 @@ START_API_FUNC
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid effect slot float property 0x%04x",
             param);
     }
-    DO_UPDATEPROPS();
+    UpdateProps(slot, context.get());
 }
 END_API_FUNC
 
@@ -1746,12 +1747,7 @@ void ALeffectslot::eax_set_effect_slot_effect(
         return;
     }
 
-    {
-        auto context = EaxAlContextWrapper{*eax_al_context_};
-        auto slot = this;
-
-        DO_UPDATEPROPS();
-    }
+    UpdateProps(this, eax_al_context_);
 
 #undef EAX_PREFIX
 }
@@ -1766,12 +1762,7 @@ void ALeffectslot::eax_set_effect_slot_send_auto(
     AuxSendAuto = is_send_auto;
 
     if (is_changed)
-    {
-        auto context = EaxAlContextWrapper{*eax_al_context_};
-        auto slot = this;
-
-        DO_UPDATEPROPS();
-    }
+        UpdateProps(this, eax_al_context_);
 }
 
 void ALeffectslot::eax_set_effect_slot_gain(
@@ -1792,12 +1783,7 @@ void ALeffectslot::eax_set_effect_slot_gain(
     Gain = gain;
 
     if (is_changed)
-    {
-        auto context = EaxAlContextWrapper{*eax_al_context_};
-        auto slot = this;
-
-        DO_UPDATEPROPS();
-    }
+        UpdateProps(this, eax_al_context_);
 
 #undef EAX_PREFIX
 }

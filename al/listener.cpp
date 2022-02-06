@@ -36,13 +36,17 @@
 #include "opthelpers.h"
 
 
-#define DO_UPDATEPROPS() do {                                                 \
-    if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
-        UpdateListenerProps(context.get());                                   \
-    else                                                                      \
-        listener.mPropsDirty.set(std::memory_order_release);                  \
-} while(0)
+namespace {
 
+inline void UpdateProps(ALlistener &listener, ALCcontext *context)
+{
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))
+        UpdateListenerProps(context);
+    else
+        listener.mPropsDirty.set(std::memory_order_release);
+}
+
+} // namespace
 
 AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value)
 START_API_FUNC
@@ -58,14 +62,14 @@ START_API_FUNC
         if(!(value >= 0.0f && std::isfinite(value)))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener gain out of range");
         listener.Gain = value;
-        DO_UPDATEPROPS();
+        UpdateProps(listener, context.get());
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
         listener.mMetersPerUnit = value;
-        DO_UPDATEPROPS();
+        UpdateProps(listener, context.get());
         break;
 
     default:
@@ -90,7 +94,7 @@ START_API_FUNC
         listener.Position[0] = value1;
         listener.Position[1] = value2;
         listener.Position[2] = value3;
-        DO_UPDATEPROPS();
+        UpdateProps(listener, context.get());
         break;
 
     case AL_VELOCITY:
@@ -99,7 +103,7 @@ START_API_FUNC
         listener.Velocity[0] = value1;
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
-        DO_UPDATEPROPS();
+        UpdateProps(listener, context.get());
         break;
 
     default:
@@ -146,7 +150,7 @@ START_API_FUNC
         listener.OrientUp[0] = values[3];
         listener.OrientUp[1] = values[4];
         listener.OrientUp[2] = values[5];
-        DO_UPDATEPROPS();
+        UpdateProps(listener, context.get());
         break;
 
     default:
@@ -457,18 +461,16 @@ void eax_set_al_listener_meters_per_unit(
     ALCcontext& al_context,
     ALfloat meters_per_unit)
 {
-    auto context = EaxAlContextWrapper{al_context};
-
-    auto& listener = context->mListener;
+    auto& listener = al_context.mListener;
 
     if (meters_per_unit < AL_MIN_METERS_PER_UNIT ||
         meters_per_unit > AL_MAX_METERS_PER_UNIT)
     {
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
+        SETERR_RETURN(&al_context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
     }
 
     listener.mMetersPerUnit = meters_per_unit;
 
-    DO_UPDATEPROPS();
+    UpdateProps(listener, &al_context);
 }
 #endif // ALSOFT_EAX

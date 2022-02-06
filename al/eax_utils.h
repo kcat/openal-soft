@@ -1,15 +1,10 @@
 #ifndef EAX_UTILS_INCLUDED
 #define EAX_UTILS_INCLUDED
 
-
-#include <cstdint>
-
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <type_traits>
-
-
-struct ALCcontext;
 
 
 struct EaxAlLowPassParam
@@ -17,33 +12,6 @@ struct EaxAlLowPassParam
     float gain;
     float gain_hf;
 }; // EaxAlLowPassParam
-
-
-// Required to call macro `DO_UPDATEPROPS`.
-class EaxAlContextWrapper
-{
-public:
-    explicit EaxAlContextWrapper(
-        ALCcontext& al_context) noexcept
-        :
-        al_context_{&al_context}
-    {
-    }
-
-    constexpr ALCcontext* get() noexcept
-    {
-        return al_context_;
-    }
-
-    constexpr ALCcontext* operator->() noexcept
-    {
-        return al_context_;
-    }
-
-
-private:
-    ALCcontext* al_context_;
-}; // EaxAlContextWrapper
 
 
 void eax_log_exception(

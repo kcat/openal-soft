@@ -197,41 +197,6 @@ EaxEaxCall::EaxEaxCall(
     }
 }
 
-bool EaxEaxCall::is_get() const noexcept
-{
-    return is_get_;
-}
-
-bool EaxEaxCall::is_deferred() const noexcept
-{
-    return is_deferred_;
-}
-
-int EaxEaxCall::get_version() const noexcept
-{
-    return version_;
-}
-
-EaxEaxCallPropertySetId EaxEaxCall::get_property_set_id() const noexcept
-{
-    return property_set_id_;
-}
-
-ALuint EaxEaxCall::get_property_id() const noexcept
-{
-    return property_id_;
-}
-
-ALuint EaxEaxCall::get_property_al_name() const noexcept
-{
-    return property_source_id_;
-}
-
-EaxFxSlotIndex EaxEaxCall::get_fx_slot_index() const noexcept
-{
-    return fx_slot_index_;
-}
-
 [[noreturn]]
 void EaxEaxCall::fail(
     const char* message)

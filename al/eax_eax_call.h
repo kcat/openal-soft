@@ -32,21 +32,13 @@ public:
         ALvoid* property_buffer,
         ALuint property_size);
 
-
-    bool is_get() const noexcept;
-
-    bool is_deferred() const noexcept;
-
-    int get_version() const noexcept;
-
-    EaxEaxCallPropertySetId get_property_set_id() const noexcept;
-
-    ALuint get_property_id() const noexcept;
-
-    ALuint get_property_al_name() const noexcept;
-
-    EaxFxSlotIndex get_fx_slot_index() const noexcept;
-
+    bool is_get() const noexcept { return is_get_; }
+    bool is_deferred() const noexcept { return is_deferred_; }
+    int get_version() const noexcept { return version_; }
+    EaxEaxCallPropertySetId get_property_set_id() const noexcept { return property_set_id_; }
+    ALuint get_property_id() const noexcept { return property_id_; }
+    ALuint get_property_al_name() const noexcept { return property_source_id_; }
+    EaxFxSlotIndex get_fx_slot_index() const noexcept { return fx_slot_index_; }
 
     template<
         typename TException,

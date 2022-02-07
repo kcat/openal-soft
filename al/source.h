@@ -806,16 +806,6 @@ private:
         const EaxEaxCall& eax_call);
 
 
-    // `alSourcei`
-    void eax_al_source_i(
-        ALenum param,
-        ALint value);
-
-    // `alSourcef`
-    void eax_al_source_f(
-        ALenum param,
-        ALfloat value);
-
     // `alSource3i`
     void eax_al_source_3i(
         ALenum param,

@@ -4016,11 +4016,13 @@ void ALsource::eax_initialize_fx_slots()
 void ALsource::eax_update_direct_filter_internal()
 {
     const auto& direct_param = eax_create_direct_filter_param();
-    eax_set_al_filter_parameters(direct_param);
 
-    eax_al_source_i(
-        AL_DIRECT_FILTER,
-        static_cast<ALint>(eax_al_filter_->id));
+    Direct.Gain = direct_param.gain;
+    Direct.GainHF = direct_param.gain_hf;
+    Direct.HFReference = LOWPASSFREQREF;
+    Direct.GainLF = 1.0f;
+    Direct.LFReference = HIGHPASSFREQREF;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_update_room_filters_internal()
@@ -5377,34 +5379,26 @@ void ALsource::eax_set_outside_volume_hf()
         AL_MAX_CONE_OUTER_GAINHF
     );
 
-    eax_al_source_f(
-        AL_CONE_OUTER_GAINHF,
-        efx_gain_hf
-    );
+    OuterGainHF = efx_gain_hf;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_doppler_factor()
 {
-    eax_al_source_f(
-        AL_DOPPLER_FACTOR,
-        eax_.source.flDopplerFactor
-    );
+    DopplerFactor = eax_.source.flDopplerFactor;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_rolloff_factor()
 {
-    eax_al_source_f(
-        AL_ROLLOFF_FACTOR,
-        eax_.source.flRolloffFactor
-    );
+    RolloffFactor = eax_.source.flRolloffFactor;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_room_rolloff_factor()
 {
-    eax_al_source_f(
-        AL_ROOM_ROLLOFF_FACTOR,
-        eax_.source.flRoomRolloffFactor
-    );
+    RoomRolloffFactor = eax_.source.flRoomRolloffFactor;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_air_absorption_factor()
@@ -5412,43 +5406,32 @@ void ALsource::eax_set_air_absorption_factor()
     const auto air_absorption_factor =
         eax_al_context_->eax_get_air_absorption_factor() * eax_.source.flAirAbsorptionFactor;
 
-    eax_al_source_f(
-        AL_AIR_ABSORPTION_FACTOR,
-        air_absorption_factor
-    );
+    AirAbsorptionFactor = air_absorption_factor;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_direct_hf_auto_flag()
 {
     const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_DIRECTHFAUTO) != 0;
-    const auto al_value = static_cast<ALint>(is_enable ? AL_TRUE : AL_FALSE);
 
-    eax_al_source_i(
-        AL_DIRECT_FILTER_GAINHF_AUTO,
-        al_value
-    );
+    DryGainHFAuto = is_enable;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_room_auto_flag()
 {
     const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMAUTO) != 0;
-    const auto al_value = static_cast<ALint>(is_enable ? AL_TRUE : AL_FALSE);
 
-    eax_al_source_i(
-        AL_AUXILIARY_SEND_FILTER_GAIN_AUTO,
-        al_value
-    );
+    WetGainAuto = is_enable;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_room_hf_auto_flag()
 {
     const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0;
-    const auto al_value = static_cast<ALint>(is_enable ? AL_TRUE : AL_FALSE);
 
-    eax_al_source_i(
-        AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO,
-        al_value
-    );
+    WetGainHFAuto = is_enable;
+    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_flags()
@@ -6057,20 +6040,6 @@ void ALsource::eax_get(
         default:
             eax_fail("Unsupported property id.");
     }
-}
-
-void ALsource::eax_al_source_i(
-    ALenum param,
-    ALint value)
-{
-    SetSourceiv(this, eax_al_context_, static_cast<SourceProp>(param), {&value, 1});
-}
-
-void ALsource::eax_al_source_f(
-    ALenum param,
-    ALfloat value)
-{
-    SetSourcefv(this, eax_al_context_, static_cast<SourceProp>(param), {&value, 1});
 }
 
 void ALsource::eax_al_source_3i(

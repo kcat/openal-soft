@@ -3052,7 +3052,9 @@ START_API_FUNC
 
     if(ALeffectslot *slot{context->mDefaultSlot.get()})
     {
-        if(slot->initEffect(&ALCcontext::sDefaultEffect, context.get()) == AL_NO_ERROR)
+        ALenum sloterr{slot->initEffect(ALCcontext::sDefaultEffect.type,
+            ALCcontext::sDefaultEffect.Props, context.get())};
+        if(sloterr == AL_NO_ERROR)
             slot->updateProps(context.get());
         else
             ERR("Failed to initialize the default effect\n");

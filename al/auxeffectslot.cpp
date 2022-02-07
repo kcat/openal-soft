@@ -582,9 +582,14 @@ START_API_FUNC
         {
             std::lock_guard<std::mutex> ___{device->EffectLock};
             ALeffect *effect{value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr};
-            if(!(value == 0 || effect != nullptr))
-                SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
-            err = slot->initEffect(effect, context.get());
+            if(effect)
+                err = slot->initEffect(effect->type, effect->Props, context.get());
+            else
+            {
+                if(value != 0)
+                    SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
+                err = slot->initEffect(AL_EFFECT_NULL, EffectProps{}, context.get());
+            }
         }
         if UNLIKELY(err != AL_NO_ERROR)
         {
@@ -939,9 +944,10 @@ ALeffectslot::~ALeffectslot()
         mSlot.mEffectState->release();
 }
 
-ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
+ALenum ALeffectslot::initEffect(ALenum effectType, const EffectProps &effectProps,
+    ALCcontext *context)
 {
-    EffectSlotType newtype{EffectSlotTypeFromEnum(effect ? effect->type : AL_EFFECT_NULL)};
+    EffectSlotType newtype{EffectSlotTypeFromEnum(effectType)};
     if(newtype != Effect.Type)
     {
         EffectStateFactory *factory{getFactoryByType(newtype)};
@@ -961,12 +967,12 @@ ALenum ALeffectslot::initEffect(ALeffect *effect, ALCcontext *context)
         }
 
         Effect.Type = newtype;
-        Effect.Props = effect ? effect->Props : EffectProps{};
+        Effect.Props = effectProps;
 
         Effect.State = std::move(state);
     }
-    else if(effect)
-        Effect.Props = effect->Props;
+    else if(newtype != EffectSlotType::None)
+        Effect.Props = effectProps;
 
     /* Remove state references from old effect slot property updates. */
     EffectSlotProps *props{context->mFreeEffectslotProps.load()};
@@ -1726,8 +1732,7 @@ void ALeffectslot::eax_set_effect_slot_effect(
     std::lock_guard<std::mutex> effect_slot_lock{eax_al_context_->mEffectSlotLock};
     std::lock_guard<std::mutex> effect_lock{device.EffectLock};
 
-    const auto error = initEffect(&effect, eax_al_context_);
-
+    const auto error = initEffect(effect.type, effect.Props, eax_al_context_);
     if (error != AL_NO_ERROR)
     {
         ERR(EAX_PREFIX "%s\n", "Failed to initialize an effect.");

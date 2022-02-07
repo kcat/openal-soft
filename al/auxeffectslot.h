@@ -65,7 +65,7 @@ struct ALeffectslot {
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
 
-    ALenum initEffect(ALeffect *effect, ALCcontext *context);
+    ALenum initEffect(ALenum effectType, const EffectProps &effectProps, ALCcontext *context);
     void updateProps(ALCcontext *context);
 
     /* This can be new'd for the context's default effect slot. */

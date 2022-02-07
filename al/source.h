@@ -48,12 +48,6 @@ struct ALbufferQueueItem : public VoiceBufferItem {
 
 
 #ifdef ALSOFT_EAX
-struct EaxSourceInitParam {
-    ALCcontext* al_context{};
-    ALfilter* al_filter{};
-}; // EaxSourceInitParam
-
-
 using EaxSourceSourceFilterDirtyFlagsValue = std::uint_least16_t;
 
 struct EaxSourceSourceFilterDirtyFlags
@@ -214,10 +208,7 @@ struct ALsource {
 
 #ifdef ALSOFT_EAX
 public:
-    void eax_initialize(
-        const EaxSourceInitParam& param) noexcept;
-
-    void eax_uninitialize();
+    void eax_initialize(ALCcontext *context) noexcept;
 
 
     void eax_dispatch(
@@ -259,7 +250,6 @@ private:
     bool eax_are_active_fx_slots_dirty_{};
 
     ALCcontext* eax_al_context_{};
-    ALfilter* eax_al_filter_{};
 
     Eax eax_{};
     Eax eax_d_{};
@@ -275,25 +265,12 @@ private:
         const char* message);
 
 
-    static void eax_validate_init_param(
-        const EaxSourceInitParam& param);
-
-    void eax_copy_init_param(
-        const EaxSourceInitParam& param);
-
-
-    void eax_set_source_defaults();
-
-    void eax_set_active_fx_slots_defaults();
-
-    void eax_set_send_defaults(
-        EAXSOURCEALLSENDPROPERTIES& eax_send);
-
-    void eax_set_sends_defaults();
-
-    void eax_set_speaker_levels_defaults();
-
-    void eax_set_defaults();
+    void eax_set_source_defaults() noexcept;
+    void eax_set_active_fx_slots_defaults() noexcept;
+    void eax_set_send_defaults(EAXSOURCEALLSENDPROPERTIES& eax_send) noexcept;
+    void eax_set_sends_defaults() noexcept;
+    void eax_set_speaker_levels_defaults() noexcept;
+    void eax_set_defaults() noexcept;
 
 
     static float eax_calculate_dst_occlusion_mb(
@@ -306,9 +283,6 @@ private:
     EaxAlLowPassParam eax_create_room_filter_param(
         const ALeffectslot& fx_slot,
         const EAXSOURCEALLSENDPROPERTIES& send) const noexcept;
-
-    void eax_set_al_filter_parameters(
-        const EaxAlLowPassParam& al_low_pass_param) const noexcept;
 
     void eax_set_fx_slots();
 
@@ -806,12 +780,9 @@ private:
         const EaxEaxCall& eax_call);
 
 
-    // `alSource3i`
-    void eax_al_source_3i(
-        ALenum param,
-        ALint value1,
-        ALint value2,
-        ALint value3);
+    // `alSource3i(source, AL_AUXILIARY_SEND_FILTER, ...)`
+    void eax_set_al_source_send(ALeffectslot *slot, size_t sendidx,
+        const EaxAlLowPassParam &filter);
 #endif // ALSOFT_EAX
 };
 

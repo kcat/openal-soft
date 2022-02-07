@@ -2400,6 +2400,12 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d sources", n);
     if UNLIKELY(n <= 0) return;
 
+#ifdef ALSOFT_EAX
+    const bool has_eax{context->has_eax()};
+    std::unique_lock<std::mutex> proplock{};
+    if(has_eax)
+        proplock = std::unique_lock<std::mutex>{context->mPropLock};
+#endif
     std::unique_lock<std::mutex> srclock{context->mSourceLock};
     ALCdevice *device{context->mALDevice.get()};
     if(static_cast<ALuint>(n) > device->SourcesMax-context->mNumSources)
@@ -2420,22 +2426,16 @@ START_API_FUNC
         sources[0] = source->id;
 
 #ifdef ALSOFT_EAX
-        if (context->has_eax())
-        {
-            std::unique_lock<std::mutex> prop_lock{context->mPropLock};
-            context->eax_initialize_source(*source);
-        }
+        if(has_eax)
+            source->eax_initialize(context.get());
 #endif // ALSOFT_EAX
     }
     else
     {
 #ifdef ALSOFT_EAX
         auto eax_sources = al::vector<ALsource*>{};
-
-        if (context->has_eax())
-        {
+        if(has_eax)
             eax_sources.reserve(static_cast<ALuint>(n));
-        }
 #endif // ALSOFT_EAX
 
         al::vector<ALuint> ids;
@@ -2445,24 +2445,15 @@ START_API_FUNC
             ids.emplace_back(source->id);
 
 #ifdef ALSOFT_EAX
-            if (context->has_eax())
-            {
+            if(has_eax)
                 eax_sources.emplace_back(source);
-            }
 #endif // ALSOFT_EAX
         } while(--n);
         std::copy(ids.cbegin(), ids.cend(), sources);
 
 #ifdef ALSOFT_EAX
-        if (context->has_eax())
-        {
-            std::unique_lock<std::mutex> prop_lock{context->mPropLock};
-
-            for (auto& eax_source : eax_sources)
-            {
-                context->eax_initialize_source(*eax_source);
-            }
-        }
+        for(auto& eax_source : eax_sources)
+            eax_source->eax_initialize(context.get());
 #endif // ALSOFT_EAX
     }
 }
@@ -3595,10 +3586,6 @@ ALsource::ALsource()
 
 ALsource::~ALsource()
 {
-#ifdef ALSOFT_EAX
-    eax_uninitialize();
-#endif // ALSOFT_EAX
-
     for(auto &item : mQueue)
     {
         if(ALbuffer *buffer{item.mBuffer})
@@ -3683,38 +3670,14 @@ public:
 }; // EaxSourceSendException
 
 
-void ALsource::eax_initialize(
-    const EaxSourceInitParam& param) noexcept
+void ALsource::eax_initialize(ALCcontext *context) noexcept
 {
-    eax_validate_init_param(param);
-    eax_copy_init_param(param);
+    assert(context);
+    eax_al_context_ = context;
     eax_set_defaults();
     eax_initialize_fx_slots();
 
     eax_d_ = eax_;
-}
-
-void ALsource::eax_uninitialize()
-{
-    if (!eax_al_context_)
-    {
-        return;
-    }
-
-    if (eax_al_context_->has_eax())
-    {
-        for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
-        {
-            eax_al_source_3i(
-                AL_AUXILIARY_SEND_FILTER,
-                AL_EFFECTSLOT_NULL,
-                static_cast<ALint>(i),
-                AL_FILTER_NULL
-            );
-        }
-    }
-
-    eax_al_context_ = nullptr;
 }
 
 void ALsource::eax_dispatch(
@@ -3766,28 +3729,7 @@ void ALsource::eax_fail(
     throw EaxSourceException{message};
 }
 
-void ALsource::eax_validate_init_param(
-    const EaxSourceInitParam& param)
-{
-    if (!param.al_context)
-    {
-        eax_fail("Null context.");
-    }
-
-    if (!param.al_filter)
-    {
-        eax_fail("Null filter.");
-    }
-}
-
-void ALsource::eax_copy_init_param(
-    const EaxSourceInitParam& param)
-{
-    eax_al_context_ = param.al_context;
-    eax_al_filter_ = param.al_filter;
-}
-
-void ALsource::eax_set_source_defaults()
+void ALsource::eax_set_source_defaults() noexcept
 {
     eax_.source.lDirect = EAXSOURCE_DEFAULTDIRECT;
     eax_.source.lDirectHF = EAXSOURCE_DEFAULTDIRECTHF;
@@ -3809,13 +3751,12 @@ void ALsource::eax_set_source_defaults()
     eax_.source.ulFlags = EAXSOURCE_DEFAULTFLAGS;
 }
 
-void ALsource::eax_set_active_fx_slots_defaults()
+void ALsource::eax_set_active_fx_slots_defaults() noexcept
 {
     eax_.active_fx_slots = EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID;
 }
 
-void ALsource::eax_set_send_defaults(
-    EAXSOURCEALLSENDPROPERTIES& eax_send)
+void ALsource::eax_set_send_defaults(EAXSOURCEALLSENDPROPERTIES& eax_send) noexcept
 {
     eax_send.guidReceivingFXSlotID = EAX_NULL_GUID;
     eax_send.lSend = EAXSOURCE_DEFAULTSEND;
@@ -3828,7 +3769,7 @@ void ALsource::eax_set_send_defaults(
     eax_send.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
 }
 
-void ALsource::eax_set_sends_defaults()
+void ALsource::eax_set_sends_defaults() noexcept
 {
     for (auto& eax_send : eax_.sends)
     {
@@ -3836,12 +3777,12 @@ void ALsource::eax_set_sends_defaults()
     }
 }
 
-void ALsource::eax_set_speaker_levels_defaults()
+void ALsource::eax_set_speaker_levels_defaults() noexcept
 {
     std::fill(eax_.speaker_levels.begin(), eax_.speaker_levels.end(), EAXSOURCE_DEFAULTSPEAKERLEVEL);
 }
 
-void ALsource::eax_set_defaults()
+void ALsource::eax_set_defaults() noexcept
 {
     eax_set_source_defaults();
     eax_set_active_fx_slots_defaults();
@@ -3960,12 +3901,6 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
     return al_low_pass_param;
 }
 
-void ALsource::eax_set_al_filter_parameters(
-    const EaxAlLowPassParam& al_low_pass_param) const noexcept
-{
-    eax_al_filter_->eax_set_low_pass_params(*eax_al_context_, al_low_pass_param);
-}
-
 void ALsource::eax_set_fx_slots()
 {
     eax_uses_primary_id_ = false;
@@ -3994,15 +3929,11 @@ void ALsource::eax_set_fx_slots()
         }
     }
 
-    for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
+    for (auto i = 0u; i < EAX_MAX_FXSLOTS; ++i)
     {
-        if (!eax_active_fx_slots_[static_cast<std::size_t>(i)])
+        if (!eax_active_fx_slots_[i])
         {
-            eax_al_source_3i(
-                AL_AUXILIARY_SEND_FILTER,
-                AL_EFFECTSLOT_NULL,
-                i,
-                AL_FILTER_NULL);
+            eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});
         }
     }
 }
@@ -4032,22 +3963,15 @@ void ALsource::eax_update_room_filters_internal()
         return;
     }
 
-    for (auto i = 0; i < EAX_MAX_FXSLOTS; ++i)
+    for (auto i = 0u; i < EAX_MAX_FXSLOTS; ++i)
     {
-        if (eax_active_fx_slots_[static_cast<std::size_t>(i)])
+        if (eax_active_fx_slots_[i])
         {
-            const auto& fx_slot = eax_al_context_->eax_get_fx_slot(static_cast<std::size_t>(i));
-            const auto& send = eax_.sends[static_cast<std::size_t>(i)];
+            auto& fx_slot = eax_al_context_->eax_get_fx_slot(static_cast<std::size_t>(i));
+            const auto& send = eax_.sends[i];
             const auto& room_param = eax_create_room_filter_param(fx_slot, send);
 
-            eax_set_al_filter_parameters(room_param);
-
-            eax_al_source_3i(
-                AL_AUXILIARY_SEND_FILTER,
-                static_cast<ALint>(fx_slot.id),
-                i,
-                static_cast<ALint>(eax_al_filter_->id)
-            );
+            eax_set_al_source_send(&fx_slot, i, room_param);
         }
     }
 }
@@ -4073,11 +3997,7 @@ void ALsource::eax_update_primary_fx_slot_id()
         const auto fx_slot_index = previous_primary_fx_slot_index.get();
         eax_active_fx_slots_[fx_slot_index] = false;
 
-        eax_al_source_3i(
-            AL_AUXILIARY_SEND_FILTER,
-            AL_EFFECTSLOT_NULL,
-            static_cast<ALint>(fx_slot_index),
-            static_cast<ALint>(AL_FILTER_NULL));
+        eax_set_al_source_send(nullptr, fx_slot_index, EaxAlLowPassParam{1.0f, 1.0f});
     }
 
     if (primary_fx_slot_index.has_value())
@@ -4085,17 +4005,11 @@ void ALsource::eax_update_primary_fx_slot_id()
         const auto fx_slot_index = primary_fx_slot_index.get();
         eax_active_fx_slots_[fx_slot_index] = true;
 
-        const auto& fx_slot = eax_al_context_->eax_get_fx_slot(fx_slot_index);
+        auto& fx_slot = eax_al_context_->eax_get_fx_slot(fx_slot_index);
         const auto& send = eax_.sends[fx_slot_index];
         const auto& room_param = eax_create_room_filter_param(fx_slot, send);
 
-        eax_set_al_filter_parameters(room_param);
-
-        eax_al_source_3i(
-            AL_AUXILIARY_SEND_FILTER,
-            static_cast<ALint>(fx_slot.id),
-            static_cast<ALint>(fx_slot_index),
-            static_cast<ALint>(eax_al_filter_->id));
+        eax_set_al_source_send(&fx_slot, fx_slot_index, room_param);
     }
 
     eax_has_active_fx_slots_ = std::any_of(
@@ -6042,14 +5956,43 @@ void ALsource::eax_get(
     }
 }
 
-void ALsource::eax_al_source_3i(
-    ALenum param,
-    ALint value1,
-    ALint value2,
-    ALint value3)
+void ALsource::eax_set_al_source_send(
+    ALeffectslot *slot,
+    size_t sendidx,
+    const EaxAlLowPassParam &filter)
 {
-    const ALint values[3] = {value1, value2, value3};
-    SetSourceiv(this, eax_al_context_, static_cast<SourceProp>(param), values);
+    if(sendidx >= EAX_MAX_FXSLOTS)
+        return;
+
+    auto &send = Send[sendidx];
+    send.Gain = filter.gain;
+    send.GainHF = filter.gain_hf;
+    send.HFReference = LOWPASSFREQREF;
+    send.GainLF = 1.0f;
+    send.LFReference = HIGHPASSFREQREF;
+
+    if(send.Slot && slot != send.Slot && IsPlayingOrPaused(this))
+    {
+        /* Add refcount on the new slot, and release the previous slot */
+        if(slot) IncrementRef(slot->ref);
+        DecrementRef(send.Slot->ref);
+        send.Slot = slot;
+
+        /* We must force an update if the auxiliary slot changed on an active
+         * source, in case the slot is about to be deleted.
+         */
+        Voice *voice{GetSourceVoice(this, eax_al_context_)};
+        if(voice) UpdateSourceProps(this, voice, eax_al_context_);
+        else mPropsDirty.set(std::memory_order_release);
+    }
+    else
+    {
+        if(slot) IncrementRef(slot->ref);
+        if(auto *oldslot = send.Slot)
+            DecrementRef(oldslot->ref);
+        send.Slot = slot;
+        UpdateSourceProps(this, eax_al_context_);
+    }
 }
 
 #endif // ALSOFT_EAX

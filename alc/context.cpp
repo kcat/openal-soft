@@ -467,22 +467,6 @@ void ALCcontext::eax_uninitialize() noexcept
     eax_is_tried_ = false;
 
     eax_fx_slots_.uninitialize();
-    eax_al_filter_ = nullptr;
-}
-
-void ALCcontext::eax_initialize_source(
-    ALsource& al_source) noexcept
-try
-{
-    auto param = EaxSourceInitParam{};
-    param.al_context = this;
-    param.al_filter = eax_al_filter_.get();
-
-    al_source.eax_initialize(param);
-}
-catch (...)
-{
-    eax_log_exception("Failed to initialize a source.");
 }
 
 ALenum ALCcontext::eax_eax_set(
@@ -682,7 +666,6 @@ void ALCcontext::eax_initialize()
 
     eax_ensure_compatibility();
     eax_initialize_filter_gain();
-    eax_initialize_filter();
     eax_set_defaults();
     eax_set_air_absorbtion_hf();
     eax_initialize_fx_slots();
@@ -773,16 +756,6 @@ void ALCcontext::eax_set_defaults() noexcept
     eax_set_context_defaults();
 
     eax_d_ = eax_;
-}
-
-void ALCcontext::eax_initialize_filter()
-{
-    eax_al_filter_ = eax_create_al_low_pass_filter(*this);
-
-    if (!eax_al_filter_)
-    {
-        eax_fail("Failed to make a low-pass filter.");
-    }
 }
 
 void ALCcontext::eax_dispatch_fx_slot(
@@ -979,7 +952,7 @@ void ALCcontext::eax_initialize_sources()
 
     for (auto& source : SourceListEnumerator{mSourceList})
     {
-        eax_initialize_source(source);
+        source.eax_initialize(this);
     }
 }
 

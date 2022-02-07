@@ -8,12 +8,6 @@
 
 #include "almalloc.h"
 
-#ifdef ALSOFT_EAX
-#include <memory>
-
-#include "eax_utils.h"
-#endif // ALSOFT_EAX
-
 #define LOWPASSFREQREF  5000.0f
 #define HIGHPASSFREQREF  250.0f
 
@@ -53,39 +47,6 @@ struct ALfilter {
     void getParamfv(ALenum param, float *values) const { vtab->getParamfv(this, param, values); }
 
     DISABLE_ALLOC()
-
-#ifdef ALSOFT_EAX
-public:
-    void eax_set_low_pass_params(
-        ALCcontext& context,
-        const EaxAlLowPassParam& param);
-#endif // ALSOFT_EAX
 };
-
-#ifdef ALSOFT_EAX
-class EaxAlFilterDeleter {
-public:
-    EaxAlFilterDeleter() noexcept = default;
-
-    EaxAlFilterDeleter(
-        ALCcontext& context);
-
-
-    void operator()(
-        ALfilter* filter);
-
-private:
-    ALCcontext* context_{};
-}; // EaxAlFilterDeleter
-
-using EaxAlFilterUPtr = std::unique_ptr<ALfilter, EaxAlFilterDeleter>;
-
-EaxAlFilterUPtr eax_create_al_low_pass_filter(
-    ALCcontext& context);
-
-void eax_delete_low_pass_filter(
-    ALCcontext& context,
-    ALfilter& filter);
-#endif // ALSOFT_EAX
 
 #endif

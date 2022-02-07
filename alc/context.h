@@ -20,8 +20,6 @@
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "al/filter.h"
-
 #include "al/eax_eax_call.h"
 #include "al/eax_fx_slot_index.h"
 #include "al/eax_fx_slots.h"
@@ -213,9 +211,6 @@ public:
 
     void eax_uninitialize() noexcept;
 
-    void eax_initialize_source(
-        ALsource& al_source) noexcept;
-
 
     ALenum eax_eax_set(
         const GUID* property_set_id,
@@ -336,7 +331,6 @@ private:
 
     EaxContextSharedDirtyFlags eax_context_shared_dirty_flags_{};
 
-    EaxAlFilterUPtr eax_al_filter_{};
     Eax eax_{};
     Eax eax_d_{};
     EAXSESSIONPROPERTIES eax_session_{};
@@ -382,8 +376,6 @@ private:
     void eax_set_context_defaults() noexcept;
 
     void eax_set_defaults() noexcept;
-
-    void eax_initialize_filter();
 
     void eax_initialize_sources();
 

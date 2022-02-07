@@ -201,8 +201,7 @@ class EaxEqualizerEffect final :
     public EaxEffect
 {
 public:
-    EaxEqualizerEffect(
-        EffectProps& al_effect_props);
+    EaxEqualizerEffect();
 
 
     // [[nodiscard]]
@@ -211,8 +210,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXEQUALIZERPROPERTIES eax_{};
     EAXEQUALIZERPROPERTIES eax_d_{};
     EaxEqualizerEffectDirtyFlags eax_dirty_flags_{};
@@ -373,10 +370,8 @@ public:
 }; // EaxEqualizerEffectException
 
 
-EaxEqualizerEffect::EaxEqualizerEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxEqualizerEffect::EaxEqualizerEffect()
+    : EaxEffect{AL_EFFECT_EQUALIZER}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -1021,10 +1016,9 @@ bool EaxEqualizerEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_equalizer_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_equalizer_effect()
 {
-    return std::make_unique<EaxEqualizerEffect>(al_effect_props);
+    return std::make_unique<EaxEqualizerEffect>();
 }
 
 #endif // ALSOFT_EAX

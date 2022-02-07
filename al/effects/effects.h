@@ -86,9 +86,7 @@ extern const EffectVtable ConvolutionEffectVtable;
 
 
 #ifdef ALSOFT_EAX
-EaxEffectUPtr eax_create_eax_effect(
-    ALenum al_effect_type,
-    EffectProps& al_effect_props);
+EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type);
 #endif // ALSOFT_EAX
 
 #endif /* AL_EFFECTS_EFFECTS_H */

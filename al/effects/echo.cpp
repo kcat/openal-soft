@@ -138,8 +138,7 @@ class EaxEchoEffect final :
     public EaxEffect
 {
 public:
-    EaxEchoEffect(
-        EffectProps& al_effect_props);
+    EaxEchoEffect();
 
 
     // [[nodiscard]]
@@ -148,8 +147,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXECHOPROPERTIES eax_{};
     EAXECHOPROPERTIES eax_d_{};
     EaxEchoEffectDirtyFlags eax_dirty_flags_{};
@@ -253,10 +250,8 @@ public:
 }; // EaxEchoEffectException
 
 
-EaxEchoEffect::EaxEchoEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxEchoEffect::EaxEchoEffect()
+    : EaxEffect{AL_EFFECT_ECHO}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -631,10 +626,9 @@ bool EaxEchoEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_echo_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_echo_effect()
 {
-    return std::make_unique<EaxEchoEffect>(al_effect_props);
+    return std::make_unique<EaxEchoEffect>();
 }
 
 #endif // ALSOFT_EAX

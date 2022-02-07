@@ -279,18 +279,13 @@ class EaxVocalMorpherEffect final :
     public EaxEffect
 {
 public:
-    EaxVocalMorpherEffect(
-        EffectProps& al_effect_props);
-
+    EaxVocalMorpherEffect();
 
     // [[nodiscard]]
     bool dispatch(
         const EaxEaxCall& eax_call) override;
 
-
 private:
-    EffectProps& al_effect_props_;
-
     EAXVOCALMORPHERPROPERTIES eax_{};
     EAXVOCALMORPHERPROPERTIES eax_d_{};
     EaxVocalMorpherEffectDirtyFlags eax_dirty_flags_{};
@@ -407,10 +402,8 @@ public:
 }; // EaxVocalMorpherEffectException
 
 
-EaxVocalMorpherEffect::EaxVocalMorpherEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxVocalMorpherEffect::EaxVocalMorpherEffect()
+    : EaxEffect{AL_EFFECT_VOCAL_MORPHER}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -860,10 +853,9 @@ bool EaxVocalMorpherEffect::set(
 } // namespace
 
 
-EaxEffectUPtr eax_create_eax_vocal_morpher_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_vocal_morpher_effect()
 {
-    return std::make_unique<EaxVocalMorpherEffect>(al_effect_props);
+    return std::make_unique<EaxVocalMorpherEffect>();
 }
 
 #endif // ALSOFT_EAX

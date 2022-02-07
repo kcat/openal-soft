@@ -751,139 +751,15 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
     WARN("Reverb preset '%s' not found\n", name);
 }
 
-#ifdef ALSOFT_EAX
-namespace {
-
-class EaxAlEffectException :
-    public EaxException
+bool IsValidEffectType(ALenum type) noexcept
 {
-public:
-    explicit EaxAlEffectException(
-        const char* message)
-        :
-        EaxException{"[EAX_AL_EFFECT]", message}
+    if(type == AL_EFFECT_NULL)
+        return true;
+
+    for(const auto &effect_item : gEffectList)
     {
+        if(type == effect_item.val && !DisabledEffects[effect_item.type])
+            return true;
     }
-}; // EaxAlEffectException
-
-
-} // namespace
-
-
-void ALeffect::eax_initialize()
-{
-    eax_effect = nullptr;
-    eax_effect = eax_create_eax_effect(type, Props);
+    return false;
 }
-
-void ALeffect::eax_al_set_effect(
-    ALenum al_effect_type)
-{
-    if (al_effect_type != AL_EFFECT_NULL)
-    {
-        auto has_effect = false;
-
-        for (const auto &effect_item : gEffectList)
-        {
-            if (al_effect_type == effect_item.val && !DisabledEffects[effect_item.type])
-            {
-                has_effect = true;
-                break;
-            }
-        }
-
-        if (!has_effect)
-        {
-            eax_fail("Effect not available.");
-        }
-    }
-
-    InitEffectParams(this, al_effect_type);
-}
-
-[[noreturn]]
-void ALeffect::eax_fail(
-    const char* message)
-{
-    throw EaxAlEffectException{message};
-}
-
-EaxAlEffectDeleter::EaxAlEffectDeleter(
-    ALCcontext& context) noexcept
-    :
-    context_{&context}
-{
-}
-
-void EaxAlEffectDeleter::operator()(
-    ALeffect* effect) const
-{
-    assert(effect);
-
-    eax_al_delete_effect(*context_, *effect);
-}
-
-EaxAlEffectUPtr eax_create_al_effect(
-    ALCcontext& context,
-    ALenum effect_type)
-{
-#define EAX_PREFIX "[EAX_MAKE_EFFECT] "
-
-    auto& device = *context.mALDevice;
-    std::lock_guard<std::mutex> effect_lock{device.EffectLock};
-
-    // Allocate.
-    //
-    if (!EnsureEffects(&device, 1))
-    {
-        ERR(EAX_PREFIX "%s\n", "Failed to ensure.");
-        return nullptr;
-    }
-
-    auto effect = EaxAlEffectUPtr{AllocEffect(&device), EaxAlEffectDeleter{context}};
-
-    if (!effect)
-    {
-        ERR(EAX_PREFIX "%s\n", "Failed to allocate.");
-        return nullptr;
-    }
-
-    // Set the type.
-    //
-    auto is_supported = (effect_type == AL_EFFECT_NULL);
-
-    if (!is_supported)
-    {
-        for (const auto& effect_item : gEffectList)
-        {
-            if(effect_type == effect_item.val && !DisabledEffects[effect_item.type])
-            {
-                is_supported = true;
-                break;
-            }
-        }
-    }
-
-    if (!is_supported)
-    {
-        ERR(EAX_PREFIX "Effect type 0x%04x not supported.\n", effect_type);
-        return nullptr;
-    }
-
-    InitEffectParams(effect.get(), effect_type);
-
-    return effect;
-
-#undef EAX_PREFIX
-}
-
-void eax_al_delete_effect(
-    ALCcontext& context,
-    ALeffect& effect)
-{
-    auto& device = *context.mALDevice;
-    std::lock_guard<std::mutex> effect_lock{device.EffectLock};
-
-    FreeEffect(&device, &effect);
-}
-#endif // ALSOFT_EAX

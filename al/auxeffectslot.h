@@ -19,9 +19,8 @@
 #ifdef ALSOFT_EAX
 #include <memory>
 
-#include "al/effect.h"
-
 #include "eax_eax_call.h"
+#include "eax_effect.h"
 #include "eax_fx_slot_index.h"
 #endif // ALSOFT_EAX
 
@@ -78,8 +77,6 @@ public:
         ALCcontext& al_context,
         EaxFxSlotIndexValue index);
 
-    void eax_uninitialize() noexcept;
-
 
     const EAX50FXSLOTPROPERTIES& eax_get_eax_fx_slot() const noexcept;
 
@@ -96,7 +93,7 @@ private:
 
     EAX50FXSLOTPROPERTIES eax_eax_fx_slot_{};
 
-    EaxAlEffectUPtr eax_al_effect_{};
+    EaxEffectUPtr eax_effect_{};
 
 
     [[noreturn]]
@@ -243,16 +240,13 @@ private:
 
 
     // `alAuxiliaryEffectSloti(effect_slot, AL_EFFECTSLOT_EFFECT, effect)`
-    void eax_set_effect_slot_effect(
-        ALeffect& effect);
+    void eax_set_effect_slot_effect(EaxEffect &effect);
 
     // `alAuxiliaryEffectSloti(effect_slot, AL_EFFECTSLOT_AUXILIARY_SEND_AUTO, value)`
-    void eax_set_effect_slot_send_auto(
-        bool is_send_auto);
+    void eax_set_effect_slot_send_auto(bool is_send_auto);
 
     // `alAuxiliaryEffectSlotf(effect_slot, AL_EFFECTSLOT_GAIN, gain)`
-    void eax_set_effect_slot_gain(
-        ALfloat gain);
+    void eax_set_effect_slot_gain(ALfloat gain);
 #endif // ALSOFT_EAX
 };
 

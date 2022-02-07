@@ -1091,11 +1091,6 @@ void ALeffectslot::eax_initialize(
     eax_set_default_slots_defaults();
 }
 
-void ALeffectslot::eax_uninitialize() noexcept
-{
-    eax_al_effect_ = nullptr;
-}
-
 const EAX50FXSLOTPROPERTIES& ALeffectslot::eax_get_eax_fx_slot() const noexcept
 {
     return eax_eax_fx_slot_;
@@ -1436,21 +1431,13 @@ bool ALeffectslot::eax_get(
 void ALeffectslot::eax_set_fx_slot_effect(
     ALenum al_effect_type)
 {
-    if (!eax_al_effect_)
-    {
-        eax_al_effect_ = eax_create_al_effect(*eax_al_context_, al_effect_type);
-    }
-    else
-    {
-        auto& device = eax_al_context_->mALDevice;
-        std::lock_guard<std::mutex> effect_lock{device->EffectLock};
+    if(!IsValidEffectType(al_effect_type))
+        eax_fail("Unsupported effect.");
 
-        eax_al_effect_->eax_al_set_effect(al_effect_type);
-    }
+    eax_effect_ = nullptr;
+    eax_effect_ = eax_create_eax_effect(al_effect_type);
 
-    eax_al_effect_->eax_initialize();
-
-    eax_set_effect_slot_effect(*eax_al_effect_);
+    eax_set_effect_slot_effect(*eax_effect_);
 }
 
 void ALeffectslot::eax_set_fx_slot_effect()
@@ -1704,35 +1691,17 @@ void ALeffectslot::eax_dispatch_effect(
     const EaxEaxCall& eax_call)
 {
     auto is_changed = false;
-
-    {
-        std::lock_guard<std::mutex> effect_lock{eax_al_context_->mALDevice->EffectLock};
-
-        if (!eax_al_effect_->eax_effect)
-        {
-            return;
-        }
-
-        is_changed = eax_al_effect_->eax_effect->dispatch(eax_call);
-    }
-
-    if (is_changed)
-    {
-        eax_set_effect_slot_effect(*eax_al_effect_);
-    }
+    if(eax_effect_)
+        is_changed = eax_effect_->dispatch(eax_call);
+    if(is_changed)
+        eax_set_effect_slot_effect(*eax_effect_);
 }
 
-void ALeffectslot::eax_set_effect_slot_effect(
-    ALeffect& effect)
+void ALeffectslot::eax_set_effect_slot_effect(EaxEffect &effect)
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_EFFECT] "
 
-    auto& device = *eax_al_context_->mALDevice;
-
-    std::lock_guard<std::mutex> effect_slot_lock{eax_al_context_->mEffectSlotLock};
-    std::lock_guard<std::mutex> effect_lock{device.EffectLock};
-
-    const auto error = initEffect(effect.type, effect.Props, eax_al_context_);
+    const auto error = initEffect(effect.al_effect_type_, effect.al_effect_props_, eax_al_context_);
     if (error != AL_NO_ERROR)
     {
         ERR(EAX_PREFIX "%s\n", "Failed to initialize an effect.");

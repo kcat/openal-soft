@@ -141,8 +141,7 @@ class EaxDistortionEffect final :
     public EaxEffect
 {
 public:
-    EaxDistortionEffect(
-        EffectProps& al_effect_props);
+    EaxDistortionEffect();
 
 
     // [[nodiscard]]
@@ -151,8 +150,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXDISTORTIONPROPERTIES eax_{};
     EAXDISTORTIONPROPERTIES eax_d_{};
     EaxDistortionEffectDirtyFlags eax_dirty_flags_{};
@@ -258,10 +255,8 @@ public:
 }; // EaxDistortionEffectException
 
 
-EaxDistortionEffect::EaxDistortionEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxDistortionEffect::EaxDistortionEffect()
+    : EaxEffect{AL_EFFECT_DISTORTION}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -636,10 +631,9 @@ bool EaxDistortionEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_distortion_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_distortion_effect()
 {
-    return std::make_unique<EaxDistortionEffect>(al_effect_props);
+    return std::make_unique<EaxDistortionEffect>();
 }
 
 #endif // ALSOFT_EAX

@@ -357,8 +357,7 @@ class EaxChorusEffect final :
     public EaxEffect
 {
 public:
-    EaxChorusEffect(
-        EffectProps& al_effect_props);
+    EaxChorusEffect();
 
 
     // [[nodiscard]]
@@ -367,7 +366,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
     EAXCHORUSPROPERTIES eax_{};
     EAXCHORUSPROPERTIES eax_d_{};
     EaxChorusEffectDirtyFlags eax_dirty_flags_{};
@@ -484,10 +482,8 @@ public:
 }; // EaxChorusEffectException
 
 
-EaxChorusEffect::EaxChorusEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxChorusEffect::EaxChorusEffect()
+    : EaxEffect{AL_EFFECT_CHORUS}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -917,10 +913,9 @@ bool EaxChorusEffect::set(
 } // namespace
 
 
-EaxEffectUPtr eax_create_eax_chorus_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_chorus_effect()
 {
-    return std::make_unique<::EaxChorusEffect>(al_effect_props);
+    return std::make_unique<::EaxChorusEffect>();
 }
 
 
@@ -947,8 +942,7 @@ class EaxFlangerEffect final :
     public EaxEffect
 {
 public:
-    EaxFlangerEffect(
-        EffectProps& al_effect_props);
+    EaxFlangerEffect();
 
 
     // [[nodiscard]]
@@ -957,8 +951,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXFLANGERPROPERTIES eax_{};
     EAXFLANGERPROPERTIES eax_d_{};
     EaxFlangerEffectDirtyFlags eax_dirty_flags_{};
@@ -1075,10 +1067,8 @@ public:
 }; // EaxFlangerEffectException
 
 
-EaxFlangerEffect::EaxFlangerEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxFlangerEffect::EaxFlangerEffect()
+    : EaxEffect{AL_EFFECT_FLANGER}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -1507,10 +1497,9 @@ bool EaxFlangerEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_flanger_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_flanger_effect()
 {
-    return std::make_unique<EaxFlangerEffect>(al_effect_props);
+    return std::make_unique<EaxFlangerEffect>();
 }
 
 #endif // ALSOFT_EAX

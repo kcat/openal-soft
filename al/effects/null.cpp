@@ -104,6 +104,8 @@ class EaxNullEffect final :
     public EaxEffect
 {
 public:
+    EaxNullEffect();
+
     // [[nodiscard]]
     bool dispatch(
         const EaxEaxCall& eax_call) override;
@@ -122,6 +124,11 @@ public:
     }
 }; // EaxNullEffectException
 
+
+EaxNullEffect::EaxNullEffect()
+    : EaxEffect{AL_EFFECT_NULL}
+{
+}
 
 // [[nodiscard]]
 bool EaxNullEffect::dispatch(

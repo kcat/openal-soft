@@ -604,18 +604,13 @@ class EaxReverbEffect final :
     public EaxEffect
 {
 public:
-    EaxReverbEffect(
-        EffectProps& al_effect_props);
-
+    EaxReverbEffect();
 
     // [[nodiscard]]
     bool dispatch(
         const EaxEaxCall& eax_call) override;
 
-
 private:
-    EffectProps& al_effect_props_;
-
     EAXREVERBPROPERTIES eax_{};
     EAXREVERBPROPERTIES eax_d_{};
     EaxReverbEffectDirtyFlags eax_dirty_flags_{};
@@ -941,10 +936,8 @@ public:
 }; // EaxReverbEffectException
 
 
-EaxReverbEffect::EaxReverbEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxReverbEffect::EaxReverbEffect()
+    : EaxEffect{AL_EFFECT_EAXREVERB}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -2464,10 +2457,9 @@ bool EaxReverbEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_reverb_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_reverb_effect()
 {
-    return std::make_unique<EaxReverbEffect>(al_effect_props);
+    return std::make_unique<EaxReverbEffect>();
 }
 
 #endif // ALSOFT_EAX

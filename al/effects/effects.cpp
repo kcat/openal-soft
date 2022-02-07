@@ -11,47 +11,21 @@
 
 
 EaxEffectUPtr eax_create_eax_null_effect();
-
-EaxEffectUPtr eax_create_eax_chorus_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_distortion_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_echo_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_flanger_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_vocal_morpher_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_pitch_shifter_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_ring_modulator_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_auto_wah_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_compressor_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_equalizer_effect(
-    EffectProps& al_effect_props);
-
-EaxEffectUPtr eax_create_eax_reverb_effect(
-    EffectProps& al_effect_props);
+EaxEffectUPtr eax_create_eax_chorus_effect();
+EaxEffectUPtr eax_create_eax_distortion_effect();
+EaxEffectUPtr eax_create_eax_echo_effect();
+EaxEffectUPtr eax_create_eax_flanger_effect();
+EaxEffectUPtr eax_create_eax_frequency_shifter_effect();
+EaxEffectUPtr eax_create_eax_vocal_morpher_effect();
+EaxEffectUPtr eax_create_eax_pitch_shifter_effect();
+EaxEffectUPtr eax_create_eax_ring_modulator_effect();
+EaxEffectUPtr eax_create_eax_auto_wah_effect();
+EaxEffectUPtr eax_create_eax_compressor_effect();
+EaxEffectUPtr eax_create_eax_equalizer_effect();
+EaxEffectUPtr eax_create_eax_reverb_effect();
 
 
-EaxEffectUPtr eax_create_eax_effect(
-    ALenum al_effect_type,
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type)
 {
 #define EAX_PREFIX "[EAX_MAKE_EAX_EFFECT] "
 
@@ -61,40 +35,40 @@ EaxEffectUPtr eax_create_eax_effect(
             return eax_create_eax_null_effect();
 
         case AL_EFFECT_CHORUS:
-            return eax_create_eax_chorus_effect(al_effect_props);
+            return eax_create_eax_chorus_effect();
 
         case AL_EFFECT_DISTORTION:
-            return eax_create_eax_distortion_effect(al_effect_props);
+            return eax_create_eax_distortion_effect();
 
         case AL_EFFECT_ECHO:
-            return eax_create_eax_echo_effect(al_effect_props);
+            return eax_create_eax_echo_effect();
 
         case AL_EFFECT_FLANGER:
-            return eax_create_eax_flanger_effect(al_effect_props);
+            return eax_create_eax_flanger_effect();
 
         case AL_EFFECT_FREQUENCY_SHIFTER:
-            return eax_create_eax_frequency_shifter_effect(al_effect_props);
+            return eax_create_eax_frequency_shifter_effect();
 
         case AL_EFFECT_VOCAL_MORPHER:
-            return eax_create_eax_vocal_morpher_effect(al_effect_props);
+            return eax_create_eax_vocal_morpher_effect();
 
         case AL_EFFECT_PITCH_SHIFTER:
-            return eax_create_eax_pitch_shifter_effect(al_effect_props);
+            return eax_create_eax_pitch_shifter_effect();
 
         case AL_EFFECT_RING_MODULATOR:
-            return eax_create_eax_ring_modulator_effect(al_effect_props);
+            return eax_create_eax_ring_modulator_effect();
 
         case AL_EFFECT_AUTOWAH:
-            return eax_create_eax_auto_wah_effect(al_effect_props);
+            return eax_create_eax_auto_wah_effect();
 
         case AL_EFFECT_COMPRESSOR:
-            return eax_create_eax_compressor_effect(al_effect_props);
+            return eax_create_eax_compressor_effect();
 
         case AL_EFFECT_EQUALIZER:
-            return eax_create_eax_equalizer_effect(al_effect_props);
+            return eax_create_eax_equalizer_effect();
 
         case AL_EFFECT_EAXREVERB:
-            return eax_create_eax_reverb_effect(al_effect_props);
+            return eax_create_eax_reverb_effect();
 
         default:
             assert(false && "Unsupported AL effect type.");

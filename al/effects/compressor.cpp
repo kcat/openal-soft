@@ -95,8 +95,7 @@ class EaxCompressorEffect final :
     public EaxEffect
 {
 public:
-    EaxCompressorEffect(
-        EffectProps& al_effect_props);
+    EaxCompressorEffect();
 
 
     // [[nodiscard]]
@@ -105,8 +104,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXAGCCOMPRESSORPROPERTIES eax_{};
     EAXAGCCOMPRESSORPROPERTIES eax_d_{};
     EaxCompressorEffectDirtyFlags eax_dirty_flags_{};
@@ -168,10 +165,8 @@ public:
 }; // EaxCompressorEffectException
 
 
-EaxCompressorEffect::EaxCompressorEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxCompressorEffect::EaxCompressorEffect()
+    : EaxEffect{AL_EFFECT_COMPRESSOR}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -330,10 +325,9 @@ bool EaxCompressorEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_compressor_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_compressor_effect()
 {
-    return std::make_unique<EaxCompressorEffect>(al_effect_props);
+    return std::make_unique<EaxCompressorEffect>();
 }
 
 #endif // ALSOFT_EAX

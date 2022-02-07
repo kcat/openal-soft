@@ -163,8 +163,7 @@ class EaxRingModulatorEffect final :
     public EaxEffect
 {
 public:
-    EaxRingModulatorEffect(
-        EffectProps& al_effect_props);
+    EaxRingModulatorEffect();
 
 
     // [[nodiscard]]
@@ -173,8 +172,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXRINGMODULATORPROPERTIES eax_{};
     EAXRINGMODULATORPROPERTIES eax_d_{};
     EaxRingModulatorEffectDirtyFlags eax_dirty_flags_{};
@@ -258,10 +255,8 @@ public:
 }; // EaxRingModulatorEffectException
 
 
-EaxRingModulatorEffect::EaxRingModulatorEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxRingModulatorEffect::EaxRingModulatorEffect()
+    : EaxEffect{AL_EFFECT_RING_MODULATOR}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -533,10 +528,9 @@ bool EaxRingModulatorEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_ring_modulator_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_ring_modulator_effect()
 {
-    return std::make_unique<EaxRingModulatorEffect>(al_effect_props);
+    return std::make_unique<EaxRingModulatorEffect>();
 }
 
 #endif // ALSOFT_EAX

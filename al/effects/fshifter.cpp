@@ -157,8 +157,7 @@ class EaxFrequencyShifterEffect final :
     public EaxEffect
 {
 public:
-    EaxFrequencyShifterEffect(
-        EffectProps& al_effect_props);
+    EaxFrequencyShifterEffect();
 
 
     // [[nodiscard]]
@@ -167,8 +166,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXFREQUENCYSHIFTERPROPERTIES eax_{};
     EAXFREQUENCYSHIFTERPROPERTIES eax_d_{};
     EaxFrequencyShifterEffectDirtyFlags eax_dirty_flags_{};
@@ -252,10 +249,8 @@ public:
 }; // EaxFrequencyShifterEffectException
 
 
-EaxFrequencyShifterEffect::EaxFrequencyShifterEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxFrequencyShifterEffect::EaxFrequencyShifterEffect()
+    : EaxEffect{AL_EFFECT_FREQUENCY_SHIFTER}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -530,10 +525,9 @@ bool EaxFrequencyShifterEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_frequency_shifter_effect()
 {
-    return std::make_unique<EaxFrequencyShifterEffect>(al_effect_props);
+    return std::make_unique<EaxFrequencyShifterEffect>();
 }
 
 #endif // ALSOFT_EAX

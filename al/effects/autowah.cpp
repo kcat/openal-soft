@@ -136,8 +136,7 @@ class EaxAutoWahEffect final :
     public EaxEffect
 {
 public:
-    EaxAutoWahEffect(
-        EffectProps& al_effect_props);
+    EaxAutoWahEffect();
 
 
     // [[nodiscard]]
@@ -146,8 +145,6 @@ public:
 
 
 private:
-    EffectProps& al_effect_props_;
-
     EAXAUTOWAHPROPERTIES eax_{};
     EAXAUTOWAHPROPERTIES eax_d_{};
     EaxAutoWahEffectDirtyFlags eax_dirty_flags_{};
@@ -241,10 +238,8 @@ public:
 }; // EaxAutoWahEffectException
 
 
-EaxAutoWahEffect::EaxAutoWahEffect(
-    EffectProps& al_effect_props)
-    :
-    al_effect_props_{al_effect_props}
+EaxAutoWahEffect::EaxAutoWahEffect()
+    : EaxEffect{AL_EFFECT_AUTOWAH}
 {
     set_eax_defaults();
     set_efx_defaults();
@@ -566,10 +561,9 @@ bool EaxAutoWahEffect::set(
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_auto_wah_effect(
-    EffectProps& al_effect_props)
+EaxEffectUPtr eax_create_eax_auto_wah_effect()
 {
-    return std::make_unique<::EaxAutoWahEffect>(al_effect_props);
+    return std::make_unique<::EaxAutoWahEffect>();
 }
 
 #endif // ALSOFT_EAX

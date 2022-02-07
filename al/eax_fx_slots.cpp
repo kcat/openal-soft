@@ -39,7 +39,6 @@ void EaxFxSlots::uninitialize() noexcept
 {
     for (auto& fx_slot : fx_slots_)
     {
-        fx_slot->eax_uninitialize();
         fx_slot = nullptr;
     }
 }

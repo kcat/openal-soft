@@ -561,6 +561,17 @@ void ALCcontext::eax_update_filters()
     }
 }
 
+void ALCcontext::eax_on_3d_listener_param_call()
+{
+    if (!has_eax())
+        return;
+
+    std::unique_lock<std::mutex> source_lock{mSourceLock};
+
+    for (auto& source : SourceListEnumerator{mSourceList})
+        source.eax_commit();
+}
+
 void ALCcontext::eax_set_last_error() noexcept
 {
     eax_last_error_ = EAXERR_INVALID_OPERATION;

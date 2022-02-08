@@ -229,6 +229,8 @@ public:
 
     void eax_update_filters();
 
+    void eax_on_3d_listener_param_call();
+
 
     void eax_set_last_error() noexcept;
 

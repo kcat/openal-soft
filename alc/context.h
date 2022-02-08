@@ -361,10 +361,6 @@ private:
 
     void eax_ensure_enough_aux_sends() const;
 
-    bool eax_has_eax_reverb_effect() const noexcept;
-
-    void eax_ensure_eax_reverb_effect() const;
-
     void eax_ensure_compatibility();
 
 

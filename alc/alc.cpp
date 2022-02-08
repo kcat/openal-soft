@@ -1277,6 +1277,11 @@ void alc_initconfig(void)
         {
             eax_g_is_enabled = true;
         }
+        if(eax_g_is_enabled && DisabledEffects[EAXREVERB_EFFECT])
+        {
+            eax_g_is_enabled = false;
+            TRACE("%s\n", "EAX disabled because EAXReverb is disabled.");
+        }
     }
 #endif // ALSOFT_EAX
 }

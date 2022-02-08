@@ -451,9 +451,7 @@ bool ALCcontext::has_eax() const noexcept
 
 bool ALCcontext::eax_is_capable() const noexcept
 {
-    return
-        eax_has_enough_aux_sends() &&
-        eax_has_eax_reverb_effect();
+    return eax_has_enough_aux_sends();
 }
 
 void ALCcontext::eax_uninitialize() noexcept
@@ -716,23 +714,9 @@ void ALCcontext::eax_ensure_enough_aux_sends() const
     }
 }
 
-bool ALCcontext::eax_has_eax_reverb_effect() const noexcept
-{
-    return !DisabledEffects[EAXREVERB_EFFECT];
-}
-
-void ALCcontext::eax_ensure_eax_reverb_effect() const
-{
-    if (!eax_has_eax_reverb_effect())
-    {
-        eax_fail("Disabled EAX Reverb Effect.");
-    }
-}
-
 void ALCcontext::eax_ensure_compatibility()
 {
     eax_ensure_enough_aux_sends();
-    eax_ensure_eax_reverb_effect();
 }
 
 unsigned long ALCcontext::eax_detect_speaker_configuration() const

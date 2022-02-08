@@ -1316,7 +1316,7 @@ void ALeffectslot::eax_set_eax_fx_slot_defaults()
     eax_eax_fx_slot_.guidLoadEffect = EAX_NULL_GUID;
     eax_eax_fx_slot_.lVolume = EAXFXSLOT_DEFAULTVOLUME;
     eax_eax_fx_slot_.lLock = EAXFXSLOT_UNLOCKED;
-    eax_eax_fx_slot_.ulFlags = EAX50FXSLOT_DEFAULTFLAGS;
+    eax_eax_fx_slot_.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
     eax_eax_fx_slot_.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
     eax_eax_fx_slot_.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
 }

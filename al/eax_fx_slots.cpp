@@ -60,6 +60,11 @@ ALeffectslot& EaxFxSlots::get(
     return const_cast<ALeffectslot&>(const_cast<const EaxFxSlots*>(this)->get(index));
 }
 
+void EaxFxSlots::unlock_legacy() noexcept
+{
+    fx_slots_[0]->eax_unlock_legacy();
+    fx_slots_[1]->eax_unlock_legacy();
+}
 
 [[noreturn]]
 void EaxFxSlots::fail(

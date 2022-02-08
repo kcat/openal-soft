@@ -26,6 +26,8 @@ public:
     ALeffectslot& get(
         EaxFxSlotIndex index);
 
+    void unlock_legacy() noexcept;
+
 
 private:
     using Items = std::array<EaxAlEffectSlotUPtr, EAX_MAX_FXSLOTS>;

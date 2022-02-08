@@ -229,6 +229,8 @@ public:
 
     void eax_update_filters();
 
+    void eax_on_3d_listener_param_call();
+
 
     void eax_set_last_error() noexcept;
 
@@ -319,6 +321,7 @@ private:
 
     bool eax_is_initialized_{};
     bool eax_is_tried_{};
+    bool eax_are_legacy_fx_slots_unlocked_{};
 
     long eax_last_error_{};
     unsigned long eax_speaker_config_{};
@@ -365,11 +368,13 @@ private:
     void eax_ensure_compatibility();
 
 
+    unsigned long eax_detect_speaker_configuration() const;
+    void eax_update_speaker_configuration();
+
+
     void eax_initialize_filter_gain();
 
     void eax_set_last_error_defaults() noexcept;
-
-    void eax_set_speaker_config_defaults() noexcept;
 
     void eax_set_session_defaults() noexcept;
 
@@ -378,6 +383,9 @@ private:
     void eax_set_defaults() noexcept;
 
     void eax_initialize_sources();
+
+
+    void eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept;
 
 
     void eax_dispatch_fx_slot(
@@ -505,9 +513,6 @@ private:
         const EaxEaxCall& eax_call);
 
     void eax_defer_hf_reference(
-        const EaxEaxCall& eax_call);
-
-    void eax_set_speaker_config(
         const EaxEaxCall& eax_call);
 
     void eax_set_session(

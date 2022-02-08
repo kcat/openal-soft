@@ -158,14 +158,7 @@ EaxEaxCall::EaxEaxCall(
         fail("EAX version out of range.");
     }
 
-    if (is_deferred_)
-    {
-        if (is_get_)
-        {
-            fail("Getting deferred properties not supported.");
-        }
-    }
-    else
+    if (!is_deferred_)
     {
         if (property_set_id_ != EaxEaxCallPropertySetId::fx_slot &&
             property_id_ != 0)

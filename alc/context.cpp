@@ -487,6 +487,8 @@ ALenum ALCcontext::eax_eax_set(
         property_value_size
     );
 
+    eax_unlock_legacy_fx_slots(eax_call);
+
     switch (eax_call.get_property_set_id())
     {
         case EaxEaxCallPropertySetId::context:
@@ -527,6 +529,8 @@ ALenum ALCcontext::eax_eax_get(
         property_value_size
     );
 
+    eax_unlock_legacy_fx_slots(eax_call);
+
     switch (eax_call.get_property_set_id())
     {
         case EaxEaxCallPropertySetId::context:
@@ -555,6 +559,17 @@ void ALCcontext::eax_update_filters()
     {
         source.eax_update_filters();
     }
+}
+
+void ALCcontext::eax_on_3d_listener_param_call()
+{
+    if (!has_eax())
+        return;
+
+    std::unique_lock<std::mutex> source_lock{mSourceLock};
+
+    for (auto& source : SourceListEnumerator{mSourceList})
+        source.eax_commit();
 }
 
 void ALCcontext::eax_set_last_error() noexcept
@@ -668,6 +683,7 @@ void ALCcontext::eax_initialize()
     eax_initialize_filter_gain();
     eax_set_defaults();
     eax_set_air_absorbtion_hf();
+    eax_update_speaker_configuration();
     eax_initialize_fx_slots();
     eax_initialize_sources();
 
@@ -719,6 +735,31 @@ void ALCcontext::eax_ensure_compatibility()
     eax_ensure_eax_reverb_effect();
 }
 
+unsigned long ALCcontext::eax_detect_speaker_configuration() const
+{
+#define EAX_PREFIX "[EAX_DETECT_SPEAKER_CONFIG]"
+
+    switch (mDevice->channelsFromFmt())
+    {
+        case 2: return mDevice->Flags.test(DirectEar) ? HEADPHONES : SPEAKERS_2;
+        case 4: return SPEAKERS_4;
+        case 6: return SPEAKERS_5;
+        case 7: return SPEAKERS_6;
+        case 8: return SPEAKERS_7;
+
+        default:
+            WARN(EAX_PREFIX "Unsupported device channel format %d.\n", mDevice->FmtChans);
+            return HEADPHONES;
+    }
+
+#undef EAX_PREFIX
+}
+
+void ALCcontext::eax_update_speaker_configuration()
+{
+    eax_speaker_config_ = eax_detect_speaker_configuration();
+}
+
 void ALCcontext::eax_initialize_filter_gain()
 {
     eax_max_filter_gain_ = level_mb_to_gain(GainMixMax / mGainBoost);
@@ -727,11 +768,6 @@ void ALCcontext::eax_initialize_filter_gain()
 void ALCcontext::eax_set_last_error_defaults() noexcept
 {
     eax_last_error_ = EAX_OK;
-}
-
-void ALCcontext::eax_set_speaker_config_defaults() noexcept
-{
-    eax_speaker_config_ = HEADPHONES;
 }
 
 void ALCcontext::eax_set_session_defaults() noexcept
@@ -751,11 +787,19 @@ void ALCcontext::eax_set_context_defaults() noexcept
 void ALCcontext::eax_set_defaults() noexcept
 {
     eax_set_last_error_defaults();
-    eax_set_speaker_config_defaults();
     eax_set_session_defaults();
     eax_set_context_defaults();
 
     eax_d_ = eax_;
+}
+
+void ALCcontext::eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept
+{
+    if (eax_call.get_version() != 5 || eax_are_legacy_fx_slots_unlocked_)
+        return;
+
+    eax_are_legacy_fx_slots_unlocked_ = true;
+    eax_fx_slots_.unlock_legacy();
 }
 
 void ALCcontext::eax_dispatch_fx_slot(
@@ -1219,17 +1263,6 @@ void ALCcontext::eax_defer_hf_reference(
     eax_defer_hf_reference(hf_reference);
 }
 
-void ALCcontext::eax_set_speaker_config(
-    const EaxEaxCall& eax_call)
-{
-    const auto speaker_config =
-        eax_call.get_value<ContextException, const unsigned long>();
-
-    eax_validate_speaker_config(speaker_config);
-
-    eax_speaker_config_ = speaker_config;
-}
-
 void ALCcontext::eax_set_session(
     const EaxEaxCall& eax_call)
 {
@@ -1280,11 +1313,10 @@ void ALCcontext::eax_set(
             break;
 
         case EAXCONTEXT_LASTERROR:
-            eax_fail("Setting last error not supported.");
+            eax_fail("Last error is read-only.");
 
         case EAXCONTEXT_SPEAKERCONFIG:
-            eax_set_speaker_config(eax_call);
-            break;
+            eax_fail("Speaker configuration is read-only.");
 
         case EAXCONTEXT_EAXSESSION:
             eax_set_session(eax_call);

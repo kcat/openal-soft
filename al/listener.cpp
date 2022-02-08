@@ -95,6 +95,9 @@ START_API_FUNC
         listener.Position[1] = value2;
         listener.Position[2] = value3;
         UpdateProps(listener, context.get());
+#ifdef ALSOFT_EAX
+        context->eax_on_3d_listener_param_call();
+#endif // ALSOFT_EAX
         break;
 
     case AL_VELOCITY:
@@ -104,6 +107,9 @@ START_API_FUNC
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
         UpdateProps(listener, context.get());
+#ifdef ALSOFT_EAX
+        context->eax_on_3d_listener_param_call();
+#endif // ALSOFT_EAX
         break;
 
     default:
@@ -151,6 +157,9 @@ START_API_FUNC
         listener.OrientUp[1] = values[4];
         listener.OrientUp[2] = values[5];
         UpdateProps(listener, context.get());
+#ifdef ALSOFT_EAX
+        context->eax_on_3d_listener_param_call();
+#endif // ALSOFT_EAX
         break;
 
     default:

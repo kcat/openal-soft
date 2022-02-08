@@ -723,18 +723,30 @@ unsigned long ALCcontext::eax_detect_speaker_configuration() const
 {
 #define EAX_PREFIX "[EAX_DETECT_SPEAKER_CONFIG]"
 
-    switch (mDevice->channelsFromFmt())
+    switch(mDevice->FmtChans)
     {
-        case 2: return mDevice->Flags.test(DirectEar) ? HEADPHONES : SPEAKERS_2;
-        case 4: return SPEAKERS_4;
-        case 6: return SPEAKERS_5;
-        case 7: return SPEAKERS_6;
-        case 8: return SPEAKERS_7;
-
-        default:
-            WARN(EAX_PREFIX "Unsupported device channel format %d.\n", mDevice->FmtChans);
+    case DevFmtMono: return SPEAKERS_2;
+    case DevFmtStereo:
+        /* Pretend 7.1 if using UHJ output, since they both provide full
+         * horizontal surround.
+         */
+        if(mDevice->mUhjEncoder)
+            return SPEAKERS_7;
+        if(mDevice->Flags.test(DirectEar))
             return HEADPHONES;
+        return SPEAKERS_2;
+    case DevFmtQuad: return SPEAKERS_4;
+    case DevFmtX51: return SPEAKERS_5;
+    case DevFmtX61: return SPEAKERS_6;
+    case DevFmtX71: return SPEAKERS_7;
+    /* This could also be HEADPHONES, since headphones-based HRTF and Ambi3D
+     * provide full-sphere surround sound. Depends if apps are more likely to
+     * consider headphones or 7.1 for surround sound support.
+     */
+    case DevFmtAmbi3D: return SPEAKERS_7;
     }
+    ERR(EAX_PREFIX "Unexpected device channel format 0x%x.\n", mDevice->FmtChans);
+    return HEADPHONES;
 
 #undef EAX_PREFIX
 }

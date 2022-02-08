@@ -3752,6 +3752,7 @@ void ALsource::eax_update(
     if (dirty_flags.air_absorption_hf)
     {
         eax_set_air_absorption_factor();
+        mPropsDirty.set(std::memory_order_release);
     }
 }
 
@@ -4001,7 +4002,7 @@ void ALsource::eax_update_direct_filter_internal()
     Direct.HFReference = LOWPASSFREQREF;
     Direct.GainLF = 1.0f;
     Direct.LFReference = HIGHPASSFREQREF;
-    UpdateSourceProps(this, eax_al_context_);
+    mPropsDirty.set(std::memory_order_release);
 }
 
 void ALsource::eax_update_room_filters_internal()
@@ -5342,25 +5343,21 @@ void ALsource::eax_set_outside_volume_hf()
     );
 
     OuterGainHF = efx_gain_hf;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_doppler_factor()
 {
     DopplerFactor = eax_.source.flDopplerFactor;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_rolloff_factor()
 {
     RolloffFactor = eax_.source.flRolloffFactor;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_room_rolloff_factor()
 {
     RoomRolloffFactor = eax_.source.flRoomRolloffFactor;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_air_absorption_factor()
@@ -5369,7 +5366,6 @@ void ALsource::eax_set_air_absorption_factor()
         eax_al_context_->eax_get_air_absorption_factor() * eax_.source.flAirAbsorptionFactor;
 
     AirAbsorptionFactor = air_absorption_factor;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_direct_hf_auto_flag()
@@ -5377,7 +5373,6 @@ void ALsource::eax_set_direct_hf_auto_flag()
     const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_DIRECTHFAUTO) != 0;
 
     DryGainHFAuto = is_enable;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_room_auto_flag()
@@ -5385,7 +5380,6 @@ void ALsource::eax_set_room_auto_flag()
     const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMAUTO) != 0;
 
     WetGainAuto = is_enable;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_room_hf_auto_flag()
@@ -5393,7 +5387,6 @@ void ALsource::eax_set_room_hf_auto_flag()
     const auto is_enable = (eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0;
 
     WetGainHFAuto = is_enable;
-    UpdateSourceProps(this, eax_al_context_);
 }
 
 void ALsource::eax_set_flags()
@@ -5490,6 +5483,8 @@ void ALsource::eax_apply_deferred()
         {
             eax_set_macro_fx_factor();
         }
+
+        mPropsDirty.set(std::memory_order_release);
 
         eax_source_dirty_misc_flags_ = EaxSourceSourceMiscDirtyFlags{};
     }
@@ -5633,6 +5628,7 @@ void ALsource::eax_set(
     if (!eax_call.is_deferred())
     {
         eax_apply_deferred();
+        UpdateSourceProps(this, eax_al_context_);
     }
 }
 
@@ -6019,28 +6015,11 @@ void ALsource::eax_set_al_source_send(
     send.GainLF = 1.0f;
     send.LFReference = HIGHPASSFREQREF;
 
-    if(send.Slot && slot != send.Slot && IsPlayingOrPaused(this))
-    {
-        /* Add refcount on the new slot, and release the previous slot */
-        if(slot) IncrementRef(slot->ref);
-        DecrementRef(send.Slot->ref);
-        send.Slot = slot;
-
-        /* We must force an update if the auxiliary slot changed on an active
-         * source, in case the slot is about to be deleted.
-         */
-        Voice *voice{GetSourceVoice(this, eax_al_context_)};
-        if(voice) UpdateSourceProps(this, voice, eax_al_context_);
-        else mPropsDirty.set(std::memory_order_release);
-    }
-    else
-    {
-        if(slot) IncrementRef(slot->ref);
-        if(auto *oldslot = send.Slot)
-            DecrementRef(oldslot->ref);
-        send.Slot = slot;
-        UpdateSourceProps(this, eax_al_context_);
-    }
+    if(slot) IncrementRef(slot->ref);
+    if(auto *oldslot = send.Slot)
+        DecrementRef(oldslot->ref);
+    send.Slot = slot;
+    mPropsDirty.set(std::memory_order_release);
 }
 
 #endif // ALSOFT_EAX

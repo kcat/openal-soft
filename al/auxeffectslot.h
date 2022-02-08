@@ -105,7 +105,7 @@ private:
 
 
     GUID eax_get_eax_default_effect_guid() const noexcept;
-    unsigned long eax_get_eax_default_lock() const noexcept;
+    long eax_get_eax_default_lock() const noexcept;
 
     void eax_set_eax_fx_slot_defaults();
 

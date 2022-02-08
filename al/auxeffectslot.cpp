@@ -1328,7 +1328,7 @@ GUID ALeffectslot::eax_get_eax_default_effect_guid() const noexcept
     }
 }
 
-unsigned long ALeffectslot::eax_get_eax_default_lock() const noexcept
+long ALeffectslot::eax_get_eax_default_lock() const noexcept
 {
     return eax_fx_slot_index_ < 2 ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }

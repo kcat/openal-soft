@@ -672,6 +672,7 @@ void ALCcontext::eax_initialize()
     eax_initialize_filter_gain();
     eax_set_defaults();
     eax_set_air_absorbtion_hf();
+    eax_update_speaker_configuration();
     eax_initialize_fx_slots();
     eax_initialize_sources();
 
@@ -723,6 +724,31 @@ void ALCcontext::eax_ensure_compatibility()
     eax_ensure_eax_reverb_effect();
 }
 
+unsigned long ALCcontext::eax_detect_speaker_configuration() const
+{
+#define EAX_PREFIX "[EAX_DETECT_SPEAKER_CONFIG]"
+
+    switch (mDevice->channelsFromFmt())
+    {
+        case 2: return mDevice->Flags.test(DirectEar) ? HEADPHONES : SPEAKERS_2;
+        case 4: return SPEAKERS_4;
+        case 6: return SPEAKERS_5;
+        case 7: return SPEAKERS_6;
+        case 8: return SPEAKERS_7;
+
+        default:
+            WARN(EAX_PREFIX "Unsupported device channel format %d.\n", mDevice->FmtChans);
+            return HEADPHONES;
+    }
+
+#undef EAX_PREFIX
+}
+
+void ALCcontext::eax_update_speaker_configuration()
+{
+    eax_speaker_config_ = eax_detect_speaker_configuration();
+}
+
 void ALCcontext::eax_initialize_filter_gain()
 {
     eax_max_filter_gain_ = level_mb_to_gain(GainMixMax / mGainBoost);
@@ -731,11 +757,6 @@ void ALCcontext::eax_initialize_filter_gain()
 void ALCcontext::eax_set_last_error_defaults() noexcept
 {
     eax_last_error_ = EAX_OK;
-}
-
-void ALCcontext::eax_set_speaker_config_defaults() noexcept
-{
-    eax_speaker_config_ = HEADPHONES;
 }
 
 void ALCcontext::eax_set_session_defaults() noexcept
@@ -755,7 +776,6 @@ void ALCcontext::eax_set_context_defaults() noexcept
 void ALCcontext::eax_set_defaults() noexcept
 {
     eax_set_last_error_defaults();
-    eax_set_speaker_config_defaults();
     eax_set_session_defaults();
     eax_set_context_defaults();
 

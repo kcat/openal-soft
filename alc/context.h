@@ -366,11 +366,13 @@ private:
     void eax_ensure_compatibility();
 
 
+    unsigned long eax_detect_speaker_configuration() const;
+    void eax_update_speaker_configuration();
+
+
     void eax_initialize_filter_gain();
 
     void eax_set_last_error_defaults() noexcept;
-
-    void eax_set_speaker_config_defaults() noexcept;
 
     void eax_set_session_defaults() noexcept;
 

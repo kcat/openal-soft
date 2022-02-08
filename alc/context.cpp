@@ -444,11 +444,6 @@ ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::end() noexcept
 }
 
 
-bool ALCcontext::has_eax() const noexcept
-{
-    return eax_is_initialized_;
-}
-
 bool ALCcontext::eax_is_capable() const noexcept
 {
     return eax_has_enough_aux_sends();

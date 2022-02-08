@@ -204,7 +204,7 @@ public:
 
 #ifdef ALSOFT_EAX
 public:
-    bool has_eax() const noexcept;
+    bool has_eax() const noexcept { return eax_is_initialized_; }
 
     bool eax_is_capable() const noexcept;
 

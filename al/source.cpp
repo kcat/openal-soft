@@ -3124,10 +3124,8 @@ START_API_FUNC
             cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
             cur = cur->mNext.load(std::memory_order_relaxed);
         }
+
         Voice *voice{GetSourceVoice(source, context.get())};
-#ifdef ALSOFT_EAX
-        auto eax_is_begins_to_play = false;
-#endif // ALSOFT_EAX
         switch(GetSourceState(source, voice))
         {
         case AL_PAUSED:
@@ -3141,7 +3139,7 @@ START_API_FUNC
             cur->mState = VChangeState::Play;
             source->state = AL_PLAYING;
 #ifdef ALSOFT_EAX
-            eax_is_begins_to_play = true;
+            source->eax_commit();
 #endif // ALSOFT_EAX
             continue;
 
@@ -3160,7 +3158,7 @@ START_API_FUNC
             assert(voice == nullptr);
             cur->mOldVoice = nullptr;
 #ifdef ALSOFT_EAX
-            eax_is_begins_to_play = true;
+            source->eax_commit();
 #endif // ALSOFT_EAX
             break;
         }
@@ -3208,11 +3206,6 @@ START_API_FUNC
         cur->mVoice = voice;
         cur->mSourceID = source->id;
         cur->mState = VChangeState::Play;
-
-#ifdef ALSOFT_EAX
-        if (eax_is_begins_to_play)
-            source->eax_commit();
-#endif // ALSOFT_EAX
     }
     if LIKELY(tail)
         SendVoiceChanges(context.get(), tail);

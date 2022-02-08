@@ -153,11 +153,15 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     /**
      * Defers/suspends updates for the given context's listener and sources.
      * This does *NOT* stop mixing, but rather prevents certain property
-     * changes from taking effect.
+     * changes from taking effect. mPropLock must be held when called.
      */
-    void deferUpdates() noexcept { mDeferUpdates.exchange(true, std::memory_order_acq_rel); }
+    bool deferUpdates() noexcept
+    { return mDeferUpdates.exchange(true, std::memory_order_acq_rel); }
 
-    /** Resumes update processing after being deferred. */
+    /**
+     * Resumes update processing after being deferred. mPropLock must be held
+     * when called.
+     */
     void processUpdates();
 
 #ifdef __USE_MINGW_ANSI_STDIO

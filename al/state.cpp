@@ -878,6 +878,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
+    std::lock_guard<std::mutex> _{context->mPropLock};
     context->deferUpdates();
 }
 END_API_FUNC
@@ -888,6 +889,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if UNLIKELY(!context) return;
 
+    std::lock_guard<std::mutex> _{context->mPropLock};
     context->processUpdates();
 }
 END_API_FUNC

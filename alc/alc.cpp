@@ -2292,7 +2292,10 @@ START_API_FUNC
     if(!ctx)
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
     else
+    {
+        std::lock_guard<std::mutex> _{ctx->mPropLock};
         ctx->deferUpdates();
+    }
 }
 END_API_FUNC
 
@@ -2306,7 +2309,10 @@ START_API_FUNC
     if(!ctx)
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
     else
+    {
+        std::lock_guard<std::mutex> _{ctx->mPropLock};
         ctx->processUpdates();
+    }
 }
 END_API_FUNC
 

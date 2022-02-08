@@ -1100,7 +1100,18 @@ void ALeffectslot::eax_validate_fx_slot_effect(
     const GUID& eax_effect_id)
 {
     if (eax_effect_id != EAX_NULL_GUID &&
-        eax_effect_id != EAX_REVERB_EFFECT)
+        eax_effect_id != EAX_REVERB_EFFECT &&
+        eax_effect_id != EAX_AGCCOMPRESSOR_EFFECT &&
+        eax_effect_id != EAX_AUTOWAH_EFFECT &&
+        eax_effect_id != EAX_CHORUS_EFFECT &&
+        eax_effect_id != EAX_DISTORTION_EFFECT &&
+        eax_effect_id != EAX_ECHO_EFFECT &&
+        eax_effect_id != EAX_EQUALIZER_EFFECT &&
+        eax_effect_id != EAX_FLANGER_EFFECT &&
+        eax_effect_id != EAX_FREQUENCYSHIFTER_EFFECT &&
+        eax_effect_id != EAX_VOCALMORPHER_EFFECT &&
+        eax_effect_id != EAX_PITCHSHIFTER_EFFECT &&
+        eax_effect_id != EAX_RINGMODULATOR_EFFECT)
     {
         eax_fail("Unsupported EAX effect GUID.");
     }

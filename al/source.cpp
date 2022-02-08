@@ -74,7 +74,6 @@
 
 #ifdef ALSOFT_EAX
 #include "eax_exception.h"
-#include "eax_globals.h"
 #endif // ALSOFT_EAX
 
 namespace {
@@ -1177,6 +1176,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f && values[0] <= 360.0f);
 
         Source->InnerAngle = values[0];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_CONE_OUTER_ANGLE:
@@ -1184,6 +1186,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f && values[0] <= 360.0f);
 
         Source->OuterAngle = values[0];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_GAIN:
@@ -1198,6 +1203,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f);
 
         Source->MaxDistance = values[0];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_ROLLOFF_FACTOR:
@@ -1205,6 +1213,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f);
 
         Source->RolloffFactor = values[0];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_REFERENCE_DISTANCE:
@@ -1212,6 +1223,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f);
 
         Source->RefDistance = values[0];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_MIN_GAIN:
@@ -1314,6 +1328,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Position[0] = values[0];
         Source->Position[1] = values[1];
         Source->Position[2] = values[2];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_VELOCITY:
@@ -1323,6 +1340,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Velocity[0] = values[0];
         Source->Velocity[1] = values[1];
         Source->Velocity[2] = values[2];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_DIRECTION:
@@ -1332,6 +1352,9 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Direction[0] = values[0];
         Source->Direction[1] = values[1];
         Source->Direction[2] = values[2];
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_ORIENTATION:
@@ -1410,6 +1433,9 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
         Source->HeadRelative = values[0] != AL_FALSE;
+#ifdef ALSOFT_EAX
+        Source->eax_commit();
+#endif // ALSOFT_EAX
         return UpdateSourceProps(Source, Context);
 
     case AL_LOOPING:
@@ -3713,6 +3739,14 @@ void ALsource::eax_update(
     {
         eax_set_air_absorption_factor();
     }
+}
+
+void ALsource::eax_commit()
+{
+    if (!eax_is_initialized())
+        return;
+
+    eax_apply_deferred();
 }
 
 ALsource* ALsource::eax_lookup_source(

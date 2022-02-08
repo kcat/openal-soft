@@ -220,6 +220,8 @@ public:
     void eax_update(
         EaxContextSharedDirtyFlags dirty_flags);
 
+    void eax_commit();
+
 
     static ALsource* eax_lookup_source(
         ALCcontext& al_context,
@@ -264,6 +266,8 @@ private:
     static void eax_fail(
         const char* message);
 
+
+    bool eax_is_initialized() const noexcept { return eax_al_context_; }
 
     void eax_set_source_defaults() noexcept;
     void eax_set_active_fx_slots_defaults() noexcept;

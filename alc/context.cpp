@@ -1232,17 +1232,6 @@ void ALCcontext::eax_defer_hf_reference(
     eax_defer_hf_reference(hf_reference);
 }
 
-void ALCcontext::eax_set_speaker_config(
-    const EaxEaxCall& eax_call)
-{
-    const auto speaker_config =
-        eax_call.get_value<ContextException, const unsigned long>();
-
-    eax_validate_speaker_config(speaker_config);
-
-    eax_speaker_config_ = speaker_config;
-}
-
 void ALCcontext::eax_set_session(
     const EaxEaxCall& eax_call)
 {
@@ -1293,11 +1282,10 @@ void ALCcontext::eax_set(
             break;
 
         case EAXCONTEXT_LASTERROR:
-            eax_fail("Setting last error not supported.");
+            eax_fail("Last error is read-only.");
 
         case EAXCONTEXT_SPEAKERCONFIG:
-            eax_set_speaker_config(eax_call);
-            break;
+            eax_fail("Speaker configuration is read-only.");
 
         case EAXCONTEXT_EAXSESSION:
             eax_set_session(eax_call);

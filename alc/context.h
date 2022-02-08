@@ -511,9 +511,6 @@ private:
     void eax_defer_hf_reference(
         const EaxEaxCall& eax_call);
 
-    void eax_set_speaker_config(
-        const EaxEaxCall& eax_call);
-
     void eax_set_session(
         const EaxEaxCall& eax_call);
 

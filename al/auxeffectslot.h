@@ -101,19 +101,15 @@ private:
         const char* message);
 
 
+    GUID eax_get_default_effect_guid() const noexcept;
+    unsigned long eax_get_default_lock() const noexcept;
+
     void eax_set_eax_fx_slot_defaults();
 
     void eax_initialize_eax();
 
 
     void eax_initialize_effects();
-
-
-    void eax_set_default_slot_0_defaults();
-
-    void eax_set_default_slot_1_defaults();
-
-    void eax_set_default_slots_defaults();
 
 
     void eax_get_fx_slot_all(

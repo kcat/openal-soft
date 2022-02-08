@@ -1088,7 +1088,6 @@ void ALeffectslot::eax_initialize(
 
     eax_initialize_eax();
     eax_initialize_effects();
-    eax_set_default_slots_defaults();
 }
 
 const EAX50FXSLOTPROPERTIES& ALeffectslot::eax_get_eax_fx_slot() const noexcept
@@ -1311,11 +1310,31 @@ void ALeffectslot::eax_fail(
     throw EaxFxSlotException{message};
 }
 
+GUID ALeffectslot::eax_get_default_effect_guid() const noexcept
+{
+    switch (eax_fx_slot_index_)
+    {
+        case 0:
+            return EAX_REVERB_EFFECT;
+
+        case 1:
+            return EAX_CHORUS_EFFECT;
+
+        default:
+            return EAX_NULL_GUID;
+    }
+}
+
+unsigned long ALeffectslot::eax_get_default_lock() const noexcept
+{
+    return eax_fx_slot_index_ < 2 ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
+}
+
 void ALeffectslot::eax_set_eax_fx_slot_defaults()
 {
-    eax_eax_fx_slot_.guidLoadEffect = EAX_NULL_GUID;
+    eax_eax_fx_slot_.guidLoadEffect = eax_get_default_effect_guid();
     eax_eax_fx_slot_.lVolume = EAXFXSLOT_DEFAULTVOLUME;
-    eax_eax_fx_slot_.lLock = EAXFXSLOT_UNLOCKED;
+    eax_eax_fx_slot_.lLock = eax_get_default_lock();
     eax_eax_fx_slot_.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
     eax_eax_fx_slot_.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
     eax_eax_fx_slot_.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
@@ -1329,37 +1348,6 @@ void ALeffectslot::eax_initialize_eax()
 void ALeffectslot::eax_initialize_effects()
 {
     eax_set_fx_slot_effect();
-}
-
-void ALeffectslot::eax_set_default_slot_0_defaults()
-{
-    eax_set_fx_slot_effect(EAX_REVERB_EFFECT);
-}
-
-void ALeffectslot::eax_set_default_slot_1_defaults()
-{
-    eax_set_fx_slot_effect(EAX_CHORUS_EFFECT);
-}
-
-void ALeffectslot::eax_set_default_slots_defaults()
-{
-    switch (eax_fx_slot_index_)
-    {
-        case 0:
-            eax_set_default_slot_0_defaults();
-            break;
-
-        case 1:
-            eax_set_default_slot_1_defaults();
-            break;
-
-        case 2:
-        case 3:
-            break;
-
-        default:
-            eax_fail("FX slot index out of range.");
-    }
 }
 
 void ALeffectslot::eax_get_fx_slot_all(

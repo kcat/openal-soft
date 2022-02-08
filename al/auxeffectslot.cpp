@@ -1087,6 +1087,7 @@ void ALeffectslot::eax_initialize(
     eax_fx_slot_index_ = index;
 
     eax_initialize_eax();
+    eax_initialize_lock();
     eax_initialize_effects();
 }
 
@@ -1095,9 +1096,17 @@ const EAX50FXSLOTPROPERTIES& ALeffectslot::eax_get_eax_fx_slot() const noexcept
     return eax_eax_fx_slot_;
 }
 
+void ALeffectslot::eax_ensure_is_unlocked() const
+{
+    if (eax_is_locked_)
+        eax_fail("Locked.");
+}
+
 void ALeffectslot::eax_validate_fx_slot_effect(
     const GUID& eax_effect_id)
 {
+    eax_ensure_is_unlocked();
+
     if (eax_effect_id != EAX_NULL_GUID &&
         eax_effect_id != EAX_REVERB_EFFECT &&
         eax_effect_id != EAX_AGCCOMPRESSOR_EFFECT &&
@@ -1129,21 +1138,13 @@ void ALeffectslot::eax_validate_fx_slot_volume(
 void ALeffectslot::eax_validate_fx_slot_lock(
     long eax_lock)
 {
+    eax_ensure_is_unlocked();
+
     eax_validate_range<EaxFxSlotException>(
         "Lock",
         eax_lock,
         EAXFXSLOT_MINLOCK,
         EAXFXSLOT_MAXLOCK);
-}
-
-void ALeffectslot::eax_validate_fx_slot_lock_state(
-    long eax_lock,
-    const GUID& eax_effect_id)
-{
-    if (eax_lock == EAXFXSLOT_LOCKED && eax_effect_id != eax_eax_fx_slot_.guidLoadEffect)
-    {
-        eax_fail("Loading an effect in a locked slot.");
-    }
 }
 
 void ALeffectslot::eax_validate_fx_slot_flags(
@@ -1303,6 +1304,13 @@ bool ALeffectslot::eax_dispatch(
     return eax_call.is_get() ? eax_get(eax_call) : eax_set(eax_call);
 }
 
+void ALeffectslot::eax_unlock_legacy() noexcept
+{
+    assert(eax_fx_slot_index_ < 2);
+    eax_is_locked_ = false;
+    eax_eax_fx_slot_.lLock = EAXFXSLOT_UNLOCKED;
+}
+
 [[noreturn]]
 void ALeffectslot::eax_fail(
     const char* message)
@@ -1310,31 +1318,26 @@ void ALeffectslot::eax_fail(
     throw EaxFxSlotException{message};
 }
 
-GUID ALeffectslot::eax_get_default_effect_guid() const noexcept
+GUID ALeffectslot::eax_get_eax_default_effect_guid() const noexcept
 {
     switch (eax_fx_slot_index_)
     {
-        case 0:
-            return EAX_REVERB_EFFECT;
-
-        case 1:
-            return EAX_CHORUS_EFFECT;
-
-        default:
-            return EAX_NULL_GUID;
+        case 0: return EAX_REVERB_EFFECT;
+        case 1: return EAX_CHORUS_EFFECT;
+        default: return EAX_NULL_GUID;
     }
 }
 
-unsigned long ALeffectslot::eax_get_default_lock() const noexcept
+unsigned long ALeffectslot::eax_get_eax_default_lock() const noexcept
 {
     return eax_fx_slot_index_ < 2 ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }
 
 void ALeffectslot::eax_set_eax_fx_slot_defaults()
 {
-    eax_eax_fx_slot_.guidLoadEffect = eax_get_default_effect_guid();
+    eax_eax_fx_slot_.guidLoadEffect = eax_get_eax_default_effect_guid();
     eax_eax_fx_slot_.lVolume = EAXFXSLOT_DEFAULTVOLUME;
-    eax_eax_fx_slot_.lLock = eax_get_default_lock();
+    eax_eax_fx_slot_.lLock = eax_get_eax_default_lock();
     eax_eax_fx_slot_.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
     eax_eax_fx_slot_.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
     eax_eax_fx_slot_.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
@@ -1343,6 +1346,11 @@ void ALeffectslot::eax_set_eax_fx_slot_defaults()
 void ALeffectslot::eax_initialize_eax()
 {
     eax_set_eax_fx_slot_defaults();
+}
+
+void ALeffectslot::eax_initialize_lock()
+{
+    eax_is_locked_ = (eax_fx_slot_index_ < 2);
 }
 
 void ALeffectslot::eax_initialize_effects()
@@ -1539,8 +1547,6 @@ void ALeffectslot::eax_set_fx_slot_effect(
         eax_call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::guidLoadEffect)>();
 
     eax_validate_fx_slot_effect(eax_effect_id);
-    eax_validate_fx_slot_lock_state(eax_eax_fx_slot_.lLock, eax_effect_id);
-
     eax_set_fx_slot_effect(eax_effect_id);
 }
 

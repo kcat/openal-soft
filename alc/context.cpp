@@ -487,6 +487,8 @@ ALenum ALCcontext::eax_eax_set(
         property_value_size
     );
 
+    eax_unlock_legacy_fx_slots(eax_call);
+
     switch (eax_call.get_property_set_id())
     {
         case EaxEaxCallPropertySetId::context:
@@ -526,6 +528,8 @@ ALenum ALCcontext::eax_eax_get(
         property_value,
         property_value_size
     );
+
+    eax_unlock_legacy_fx_slots(eax_call);
 
     switch (eax_call.get_property_set_id())
     {
@@ -756,6 +760,15 @@ void ALCcontext::eax_set_defaults() noexcept
     eax_set_context_defaults();
 
     eax_d_ = eax_;
+}
+
+void ALCcontext::eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept
+{
+    if (eax_call.get_version() != 5 || eax_are_legacy_fx_slots_unlocked_)
+        return;
+
+    eax_are_legacy_fx_slots_unlocked_ = true;
+    eax_fx_slots_.unlock_legacy();
 }
 
 void ALCcontext::eax_dispatch_fx_slot(

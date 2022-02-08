@@ -319,6 +319,7 @@ private:
 
     bool eax_is_initialized_{};
     bool eax_is_tried_{};
+    bool eax_are_legacy_fx_slots_unlocked_{};
 
     long eax_last_error_{};
     unsigned long eax_speaker_config_{};
@@ -378,6 +379,9 @@ private:
     void eax_set_defaults() noexcept;
 
     void eax_initialize_sources();
+
+
+    void eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept;
 
 
     void eax_dispatch_fx_slot(

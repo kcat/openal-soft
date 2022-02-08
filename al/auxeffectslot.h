@@ -85,6 +85,8 @@ public:
     bool eax_dispatch(
         const EaxEaxCall& eax_call);
 
+    void eax_unlock_legacy() noexcept;
+
 
 private:
     ALCcontext* eax_al_context_{};
@@ -94,6 +96,7 @@ private:
     EAX50FXSLOTPROPERTIES eax_eax_fx_slot_{};
 
     EaxEffectUPtr eax_effect_{};
+    bool eax_is_locked_{};
 
 
     [[noreturn]]
@@ -101,12 +104,14 @@ private:
         const char* message);
 
 
-    GUID eax_get_default_effect_guid() const noexcept;
-    unsigned long eax_get_default_lock() const noexcept;
+    GUID eax_get_eax_default_effect_guid() const noexcept;
+    unsigned long eax_get_eax_default_lock() const noexcept;
 
     void eax_set_eax_fx_slot_defaults();
 
     void eax_initialize_eax();
+
+    void eax_initialize_lock();
 
 
     void eax_initialize_effects();
@@ -139,6 +144,9 @@ private:
     void eax_set_fx_slot_flags();
 
 
+    void eax_ensure_is_unlocked() const;
+
+
     void eax_validate_fx_slot_effect(
         const GUID& eax_effect_id);
 
@@ -147,10 +155,6 @@ private:
 
     void eax_validate_fx_slot_lock(
         long eax_lock);
-
-    void eax_validate_fx_slot_lock_state(
-        long eax_lock,
-        const GUID& eax_effect_id);
 
     void eax_validate_fx_slot_flags(
         unsigned long eax_flags,

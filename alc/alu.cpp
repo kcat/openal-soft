@@ -399,6 +399,7 @@ bool CalcContextParams(ContextBase *ctx)
 
     ctx->mParams.Gain = props->Gain * ctx->mGainBoost;
     ctx->mParams.MetersPerUnit = props->MetersPerUnit;
+    ctx->mParams.AirAbsorptionGainHF = props->AirAbsorptionGainHF;
 
     ctx->mParams.DopplerFactor = props->DopplerFactor;
     ctx->mParams.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
@@ -1434,7 +1435,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             context->mParams.MetersPerUnit};
         if(props->AirAbsorptionFactor > 0.0f)
         {
-            const float hfattn{std::pow(AirAbsorbGainHF, meters_base*props->AirAbsorptionFactor)};
+            const float hfattn{std::pow(context->mParams.AirAbsorptionGainHF,
+                meters_base*props->AirAbsorptionFactor)};
             DryGain.HF *= hfattn;
             std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
                 [hfattn](GainTriplet &gain) noexcept -> void { gain.HF *= hfattn; });

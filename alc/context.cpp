@@ -181,6 +181,7 @@ void ALCcontext::init()
     mParams.Velocity = alu::Vector{};
     mParams.Gain = mListener.Gain;
     mParams.MetersPerUnit = mListener.mMetersPerUnit;
+    mParams.AirAbsorptionGainHF = mAirAbsorptionGainHF;
     mParams.DopplerFactor = mDopplerFactor;
     mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
     mParams.SourceDistanceModel = mSourceDistanceModel;
@@ -572,11 +573,6 @@ float ALCcontext::eax_get_max_filter_gain() const noexcept
     return eax_max_filter_gain_;
 }
 
-float ALCcontext::eax_get_air_absorption_factor() const noexcept
-{
-    return eax_air_absorption_factor_;
-}
-
 EaxFxSlotIndex ALCcontext::eax_get_previous_primary_fx_slot_index() const noexcept
 {
     return eax_previous_primary_fx_slot_index_;
@@ -951,7 +947,8 @@ void ALCcontext::eax_set_distance_factor()
 
 void ALCcontext::eax_set_air_absorbtion_hf()
 {
-    eax_air_absorption_factor_ = eax_.context.flAirAbsorptionHF / EAXCONTEXT_DEFAULTAIRABSORPTIONHF;
+    mAirAbsorptionGainHF = eax_.context.flAirAbsorptionHF;
+    mPropsDirty.set(std::memory_order_release);
 }
 
 void ALCcontext::eax_set_hf_reference()
@@ -1360,7 +1357,6 @@ void ALCcontext::eax_apply_deferred()
 
     if (eax_context_dirty_flags_.flAirAbsorptionHF)
     {
-        eax_context_shared_dirty_flags_.air_absorption_hf = true;
         eax_set_air_absorbtion_hf();
     }
 

@@ -3741,12 +3741,6 @@ void ALsource::eax_update(
             eax_update_primary_fx_slot_id();
         }
     }
-
-    if (dirty_flags.air_absorption_hf)
-    {
-        eax_set_air_absorption_factor();
-        mPropsDirty.set(std::memory_order_release);
-    }
 }
 
 void ALsource::eax_commit()
@@ -5364,10 +5358,7 @@ void ALsource::eax_set_room_rolloff_factor()
 
 void ALsource::eax_set_air_absorption_factor()
 {
-    const auto air_absorption_factor =
-        eax_al_context_->eax_get_air_absorption_factor() * eax_.source.flAirAbsorptionFactor;
-
-    AirAbsorptionFactor = air_absorption_factor;
+    AirAbsorptionFactor = eax_.source.flAirAbsorptionFactor;
 }
 
 void ALsource::eax_set_direct_hf_auto_flag()

@@ -33,7 +33,6 @@ struct EaxContextSharedDirtyFlags
     using EaxIsBitFieldStruct = bool;
 
     EaxContextSharedDirtyFlagsValue primary_fx_slot_id : 1;
-    EaxContextSharedDirtyFlagsValue air_absorption_hf : 1;
 }; // EaxContextSharedDirtyFlags
 
 
@@ -116,6 +115,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     float mDopplerFactor{1.0f};
     float mDopplerVelocity{1.0f};
     float mSpeedOfSound{SpeedOfSoundMetersPerSec};
+    float mAirAbsorptionGainHF{AirAbsorbGainHF};
 
     std::mutex mEventCbLock;
     ALEVENTPROCSOFT mEventCb{};
@@ -252,8 +252,6 @@ public:
 
     float eax_get_max_filter_gain() const noexcept;
 
-    float eax_get_air_absorption_factor() const noexcept;
-
     EaxFxSlotIndex eax_get_previous_primary_fx_slot_index() const noexcept;
 
     EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept;
@@ -342,7 +340,6 @@ private:
     unsigned long eax_speaker_config_{};
 
     float eax_max_filter_gain_{};
-    float eax_air_absorption_factor_{};
     EaxFxSlotIndex eax_previous_primary_fx_slot_index_{};
     EaxFxSlotIndex eax_primary_fx_slot_index_{};
     EaxFxSlots eax_fx_slots_{};

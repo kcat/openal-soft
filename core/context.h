@@ -28,6 +28,8 @@ using uint = unsigned int;
 
 constexpr float SpeedOfSoundMetersPerSec{343.3f};
 
+constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
+
 enum class DistanceModel : unsigned char {
     Disable,
     Inverse, InverseClamped,
@@ -56,6 +58,7 @@ struct ContextProps {
     std::array<float,3> OrientUp;
     float Gain;
     float MetersPerUnit;
+    float AirAbsorptionGainHF;
 
     float DopplerFactor;
     float DopplerVelocity;
@@ -78,9 +81,10 @@ struct ContextParams {
 
     float Gain{1.0f};
     float MetersPerUnit{1.0f};
+    float AirAbsorptionGainHF{AirAbsorbGainHF};
 
     float DopplerFactor{1.0f};
-    float SpeedOfSound{343.3f}; /* in units per sec! */
+    float SpeedOfSound{SpeedOfSoundMetersPerSec}; /* in units per sec! */
 
     bool SourceDistanceModel{false};
     DistanceModel mDistanceModel{};

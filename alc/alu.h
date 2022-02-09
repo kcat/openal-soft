@@ -12,8 +12,6 @@ enum class StereoEncoding : unsigned char;
 
 constexpr float GainMixMax{1000.0f}; /* +60dB */
 
-constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
-
 
 void aluInit(void);
 

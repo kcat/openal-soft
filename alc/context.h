@@ -250,17 +250,17 @@ public:
     void eax_set_last_error() noexcept;
 
 
-    float eax_get_max_filter_gain() const noexcept;
+    float eax_get_max_filter_gain() const noexcept { return eax_max_filter_gain_; }
 
-    EaxFxSlotIndex eax_get_previous_primary_fx_slot_index() const noexcept;
+    EaxFxSlotIndex eax_get_previous_primary_fx_slot_index() const noexcept
+    { return eax_previous_primary_fx_slot_index_; }
+    EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept
+    { return eax_primary_fx_slot_index_; }
 
-    EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept;
-
-    const ALeffectslot& eax_get_fx_slot(
-        EaxFxSlotIndexValue fx_slot_index) const;
-
-    ALeffectslot& eax_get_fx_slot(
-        EaxFxSlotIndexValue fx_slot_index);
+    const ALeffectslot& eax_get_fx_slot(EaxFxSlotIndexValue fx_slot_index) const
+    { return eax_fx_slots_.get(fx_slot_index); }
+    ALeffectslot& eax_get_fx_slot(EaxFxSlotIndexValue fx_slot_index)
+    { return eax_fx_slots_.get(fx_slot_index); }
 
 
 private:

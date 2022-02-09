@@ -568,33 +568,6 @@ void ALCcontext::eax_set_last_error() noexcept
     eax_last_error_ = EAXERR_INVALID_OPERATION;
 }
 
-float ALCcontext::eax_get_max_filter_gain() const noexcept
-{
-    return eax_max_filter_gain_;
-}
-
-EaxFxSlotIndex ALCcontext::eax_get_previous_primary_fx_slot_index() const noexcept
-{
-    return eax_previous_primary_fx_slot_index_;
-}
-
-EaxFxSlotIndex ALCcontext::eax_get_primary_fx_slot_index() const noexcept
-{
-    return eax_primary_fx_slot_index_;
-}
-
-const ALeffectslot& ALCcontext::eax_get_fx_slot(
-    EaxFxSlotIndexValue fx_slot_index) const
-{
-    return eax_fx_slots_.get(fx_slot_index);
-}
-
-ALeffectslot& ALCcontext::eax_get_fx_slot(
-    EaxFxSlotIndexValue fx_slot_index)
-{
-    return eax_fx_slots_.get(fx_slot_index);
-}
-
 [[noreturn]]
 void ALCcontext::eax_fail(
     const char* message)

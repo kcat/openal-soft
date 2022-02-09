@@ -259,8 +259,6 @@ void ALCcontext::applyAllUpdates()
 
     if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
         UpdateContextProps(this);
-    if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-        UpdateListenerProps(this);
     UpdateAllEffectSlotProps(this);
     UpdateAllSourceProps(this);
 
@@ -948,7 +946,7 @@ void ALCcontext::eax_set_primary_fx_slot_id()
 void ALCcontext::eax_set_distance_factor()
 {
     mListener.mMetersPerUnit = eax_.context.flDistanceFactor;
-    mListener.mPropsDirty.set(std::memory_order_release);
+    mPropsDirty.set(std::memory_order_release);
 }
 
 void ALCcontext::eax_set_air_absorbtion_hf()
@@ -1333,8 +1331,6 @@ void ALCcontext::eax_set(
 
             if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
                 UpdateContextProps(this);
-            if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-                UpdateListenerProps(this);
             UpdateAllSourceProps(this);
 
             mHoldUpdates.store(false, std::memory_order_release);

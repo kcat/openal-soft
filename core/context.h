@@ -50,6 +50,13 @@ using WetBufferPtr = std::unique_ptr<WetBuffer>;
 
 
 struct ContextProps {
+    std::array<float,3> Position;
+    std::array<float,3> Velocity;
+    std::array<float,3> OrientAt;
+    std::array<float,3> OrientUp;
+    float Gain;
+    float MetersPerUnit;
+
     float DopplerFactor;
     float DopplerVelocity;
     float SpeedOfSound;
@@ -61,23 +68,9 @@ struct ContextProps {
     DEF_NEWDEL(ContextProps)
 };
 
-struct ListenerProps {
-    std::array<float,3> Position;
-    std::array<float,3> Velocity;
-    std::array<float,3> OrientAt;
-    std::array<float,3> OrientUp;
-    float Gain;
-    float MetersPerUnit;
-
-    std::atomic<ListenerProps*> next;
-
-    DEF_NEWDEL(ListenerProps)
-};
-
 struct ContextParams {
     /* Pointer to the most recent property values that are awaiting an update. */
     std::atomic<ContextProps*> ContextUpdate{nullptr};
-    std::atomic<ListenerProps*> ListenerUpdate{nullptr};
 
     alu::Vector Position{};
     alu::Matrix Matrix{alu::Matrix::Identity()};
@@ -109,7 +102,6 @@ struct ContextBase {
      * updates.
      */
     std::atomic<ContextProps*> mFreeContextProps{nullptr};
-    std::atomic<ListenerProps*> mFreeListenerProps{nullptr};
     std::atomic<VoicePropsItem*> mFreeVoiceProps{nullptr};
     std::atomic<EffectSlotProps*> mFreeEffectslotProps{nullptr};
 

@@ -375,22 +375,6 @@ bool CalcContextParams(ContextBase *ctx)
     ContextProps *props{ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
-    ctx->mParams.DopplerFactor = props->DopplerFactor;
-    ctx->mParams.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
-
-    ctx->mParams.SourceDistanceModel = props->SourceDistanceModel;
-    ctx->mParams.mDistanceModel = props->mDistanceModel;
-
-    AtomicReplaceHead(ctx->mFreeContextProps, props);
-    return true;
-}
-
-bool CalcListenerParams(ContextBase *ctx)
-{
-    ListenerProps *props{ctx->mParams.ListenerUpdate.exchange(nullptr,
-        std::memory_order_acq_rel)};
-    if(!props) return false;
-
     const alu::Vector pos{props->Position[0], props->Position[1], props->Position[2], 1.0f};
     ctx->mParams.Position = pos;
 
@@ -416,7 +400,13 @@ bool CalcListenerParams(ContextBase *ctx)
     ctx->mParams.Gain = props->Gain * ctx->mGainBoost;
     ctx->mParams.MetersPerUnit = props->MetersPerUnit;
 
-    AtomicReplaceHead(ctx->mFreeListenerProps, props);
+    ctx->mParams.DopplerFactor = props->DopplerFactor;
+    ctx->mParams.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
+
+    ctx->mParams.SourceDistanceModel = props->SourceDistanceModel;
+    ctx->mParams.mDistanceModel = props->mDistanceModel;
+
+    AtomicReplaceHead(ctx->mFreeContextProps, props);
     return true;
 }
 
@@ -1691,7 +1681,6 @@ void ProcessParamUpdates(ContextBase *ctx, const EffectSlotArray &slots,
     if LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire))
     {
         bool force{CalcContextParams(ctx)};
-        force |= CalcListenerParams(ctx);
         auto sorted_slots = const_cast<EffectSlot**>(slots.data() + slots.size());
         for(EffectSlot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);

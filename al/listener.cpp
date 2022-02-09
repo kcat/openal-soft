@@ -38,16 +38,16 @@
 
 namespace {
 
-inline void UpdateProps(ALlistener &listener, ALCcontext *context)
+inline void UpdateProps(ALCcontext *context)
 {
     if(!context->mDeferUpdates.load(std::memory_order_acquire))
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
     else
-        listener.mPropsDirty.set(std::memory_order_release);
+        context->mPropsDirty.set(std::memory_order_release);
 }
 
 #ifdef ALSOFT_EAX
-inline void CommitAndUpdateProps(ALlistener &listener, ALCcontext *context)
+inline void CommitAndUpdateProps(ALCcontext *context)
 {
     if(!context->mDeferUpdates.load(std::memory_order_acquire))
     {
@@ -60,17 +60,17 @@ inline void CommitAndUpdateProps(ALlistener &listener, ALCcontext *context)
 
             context->eax_commit_and_update_sources();
         }
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
         context->mHoldUpdates.store(false, std::memory_order_release);
     }
     else
-        listener.mPropsDirty.set(std::memory_order_release);
+        context->mPropsDirty.set(std::memory_order_release);
 }
 
 #else
 
-inline void CommitAndUpdateProps(ALlistener &listener, ALCcontext *context)
-{ UpdateProps(listener, context); }
+inline void CommitAndUpdateProps(ALCcontext *context)
+{ UpdateProps(context); }
 #endif
 
 } // namespace
@@ -89,14 +89,14 @@ START_API_FUNC
         if(!(value >= 0.0f && std::isfinite(value)))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener gain out of range");
         listener.Gain = value;
-        UpdateProps(listener, context.get());
+        UpdateProps(context.get());
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
         listener.mMetersPerUnit = value;
-        UpdateProps(listener, context.get());
+        UpdateProps(context.get());
         break;
 
     default:
@@ -121,7 +121,7 @@ START_API_FUNC
         listener.Position[0] = value1;
         listener.Position[1] = value2;
         listener.Position[2] = value3;
-        CommitAndUpdateProps(listener, context.get());
+        CommitAndUpdateProps(context.get());
         break;
 
     case AL_VELOCITY:
@@ -130,7 +130,7 @@ START_API_FUNC
         listener.Velocity[0] = value1;
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
-        CommitAndUpdateProps(listener, context.get());
+        CommitAndUpdateProps(context.get());
         break;
 
     default:
@@ -177,7 +177,7 @@ START_API_FUNC
         listener.OrientUp[0] = values[3];
         listener.OrientUp[1] = values[4];
         listener.OrientUp[2] = values[5];
-        CommitAndUpdateProps(listener, context.get());
+        CommitAndUpdateProps(context.get());
         break;
 
     default:
@@ -445,39 +445,3 @@ START_API_FUNC
     }
 }
 END_API_FUNC
-
-
-void UpdateListenerProps(ALCcontext *context)
-{
-    /* Get an unused proprty container, or allocate a new one as needed. */
-    ListenerProps *props{context->mFreeListenerProps.load(std::memory_order_acquire)};
-    if(!props)
-        props = new ListenerProps{};
-    else
-    {
-        ListenerProps *next;
-        do {
-            next = props->next.load(std::memory_order_relaxed);
-        } while(context->mFreeListenerProps.compare_exchange_weak(props, next,
-                std::memory_order_seq_cst, std::memory_order_acquire) == 0);
-    }
-
-    /* Copy in current property values. */
-    ALlistener &listener = context->mListener;
-    props->Position = listener.Position;
-    props->Velocity = listener.Velocity;
-    props->OrientAt = listener.OrientAt;
-    props->OrientUp = listener.OrientUp;
-    props->Gain = listener.Gain;
-    props->MetersPerUnit = listener.mMetersPerUnit;
-
-    /* Set the new container for updating internal parameters. */
-    props = context->mParams.ListenerUpdate.exchange(props, std::memory_order_acq_rel);
-    if(props)
-    {
-        /* If there was an unused update container, put it back in the
-         * freelist.
-         */
-        AtomicReplaceHead(context->mFreeListenerProps, props);
-    }
-}

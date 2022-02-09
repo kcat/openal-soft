@@ -52,22 +52,6 @@ ContextBase::~ContextBase()
 
     delete mVoices.exchange(nullptr, std::memory_order_relaxed);
 
-    count = 0;
-    ListenerProps *lprops{mParams.ListenerUpdate.exchange(nullptr, std::memory_order_relaxed)};
-    if(lprops)
-    {
-        ++count;
-        delete lprops;
-    }
-    lprops = mFreeListenerProps.exchange(nullptr, std::memory_order_acquire);
-    while(lprops)
-    {
-        std::unique_ptr<ListenerProps> old{lprops};
-        lprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu listener property object%s\n", count, (count==1)?"":"s");
-
     if(mAsyncEvents)
     {
         count = 0;

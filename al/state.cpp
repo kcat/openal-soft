@@ -935,6 +935,14 @@ void UpdateContextProps(ALCcontext *context)
     }
 
     /* Copy in current property values. */
+    ALlistener &listener = context->mListener;
+    props->Position = listener.Position;
+    props->Velocity = listener.Velocity;
+    props->OrientAt = listener.OrientAt;
+    props->OrientUp = listener.OrientUp;
+    props->Gain = listener.Gain;
+    props->MetersPerUnit = listener.mMetersPerUnit;
+
     props->DopplerFactor = context->mDopplerFactor;
     props->DopplerVelocity = context->mDopplerVelocity;
     props->SpeedOfSound = context->mSpeedOfSound;

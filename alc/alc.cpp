@@ -2149,8 +2149,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         context->mPropsDirty.test_and_clear(std::memory_order_release);
         UpdateContextProps(context);
-        context->mListener.mPropsDirty.test_and_clear(std::memory_order_release);
-        UpdateListenerProps(context);
         UpdateAllSourceProps(context);
     }
     mixer_mode.leave();
@@ -3025,7 +3023,6 @@ START_API_FUNC
             TRACE("volume-adjust gain: %f\n", context->mGainBoost);
         }
     }
-    UpdateListenerProps(context.get());
 
     {
         using ContextArray = al::FlexArray<ContextBase*>;

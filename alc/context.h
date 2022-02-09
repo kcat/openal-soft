@@ -162,7 +162,17 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
      * Resumes update processing after being deferred. mPropLock must be held
      * when called.
      */
-    void processUpdates();
+    void processUpdates()
+    {
+        if(mDeferUpdates.exchange(false, std::memory_order_acq_rel))
+            applyAllUpdates();
+    }
+
+    /**
+     * Applies all pending updates for the context, listener, effect slots, and
+     * sources.
+     */
+    void applyAllUpdates();
 
 #ifdef __USE_MINGW_ANSI_STDIO
     [[gnu::format(gnu_printf, 3, 4)]]

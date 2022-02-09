@@ -247,30 +247,27 @@ bool ALCcontext::deinit()
     return ret;
 }
 
-void ALCcontext::processUpdates()
+void ALCcontext::applyAllUpdates()
 {
-    if(mDeferUpdates.exchange(false, std::memory_order_acq_rel))
-    {
-        /* Tell the mixer to stop applying updates, then wait for any active
-         * updating to finish, before providing updates.
-         */
-        mHoldUpdates.store(true, std::memory_order_release);
-        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
-            /* busy-wait */
-        }
-
-        if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-            UpdateContextProps(this);
-        if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-            UpdateListenerProps(this);
-        UpdateAllEffectSlotProps(this);
-        UpdateAllSourceProps(this);
-
-        /* Now with all updates declared, let the mixer continue applying them
-         * so they all happen at once.
-         */
-        mHoldUpdates.store(false, std::memory_order_release);
+    /* Tell the mixer to stop applying updates, then wait for any active
+     * updating to finish, before providing updates.
+     */
+    mHoldUpdates.store(true, std::memory_order_release);
+    while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
+        /* busy-wait */
     }
+
+    if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+        UpdateContextProps(this);
+    if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+        UpdateListenerProps(this);
+    UpdateAllEffectSlotProps(this);
+    UpdateAllSourceProps(this);
+
+    /* Now with all updates declared, let the mixer continue applying them so
+     * they all happen at once.
+     */
+    mHoldUpdates.store(false, std::memory_order_release);
 }
 
 #ifdef ALSOFT_EAX
@@ -950,7 +947,8 @@ void ALCcontext::eax_set_primary_fx_slot_id()
 
 void ALCcontext::eax_set_distance_factor()
 {
-    eax_set_al_listener_meters_per_unit(*this, eax_.context.flDistanceFactor);
+    mListener.mMetersPerUnit = eax_.context.flDistanceFactor;
+    mListener.mPropsDirty.set(std::memory_order_release);
 }
 
 void ALCcontext::eax_set_air_absorbtion_hf()
@@ -1326,6 +1324,21 @@ void ALCcontext::eax_set(
     if (!eax_call.is_deferred())
     {
         eax_apply_deferred();
+        if(!mDeferUpdates.load(std::memory_order_acquire))
+        {
+            mHoldUpdates.store(true, std::memory_order_release);
+            while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
+                /* busy-wait */
+            }
+
+            if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+                UpdateContextProps(this);
+            if(mListener.mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+                UpdateListenerProps(this);
+            UpdateAllSourceProps(this);
+
+            mHoldUpdates.store(false, std::memory_order_release);
+        }
     }
 }
 

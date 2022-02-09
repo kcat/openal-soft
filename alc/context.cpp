@@ -1189,30 +1189,30 @@ void ALCcontext::eax_defer_context_all(
 void ALCcontext::eax_defer_context_all(
     const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_version())
+    switch(eax_call.get_version())
     {
-        case 4:
-            {
-                const auto& context_all =
-                    eax_call.get_value<ContextException, EAX40CONTEXTPROPERTIES>();
+    case 4:
+        {
+            const auto& context_all =
+                eax_call.get_value<ContextException, EAX40CONTEXTPROPERTIES>();
 
-                eax_validate_context_all(context_all);
-            }
+            eax_validate_context_all(context_all);
+            eax_defer_context_all(context_all);
+        }
+        break;
 
-            break;
+    case 5:
+        {
+            const auto& context_all =
+                eax_call.get_value<ContextException, EAX50CONTEXTPROPERTIES>();
 
-        case 5:
-            {
-                const auto& context_all =
-                    eax_call.get_value<ContextException, EAX50CONTEXTPROPERTIES>();
+            eax_validate_context_all(context_all);
+            eax_defer_context_all(context_all);
+        }
+        break;
 
-                eax_validate_context_all(context_all);
-            }
-
-            break;
-
-        default:
-            eax_fail("Unsupported EAX version.");
+    default:
+        eax_fail("Unsupported EAX version.");
     }
 }
 

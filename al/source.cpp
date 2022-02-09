@@ -3757,6 +3757,15 @@ void ALsource::eax_commit()
     eax_apply_deferred();
 }
 
+void ALsource::eax_commit_and_update()
+{
+    if (!eax_is_initialized())
+        return;
+
+    eax_apply_deferred();
+    UpdateSourceProps(this, eax_al_context_);
+}
+
 ALsource* ALsource::eax_lookup_source(
     ALCcontext& al_context,
     ALuint source_id) noexcept

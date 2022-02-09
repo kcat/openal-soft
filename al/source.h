@@ -221,6 +221,7 @@ public:
         EaxContextSharedDirtyFlags dirty_flags);
 
     void eax_commit();
+    void eax_commit_and_update();
 
 
     static ALsource* eax_lookup_source(

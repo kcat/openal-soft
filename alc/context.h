@@ -233,7 +233,8 @@ public:
 
     void eax_update_filters();
 
-    void eax_on_3d_listener_param_call();
+    void eax_commit_sources();
+    void eax_commit_and_update_sources();
 
 
     void eax_set_last_error() noexcept;

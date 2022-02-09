@@ -46,6 +46,33 @@ inline void UpdateProps(ALlistener &listener, ALCcontext *context)
         listener.mPropsDirty.set(std::memory_order_release);
 }
 
+#ifdef ALSOFT_EAX
+inline void CommitAndUpdateProps(ALlistener &listener, ALCcontext *context)
+{
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))
+    {
+        if(context->has_eax())
+        {
+            context->mHoldUpdates.store(true, std::memory_order_release);
+            while((context->mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
+                /* busy-wait */
+            }
+
+            context->eax_commit_and_update_sources();
+        }
+        UpdateListenerProps(context);
+        context->mHoldUpdates.store(false, std::memory_order_release);
+    }
+    else
+        listener.mPropsDirty.set(std::memory_order_release);
+}
+
+#else
+
+inline void CommitAndUpdateProps(ALlistener &listener, ALCcontext *context)
+{ UpdateProps(listener, context); }
+#endif
+
 } // namespace
 
 AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value)
@@ -94,10 +121,7 @@ START_API_FUNC
         listener.Position[0] = value1;
         listener.Position[1] = value2;
         listener.Position[2] = value3;
-        UpdateProps(listener, context.get());
-#ifdef ALSOFT_EAX
-        context->eax_on_3d_listener_param_call();
-#endif // ALSOFT_EAX
+        CommitAndUpdateProps(listener, context.get());
         break;
 
     case AL_VELOCITY:
@@ -106,10 +130,7 @@ START_API_FUNC
         listener.Velocity[0] = value1;
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
-        UpdateProps(listener, context.get());
-#ifdef ALSOFT_EAX
-        context->eax_on_3d_listener_param_call();
-#endif // ALSOFT_EAX
+        CommitAndUpdateProps(listener, context.get());
         break;
 
     default:
@@ -156,10 +177,7 @@ START_API_FUNC
         listener.OrientUp[0] = values[3];
         listener.OrientUp[1] = values[4];
         listener.OrientUp[2] = values[5];
-        UpdateProps(listener, context.get());
-#ifdef ALSOFT_EAX
-        context->eax_on_3d_listener_param_call();
-#endif // ALSOFT_EAX
+        CommitAndUpdateProps(listener, context.get());
         break;
 
     default:

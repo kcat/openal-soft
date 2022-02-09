@@ -553,15 +553,18 @@ void ALCcontext::eax_update_filters()
     }
 }
 
-void ALCcontext::eax_on_3d_listener_param_call()
+void ALCcontext::eax_commit_sources()
 {
-    if (!has_eax())
-        return;
-
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-
     for (auto& source : SourceListEnumerator{mSourceList})
         source.eax_commit();
+}
+
+void ALCcontext::eax_commit_and_update_sources()
+{
+    std::unique_lock<std::mutex> source_lock{mSourceLock};
+    for (auto& source : SourceListEnumerator{mSourceList})
+        source.eax_commit_and_update();
 }
 
 void ALCcontext::eax_set_last_error() noexcept

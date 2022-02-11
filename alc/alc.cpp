@@ -452,6 +452,13 @@ const struct {
     DECL(alAuxiliaryEffectSlotPlayvSOFT),
     DECL(alAuxiliaryEffectSlotStopSOFT),
     DECL(alAuxiliaryEffectSlotStopvSOFT),
+#ifdef ALSOFT_EAX
+}, eaxFunctions[] = {
+    DECL(EAXGet),
+    DECL(EAXSet),
+    DECL(EAXGetBufferMode),
+    DECL(EAXSetBufferMode),
+#endif
 };
 #undef DECL
 
@@ -882,6 +889,7 @@ constexpr struct {
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 
 #ifdef ALSOFT_EAX
+}, eaxEnumerations[] = {
     DECL(AL_EAX_RAM_SIZE),
     DECL(AL_EAX_RAM_FREE),
     DECL(AL_STORAGE_AUTOMATIC),
@@ -2943,14 +2951,22 @@ START_API_FUNC
     {
         DeviceRef dev{VerifyDevice(device)};
         alcSetError(dev.get(), ALC_INVALID_VALUE);
+        return nullptr;
     }
-    else
+#ifdef ALSOFT_EAX
+    if(eax_g_is_enabled)
     {
-        for(const auto &func : alcFunctions)
+        for(const auto &func : eaxFunctions)
         {
             if(strcmp(func.funcName, funcName) == 0)
                 return func.address;
         }
+    }
+#endif
+    for(const auto &func : alcFunctions)
+    {
+        if(strcmp(func.funcName, funcName) == 0)
+            return func.address;
     }
     return nullptr;
 }
@@ -2964,14 +2980,22 @@ START_API_FUNC
     {
         DeviceRef dev{VerifyDevice(device)};
         alcSetError(dev.get(), ALC_INVALID_VALUE);
+        return 0;
     }
-    else
+#ifdef ALSOFT_EAX
+    if(eax_g_is_enabled)
     {
-        for(const auto &enm : alcEnumerations)
+        for(const auto &enm : eaxEnumerations)
         {
             if(strcmp(enm.enumName, enumName) == 0)
                 return enm.value;
         }
+    }
+#endif
+    for(const auto &enm : alcEnumerations)
+    {
+        if(strcmp(enm.enumName, enumName) == 0)
+            return enm.value;
     }
 
     return 0;

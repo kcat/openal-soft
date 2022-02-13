@@ -21,6 +21,9 @@ openal-soft-1.22.0:
 
     Implemented enumeration for the JACK and CoreAudio backends.
 
+    Implemented the legacy EAX extension APIs. Enabled by default only on
+    Windows.
+
     Added optional support for RTKit to get real-time priority. Only used as a
     backup when pthread_setschedparam fails.
 

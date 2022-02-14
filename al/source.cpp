@@ -3764,16 +3764,13 @@ void ALsource::eax_update_filters()
     eax_update_filters_internal();
 }
 
-void ALsource::eax_update(
-    EaxContextSharedDirtyFlags dirty_flags)
+void ALsource::eax_update(EaxContextSharedDirtyFlags)
 {
-    if (dirty_flags.primary_fx_slot_id)
-    {
-        if (eax_uses_primary_id_)
-        {
-            eax_update_primary_fx_slot_id();
-        }
-    }
+    /* NOTE: EaxContextSharedDirtyFlags only has one flag (primary_fx_slot_id),
+     * which must be true for this to be called.
+     */
+    if(eax_uses_primary_id_)
+        eax_update_primary_fx_slot_id();
 }
 
 void ALsource::eax_commit_and_update()

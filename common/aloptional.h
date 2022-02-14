@@ -300,7 +300,7 @@ public:
     constexpr const T&& operator*() const&& { return std::move(mStore.mValue); }
     constexpr T&& operator*() && { return std::move(mStore.mValue); }
 
-    constexpr operator bool() const noexcept { return mStore.mHasValue; }
+    constexpr explicit operator bool() const noexcept { return mStore.mHasValue; }
     constexpr bool has_value() const noexcept { return mStore.mHasValue; }
 
     constexpr T& value() & { return mStore.mValue; }

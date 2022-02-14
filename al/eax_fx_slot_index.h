@@ -4,58 +4,28 @@
 
 #include <cstddef>
 
+#include "aloptional.h"
 #include "eax_api.h"
 
 
 using EaxFxSlotIndexValue = std::size_t;
 
 
-class EaxFxSlotIndex
+class EaxFxSlotIndex : public al::optional<EaxFxSlotIndexValue>
 {
 public:
-    EaxFxSlotIndex() noexcept = default;
+    using al::optional<EaxFxSlotIndexValue>::optional;
 
-    EaxFxSlotIndex(
-        EaxFxSlotIndexValue index);
+    EaxFxSlotIndex& operator=(const EaxFxSlotIndexValue &value) { set(value); return *this; }
+    EaxFxSlotIndex& operator=(const GUID &guid) { set(guid); return *this; }
 
-    EaxFxSlotIndex(
-        const EaxFxSlotIndex& rhs) noexcept;
-
-    void operator=(
-        EaxFxSlotIndexValue index);
-
-    void operator=(
-        const GUID& guid);
-
-    void operator=(
-        const EaxFxSlotIndex& rhs) noexcept;
-
-
-    bool has_value() const noexcept;
-
-    EaxFxSlotIndexValue get() const;
-
-    void reset() noexcept;
-
-    void set(
-        EaxFxSlotIndexValue index);
-
-    void set(
-        const GUID& guid);
-
-    operator EaxFxSlotIndexValue() const;
-
+    void set(EaxFxSlotIndexValue index);
+    void set(const GUID& guid);
 
 private:
     [[noreturn]]
-    static void fail(
-        const char* message);
-
-
-    bool has_value_{};
-    EaxFxSlotIndexValue value_{};
+    static void fail(const char *message);
 }; // EaxFxSlotIndex
-
 
 bool operator==(
     const EaxFxSlotIndex& lhs,
@@ -64,6 +34,5 @@ bool operator==(
 bool operator!=(
     const EaxFxSlotIndex& lhs,
     const EaxFxSlotIndex& rhs) noexcept;
-
 
 #endif // !EAX_FX_SLOT_INDEX_INCLUDED

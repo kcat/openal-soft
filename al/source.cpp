@@ -4058,7 +4058,7 @@ void ALsource::eax_update_primary_fx_slot_id()
 
     if (previous_primary_fx_slot_index.has_value())
     {
-        const auto fx_slot_index = previous_primary_fx_slot_index.get();
+        const auto fx_slot_index = previous_primary_fx_slot_index.value();
         eax_active_fx_slots_[fx_slot_index] = false;
 
         eax_set_al_source_send(nullptr, fx_slot_index, EaxAlLowPassParam{1.0f, 1.0f});
@@ -4066,7 +4066,7 @@ void ALsource::eax_update_primary_fx_slot_id()
 
     if (primary_fx_slot_index.has_value())
     {
-        const auto fx_slot_index = primary_fx_slot_index.get();
+        const auto fx_slot_index = primary_fx_slot_index.value();
         eax_active_fx_slots_[fx_slot_index] = true;
 
         auto& fx_slot = eax_al_context_->eax_get_fx_slot(fx_slot_index);

@@ -51,7 +51,7 @@ const ALeffectslot& EaxFxSlots::get(
         fail("Empty index.");
     }
 
-    return *fx_slots_[index.get()];
+    return *fx_slots_[index.value()];
 }
 
 ALeffectslot& EaxFxSlots::get(

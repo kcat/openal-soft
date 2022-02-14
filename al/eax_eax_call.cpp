@@ -69,62 +69,62 @@ EaxEaxCall::EaxEaxCall(
     else if (property_set_guid_ == DSPROPSETID_EAX20_ListenerProperties)
     {
         version_ = 2;
-        fx_slot_index_ = 0;
+        fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot_effect;
         property_id_ = convert_eax_v2_0_listener_property_id(property_id_);
     }
     else if (property_set_guid_ == DSPROPSETID_EAX30_ListenerProperties)
     {
         version_ = 3;
-        fx_slot_index_ = 0;
+        fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot_effect;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot0)
     {
         version_ = 4;
-        fx_slot_index_ = 0;
+        fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot0)
     {
         version_ = 5;
-        fx_slot_index_ = 0;
+        fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot1)
     {
         version_ = 4;
-        fx_slot_index_ = 1;
+        fx_slot_index_ = 1u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot1)
     {
         version_ = 5;
-        fx_slot_index_ = 1;
+        fx_slot_index_ = 1u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot2)
     {
         version_ = 4;
-        fx_slot_index_ = 2;
+        fx_slot_index_ = 2u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot2)
     {
         version_ = 5;
-        fx_slot_index_ = 2;
+        fx_slot_index_ = 2u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot3)
     {
         version_ = 4;
-        fx_slot_index_ = 3;
+        fx_slot_index_ = 3u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot3)
     {
         version_ = 5;
-        fx_slot_index_ = 3;
+        fx_slot_index_ = 3u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
     else if (property_set_guid_ == DSPROPSETID_EAX20_BufferProperties)

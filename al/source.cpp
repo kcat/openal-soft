@@ -427,7 +427,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         BufferFmt = item.mBuffer;
         if(BufferFmt) break;
     }
-    if(!BufferFmt)
+    if(!BufferFmt || BufferFmt->mCallback)
         return al::nullopt;
 
     /* Get sample frame offset */
@@ -477,7 +477,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         if(item.mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            return al::make_optional(VoicePos{offset-totalBufferLen, frac, &item});
+            return VoicePos{offset-totalBufferLen, frac, &item};
         }
         totalBufferLen += item.mSampleLen;
     }
@@ -1283,9 +1283,6 @@ void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop,
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if(voice->mFlags.test(VoiceIsCallback))
-                SETERR_RETURN(Context, AL_INVALID_VALUE,,
-                    "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
             if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid offset");
 
@@ -1506,9 +1503,6 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if(voice->mFlags.test(VoiceIsCallback))
-                SETERR_RETURN(Context, AL_INVALID_VALUE,,
-                    "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
             if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid source offset");
 

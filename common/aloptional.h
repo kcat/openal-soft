@@ -240,7 +240,7 @@ struct optional_storage<T, false, false, false, false> : public optstore_helper<
 
 } // namespace detail_
 
-#define REQUIRES(...) bool rt_=true, std::enable_if_t<rt_ && (__VA_ARGS__),bool> = true
+#define REQUIRES(...) std::enable_if_t<(__VA_ARGS__),bool> = true
 
 template<typename T>
 class optional {

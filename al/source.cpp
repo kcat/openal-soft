@@ -1150,6 +1150,28 @@ bool UpdateSourceProps(ALsource *source, ALCcontext *context)
         source->mPropsDirty.set(std::memory_order_release);
     return true;
 }
+#ifdef ALSOFT_EAX
+bool CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
+{
+    Voice *voice;
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))
+    {
+        if(source->eax_is_initialized())
+            source->eax_commit();
+        if(IsPlayingOrPaused(source) && (voice=GetSourceVoice(source, context)) != nullptr)
+            UpdateSourceProps(source, voice, context);
+    }
+    else
+        source->mPropsDirty.set(std::memory_order_release);
+    return true;
+}
+
+#else
+
+inline bool CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
+{ return UpdateSourceProps(source, context);
+#endif
+
 
 bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values)
 {
@@ -1176,20 +1198,14 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f && values[0] <= 360.0f);
 
         Source->InnerAngle = values[0];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_CONE_OUTER_ANGLE:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0.0f && values[0] <= 360.0f);
 
         Source->OuterAngle = values[0];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_GAIN:
         CHECKSIZE(values, 1);
@@ -1203,30 +1219,21 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] >= 0.0f);
 
         Source->MaxDistance = values[0];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_ROLLOFF_FACTOR:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0.0f);
 
         Source->RolloffFactor = values[0];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_REFERENCE_DISTANCE:
         CHECKSIZE(values, 1);
         CHECKVAL(values[0] >= 0.0f);
 
         Source->RefDistance = values[0];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_MIN_GAIN:
         CHECKSIZE(values, 1);
@@ -1328,10 +1335,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Position[0] = values[0];
         Source->Position[1] = values[1];
         Source->Position[2] = values[2];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_VELOCITY:
         CHECKSIZE(values, 3);
@@ -1340,10 +1344,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Velocity[0] = values[0];
         Source->Velocity[1] = values[1];
         Source->Velocity[2] = values[2];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_DIRECTION:
         CHECKSIZE(values, 3);
@@ -1352,10 +1353,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         Source->Direction[0] = values[0];
         Source->Direction[1] = values[1];
         Source->Direction[2] = values[2];
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_ORIENTATION:
         CHECKSIZE(values, 6);
@@ -1433,10 +1431,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
         Source->HeadRelative = values[0] != AL_FALSE;
-#ifdef ALSOFT_EAX
-        Source->eax_commit();
-#endif // ALSOFT_EAX
-        return UpdateSourceProps(Source, Context);
+        return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_LOOPING:
         CHECKSIZE(values, 1);
@@ -3139,7 +3134,8 @@ START_API_FUNC
             cur->mState = VChangeState::Play;
             source->state = AL_PLAYING;
 #ifdef ALSOFT_EAX
-            source->eax_commit();
+            if(source->eax_is_initialized())
+                source->eax_commit();
 #endif // ALSOFT_EAX
             continue;
 
@@ -3158,7 +3154,8 @@ START_API_FUNC
             assert(voice == nullptr);
             cur->mOldVoice = nullptr;
 #ifdef ALSOFT_EAX
-            source->eax_commit();
+            if(source->eax_is_initialized())
+                source->eax_commit();
 #endif // ALSOFT_EAX
             break;
         }
@@ -3633,18 +3630,47 @@ ALsource::~ALsource()
 void UpdateAllSourceProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
-    auto voicelist = context->getVoicesSpan();
-    ALuint vidx{0u};
-    for(Voice *voice : voicelist)
+#ifdef ALSOFT_EAX
+    if(context->has_eax())
     {
-        ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
-        ALsource *source = sid ? LookupSource(context, sid) : nullptr;
-        if(source && source->VoiceIdx == vidx)
+        /* If EAX is enabled, we need to go through and commit all sources' EAX
+         * changes, along with updating its voice, if any.
+         */
+        for(auto &sublist : context->mSourceList)
         {
-            if(source->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-                UpdateSourceProps(source, voice, context);
+            uint64_t usemask{~sublist.FreeMask};
+            while(usemask)
+            {
+                const int idx{al::countr_zero(usemask)};
+                usemask &= ~(1_u64 << idx);
+
+                ALsource *source{sublist.Sources + idx};
+                source->eax_commit();
+
+                if(Voice *voice{GetSourceVoice(source, context)})
+                {
+                    if(source->mPropsDirty.test_and_clear(std::memory_order_relaxed))
+                        UpdateSourceProps(source, voice, context);
+                }
+            }
         }
-        ++vidx;
+    }
+    else
+#endif
+    {
+        auto voicelist = context->getVoicesSpan();
+        ALuint vidx{0u};
+        for(Voice *voice : voicelist)
+        {
+            ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
+            ALsource *source = sid ? LookupSource(context, sid) : nullptr;
+            if(source && source->VoiceIdx == vidx)
+            {
+                if(source->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+                    UpdateSourceProps(source, voice, context);
+            }
+            ++vidx;
+        }
     }
 }
 
@@ -3654,8 +3680,8 @@ SourceSubList::~SourceSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        al::destroy_at(Sources+idx);
         usemask &= ~(1_u64 << idx);
+        al::destroy_at(Sources+idx);
     }
     FreeMask = ~usemask;
     al_free(Sources);
@@ -3743,21 +3769,11 @@ void ALsource::eax_update(
     }
 }
 
-void ALsource::eax_commit()
-{
-    if (!eax_is_initialized())
-        return;
-
-    eax_apply_deferred();
-}
-
 void ALsource::eax_commit_and_update()
 {
-    if (!eax_is_initialized())
-        return;
-
     eax_apply_deferred();
-    UpdateSourceProps(this, eax_al_context_);
+    if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+        UpdateSourceProps(this, eax_al_context_);
 }
 
 ALsource* ALsource::eax_lookup_source(
@@ -5621,7 +5637,8 @@ void ALsource::eax_set(
     if (!eax_call.is_deferred())
     {
         eax_apply_deferred();
-        UpdateSourceProps(this, eax_al_context_);
+        if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+            UpdateSourceProps(this, eax_al_context_);
     }
 }
 

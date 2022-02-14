@@ -243,7 +243,6 @@ public:
 
     void eax_update_filters();
 
-    void eax_commit_sources();
     void eax_commit_and_update_sources();
 
 

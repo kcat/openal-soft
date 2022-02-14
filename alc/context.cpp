@@ -549,13 +549,6 @@ void ALCcontext::eax_update_filters()
     }
 }
 
-void ALCcontext::eax_commit_sources()
-{
-    std::unique_lock<std::mutex> source_lock{mSourceLock};
-    for (auto& source : SourceListEnumerator{mSourceList})
-        source.eax_commit();
-}
-
 void ALCcontext::eax_commit_and_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};

@@ -12,6 +12,7 @@
 
 #include <cfloat>
 #include <cstdint>
+#include <cstring>
 
 #include <array>
 
@@ -28,27 +29,12 @@ typedef struct _GUID
     std::uint8_t Data4[8];
 } GUID;
 
-inline constexpr bool operator==(
-    const GUID& lhs,
-    const GUID& rhs) noexcept
+inline bool operator==(const GUID& lhs, const GUID& rhs) noexcept
 {
-    return
-        lhs.Data1 == rhs.Data1 &&
-        lhs.Data2 == rhs.Data2 &&
-        lhs.Data3 == rhs.Data3 &&
-        lhs.Data4[0] == rhs.Data4[0] &&
-        lhs.Data4[1] == rhs.Data4[1] &&
-        lhs.Data4[2] == rhs.Data4[2] &&
-        lhs.Data4[3] == rhs.Data4[3] &&
-        lhs.Data4[4] == rhs.Data4[4] &&
-        lhs.Data4[5] == rhs.Data4[5] &&
-        lhs.Data4[6] == rhs.Data4[6] &&
-        lhs.Data4[7] == rhs.Data4[7];
+    return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0;
 }
 
-inline constexpr bool operator!=(
-    const GUID& lhs,
-    const GUID& rhs) noexcept
+inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
 {
     return !(lhs == rhs);
 }

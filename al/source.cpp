@@ -1124,34 +1124,33 @@ ALuint DoubleValsByProp(ALenum prop)
 }
 
 
-bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values);
-bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values);
-bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values);
+void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values);
+void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values);
+void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values);
 
 #define CHECKSIZE(v, s) do { \
     if LIKELY((v).size() == (s) || (v).size() == MaxValues) break;            \
     Context->setError(AL_INVALID_ENUM,                                        \
         "Property 0x%04x expects %d value(s), got %zu", prop, (s),            \
         (v).size());                                                          \
-    return false;                                                             \
+    return;                                                                   \
 } while(0)
 #define CHECKVAL(x) do {                                                      \
     if LIKELY(x) break;                                                       \
     Context->setError(AL_INVALID_VALUE, "Value out of range");                \
-    return false;                                                             \
+    return;                                                                   \
 } while(0)
 
-bool UpdateSourceProps(ALsource *source, ALCcontext *context)
+void UpdateSourceProps(ALsource *source, ALCcontext *context)
 {
     Voice *voice;
     if(SourceShouldUpdate(source, context) && (voice=GetSourceVoice(source, context)) != nullptr)
         UpdateSourceProps(source, voice, context);
     else
         source->mPropsDirty = true;
-    return true;
 }
 #ifdef ALSOFT_EAX
-bool CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
+void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 {
     Voice *voice;
     if(!context->mDeferUpdates.load(std::memory_order_acquire))
@@ -1159,23 +1158,23 @@ bool CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
         if(source->eax_is_initialized())
             source->eax_commit();
         if(IsPlayingOrPaused(source) && (voice=GetSourceVoice(source, context)) != nullptr)
+        {
             UpdateSourceProps(source, voice, context);
-        else
-            source->mPropsDirty = true;
+            return;
+        }
     }
-    else
-        source->mPropsDirty = true;
-    return true;
+    source->mPropsDirty = true;
 }
 
 #else
 
-inline bool CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
+inline void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 { return UpdateSourceProps(source, context);
 #endif
 
 
-bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values)
+void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop,
+    const al::span<const float> values)
 {
     int ival;
 
@@ -1185,7 +1184,7 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_SEC_OFFSET_LATENCY_SOFT:
     case AL_SEC_OFFSET_CLOCK_SOFT:
         /* Query only */
-        SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+        SETERR_RETURN(Context, AL_INVALID_OPERATION,,
             "Setting read-only source property 0x%04x", prop);
 
     case AL_PITCH:
@@ -1295,17 +1294,17 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
             if(voice->mFlags.test(VoiceIsCallback))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                SETERR_RETURN(Context, AL_INVALID_VALUE,,
                     "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
-            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid offset");
+            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mALDevice.get()))
-                return true;
+                return;
         }
         Source->OffsetType = prop;
         Source->Offset = values[0];
-        return true;
+        return;
 
     case AL_SOURCE_RADIUS:
         CHECKSIZE(values, 1);
@@ -1405,10 +1404,11 @@ bool SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     ERR("Unexpected property: 0x%04x\n", prop);
     Context->setError(AL_INVALID_ENUM, "Invalid source float property 0x%04x", prop);
-    return false;
+    return;
 }
 
-bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values)
+void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
+    const al::span<const int> values)
 {
     ALCdevice *device{Context->mALDevice.get()};
     ALeffectslot *slot{nullptr};
@@ -1425,7 +1425,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
     case AL_BYTE_LENGTH_SOFT:
     case AL_SAMPLE_LENGTH_SOFT:
         /* Query only */
-        SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+        SETERR_RETURN(Context, AL_INVALID_OPERATION,,
             "Setting read-only source property 0x%04x", prop);
 
     case AL_SOURCE_RELATIVE:
@@ -1456,14 +1456,14 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
                 device->waitForMix();
             }
         }
-        return true;
+        return;
 
     case AL_BUFFER:
         CHECKSIZE(values, 1);
         {
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
-                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
                     "Setting buffer on playing or paused source %u", Source->id);
         }
         if(values[0])
@@ -1471,13 +1471,13 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             std::lock_guard<std::mutex> _{device->BufferLock};
             ALbuffer *buffer{LookupBuffer(device, static_cast<ALuint>(values[0]))};
             if(!buffer)
-                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid buffer ID %u",
+                SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid buffer ID %u",
                     static_cast<ALuint>(values[0]));
             if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
                     "Setting non-persistently mapped buffer %u", buffer->id);
             if(buffer->mCallback && ReadRef(buffer->ref) != 0)
-                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
                     "Setting already-set callback buffer %u", buffer->id);
 
             /* Add the selected buffer to a one-item queue */
@@ -1510,7 +1510,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             if(ALbuffer *buffer{item.mBuffer})
                 DecrementRef(buffer->ref);
         }
-        return true;
+        return;
 
     case AL_SEC_OFFSET:
     case AL_SAMPLE_OFFSET:
@@ -1521,17 +1521,17 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
             if(voice->mFlags.test(VoiceIsCallback))
-                SETERR_RETURN(Context, AL_INVALID_VALUE, false,
+                SETERR_RETURN(Context, AL_INVALID_VALUE,,
                     "Source offset for callback is invalid");
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
-            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid source offset");
+            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid source offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, device))
-                return true;
+                return;
         }
         Source->OffsetType = prop;
         Source->Offset = values[0];
-        return true;
+        return;
 
     case AL_DIRECT_FILTER:
         CHECKSIZE(values, 1);
@@ -1540,7 +1540,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             std::lock_guard<std::mutex> _{device->FilterLock};
             ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[0]))};
             if(!filter)
-                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u",
+                SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid filter ID %u",
                     static_cast<ALuint>(values[0]));
             Source->Direct.Gain = filter->Gain;
             Source->Direct.GainHF = filter->GainHF;
@@ -1588,7 +1588,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         }
         Context->setError(AL_INVALID_VALUE, "Unsupported AL_DIRECT_CHANNELS_SOFT: 0x%04x\n",
             values[0]);
-        return false;
+        return;
 
     case AL_DISTANCE_MODEL:
         CHECKSIZE(values, 1);
@@ -1597,10 +1597,10 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             Source->mDistanceModel = *model;
             if(Context->mSourceDistanceModel)
                 return UpdateSourceProps(Source, Context);
-            return true;
+            return;
         }
         Context->setError(AL_INVALID_VALUE, "Distance model out of range: 0x%04x", values[0]);
-        return false;
+        return;
 
     case AL_SOURCE_RESAMPLER_SOFT:
         CHECKSIZE(values, 1);
@@ -1618,37 +1618,37 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
         }
         Context->setError(AL_INVALID_VALUE, "Unsupported AL_SOURCE_SPATIALIZE_SOFT: 0x%04x\n",
             values[0]);
-        return false;
+        return;
 
     case AL_STEREO_MODE_SOFT:
         CHECKSIZE(values, 1);
         {
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
-                SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
                     "Setting buffer on playing or paused source %u", Source->id);
         }
         if(auto mode = StereoModeFromEnum(values[0]))
         {
             Source->mStereoMode = *mode;
-            return true;
+            return;
         }
-        return false;
+        return;
 
     case AL_AUXILIARY_SEND_FILTER:
         CHECKSIZE(values, 3);
         slotlock = std::unique_lock<std::mutex>{Context->mEffectSlotLock};
         if(values[0] && (slot=LookupEffectSlot(Context, static_cast<ALuint>(values[0]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid effect ID %u", values[0]);
+            SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid effect ID %u", values[0]);
         if(static_cast<ALuint>(values[1]) >= device->NumAuxSends)
-            SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid send %u", values[1]);
+            SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid send %u", values[1]);
 
         if(values[2])
         {
             std::lock_guard<std::mutex> _{device->FilterLock};
             ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[2]))};
             if(!filter)
-                SETERR_RETURN(Context, AL_INVALID_VALUE, false, "Invalid filter ID %u", values[2]);
+                SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid filter ID %u", values[2]);
 
             auto &send = Source->Send[static_cast<ALuint>(values[1])];
             send.Gain = filter->Gain;
@@ -1691,7 +1691,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
             Source->Send[static_cast<ALuint>(values[1])].Slot = slot;
             UpdateSourceProps(Source, Context);
         }
-        return true;
+        return;
 
 
     /* 1x float */
@@ -1747,10 +1747,11 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 
     ERR("Unexpected property: 0x%04x\n", prop);
     Context->setError(AL_INVALID_ENUM, "Invalid source integer property 0x%04x", prop);
-    return false;
+    return;
 }
 
-bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values)
+void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop,
+    const al::span<const int64_t> values)
 {
     float fvals[MaxValues];
     int   ivals[MaxValues];
@@ -1766,7 +1767,7 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
     case AL_SAMPLE_OFFSET_CLOCK_SOFT:
         /* Query only */
-        SETERR_RETURN(Context, AL_INVALID_OPERATION, false,
+        SETERR_RETURN(Context, AL_INVALID_OPERATION,,
             "Setting read-only source property 0x%04x", prop);
 
     /* 1x int */
@@ -1860,11 +1861,19 @@ bool SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 
     ERR("Unexpected property: 0x%04x\n", prop);
     Context->setError(AL_INVALID_ENUM, "Invalid source integer64 property 0x%04x", prop);
-    return false;
+    return;
 }
 
 #undef CHECKVAL
+#undef CHECKSIZE
 
+#define CHECKSIZE(v, s) do { \
+    if LIKELY((v).size() == (s) || (v).size() == MaxValues) break;            \
+    Context->setError(AL_INVALID_ENUM,                                        \
+        "Property 0x%04x expects %d value(s), got %zu", prop, (s),            \
+        (v).size());                                                          \
+    return false;                                                             \
+} while(0)
 
 bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<double> values);
 bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int> values);
@@ -3729,10 +3738,8 @@ public:
 }; // EaxSourceSendException
 
 
-void EaxUpdateSourceProps(ALsource *source, ALCcontext *context)
+void EaxUpdateSourceVoice(ALsource *source, ALCcontext *context)
 {
-    if(!SourceShouldUpdate(source, context))
-        return;
     if(Voice *voice{GetSourceVoice(source, context)})
     {
         if(std::exchange(source->mPropsDirty, false))
@@ -3784,7 +3791,7 @@ void ALsource::eax_update(
 void ALsource::eax_commit_and_update()
 {
     eax_apply_deferred();
-    EaxUpdateSourceProps(this, eax_al_context_);
+    EaxUpdateSourceVoice(this, eax_al_context_);
 }
 
 ALsource* ALsource::eax_lookup_source(
@@ -5648,7 +5655,7 @@ void ALsource::eax_set(
     if(!eax_call.is_deferred())
     {
         eax_apply_deferred();
-        EaxUpdateSourceProps(this, eax_al_context_);
+        EaxUpdateSourceVoice(this, eax_al_context_);
     }
 }
 

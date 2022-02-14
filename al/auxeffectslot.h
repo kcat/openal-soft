@@ -48,7 +48,7 @@ struct ALeffectslot {
         al::intrusive_ptr<EffectState> State;
     } Effect;
 
-    al::atomic_invflag mPropsDirty;
+    bool mPropsDirty{true};
 
     SlotState mState{SlotState::Initial};
 

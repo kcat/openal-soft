@@ -187,7 +187,7 @@ struct ALsource {
     /** Source Buffer Queue head. */
     al::deque<ALbufferQueueItem> mQueue;
 
-    bool mPropsDirty{false};
+    bool mPropsDirty{true};
 
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.

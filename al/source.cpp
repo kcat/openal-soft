@@ -1130,7 +1130,7 @@ void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 
 void UpdateSourceProps(ALsource *source, ALCcontext *context)
 {
-    if(!context->mDeferUpdates.load(std::memory_order_acquire))
+    if(!context->mDeferUpdates)
     {
         if(Voice *voice{GetSourceVoice(source, context)})
         {
@@ -1143,7 +1143,7 @@ void UpdateSourceProps(ALsource *source, ALCcontext *context)
 #ifdef ALSOFT_EAX
 void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 {
-    if(!context->mDeferUpdates.load(std::memory_order_acquire))
+    if(!context->mDeferUpdates)
     {
         if(source->eax_is_initialized())
             source->eax_commit();

@@ -102,8 +102,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     al::vector<WetBufferPtr> mWetBuffers;
 
 
-    al::atomic_invflag mPropsDirty;
-    std::atomic<bool> mDeferUpdates{false};
+    bool mPropsDirty{true};
+    bool mDeferUpdates{false};
 
     std::mutex mPropLock;
 
@@ -155,8 +155,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
      * This does *NOT* stop mixing, but rather prevents certain property
      * changes from taking effect. mPropLock must be held when called.
      */
-    bool deferUpdates() noexcept
-    { return mDeferUpdates.exchange(true, std::memory_order_acq_rel); }
+    void deferUpdates() noexcept { mDeferUpdates = true; }
 
     /**
      * Resumes update processing after being deferred. mPropLock must be held
@@ -164,7 +163,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
      */
     void processUpdates()
     {
-        if(mDeferUpdates.exchange(false, std::memory_order_acq_rel))
+        if(std::exchange(mDeferUpdates, false))
             applyAllUpdates();
     }
 

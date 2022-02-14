@@ -147,10 +147,10 @@ START_API_FUNC
 END_API_FUNC
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
+    if(!context->mDeferUpdates)                                               \
         UpdateContextProps(context.get());                                    \
     else                                                                      \
-        context->mPropsDirty.set(std::memory_order_release);                  \
+        context->mPropsDirty = true;                                          \
 } while(0)
 
 
@@ -263,7 +263,7 @@ START_API_FUNC
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->mDeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates)
             value = AL_TRUE;
         break;
 
@@ -316,7 +316,7 @@ START_API_FUNC
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->mDeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates)
             value = static_cast<ALdouble>(AL_TRUE);
         break;
 
@@ -367,7 +367,7 @@ START_API_FUNC
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->mDeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates)
             value = static_cast<ALfloat>(AL_TRUE);
         break;
 
@@ -418,7 +418,7 @@ START_API_FUNC
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->mDeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates)
             value = AL_TRUE;
         break;
 
@@ -504,7 +504,7 @@ START_API_FUNC
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(context->mDeferUpdates.load(std::memory_order_acquire))
+        if(context->mDeferUpdates)
             value = AL_TRUE;
         break;
 

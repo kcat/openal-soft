@@ -2155,7 +2155,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         context->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
         srclock.unlock();
 
-        context->mPropsDirty.test_and_clear(std::memory_order_release);
+        context->mPropsDirty = false;
         UpdateContextProps(context);
         UpdateAllSourceProps(context);
     }

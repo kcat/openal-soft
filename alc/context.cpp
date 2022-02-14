@@ -114,7 +114,6 @@ void ALCcontext::setThreadContext(ALCcontext *context) noexcept
 ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
   : ContextBase{device.get()}, mALDevice{std::move(device)}
 {
-    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 }
 
 ALCcontext::~ALCcontext()
@@ -258,7 +257,7 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
-    if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+    if(std::exchange(mPropsDirty, false))
         UpdateContextProps(this);
     UpdateAllEffectSlotProps(this);
     UpdateAllSourceProps(this);
@@ -908,13 +907,13 @@ void ALCcontext::eax_set_primary_fx_slot_id()
 void ALCcontext::eax_set_distance_factor()
 {
     mListener.mMetersPerUnit = eax_.context.flDistanceFactor;
-    mPropsDirty.set(std::memory_order_release);
+    mPropsDirty = true;
 }
 
 void ALCcontext::eax_set_air_absorbtion_hf()
 {
     mAirAbsorptionGainHF = eax_.context.flAirAbsorptionHF;
-    mPropsDirty.set(std::memory_order_release);
+    mPropsDirty = true;
 }
 
 void ALCcontext::eax_set_hf_reference()
@@ -1285,14 +1284,14 @@ void ALCcontext::eax_set(
     if (!eax_call.is_deferred())
     {
         eax_apply_deferred();
-        if(!mDeferUpdates.load(std::memory_order_acquire))
+        if(!mDeferUpdates)
         {
             mHoldUpdates.store(true, std::memory_order_release);
             while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
                 /* busy-wait */
             }
 
-            if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+            if(std::exchange(mPropsDirty, false))
                 UpdateContextProps(this);
             UpdateAllSourceProps(this);
 

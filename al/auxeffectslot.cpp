@@ -310,11 +310,12 @@ void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
 
 inline void UpdateProps(ALeffectslot *slot, ALCcontext *context)
 {
-    if(!context->mDeferUpdates.load(std::memory_order_acquire)
-        && slot->mState == SlotState::Playing)
+    if(!context->mDeferUpdates && slot->mState == SlotState::Playing)
+    {
         slot->updateProps(context);
-    else
-        slot->mPropsDirty.set(std::memory_order_release);
+        return;
+    }
+    slot->mPropsDirty = true;
 }
 
 } // namespace
@@ -466,7 +467,7 @@ START_API_FUNC
     if(slot->mState == SlotState::Playing)
         return;
 
-    slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+    slot->mPropsDirty = false;
     slot->updateProps(context.get());
 
     AddActiveEffectSlots({&slot, 1}, context.get());
@@ -497,7 +498,7 @@ START_API_FUNC
 
         if(slot->mState != SlotState::Playing)
         {
-            slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+            slot->mPropsDirty = false;
             slot->updateProps(context.get());
         }
         slots[i] = slot;
@@ -598,7 +599,7 @@ START_API_FUNC
         }
         if UNLIKELY(slot->mState == SlotState::Initial)
         {
-            slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+            slot->mPropsDirty = false;
             slot->updateProps(context.get());
 
             AddActiveEffectSlots({&slot, 1}, context.get());
@@ -913,8 +914,6 @@ END_API_FUNC
 
 ALeffectslot::ALeffectslot()
 {
-    mPropsDirty.test_and_clear(std::memory_order_relaxed);
-
     EffectStateFactory *factory{getFactoryByType(EffectSlotType::None)};
     assert(factory != nullptr);
 
@@ -1033,8 +1032,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
             ALeffectslot *slot{sublist.EffectSlots + idx};
             usemask &= ~(1_u64 << idx);
 
-            if(slot->mState != SlotState::Stopped
-                && slot->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+            if(slot->mState != SlotState::Stopped && std::exchange(slot->mPropsDirty, false))
                 slot->updateProps(context);
         }
     }
@@ -1715,7 +1713,7 @@ void ALeffectslot::eax_set_effect_slot_effect(EaxEffect &effect)
 
     if (mState == SlotState::Initial)
     {
-        mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+        mPropsDirty = false;
         updateProps(eax_al_context_);
 
         auto effect_slot_ptr = this;

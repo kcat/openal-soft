@@ -758,12 +758,14 @@ void ALCcontext::eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept
 void ALCcontext::eax_dispatch_fx_slot(
     const EaxEaxCall& eax_call)
 {
-    auto& fx_slot = eax_get_fx_slot(eax_call.get_fx_slot_index());
+    const auto fx_slot_index = eax_call.get_fx_slot_index();
+    if(!fx_slot_index.has_value())
+        eax_fail("Invalid fx slot index.");
 
-    if (fx_slot.eax_dispatch(eax_call))
+    auto& fx_slot = eax_get_fx_slot(*fx_slot_index);
+    if(fx_slot.eax_dispatch(eax_call))
     {
         std::lock_guard<std::mutex> source_lock{mSourceLock};
-
         eax_update_filters();
     }
 }

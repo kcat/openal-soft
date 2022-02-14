@@ -3989,7 +3989,7 @@ void ALsource::eax_set_fx_slots()
         if (fx_slot_index.has_value())
         {
             eax_has_active_fx_slots_ = true;
-            eax_active_fx_slots_[fx_slot_index] = true;
+            eax_active_fx_slots_[*fx_slot_index] = true;
         }
     }
 

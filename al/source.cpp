@@ -1582,7 +1582,7 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
         {
             Source->mDistanceModel = *model;
             if(Context->mSourceDistanceModel)
-                return UpdateSourceProps(Source, Context);
+                UpdateSourceProps(Source, Context);
             return;
         }
         Context->setError(AL_INVALID_VALUE, "Distance model out of range: 0x%04x", values[0]);
@@ -1612,13 +1612,15 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
                 SETERR_RETURN(Context, AL_INVALID_OPERATION,,
-                    "Setting buffer on playing or paused source %u", Source->id);
+                    "Modifying stereo mode on playing or paused source %u", Source->id);
         }
         if(auto mode = StereoModeFromEnum(values[0]))
         {
             Source->mStereoMode = *mode;
             return;
         }
+        Context->setError(AL_INVALID_VALUE, "Unsupported AL_STEREO_MODE_SOFT: 0x%04x\n",
+            values[0]);
         return;
 
     case AL_AUXILIARY_SEND_FILTER:

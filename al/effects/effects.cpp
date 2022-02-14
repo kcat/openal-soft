@@ -10,21 +10,6 @@
 #include "AL/efx.h"
 
 
-EaxEffectUPtr eax_create_eax_null_effect();
-EaxEffectUPtr eax_create_eax_chorus_effect();
-EaxEffectUPtr eax_create_eax_distortion_effect();
-EaxEffectUPtr eax_create_eax_echo_effect();
-EaxEffectUPtr eax_create_eax_flanger_effect();
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect();
-EaxEffectUPtr eax_create_eax_vocal_morpher_effect();
-EaxEffectUPtr eax_create_eax_pitch_shifter_effect();
-EaxEffectUPtr eax_create_eax_ring_modulator_effect();
-EaxEffectUPtr eax_create_eax_auto_wah_effect();
-EaxEffectUPtr eax_create_eax_compressor_effect();
-EaxEffectUPtr eax_create_eax_equalizer_effect();
-EaxEffectUPtr eax_create_eax_reverb_effect();
-
-
 EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type)
 {
 #define EAX_PREFIX "[EAX_MAKE_EAX_EFFECT] "

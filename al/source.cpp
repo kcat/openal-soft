@@ -679,16 +679,6 @@ inline ALenum GetSourceState(ALsource *source, Voice *voice)
     return source->state;
 }
 
-/**
- * Returns if the source should specify an update, given the context's
- * deferring state and the source's last known state.
- */
-inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
-{
-    return !context->mDeferUpdates.load(std::memory_order_acquire) &&
-           IsPlayingOrPaused(source);
-}
-
 
 bool EnsureSources(ALCcontext *context, size_t needed)
 {
@@ -742,19 +732,16 @@ void FreeSource(ALCcontext *context, ALsource *source)
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
 
-    if(IsPlayingOrPaused(source))
+    if(Voice *voice{GetSourceVoice(source, context)})
     {
-        if(Voice *voice{GetSourceVoice(source, context)})
-        {
-            VoiceChange *vchg{GetVoiceChanger(context)};
+        VoiceChange *vchg{GetVoiceChanger(context)};
 
-            voice->mPendingChange.store(true, std::memory_order_relaxed);
-            vchg->mVoice = voice;
-            vchg->mSourceID = source->id;
-            vchg->mState = VChangeState::Stop;
+        voice->mPendingChange.store(true, std::memory_order_relaxed);
+        vchg->mVoice = voice;
+        vchg->mSourceID = source->id;
+        vchg->mState = VChangeState::Stop;
 
-            SendVoiceChanges(context, vchg);
-        }
+        SendVoiceChanges(context, vchg);
     }
 
     al::destroy_at(source);
@@ -1143,21 +1130,24 @@ void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
 
 void UpdateSourceProps(ALsource *source, ALCcontext *context)
 {
-    Voice *voice;
-    if(SourceShouldUpdate(source, context) && (voice=GetSourceVoice(source, context)) != nullptr)
-        UpdateSourceProps(source, voice, context);
-    else
-        source->mPropsDirty = true;
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))
+    {
+        if(Voice *voice{GetSourceVoice(source, context)})
+        {
+            UpdateSourceProps(source, voice, context);
+            return;
+        }
+    }
+    source->mPropsDirty = true;
 }
 #ifdef ALSOFT_EAX
 void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 {
-    Voice *voice;
     if(!context->mDeferUpdates.load(std::memory_order_acquire))
     {
         if(source->eax_is_initialized())
             source->eax_commit();
-        if(IsPlayingOrPaused(source) && (voice=GetSourceVoice(source, context)) != nullptr)
+        if(Voice *voice{GetSourceVoice(source, context)})
         {
             UpdateSourceProps(source, voice, context);
             return;
@@ -1169,7 +1159,7 @@ void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 #else
 
 inline void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
-{ return UpdateSourceProps(source, context);
+{ UpdateSourceProps(source, context);
 #endif
 
 
@@ -1440,21 +1430,17 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
         CHECKVAL(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
         Source->Looping = values[0] != AL_FALSE;
-        if(IsPlayingOrPaused(Source))
+        if(Voice *voice{GetSourceVoice(Source, Context)})
         {
-            if(Voice *voice{GetSourceVoice(Source, Context)})
-            {
-                if(Source->Looping)
-                    voice->mLoopBuffer.store(&Source->mQueue.front(), std::memory_order_release);
-                else
-                    voice->mLoopBuffer.store(nullptr, std::memory_order_release);
+            if(Source->Looping)
+                voice->mLoopBuffer.store(&Source->mQueue.front(), std::memory_order_release);
+            else
+                voice->mLoopBuffer.store(nullptr, std::memory_order_release);
 
-                /* If the source is playing, wait for the current mix to finish
-                 * to ensure it isn't currently looping back or reaching the
-                 * end.
-                 */
-                device->waitForMix();
-            }
+            /* If the source is playing, wait for the current mix to finish to
+             * ensure it isn't currently looping back or reaching the end.
+             */
+            device->waitForMix();
         }
         return;
 

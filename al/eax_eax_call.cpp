@@ -5,9 +5,9 @@
 #include "al/eax_exception.h"
 
 
-namespace
-{
+namespace {
 
+constexpr auto deferred_flag = 0x80000000U;
 
 class EaxEaxCallException :
     public EaxException
@@ -21,129 +21,112 @@ public:
     }
 }; // EaxEaxCallException
 
-
 } // namespace
 
 
 EaxEaxCall::EaxEaxCall(
     bool is_get,
-    const GUID* property_set_id,
+    const GUID& property_set_guid,
     ALuint property_id,
     ALuint property_source_id,
     ALvoid* property_buffer,
     ALuint property_size)
+    : is_get_{is_get}, is_deferred_{(property_id&deferred_flag) != 0}, version_{0}
+    , property_set_id_{EaxEaxCallPropertySetId::none}, property_id_{property_id & ~deferred_flag}
+    , property_source_id_{property_source_id}, property_buffer_{property_buffer}
+    , property_size_{property_size}
 {
-    if (!property_set_id)
-    {
-        fail("Null property set ID.");
-    }
-
-    is_get_ = is_get;
-
-    constexpr auto deferred_flag = 0x80000000U;
-    is_deferred_ = ((property_id & 0x80000000U) != 0);
-
-    version_ = 0;
-    fx_slot_index_.reset();
-    property_set_id_ = EaxEaxCallPropertySetId::none;
-
-    property_set_guid_ = *property_set_id;
-    property_id_ = property_id & (~deferred_flag);
-    property_source_id_ = property_source_id;
-    property_buffer_ = property_buffer;
-    property_size_ = property_size;
-
     if (false)
     {
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX40_Context)
+    else if (property_set_guid == EAXPROPERTYID_EAX40_Context)
     {
         version_ = 4;
         property_set_id_ = EaxEaxCallPropertySetId::context;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX50_Context)
+    else if (property_set_guid == EAXPROPERTYID_EAX50_Context)
     {
         version_ = 5;
         property_set_id_ = EaxEaxCallPropertySetId::context;
     }
-    else if (property_set_guid_ == DSPROPSETID_EAX20_ListenerProperties)
+    else if (property_set_guid == DSPROPSETID_EAX20_ListenerProperties)
     {
         version_ = 2;
         fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot_effect;
         property_id_ = convert_eax_v2_0_listener_property_id(property_id_);
     }
-    else if (property_set_guid_ == DSPROPSETID_EAX30_ListenerProperties)
+    else if (property_set_guid == DSPROPSETID_EAX30_ListenerProperties)
     {
         version_ = 3;
         fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot_effect;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot0)
+    else if (property_set_guid == EAXPROPERTYID_EAX40_FXSlot0)
     {
         version_ = 4;
         fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot0)
+    else if (property_set_guid == EAXPROPERTYID_EAX50_FXSlot0)
     {
         version_ = 5;
         fx_slot_index_ = 0u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot1)
+    else if (property_set_guid == EAXPROPERTYID_EAX40_FXSlot1)
     {
         version_ = 4;
         fx_slot_index_ = 1u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot1)
+    else if (property_set_guid == EAXPROPERTYID_EAX50_FXSlot1)
     {
         version_ = 5;
         fx_slot_index_ = 1u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot2)
+    else if (property_set_guid == EAXPROPERTYID_EAX40_FXSlot2)
     {
         version_ = 4;
         fx_slot_index_ = 2u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot2)
+    else if (property_set_guid == EAXPROPERTYID_EAX50_FXSlot2)
     {
         version_ = 5;
         fx_slot_index_ = 2u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX40_FXSlot3)
+    else if (property_set_guid == EAXPROPERTYID_EAX40_FXSlot3)
     {
         version_ = 4;
         fx_slot_index_ = 3u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX50_FXSlot3)
+    else if (property_set_guid == EAXPROPERTYID_EAX50_FXSlot3)
     {
         version_ = 5;
         fx_slot_index_ = 3u;
         property_set_id_ = EaxEaxCallPropertySetId::fx_slot;
     }
-    else if (property_set_guid_ == DSPROPSETID_EAX20_BufferProperties)
+    else if (property_set_guid == DSPROPSETID_EAX20_BufferProperties)
     {
         version_ = 2;
         property_set_id_ = EaxEaxCallPropertySetId::source;
         property_id_ = convert_eax_v2_0_buffer_property_id(property_id_);
     }
-    else if (property_set_guid_ == DSPROPSETID_EAX30_BufferProperties)
+    else if (property_set_guid == DSPROPSETID_EAX30_BufferProperties)
     {
         version_ = 3;
         property_set_id_ = EaxEaxCallPropertySetId::source;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX40_Source)
+    else if (property_set_guid == EAXPROPERTYID_EAX40_Source)
     {
         version_ = 4;
         property_set_id_ = EaxEaxCallPropertySetId::source;
     }
-    else if (property_set_guid_ == EAXPROPERTYID_EAX50_Source)
+    else if (property_set_guid == EAXPROPERTYID_EAX50_Source)
     {
         version_ = 5;
         property_set_id_ = EaxEaxCallPropertySetId::source;
@@ -319,9 +302,12 @@ EaxEaxCall create_eax_call(
     ALvoid* property_buffer,
     ALuint property_size)
 {
+    if(!property_set_id)
+        throw EaxEaxCallException{"Null property set ID."};
+
     return EaxEaxCall{
         is_get,
-        property_set_id,
+        *property_set_id,
         property_id,
         property_source_id,
         property_buffer,

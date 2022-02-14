@@ -5785,13 +5785,9 @@ void ALsource::eax_api_get_source_all(
 void ALsource::eax_api_get_source_all_obstruction(
     const EaxEaxCall& eax_call)
 {
-    static_assert(
-        offsetof(EAXOBSTRUCTIONPROPERTIES, flObstructionLFRatio) - offsetof(EAXOBSTRUCTIONPROPERTIES, lObstruction) ==
-        offsetof(EAX30SOURCEPROPERTIES, flObstructionLFRatio) - offsetof(EAX30SOURCEPROPERTIES, lObstruction),
-        "Type size."
-    );
-
-    const auto eax_obstruction_all = *reinterpret_cast<const EAXOBSTRUCTIONPROPERTIES*>(&eax_.source.lObstruction);
+    auto eax_obstruction_all = EAXOBSTRUCTIONPROPERTIES{};
+    eax_obstruction_all.lObstruction = eax_.source.lObstruction;
+    eax_obstruction_all.flObstructionLFRatio = eax_.source.flObstructionLFRatio;
 
     eax_call.set_value<EaxSourceException>(eax_obstruction_all);
 }
@@ -5799,20 +5795,11 @@ void ALsource::eax_api_get_source_all_obstruction(
 void ALsource::eax_api_get_source_all_occlusion(
     const EaxEaxCall& eax_call)
 {
-    static_assert(
-        offsetof(EAXOCCLUSIONPROPERTIES, flOcclusionLFRatio) - offsetof(EAXOCCLUSIONPROPERTIES, lOcclusion) ==
-        offsetof(EAX30SOURCEPROPERTIES, flOcclusionLFRatio) - offsetof(EAX30SOURCEPROPERTIES, lOcclusion) &&
-
-        offsetof(EAXOCCLUSIONPROPERTIES, flOcclusionRoomRatio) - offsetof(EAXOCCLUSIONPROPERTIES, lOcclusion) ==
-        offsetof(EAX30SOURCEPROPERTIES, flOcclusionRoomRatio) - offsetof(EAX30SOURCEPROPERTIES, lOcclusion) &&
-
-        offsetof(EAXOCCLUSIONPROPERTIES, flOcclusionDirectRatio) - offsetof(EAXOCCLUSIONPROPERTIES, lOcclusion) ==
-        offsetof(EAX30SOURCEPROPERTIES, flOcclusionDirectRatio) - offsetof(EAX30SOURCEPROPERTIES, lOcclusion),
-
-        "Type size."
-    );
-
-    const auto eax_occlusion_all = *reinterpret_cast<const EAXOCCLUSIONPROPERTIES*>(&eax_.source.lOcclusion);
+    auto eax_occlusion_all = EAXOCCLUSIONPROPERTIES{};
+    eax_occlusion_all.lOcclusion = eax_.source.lOcclusion;
+    eax_occlusion_all.flOcclusionLFRatio = eax_.source.flOcclusionLFRatio;
+    eax_occlusion_all.flOcclusionRoomRatio = eax_.source.flOcclusionRoomRatio;
+    eax_occlusion_all.flOcclusionDirectRatio = eax_.source.flOcclusionDirectRatio;
 
     eax_call.set_value<EaxSourceException>(eax_occlusion_all);
 }
@@ -5820,14 +5807,9 @@ void ALsource::eax_api_get_source_all_occlusion(
 void ALsource::eax_api_get_source_all_exclusion(
     const EaxEaxCall& eax_call)
 {
-    static_assert(
-        offsetof(EAXEXCLUSIONPROPERTIES, flExclusionLFRatio) - offsetof(EAXEXCLUSIONPROPERTIES, lExclusion) ==
-        offsetof(EAX30SOURCEPROPERTIES, flExclusionLFRatio) - offsetof(EAX30SOURCEPROPERTIES, lExclusion),
-
-        "Type size."
-    );
-
-    const auto eax_exclusion_all = *reinterpret_cast<const EAXEXCLUSIONPROPERTIES*>(&eax_.source.lExclusion);
+    auto eax_exclusion_all = EAXEXCLUSIONPROPERTIES{};
+    eax_exclusion_all.lExclusion = eax_.source.lExclusion;
+    eax_exclusion_all.flExclusionLFRatio = eax_.source.flExclusionLFRatio;
 
     eax_call.set_value<EaxSourceException>(eax_exclusion_all);
 }

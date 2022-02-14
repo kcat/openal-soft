@@ -1159,7 +1159,7 @@ void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 #else
 
 inline void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
-{ UpdateSourceProps(source, context);
+{ UpdateSourceProps(source, context); }
 #endif
 
 

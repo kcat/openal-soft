@@ -43,21 +43,18 @@ void EaxFxSlots::uninitialize() noexcept
     }
 }
 
-const ALeffectslot& EaxFxSlots::get(
-    EaxFxSlotIndex index) const
+const ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index) const
 {
-    if (!index.has_value())
-    {
+    if(!index.has_value())
         fail("Empty index.");
-    }
-
     return *fx_slots_[index.value()];
 }
 
-ALeffectslot& EaxFxSlots::get(
-    EaxFxSlotIndex index)
+ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index)
 {
-    return const_cast<ALeffectslot&>(const_cast<const EaxFxSlots*>(this)->get(index));
+    if(!index.has_value())
+        fail("Empty index.");
+    return *fx_slots_[index.value()];
 }
 
 void EaxFxSlots::unlock_legacy() noexcept

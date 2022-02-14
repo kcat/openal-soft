@@ -2120,7 +2120,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 auto send_begin = source->Send.begin() + static_cast<ptrdiff_t>(num_sends);
                 std::for_each(send_begin, source->Send.end(), clear_send);
 
-                source->mPropsDirty.set(std::memory_order_release);
+                source->mPropsDirty = true;
             }
         }
 

@@ -511,7 +511,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 
     voice->prepare(device);
 
-    source->mPropsDirty.test_and_clear(std::memory_order_acq_rel);
+    source->mPropsDirty = false;
     UpdateSourceProps(source, voice, context);
 
     voice->mSourceID.store(source->id, std::memory_order_release);
@@ -1147,7 +1147,7 @@ bool UpdateSourceProps(ALsource *source, ALCcontext *context)
     if(SourceShouldUpdate(source, context) && (voice=GetSourceVoice(source, context)) != nullptr)
         UpdateSourceProps(source, voice, context);
     else
-        source->mPropsDirty.set(std::memory_order_release);
+        source->mPropsDirty = true;
     return true;
 }
 #ifdef ALSOFT_EAX
@@ -1160,9 +1160,11 @@ bool CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
             source->eax_commit();
         if(IsPlayingOrPaused(source) && (voice=GetSourceVoice(source, context)) != nullptr)
             UpdateSourceProps(source, voice, context);
+        else
+            source->mPropsDirty = true;
     }
     else
-        source->mPropsDirty.set(std::memory_order_release);
+        source->mPropsDirty = true;
     return true;
 }
 
@@ -1679,7 +1681,7 @@ bool SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
              */
             Voice *voice{GetSourceVoice(Source, Context)};
             if(voice) UpdateSourceProps(Source, voice, Context);
-            else Source->mPropsDirty.set(std::memory_order_release);
+            else Source->mPropsDirty = true;
         }
         else
         {
@@ -3610,8 +3612,6 @@ ALsource::ALsource()
         send.GainLF = 1.0f;
         send.LFReference = HIGHPASSFREQREF;
     }
-
-    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 }
 
 ALsource::~ALsource()
@@ -3649,7 +3649,7 @@ void UpdateAllSourceProps(ALCcontext *context)
 
                 if(Voice *voice{GetSourceVoice(source, context)})
                 {
-                    if(source->mPropsDirty.test_and_clear(std::memory_order_relaxed))
+                    if(std::exchange(source->mPropsDirty, false))
                         UpdateSourceProps(source, voice, context);
                 }
             }
@@ -3666,7 +3666,7 @@ void UpdateAllSourceProps(ALCcontext *context)
             ALsource *source = sid ? LookupSource(context, sid) : nullptr;
             if(source && source->VoiceIdx == vidx)
             {
-                if(source->mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+                if(std::exchange(source->mPropsDirty, false))
                     UpdateSourceProps(source, voice, context);
             }
             ++vidx;
@@ -3729,6 +3729,18 @@ public:
 }; // EaxSourceSendException
 
 
+void EaxUpdateSourceProps(ALsource *source, ALCcontext *context)
+{
+    if(!SourceShouldUpdate(source, context))
+        return;
+    if(Voice *voice{GetSourceVoice(source, context)})
+    {
+        if(std::exchange(source->mPropsDirty, false))
+            UpdateSourceProps(source, voice, context);
+    }
+}
+
+
 void ALsource::eax_initialize(ALCcontext *context) noexcept
 {
     assert(context);
@@ -3772,8 +3784,7 @@ void ALsource::eax_update(
 void ALsource::eax_commit_and_update()
 {
     eax_apply_deferred();
-    if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-        UpdateSourceProps(this, eax_al_context_);
+    EaxUpdateSourceProps(this, eax_al_context_);
 }
 
 ALsource* ALsource::eax_lookup_source(
@@ -4014,7 +4025,7 @@ void ALsource::eax_update_direct_filter_internal()
     Direct.HFReference = LOWPASSFREQREF;
     Direct.GainLF = 1.0f;
     Direct.LFReference = HIGHPASSFREQREF;
-    mPropsDirty.set(std::memory_order_release);
+    mPropsDirty = true;
 }
 
 void ALsource::eax_update_room_filters_internal()
@@ -5493,7 +5504,7 @@ void ALsource::eax_apply_deferred()
             eax_set_macro_fx_factor();
         }
 
-        mPropsDirty.set(std::memory_order_release);
+        mPropsDirty = true;
 
         eax_source_dirty_misc_flags_ = EaxSourceSourceMiscDirtyFlags{};
     }
@@ -5634,11 +5645,10 @@ void ALsource::eax_set(
             eax_fail("Unsupported property id.");
     }
 
-    if (!eax_call.is_deferred())
+    if(!eax_call.is_deferred())
     {
         eax_apply_deferred();
-        if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
-            UpdateSourceProps(this, eax_al_context_);
+        EaxUpdateSourceProps(this, eax_al_context_);
     }
 }
 
@@ -6029,7 +6039,8 @@ void ALsource::eax_set_al_source_send(
     if(auto *oldslot = send.Slot)
         DecrementRef(oldslot->ref);
     send.Slot = slot;
-    mPropsDirty.set(std::memory_order_release);
+
+    mPropsDirty = true;
 }
 
 #endif // ALSOFT_EAX

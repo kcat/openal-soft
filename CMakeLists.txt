@@ -95,7 +95,7 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
-option(ALSOFT_EAX "Enable EAX extensions." ${WIN32})
+option(ALSOFT_EAX "Enable legacy EAX extensions" ${WIN32})
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -1485,17 +1485,12 @@ if(FPMATH_SET)
 endif()
 
 if(ALSOFT_EAX)
-    message(STATUS "Building with deprecated EAX extensions
+    message(STATUS "Building with legacy EAX extensions
 ")
 endif()
 
 if(ALSOFT_EMBED_HRTF_DATA)
     message(STATUS "Embedding HRTF datasets
-")
-endif()
-
-if(ALSOFT_EAX)
-    message(STATUS "Enabled deprecated EAX extensions
 ")
 endif()
 

@@ -257,6 +257,9 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
+#ifdef ALSOFT_EAX
+    eax_apply_deferred();
+#endif
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(this);
     UpdateAllEffectSlotProps(this);

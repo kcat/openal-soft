@@ -342,7 +342,7 @@ public:
         return *this;
     }
 
-    operator bool() const noexcept { return mLoop != nullptr; }
+    explicit operator bool() const noexcept { return mLoop != nullptr; }
 
     auto start() const { return pw_thread_loop_start(mLoop); }
     auto stop() const { return pw_thread_loop_stop(mLoop); }

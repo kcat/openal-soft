@@ -818,21 +818,14 @@ void NodeProxy::infoCallback(const pw_node_info *info)
             return;
         }
 
-        bool isHeadphones{};
-        if(const char *form_factor{spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR)})
-        {
-            if(al::strcasecmp(form_factor, "headphones") == 0
-                || al::strcasecmp(form_factor, "headset") == 0)
-                isHeadphones = true;
-        }
-
         const char *devName{spa_dict_lookup(info->props, PW_KEY_NODE_NAME)};
         const char *nodeName{spa_dict_lookup(info->props, PW_KEY_NODE_DESCRIPTION)};
         if(!nodeName || !*nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NICK);
         if(!nodeName || !*nodeName) nodeName = devName;
 
-        TRACE("Got %s device \"%s\"%s\n", AsString(ntype), devName ? devName : "(nil)",
-            isHeadphones ? " (headphones)" : "");
+        const char *form_factor{spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR)};
+        TRACE("Got %s device \"%s\"%s%s%s\n", AsString(ntype), devName ? devName : "(nil)",
+            form_factor?" (":"", form_factor?form_factor:"", form_factor?")":"");
         TRACE("  \"%s\" = ID %u\n", nodeName ? nodeName : "(nil)", info->id);
 
         DeviceNode &node = DeviceNode::Add(info->id);
@@ -840,7 +833,8 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         else node.mName = "PipeWire node #"+std::to_string(info->id);
         node.mDevName = devName ? devName : "";
         node.mType = ntype;
-        node.mIsHeadphones = isHeadphones;
+        node.mIsHeadphones = form_factor && (al::strcasecmp(form_factor, "headphones") == 0
+            || al::strcasecmp(form_factor, "headset") == 0);
     }
 }
 

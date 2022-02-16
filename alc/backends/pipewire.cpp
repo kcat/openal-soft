@@ -568,7 +568,12 @@ DeviceNode *DeviceNode::Find(uint32_t id)
 void DeviceNode::Remove(uint32_t id)
 {
     auto match_id = [id](DeviceNode &n) noexcept -> bool
-    { return n.mId == id; };
+    {
+        if(n.mId != id)
+            return false;
+        TRACE("Removing device \"%s\"\n", n.mDevName.c_str());
+        return true;
+    };
 
     auto end = std::remove_if(sList.begin(), sList.end(), match_id);
     sList.erase(end, sList.end());

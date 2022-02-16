@@ -696,10 +696,10 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
 
 void DeviceNode::parsePositions(const spa_pod *value) noexcept
 {
-    mIs51Rear = false;
-
     const auto chanmap = get_array_span<SPA_TYPE_Id>(value);
     if(chanmap.empty()) return;
+
+    mIs51Rear = false;
 
     if(MatchChannelMap(chanmap, X71Map))
         mChannels = DevFmtX71;
@@ -724,11 +724,11 @@ void DeviceNode::parsePositions(const spa_pod *value) noexcept
 
 void DeviceNode::parseChannelCount(const spa_pod *value) noexcept
 {
-    mIs51Rear = false;
-
     /* As a fallback with just a channel count, just assume mono or stereo. */
     const auto chancount = get_value<SPA_TYPE_Int>(value);
     if(!chancount) return;
+
+    mIs51Rear = false;
 
     if(*chancount >= 2)
         mChannels = DevFmtStereo;

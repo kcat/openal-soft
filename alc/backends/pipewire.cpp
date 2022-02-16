@@ -744,6 +744,7 @@ constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
 constexpr char AudioSourceClass[]{"Audio/Source"};
 constexpr char AudioDuplexClass[]{"Audio/Duplex"};
+constexpr char StreamClass[]{"Stream/"};
 
 /* A generic PipeWire node proxy object used to track changes to sink and
  * source nodes.
@@ -1056,7 +1057,8 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             || al::strcasecmp(media_class, AudioDuplexClass) == 0};
         if(!isGood)
         {
-            if(std::strstr(media_class, "/Video") == nullptr)
+            if(std::strstr(media_class, "/Video") == nullptr
+                && std::strncmp(media_class, StreamClass, sizeof(StreamClass)-1) != 0)
                 TRACE("Ignoring node class %s\n", media_class);
             return;
         }

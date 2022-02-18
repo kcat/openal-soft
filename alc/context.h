@@ -248,8 +248,6 @@ public:
     void eax_set_last_error() noexcept;
 
 
-    float eax_get_max_filter_gain() const noexcept { return eax_max_filter_gain_; }
-
     EaxFxSlotIndex eax_get_previous_primary_fx_slot_index() const noexcept
     { return eax_previous_primary_fx_slot_index_; }
     EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept
@@ -337,7 +335,6 @@ private:
     long eax_last_error_{};
     unsigned long eax_speaker_config_{};
 
-    float eax_max_filter_gain_{};
     EaxFxSlotIndex eax_previous_primary_fx_slot_index_{};
     EaxFxSlotIndex eax_primary_fx_slot_index_{};
     EaxFxSlots eax_fx_slots_{};
@@ -377,8 +374,6 @@ private:
     unsigned long eax_detect_speaker_configuration() const;
     void eax_update_speaker_configuration();
 
-
-    void eax_initialize_filter_gain();
 
     void eax_set_last_error_defaults() noexcept;
 

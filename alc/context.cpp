@@ -635,7 +635,6 @@ void ALCcontext::eax_initialize()
     }
 
     eax_ensure_compatibility();
-    eax_initialize_filter_gain();
     eax_set_defaults();
     eax_set_air_absorbtion_hf();
     eax_update_speaker_configuration();
@@ -711,11 +710,6 @@ unsigned long ALCcontext::eax_detect_speaker_configuration() const
 void ALCcontext::eax_update_speaker_configuration()
 {
     eax_speaker_config_ = eax_detect_speaker_configuration();
-}
-
-void ALCcontext::eax_initialize_filter_gain()
-{
-    eax_max_filter_gain_ = level_mb_to_gain(GainMixMax / mGainBoost);
 }
 
 void ALCcontext::eax_set_last_error_defaults() noexcept

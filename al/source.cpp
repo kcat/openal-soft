@@ -3894,12 +3894,10 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
         }
     }
 
-    const auto max_gain = eax_al_context_->eax_get_max_filter_gain();
-
     const auto al_low_pass_param = EaxAlLowPassParam
     {
-        clamp(level_mb_to_gain(gain_mb), 0.0F, max_gain),
-        clamp(level_mb_to_gain(gain_hf_mb), 0.0F, max_gain)
+        level_mb_to_gain(gain_mb),
+        minf(level_mb_to_gain(gain_hf_mb), 1.0f)
     };
 
     return al_low_pass_param;
@@ -3947,12 +3945,10 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
 
         0.0F;
 
-    const auto max_gain = eax_al_context_->eax_get_max_filter_gain();
-
     const auto al_low_pass_param = EaxAlLowPassParam
     {
-        clamp(level_mb_to_gain(gain_mb), 0.0F, max_gain),
-        clamp(level_mb_to_gain(gain_hf_mb), 0.0F, max_gain)
+        level_mb_to_gain(gain_mb),
+        minf(level_mb_to_gain(gain_hf_mb), 1.0f)
     };
 
     return al_low_pass_param;

@@ -10,7 +10,6 @@
 
 using EaxFxSlotIndexValue = std::size_t;
 
-
 class EaxFxSlotIndex : public al::optional<EaxFxSlotIndexValue>
 {
 public:
@@ -27,12 +26,16 @@ private:
     static void fail(const char *message);
 }; // EaxFxSlotIndex
 
-bool operator==(
-    const EaxFxSlotIndex& lhs,
-    const EaxFxSlotIndex& rhs) noexcept;
+inline bool operator==(const EaxFxSlotIndex& lhs, const EaxFxSlotIndex& rhs) noexcept
+{
+    if(lhs.has_value() != rhs.has_value())
+        return false;
+    if(lhs.has_value())
+        return *lhs == *rhs;
+    return true;
+}
 
-bool operator!=(
-    const EaxFxSlotIndex& lhs,
-    const EaxFxSlotIndex& rhs) noexcept;
+inline bool operator!=(const EaxFxSlotIndex& lhs, const EaxFxSlotIndex& rhs) noexcept
+{ return !(lhs == rhs); }
 
 #endif // !EAX_FX_SLOT_INDEX_INCLUDED

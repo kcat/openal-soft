@@ -157,13 +157,11 @@ struct EAXVECTOR
     float z;
 }; // EAXVECTOR
 
-bool operator==(
-    const EAXVECTOR& lhs,
-    const EAXVECTOR& rhs) noexcept;
+inline bool operator==(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
+{ return std::memcmp(&lhs, &rhs, sizeof(EAXVECTOR)) == 0; }
 
-bool operator!=(
-    const EAXVECTOR& lhs,
-    const EAXVECTOR& rhs) noexcept;
+inline bool operator!=(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
+{ return !(lhs == rhs); }
 
 
 extern const GUID EAXPROPERTYID_EAX40_Context;

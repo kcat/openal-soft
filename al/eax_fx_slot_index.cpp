@@ -69,22 +69,3 @@ void EaxFxSlotIndex::fail(const char* message)
 {
     throw EaxFxSlotIndexException{message};
 }
-
-
-bool operator==(
-    const EaxFxSlotIndex& lhs,
-    const EaxFxSlotIndex& rhs) noexcept
-{
-    if(lhs.has_value() != rhs.has_value())
-        return false;
-    if(lhs.has_value())
-        return *lhs == *rhs;
-    return true;
-}
-
-bool operator!=(
-    const EaxFxSlotIndex& lhs,
-    const EaxFxSlotIndex& rhs) noexcept
-{
-    return !(lhs == rhs);
-}

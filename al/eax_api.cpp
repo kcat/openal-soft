@@ -254,21 +254,6 @@ const GUID EAX_RINGMODULATOR_EFFECT =
 
 
 bool operator==(
-    const EAXVECTOR& lhs,
-    const EAXVECTOR& rhs) noexcept
-{
-    return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
-}
-
-bool operator!=(
-    const EAXVECTOR& lhs,
-    const EAXVECTOR& rhs) noexcept
-{
-    return !(lhs == rhs);
-}
-
-
-bool operator==(
     const EAX40CONTEXTPROPERTIES& lhs,
     const EAX40CONTEXTPROPERTIES& rhs) noexcept
 {

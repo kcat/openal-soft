@@ -293,7 +293,7 @@ inline float gain_to_level_mb(float x)
 {
     if (x <= 0.0f)
         return -10'000.0f;
-    return std::log10(x * 2'000.0f);
+    return maxf(std::log10(x) * 2'000.0f, -10'000.0f);
 }
 
 #endif /* AL_NUMERIC_H */

@@ -74,7 +74,7 @@ public:
         return *this;
     }
 
-    operator bool() const noexcept { return mPtr != nullptr; }
+    explicit operator bool() const noexcept { return mPtr != nullptr; }
 
     T& operator*() const noexcept { return *mPtr; }
     T* operator->() const noexcept { return mPtr; }

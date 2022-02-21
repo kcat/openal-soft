@@ -463,7 +463,7 @@ struct WasapiProxy {
         const char *mParam;
         std::promise<HRESULT> mPromise;
 
-        operator bool() const noexcept { return mType != MsgType::QuitThread; }
+        explicit operator bool() const noexcept { return mType != MsgType::QuitThread; }
     };
     static std::deque<Msg> mMsgQueue;
     static std::mutex mMsgQueueLock;

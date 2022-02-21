@@ -12,16 +12,22 @@
  * is not required to be true, but it can result in more optimal code for the
  * true path at the expense of a less optimal false path.
  */
-constexpr bool likely(bool expr) { return __builtin_expect(expr, true); }
+template<typename T>
+constexpr bool likely(T&& expr) noexcept
+{ return __builtin_expect(static_cast<bool>(expr), true); }
 /* The opposite of likely(), optimizing for the case where the condition is
  * false.
  */
-constexpr bool unlikely(bool expr) { return __builtin_expect(expr, false); }
+template<typename T>
+constexpr bool unlikely(T&& expr) noexcept
+{ return __builtin_expect(static_cast<bool>(expr), false); }
 
 #else
 
-constexpr bool likely(bool expr) { return expr; }
-constexpr bool unlikely(bool expr) { return expr; }
+template<typename T>
+constexpr bool likely(T&& expr) noexcept { return static_cast<bool>(expr); }
+template<typename T>
+constexpr bool unlikely(T&& expr) noexcept { return static_cast<bool>(expr); }
 #endif
 #define LIKELY(x) (likely(x))
 #define UNLIKELY(x) (unlikely(x))

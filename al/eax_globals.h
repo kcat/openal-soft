@@ -5,11 +5,11 @@
 extern bool eax_g_is_enabled;
 
 
-extern const char eax_v2_0_ext_name_1[];
-extern const char eax_v2_0_ext_name_2[];
-extern const char eax_v3_0_ext_name[];
-extern const char eax_v4_0_ext_name[];
-extern const char eax_v5_0_ext_name[];
+extern const char eax1_ext_name[];
+extern const char eax2_ext_name[];
+extern const char eax3_ext_name[];
+extern const char eax4_ext_name[];
+extern const char eax5_ext_name[];
 
 extern const char eax_x_ram_ext_name[];
 

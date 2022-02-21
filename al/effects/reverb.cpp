@@ -11,9 +11,8 @@
 
 #ifdef ALSOFT_EAX
 #include <tuple>
-
 #include "alnumeric.h"
-
+#include "AL/efx-presets.h"
 #include "al/eax_exception.h"
 #include "al/eax_utils.h"
 #endif // ALSOFT_EAX
@@ -567,6 +566,8 @@ const EffectProps StdReverbEffectProps{genDefaultStdProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
+extern const EFXEAXREVERBPROPERTIES eax_efx_reverb_presets[];
+
 using EaxReverbEffectDirtyFlagsValue = std::uint_least32_t;
 
 struct EaxReverbEffectDirtyFlags
@@ -599,6 +600,17 @@ struct EaxReverbEffectDirtyFlags
     EaxReverbEffectDirtyFlagsValue ulFlags : 1;
 }; // EaxReverbEffectDirtyFlags
 
+using Eax1ReverbEffectDirtyFlagsValue = std::uint_least8_t;
+
+struct Eax1ReverbEffectDirtyFlags
+{
+    using EaxIsBitFieldStruct = bool;
+
+    EaxReverbEffectDirtyFlagsValue environment : 1;
+    EaxReverbEffectDirtyFlagsValue volume : 1;
+    EaxReverbEffectDirtyFlagsValue decay_time : 1;
+    EaxReverbEffectDirtyFlagsValue damping : 1;
+}; // Eax1ReverbEffectDirtyFlags
 
 class EaxReverbEffect final :
     public EaxEffect
@@ -611,15 +623,18 @@ public:
         const EaxEaxCall& eax_call) override;
 
 private:
+    EAX_REVERBPROPERTIES eax1_{};
     EAXREVERBPROPERTIES eax_{};
     EAXREVERBPROPERTIES eax_d_{};
+    Eax1ReverbEffectDirtyFlags eax1_dirty_flags_{};
     EaxReverbEffectDirtyFlags eax_dirty_flags_{};
 
+    [[noreturn]] static void eax_fail(const char* message);
 
     void set_eax_defaults();
 
 
-    void set_efx_density();
+    void set_efx_density_from_environment_size();
 
     void set_efx_diffusion();
 
@@ -668,6 +683,8 @@ private:
     void set_efx_defaults();
 
 
+    bool v1_get(const EaxEaxCall& eax_call) const;
+
     void get_all(
         const EaxEaxCall& eax_call) const;
 
@@ -676,85 +693,91 @@ private:
         const EaxEaxCall& eax_call) const;
 
 
-    void validate_environment(
+    static void v1_validate_environment(unsigned long environment);
+    static void v1_validate_volume(float volume);
+    static void v1_validate_decay_time(float decay_time);
+    static void v1_validate_damping(float damping);
+    static void v1_validate_all(const EAX_REVERBPROPERTIES& all);
+
+    static void validate_environment(
         unsigned long ulEnvironment,
         int version,
         bool is_standalone);
 
-    void validate_environment_size(
+    static void validate_environment_size(
         float flEnvironmentSize);
 
-    void validate_environment_diffusion(
+    static void validate_environment_diffusion(
         float flEnvironmentDiffusion);
 
-    void validate_room(
+    static void validate_room(
         long lRoom);
 
-    void validate_room_hf(
+    static void validate_room_hf(
         long lRoomHF);
 
-    void validate_room_lf(
+    static void validate_room_lf(
         long lRoomLF);
 
-    void validate_decay_time(
+    static void validate_decay_time(
         float flDecayTime);
 
-    void validate_decay_hf_ratio(
+    static void validate_decay_hf_ratio(
         float flDecayHFRatio);
 
-    void validate_decay_lf_ratio(
+    static void validate_decay_lf_ratio(
         float flDecayLFRatio);
 
-    void validate_reflections(
+    static void validate_reflections(
         long lReflections);
 
-    void validate_reflections_delay(
+    static void validate_reflections_delay(
         float flReflectionsDelay);
 
-    void validate_reflections_pan(
+    static void validate_reflections_pan(
         const EAXVECTOR& vReflectionsPan);
 
-    void validate_reverb(
+    static void validate_reverb(
         long lReverb);
 
-    void validate_reverb_delay(
+    static void validate_reverb_delay(
         float flReverbDelay);
 
-    void validate_reverb_pan(
+    static void validate_reverb_pan(
         const EAXVECTOR& vReverbPan);
 
-    void validate_echo_time(
+    static void validate_echo_time(
         float flEchoTime);
 
-    void validate_echo_depth(
+    static void validate_echo_depth(
         float flEchoDepth);
 
-    void validate_modulation_time(
+    static void validate_modulation_time(
         float flModulationTime);
 
-    void validate_modulation_depth(
+    static void validate_modulation_depth(
         float flModulationDepth);
 
-    void validate_air_absorbtion_hf(
+    static void validate_air_absorbtion_hf(
         float air_absorbtion_hf);
 
-    void validate_hf_reference(
+    static void validate_hf_reference(
         float flHFReference);
 
-    void validate_lf_reference(
+    static void validate_lf_reference(
         float flLFReference);
 
-    void validate_room_rolloff_factor(
+    static void validate_room_rolloff_factor(
         float flRoomRolloffFactor);
 
-    void validate_flags(
+    static void validate_flags(
         unsigned long ulFlags);
 
-    void validate_all(
+    static void validate_all(
         const EAX20LISTENERPROPERTIES& all,
         int version);
 
-    void validate_all(
+    static void validate_all(
         const EAXREVERBPROPERTIES& all,
         int version);
 
@@ -914,6 +937,14 @@ private:
         const EaxEaxCall& eax_call);
 
 
+    void v1_set_efx();
+    bool v1_set_environment(const EaxEaxCall& eax_call);
+    bool v1_set_volume(const EaxEaxCall& eax_call);
+    bool v1_set_decay_time(const EaxEaxCall& eax_call);
+    bool v1_set_damping(const EaxEaxCall& eax_call);
+    bool v1_set_all(const EaxEaxCall& eax_call);
+    bool v1_set(const EaxEaxCall& eax_call);
+
     // [[nodiscard]]
     bool apply_deferred();
 
@@ -950,14 +981,19 @@ bool EaxReverbEffect::dispatch(
     return eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
+[[noreturn]] void EaxReverbEffect::eax_fail(const char* message)
+{
+    throw EaxReverbEffectException{message};
+}
+
 void EaxReverbEffect::set_eax_defaults()
 {
+    eax1_ = EAX1REVERB_PRESETS[EAX_ENVIRONMENT_GENERIC];
     eax_ = EAXREVERB_PRESETS[EAX_ENVIRONMENT_GENERIC];
-
     eax_d_ = eax_;
 }
 
-void EaxReverbEffect::set_efx_density()
+void EaxReverbEffect::set_efx_density_from_environment_size()
 {
     const auto eax_environment_size = eax_.flEnvironmentSize;
 
@@ -1180,7 +1216,7 @@ void EaxReverbEffect::set_efx_flags()
 
 void EaxReverbEffect::set_efx_defaults()
 {
-    set_efx_density();
+    set_efx_density_from_environment_size();
     set_efx_diffusion();
     set_efx_gain();
     set_efx_gain_hf();
@@ -1203,6 +1239,37 @@ void EaxReverbEffect::set_efx_defaults()
     set_efx_lf_reference();
     set_efx_room_rolloff_factor();
     set_efx_flags();
+}
+
+bool EaxReverbEffect::v1_get(const EaxEaxCall& eax_call) const
+{
+    switch (eax_call.get_property_id())
+    {
+        case DSPROPERTY_EAX_ALL:
+            eax_call.set_value<EaxReverbEffectException>(eax1_);
+            break;
+
+        case DSPROPERTY_EAX_ENVIRONMENT:
+            eax_call.set_value<EaxReverbEffectException>(eax1_.environment);
+            break;
+
+        case DSPROPERTY_EAX_VOLUME:
+            eax_call.set_value<EaxReverbEffectException>(eax1_.fVolume);
+            break;
+
+        case DSPROPERTY_EAX_DECAYTIME:
+            eax_call.set_value<EaxReverbEffectException>(eax1_.fDecayTime_sec);
+            break;
+
+        case DSPROPERTY_EAX_DAMPING:
+            eax_call.set_value<EaxReverbEffectException>(eax1_.fDamping);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+
+    return false;
 }
 
 void EaxReverbEffect::get_all(
@@ -1236,6 +1303,9 @@ void EaxReverbEffect::get_all(
 bool EaxReverbEffect::get(
     const EaxEaxCall& eax_call) const
 {
+    if (eax_call.get_version() == 1)
+        return v1_get(eax_call);
+
     switch (eax_call.get_property_id())
     {
         case EAXREVERB_NONE:
@@ -1342,10 +1412,38 @@ bool EaxReverbEffect::get(
             break;
 
         default:
-            throw EaxReverbEffectException{"Unsupported property id."};
+            eax_fail("Unsupported property id.");
     }
 
     return false;
+}
+
+void EaxReverbEffect::v1_validate_environment(unsigned long environment)
+{
+    validate_environment(environment, 1, true);
+}
+
+void EaxReverbEffect::v1_validate_volume(float volume)
+{
+    eax_validate_range<EaxReverbEffectException>("Volume", volume, EAX1REVERB_MINVOLUME, EAX1REVERB_MAXVOLUME);
+}
+
+void EaxReverbEffect::v1_validate_decay_time(float decay_time)
+{
+    validate_decay_time(decay_time);
+}
+
+void EaxReverbEffect::v1_validate_damping(float damping)
+{
+    eax_validate_range<EaxReverbEffectException>("Damping", damping, EAX1REVERB_MINDAMPING, EAX1REVERB_MAXDAMPING);
+}
+
+void EaxReverbEffect::v1_validate_all(const EAX_REVERBPROPERTIES& all)
+{
+    v1_validate_environment(all.environment);
+    v1_validate_volume(all.fVolume);
+    v1_validate_decay_time(all.fDecayTime_sec);
+    v1_validate_damping(all.fDamping);
 }
 
 void EaxReverbEffect::validate_environment(
@@ -1357,7 +1455,7 @@ void EaxReverbEffect::validate_environment(
         "Environment",
         ulEnvironment,
         EAXREVERB_MINENVIRONMENT,
-        (version == 2 || is_standalone) ? EAX20REVERB_MAXENVIRONMENT : EAX30REVERB_MAXENVIRONMENT);
+        (version <= 2 || is_standalone) ? EAX1REVERB_MAXENVIRONMENT : EAX30REVERB_MAXENVIRONMENT);
 }
 
 void EaxReverbEffect::validate_environment_size(
@@ -1628,6 +1726,42 @@ void EaxReverbEffect::validate_all(
     validate_lf_reference(lReverb.flLFReference);
     validate_room_rolloff_factor(lReverb.flRoomRolloffFactor);
     validate_flags(lReverb.ulFlags);
+}
+
+void EaxReverbEffect::v1_set_efx()
+{
+    auto efx_props = eax_efx_reverb_presets[eax1_.environment];
+    efx_props.flGain = eax1_.fVolume;
+    efx_props.flDecayTime = eax1_.fDecayTime_sec;
+    efx_props.flDecayHFRatio = clamp(eax1_.fDamping, AL_EAXREVERB_MIN_DECAY_HFRATIO, AL_EAXREVERB_MAX_DECAY_HFRATIO);
+
+    al_effect_props_.Reverb.Density = efx_props.flDensity;
+    al_effect_props_.Reverb.Diffusion = efx_props.flDiffusion;
+    al_effect_props_.Reverb.Gain = efx_props.flGain;
+    al_effect_props_.Reverb.GainHF = efx_props.flGainHF;
+    al_effect_props_.Reverb.GainLF = efx_props.flGainLF;
+    al_effect_props_.Reverb.DecayTime = efx_props.flDecayTime;
+    al_effect_props_.Reverb.DecayHFRatio = efx_props.flDecayHFRatio;
+    al_effect_props_.Reverb.DecayLFRatio = efx_props.flDecayLFRatio;
+    al_effect_props_.Reverb.ReflectionsGain = efx_props.flReflectionsGain;
+    al_effect_props_.Reverb.ReflectionsDelay = efx_props.flReflectionsDelay;
+    al_effect_props_.Reverb.ReflectionsPan[0] = efx_props.flReflectionsPan[0];
+    al_effect_props_.Reverb.ReflectionsPan[1] = efx_props.flReflectionsPan[1];
+    al_effect_props_.Reverb.ReflectionsPan[2] = efx_props.flReflectionsPan[2];
+    al_effect_props_.Reverb.LateReverbGain = efx_props.flLateReverbGain;
+    al_effect_props_.Reverb.LateReverbDelay = efx_props.flLateReverbDelay;
+    al_effect_props_.Reverb.LateReverbPan[0] = efx_props.flLateReverbPan[0];
+    al_effect_props_.Reverb.LateReverbPan[1] = efx_props.flLateReverbPan[1];
+    al_effect_props_.Reverb.LateReverbPan[2] = efx_props.flLateReverbPan[2];
+    al_effect_props_.Reverb.EchoTime = efx_props.flEchoTime;
+    al_effect_props_.Reverb.EchoDepth = efx_props.flEchoDepth;
+    al_effect_props_.Reverb.ModulationTime = efx_props.flModulationTime;
+    al_effect_props_.Reverb.ModulationDepth = efx_props.flModulationDepth;
+    al_effect_props_.Reverb.HFReference = efx_props.flHFReference;
+    al_effect_props_.Reverb.LFReference = efx_props.flLFReference;
+    al_effect_props_.Reverb.RoomRolloffFactor = efx_props.flRoomRolloffFactor;
+    al_effect_props_.Reverb.AirAbsorptionGainHF = efx_props.flAirAbsorptionGainHF;
+    al_effect_props_.Reverb.DecayHFLimit = false;
 }
 
 void EaxReverbEffect::defer_environment(
@@ -2200,6 +2334,87 @@ void EaxReverbEffect::defer_all(
     }
 }
 
+bool EaxReverbEffect::v1_set_environment(const EaxEaxCall& eax_call)
+{
+    const auto environment = eax_call.get_value<EaxReverbEffectException, const decltype(EAX_REVERBPROPERTIES::environment)>();
+    v1_validate_environment(environment);
+
+    if (eax1_.environment == environment)
+        return false;
+
+    eax1_.environment = environment;
+    v1_set_efx();
+    return true;
+}
+
+bool EaxReverbEffect::v1_set_volume(const EaxEaxCall& eax_call)
+{
+    const auto volume = eax_call.get_value<EaxReverbEffectException, const decltype(EAX_REVERBPROPERTIES::fVolume)>();
+    v1_validate_volume(volume);
+
+    if (eax1_.fVolume == volume)
+        return false;
+
+    eax1_.fVolume = volume;
+    v1_set_efx();
+    return true;
+}
+
+bool EaxReverbEffect::v1_set_decay_time(const EaxEaxCall& eax_call)
+{
+    const auto decay_time = eax_call.get_value<EaxReverbEffectException, const decltype(EAX_REVERBPROPERTIES::fDecayTime_sec)>();
+    v1_validate_decay_time(decay_time);
+
+    if (eax1_.fDecayTime_sec == decay_time)
+        return false;
+
+    eax1_.fDecayTime_sec = decay_time;
+    v1_set_efx();
+    return true;
+}
+
+bool EaxReverbEffect::v1_set_damping(const EaxEaxCall& eax_call)
+{
+    const auto damping = eax_call.get_value<EaxReverbEffectException, const decltype(EAX_REVERBPROPERTIES::fDamping)>();
+    v1_validate_damping(damping);
+
+    if (eax1_.fDamping == damping)
+        return false;
+
+    eax1_.fDamping = damping;
+    v1_set_efx();
+    return true;
+}
+
+bool EaxReverbEffect::v1_set_all(const EaxEaxCall& eax_call)
+{
+    const auto& all = eax_call.get_value<EaxReverbEffectException, const EAX_REVERBPROPERTIES>();
+    v1_validate_all(all);
+
+    if (eax1_ == all)
+        return false;
+
+    eax1_.environment = all.environment;
+    eax1_.fVolume = all.fVolume;
+    eax1_.fDecayTime_sec = all.fDecayTime_sec;
+    eax1_.fDamping = all.fDamping;
+    v1_set_efx();
+    return true;
+}
+
+bool EaxReverbEffect::v1_set(const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case DSPROPERTY_EAX_ALL: return v1_set_all(eax_call);
+        case DSPROPERTY_EAX_ENVIRONMENT: return v1_set_environment(eax_call);
+        case DSPROPERTY_EAX_VOLUME: return v1_set_volume(eax_call);
+        case DSPROPERTY_EAX_DECAYTIME: return v1_set_decay_time(eax_call);
+        case DSPROPERTY_EAX_DAMPING: return v1_set_damping(eax_call);
+        default: eax_fail("Unsupported property id.");
+    }
+}
+
 // [[nodiscard]]
 bool EaxReverbEffect::apply_deferred()
 {
@@ -2216,7 +2431,7 @@ bool EaxReverbEffect::apply_deferred()
 
     if (eax_dirty_flags_.flEnvironmentSize)
     {
-        set_efx_density();
+        set_efx_density_from_environment_size();
     }
 
     if (eax_dirty_flags_.flEnvironmentDiffusion)
@@ -2338,6 +2553,9 @@ bool EaxReverbEffect::apply_deferred()
 bool EaxReverbEffect::set(
     const EaxEaxCall& eax_call)
 {
+    if (eax_call.get_version() == 1)
+        return v1_set(eax_call);
+
     switch (eax_call.get_property_id())
     {
         case EAXREVERB_NONE:
@@ -2444,7 +2662,7 @@ bool EaxReverbEffect::set(
             break;
 
         default:
-            throw EaxReverbEffectException{"Unsupported property id."};
+            eax_fail("Unsupported property id.");
     }
 
     if (!eax_call.is_deferred())
@@ -2454,6 +2672,36 @@ bool EaxReverbEffect::set(
 
     return false;
 }
+
+const EFXEAXREVERBPROPERTIES eax_efx_reverb_presets[EAX1_ENVIRONMENT_COUNT] =
+{
+    EFX_REVERB_PRESET_GENERIC,
+    EFX_REVERB_PRESET_PADDEDCELL,
+    EFX_REVERB_PRESET_ROOM,
+    EFX_REVERB_PRESET_BATHROOM,
+    EFX_REVERB_PRESET_LIVINGROOM,
+    EFX_REVERB_PRESET_STONEROOM,
+    EFX_REVERB_PRESET_AUDITORIUM,
+    EFX_REVERB_PRESET_CONCERTHALL,
+    EFX_REVERB_PRESET_CAVE,
+    EFX_REVERB_PRESET_ARENA,
+    EFX_REVERB_PRESET_HANGAR,
+    EFX_REVERB_PRESET_CARPETEDHALLWAY,
+    EFX_REVERB_PRESET_HALLWAY,
+    EFX_REVERB_PRESET_STONECORRIDOR,
+    EFX_REVERB_PRESET_ALLEY,
+    EFX_REVERB_PRESET_FOREST,
+    EFX_REVERB_PRESET_CITY,
+    EFX_REVERB_PRESET_MOUNTAINS,
+    EFX_REVERB_PRESET_QUARRY,
+    EFX_REVERB_PRESET_PLAIN,
+    EFX_REVERB_PRESET_PARKINGLOT,
+    EFX_REVERB_PRESET_SEWERPIPE,
+    EFX_REVERB_PRESET_UNDERWATER,
+    EFX_REVERB_PRESET_DRUGGED,
+    EFX_REVERB_PRESET_DIZZY,
+    EFX_REVERB_PRESET_PSYCHOTIC,
+}; // EFXEAXREVERBPROPERTIES
 
 } // namespace
 

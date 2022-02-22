@@ -12,7 +12,7 @@
 #include "al/eax_api.h"
 
 
-extern const GUID DSPROPSETID_EAX_ReverbProperties =
+const GUID DSPROPSETID_EAX_ReverbProperties =
 {
     0x4A4E6FC1,
     0xC341,
@@ -20,7 +20,7 @@ extern const GUID DSPROPSETID_EAX_ReverbProperties =
     {0xB7, 0x3A, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}
 };
 
-extern const GUID DSPROPSETID_EAXBUFFER_ReverbProperties =
+const GUID DSPROPSETID_EAXBUFFER_ReverbProperties =
 {
     0x4A4E6FC0,
     0xC341,

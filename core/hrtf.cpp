@@ -447,32 +447,47 @@ void MirrorLeftHrirs(const al::span<const HrtfStore::Elevation> elevs, HrirArray
 }
 
 
+template<size_t num_bits, typename T>
+constexpr std::enable_if_t<std::is_signed<T>::value && num_bits < sizeof(T)*8,
+T> fixsign(T value) noexcept
+{
+    constexpr auto signbit = static_cast<T>(1u << (num_bits-1));
+    return static_cast<T>((value^signbit) - signbit);
+}
+
+template<size_t num_bits, typename T>
+constexpr std::enable_if_t<!std::is_signed<T>::value || num_bits == sizeof(T)*8,
+T> fixsign(T value) noexcept
+{ return value; }
+
 template<typename T, size_t num_bits=sizeof(T)*8>
-inline T readle(std::istream &data)
+inline std::enable_if_t<al::endian::native == al::endian::little,
+T> readle(std::istream &data)
 {
     static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
     static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
 
     T ret{};
-    if_constexpr(al::endian::native == al::endian::little)
-    {
-        if(!data.read(reinterpret_cast<char*>(&ret), num_bits/8))
-            return static_cast<T>(EOF);
-    }
-    else
-    {
-        al::byte b[sizeof(T)]{};
-        if(!data.read(reinterpret_cast<char*>(b), num_bits/8))
-            return static_cast<T>(EOF);
-        std::reverse_copy(std::begin(b), std::end(b), reinterpret_cast<al::byte*>(&ret));
-    }
+    if(!data.read(reinterpret_cast<char*>(&ret), num_bits/8))
+        return static_cast<T>(EOF);
 
-    if_constexpr(std::is_signed<T>::value && num_bits < sizeof(T)*8)
-    {
-        constexpr auto signbit = static_cast<T>(1u << (num_bits-1));
-        return static_cast<T>((ret^signbit) - signbit);
-    }
-    return ret;
+    return fixsign<num_bits>(ret);
+}
+
+template<typename T, size_t num_bits=sizeof(T)*8>
+inline std::enable_if_t<al::endian::native == al::endian::big,
+T> readle(std::istream &data)
+{
+    static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
+    static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
+
+    T ret{};
+    al::byte b[sizeof(T)]{};
+    if(!data.read(reinterpret_cast<char*>(b), num_bits/8))
+        return static_cast<T>(EOF);
+    std::reverse_copy(std::begin(b), std::end(b), reinterpret_cast<al::byte*>(&ret));
+
+    return fixsign<num_bits>(ret);
 }
 
 template<>

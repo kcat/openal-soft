@@ -102,7 +102,7 @@ constexpr SLuint32 GetTypeRepresentation(DevFmtType type) noexcept
 
 constexpr SLuint32 GetByteOrderEndianness() noexcept
 {
-    if_constexpr(al::endian::native == al::endian::little)
+    if(al::endian::native == al::endian::little)
         return SL_BYTEORDER_LITTLEENDIAN;
     return SL_BYTEORDER_BIGENDIAN;
 }

@@ -6,7 +6,6 @@
 #include <type_traits>
 #if !defined(__GNUC__) && (defined(_WIN32) || defined(_WIN64))
 #include <intrin.h>
-#include "opthelpers.h"
 #endif
 
 namespace al {
@@ -111,34 +110,33 @@ int> popcount(T val) noexcept
     return static_cast<int>(((v * b00000001) >> ((sizeof(T)-1)*8)) & 0xff);
 }
 
-#if defined(_WIN64)
+#ifdef _WIN32
 
 template<typename T>
-inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value,
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+    && std::numeric_limits<T>::digits <= 32,
 int> countr_zero(T v)
 {
     unsigned long idx{std::numeric_limits<T>::digits};
-    if_constexpr(std::numeric_limits<T>::digits <= 32)
-        _BitScanForward(&idx, static_cast<uint32_t>(v));
-    else // std::numeric_limits<T>::digits > 32
-        _BitScanForward64(&idx, v);
+    _BitScanForward(&idx, static_cast<uint32_t>(v));
     return static_cast<int>(idx);
 }
 
-#elif defined(_WIN32)
-
 template<typename T>
-inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value,
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+    && 32 < std::numeric_limits<T>::digits && std::numeric_limits<T>::digits <= 64,
 int> countr_zero(T v)
 {
     unsigned long idx{std::numeric_limits<T>::digits};
-    if_constexpr(std::numeric_limits<T>::digits <= 32)
-        _BitScanForward(&idx, static_cast<uint32_t>(v));
-    else if(!_BitScanForward(&idx, static_cast<uint32_t>(v)))
+#ifdef _WIN64
+    _BitScanForward64(&idx, v);
+#else
+    if(!_BitScanForward(&idx, static_cast<uint32_t>(v)))
     {
         if(_BitScanForward(&idx, static_cast<uint32_t>(v>>32)))
             idx += 32;
     }
+#endif /* _WIN64 */
     return static_cast<int>(idx);
 }
 

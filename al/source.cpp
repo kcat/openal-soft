@@ -1477,7 +1477,8 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
 
             /* Source is now Static */
             Source->SourceType = AL_STATIC;
-            oldlist = std::exchange(Source->mQueue, std::move(newlist));
+            Source->mQueue.swap(oldlist);
+            Source->mQueue.swap(newlist);
         }
         else
         {

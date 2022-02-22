@@ -1494,6 +1494,9 @@ if(ALSOFT_EMBED_HRTF_DATA)
     message(STATUS "")
 endif()
 
+# An alias for sub-project builds
+add_library(OpenAL::OpenAL ALIAS OpenAL)
+
 # Install main library
 if(ALSOFT_INSTALL)
     configure_package_config_file(OpenALConfig.cmake.in OpenALConfig.cmake

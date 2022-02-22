@@ -287,158 +287,23 @@ public:
 }; // ContextException
 
 
+template<typename F>
+void ForEachSource(ALCcontext *context, F func)
+{
+    for(auto &sublist : context->mSourceList)
+    {
+        uint64_t usemask{~sublist.FreeMask};
+        while(usemask)
+        {
+            const int idx{al::countr_zero(usemask)};
+            usemask &= ~(1_u64 << idx);
+
+            func(sublist.Sources[idx]);
+        }
+    }
+}
+
 } // namespace
-
-
-ALCcontext::SourceListIterator::SourceListIterator(
-    SourceList& sources,
-    SourceListIteratorBeginTag) noexcept
-    :
-    sub_list_iterator_{sources.begin()},
-    sub_list_end_iterator_{sources.end()},
-    sub_list_item_index_{}
-{
-    // Search for first non-free item.
-    //
-    while (true)
-    {
-        if (sub_list_iterator_ == sub_list_end_iterator_)
-        {
-            // End of list.
-
-            sub_list_item_index_ = 0;
-            return;
-        }
-
-        if ((~sub_list_iterator_->FreeMask) == 0_u64)
-        {
-            // All sub-list's items are free.
-
-            ++sub_list_iterator_;
-            sub_list_item_index_ = 0;
-            continue;
-        }
-
-        if (sub_list_item_index_ >= 64_u64)
-        {
-            // Sub-list item's index beyond the last one.
-
-            ++sub_list_iterator_;
-            sub_list_item_index_ = 0;
-            continue;
-        }
-
-        if ((sub_list_iterator_->FreeMask & (1_u64 << sub_list_item_index_)) == 0_u64)
-        {
-            // Found non-free item.
-
-            break;
-        }
-
-        sub_list_item_index_ += 1;
-    }
-}
-
-ALCcontext::SourceListIterator::SourceListIterator(
-    SourceList& sources,
-    SourceListIteratorEndTag) noexcept
-    :
-    sub_list_iterator_{sources.end()},
-    sub_list_end_iterator_{sources.end()},
-    sub_list_item_index_{}
-{
-}
-
-ALCcontext::SourceListIterator::SourceListIterator(
-    const SourceListIterator& rhs)
-    :
-    sub_list_iterator_{rhs.sub_list_iterator_},
-    sub_list_end_iterator_{rhs.sub_list_end_iterator_},
-    sub_list_item_index_{rhs.sub_list_item_index_}
-{
-}
-
-ALCcontext::SourceListIterator& ALCcontext::SourceListIterator::operator++()
-{
-    while (true)
-    {
-        if (sub_list_iterator_ == sub_list_end_iterator_)
-        {
-            // End of list.
-
-            sub_list_item_index_ = 0;
-            break;
-        }
-
-        if ((~sub_list_iterator_->FreeMask) == 0_u64)
-        {
-            // All sub-list's items are free.
-
-            ++sub_list_iterator_;
-            sub_list_item_index_ = 0;
-            continue;
-        }
-
-        sub_list_item_index_ += 1;
-
-        if (sub_list_item_index_ >= 64_u64)
-        {
-            // Sub-list item's index beyond the last one.
-
-            ++sub_list_iterator_;
-            sub_list_item_index_ = 0;
-            continue;
-        }
-
-        if ((sub_list_iterator_->FreeMask & (1_u64 << sub_list_item_index_)) == 0_u64)
-        {
-            // Found non-free item.
-
-            break;
-        }
-    }
-
-    return *this;
-}
-
-ALsource& ALCcontext::SourceListIterator::operator*() noexcept
-{
-    assert(sub_list_iterator_ != sub_list_end_iterator_);
-    return (*sub_list_iterator_).Sources[sub_list_item_index_];
-}
-
-bool ALCcontext::SourceListIterator::operator==(
-    const SourceListIterator& rhs) const noexcept
-{
-    return
-        sub_list_iterator_ == rhs.sub_list_iterator_ &&
-        sub_list_end_iterator_ == rhs.sub_list_end_iterator_ &&
-        sub_list_item_index_ == rhs.sub_list_item_index_;
-}
-
-bool ALCcontext::SourceListIterator::operator!=(
-    const SourceListIterator& rhs) const noexcept
-{
-    return !((*this) == rhs);
-}
-
-
-ALCcontext::SourceListEnumerator::SourceListEnumerator(
-    ALCcontext::SourceList& sources) noexcept
-    :
-    sources_{sources}
-{
-}
-
-ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::begin() noexcept
-{
-    return SourceListIterator{sources_, SourceListIteratorBeginTag{}};
-}
-
-ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::end() noexcept
-{
-    return SourceListIterator{sources_, SourceListIteratorEndTag{}};
-}
 
 
 bool ALCcontext::eax_is_capable() const noexcept
@@ -546,17 +411,13 @@ ALenum ALCcontext::eax_eax_get(
 
 void ALCcontext::eax_update_filters()
 {
-    for (auto& source : SourceListEnumerator{mSourceList})
-    {
-        source.eax_update_filters();
-    }
+    ForEachSource(this, std::mem_fn(&ALsource::eax_update_filters));
 }
 
 void ALCcontext::eax_commit_and_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-    for (auto& source : SourceListEnumerator{mSourceList})
-        source.eax_commit_and_update();
+    ForEachSource(this, std::mem_fn(&ALsource::eax_commit_and_update));
 }
 
 void ALCcontext::eax_set_last_error() noexcept
@@ -944,21 +805,17 @@ void ALCcontext::eax_initialize_fx_slots()
 void ALCcontext::eax_initialize_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-
-    for (auto& source : SourceListEnumerator{mSourceList})
-    {
-        source.eax_initialize(this);
-    }
+    auto init_source = [this](ALsource &source) noexcept
+    { source.eax_initialize(this); };
+    ForEachSource(this, init_source);
 }
 
 void ALCcontext::eax_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-
-    for (auto& source : SourceListEnumerator{mSourceList})
-    {
-        source.eax_update(eax_context_shared_dirty_flags_);
-    }
+    auto update_source = [this](ALsource &source)
+    { source.eax_update(eax_context_shared_dirty_flags_); };
+    ForEachSource(this, update_source);
 }
 
 void ALCcontext::eax_validate_primary_fx_slot_id(

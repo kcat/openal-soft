@@ -260,68 +260,6 @@ public:
 
 
 private:
-    using SourceList = al::vector<SourceSubList>;
-
-
-    struct SourceListIteratorBeginTag{};
-    struct SourceListIteratorEndTag{};
-
-    class SourceListIterator
-    {
-    public:
-        SourceListIterator(
-            SourceList& sources,
-            SourceListIteratorBeginTag) noexcept;
-
-        SourceListIterator(
-            SourceList& sources,
-            SourceListIteratorEndTag) noexcept;
-
-        SourceListIterator(
-            const SourceListIterator& rhs);
-
-        SourceListIterator& operator=(
-            const SourceListIterator& rhs) = delete;
-
-        SourceListIterator& operator++();
-
-        ALsource& operator*() noexcept;
-
-        bool operator==(
-            const SourceListIterator& rhs) const noexcept;
-
-        bool operator!=(
-            const SourceListIterator& rhs) const noexcept;
-
-
-    private:
-        SourceList::iterator sub_list_iterator_;
-        SourceList::iterator sub_list_end_iterator_;
-        std::uint64_t sub_list_item_index_;
-    }; // SourceListIterator
-
-    class SourceListEnumerator
-    {
-    public:
-        explicit SourceListEnumerator(
-            SourceList& sources) noexcept;
-
-        SourceListEnumerator(
-            const SourceListEnumerator& rhs) = delete;
-
-        SourceListEnumerator& operator=(
-            const SourceListEnumerator& rhs) = delete;
-
-        SourceListIterator begin() noexcept;
-
-        SourceListIterator end() noexcept;
-
-
-    private:
-        SourceList& sources_;
-    }; // SourceListEnumerator
-
-
     struct Eax
     {
         EAX50CONTEXTPROPERTIES context{};

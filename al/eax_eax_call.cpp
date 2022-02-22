@@ -131,17 +131,35 @@ EaxEaxCall::EaxEaxCall(
         version_ = 5;
         property_set_id_ = EaxEaxCallPropertySetId::source;
     }
+    else if (property_set_guid == DSPROPSETID_EAX_ReverbProperties)
+    {
+        version_ = 1;
+        fx_slot_index_ = 0u;
+        property_set_id_ = EaxEaxCallPropertySetId::fx_slot_effect;
+    }
+    else if (property_set_guid == DSPROPSETID_EAXBUFFER_ReverbProperties)
+    {
+        version_ = 1;
+        property_set_id_ = EaxEaxCallPropertySetId::source;
+    }
     else
     {
         fail("Unsupported property set id.");
     }
 
-    if (version_ < 2 || version_ > 5)
+    if (version_ < 1 || version_ > 5)
     {
         fail("EAX version out of range.");
     }
 
-    if (!is_deferred_)
+    if (is_deferred_)
+    {
+        if (version_ == 1)
+        {
+            fail("EAX1 does not support deferring.");
+        }
+    }
+    else
     {
         if (property_set_id_ != EaxEaxCallPropertySetId::fx_slot &&
             property_id_ != 0)

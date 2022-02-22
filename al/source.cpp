@@ -3788,6 +3788,8 @@ void ALsource::eax_fail(
 
 void ALsource::eax_set_source_defaults() noexcept
 {
+    eax1_.fMix = EAX_REVERBMIX_USEDISTANCE;
+
     eax_.source.lDirect = EAXSOURCE_DEFAULTDIRECT;
     eax_.source.lDirectHF = EAXSOURCE_DEFAULTDIRECTHF;
     eax_.source.lRoom = EAXSOURCE_DEFAULTROOM;
@@ -4151,6 +4153,13 @@ const char* ALsource::eax_get_occlusion_room_ratio_name() noexcept
     return "Occlusion Room Ratio";
 }
 
+void ALsource::eax1_validate_reverb_mix(float reverb_mix)
+{
+    if (reverb_mix == EAX_REVERBMIX_USEDISTANCE)
+        return;
+
+    eax_validate_range<EaxSourceSendException>("Reverb Mix", reverb_mix, EAX_BUFFER_MINREVERBMIX, EAX_BUFFER_MAXREVERBMIX);
+}
 
 void ALsource::eax_validate_send_receiving_fx_slot_guid(
     const GUID& guidReceivingFXSlotID)
@@ -5075,6 +5084,32 @@ void ALsource::eax_defer_source_speaker_level_all(
     }
 }
 
+void ALsource::eax1_set_efx()
+{
+    const auto primary_fx_slot_index = eax_al_context_->eax_get_primary_fx_slot_index();
+
+    if (!primary_fx_slot_index.has_value())
+        return;
+
+    WetGainAuto = (eax1_.fMix == EAX_REVERBMIX_USEDISTANCE);
+    const auto filter_gain = (WetGainAuto ? 1.0F : eax1_.fMix);
+    auto& fx_slot = eax_al_context_->eax_get_fx_slot(*primary_fx_slot_index);
+    eax_set_al_source_send(&fx_slot, *primary_fx_slot_index, EaxAlLowPassParam{filter_gain, 1.0F});
+    mPropsDirty = true;
+}
+
+void ALsource::eax1_set_reverb_mix(const EaxEaxCall& eax_call)
+{
+    const auto reverb_mix = eax_call.get_value<EaxSourceException, const decltype(EAXBUFFER_REVERBPROPERTIES::fMix)>();
+    eax1_validate_reverb_mix(reverb_mix);
+
+    if (eax1_.fMix == reverb_mix)
+        return;
+
+    eax1_.fMix = reverb_mix;
+    eax1_set_efx();
+}
+
 void ALsource::eax_defer_source_direct(
     const EaxEaxCall& eax_call)
 {
@@ -5408,6 +5443,20 @@ void ALsource::eax_set_speaker_levels()
     // TODO
 }
 
+void ALsource::eax1_set(const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case DSPROPERTY_EAXBUFFER_ALL:
+        case DSPROPERTY_EAXBUFFER_REVERBMIX:
+            eax1_set_reverb_mix(eax_call);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+}
+
 void ALsource::eax_apply_deferred()
 {
     if (!eax_are_active_fx_slots_dirty_ &&
@@ -5497,6 +5546,12 @@ void ALsource::eax_apply_deferred()
 void ALsource::eax_set(
     const EaxEaxCall& eax_call)
 {
+    if (eax_call.get_version() == 1)
+    {
+        eax1_set(eax_call);
+        return;
+    }
+
     switch (eax_call.get_property_id())
     {
         case EAXSOURCE_NONE:
@@ -5715,6 +5770,20 @@ void ALsource::eax_copy_send(
     dst_send.flExclusionLFRatio = src_send.flExclusionLFRatio;
 }
 
+void ALsource::eax1_get(const EaxEaxCall& eax_call)
+{
+    switch (eax_call.get_property_id())
+    {
+        case DSPROPERTY_EAXBUFFER_ALL:
+        case DSPROPERTY_EAXBUFFER_REVERBMIX:
+            eax_call.set_value<EaxSourceException>(eax1_);
+            break;
+
+        default:
+            eax_fail("Unsupported property id.");
+    }
+}
+
 void ALsource::eax_api_get_source_all_v2(
     const EaxEaxCall& eax_call)
 {
@@ -5853,6 +5922,12 @@ void ALsource::eax_api_get_source_speaker_level_all(
 void ALsource::eax_get(
     const EaxEaxCall& eax_call)
 {
+    if (eax_call.get_version() == 1)
+    {
+        eax1_get(eax_call);
+        return;
+    }
+
     switch (eax_call.get_property_id())
     {
         case EAXSOURCE_NONE:

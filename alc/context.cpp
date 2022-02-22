@@ -580,11 +580,11 @@ void ALCcontext::eax_initialize_extensions()
 
     const auto string_max_capacity =
         std::strlen(mExtensionList) + 1 +
-        std::strlen(eax_v2_0_ext_name_1) + 1 +
-        std::strlen(eax_v2_0_ext_name_2) + 1 +
-        std::strlen(eax_v3_0_ext_name) + 1 +
-        std::strlen(eax_v4_0_ext_name) + 1 +
-        std::strlen(eax_v5_0_ext_name) + 1 +
+        std::strlen(eax1_ext_name) + 1 +
+        std::strlen(eax2_ext_name) + 1 +
+        std::strlen(eax3_ext_name) + 1 +
+        std::strlen(eax4_ext_name) + 1 +
+        std::strlen(eax5_ext_name) + 1 +
         std::strlen(eax_x_ram_ext_name) + 1 +
         0;
 
@@ -592,19 +592,19 @@ void ALCcontext::eax_initialize_extensions()
 
     if (eax_is_capable())
     {
-        eax_extension_list_ += eax_v2_0_ext_name_1;
+        eax_extension_list_ += eax1_ext_name;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax_v2_0_ext_name_2;
+        eax_extension_list_ += eax2_ext_name;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax_v3_0_ext_name;
+        eax_extension_list_ += eax3_ext_name;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax_v4_0_ext_name;
+        eax_extension_list_ += eax4_ext_name;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax_v5_0_ext_name;
+        eax_extension_list_ += eax5_ext_name;
         eax_extension_list_ += ' ';
     }
 

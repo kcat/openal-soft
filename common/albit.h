@@ -100,15 +100,15 @@ constexpr std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::va
 int> popcount(T val) noexcept
 {
     using fast_type = typename detail_::fast_utype<T>::type;
-    constexpr fast_type m55{detail_::repbits<fast_type>(0x55)};
-    constexpr fast_type m33{detail_::repbits<fast_type>(0x33)};
-    constexpr fast_type m0f{detail_::repbits<fast_type>(0x0f)};
-    constexpr fast_type m01{detail_::repbits<fast_type>(0x01)};
+    constexpr fast_type b01010101{detail_::repbits<fast_type>(0x55)};
+    constexpr fast_type b00110011{detail_::repbits<fast_type>(0x33)};
+    constexpr fast_type b00001111{detail_::repbits<fast_type>(0x0f)};
+    constexpr fast_type b00000001{detail_::repbits<fast_type>(0x01)};
 
-    auto v = val - ((fast_type{val} >> 1) & m55);
-    v = (v & m33) + ((v >> 2) & m33);
-    v = (v + (v >> 4)) & m0f;
-    return static_cast<int>(((v * m01) >> ((sizeof(T)-1)*8)) & 0xff);
+    fast_type v{fast_type{val} - ((fast_type{val} >> 1) & b01010101)};
+    v = (v & b00110011) + ((v >> 2) & b00110011);
+    v = (v + (v >> 4)) & b00001111;
+    return static_cast<int>(((v * b00000001) >> ((sizeof(T)-1)*8)) & 0xff);
 }
 
 #if defined(_WIN64)

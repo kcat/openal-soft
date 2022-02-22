@@ -1472,26 +1472,26 @@ if(HAS_ROUTER)
     message(STATUS "Building DLL router")
 endif()
 
-message(STATUS "
-Building OpenAL with support for the following backends:
-    ${BACKENDS}
-
-Building with support for CPU extensions:
-    ${CPU_EXTS}
-")
+message(STATUS "")
+message(STATUS "Building OpenAL with support for the following backends:")
+message(STATUS "   ${BACKENDS}")
+message(STATUS "")
+message(STATUS "Building with support for CPU extensions:")
+message(STATUS "    ${CPU_EXTS}")
+message(STATUS "")
 if(FPMATH_SET)
-    message(STATUS "Building with SSE${FPMATH_SET} codegen
-")
+    message(STATUS "Building with SSE${FPMATH_SET} codegen")
+    message(STATUS "")
 endif()
 
 if(ALSOFT_EAX)
-    message(STATUS "Building with legacy EAX extensions
-")
+    message(STATUS "Building with legacy EAX extension support")
+    message(STATUS "")
 endif()
 
 if(ALSOFT_EMBED_HRTF_DATA)
-    message(STATUS "Embedding HRTF datasets
-")
+    message(STATUS "Embedding HRTF datasets")
+    message(STATUS "")
 endif()
 
 # Install main library

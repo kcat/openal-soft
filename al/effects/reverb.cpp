@@ -600,18 +600,6 @@ struct EaxReverbEffectDirtyFlags
     EaxReverbEffectDirtyFlagsValue ulFlags : 1;
 }; // EaxReverbEffectDirtyFlags
 
-using Eax1ReverbEffectDirtyFlagsValue = std::uint_least8_t;
-
-struct Eax1ReverbEffectDirtyFlags
-{
-    using EaxIsBitFieldStruct = bool;
-
-    EaxReverbEffectDirtyFlagsValue environment : 1;
-    EaxReverbEffectDirtyFlagsValue volume : 1;
-    EaxReverbEffectDirtyFlagsValue decay_time : 1;
-    EaxReverbEffectDirtyFlagsValue damping : 1;
-}; // Eax1ReverbEffectDirtyFlags
-
 class EaxReverbEffect final :
     public EaxEffect
 {
@@ -626,7 +614,6 @@ private:
     EAX_REVERBPROPERTIES eax1_{};
     EAXREVERBPROPERTIES eax_{};
     EAXREVERBPROPERTIES eax_d_{};
-    Eax1ReverbEffectDirtyFlags eax1_dirty_flags_{};
     EaxReverbEffectDirtyFlags eax_dirty_flags_{};
 
     [[noreturn]] static void eax_fail(const char* message);

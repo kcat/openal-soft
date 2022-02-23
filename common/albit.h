@@ -21,19 +21,19 @@ enum class endian {
 
 /* This doesn't support mixed-endian. */
 namespace detail_ {
-constexpr inline bool EndianTest() noexcept
+constexpr bool IsLittleEndian() noexcept
 {
     static_assert(sizeof(char) < sizeof(int), "char is too big");
 
     constexpr int test_val{1};
-    return static_cast<const char&>(test_val);
+    return static_cast<const char&>(test_val) ? true : false;
 }
 } // namespace detail_
 
 enum class endian {
-    little = 0,
-    big = 1,
-    native = detail_::EndianTest() ? little : big
+    big = 0,
+    little = 1,
+    native = detail_::IsLittleEndian() ? little : big
 };
 #endif
 

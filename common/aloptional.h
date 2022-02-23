@@ -25,7 +25,7 @@ template<typename T, bool = std::is_trivially_destructible<T>::value>
 struct optstore_base {
     bool mHasValue{false};
     union {
-        char mDummy;
+        char mDummy{};
         T mValue;
     };
 
@@ -43,7 +43,7 @@ template<typename T>
 struct optstore_base<T, false> {
     bool mHasValue{false};
     union {
-        char mDummy;
+        char mDummy{};
         T mValue;
     };
 

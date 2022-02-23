@@ -112,11 +112,5 @@
 /* Define if we have pthread_setname_np() */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP
 
-/* Define if pthread_setname_np() only accepts one parameter */
-#cmakedefine PTHREAD_SETNAME_NP_ONE_PARAM
-
-/* Define if pthread_setname_np() accepts three parameters */
-#cmakedefine PTHREAD_SETNAME_NP_THREE_PARAMS
-
 /* Define if we have pthread_set_name_np() */
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP

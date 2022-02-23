@@ -566,51 +566,11 @@ if(NOT WIN32)
         check_symbol_exists(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
         if(NOT HAVE_PTHREAD_SETNAME_NP)
             check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
-        else()
-            check_c_source_compiles("
-#include <pthread.h>
-#include <pthread_np.h>
-int main()
-{
-    pthread_setname_np(\"testname\");
-    return 0;
-}"
-                PTHREAD_SETNAME_NP_ONE_PARAM
-            )
-            check_c_source_compiles("
-#include <pthread.h>
-#include <pthread_np.h>
-int main()
-{
-    pthread_setname_np(pthread_self(), \"%s\", \"testname\");
-    return 0;
-}"
-                PTHREAD_SETNAME_NP_THREE_PARAMS
-            )
         endif()
     else()
         check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
         if(NOT HAVE_PTHREAD_SETNAME_NP)
             check_symbol_exists(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
-        else()
-            check_c_source_compiles("
-#include <pthread.h>
-int main()
-{
-    pthread_setname_np(\"testname\");
-    return 0;
-}"
-                PTHREAD_SETNAME_NP_ONE_PARAM
-            )
-            check_c_source_compiles("
-#include <pthread.h>
-int main()
-{
-    pthread_setname_np(pthread_self(), \"%s\", \"testname\");
-    return 0;
-}"
-                PTHREAD_SETNAME_NP_THREE_PARAMS
-            )
         endif()
     endif()
 endif()

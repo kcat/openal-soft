@@ -16,13 +16,6 @@
  * single-consumer/single-provider operation.
  */
 
-struct ll_ringbuffer_data {
-    al::byte *buf;
-    size_t len;
-};
-using ll_ringbuffer_data_pair = std::pair<ll_ringbuffer_data,ll_ringbuffer_data>;
-
-
 struct RingBuffer {
 private:
     std::atomic<size_t> mWritePtr{0u};
@@ -34,6 +27,13 @@ private:
     al::FlexArray<al::byte, 16> mBuffer;
 
 public:
+    struct Data {
+        al::byte *buf;
+        size_t len;
+    };
+    using DataPair = std::pair<Data,Data>;
+
+
     RingBuffer(const size_t count) : mBuffer{count} { }
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
@@ -44,13 +44,13 @@ public:
      * hold the current readable data. If the readable data is in one segment
      * the second segment has zero length.
      */
-    ll_ringbuffer_data_pair getReadVector() const noexcept;
+    DataPair getReadVector() const noexcept;
     /**
      * The non-copying data writer. Returns two ringbuffer data pointers that
      * hold the current writeable data. If the writeable data is in one segment
      * the second segment has zero length.
      */
-    ll_ringbuffer_data_pair getWriteVector() const noexcept;
+    DataPair getWriteVector() const noexcept;
 
     /**
      * Return the number of elements available for reading. This is the number

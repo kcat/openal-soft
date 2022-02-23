@@ -2,26 +2,7 @@
 #define AL_ATOMIC_H
 
 #include <atomic>
-#include <utility>
 
-
-namespace al {
-
-struct atomic_invflag : protected std::atomic_flag {
-    using std::atomic_flag::atomic_flag;
-
-    inline bool test_and_clear(std::memory_order m=std::memory_order_seq_cst) noexcept
-    { return !test_and_set(m); }
-    inline bool test_and_clear(std::memory_order m=std::memory_order_seq_cst) volatile noexcept
-    { return !test_and_set(m); }
-
-    inline void set(std::memory_order m=std::memory_order_seq_cst) noexcept
-    { clear(m); }
-    inline void set(std::memory_order m=std::memory_order_seq_cst) volatile noexcept
-    { clear(m); }
-};
-
-} // namespace al
 
 using RefCount = std::atomic<unsigned int>;
 

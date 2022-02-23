@@ -504,8 +504,8 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
 /* Wraps the given value in radians to stay between [-pi,+pi] */
 inline float WrapRadians(float r)
 {
-    constexpr float Pi{al::numbers::pi_v<float>};
-    constexpr float Pi2{Pi*2.0f};
+    static constexpr float Pi{al::numbers::pi_v<float>};
+    static constexpr float Pi2{Pi*2.0f};
     if(r >  Pi) return std::fmod(Pi+r, Pi2) - Pi;
     if(r < -Pi) return Pi - std::fmod(Pi-r, Pi2);
     return r;
@@ -1103,7 +1103,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* If the source distance is 0, simulate a plane-wave by using
                  * infinite distance, which results in a w0 of 0.
                  */
-                constexpr float w0{0.0f};
+                static constexpr float w0{0.0f};
                 for(size_t c{0};c < num_channels;c++)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
@@ -1265,7 +1265,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
                      * decay distance (so it doesn't take any longer to decay
                      * than the air would allow).
                      */
-                    constexpr float log10_decaygain{-3.0f/*std::log10(ReverbDecayGain)*/};
+                    static constexpr float log10_decaygain{-3.0f/*std::log10(ReverbDecayGain)*/};
                     const float absorb_dist{log10_decaygain / std::log10(airAbsorption)};
                     DecayDistance[i].HF = minf(absorb_dist, DecayDistance[i].HF);
                 }
@@ -1383,7 +1383,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        constexpr float Rad2Deg{static_cast<float>(180.0 / al::numbers::pi)};
+        static constexpr float Rad2Deg{static_cast<float>(180.0 / al::numbers::pi)};
         const float Angle{Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale};
 
         float ConeGain, ConeHF;

@@ -1268,23 +1268,17 @@ void alc_initconfig(void)
 
 #ifdef ALSOFT_EAX
     {
-        constexpr auto eax_block_name = "eax";
+        static constexpr char eax_block_name[] = "eax";
 
-        const auto eax_enable_opt = ConfigValueBool(nullptr, eax_block_name, "enable");
-
-        if (eax_enable_opt)
+        if(const auto eax_enable_opt = ConfigValueBool(nullptr, eax_block_name, "enable"))
         {
             eax_g_is_enabled = *eax_enable_opt;
-
-            if (!eax_g_is_enabled)
-            {
+            if(!eax_g_is_enabled)
                 TRACE("%s\n", "EAX disabled by a configuration.");
-            }
         }
         else
-        {
             eax_g_is_enabled = true;
-        }
+
         if(eax_g_is_enabled && DisabledEffects[EAXREVERB_EFFECT])
         {
             eax_g_is_enabled = false;
@@ -1530,19 +1524,19 @@ void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
 {
-    constexpr bool AutoKnee{true};
-    constexpr bool AutoAttack{true};
-    constexpr bool AutoRelease{true};
-    constexpr bool AutoPostGain{true};
-    constexpr bool AutoDeclip{true};
-    constexpr float LookAheadTime{0.001f};
-    constexpr float HoldTime{0.002f};
-    constexpr float PreGainDb{0.0f};
-    constexpr float PostGainDb{0.0f};
-    constexpr float Ratio{std::numeric_limits<float>::infinity()};
-    constexpr float KneeDb{0.0f};
-    constexpr float AttackTime{0.02f};
-    constexpr float ReleaseTime{0.2f};
+    static constexpr bool AutoKnee{true};
+    static constexpr bool AutoAttack{true};
+    static constexpr bool AutoRelease{true};
+    static constexpr bool AutoPostGain{true};
+    static constexpr bool AutoDeclip{true};
+    static constexpr float LookAheadTime{0.001f};
+    static constexpr float HoldTime{0.002f};
+    static constexpr float PreGainDb{0.0f};
+    static constexpr float PostGainDb{0.0f};
+    static constexpr float Ratio{std::numeric_limits<float>::infinity()};
+    static constexpr float KneeDb{0.0f};
+    static constexpr float AttackTime{0.02f};
+    static constexpr float ReleaseTime{0.2f};
 
     return Compressor::Create(device->RealOut.Buffer.size(), static_cast<float>(device->Frequency),
         AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, LookAheadTime, HoldTime,
@@ -2503,7 +2497,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     std::lock_guard<std::mutex> _{device->StateLock};
     if(device->Type == DeviceType::Capture)
     {
-        constexpr int MaxCaptureAttributes{9};
+        static constexpr int MaxCaptureAttributes{9};
         switch(param)
         {
         case ALC_ATTRIBUTES_SIZE:

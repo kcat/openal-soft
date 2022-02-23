@@ -30,10 +30,10 @@ std::string EaxException::make_message(
         return std::string{};
     }
 
-    constexpr auto left_prefix = "[";
+    static constexpr char left_prefix[] = "[";
     const auto left_prefix_size = std::string::traits_type::length(left_prefix);
 
-    constexpr auto right_prefix = "] ";
+    static constexpr char right_prefix[] = "] ";
     const auto right_prefix_size = std::string::traits_type::length(right_prefix);
 
     const auto what_size =

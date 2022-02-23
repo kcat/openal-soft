@@ -87,7 +87,7 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(unlikely(!context))
     {
-        constexpr ALenum deferror{AL_INVALID_OPERATION};
+        static constexpr ALenum deferror{AL_INVALID_OPERATION};
         WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);
         if(TrapALError)
         {

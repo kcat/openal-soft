@@ -142,9 +142,9 @@ void BackendBase::setDefaultChannelOrder()
 #ifdef _WIN32
 void BackendBase::setChannelOrderFromWFXMask(uint chanmask)
 {
-    constexpr uint x51{SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER
+    static constexpr uint x51{SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER
         | SPEAKER_LOW_FREQUENCY | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT};
-    constexpr uint x51rear{SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER
+    static constexpr uint x51rear{SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER
         | SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT};
     /* Swap a 5.1 mask using the back channels for one with the sides. */
     if(chanmask == x51rear) chanmask = x51;

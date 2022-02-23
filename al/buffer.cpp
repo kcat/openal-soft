@@ -761,7 +761,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(*DstChannels) ? 1 : 0)};
 
-    constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
+    static constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
     al::vector<al::byte,16>(FrameSizeFromFmt(*DstChannels, *DstType, ambiorder) *
         size_t{line_size}).swap(ALBuf->mData);
 

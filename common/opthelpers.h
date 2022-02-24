@@ -1,6 +1,9 @@
 #ifndef OPTHELPERS_H
 #define OPTHELPERS_H
 
+#include <utility>
+
+
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin
 #else
@@ -14,20 +17,20 @@
  */
 template<typename T>
 constexpr bool likely(T&& expr) noexcept
-{ return __builtin_expect(static_cast<bool>(expr), true); }
+{ return __builtin_expect(static_cast<bool>(std::forward<T>(expr)), true); }
 /* The opposite of likely(), optimizing for the case where the condition is
  * false.
  */
 template<typename T>
 constexpr bool unlikely(T&& expr) noexcept
-{ return __builtin_expect(static_cast<bool>(expr), false); }
+{ return __builtin_expect(static_cast<bool>(std::forward<T>(expr)), false); }
 
 #else
 
 template<typename T>
-constexpr bool likely(T&& expr) noexcept { return static_cast<bool>(expr); }
+constexpr bool likely(T&& expr) noexcept { return static_cast<bool>(std::forward<T>(expr)); }
 template<typename T>
-constexpr bool unlikely(T&& expr) noexcept { return static_cast<bool>(expr); }
+constexpr bool unlikely(T&& expr) noexcept { return static_cast<bool>(std::forward<T>(expr)); }
 #endif
 #define LIKELY(x) (likely(x))
 #define UNLIKELY(x) (unlikely(x))

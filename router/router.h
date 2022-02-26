@@ -7,10 +7,11 @@
 
 #include <stdio.h>
 
-#include <vector>
-#include <string>
 #include <atomic>
 #include <mutex>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "AL/alc.h"
 #include "AL/al.h"
@@ -122,8 +123,9 @@ struct DriverIface {
     LPALSPEEDOFSOUND alSpeedOfSound{nullptr};
     LPALDISTANCEMODEL alDistanceModel{nullptr};
 
-    DriverIface(std::wstring name, HMODULE mod)
-      : Name(std::move(name)), Module(mod)
+    template<typename T>
+    DriverIface(T&& name, HMODULE mod)
+      : Name(std::forward<T>(name)), Module(mod)
     { }
     ~DriverIface()
     {

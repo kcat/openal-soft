@@ -51,6 +51,17 @@ static LPALGETSOURCEI64SOFT alGetSourcei64SOFT;
 static LPALGETSOURCE3I64SOFT alGetSource3i64SOFT;
 static LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
+/* C doesn't allow casting between function and non-function pointer types, so
+ * with C99 we need to use a union to reinterpret the pointer type. Pre-C99
+ * still needs to use a normal cast and live with the warning (C++ is fine with
+ * a regular reinterpret_cast).
+ */
+#if __STDC_VERSION__ >= 199901L
+#define FUNCTION_CAST(T, ptr) (union{void *p; T f;}){ptr}.f
+#else
+#define FUNCTION_CAST(T, ptr) (T)(ptr)
+#endif
+
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
  * returns the new buffer ID.
  */
@@ -164,7 +175,7 @@ int main(int argc, char **argv)
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
     LOAD_PROC(LPALSOURCEDSOFT, alSourcedSOFT);
     LOAD_PROC(LPALSOURCE3DSOFT, alSource3dSOFT);
     LOAD_PROC(LPALSOURCEDVSOFT, alSourcedvSOFT);

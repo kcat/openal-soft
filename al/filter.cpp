@@ -67,8 +67,6 @@ public:
     ALenum errorCode() const noexcept { return mErrorCode; }
 };
 
-#define FILTER_MIN_GAIN 0.0f
-#define FILTER_MAX_GAIN 4.0f /* +12dB */
 
 #define DEFINE_ALFILTER_VTABLE(T)                                  \
 const ALfilter::Vtable T##_vtable = {                              \
@@ -88,7 +86,7 @@ void ALlowpass_setParamf(ALfilter *filter, ALenum param, float val)
     switch(param)
     {
     case AL_LOWPASS_GAIN:
-        if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
+        if(!(val >= AL_LOWPASS_MIN_GAIN && val <= AL_LOWPASS_MAX_GAIN))
             throw filter_exception{AL_INVALID_VALUE, "Low-pass gain %f out of range", val};
         filter->Gain = val;
         break;
@@ -147,7 +145,7 @@ void ALhighpass_setParamf(ALfilter *filter, ALenum param, float val)
     switch(param)
     {
     case AL_HIGHPASS_GAIN:
-        if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
+        if(!(val >= AL_HIGHPASS_MIN_GAIN && val <= AL_HIGHPASS_MAX_GAIN))
             throw filter_exception{AL_INVALID_VALUE, "High-pass gain %f out of range", val};
         filter->Gain = val;
         break;
@@ -206,7 +204,7 @@ void ALbandpass_setParamf(ALfilter *filter, ALenum param, float val)
     switch(param)
     {
     case AL_BANDPASS_GAIN:
-        if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
+        if(!(val >= AL_BANDPASS_MIN_GAIN && val <= AL_BANDPASS_MAX_GAIN))
             throw filter_exception{AL_INVALID_VALUE, "Band-pass gain %f out of range", val};
         filter->Gain = val;
         break;

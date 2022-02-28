@@ -72,7 +72,6 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_direct_channels_remix "
     "AL_SOFT_effect_target "
     "AL_SOFT_events "
-    "AL_SOFTX_filter_gain_ex "
     "AL_SOFT_gain_clamp_ex "
     "AL_SOFTX_hold_on_disconnect "
     "AL_SOFT_loop_points "

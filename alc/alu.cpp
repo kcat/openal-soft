@@ -1235,6 +1235,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     EffectSlot *SendSlots[MAX_SENDS];
     float RoomRolloff[MAX_SENDS];
     GainTriplet DecayDistance[MAX_SENDS];
+    uint UseDryAttnForRoom{0};
     for(uint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
@@ -1246,9 +1247,20 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             DecayDistance[i].LF = 0.0f;
             DecayDistance[i].HF = 0.0f;
         }
-        else if(SendSlots[i]->AuxSendAuto)
+        else if(!SendSlots[i]->AuxSendAuto)
         {
-            RoomRolloff[i] = SendSlots[i]->RoomRolloff + props->RoomRolloffFactor;
+            /* If the slot's auxiliary send auto is off, the data sent to the
+             * effect slot is the same as the dry path, sans filter effects.
+             */
+            RoomRolloff[i] = 0.0f;
+            DecayDistance[i].Base = 0.0f;
+            DecayDistance[i].LF = 0.0f;
+            DecayDistance[i].HF = 0.0f;
+            UseDryAttnForRoom |= 1u<<i;
+        }
+        else
+        {
+            RoomRolloff[i] = SendSlots[i]->RoomRolloff;
             /* Calculate the distances to where this effect's decay reaches
              * -60dB.
              */
@@ -1270,15 +1282,6 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
                     DecayDistance[i].HF = minf(absorb_dist, DecayDistance[i].HF);
                 }
             }
-        }
-        else
-        {
-            /* If the slot's auxiliary send auto is off, the data sent to the
-             * effect slot is the same as the dry path, sans filter effects */
-            RoomRolloff[i] = props->RolloffFactor;
-            DecayDistance[i].Base = 0.0f;
-            DecayDistance[i].LF = 0.0f;
-            DecayDistance[i].HF = 0.0f;
         }
 
         if(!SendSlots[i])
@@ -1310,10 +1313,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
     /* Calculate distance attenuation */
     float ClampedDist{Distance};
-    float DryAttenuation{1.0f};
-    float WetAttenuation[MAX_SENDS];
-    for(uint i{0};i < NumSends;i++)
-        WetAttenuation[i] = DryAttenuation;
+    float DryGainBase{props->Gain};
+    float WetGainBase{props->Gain};
 
     switch(context->mParams.SourceDistanceModel ? props->mDistanceModel
         : context->mParams.mDistanceModel)
@@ -1328,12 +1329,10 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             else
             {
                 float dist{lerp(props->RefDistance, ClampedDist, props->RolloffFactor)};
-                if(dist > 0.0f) DryAttenuation = props->RefDistance / dist;
-                for(uint i{0};i < NumSends;i++)
-                {
-                    dist = lerp(props->RefDistance, ClampedDist, RoomRolloff[i]);
-                    if(dist > 0.0f) WetAttenuation[i] = props->RefDistance / dist;
-                }
+                if(dist > 0.0f) DryGainBase *= props->RefDistance / dist;
+
+                dist = lerp(props->RefDistance, ClampedDist, props->RoomRolloffFactor);
+                if(dist > 0.0f) WetGainBase *= props->RefDistance / dist;
             }
             break;
 
@@ -1346,15 +1345,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
                 ClampedDist = props->RefDistance;
             else
             {
-                float attn{props->RolloffFactor * (ClampedDist-props->RefDistance) /
-                    (props->MaxDistance-props->RefDistance)};
-                DryAttenuation = maxf(1.0f - attn, 0.0f);
-                for(uint i{0};i < NumSends;i++)
-                {
-                    attn = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
-                        (props->MaxDistance-props->RefDistance);
-                    WetAttenuation[i] = maxf(1.0f - attn, 0.0f);
-                }
+                float attn{(ClampedDist-props->RefDistance) /
+                    (props->MaxDistance-props->RefDistance) * props->RolloffFactor};
+                DryGainBase *= maxf(1.0f - attn, 0.0f);
+
+                attn = (ClampedDist-props->RefDistance) /
+                    (props->MaxDistance-props->RefDistance) * props->RoomRolloffFactor;
+                WetGainBase *= maxf(1.0f - attn, 0.0f);
             }
             break;
 
@@ -1368,9 +1365,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             else
             {
                 const float dist_ratio{ClampedDist/props->RefDistance};
-                DryAttenuation = std::pow(dist_ratio, -props->RolloffFactor);
-                for(uint i{0};i < NumSends;i++)
-                    WetAttenuation[i] = std::pow(dist_ratio, -RoomRolloff[i]);
+                DryGainBase *= std::pow(dist_ratio, -props->RolloffFactor);
+                WetGainBase *= std::pow(dist_ratio, -props->RoomRolloffFactor);
             }
             break;
 
@@ -1379,13 +1375,13 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     }
 
     /* Calculate directional soundcones */
-    float ConeGain{1.0f}, ConeHF{1.0f};
-    float WetConeGain{1.0f}, WetConeHF{1.0f};
+    float ConeHF{1.0f}, WetConeHF{1.0f};
     if(directional && props->InnerAngle < 360.0f)
     {
         static constexpr float Rad2Deg{static_cast<float>(180.0 / al::numbers::pi)};
         const float Angle{Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale};
 
+        float ConeGain{1.0f};
         if(Angle >= props->OuterAngle)
         {
             ConeGain = props->OuterGain;
@@ -1398,43 +1394,62 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             ConeHF = lerp(1.0f, props->OuterGainHF, scale * props->DryGainHFAuto);
         }
 
-        WetConeGain = lerp(1.0f, ConeGain, props->WetGainAuto);
+        DryGainBase *= ConeGain;
+        WetGainBase *= lerp(1.0f, ConeGain, props->WetGainAuto);
+
         WetConeHF = lerp(1.0f, ConeHF, props->WetGainHFAuto);
     }
 
     /* Apply gain and frequency filters */
+    DryGainBase = clampf(DryGainBase, props->MinGain, props->MaxGain) * context->mParams.Gain;
+    WetGainBase = clampf(WetGainBase, props->MinGain, props->MaxGain) * context->mParams.Gain;
+
     GainTriplet DryGain{};
-    DryGain.Base = props->Gain * DryAttenuation * ConeGain;
-    DryGain.Base = minf(clampf(DryGain.Base, props->MinGain, props->MaxGain) * props->Direct.Gain *
-        context->mParams.Gain, GainMixMax);
+    DryGain.Base = minf(DryGainBase * props->Direct.Gain, GainMixMax);
     DryGain.HF = ConeHF * props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
     GainTriplet WetGain[MAX_SENDS]{};
     for(uint i{0};i < NumSends;i++)
     {
-        const float gain{props->Gain * WetConeGain * WetAttenuation[i]};
-        WetGain[i].Base = minf(clampf(gain, props->MinGain, props->MaxGain) * props->Send[i].Gain *
-            context->mParams.Gain, GainMixMax);
-        WetGain[i].HF = WetConeHF * props->Send[i].GainHF;
+        const auto wet_switch = static_cast<float>(!(UseDryAttnForRoom&(1u<<i)));
+        const float gain{lerp(DryGainBase, WetGainBase, wet_switch)};
+        WetGain[i].Base = minf(gain * props->Send[i].Gain, GainMixMax);
+        WetGain[i].HF = lerp(ConeHF, WetConeHF, wet_switch) * props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
     }
 
     /* Distance-based air absorption and initial send decay. */
-    if(ClampedDist > props->RefDistance && props->RolloffFactor > 0.0f)
+    if(likely(ClampedDist > props->RefDistance))
     {
-        const float meters_base{(ClampedDist-props->RefDistance) * props->RolloffFactor *
-            context->mParams.MetersPerUnit};
-        if(props->AirAbsorptionFactor > 0.0f)
+        const float meters_base{(ClampedDist-props->RefDistance) * props->RolloffFactor};
+        const float absorption{meters_base * context->mParams.MetersPerUnit *
+            props->AirAbsorptionFactor};
+        if(absorption > std::numeric_limits<float>::epsilon())
         {
-            const float hfattn{std::pow(context->mParams.AirAbsorptionGainHF,
-                meters_base*props->AirAbsorptionFactor)};
-            DryGain.HF *= hfattn;
-            std::for_each(std::begin(WetGain), std::begin(WetGain)+NumSends,
-                [hfattn](GainTriplet &gain) noexcept -> void { gain.HF *= hfattn; });
+            const float hfattn{std::pow(context->mParams.AirAbsorptionGainHF, absorption)};
+            ConeHF *= hfattn;
+            WetConeHF *= hfattn;
         }
+
+        auto calc_attenuation = [](float distance, float refdist, float rolloff)
+        {
+            const float dist{lerp(refdist, distance, rolloff)};
+            if(dist > 0.0f) return refdist / dist;
+            return 1.0f;
+        };
+
+        /* The reverb effect's room rolloff factor always applies to an inverse
+         * distance rolloff model.
+         */
+        for(uint i{0};i < NumSends;i++)
+            WetGain[i].Base *= calc_attenuation(ClampedDist, props->RefDistance,
+                RoomRolloff[i]);
 
         if(props->WetGainAuto)
         {
+            const float baseAttn = calc_attenuation(ClampedDist, props->RefDistance,
+                props->RolloffFactor);
+
             /* Apply a decay-time transformation to the wet path, based on the
              * source distance in meters. The initial decay of the reverb
              * effect is calculated and applied to the wet path.
@@ -1444,17 +1459,18 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
                 if(!(DecayDistance[i].Base > 0.0f))
                     continue;
 
-                const float gain{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].Base)};
-                WetGain[i].Base *= (1.0f-DryAttenuation)*gain + DryAttenuation;
-                /* Yes, the wet path's air absorption is applied with
-                 * WetGainAuto on, rather than WetGainHFAuto.
-                 */
+                const float gain{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].Base)*
+                    (1.0f-baseAttn) + baseAttn};
+                WetGain[i].Base *= gain;
+
                 if(gain > 0.0f)
                 {
-                    float gainhf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].HF)};
-                    WetGain[i].HF *= (1.0f-DryAttenuation)*minf(gainhf/gain, 1.0f) + DryAttenuation;
-                    float gainlf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].LF)};
-                    WetGain[i].LF *= (1.0f-DryAttenuation)*minf(gainlf/gain, 1.0f) + DryAttenuation;
+                    float gainhf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].HF)*
+                        (1.0f-baseAttn) + baseAttn};
+                    WetGain[i].HF *= minf(gainhf/gain, 1.0f);
+                    float gainlf{std::pow(ReverbDecayGain, meters_base/DecayDistance[i].LF)*
+                        (1.0f-baseAttn) + baseAttn};
+                    WetGain[i].LF *= minf(gainlf/gain, 1.0f);
                 }
             }
         }

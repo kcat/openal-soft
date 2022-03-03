@@ -772,7 +772,7 @@ void ALCcontext::eax_set_distance_factor()
 
 void ALCcontext::eax_set_air_absorbtion_hf()
 {
-    mAirAbsorptionGainHF = eax_.context.flAirAbsorptionHF;
+    mAirAbsorptionGainHF = level_mb_to_gain(eax_.context.flAirAbsorptionHF);
     mPropsDirty = true;
 }
 

@@ -1374,30 +1374,30 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     GainTriplet WetGain[MAX_SENDS]{};
     for(uint i{0};i < NumSends;i++)
     {
-        /* If this effect slot's Auxiliary Send Auto is off, then wet_switch=0
-         * which selects the dry path distance and cone attenuation, otherwise
-         * wet_switch=1 which selects the wet (room) path distance and cone
-         * attenuation. The send filter is still used in place of the direct
-         * filter, however.
+        /* If this effect slot's Auxiliary Send Auto is off, then use the dry
+         * path distance and cone attenuation, otherwise use the wet (room)
+         * path distance and cone attenuation. The send filter is used instead
+         * of the direct filter, regardless.
          */
-        const auto wet_switch = static_cast<float>(!(UseDryAttnForRoom&(1u<<i)));
-        const float gain{lerp(DryGainBase, WetGainBase, wet_switch)};
+        const bool use_room{!(UseDryAttnForRoom&(1u<<i))};
+        const float gain{use_room ? WetGainBase : DryGainBase};
         WetGain[i].Base = minf(gain * props->Send[i].Gain, GainMixMax);
-        WetGain[i].HF = lerp(ConeHF, WetConeHF, wet_switch) * props->Send[i].GainHF;
+        WetGain[i].HF = (use_room ? WetConeHF : ConeHF) * props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
     }
 
     /* Distance-based air absorption and initial send decay. */
     if(likely(Distance > props->RefDistance))
     {
-        const float meters_base{(Distance-props->RefDistance) * props->RolloffFactor};
-        const float absorption{meters_base * context->mParams.MetersPerUnit *
+        const float distance_base{(Distance-props->RefDistance) * props->RolloffFactor};
+        const float absorption{distance_base * context->mParams.MetersPerUnit *
             props->AirAbsorptionFactor};
         if(absorption > std::numeric_limits<float>::epsilon())
         {
             const float hfattn{std::pow(context->mParams.AirAbsorptionGainHF, absorption)};
-            ConeHF *= hfattn;
-            WetConeHF *= hfattn;
+            DryGain.HF *= hfattn;
+            for(uint i{0u};i < NumSends;++i)
+                WetGain[i].HF *= hfattn;
         }
 
         /* If the source's Auxiliary Send Filter Gain Auto is off, no extra
@@ -1455,20 +1455,20 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
                 props->RolloffFactor);
 
             /* Apply a decay-time transformation to the wet path, based on the
-             * source distance in meters. The initial decay of the reverb
-             * effect is calculated and applied to the wet path.
+             * source distance. The initial decay of the reverb effect is
+             * calculated and applied to the wet path.
              */
-            const float gain{std::pow(ReverbDecayGain, meters_base/DecayDistance.Base)*
-                (1.0f-baseAttn) + baseAttn};
+            const float fact{distance_base / DecayDistance.Base};
+            const float gain{std::pow(ReverbDecayGain, fact)*(1.0f-baseAttn) + baseAttn};
             WetGain[i].Base *= gain;
 
             if(gain > 0.0f)
             {
-                float gainhf{std::pow(ReverbDecayGain, meters_base/DecayDistance.HF)*
-                    (1.0f-baseAttn) + baseAttn};
+                const float hffact{distance_base / DecayDistance.HF};
+                const float gainhf{std::pow(ReverbDecayGain, hffact)*(1.0f-baseAttn) + baseAttn};
                 WetGain[i].HF *= minf(gainhf/gain, 1.0f);
-                float gainlf{std::pow(ReverbDecayGain, meters_base/DecayDistance.LF)*
-                    (1.0f-baseAttn) + baseAttn};
+                const float lffact{distance_base / DecayDistance.LF};
+                const float gainlf{std::pow(ReverbDecayGain, lffact)*(1.0f-baseAttn) + baseAttn};
                 WetGain[i].LF *= minf(gainlf/gain, 1.0f);
             }
         }

@@ -244,19 +244,19 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
             mQ[sFilterDelay+i] = InSamples[i*InChannels + 3];
     }
 
-    /* Precompute j(0.828347*D + 0.767835*T) and store in xoutput. */
+    /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
-        [](const float d, const float t) noexcept { return 0.828347f*d + 0.767835f*t; });
+        [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, SamplesToDo}, mTemp.data());
 
     for(size_t i{0};i < SamplesToDo;++i)
     {
-        /* W = 0.981532*S + 0.197484*j(0.828347*D + 0.767835*T) */
+        /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
         woutput[i] = 0.981532f*mS[i] + 0.197484f*xoutput[i];
-        /* X = 0.418504*S - j(0.828347*D + 0.767835*T) */
-        xoutput[i] = 0.418504f*mS[i] - xoutput[i];
+        /* X = 0.418496*S - j(0.828331*D + 0.767820*T) */
+        xoutput[i] = 0.418496f*mS[i] - xoutput[i];
     }
 
     /* Precompute j*S and store in youtput. */

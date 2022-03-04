@@ -21,6 +21,9 @@ public:
     // [[nodiscard]]
     virtual bool dispatch(
         const EaxEaxCall& eax_call) = 0;
+
+    // [[nodiscard]]
+    virtual bool apply_deferred() = 0;
 }; // EaxEffect
 
 

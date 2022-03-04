@@ -258,6 +258,8 @@ public:
     ALeffectslot& eax_get_fx_slot(EaxFxSlotIndexValue fx_slot_index)
     { return eax_fx_slots_.get(fx_slot_index); }
 
+    void eax_commit_fx_slots()
+    { eax_fx_slots_.commit(); }
 
 private:
     struct Eax

@@ -109,6 +109,9 @@ public:
     // [[nodiscard]]
     bool dispatch(
         const EaxEaxCall& eax_call) override;
+
+    // [[nodiscard]]
+    bool apply_deferred() override;
 }; // EaxNullEffect
 
 
@@ -139,6 +142,11 @@ bool EaxNullEffect::dispatch(
         throw EaxNullEffectException{"Unsupported property id."};
     }
 
+    return false;
+}
+
+bool EaxNullEffect::apply_deferred()
+{
     return false;
 }
 

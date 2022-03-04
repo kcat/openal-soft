@@ -19,6 +19,12 @@ public:
 
     void uninitialize() noexcept;
 
+    void commit()
+    {
+        for(auto& fx_slot : fx_slots_)
+            fx_slot->eax_commit();
+    }
+
 
     const ALeffectslot& get(
         EaxFxSlotIndex index) const;

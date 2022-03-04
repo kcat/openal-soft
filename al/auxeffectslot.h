@@ -77,7 +77,6 @@ public:
         ALCcontext& al_context,
         EaxFxSlotIndexValue index);
 
-
     const EAX50FXSLOTPROPERTIES& eax_get_eax_fx_slot() const noexcept;
 
 
@@ -87,6 +86,7 @@ public:
 
     void eax_unlock_legacy() noexcept;
 
+    void eax_commit() { eax_apply_deferred(); }
 
 private:
     ALCcontext* eax_al_context_{};
@@ -229,6 +229,8 @@ private:
 
     bool eax_set_fx_slot(
         const EaxEaxCall& eax_call);
+
+    void eax_apply_deferred();
 
     // [[nodiscard]]
     bool eax_set(

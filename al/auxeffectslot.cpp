@@ -1023,14 +1023,18 @@ void ALeffectslot::updateProps(ALCcontext *context)
 void UpdateAllEffectSlotProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+#ifdef ALSOFT_EAX
+    if(context->has_eax())
+        context->eax_commit_fx_slots();
+#endif
     for(auto &sublist : context->mEffectSlotList)
     {
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
             const int idx{al::countr_zero(usemask)};
-            ALeffectslot *slot{sublist.EffectSlots + idx};
             usemask &= ~(1_u64 << idx);
+            ALeffectslot *slot{sublist.EffectSlots + idx};
 
             if(slot->mState != SlotState::Stopped && std::exchange(slot->mPropsDirty, false))
                 slot->updateProps(context);
@@ -1676,18 +1680,28 @@ bool ALeffectslot::eax_set_fx_slot(
 bool ALeffectslot::eax_set(
     const EaxEaxCall& eax_call)
 {
+    bool ret{false};
+
     switch (eax_call.get_property_set_id())
     {
         case EaxEaxCallPropertySetId::fx_slot:
-            return eax_set_fx_slot(eax_call);
+            ret = eax_set_fx_slot(eax_call);
+            break;
 
         case EaxEaxCallPropertySetId::fx_slot_effect:
             eax_dispatch_effect(eax_call);
-            return false;
+            break;
 
         default:
             eax_fail("Unsupported property id.");
     }
+
+    if(!eax_call.is_deferred())
+    {
+        eax_apply_deferred();
+    }
+
+    return ret;
 }
 
 void ALeffectslot::eax_dispatch_effect(
@@ -1699,6 +1713,18 @@ void ALeffectslot::eax_dispatch_effect(
     if(is_changed)
         eax_set_effect_slot_effect(*eax_effect_);
 }
+
+void ALeffectslot::eax_apply_deferred()
+{
+    /* The other FXSlot properties (volume, effect, etc) aren't deferred? */
+
+    auto is_changed = false;
+    if(eax_effect_)
+        is_changed = eax_effect_->apply_deferred();
+    if(is_changed)
+        eax_set_effect_slot_effect(*eax_effect_);
+}
+
 
 void ALeffectslot::eax_set_effect_slot_effect(EaxEffect &effect)
 {
@@ -1732,14 +1758,11 @@ void ALeffectslot::eax_set_effect_slot_effect(EaxEffect &effect)
 void ALeffectslot::eax_set_effect_slot_send_auto(
     bool is_send_auto)
 {
-    std::lock_guard<std::mutex> effect_slot_lock{eax_al_context_->mEffectSlotLock};
-
-    const auto is_changed = (AuxSendAuto != is_send_auto);
+    if(AuxSendAuto == is_send_auto)
+        return;
 
     AuxSendAuto = is_send_auto;
-
-    if (is_changed)
-        UpdateProps(this, eax_al_context_);
+    UpdateProps(this, eax_al_context_);
 }
 
 void ALeffectslot::eax_set_effect_slot_gain(
@@ -1747,20 +1770,13 @@ void ALeffectslot::eax_set_effect_slot_gain(
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_GAIN] "
 
-    if (gain < 0.0F || gain > 1.0F)
-    {
-        ERR(EAX_PREFIX "%s\n", "Gain out of range.");
+    if(gain == Gain)
         return;
-    }
+    if(gain < 0.0f || gain > 1.0f)
+        ERR(EAX_PREFIX "Gain out of range (%f)\n", gain);
 
-    std::lock_guard<std::mutex> effect_slot_lock{eax_al_context_->mEffectSlotLock};
-
-    const auto is_changed = (Gain != gain);
-
-    Gain = gain;
-
-    if (is_changed)
-        UpdateProps(this, eax_al_context_);
+    Gain = clampf(gain, 0.0f, 1.0f);
+    UpdateProps(this, eax_al_context_);
 
 #undef EAX_PREFIX
 }

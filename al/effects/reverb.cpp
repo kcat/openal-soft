@@ -610,6 +610,9 @@ public:
     bool dispatch(
         const EaxEaxCall& eax_call) override;
 
+    // [[nodiscard]]
+    bool apply_deferred() override;
+
 private:
     EAX_REVERBPROPERTIES eax1_{};
     EAXREVERBPROPERTIES eax_{};
@@ -931,9 +934,6 @@ private:
     bool v1_set_damping(const EaxEaxCall& eax_call);
     bool v1_set_all(const EaxEaxCall& eax_call);
     bool v1_set(const EaxEaxCall& eax_call);
-
-    // [[nodiscard]]
-    bool apply_deferred();
 
     // [[nodiscard]]
     bool set(

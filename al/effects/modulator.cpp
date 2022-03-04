@@ -170,6 +170,8 @@ public:
     bool dispatch(
         const EaxEaxCall& eax_call) override;
 
+    // [[nodiscard]]
+    bool apply_deferred() override;
 
 private:
     EAXRINGMODULATORPROPERTIES eax_{};
@@ -232,9 +234,6 @@ private:
     void defer_all(
         const EaxEaxCall& eax_call);
 
-
-    // [[nodiscard]]
-    bool apply_deferred();
 
     // [[nodiscard]]
     bool set(

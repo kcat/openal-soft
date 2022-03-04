@@ -145,6 +145,8 @@ public:
     bool dispatch(
         const EaxEaxCall& eax_call) override;
 
+    // [[nodiscard]]
+    bool apply_deferred() override;
 
 private:
     EAXECHOPROPERTIES eax_{};
@@ -229,8 +231,6 @@ private:
     void defer_all(
         const EaxEaxCall& eax_call);
 
-
-    bool apply_deferred();
 
     bool set(
         const EaxEaxCall& eax_call);

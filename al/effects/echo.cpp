@@ -140,10 +140,7 @@ class EaxEchoEffect final :
 public:
     EaxEchoEffect();
 
-
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -153,87 +150,39 @@ private:
     EAXECHOPROPERTIES eax_d_{};
     EaxEchoEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults();
 
-
     void set_efx_delay();
-
     void set_efx_lr_delay();
-
     void set_efx_damping();
-
     void set_efx_feedback();
-
     void set_efx_spread();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_delay(float flDelay);
+    void validate_lr_delay(float flLRDelay);
+    void validate_damping(float flDamping);
+    void validate_feedback(float flFeedback);
+    void validate_spread(float flSpread);
+    void validate_all(const EAXECHOPROPERTIES& all);
 
+    void defer_delay(float flDelay);
+    void defer_lr_delay(float flLRDelay);
+    void defer_damping(float flDamping);
+    void defer_feedback(float flFeedback);
+    void defer_spread(float flSpread);
+    void defer_all(const EAXECHOPROPERTIES& all);
 
-    void validate_delay(
-        float flDelay);
+    void defer_delay(const EaxEaxCall& eax_call);
+    void defer_lr_delay(const EaxEaxCall& eax_call);
+    void defer_damping(const EaxEaxCall& eax_call);
+    void defer_feedback(const EaxEaxCall& eax_call);
+    void defer_spread(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_lr_delay(
-        float flLRDelay);
-
-    void validate_damping(
-        float flDamping);
-
-    void validate_feedback(
-        float flFeedback);
-
-    void validate_spread(
-        float flSpread);
-
-    void validate_all(
-        const EAXECHOPROPERTIES& all);
-
-
-    void defer_delay(
-        float flDelay);
-
-    void defer_lr_delay(
-        float flLRDelay);
-
-    void defer_damping(
-        float flDamping);
-
-    void defer_feedback(
-        float flFeedback);
-
-    void defer_spread(
-        float flSpread);
-
-    void defer_all(
-        const EAXECHOPROPERTIES& all);
-
-
-    void defer_delay(
-        const EaxEaxCall& eax_call);
-
-    void defer_lr_delay(
-        const EaxEaxCall& eax_call);
-
-    void defer_damping(
-        const EaxEaxCall& eax_call);
-
-    void defer_feedback(
-        const EaxEaxCall& eax_call);
-
-    void defer_spread(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxEchoEffect
 
 
@@ -257,11 +206,10 @@ EaxEchoEffect::EaxEchoEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxEchoEffect::dispatch(
+void EaxEchoEffect::dispatch(
     const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxEchoEffect::set_eax_defaults()
@@ -334,11 +282,9 @@ void EaxEchoEffect::set_efx_defaults()
     set_efx_spread();
 }
 
-// [[nodiscard]]
-bool EaxEchoEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxEchoEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXECHO_NONE:
             break;
@@ -370,8 +316,6 @@ bool EaxEchoEffect::get(
         default:
             throw EaxEchoEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxEchoEffect::validate_delay(
@@ -579,11 +523,9 @@ bool EaxEchoEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxEchoEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxEchoEffect::set(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXECHO_NONE:
             break;
@@ -615,13 +557,6 @@ bool EaxEchoEffect::set(
         default:
             throw EaxEchoEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

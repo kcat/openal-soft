@@ -31,10 +31,9 @@ EaxEaxCall::EaxEaxCall(
     ALuint property_source_id,
     ALvoid* property_buffer,
     ALuint property_size)
-    : is_get_{is_get}, is_deferred_{(property_id&deferred_flag) != 0}, version_{0}
-    , property_set_id_{EaxEaxCallPropertySetId::none}, property_id_{property_id & ~deferred_flag}
-    , property_source_id_{property_source_id}, property_buffer_{property_buffer}
-    , property_size_{property_size}
+    : is_get_{is_get}, version_{0}, property_set_id_{EaxEaxCallPropertySetId::none}
+    , property_id_{property_id & ~deferred_flag}, property_source_id_{property_source_id}
+    , property_buffer_{property_buffer}, property_size_{property_size}
 {
     if (false)
     {
@@ -152,17 +151,9 @@ EaxEaxCall::EaxEaxCall(
         fail("EAX version out of range.");
     }
 
-    if (is_deferred_)
+    if(!(property_id&deferred_flag))
     {
-        if (version_ == 1)
-        {
-            fail("EAX1 does not support deferring.");
-        }
-    }
-    else
-    {
-        if (property_set_id_ != EaxEaxCallPropertySetId::fx_slot &&
-            property_id_ != 0)
+        if(property_set_id_ != EaxEaxCallPropertySetId::fx_slot && property_id_ != 0)
         {
             if (!property_buffer)
             {
@@ -176,8 +167,7 @@ EaxEaxCall::EaxEaxCall(
         }
     }
 
-    if (property_set_id_ == EaxEaxCallPropertySetId::source &&
-        property_source_id_ == 0)
+    if(property_set_id_ == EaxEaxCallPropertySetId::source && property_source_id_ == 0)
     {
         fail("Null AL source id.");
     }

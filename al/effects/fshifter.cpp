@@ -159,10 +159,7 @@ class EaxFrequencyShifterEffect final :
 public:
     EaxFrequencyShifterEffect();
 
-
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -172,66 +169,31 @@ private:
     EAXFREQUENCYSHIFTERPROPERTIES eax_d_{};
     EaxFrequencyShifterEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults();
 
-
     void set_efx_frequency();
-
     void set_efx_left_direction();
-
     void set_efx_right_direction();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_frequency(float flFrequency);
+    void validate_left_direction(unsigned long ulLeftDirection);
+    void validate_right_direction(unsigned long ulRightDirection);
+    void validate_all(const EAXFREQUENCYSHIFTERPROPERTIES& all);
 
+    void defer_frequency(float flFrequency);
+    void defer_left_direction(unsigned long ulLeftDirection);
+    void defer_right_direction(unsigned long ulRightDirection);
+    void defer_all(const EAXFREQUENCYSHIFTERPROPERTIES& all);
 
-    void validate_frequency(
-        float flFrequency);
+    void defer_frequency(const EaxEaxCall& eax_call);
+    void defer_left_direction(const EaxEaxCall& eax_call);
+    void defer_right_direction(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_left_direction(
-        unsigned long ulLeftDirection);
-
-    void validate_right_direction(
-        unsigned long ulRightDirection);
-
-    void validate_all(
-        const EAXFREQUENCYSHIFTERPROPERTIES& all);
-
-
-    void defer_frequency(
-        float flFrequency);
-
-    void defer_left_direction(
-        unsigned long ulLeftDirection);
-
-    void defer_right_direction(
-        unsigned long ulRightDirection);
-
-    void defer_all(
-        const EAXFREQUENCYSHIFTERPROPERTIES& all);
-
-
-    void defer_frequency(
-        const EaxEaxCall& eax_call);
-
-    void defer_left_direction(
-        const EaxEaxCall& eax_call);
-
-    void defer_right_direction(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxFrequencyShifterEffect
 
 
@@ -255,11 +217,9 @@ EaxFrequencyShifterEffect::EaxFrequencyShifterEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxFrequencyShifterEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxFrequencyShifterEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxFrequencyShifterEffect::set_eax_defaults()
@@ -312,11 +272,9 @@ void EaxFrequencyShifterEffect::set_efx_defaults()
     set_efx_right_direction();
 }
 
-// [[nodiscard]]
-bool EaxFrequencyShifterEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxFrequencyShifterEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXFREQUENCYSHIFTER_NONE:
             break;
@@ -340,8 +298,6 @@ bool EaxFrequencyShifterEffect::get(
         default:
             throw EaxFrequencyShifterEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxFrequencyShifterEffect::validate_frequency(
@@ -485,11 +441,9 @@ bool EaxFrequencyShifterEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxFrequencyShifterEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxFrequencyShifterEffect::set(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXFREQUENCYSHIFTER_NONE:
             break;
@@ -513,13 +467,6 @@ bool EaxFrequencyShifterEffect::set(
         default:
             throw EaxFrequencyShifterEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

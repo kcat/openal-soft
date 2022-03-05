@@ -203,10 +203,7 @@ class EaxEqualizerEffect final :
 public:
     EaxEqualizerEffect();
 
-
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -216,143 +213,59 @@ private:
     EAXEQUALIZERPROPERTIES eax_d_{};
     EaxEqualizerEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults();
 
-
     void set_efx_low_gain();
-
     void set_efx_low_cutoff();
-
     void set_efx_mid1_gain();
-
     void set_efx_mid1_center();
-
     void set_efx_mid1_width();
-
     void set_efx_mid2_gain();
-
     void set_efx_mid2_center();
-
     void set_efx_mid2_width();
-
     void set_efx_high_gain();
-
     void set_efx_high_cutoff();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_low_gain(long lLowGain);
+    void validate_low_cutoff(float flLowCutOff);
+    void validate_mid1_gain(long lMid1Gain);
+    void validate_mid1_center(float flMid1Center);
+    void validate_mid1_width(float flMid1Width);
+    void validate_mid2_gain(long lMid2Gain);
+    void validate_mid2_center(float flMid2Center);
+    void validate_mid2_width(float flMid2Width);
+    void validate_high_gain(long lHighGain);
+    void validate_high_cutoff(float flHighCutOff);
+    void validate_all(const EAXEQUALIZERPROPERTIES& all);
 
+    void defer_low_gain(long lLowGain);
+    void defer_low_cutoff(float flLowCutOff);
+    void defer_mid1_gain(long lMid1Gain);
+    void defer_mid1_center(float flMid1Center);
+    void defer_mid1_width(float flMid1Width);
+    void defer_mid2_gain(long lMid2Gain);
+    void defer_mid2_center(float flMid2Center);
+    void defer_mid2_width(float flMid2Width);
+    void defer_high_gain(long lHighGain);
+    void defer_high_cutoff(float flHighCutOff);
+    void defer_all(const EAXEQUALIZERPROPERTIES& all);
 
-    void validate_low_gain(
-        long lLowGain);
+    void defer_low_gain(const EaxEaxCall& eax_call);
+    void defer_low_cutoff(const EaxEaxCall& eax_call);
+    void defer_mid1_gain(const EaxEaxCall& eax_call);
+    void defer_mid1_center(const EaxEaxCall& eax_call);
+    void defer_mid1_width(const EaxEaxCall& eax_call);
+    void defer_mid2_gain(const EaxEaxCall& eax_call);
+    void defer_mid2_center(const EaxEaxCall& eax_call);
+    void defer_mid2_width(const EaxEaxCall& eax_call);
+    void defer_high_gain(const EaxEaxCall& eax_call);
+    void defer_high_cutoff(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_low_cutoff(
-        float flLowCutOff);
-
-    void validate_mid1_gain(
-        long lMid1Gain);
-
-    void validate_mid1_center(
-        float flMid1Center);
-
-    void validate_mid1_width(
-        float flMid1Width);
-
-    void validate_mid2_gain(
-        long lMid2Gain);
-
-    void validate_mid2_center(
-        float flMid2Center);
-
-    void validate_mid2_width(
-        float flMid2Width);
-
-    void validate_high_gain(
-        long lHighGain);
-
-    void validate_high_cutoff(
-        float flHighCutOff);
-
-    void validate_all(
-        const EAXEQUALIZERPROPERTIES& all);
-
-
-    void defer_low_gain(
-        long lLowGain);
-
-    void defer_low_cutoff(
-        float flLowCutOff);
-
-    void defer_mid1_gain(
-        long lMid1Gain);
-
-    void defer_mid1_center(
-        float flMid1Center);
-
-    void defer_mid1_width(
-        float flMid1Width);
-
-    void defer_mid2_gain(
-        long lMid2Gain);
-
-    void defer_mid2_center(
-        float flMid2Center);
-
-    void defer_mid2_width(
-        float flMid2Width);
-
-    void defer_high_gain(
-        long lHighGain);
-
-    void defer_high_cutoff(
-        float flHighCutOff);
-
-    void defer_all(
-        const EAXEQUALIZERPROPERTIES& all);
-
-
-    void defer_low_gain(
-        const EaxEaxCall& eax_call);
-
-    void defer_low_cutoff(
-        const EaxEaxCall& eax_call);
-
-    void defer_mid1_gain(
-        const EaxEaxCall& eax_call);
-
-    void defer_mid1_center(
-        const EaxEaxCall& eax_call);
-
-    void defer_mid1_width(
-        const EaxEaxCall& eax_call);
-
-    void defer_mid2_gain(
-        const EaxEaxCall& eax_call);
-
-    void defer_mid2_center(
-        const EaxEaxCall& eax_call);
-
-    void defer_mid2_width(
-        const EaxEaxCall& eax_call);
-
-    void defer_high_gain(
-        const EaxEaxCall& eax_call);
-
-    void defer_high_cutoff(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxEqualizerEffect
 
 
@@ -376,11 +289,9 @@ EaxEqualizerEffect::EaxEqualizerEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxEqualizerEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxEqualizerEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxEqualizerEffect::set_eax_defaults()
@@ -513,11 +424,9 @@ void EaxEqualizerEffect::set_efx_defaults()
     set_efx_high_cutoff();
 }
 
-// [[nodiscard]]
-bool EaxEqualizerEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxEqualizerEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXEQUALIZER_NONE:
             break;
@@ -569,8 +478,6 @@ bool EaxEqualizerEffect::get(
         default:
             throw EaxEqualizerEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxEqualizerEffect::validate_low_gain(
@@ -948,11 +855,9 @@ bool EaxEqualizerEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxEqualizerEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxEqualizerEffect::set(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXEQUALIZER_NONE:
             break;
@@ -1004,13 +909,6 @@ bool EaxEqualizerEffect::set(
         default:
             throw EaxEqualizerEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

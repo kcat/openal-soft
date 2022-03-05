@@ -1677,16 +1677,12 @@ bool ALeffectslot::eax_set_fx_slot(
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_set(
-    const EaxEaxCall& eax_call)
+bool ALeffectslot::eax_set(const EaxEaxCall& eax_call)
 {
-    bool ret{false};
-
-    switch (eax_call.get_property_set_id())
+    switch(eax_call.get_property_set_id())
     {
         case EaxEaxCallPropertySetId::fx_slot:
-            ret = eax_set_fx_slot(eax_call);
-            break;
+            return eax_set_fx_slot(eax_call);
 
         case EaxEaxCallPropertySetId::fx_slot_effect:
             eax_dispatch_effect(eax_call);
@@ -1696,23 +1692,11 @@ bool ALeffectslot::eax_set(
             eax_fail("Unsupported property id.");
     }
 
-    if(!eax_call.is_deferred())
-    {
-        eax_apply_deferred();
-    }
-
-    return ret;
+    return false;
 }
 
-void ALeffectslot::eax_dispatch_effect(
-    const EaxEaxCall& eax_call)
-{
-    auto is_changed = false;
-    if(eax_effect_)
-        is_changed = eax_effect_->dispatch(eax_call);
-    if(is_changed)
-        eax_set_effect_slot_effect(*eax_effect_);
-}
+void ALeffectslot::eax_dispatch_effect(const EaxEaxCall& eax_call)
+{ if(eax_effect_) eax_effect_->dispatch(eax_call); }
 
 void ALeffectslot::eax_apply_deferred()
 {

@@ -106,9 +106,7 @@ class EaxNullEffect final :
 public:
     EaxNullEffect();
 
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -133,16 +131,10 @@ EaxNullEffect::EaxNullEffect()
 {
 }
 
-// [[nodiscard]]
-bool EaxNullEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxNullEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    if (eax_call.get_property_id() != 0)
-    {
+    if(eax_call.get_property_id() != 0)
         throw EaxNullEffectException{"Unsupported property id."};
-    }
-
-    return false;
 }
 
 bool EaxNullEffect::apply_deferred()

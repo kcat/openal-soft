@@ -616,9 +616,7 @@ class EaxReverbEffect final :
 public:
     EaxReverbEffect();
 
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -634,7 +632,6 @@ private:
     [[noreturn]] static void eax_fail(const char* message);
 
     void set_eax_defaults();
-
 
     void set_efx_density_from_environment_size();
     void set_efx_diffusion();
@@ -661,13 +658,11 @@ private:
     void set_efx_flags();
     void set_efx_defaults();
 
-    bool v1_get(const EaxEaxCall& eax_call) const;
+    void v1_get(const EaxEaxCall& eax_call) const;
 
     void get_all(const EaxEaxCall& eax_call) const;
 
-    // [[nodiscard]]
-    bool get(const EaxEaxCall& eax_call) const;
-
+    void get(const EaxEaxCall& eax_call) const;
 
     static void v1_validate_environment(unsigned long environment);
     static void v1_validate_volume(float volume);
@@ -770,8 +765,7 @@ private:
     void defer_flags(const EaxEaxCall& eax_call);
     void defer_all(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool set(const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxReverbEffect
 
 
@@ -795,11 +789,9 @@ EaxReverbEffect::EaxReverbEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxReverbEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxReverbEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 [[noreturn]] void EaxReverbEffect::eax_fail(const char* message)
@@ -1063,9 +1055,9 @@ void EaxReverbEffect::set_efx_defaults()
     set_efx_flags();
 }
 
-bool EaxReverbEffect::v1_get(const EaxEaxCall& eax_call) const
+void EaxReverbEffect::v1_get(const EaxEaxCall& eax_call) const
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case DSPROPERTY_EAX_ALL:
             eax_call.set_value<EaxReverbEffectException>(eax1_);
@@ -1090,8 +1082,6 @@ bool EaxReverbEffect::v1_get(const EaxEaxCall& eax_call) const
         default:
             eax_fail("Unsupported property id.");
     }
-
-    return false;
 }
 
 void EaxReverbEffect::get_all(
@@ -1121,14 +1111,11 @@ void EaxReverbEffect::get_all(
     }
 }
 
-// [[nodiscard]]
-bool EaxReverbEffect::get(
-    const EaxEaxCall& eax_call) const
+void EaxReverbEffect::get(const EaxEaxCall& eax_call) const
 {
-    if (eax_call.get_version() == 1)
-        return v1_get(eax_call);
-
-    switch (eax_call.get_property_id())
+    if(eax_call.get_version() == 1)
+        v1_get(eax_call);
+    else switch(eax_call.get_property_id())
     {
         case EAXREVERB_NONE:
             break;
@@ -1236,8 +1223,6 @@ bool EaxReverbEffect::get(
         default:
             eax_fail("Unsupported property id.");
     }
-
-    return false;
 }
 
 void EaxReverbEffect::v1_validate_environment(unsigned long environment)
@@ -1844,7 +1829,6 @@ void EaxReverbEffect::v1_defer_environment(const EaxEaxCall& eax_call)
     validate_environment(environment, 1, true);
 
     const auto& reverb_preset = EAX1REVERB_PRESETS[environment];
-
     v1_defer_all(reverb_preset);
 }
 
@@ -2398,9 +2382,7 @@ bool EaxReverbEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxReverbEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxReverbEffect::set(const EaxEaxCall& eax_call)
 {
     if(eax_call.get_version() == 1)
         v1_defer(eax_call);
@@ -2512,13 +2494,6 @@ bool EaxReverbEffect::set(
         default:
             eax_fail("Unsupported property id.");
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 const EFXEAXREVERBPROPERTIES eax_efx_reverb_presets[EAX1_ENVIRONMENT_COUNT] =

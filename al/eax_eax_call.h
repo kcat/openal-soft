@@ -33,7 +33,6 @@ public:
         ALuint property_size);
 
     bool is_get() const noexcept { return is_get_; }
-    bool is_deferred() const noexcept { return is_deferred_; }
     int get_version() const noexcept { return version_; }
     EaxEaxCallPropertySetId get_property_set_id() const noexcept { return property_set_id_; }
     ALuint get_property_id() const noexcept { return property_id_; }
@@ -83,7 +82,6 @@ public:
 
 private:
     const bool is_get_;
-    const bool is_deferred_;
     int version_;
     EaxFxSlotIndex fx_slot_index_;
     EaxEaxCallPropertySetId property_set_id_;

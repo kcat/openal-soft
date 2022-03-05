@@ -359,10 +359,7 @@ class EaxChorusEffect final :
 public:
     EaxChorusEffect();
 
-
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -372,99 +369,43 @@ private:
     EAXCHORUSPROPERTIES eax_d_{};
     EaxChorusEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults() noexcept;
 
-
     void set_efx_waveform();
-
     void set_efx_phase();
-
     void set_efx_rate();
-
     void set_efx_depth();
-
     void set_efx_feedback();
-
     void set_efx_delay();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_waveform(unsigned long ulWaveform);
+    void validate_phase(long lPhase);
+    void validate_rate(float flRate);
+    void validate_depth(float flDepth);
+    void validate_feedback(float flFeedback);
+    void validate_delay(float flDelay);
+    void validate_all(const EAXCHORUSPROPERTIES& eax_all);
 
+    void defer_waveform(unsigned long ulWaveform);
+    void defer_phase(long lPhase);
+    void defer_rate(float flRate);
+    void defer_depth(float flDepth);
+    void defer_feedback(float flFeedback);
+    void defer_delay(float flDelay);
+    void defer_all(const EAXCHORUSPROPERTIES& eax_all);
 
-    void validate_waveform(
-        unsigned long ulWaveform);
+    void defer_waveform(const EaxEaxCall& eax_call);
+    void defer_phase(const EaxEaxCall& eax_call);
+    void defer_rate(const EaxEaxCall& eax_call);
+    void defer_depth(const EaxEaxCall& eax_call);
+    void defer_feedback(const EaxEaxCall& eax_call);
+    void defer_delay(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_phase(
-        long lPhase);
-
-    void validate_rate(
-        float flRate);
-
-    void validate_depth(
-        float flDepth);
-
-    void validate_feedback(
-        float flFeedback);
-
-    void validate_delay(
-        float flDelay);
-
-    void validate_all(
-        const EAXCHORUSPROPERTIES& eax_all);
-
-
-    void defer_waveform(
-        unsigned long ulWaveform);
-
-    void defer_phase(
-        long lPhase);
-
-    void defer_rate(
-        float flRate);
-
-    void defer_depth(
-        float flDepth);
-
-    void defer_feedback(
-        float flFeedback);
-
-    void defer_delay(
-        float flDelay);
-
-    void defer_all(
-        const EAXCHORUSPROPERTIES& eax_all);
-
-
-    void defer_waveform(
-        const EaxEaxCall& eax_call);
-
-    void defer_phase(
-        const EaxEaxCall& eax_call);
-
-    void defer_rate(
-        const EaxEaxCall& eax_call);
-
-    void defer_depth(
-        const EaxEaxCall& eax_call);
-
-    void defer_feedback(
-        const EaxEaxCall& eax_call);
-
-    void defer_delay(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxChorusEffect
 
 
@@ -488,11 +429,9 @@ EaxChorusEffect::EaxChorusEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxChorusEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxChorusEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxChorusEffect::set_eax_defaults() noexcept
@@ -577,10 +516,9 @@ void EaxChorusEffect::set_efx_defaults()
     set_efx_delay();
 }
 
-bool EaxChorusEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxChorusEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXCHORUS_NONE:
             break;
@@ -616,8 +554,6 @@ bool EaxChorusEffect::get(
         default:
             throw EaxChorusEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxChorusEffect::validate_waveform(
@@ -859,11 +795,9 @@ bool EaxChorusEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxChorusEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxChorusEffect::set(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXCHORUS_NONE:
             break;
@@ -899,13 +833,6 @@ bool EaxChorusEffect::set(
         default:
             throw EaxChorusEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 
@@ -944,9 +871,7 @@ public:
     EaxFlangerEffect();
 
 
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -956,99 +881,43 @@ private:
     EAXFLANGERPROPERTIES eax_d_{};
     EaxFlangerEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults();
 
-
     void set_efx_waveform();
-
     void set_efx_phase();
-
     void set_efx_rate();
-
     void set_efx_depth();
-
     void set_efx_feedback();
-
     void set_efx_delay();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_waveform(unsigned long ulWaveform);
+    void validate_phase(long lPhase);
+    void validate_rate(float flRate);
+    void validate_depth(float flDepth);
+    void validate_feedback(float flFeedback);
+    void validate_delay(float flDelay);
+    void validate_all(const EAXFLANGERPROPERTIES& all);
 
+    void defer_waveform(unsigned long ulWaveform);
+    void defer_phase(long lPhase);
+    void defer_rate(float flRate);
+    void defer_depth(float flDepth);
+    void defer_feedback(float flFeedback);
+    void defer_delay(float flDelay);
+    void defer_all(const EAXFLANGERPROPERTIES& all);
 
-    void validate_waveform(
-        unsigned long ulWaveform);
+    void defer_waveform(const EaxEaxCall& eax_call);
+    void defer_phase(const EaxEaxCall& eax_call);
+    void defer_rate(const EaxEaxCall& eax_call);
+    void defer_depth(const EaxEaxCall& eax_call);
+    void defer_feedback(const EaxEaxCall& eax_call);
+    void defer_delay(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_phase(
-        long lPhase);
-
-    void validate_rate(
-        float flRate);
-
-    void validate_depth(
-        float flDepth);
-
-    void validate_feedback(
-        float flFeedback);
-
-    void validate_delay(
-        float flDelay);
-
-    void validate_all(
-        const EAXFLANGERPROPERTIES& all);
-
-
-    void defer_waveform(
-        unsigned long ulWaveform);
-
-    void defer_phase(
-        long lPhase);
-
-    void defer_rate(
-        float flRate);
-
-    void defer_depth(
-        float flDepth);
-
-    void defer_feedback(
-        float flFeedback);
-
-    void defer_delay(
-        float flDelay);
-
-    void defer_all(
-        const EAXFLANGERPROPERTIES& all);
-
-
-    void defer_waveform(
-        const EaxEaxCall& eax_call);
-
-    void defer_phase(
-        const EaxEaxCall& eax_call);
-
-    void defer_rate(
-        const EaxEaxCall& eax_call);
-
-    void defer_depth(
-        const EaxEaxCall& eax_call);
-
-    void defer_feedback(
-        const EaxEaxCall& eax_call);
-
-    void defer_delay(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxFlangerEffect
 
 
@@ -1072,11 +941,9 @@ EaxFlangerEffect::EaxFlangerEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxFlangerEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxFlangerEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxFlangerEffect::set_eax_defaults()
@@ -1161,11 +1028,9 @@ void EaxFlangerEffect::set_efx_defaults()
     set_efx_delay();
 }
 
-// [[nodiscard]]
-bool EaxFlangerEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxFlangerEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXFLANGER_NONE:
             break;
@@ -1201,8 +1066,6 @@ bool EaxFlangerEffect::get(
         default:
             throw EaxFlangerEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxFlangerEffect::validate_waveform(
@@ -1444,11 +1307,9 @@ bool EaxFlangerEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxFlangerEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxFlangerEffect::set(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXFLANGER_NONE:
             break;
@@ -1484,13 +1345,6 @@ bool EaxFlangerEffect::set(
         default:
             throw EaxFlangerEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

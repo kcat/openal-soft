@@ -332,11 +332,10 @@ ALenum ALCcontext::eax_eax_set(
 {
     eax_initialize();
 
-    constexpr auto deferred_flag = 0x80000000u;
     const auto eax_call = create_eax_call(
         false,
         property_set_id,
-        property_id | (mDeferUpdates ? deferred_flag : 0u),
+        property_id,
         property_source_id,
         property_value,
         property_value_size
@@ -362,6 +361,10 @@ ALenum ALCcontext::eax_eax_set(
         default:
             eax_fail("Unsupported property set id.");
     }
+
+    static constexpr auto deferred_flag = 0x80000000u;
+    if(!(property_id&deferred_flag) && !mDeferUpdates)
+        applyAllUpdates();
 
     return AL_NO_ERROR;
 }
@@ -1135,22 +1138,6 @@ void ALCcontext::eax_set(
 
         default:
             eax_fail("Unsupported property id.");
-    }
-
-    if(!eax_call.is_deferred())
-    {
-        eax_apply_deferred();
-
-        mHoldUpdates.store(true, std::memory_order_release);
-        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
-            /* busy-wait */
-        }
-
-        if(std::exchange(mPropsDirty, false))
-            UpdateContextProps(this);
-        UpdateAllSourceProps(this);
-
-        mHoldUpdates.store(false, std::memory_order_release);
     }
 }
 

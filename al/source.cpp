@@ -5681,12 +5681,6 @@ void ALsource::eax_set(
         default:
             eax_fail("Unsupported property id.");
     }
-
-    if(!eax_call.is_deferred())
-    {
-        eax_apply_deferred();
-        EaxUpdateSourceVoice(this, eax_al_context_);
-    }
 }
 
 const GUID& ALsource::eax_get_send_fx_slot_guid(

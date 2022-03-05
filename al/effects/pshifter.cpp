@@ -110,9 +110,7 @@ class EaxPitchShifterEffect final :
 public:
     EaxPitchShifterEffect();
 
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -122,55 +120,27 @@ private:
     EAXPITCHSHIFTERPROPERTIES eax_d_{};
     EaxPitchShifterEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults();
 
-
     void set_efx_coarse_tune();
-
     void set_efx_fine_tune();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_coarse_tune(long lCoarseTune);
+    void validate_fine_tune(long lFineTune);
+    void validate_all(const EAXPITCHSHIFTERPROPERTIES& all);
 
+    void defer_coarse_tune(long lCoarseTune);
+    void defer_fine_tune(long lFineTune);
+    void defer_all(const EAXPITCHSHIFTERPROPERTIES& all);
 
-    void validate_coarse_tune(
-        long lCoarseTune);
+    void defer_coarse_tune(const EaxEaxCall& eax_call);
+    void defer_fine_tune(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_fine_tune(
-        long lFineTune);
-
-    void validate_all(
-        const EAXPITCHSHIFTERPROPERTIES& all);
-
-
-    void defer_coarse_tune(
-        long lCoarseTune);
-
-    void defer_fine_tune(
-        long lFineTune);
-
-    void defer_all(
-        const EAXPITCHSHIFTERPROPERTIES& all);
-
-
-    void defer_coarse_tune(
-        const EaxEaxCall& eax_call);
-
-    void defer_fine_tune(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxPitchShifterEffect
 
 
@@ -194,11 +164,9 @@ EaxPitchShifterEffect::EaxPitchShifterEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxPitchShifterEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxPitchShifterEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxPitchShifterEffect::set_eax_defaults()
@@ -235,11 +203,9 @@ void EaxPitchShifterEffect::set_efx_defaults()
     set_efx_fine_tune();
 }
 
-// [[nodiscard]]
-bool EaxPitchShifterEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxPitchShifterEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXPITCHSHIFTER_NONE:
             break;
@@ -259,8 +225,6 @@ bool EaxPitchShifterEffect::get(
         default:
             throw EaxPitchShifterEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxPitchShifterEffect::validate_coarse_tune(
@@ -366,11 +330,9 @@ bool EaxPitchShifterEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxPitchShifterEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxPitchShifterEffect::set(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXPITCHSHIFTER_NONE:
             break;
@@ -390,13 +352,6 @@ bool EaxPitchShifterEffect::set(
         default:
             throw EaxPitchShifterEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

@@ -165,10 +165,7 @@ class EaxRingModulatorEffect final :
 public:
     EaxRingModulatorEffect();
 
-
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -178,66 +175,31 @@ private:
     EAXRINGMODULATORPROPERTIES eax_d_{};
     EaxRingModulatorEffectDirtyFlags eax_dirty_flags_{};
 
-
     void set_eax_defaults();
 
-
     void set_efx_frequency();
-
     void set_efx_high_pass_cutoff();
-
     void set_efx_waveform();
-
     void set_efx_defaults();
 
+    void get(const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void validate_frequency(float flFrequency);
+    void validate_high_pass_cutoff(float flHighPassCutOff);
+    void validate_waveform(unsigned long ulWaveform);
+    void validate_all(const EAXRINGMODULATORPROPERTIES& all);
 
+    void defer_frequency(float flFrequency);
+    void defer_high_pass_cutoff(float flHighPassCutOff);
+    void defer_waveform(unsigned long ulWaveform);
+    void defer_all(const EAXRINGMODULATORPROPERTIES& all);
 
-    void validate_frequency(
-        float flFrequency);
+    void defer_frequency(const EaxEaxCall& eax_call);
+    void defer_high_pass_cutoff(const EaxEaxCall& eax_call);
+    void defer_waveform(const EaxEaxCall& eax_call);
+    void defer_all(const EaxEaxCall& eax_call);
 
-    void validate_high_pass_cutoff(
-        float flHighPassCutOff);
-
-    void validate_waveform(
-        unsigned long ulWaveform);
-
-    void validate_all(
-        const EAXRINGMODULATORPROPERTIES& all);
-
-
-    void defer_frequency(
-        float flFrequency);
-
-    void defer_high_pass_cutoff(
-        float flHighPassCutOff);
-
-    void defer_waveform(
-        unsigned long ulWaveform);
-
-    void defer_all(
-        const EAXRINGMODULATORPROPERTIES& all);
-
-
-    void defer_frequency(
-        const EaxEaxCall& eax_call);
-
-    void defer_high_pass_cutoff(
-        const EaxEaxCall& eax_call);
-
-    void defer_waveform(
-        const EaxEaxCall& eax_call);
-
-    void defer_all(
-        const EaxEaxCall& eax_call);
-
-
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxRingModulatorEffect
 
 
@@ -261,11 +223,9 @@ EaxRingModulatorEffect::EaxRingModulatorEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxRingModulatorEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxRingModulatorEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxRingModulatorEffect::set_eax_defaults()
@@ -316,11 +276,9 @@ void EaxRingModulatorEffect::set_efx_defaults()
     set_efx_waveform();
 }
 
-// [[nodiscard]]
-bool EaxRingModulatorEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxRingModulatorEffect::get(const EaxEaxCall& eax_call)
 {
-    switch (eax_call.get_property_id())
+    switch(eax_call.get_property_id())
     {
         case EAXRINGMODULATOR_NONE:
             break;
@@ -344,8 +302,6 @@ bool EaxRingModulatorEffect::get(
         default:
             throw EaxRingModulatorEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxRingModulatorEffect::validate_frequency(
@@ -488,9 +444,7 @@ bool EaxRingModulatorEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxRingModulatorEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxRingModulatorEffect::set(const EaxEaxCall& eax_call)
 {
     switch (eax_call.get_property_id())
     {
@@ -516,13 +470,6 @@ bool EaxRingModulatorEffect::set(
         default:
             throw EaxRingModulatorEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

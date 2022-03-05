@@ -139,9 +139,7 @@ public:
     EaxAutoWahEffect();
 
 
-    // [[nodiscard]]
-    bool dispatch(
-        const EaxEaxCall& eax_call) override;
+    void dispatch(const EaxEaxCall& eax_call) override;
 
     // [[nodiscard]]
     bool apply_deferred() override;
@@ -166,9 +164,7 @@ private:
     void set_efx_defaults();
 
 
-    // [[nodiscard]]
-    bool get(
-        const EaxEaxCall& eax_call);
+    void get(const EaxEaxCall& eax_call);
 
 
     void validate_attack_time(
@@ -218,9 +214,7 @@ private:
     void defer_all(
         const EaxEaxCall& eax_call);
 
-    // [[nodiscard]]
-    bool set(
-        const EaxEaxCall& eax_call);
+    void set(const EaxEaxCall& eax_call);
 }; // EaxAutoWahEffect
 
 
@@ -244,11 +238,9 @@ EaxAutoWahEffect::EaxAutoWahEffect()
     set_efx_defaults();
 }
 
-// [[nodiscard]]
-bool EaxAutoWahEffect::dispatch(
-    const EaxEaxCall& eax_call)
+void EaxAutoWahEffect::dispatch(const EaxEaxCall& eax_call)
 {
-    return eax_call.is_get() ? get(eax_call) : set(eax_call);
+    eax_call.is_get() ? get(eax_call) : set(eax_call);
 }
 
 void EaxAutoWahEffect::set_eax_defaults()
@@ -309,8 +301,7 @@ void EaxAutoWahEffect::set_efx_defaults()
     set_efx_peak_gain();
 }
 
-bool EaxAutoWahEffect::get(
-    const EaxEaxCall& eax_call)
+void EaxAutoWahEffect::get(const EaxEaxCall& eax_call)
 {
     switch (eax_call.get_property_id())
     {
@@ -340,8 +331,6 @@ bool EaxAutoWahEffect::get(
         default:
             throw EaxAutoWahEffectException{"Unsupported property id."};
     }
-
-    return false;
 }
 
 void EaxAutoWahEffect::validate_attack_time(
@@ -517,9 +506,7 @@ bool EaxAutoWahEffect::apply_deferred()
     return true;
 }
 
-// [[nodiscard]]
-bool EaxAutoWahEffect::set(
-    const EaxEaxCall& eax_call)
+void EaxAutoWahEffect::set(const EaxEaxCall& eax_call)
 {
     switch (eax_call.get_property_id())
     {
@@ -549,13 +536,6 @@ bool EaxAutoWahEffect::set(
         default:
             throw EaxAutoWahEffectException{"Unsupported property id."};
     }
-
-    if (!eax_call.is_deferred())
-    {
-        return apply_deferred();
-    }
-
-    return false;
 }
 
 } // namespace

@@ -3809,6 +3809,7 @@ void ALsource::eax_set_source_defaults() noexcept
     eax_.source.flRoomRolloffFactor = EAXSOURCE_DEFAULTROOMROLLOFFFACTOR;
     eax_.source.flAirAbsorptionFactor = EAXSOURCE_DEFAULTAIRABSORPTIONFACTOR;
     eax_.source.ulFlags = EAXSOURCE_DEFAULTFLAGS;
+    eax_.source.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 }
 
 void ALsource::eax_set_active_fx_slots_defaults() noexcept

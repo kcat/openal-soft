@@ -121,7 +121,11 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     props->OuterAngle = source->OuterAngle;
     props->RefDistance = source->RefDistance;
     props->MaxDistance = source->MaxDistance;
-    props->RolloffFactor = source->RolloffFactor;
+    props->RolloffFactor = source->RolloffFactor
+#ifdef ALSOFT_EAX
+        + source->RolloffFactor2
+#endif
+    ;
     props->Position = source->Position;
     props->Velocity = source->Velocity;
     props->Direction = source->Direction;
@@ -5393,7 +5397,7 @@ void ALsource::eax_set_doppler_factor()
 
 void ALsource::eax_set_rolloff_factor()
 {
-    RolloffFactor = eax_.source.flRolloffFactor;
+    RolloffFactor2 = eax_.source.flRolloffFactor;
 }
 
 void ALsource::eax_set_room_rolloff_factor()

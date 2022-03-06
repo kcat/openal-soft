@@ -123,6 +123,11 @@ struct ALsource {
     float RefDistance{1.0f};
     float MaxDistance{std::numeric_limits<float>::max()};
     float RolloffFactor{1.0f};
+#ifdef ALSOFT_EAX
+    // For EAXSOURCE_ROLLOFFFACTOR, which is distinct from and added to
+    // AL_ROLLOFF_FACTOR
+    float RolloffFactor2{0.0f};
+#endif
     std::array<float,3> Position{{0.0f, 0.0f, 0.0f}};
     std::array<float,3> Velocity{{0.0f, 0.0f, 0.0f}};
     std::array<float,3> Direction{{0.0f, 0.0f, 0.0f}};

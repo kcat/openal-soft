@@ -111,7 +111,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     al::vector<FilterSubList> FilterList;
 
 #ifdef ALSOFT_EAX
-    ALsizei eax_x_ram_free_size{eax_x_ram_max_size};
+    ALuint eax_x_ram_free_size{eax_x_ram_max_size};
 #endif // ALSOFT_EAX
 
 

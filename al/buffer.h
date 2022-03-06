@@ -75,7 +75,6 @@ struct ALbuffer : public BufferStorage {
 #ifdef ALSOFT_EAX
     ALenum eax_x_ram_mode{AL_STORAGE_AUTOMATIC};
     bool eax_x_ram_is_hardware{};
-    bool eax_x_ram_is_dirty{};
 #endif // ALSOFT_EAX
 };
 

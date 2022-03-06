@@ -456,7 +456,7 @@ START_API_FUNC
             auto device = context->mALDevice.get();
             std::lock_guard<std::mutex> device_lock{device->BufferLock};
 
-            value = device->eax_x_ram_free_size;
+            value = static_cast<ALint>(device->eax_x_ram_free_size);
         }
         else
         {

@@ -1766,18 +1766,10 @@ void ALeffectslot::eax_set_effect_slot_gain(
 }
 
 
-EaxAlEffectSlotDeleter::EaxAlEffectSlotDeleter(
-    ALCcontext& context) noexcept
-    :
-    context_{&context}
-{
-}
-
-void EaxAlEffectSlotDeleter::operator()(
-    ALeffectslot* effect_slot)
+void ALeffectslot::EaxDeleter::operator()(ALeffectslot* effect_slot)
 {
     assert(effect_slot);
-    eax_delete_al_effect_slot(*context_, *effect_slot);
+    eax_delete_al_effect_slot(*effect_slot->eax_al_context_, *effect_slot);
 }
 
 
@@ -1802,8 +1794,7 @@ EaxAlEffectSlotUPtr eax_create_al_effect_slot(
         return nullptr;
     }
 
-    auto effect_slot = EaxAlEffectSlotUPtr{AllocEffectSlot(&context), EaxAlEffectSlotDeleter{context}};
-
+    auto effect_slot = EaxAlEffectSlotUPtr{AllocEffectSlot(&context)};
     if (!effect_slot)
     {
         ERR(EAX_PREFIX "%s\n", "Failed to allocate.");

@@ -249,29 +249,20 @@ private:
 
     // `alAuxiliaryEffectSlotf(effect_slot, AL_EFFECTSLOT_GAIN, gain)`
     void eax_set_effect_slot_gain(ALfloat gain);
+
+public:
+    class EaxDeleter {
+    public:
+        void operator()(ALeffectslot *effect_slot);
+    }; // EaxAlEffectSlotDeleter
 #endif // ALSOFT_EAX
 };
 
 void UpdateAllEffectSlotProps(ALCcontext *context);
 
 #ifdef ALSOFT_EAX
-class EaxAlEffectSlotDeleter
-{
-public:
-    EaxAlEffectSlotDeleter() noexcept = default;
 
-    EaxAlEffectSlotDeleter(
-        ALCcontext& context) noexcept;
-
-    void operator()(
-        ALeffectslot* effect_slot);
-
-
-private:
-    ALCcontext* context_{};
-}; // EaxAlEffectSlotDeleter
-
-using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, EaxAlEffectSlotDeleter>;
+using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, ALeffectslot::EaxDeleter>;
 
 
 EaxAlEffectSlotUPtr eax_create_al_effect_slot(

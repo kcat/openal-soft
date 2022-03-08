@@ -191,14 +191,14 @@ void UhjDecoder::decodeStereo(const al::span<float*> samples, const size_t sampl
          */
         const float wtarget{mWidthControl};
         const float wcurrent{unlikely(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
-        const float wstep{(wtarget - wcurrent) / static_cast<float>(forwardSamples)};
-        if(likely(wstep < 0.00001f))
+        if(likely(wtarget == wcurrent) || unlikely(forwardSamples == 0))
         {
             for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
-                mD[i] = (left[i] - right[i]) * wtarget;
+                mD[i] = (left[i] - right[i]) * wcurrent;
         }
         else
         {
+            const float wstep{(wtarget - wcurrent) / static_cast<float>(forwardSamples)};
             float fi{0.0f};
             size_t i{0};
             for(;i < forwardSamples;++i)
@@ -208,8 +208,8 @@ void UhjDecoder::decodeStereo(const al::span<float*> samples, const size_t sampl
             }
             for(;i < samplesToDo+sFilterDelay;++i)
                 mD[i] = (left[i] - right[i]) * wtarget;
+            mCurrentWidth = wtarget;
         }
-        mCurrentWidth = wtarget;
     }
 
     float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};

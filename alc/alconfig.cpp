@@ -440,8 +440,8 @@ void ReadALConfig()
     if(auto configdir = al::getenv("XDG_CONFIG_HOME"))
     {
         fname = *configdir;
-        if(fname.back() != '/') fname += "/alsoft.conf";
-        else fname += "alsoft.conf";
+        if(fname.back() != '/') fname += "/openal/alsoft.conf";
+        else fname += "openal/alsoft.conf";
     }
     else
     {
@@ -449,8 +449,8 @@ void ReadALConfig()
         if(auto homedir = al::getenv("HOME"))
         {
             fname = *homedir;
-            if(fname.back() != '/') fname += "/.config/alsoft.conf";
-            else fname += ".config/alsoft.conf";
+            if(fname.back() != '/') fname += "/.config/openal/alsoft.conf";
+            else fname += ".config/openal/alsoft.conf";
         }
     }
     if(!fname.empty())

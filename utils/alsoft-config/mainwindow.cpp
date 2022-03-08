@@ -158,7 +158,7 @@ static QString getDefaultConfigName()
     };
     QString base = get_appdata_path();
 #else
-    static const char fname[] = "alsoft.conf";
+    static const char fname[] = "openal/alsoft.conf";
     QByteArray base = qgetenv("XDG_CONFIG_HOME");
     if(base.isEmpty())
     {

@@ -125,26 +125,15 @@ float InitConeScale()
     }
     return ret;
 }
-
-float InitZScale()
-{
-    float ret{1.0f};
-    if(auto optval = al::getenv("__ALSOFT_REVERSE_Z"))
-    {
-        if(al::strcasecmp(optval->c_str(), "true") == 0
-            || strtol(optval->c_str(), nullptr, 0) == 1)
-            ret *= -1.0f;
-    }
-    return ret;
-}
-
-} // namespace
-
 /* Cone scalar */
 const float ConeScale{InitConeScale()};
 
-/* Localized Z scalar for mono sources */
-const float ZScale{InitZScale()};
+/* Localized Z scalar for mono sources (initialized in aluInit, after
+ * configuration is loaded).
+ */
+float ZScale{1.0f};
+
+} // namespace
 
 namespace {
 
@@ -253,9 +242,10 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
 
 } // namespace
 
-void aluInit(void)
+void aluInit(CompatFlagBitset flags)
 {
     MixDirectHrtf = SelectHrtfMixer();
+    ZScale = flags.test(CompatFlags::ReverseZ) ? -1.0f : 1.0f;
 }
 
 

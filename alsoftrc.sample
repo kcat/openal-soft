@@ -583,6 +583,17 @@
 ## EAX extensions stuff
 ##
 [eax]
-##enable:
+
+## enable: (global)
 #  Sets whether to enable EAX extensions or not.
 #enable = true
+
+##
+## Per-game compatibility options (these should only be set in per-game config
+## files, *NOT* system- or user-level!)
+##
+[game_compat]
+
+## reverse-z: (global)
+#  Reverses the local Z (front-back) position of 3D sound sources.
+#reverse-z = false

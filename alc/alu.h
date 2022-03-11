@@ -1,6 +1,8 @@
 #ifndef ALU_H
 #define ALU_H
 
+#include <bitset>
+
 #include "aloptional.h"
 
 struct ALCcontext;
@@ -13,7 +15,14 @@ enum class StereoEncoding : unsigned char;
 constexpr float GainMixMax{1000.0f}; /* +60dB */
 
 
-void aluInit(void);
+enum CompatFlags : uint8_t {
+    ReverseZ,
+
+    Count
+};
+using CompatFlagBitset = std::bitset<CompatFlags::Count>;
+
+void aluInit(CompatFlagBitset flags);
 
 /* aluInitRenderer
  *
@@ -23,9 +32,5 @@ void aluInit(void);
 void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding> stereomode);
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context);
-
-
-extern const float ConeScale;
-extern const float ZScale;
 
 #endif

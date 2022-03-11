@@ -598,6 +598,14 @@
 ##
 [game_compat]
 
+## reverse-x: (global)
+#  Reverses the local X (left-right) position of 3D sound sources.
+#reverse-x = false
+
+## reverse-y: (global)
+#  Reverses the local Y (up-down) position of 3D sound sources.
+#reverse-y = false
+
 ## reverse-z: (global)
 #  Reverses the local Z (front-back) position of 3D sound sources.
 #reverse-z = false

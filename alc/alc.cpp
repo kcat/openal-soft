@@ -1121,14 +1121,20 @@ void alc_initconfig(void)
         AllowRTTimeLimit = *limopt;
 
     CompatFlagBitset compatflags{};
-    if(auto optval = al::getenv("__ALSOFT_REVERSE_Z"))
+    auto checkflag = [](const char *envname, const char *optname) -> bool
     {
-        if(al::strcasecmp(optval->c_str(), "true") == 0
-            || strtol(optval->c_str(), nullptr, 0) == 1)
-            compatflags.set(CompatFlags::ReverseZ);
-    }
-    else if(GetConfigValueBool(nullptr, "game_compat", "reverse-z", false))
-        compatflags.set(CompatFlags::ReverseZ);
+        if(auto optval = al::getenv(envname))
+        {
+            if(al::strcasecmp(optval->c_str(), "true") == 0
+                || strtol(optval->c_str(), nullptr, 0) == 1)
+                return true;
+            return false;
+        }
+        return GetConfigValueBool(nullptr, "game_compat", optname, false);
+    };
+    compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
+    compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
+    compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
 
     aluInit(compatflags);
     Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));

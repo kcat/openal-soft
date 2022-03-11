@@ -128,9 +128,11 @@ float InitConeScale()
 /* Cone scalar */
 const float ConeScale{InitConeScale()};
 
-/* Localized Z scalar for mono sources (initialized in aluInit, after
+/* Localized scalars for mono sources (initialized in aluInit, after
  * configuration is loaded).
  */
+float XScale{1.0f};
+float YScale{1.0f};
 float ZScale{1.0f};
 
 } // namespace
@@ -245,6 +247,8 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
 void aluInit(CompatFlagBitset flags)
 {
     MixDirectHrtf = SelectHrtfMixer();
+    XScale = flags.test(CompatFlags::ReverseX) ? -1.0f : 1.0f;
+    YScale = flags.test(CompatFlags::ReverseY) ? -1.0f : 1.0f;
     ZScale = flags.test(CompatFlags::ReverseZ) ? -1.0f : 1.0f;
 }
 
@@ -1516,7 +1520,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     else if(Distance > 0.0f)
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
-    CalcPanningAndFilters(voice, ToSource[0], ToSource[1], ToSource[2]*ZScale,
+    CalcPanningAndFilters(voice, ToSource[0]*XScale, ToSource[1]*YScale, ToSource[2]*ZScale,
         Distance*context->mParams.MetersPerUnit, spread, DryGain, WetGain, SendSlots, props,
         context->mParams, Device);
 }

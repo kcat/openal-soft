@@ -64,8 +64,13 @@ to it before passing in 3D coordinates. Depending on how exactly this is done,
 it can cause correct output for stereo but incorrect Z panning for surround
 sound (i.e., sounds that are supposed to be behind you sound like they're in
 front, and vice-versa). Setting this to "true" or "1" will negate the localized
-Z coordinate to attempt to fix output for apps that have incorrect front/back
-panning.
+Z coordinate to flip front/back panning for 3D sources.
+
+__ALSOFT_REVERSE_Y
+Same as for __ALSOFT_REVERSE_Z, but for Y (up/down) panning.
+
+__ALSOFT_REVERSE_X
+Same as for __ALSOFT_REVERSE_Z, but for X (left/right) panning.
 
 __ALSOFT_SUSPEND_CONTEXT
 Due to the OpenAL spec not being very clear about them, behavior of the

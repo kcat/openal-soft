@@ -16,6 +16,8 @@ constexpr float GainMixMax{1000.0f}; /* +60dB */
 
 
 enum CompatFlags : uint8_t {
+    ReverseX,
+    ReverseY,
     ReverseZ,
 
     Count

@@ -8,6 +8,11 @@
 #endif
 #ifdef HAVE_SSE_INTRINSICS
 #include <emmintrin.h>
+#ifndef _MM_DENORMALS_ZERO_MASK
+/* Some headers seem to be missing these? */
+#define _MM_DENORMALS_ZERO_MASK 0x0040u
+#define _MM_DENORMALS_ZERO_ON 0x0040u
+#endif
 #endif
 
 #include "cpu_caps.h"

@@ -14,9 +14,16 @@
 # block, while ALSA options would be in the [alsa/Name of Device] block.
 # Options marked as "(global)" are not influenced by the device.
 #
-# The system-wide settings can be put in /etc/openal/alsoft.conf and user-
-# specific override settings in $HOME/.alsoftrc.
+# The system-wide settings can be put in /etc/xdg/alsoft.conf (as determined by
+# the XDG_CONFIG_DIRS env var list, /etc/xdg being the default if unset) and
+# user-specific override settings in $HOME/.config/alsoft.conf (as determined
+# by the XDG_CONFIG_HOME env var).
+#
 # For Windows, these settings should go into $AppData\alsoft.ini
+#
+# An additional configuration file (alsoft.ini on Windows, alsoft.conf on other
+# OSs) can be placed alongside the process executable for app-specific config
+# settings.
 #
 # Option and block names are case-senstive. The supplied values are only hints
 # and may not be honored (though generally it'll try to get as close as
@@ -284,10 +291,7 @@
 ## hq-mode:
 #  Enables a high-quality ambisonic decoder. This mode is capable of frequency-
 #  dependent processing, creating a better reproduction of 3D sound rendering
-#  over surround sound speakers. Enabling this also requires specifying decoder
-#  configuration files for the appropriate speaker configuration you intend to
-#  use (see the quad, surround51, etc options below). Currently, up to third-
-#  order decoding is supported.
+#  over surround sound speakers.
 #hq-mode = true
 
 ## distance-comp:

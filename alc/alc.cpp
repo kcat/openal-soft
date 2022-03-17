@@ -1605,63 +1605,53 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         uint aorder{0u};
         uint freq{0u};
 
-#define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
+#define ATTRIBUTE(a) a: TRACE("%s = %d\n", #a, attrList[attrIdx + 1]);
         size_t attrIdx{0};
         while(attrList[attrIdx])
         {
             switch(attrList[attrIdx])
             {
-            case ALC_FORMAT_CHANNELS_SOFT:
-                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_FORMAT_CHANNELS_SOFT)
                 optchans = DevFmtChannelsFromEnum(attrList[attrIdx + 1]);
                 break;
 
-            case ALC_FORMAT_TYPE_SOFT:
-                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_FORMAT_TYPE_SOFT)
                 opttype = DevFmtTypeFromEnum(attrList[attrIdx + 1]);
                 break;
 
-            case ALC_FREQUENCY:
+            case ATTRIBUTE(ALC_FREQUENCY)
                 freq = static_cast<uint>(attrList[attrIdx + 1]);
-                TRACE_ATTR(ALC_FREQUENCY, freq);
                 break;
 
-            case ALC_AMBISONIC_LAYOUT_SOFT:
-                TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_AMBISONIC_LAYOUT_SOFT)
                 optlayout = DevAmbiLayoutFromEnum(attrList[attrIdx + 1]);
                 break;
 
-            case ALC_AMBISONIC_SCALING_SOFT:
-                TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_AMBISONIC_SCALING_SOFT)
                 optscale = DevAmbiScalingFromEnum(attrList[attrIdx + 1]);
                 break;
 
-            case ALC_AMBISONIC_ORDER_SOFT:
+            case ATTRIBUTE(ALC_AMBISONIC_ORDER_SOFT)
                 aorder = static_cast<uint>(attrList[attrIdx + 1]);
-                TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
                 break;
 
-            case ALC_MONO_SOURCES:
+            case ATTRIBUTE(ALC_MONO_SOURCES)
                 numMono = static_cast<uint>(attrList[attrIdx + 1]);
-                TRACE_ATTR(ALC_MONO_SOURCES, numMono);
                 if(numMono > INT_MAX) numMono = 0;
                 break;
 
-            case ALC_STEREO_SOURCES:
+            case ATTRIBUTE(ALC_STEREO_SOURCES)
                 numStereo = static_cast<uint>(attrList[attrIdx + 1]);
-                TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
                 if(numStereo > INT_MAX) numStereo = 0;
                 break;
 
-            case ALC_MAX_AUXILIARY_SENDS:
+            case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
                 numSends = static_cast<uint>(attrList[attrIdx + 1]);
-                TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
                 if(numSends > INT_MAX) numSends = 0;
                 else numSends = minu(numSends, MAX_SENDS);
                 break;
 
-            case ALC_HRTF_SOFT:
-                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_HRTF_SOFT)
                 if(attrList[attrIdx + 1] == ALC_FALSE)
                     opthrtf = false;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
@@ -1670,13 +1660,11 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     opthrtf = al::nullopt;
                 break;
 
-            case ALC_HRTF_ID_SOFT:
+            case ATTRIBUTE(ALC_HRTF_ID_SOFT)
                 hrtf_id = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
                 break;
 
-            case ALC_OUTPUT_LIMITER_SOFT:
-                TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_OUTPUT_LIMITER_SOFT)
                 if(attrList[attrIdx + 1] == ALC_FALSE)
                     optlimit = false;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
@@ -1685,8 +1673,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     optlimit = al::nullopt;
                 break;
 
-            case ALC_OUTPUT_MODE_SOFT:
-                TRACE_ATTR(ALC_OUTPUT_MODE_SOFT, attrList[attrIdx + 1]);
+            case ATTRIBUTE(ALC_OUTPUT_MODE_SOFT)
                 if(attrList[attrIdx + 1] == ALC_HRTF_SOFT)
                     stereomode = StereoEncoding::Hrtf;
                 else if(attrList[attrIdx + 1] == ALC_STEREO_UHJ_SOFT)
@@ -1705,7 +1692,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
             attrIdx += 2;
         }
-#undef TRACE_ATTR
+#undef ATTRIBUTE
 
         const bool loopback{device->Type == DeviceType::Loopback};
         if(loopback)

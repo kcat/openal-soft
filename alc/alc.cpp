@@ -1686,7 +1686,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 break;
 
             case ALC_OUTPUT_MODE_SOFT:
-                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
+                TRACE_ATTR(ALC_OUTPUT_MODE_SOFT, attrList[attrIdx + 1]);
                 if(attrList[attrIdx + 1] == ALC_HRTF_SOFT)
                     stereomode = StereoEncoding::Hrtf;
                 else if(attrList[attrIdx + 1] == ALC_STEREO_UHJ_SOFT)

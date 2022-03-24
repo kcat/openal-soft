@@ -65,3 +65,23 @@ void ALCdevice::enumerateHrtfs()
             std::rotate(mHrtfList.begin(), iter, iter+1);
     }
 }
+
+auto ALCdevice::getOutputMode1() const noexcept -> OutputMode1
+{
+    switch(FmtChans)
+    {
+    case DevFmtMono: return OutputMode1::Mono;
+    case DevFmtStereo:
+        if(mHrtf)
+            return OutputMode1::Hrtf;
+        else if(mUhjEncoder)
+            return OutputMode1::Uhj2;
+        return OutputMode1::StereoPlain;
+    case DevFmtQuad: return OutputMode1::Quad;
+    case DevFmtX51: return OutputMode1::X51;
+    case DevFmtX61: return OutputMode1::X61;
+    case DevFmtX71: return OutputMode1::X71;
+    case DevFmtAmbi3D: break;
+    }
+    return OutputMode1::Any;
+}

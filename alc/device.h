@@ -15,6 +15,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/device.h"
+#include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 
@@ -95,6 +96,22 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     std::string mHrtfName;
     al::vector<std::string> mHrtfList;
     ALCenum mHrtfStatus{ALC_FALSE};
+
+    enum class OutputMode1 : ALCenum {
+        Any = ALC_ANY_SOFT,
+        Mono = ALC_MONO_SOFT,
+        Stereo = ALC_STEREO_SOFT,
+        StereoPlain = ALC_STEREO_PLAIN_SOFT,
+        Uhj2 = ALC_STEREO_UHJ_SOFT,
+        Hrtf = ALC_STEREO_HRTF_SOFT,
+        Quad = ALC_QUAD_SOFT,
+        X51 = ALC_5POINT1_SOFT,
+        X61 = ALC_6POINT1_SOFT,
+        X71 = ALC_7POINT1_SOFT
+    };
+    OutputMode1 getOutputMode1() const noexcept;
+
+    using OutputMode = OutputMode1;
 
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 

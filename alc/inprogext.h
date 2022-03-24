@@ -102,10 +102,16 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 #ifndef ALC_SOFT_output_mode
 #define ALC_SOFT_output_mode
 #define ALC_OUTPUT_MODE_SOFT                     0x19AC
-#define ALC_NORMAL_SOFT                          0x19AD
-#define ALC_STEREO_UHJ_SOFT                      0x19AE
-/*#define ALC_HRTF_SOFT                            0x1992*/
-#define ALC_ANY_SOFT                             0x19AF
+#define ALC_ANY_SOFT                             0x19AD
+/*#define ALC_MONO_SOFT                            0x1500*/
+/*#define ALC_STEREO_SOFT                          0x1501*/
+#define ALC_STEREO_PLAIN_SOFT                    0x19AE
+#define ALC_STEREO_UHJ_SOFT                      0x19AF
+#define ALC_STEREO_HRTF_SOFT                     0x1992 /* =ALC_HRTF_SOFT */
+/*#define ALC_QUAD_SOFT                            0x1503*/
+/*#define ALC_5POINT1_SOFT                         0x1504*/
+/*#define ALC_6POINT1_SOFT                         0x1505*/
+/*#define ALC_7POINT1_SOFT                         0x1506*/
 #endif
 
 #ifdef __cplusplus

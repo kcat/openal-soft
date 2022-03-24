@@ -50,8 +50,8 @@ enum FamCount : size_t { };
 #define DEF_FAM_NEWDEL(T, FamMem)                                             \
     static constexpr size_t Sizeof(size_t count) noexcept                     \
     {                                                                         \
-        return std::max<size_t>(sizeof(T),                                    \
-            decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)));            \
+        return std::max(decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)), \
+            sizeof(T));                                                       \
     }                                                                         \
                                                                               \
     void *operator new(size_t /*size*/, FamCount count)                       \
@@ -188,10 +188,7 @@ struct FlexArrayStorage {
     };
 
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
-    {
-        return std::max<size_t>(offsetof(FlexArrayStorage, mArray) + sizeof(T)*count,
-            sizeof(FlexArrayStorage)) + base;
-    }
+    { return std::max(offsetof(FlexArrayStorage,mArray[count]), sizeof(FlexArrayStorage)) + base; }
 
     FlexArrayStorage(size_t size) : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }
@@ -210,10 +207,7 @@ struct FlexArrayStorage<T,alignment,false> {
     };
 
     static constexpr size_t Sizeof(size_t count, size_t base) noexcept
-    {
-        return std::max<size_t>(offsetof(FlexArrayStorage, mArray) + sizeof(T)*count,
-            sizeof(FlexArrayStorage)) + base;
-    }
+    { return std::max(offsetof(FlexArrayStorage,mArray[count]), sizeof(FlexArrayStorage)) + base; }
 
     FlexArrayStorage(size_t size) : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }

@@ -802,33 +802,8 @@ void EaxReverbEffect::dispatch(const EaxEaxCall& eax_call)
 void EaxReverbEffect::set_eax_defaults()
 {
     eax1_ = EAX1REVERB_PRESETS[EAX_ENVIRONMENT_GENERIC];
-    eax1_.fVolume = 0.0f;
     eax1_d_ = eax1_;
     eax_ = EAXREVERB_PRESETS[EAX_ENVIRONMENT_GENERIC];
-    eax_.ulEnvironment = EAXREVERB_DEFAULTENVIRONMENT;
-    eax_.flEnvironmentSize = EAXREVERB_DEFAULTENVIRONMENTSIZE;
-    eax_.flEnvironmentDiffusion = EAXREVERB_DEFAULTENVIRONMENTDIFFUSION;
-    eax_.lRoom = EAXREVERB_DEFAULTROOM;
-    eax_.lRoomHF = EAXREVERB_DEFAULTROOMHF;
-    eax_.lRoomLF = EAXREVERB_DEFAULTROOMLF;
-    eax_.flDecayTime = EAXREVERB_DEFAULTDECAYTIME;
-    eax_.flDecayHFRatio = EAXREVERB_DEFAULTDECAYHFRATIO;
-    eax_.flDecayLFRatio = EAXREVERB_DEFAULTDECAYLFRATIO;
-    eax_.lReflections = EAXREVERB_DEFAULTREFLECTIONS;
-    eax_.flReflectionsDelay = EAXREVERB_DEFAULTREFLECTIONSDELAY;
-    eax_.vReflectionsPan = EAXREVERB_DEFAULTREFLECTIONSPAN;
-    eax_.lReverb = EAXREVERB_DEFAULTREVERB;
-    eax_.flReverbDelay = EAXREVERB_DEFAULTREVERBDELAY;
-    eax_.vReverbPan = EAXREVERB_DEFAULTREVERBPAN;
-    eax_.flEchoTime = EAXREVERB_DEFAULTECHOTIME;
-    eax_.flEchoDepth = EAXREVERB_DEFAULTECHODEPTH;
-    eax_.flModulationTime = EAXREVERB_DEFAULTMODULATIONTIME;
-    eax_.flModulationDepth = EAXREVERB_DEFAULTMODULATIONDEPTH;
-    eax_.flAirAbsorptionHF = EAXREVERB_DEFAULTAIRABSORPTIONHF;
-    eax_.flHFReference = EAXREVERB_DEFAULTHFREFERENCE;
-    eax_.flLFReference = EAXREVERB_DEFAULTLFREFERENCE;
-    eax_.flRoomRolloffFactor = EAXREVERB_DEFAULTROOMROLLOFFFACTOR;
-    eax_.ulFlags = EAXREVERB_DEFAULTFLAGS;
     eax_d_ = eax_;
 }
 

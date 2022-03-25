@@ -1,6 +1,8 @@
 #ifndef INTRUSIVE_PTR_H
 #define INTRUSIVE_PTR_H
 
+#include <utility>
+
 #include "atomic.h"
 #include "opthelpers.h"
 
@@ -67,10 +69,13 @@ public:
     }
     intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
     {
-        if(mPtr)
-            mPtr->release();
-        mPtr = rhs.mPtr;
-        rhs.mPtr = nullptr;
+        if(likely(&rhs != this))
+        {
+            if(mPtr)
+                mPtr->release();
+            mPtr = rhs.mPtr;
+            rhs.mPtr = nullptr;
+        }
         return *this;
     }
 
@@ -87,12 +92,7 @@ public:
         mPtr = ptr;
     }
 
-    T* release() noexcept
-    {
-        T *ret{mPtr};
-        mPtr = nullptr;
-        return ret;
-    }
+    T* release() noexcept { return std::exchange(mPtr, nullptr); }
 
     void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
     void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }

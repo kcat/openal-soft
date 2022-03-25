@@ -62,6 +62,8 @@ public:
 
     intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
     {
+        static_assert(noexcept(std::declval<T*>()->release()), "release must be noexcept");
+
         if(rhs.mPtr) rhs.mPtr->add_ref();
         if(mPtr) mPtr->release();
         mPtr = rhs.mPtr;
@@ -71,10 +73,8 @@ public:
     {
         if(likely(&rhs != this))
         {
-            if(mPtr)
-                mPtr->release();
-            mPtr = rhs.mPtr;
-            rhs.mPtr = nullptr;
+            if(mPtr) mPtr->release();
+            mPtr = std::exchange(rhs.mPtr, nullptr);
         }
         return *this;
     }

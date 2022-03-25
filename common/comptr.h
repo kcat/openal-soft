@@ -46,10 +46,8 @@ public:
     {
         if(likely(&rhs != this))
         {
-            if(mPtr)
-                mPtr->Release();
-            mPtr = rhs.mPtr;
-            rhs.mPtr = nullptr;
+            if(mPtr) mPtr->Release();
+            mPtr = std::exchange(rhs.mPtr, nullptr);
         }
         return *this;
     }

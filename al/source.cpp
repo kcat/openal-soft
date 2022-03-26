@@ -3744,19 +3744,6 @@ void ALsource::eax_initialize(ALCcontext *context) noexcept
     eax_d_ = eax_;
 }
 
-void ALsource::eax_dispatch(
-    const EaxEaxCall& eax_call)
-{
-    if (eax_call.is_get())
-    {
-        eax_get(eax_call);
-    }
-    else
-    {
-        eax_set(eax_call);
-    }
-}
-
 void ALsource::eax_update_filters()
 {
     eax_update_filters_internal();

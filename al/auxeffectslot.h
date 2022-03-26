@@ -81,8 +81,9 @@ public:
 
 
     // [[nodiscard]]
-    bool eax_dispatch(
-        const EaxEaxCall& eax_call);
+    bool eax_dispatch(const EaxEaxCall& eax_call)
+    { return eax_call.is_get() ? eax_get(eax_call) : eax_set(eax_call); }
+
 
     void eax_unlock_legacy() noexcept;
 

@@ -216,8 +216,8 @@ public:
     void eax_initialize(ALCcontext *context) noexcept;
 
 
-    void eax_dispatch(
-        const EaxEaxCall& eax_call);
+    void eax_dispatch(const EaxEaxCall& eax_call)
+    { eax_call.is_get() ? eax_get(eax_call) : eax_set(eax_call); }
 
 
     void eax_update_filters();

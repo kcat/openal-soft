@@ -1299,13 +1299,6 @@ bool ALeffectslot::eax_set_fx_slot_all(
     return is_occlusion_modified || is_occlusion_lf_ratio_modified;
 }
 
-// [[nodiscard]]
-bool ALeffectslot::eax_dispatch(
-    const EaxEaxCall& eax_call)
-{
-    return eax_call.is_get() ? eax_get(eax_call) : eax_set(eax_call);
-}
-
 void ALeffectslot::eax_unlock_legacy() noexcept
 {
     assert(eax_fx_slot_index_ < 2);

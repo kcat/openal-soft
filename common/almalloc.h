@@ -221,7 +221,10 @@ struct FlexArrayStorage {
     };
 
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
-    { return std::max(offsetof(FlexArrayStorage,mArray[count]), sizeof(FlexArrayStorage)) + base; }
+    {
+        const size_t len{sizeof(T)*count};
+        return std::max(offsetof(FlexArrayStorage,mArray)+len, sizeof(FlexArrayStorage)) + base;
+    }
 
     FlexArrayStorage(size_t size) : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }
@@ -240,7 +243,10 @@ struct FlexArrayStorage<T,alignment,false> {
     };
 
     static constexpr size_t Sizeof(size_t count, size_t base) noexcept
-    { return std::max(offsetof(FlexArrayStorage,mArray[count]), sizeof(FlexArrayStorage)) + base; }
+    {
+        const size_t len{sizeof(T)*count};
+        return std::max(offsetof(FlexArrayStorage,mArray)+len, sizeof(FlexArrayStorage)) + base;
+    }
 
     FlexArrayStorage(size_t size) : mSize{size}
     { al::uninitialized_default_construct_n(mArray, mSize); }

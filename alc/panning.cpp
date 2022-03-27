@@ -981,11 +981,11 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
     }
 
 
-    /* If there's no request for HRTF or UHJ and the device is headphones, or
-     * if HRTF is explicitly requested, try to enable it.
+    /* If HRTF is explicitly requested, or if there's no explicit request and
+     * the device is headphones, try to enable it.
      */
-    if((!stereomode && device->Flags.test(DirectEar))
-        || (stereomode && *stereomode == StereoEncoding::Hrtf))
+    if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Hrtf
+        || (!stereomode && device->Flags.test(DirectEar)))
     {
         if(device->mHrtfList.empty())
             device->enumerateHrtfs();
@@ -1033,7 +1033,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
     }
     old_hrtf = nullptr;
 
-    if(stereomode && *stereomode == StereoEncoding::Uhj)
+    if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
         device->mUhjEncoder = std::make_unique<UhjEncoder>();
         TRACE("UHJ enabled\n");

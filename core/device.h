@@ -57,9 +57,11 @@ enum class RenderMode : unsigned char {
 };
 
 enum class StereoEncoding : unsigned char {
-    Normal,
+    Basic,
     Uhj,
-    Hrtf
+    Hrtf,
+
+    Default = Basic
 };
 
 

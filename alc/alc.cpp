@@ -1755,10 +1755,10 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             else if(device->FmtChans == DevFmtStereo)
             {
                 if(opthrtf)
-                    stereomode = *opthrtf ? StereoEncoding::Hrtf : StereoEncoding::Normal;
+                    stereomode = *opthrtf ? StereoEncoding::Hrtf : StereoEncoding::Default;
 
                 if(outmode == ALC_STEREO_BASIC_SOFT)
-                    stereomode = StereoEncoding::Normal;
+                    stereomode = StereoEncoding::Basic;
                 else if(outmode == ALC_STEREO_UHJ_SOFT)
                     stereomode = StereoEncoding::Uhj;
                 else if(outmode == ALC_STEREO_HRTF_SOFT)
@@ -1802,7 +1802,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     stereomode = StereoEncoding::Hrtf;
                 }
                 else
-                    stereomode = StereoEncoding::Normal;
+                    stereomode = StereoEncoding::Default;
             }
 
             using OutputMode = ALCdevice::OutputMode;
@@ -1813,7 +1813,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             case OutputMode::Stereo: set_device_mode(DevFmtStereo); break;
             case OutputMode::StereoBasic:
                 set_device_mode(DevFmtStereo);
-                stereomode = StereoEncoding::Normal;
+                stereomode = StereoEncoding::Basic;
                 break;
             case OutputMode::Uhj2:
                 set_device_mode(DevFmtStereo);
@@ -1994,7 +1994,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             else if(al::strcasecmp(hrtf, "false") == 0)
             {
                 if(!stereomode || *stereomode == StereoEncoding::Hrtf)
-                    stereomode = StereoEncoding::Normal;
+                    stereomode = StereoEncoding::Default;
             }
             else if(al::strcasecmp(hrtf, "auto") != 0)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
@@ -2060,7 +2060,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         {
             const char *mode{encopt->c_str()};
             if(al::strcasecmp(mode, "panpot") == 0)
-                stereomode = al::make_optional(StereoEncoding::Normal);
+                stereomode = al::make_optional(StereoEncoding::Basic);
             else if(al::strcasecmp(mode, "uhj") == 0)
                 stereomode = al::make_optional(StereoEncoding::Uhj);
             else if(al::strcasecmp(mode, "hrtf") == 0)

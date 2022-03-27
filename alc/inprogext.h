@@ -105,9 +105,9 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 #define ALC_ANY_SOFT                             0x19AD
 /*#define ALC_MONO_SOFT                            0x1500*/
 /*#define ALC_STEREO_SOFT                          0x1501*/
-#define ALC_STEREO_PLAIN_SOFT                    0x19AE
+#define ALC_STEREO_BASIC_SOFT                    0x19AE
 #define ALC_STEREO_UHJ_SOFT                      0x19AF
-#define ALC_STEREO_HRTF_SOFT                     0x1992 /* =ALC_HRTF_SOFT */
+#define ALC_STEREO_HRTF_SOFT                     0x19B2
 /*#define ALC_QUAD_SOFT                            0x1503*/
 /*#define ALC_5POINT1_SOFT                         0x1504*/
 /*#define ALC_6POINT1_SOFT                         0x1505*/

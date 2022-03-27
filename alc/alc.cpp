@@ -538,7 +538,7 @@ constexpr struct {
 
     DECL(ALC_OUTPUT_MODE_SOFT),
     DECL(ALC_ANY_SOFT),
-    DECL(ALC_STEREO_PLAIN_SOFT),
+    DECL(ALC_STEREO_BASIC_SOFT),
     DECL(ALC_STEREO_UHJ_SOFT),
     DECL(ALC_STEREO_HRTF_SOFT),
 
@@ -1757,7 +1757,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 if(opthrtf)
                     stereomode = *opthrtf ? StereoEncoding::Hrtf : StereoEncoding::Normal;
 
-                if(outmode == ALC_STEREO_PLAIN_SOFT)
+                if(outmode == ALC_STEREO_BASIC_SOFT)
                     stereomode = StereoEncoding::Normal;
                 else if(outmode == ALC_STEREO_UHJ_SOFT)
                     stereomode = StereoEncoding::Uhj;
@@ -1811,7 +1811,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             case OutputMode::Any: break;
             case OutputMode::Mono: set_device_mode(DevFmtMono); break;
             case OutputMode::Stereo: set_device_mode(DevFmtStereo); break;
-            case OutputMode::StereoPlain:
+            case OutputMode::StereoBasic:
                 set_device_mode(DevFmtStereo);
                 stereomode = StereoEncoding::Normal;
                 break;

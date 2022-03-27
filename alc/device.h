@@ -101,7 +101,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
         Any = ALC_ANY_SOFT,
         Mono = ALC_MONO_SOFT,
         Stereo = ALC_STEREO_SOFT,
-        StereoPlain = ALC_STEREO_PLAIN_SOFT,
+        StereoBasic = ALC_STEREO_BASIC_SOFT,
         Uhj2 = ALC_STEREO_UHJ_SOFT,
         Hrtf = ALC_STEREO_HRTF_SOFT,
         Quad = ALC_QUAD_SOFT,

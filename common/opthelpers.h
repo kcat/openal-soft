@@ -44,7 +44,7 @@ constexpr bool unlikely(T&& expr) noexcept { return static_cast<bool>(std::forwa
 #elif defined(_MSC_VER)
 #define ASSUME __assume
 #elif defined(__GNUC__)
-#define ASSUME(x) do { if(!(x)) __builtin_unreachable(); } while(0)
+#define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(0)
 #else
 #define ASSUME(x) ((void)0)
 #endif

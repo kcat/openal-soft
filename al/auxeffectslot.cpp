@@ -915,7 +915,7 @@ END_API_FUNC
 ALeffectslot::ALeffectslot()
 {
     EffectStateFactory *factory{getFactoryByType(EffectSlotType::None)};
-    assert(factory != nullptr);
+    if(!factory) throw std::runtime_error{"Failed to get null effect factory"};
 
     al::intrusive_ptr<EffectState> state{factory->create()};
     Effect.State = state;

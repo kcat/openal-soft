@@ -266,7 +266,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
         BufferFmt = BufferList->mBuffer;
         ++BufferList;
     }
-    assert(BufferFmt != nullptr);
+    ASSUME(BufferFmt != nullptr);
 
     return static_cast<double>(readPos) / double{MixerFracOne} / BufferFmt->mSampleRate;
 }
@@ -315,7 +315,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         BufferFmt = BufferList->mBuffer;
         ++BufferList;
     }
-    assert(BufferFmt != nullptr);
+    ASSUME(BufferFmt != nullptr);
 
     double offset{};
     switch(name)
@@ -375,7 +375,7 @@ double GetSourceLength(const ALsource *source, ALenum name)
     if(length == 0)
         return 0.0;
 
-    assert(BufferFmt != nullptr);
+    ASSUME(BufferFmt != nullptr);
     switch(name)
     {
     case AL_SEC_LENGTH_SOFT:
@@ -585,7 +585,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
         }
         ++vidx;
     }
-    if UNLIKELY(!newvoice)
+    if(unlikely(!newvoice))
     {
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
         if(allvoices.size() == voicelist.size())
@@ -605,7 +605,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
             }
             ++vidx;
         }
-        assert(newvoice != nullptr);
+        ASSUME(newvoice != nullptr);
     }
 
     /* Initialize the new voice and set its starting offset.
@@ -3169,7 +3169,7 @@ START_API_FUNC
                 break;
             }
         }
-        assert(voice != nullptr);
+        ASSUME(voice != nullptr);
 
         voice->mPosition.store(0u, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);

@@ -1277,13 +1277,11 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         : context->mParams.mDistanceModel)
     {
         case DistanceModel::InverseClamped:
-            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             if(props->MaxDistance < props->RefDistance) break;
+            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             /*fall-through*/
         case DistanceModel::Inverse:
-            if(!(props->RefDistance > 0.0f))
-                ClampedDist = props->RefDistance;
-            else
+            if(props->RefDistance > 0.0f)
             {
                 float dist{lerp(props->RefDistance, ClampedDist, props->RolloffFactor)};
                 if(dist > 0.0f) DryGainBase *= props->RefDistance / dist;
@@ -1294,13 +1292,11 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             break;
 
         case DistanceModel::LinearClamped:
-            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             if(props->MaxDistance < props->RefDistance) break;
+            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             /*fall-through*/
         case DistanceModel::Linear:
-            if(!(props->MaxDistance != props->RefDistance))
-                ClampedDist = props->RefDistance;
-            else
+            if(props->MaxDistance != props->RefDistance)
             {
                 float attn{(ClampedDist-props->RefDistance) /
                     (props->MaxDistance-props->RefDistance) * props->RolloffFactor};
@@ -1313,13 +1309,11 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             break;
 
         case DistanceModel::ExponentClamped:
-            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             if(props->MaxDistance < props->RefDistance) break;
+            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             /*fall-through*/
         case DistanceModel::Exponent:
-            if(!(ClampedDist > 0.0f && props->RefDistance > 0.0f))
-                ClampedDist = props->RefDistance;
-            else
+            if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
             {
                 const float dist_ratio{ClampedDist/props->RefDistance};
                 DryGainBase *= std::pow(dist_ratio, -props->RolloffFactor);

@@ -118,10 +118,10 @@ void DecodeIMA4Block(int16_t *dst, const al::byte *src, size_t numchans, size_t 
 
     for(size_t c{0};c < numchans;c++)
     {
-        sample[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
+        sample[c] = src[0] | (src[1]<<8);
         sample[c] = (sample[c]^0x8000) - 32768;
         src += 2;
-        index[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
+        index[c] = src[0] | (src[1]<<8);
         index[c] = clampi((index[c]^0x8000) - 32768, 0, 88);
         src += 2;
 
@@ -134,8 +134,8 @@ void DecodeIMA4Block(int16_t *dst, const al::byte *src, size_t numchans, size_t 
         {
             for(size_t c{0};c < numchans;c++)
             {
-                code[c] = al::to_integer<ALuint>(src[0]) | (al::to_integer<ALuint>(src[1])<< 8) |
-                    (al::to_integer<ALuint>(src[2])<<16) | (al::to_integer<ALuint>(src[3])<<24);
+                code[c] = ALuint{src[0]} | (ALuint{src[1]}<< 8) | (ALuint{src[2]}<<16)
+                    | (ALuint{src[3]}<<24);
                 src += 4;
             }
         }
@@ -164,25 +164,23 @@ void DecodeMSADPCMBlock(int16_t *dst, const al::byte *src, size_t numchans, size
 
     for(size_t c{0};c < numchans;c++)
     {
-        blockpred[c] = std::min<ALubyte>(al::to_integer<ALubyte>(src[0]), 6);
+        blockpred[c] = std::min<ALubyte>(src[0], 6);
         ++src;
     }
     for(size_t c{0};c < numchans;c++)
     {
-        delta[c] = al::to_integer<int>(src[0]) | (al::to_integer<int>(src[1])<<8);
+        delta[c] = src[0] | (src[1]<<8);
         delta[c] = (delta[c]^0x8000) - 32768;
         src += 2;
     }
     for(size_t c{0};c < numchans;c++)
     {
-        samples[c][0] = static_cast<ALshort>(al::to_integer<int>(src[0]) |
-            (al::to_integer<int>(src[1])<<8));
+        samples[c][0] = static_cast<ALshort>(src[0] | (src[1]<<8));
         src += 2;
     }
     for(size_t c{0};c < numchans;c++)
     {
-        samples[c][1] = static_cast<ALshort>(al::to_integer<int>(src[0]) |
-            (al::to_integer<int>(src[1])<<8));
+        samples[c][1] = static_cast<ALshort>(src[0] | (src[1]<<8));
         src += 2;
     }
 
@@ -206,13 +204,13 @@ void DecodeMSADPCMBlock(int16_t *dst, const al::byte *src, size_t numchans, size
 
             int pred{(samples[c][0]*MSADPCMAdaptionCoeff[blockpred[c]][0] +
                 samples[c][1]*MSADPCMAdaptionCoeff[blockpred[c]][1]) / 256};
-            pred += (al::to_integer<int>(nibble^0x08) - 0x08) * delta[c];
+            pred += ((nibble^0x08) - 0x08) * delta[c];
             pred  = clampi(pred, -32768, 32767);
 
             samples[c][1] = samples[c][0];
             samples[c][0] = static_cast<int16_t>(pred);
 
-            delta[c] = (MSADPCMAdaption[al::to_integer<ALubyte>(nibble)] * delta[c]) / 256;
+            delta[c] = (MSADPCMAdaption[nibble] * delta[c]) / 256;
             delta[c] = maxi(16, delta[c]);
 
             *(dst++) = static_cast<int16_t>(pred);

@@ -355,10 +355,7 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
 {
     const uint IrSize{Device->mIrSize};
     auto &HrtfSamples = Device->HrtfSourceData;
-    /* Source HRTF mixing needs to include the direct delay so it remains
-     * aligned with the direct mix's HRTF filtering.
-     */
-    float2 *AccumSamples{Device->HrtfAccumData + HrtfDirectDelay};
+    auto &AccumSamples = Device->HrtfAccumData;
 
     /* Copy the HRTF history and new input samples into a temp buffer. */
     auto src_iter = std::copy(parms.Hrtf.History.begin(), parms.Hrtf.History.end(),

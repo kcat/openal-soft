@@ -26,8 +26,6 @@ constexpr uint HrirMask{HrirLength - 1};
 
 constexpr uint MinIrLength{8};
 
-constexpr uint HrtfDirectDelay{256};
-
 using HrirArray = std::array<float2,HrirLength>;
 using HrirSpan = al::span<float2,HrirLength>;
 using ConstHrirSpan = al::span<const float2,HrirLength>;
@@ -47,7 +45,6 @@ struct HrtfFilter {
 
 
 struct HrtfChannelState {
-    std::array<float,HrtfDirectDelay> mDelay{};
     BandSplitter mSplitter;
     float mHfScale{};
     alignas(16) HrirArray mCoeffs{};

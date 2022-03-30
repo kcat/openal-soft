@@ -101,42 +101,6 @@ constexpr bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept
 template<typename T, std::size_t N, typename U, std::size_t M>
 constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
-#ifdef __cpp_lib_assume_aligned
-template<std::size_t alignment, typename T>
-using assume_aligned = std::assume_aligned<alignment,T>;
-
-#elif defined(__clang__) || (defined(__GNUC__) && !defined(__ICC))
-
-template<std::size_t alignment, typename T>
-[[gnu::always_inline/*,nodiscard*/]] constexpr T* assume_aligned(T *ptr) noexcept
-{ return static_cast<T*>(__builtin_assume_aligned(ptr, alignment)); }
-
-#elif defined(_MSC_VER)
-
-template<std::size_t alignment, typename T>
-__forceinline /*[[nodiscard]]*/ constexpr T* assume_aligned(T *ptr) noexcept
-{
-    static constexpr std::size_t alignment_mask{(1<<alignment) - 1};
-    if((reinterpret_cast<std::uintptr_t>(ptr)&alignment_mask) == 0)
-        return ptr;
-    __assume(0);
-}
-
-#elif defined(__ICC)
-
-template<std::size_t alignment, typename T>
-/*[[nodiscard]]*/ constexpr T* assume_aligned(T *ptr) noexcept
-{
-    __assume_aligned(ptr, alignment);
-    return ptr;
-}
-
-#else
-
-template<std::size_t alignment, typename T>
-/*[[nodiscard]]*/ constexpr T* assume_aligned(T *ptr) noexcept { return ptr; }
-#endif
-
 
 template<typename T, typename ...Args>
 constexpr T* construct_at(T *ptr, Args&& ...args)

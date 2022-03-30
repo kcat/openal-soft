@@ -1,6 +1,7 @@
 #ifndef OPTHELPERS_H
 #define OPTHELPERS_H
 
+#include <cstdint>
 #include <utility>
 
 

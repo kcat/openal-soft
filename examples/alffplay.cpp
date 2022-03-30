@@ -819,7 +819,6 @@ bool AudioState::readAudio(uint8_t *samples, unsigned int length, int &sample_sk
         std::fill_n(samples, rem*mFrameSize,
             (mDstSampleFmt == AV_SAMPLE_FMT_U8) ? 0x80 : 0x00);
         mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
-        audio_size += rem;
     }
     return true;
 }

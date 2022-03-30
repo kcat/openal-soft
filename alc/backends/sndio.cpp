@@ -438,14 +438,14 @@ void SndioCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Padded samples not supported (got %u of %u bits)", par.bits, par.bps*8};
 
-    auto match_fmt = [](DevFmtType fmttype, const sio_par &par) -> bool
+    auto match_fmt = [](DevFmtType fmttype, const sio_par &p) -> bool
     {
-        return (fmttype == DevFmtByte && par.bps == 1 && par.sig != 0)
-            || (fmttype == DevFmtUByte && par.bps == 1 && par.sig == 0)
-            || (fmttype == DevFmtShort && par.bps == 2 && par.sig != 0)
-            || (fmttype == DevFmtUShort && par.bps == 2 && par.sig == 0)
-            || (fmttype == DevFmtInt && par.bps == 4 && par.sig != 0)
-            || (fmttype == DevFmtUInt && par.bps == 4 && par.sig == 0);
+        return (fmttype == DevFmtByte && p.bps == 1 && p.sig != 0)
+            || (fmttype == DevFmtUByte && p.bps == 1 && p.sig == 0)
+            || (fmttype == DevFmtShort && p.bps == 2 && p.sig != 0)
+            || (fmttype == DevFmtUShort && p.bps == 2 && p.sig == 0)
+            || (fmttype == DevFmtInt && p.bps == 4 && p.sig != 0)
+            || (fmttype == DevFmtUInt && p.bps == 4 && p.sig == 0);
     };
     if(!match_fmt(mDevice->FmtType, par) || mDevice->channelsFromFmt() != par.rchan
         || mDevice->Frequency != par.rate)

@@ -3580,7 +3580,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-extern "C" AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*)
+AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

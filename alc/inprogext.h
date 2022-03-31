@@ -114,6 +114,18 @@ ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *de
 /*#define ALC_7POINT1_SOFT                         0x1506*/
 #endif
 
+
+/* Non-standard export. Not part of any extension. */
+AL_API const ALchar* AL_APIENTRY alsoft_get_version(void);
+
+
+/* Functions from abandoned extenions. */
+AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb,
+    const ALuint *buffers);
+
+AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname);
+AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

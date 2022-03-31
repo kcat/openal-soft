@@ -137,7 +137,7 @@ ALenum ALenumFromDistanceModel(DistanceModel model)
 /* WARNING: Non-standard export! Not part of any extension, or exposed in the
  * alcFunctions list.
  */
-extern "C" AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
+AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
 START_API_FUNC
 {
     static const auto spoof = al::getenv("ALSOFT_SPOOF_VERSION");
@@ -477,7 +477,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
+AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -686,7 +686,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-extern "C" AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
+AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
 START_API_FUNC
 {
     if(values)

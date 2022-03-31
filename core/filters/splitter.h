@@ -24,6 +24,8 @@ public:
     void clear() noexcept { mLpZ1 = mLpZ2 = mApZ1 = 0.0f; }
     void process(const al::span<const Real> input, Real *hpout, Real *lpout);
 
+    void processHfScale(const al::span<const Real> input, Real *output, const Real hfscale);
+
     void processHfScale(const al::span<Real> samples, const Real hfscale);
     void processScale(const al::span<Real> samples, const Real hfscale, const Real lfscale);
 

@@ -96,12 +96,11 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
          * the high frequency response. The band-splitter applies this scaling
          * with a consistent phase shift regardless of the scale amount.
          */
-        al::span<float> tempbuf{al::assume_aligned<16>(TempBuf), BufferSize};
-        std::copy(input.begin(), input.begin()+BufferSize, tempbuf.begin());
-
-        ChanState->mSplitter.processHfScale(tempbuf, ChanState->mHfScale);
+        ChanState->mSplitter.processHfScale({input.data(), BufferSize}, TempBuf,
+            ChanState->mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
+        const float *RESTRICT tempbuf{al::assume_aligned<16>(TempBuf)};
         const ConstHrirSpan Coeffs{ChanState->mCoeffs};
         for(size_t i{0u};i < BufferSize;++i)
         {
@@ -113,10 +112,12 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
     }
 
     /* Add the HRTF signal to the existing "direct" signal. */
+    float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
+    float *RESTRICT right{al::assume_aligned<16>(RightOut.data())};
     for(size_t i{0u};i < BufferSize;++i)
-        LeftOut[i]  += AccumSamples[i][0];
+        left[i]  += AccumSamples[i][0];
     for(size_t i{0u};i < BufferSize;++i)
-        RightOut[i] += AccumSamples[i][1];
+        right[i] += AccumSamples[i][1];
 
     /* Copy the new in-progress accumulation values to the front and clear the
      * following samples for the next mix.

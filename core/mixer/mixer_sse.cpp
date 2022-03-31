@@ -36,7 +36,17 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
      * systems that support SSE, which is the only one that needs to know the
      * alignment of Values (which alternates between 8- and 16-byte aligned).
      */
-    if(reinterpret_cast<intptr_t>(Values)&0x8)
+    if(!(reinterpret_cast<uintptr_t>(Values)&15))
+    {
+        for(size_t i{0};i < IrSize;i += 2)
+        {
+            const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
+            __m128 vals{_mm_load_ps(&Values[i][0])};
+            vals = MLA4(vals, lrlr, coeffs);
+            _mm_store_ps(&Values[i][0], vals);
+        }
+    }
+    else
     {
         __m128 imp0, imp1;
         __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
@@ -60,16 +70,6 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
-    }
-    else
-    {
-        for(size_t i{0};i < IrSize;i += 2)
-        {
-            const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
-            __m128 vals{_mm_load_ps(&Values[i][0])};
-            vals = MLA4(vals, lrlr, coeffs);
-            _mm_store_ps(&Values[i][0], vals);
-        }
     }
 }
 

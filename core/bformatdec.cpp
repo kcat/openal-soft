@@ -133,31 +133,25 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
     for(size_t i{0};i < SamplesToDo;++i)
         side[FrontStablizer::DelayLength+i] += OutBuffer[lidx][i] - OutBuffer[ridx][i];
 
-    /* Combine the delayed mid signal with the decoded mid signal. Note that
-     * the samples are stored and combined in reverse, so the newest samples
-     * are at the front and the oldest at the back.
-     */
-    al::span<float> tmpbuf{mStablizer->TempBuf.data(), SamplesToDo+FrontStablizer::DelayLength};
-    auto tmpiter = tmpbuf.begin() + SamplesToDo;
-    std::copy(mStablizer->MidDelay.cbegin(), mStablizer->MidDelay.cend(), tmpiter);
-    for(size_t i{0};i < SamplesToDo;++i)
-        *--tmpiter = OutBuffer[lidx][i] + OutBuffer[ridx][i];
+    /* Combine the delayed mid signal with the decoded mid signal. */
+    float *tmpbuf{mStablizer->TempBuf.data()};
+    auto tmpiter = std::copy(mStablizer->MidDelay.cbegin(), mStablizer->MidDelay.cend(), tmpbuf);
+    for(size_t i{0};i < SamplesToDo;++i,++tmpiter)
+        *tmpiter = OutBuffer[lidx][i] + OutBuffer[ridx][i];
     /* Save the newest samples for next time. */
-    std::copy_n(tmpbuf.cbegin(), mStablizer->MidDelay.size(), mStablizer->MidDelay.begin());
+    std::copy_n(tmpbuf+SamplesToDo, mStablizer->MidDelay.size(), mStablizer->MidDelay.begin());
 
-    /* Apply an all-pass on the reversed signal, then reverse the samples to
-     * get the forward signal with a reversed phase shift. The future samples
-     * are included with the all-pass to reduce the error in the output
-     * samples (the smaller the delay, the more error is introduced).
+    /* Apply an all-pass on the signal in reverse. The future samples are
+     * included with the all-pass to reduce the error in the output samples
+     * (the smaller the delay, the more error is introduced).
      */
-    mStablizer->MidFilter.applyAllpass(tmpbuf);
-    tmpbuf = tmpbuf.subspan<FrontStablizer::DelayLength>();
-    std::reverse(tmpbuf.begin(), tmpbuf.end());
+    mStablizer->MidFilter.applyAllpassRev({tmpbuf, SamplesToDo+FrontStablizer::DelayLength});
 
     /* Now apply the band-splitter, combining its phase shift with the reversed
      * phase shift, restoring the original phase on the split signal.
      */
-    mStablizer->MidFilter.process(tmpbuf, mStablizer->MidHF.data(), mStablizer->MidLF.data());
+    mStablizer->MidFilter.process({tmpbuf, SamplesToDo}, mStablizer->MidHF.data(),
+        mStablizer->MidLF.data());
 
     /* This pans the separate low- and high-frequency signals between being on
      * the center channel and the left+right channels. The low-frequency signal

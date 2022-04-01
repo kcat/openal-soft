@@ -211,7 +211,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
         {
             float step_count{0.0f};
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(size_t todo{(min_len-pos) >> 2})
+            if(size_t todo{min_len >> 2})
             {
                 const __m128 four4{_mm_set1_ps(4.0f)};
                 const __m128 step4{_mm_set1_ps(step)};

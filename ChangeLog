@@ -1,6 +1,11 @@
 openal-soft-1.22.0:
 
-    Improved sound positioning when a source is near the listener.
+    Implemented the ALC_SOFT_reopen_device extension. This allows for moving
+    devices to different outputs without losing object state.
+
+    Implemented the legacy EAX extensions. Enabled by default only on Windows.
+
+    Improved sound positioning stability when a source is near the listener.
 
     Improved the default 5.1 output decoder.
 
@@ -17,12 +22,9 @@ openal-soft-1.22.0:
     Fixed WASAPI capture using really low sample rates, and sources with very
     high pitch shifts when using a bsinc resampler.
 
-    Implemented a PipeWire backend.
+    Added a PipeWire backend.
 
-    Implemented enumeration for the JACK and CoreAudio backends.
-
-    Implemented the legacy EAX extension APIs. Enabled by default only on
-    Windows.
+    Added enumeration for the JACK and CoreAudio backends.
 
     Added optional support for RTKit to get real-time priority. Only used as a
     backup when pthread_setschedparam fails.
@@ -38,9 +40,6 @@ openal-soft-1.22.0:
     Added an in-progress extension to handle UHJ audio buffers natively.
 
     Added an in-progress extension to select UHJ output in addition to HRTF.
-
-    Added an in-progress extension to reopen and move devices to different
-    outputs without losing object state.
 
     Added an in-progress extension to hold sources in a playing state when a
     device disconnects. Allows devices to be reset or reopened and have sources

@@ -579,6 +579,16 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #endif
 #endif
 
+#ifndef ALC_SOFT_reopen_device
+#define ALC_SOFT_reopen_device
+typedef ALCboolean (ALC_APIENTRY*LPALCREOPENDEVICESOFT)(ALCdevice *device,
+    const ALCchar *deviceName, const ALCint *attribs);
+#ifdef AL_ALEXT_PROTOTYPES
+ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
+    const ALCint *attribs);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -66,16 +66,6 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #endif
 #endif
 
-#ifndef ALC_SOFT_reopen_device
-#define ALC_SOFT_reopen_device
-typedef ALCboolean (ALC_APIENTRY*LPALCREOPENDEVICESOFT)(ALCdevice *device,
-    const ALCchar *deviceName, const ALCint *attribs);
-#ifdef AL_ALEXT_PROTOTYPES
-ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
-    const ALCint *attribs);
-#endif
-#endif
-
 #ifndef AL_SOFT_UHJ
 #define AL_SOFT_UHJ
 #define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2

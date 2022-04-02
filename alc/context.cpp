@@ -65,7 +65,7 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_bformat_ex "
     "AL_SOFTX_bformat_hoa "
     "AL_SOFT_block_alignment "
-    "AL_SOFTX_callback_buffer "
+    "AL_SOFT_callback_buffer "
     "AL_SOFTX_convolution_reverb "
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "

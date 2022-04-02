@@ -3,6 +3,8 @@ openal-soft-1.22.0:
     Implemented the ALC_SOFT_reopen_device extension. This allows for moving
     devices to different outputs without losing object state.
 
+    Implemented the AL_SOFT_callback_buffer extension.
+
     Implemented the legacy EAX extensions. Enabled by default only on Windows.
 
     Improved sound positioning stability when a source is near the listener.

@@ -45,17 +45,6 @@
 #include "common/alhelpers.h"
 
 
-#ifndef AL_SOFT_callback_buffer
-#define AL_SOFT_callback_buffer
-#define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
-#define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
-typedef ALsizei (AL_APIENTRY*LPALBUFFERCALLBACKTYPESOFT)(ALvoid *userptr, ALvoid *sampledata, ALsizei numsamples);
-typedef void (AL_APIENTRY*LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, LPALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr);
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **value);
-typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3);
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values);
-#endif
-
 namespace {
 
 using std::chrono::seconds;
@@ -352,7 +341,7 @@ int main(int argc, char **argv)
     argv++; argc--;
     AudioManager almgr{&argv, &argc};
 
-    if(!alIsExtensionPresent("AL_SOFTX_callback_buffer"))
+    if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
         fprintf(stderr, "AL_SOFT_callback_buffer extension not available\n");
         return 1;

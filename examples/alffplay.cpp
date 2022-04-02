@@ -76,16 +76,6 @@ extern "C" {
 #define ALLOW_EXPERIMENTAL_EXTS
 
 #ifdef ALLOW_EXPERIMENTAL_EXTS
-#ifndef AL_SOFT_callback_buffer
-#define AL_SOFT_callback_buffer
-#define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
-#define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
-typedef ALsizei (AL_APIENTRY*ALBUFFERCALLBACKTYPESOFT)(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes);
-typedef void (AL_APIENTRY*LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr);
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **value);
-typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3);
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values);
-#endif
 #ifndef AL_SOFT_UHJ
 #define AL_SOFT_UHJ
 #define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2
@@ -132,9 +122,7 @@ LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 LPALEVENTCONTROLSOFT alEventControlSOFT;
 LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
 
-#ifdef AL_SOFT_callback_buffer
 LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
-#endif
 ALenum FormatStereo8{AL_FORMAT_STEREO8};
 ALenum FormatStereo16{AL_FORMAT_STEREO16};
 ALenum FormatStereo32F{AL_FORMAT_STEREO_FLOAT32};
@@ -377,11 +365,9 @@ struct AudioState {
     void eventCallback(ALenum eventType, ALuint object, ALuint param, ALsizei length,
         const ALchar *message);
 
-#ifdef AL_SOFT_callback_buffer
     static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size)
     { return static_cast<AudioState*>(userptr)->bufferCallback(data, size); }
     ALsizei bufferCallback(void *data, ALsizei size);
-#endif
 
     nanoseconds getClockNoLock();
     nanoseconds getClock()
@@ -945,7 +931,6 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
     }
 }
 
-#ifdef AL_SOFT_callback_buffer
 ALsizei AudioState::bufferCallback(void *data, ALsizei size)
 {
     ALsizei got{0};
@@ -971,7 +956,6 @@ ALsizei AudioState::bufferCallback(void *data, ALsizei size)
 
     return got;
 }
-#endif
 
 int AudioState::handler()
 {
@@ -1277,7 +1261,6 @@ int AudioState::handler()
     if(alGetError() != AL_NO_ERROR)
         return 0;
 
-#ifdef AL_SOFT_callback_buffer
     bool callback_ok{false};
     if(alBufferCallbackSOFT)
     {
@@ -1305,7 +1288,6 @@ int AudioState::handler()
         }
     }
     if(!callback_ok)
-#endif
         buffer_len = static_cast<int>(duration_cast<seconds>(mCodecCtx->sample_rate *
             AudioBufferTime).count() * mFrameSize);
     if(buffer_len > 0)
@@ -2048,14 +2030,12 @@ int main(int argc, char *argv[])
         alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
             alGetProcAddress("alEventCallbackSOFT"));
     }
-#ifdef AL_SOFT_callback_buffer
-    if(alIsExtensionPresent("AL_SOFTX_callback_buffer"))
+    if(alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
         std::cout<< "Found AL_SOFT_callback_buffer" <<std::endl;
         alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
             alGetProcAddress("alBufferCallbackSOFT"));
     }
-#endif
 
     int fileidx{0};
     for(;fileidx < argc;++fileidx)

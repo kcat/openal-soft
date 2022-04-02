@@ -1584,7 +1584,7 @@ END_API_FUNC
 
 
 AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq,
-    ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr, ALbitfieldSOFT flags)
+    ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -1600,8 +1600,6 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Invalid sample rate %d", freq);
     else if UNLIKELY(callback == nullptr)
         context->setError(AL_INVALID_VALUE, "NULL callback");
-    else if UNLIKELY(flags != 0)
-        context->setError(AL_INVALID_VALUE, "Invalid callback flags 0x%x", flags);
     else
     {
         auto usrfmt = DecomposeUserFormat(format);

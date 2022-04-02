@@ -950,7 +950,7 @@ constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_EXT_thread_local_context "
     "ALC_SOFT_loopback "
     "ALC_SOFT_loopback_bformat "
-    "ALC_SOFTX_reopen_device";
+    "ALC_SOFT_reopen_device";
 constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "

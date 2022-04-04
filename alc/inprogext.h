@@ -92,7 +92,7 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 AL_API const ALchar* AL_APIENTRY alsoft_get_version(void);
 
 
-/* Functions from abandoned extenions. */
+/* Functions from abandoned extenions. Only here for binary compatibility. */
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb,
     const ALuint *buffers);
 

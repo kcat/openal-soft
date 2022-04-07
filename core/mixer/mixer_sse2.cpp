@@ -78,7 +78,7 @@ float *Resample_<LerpTag,SSE2Tag>(const InterpState*, float *RESTRICT src, uint 
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
         do {
-            *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
+            *(dst_iter++) = lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
             src  += frac>>MixerFracBits;

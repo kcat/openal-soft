@@ -69,7 +69,7 @@ constexpr inline size_t clampz(size_t val, size_t min, size_t max) noexcept
 { return minz(max, maxz(min, val)); }
 
 
-constexpr inline float lerp(float val1, float val2, float mu) noexcept
+constexpr inline float lerpf(float val1, float val2, float mu) noexcept
 { return val1 + (val2-val1)*mu; }
 constexpr inline float cubic(float val1, float val2, float val3, float val4, float mu) noexcept
 {

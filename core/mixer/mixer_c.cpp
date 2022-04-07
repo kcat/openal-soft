@@ -26,7 +26,7 @@ constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
 inline float do_point(const InterpState&, const float *RESTRICT vals, const uint)
 { return vals[0]; }
 inline float do_lerp(const InterpState&, const float *RESTRICT vals, const uint frac)
-{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
+{ return lerpf(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 inline float do_cubic(const InterpState&, const float *RESTRICT vals, const uint frac)
 { return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)

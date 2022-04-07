@@ -1283,10 +1283,10 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         case DistanceModel::Inverse:
             if(props->RefDistance > 0.0f)
             {
-                float dist{lerp(props->RefDistance, ClampedDist, props->RolloffFactor)};
+                float dist{lerpf(props->RefDistance, ClampedDist, props->RolloffFactor)};
                 if(dist > 0.0f) DryGainBase *= props->RefDistance / dist;
 
-                dist = lerp(props->RefDistance, ClampedDist, props->RoomRolloffFactor);
+                dist = lerpf(props->RefDistance, ClampedDist, props->RoomRolloffFactor);
                 if(dist > 0.0f) WetGainBase *= props->RefDistance / dist;
             }
             break;
@@ -1336,19 +1336,19 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         if(Angle >= props->OuterAngle)
         {
             ConeGain = props->OuterGain;
-            ConeHF = lerp(1.0f, props->OuterGainHF, props->DryGainHFAuto);
+            ConeHF = lerpf(1.0f, props->OuterGainHF, props->DryGainHFAuto);
         }
         else if(Angle >= props->InnerAngle)
         {
             const float scale{(Angle-props->InnerAngle) / (props->OuterAngle-props->InnerAngle)};
-            ConeGain = lerp(1.0f, props->OuterGain, scale);
-            ConeHF = lerp(1.0f, props->OuterGainHF, scale * props->DryGainHFAuto);
+            ConeGain = lerpf(1.0f, props->OuterGain, scale);
+            ConeHF = lerpf(1.0f, props->OuterGainHF, scale * props->DryGainHFAuto);
         }
 
         DryGainBase *= ConeGain;
-        WetGainBase *= lerp(1.0f, ConeGain, props->WetGainAuto);
+        WetGainBase *= lerpf(1.0f, ConeGain, props->WetGainAuto);
 
-        WetConeHF = lerp(1.0f, ConeHF, props->WetGainHFAuto);
+        WetConeHF = lerpf(1.0f, ConeHF, props->WetGainHFAuto);
     }
 
     /* Apply gain and frequency filters */
@@ -1398,7 +1398,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
             auto calc_attenuation = [](float distance, float refdist, float rolloff) noexcept
             {
-                const float dist{lerp(refdist, distance, rolloff)};
+                const float dist{lerpf(refdist, distance, rolloff)};
                 if(dist > refdist) return refdist / dist;
                 return 1.0f;
             };

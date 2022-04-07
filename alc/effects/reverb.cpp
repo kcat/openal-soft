@@ -902,7 +902,7 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
          * filter for each of its four lines. Also include the average
          * modulation delay (depth is half the max delay in samples).
          */
-        length += lerp(LATE_ALLPASS_LENGTHS[i], late_allpass_avg, diffusion)*density_mult +
+        length += lerpf(LATE_ALLPASS_LENGTHS[i], late_allpass_avg, diffusion)*density_mult +
             Mod.Depth[1]/frequency;
 
         /* Calculate the T60 damping coefficients for each line. */
@@ -1517,7 +1517,7 @@ void ReverbState::lateUnfaded(const size_t offset, const size_t todo)
                  * samples that were acquired above, and combined with the main
                  * delay tap.
                  */
-                mTempSamples[j][i] = lerp(out0, out1, frac)*midGain +
+                mTempSamples[j][i] = lerpf(out0, out1, frac)*midGain +
                     main_delay.Line[late_delay_tap++][j]*densityGain;
                 ++i;
             } while(--td);
@@ -1586,8 +1586,8 @@ void ReverbState::lateFaded(const size_t offset, const size_t todo, const float 
                 const float fade1{densityStep*fadeCount};
                 const float gfade0{oldMidGain + oldMidStep*fadeCount};
                 const float gfade1{midStep*fadeCount};
-                mTempSamples[j][i] = lerp(out00, out01, frac)*gfade0 +
-                    lerp(out10, out11, frac)*gfade1 +
+                mTempSamples[j][i] = lerpf(out00, out01, frac)*gfade0 +
+                    lerpf(out10, out11, frac)*gfade1 +
                     main_delay.Line[late_delay_tap0++][j]*fade0 +
                     main_delay.Line[late_delay_tap1++][j]*fade1;
                 ++i;

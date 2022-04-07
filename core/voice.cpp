@@ -382,7 +382,7 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
         if(Counter > fademix)
         {
             const float a{static_cast<float>(fademix) / static_cast<float>(Counter)};
-            gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
+            gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
         MixHrtfFilter hrtfparams{
@@ -409,7 +409,7 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
         if(Counter > DstBufferSize)
         {
             const float a{static_cast<float>(todo) / static_cast<float>(Counter-fademix)};
-            gain = lerp(parms.Hrtf.Old.Gain, TargetGain, a);
+            gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
         MixHrtfFilter hrtfparams{

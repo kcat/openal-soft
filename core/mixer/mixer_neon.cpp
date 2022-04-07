@@ -101,7 +101,7 @@ float *Resample_<LerpTag,NEONTag>(const InterpState*, float *RESTRICT src, uint 
         frac = static_cast<uint>(vgetq_lane_s32(frac4, 0));
 
         do {
-            *(dst_iter++) = lerp(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
+            *(dst_iter++) = lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
             src  += frac>>MixerFracBits;

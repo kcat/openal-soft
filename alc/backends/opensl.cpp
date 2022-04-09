@@ -810,8 +810,11 @@ void OpenSLCapture::open(const char* name)
     if(SL_RESULT_SUCCESS == result)
     {
         const uint chunk_size{mDevice->UpdateSize * mFrameSize};
+        const auto silence = (mDevice->FmtType == DevFmtUByte) ? al::byte{0x80} : al::byte{0};
 
         auto data = mRing->getWriteVector();
+        std::fill_n(data.first.buf, data.first.len*chunk_size, silence);
+        std::fill_n(data.second.buf, data.second.len*chunk_size, silence);
         for(size_t i{0u};i < data.first.len && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(data.first.buf + chunk_size*i, chunk_size);
@@ -875,6 +878,7 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 {
     const uint update_size{mDevice->UpdateSize};
     const uint chunk_size{update_size * mFrameSize};
+    const auto silence = (mDevice->FmtType == DevFmtUByte) ? al::byte{0x80} : al::byte{0};
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
@@ -922,15 +926,20 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
     {
         SLresult result{SL_RESULT_SUCCESS};
         auto wdata = mRing->getWriteVector();
+        std::fill_n(wdata.first.buf, wdata.first.len*chunk_size, silence);
         for(size_t i{0u};i < wdata.first.len && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(wdata.first.buf + chunk_size*i, chunk_size);
             PRINTERR(result, "bufferQueue->Enqueue");
         }
-        for(size_t i{0u};i < wdata.second.len && SL_RESULT_SUCCESS == result;i++)
+        if(wdata.second.len > 0)
         {
-            result = VCALL(bufferQueue,Enqueue)(wdata.second.buf + chunk_size*i, chunk_size);
-            PRINTERR(result, "bufferQueue->Enqueue");
+            std::fill_n(wdata.second.buf, wdata.second.len*chunk_size, silence);
+            for(size_t i{0u};i < wdata.second.len && SL_RESULT_SUCCESS == result;i++)
+            {
+                result = VCALL(bufferQueue,Enqueue)(wdata.second.buf + chunk_size*i, chunk_size);
+                PRINTERR(result, "bufferQueue->Enqueue");
+            }
         }
     }
 }

@@ -68,32 +68,6 @@ _Pragma("GCC diagnostic pop")
 
 #include "common/alhelpers.h"
 
-extern "C" {
-/* Undefine this to disable use of experimental extensions. Don't use for
- * production code! Interfaces and behavior may change prior to being
- * finalized.
- */
-#define ALLOW_EXPERIMENTAL_EXTS
-
-#ifdef ALLOW_EXPERIMENTAL_EXTS
-#ifndef AL_SOFT_UHJ
-#define AL_SOFT_UHJ
-#define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2
-#define AL_FORMAT_UHJ2CHN16_SOFT                 0x19A3
-#define AL_FORMAT_UHJ2CHN_FLOAT32_SOFT           0x19A4
-#define AL_FORMAT_UHJ3CHN8_SOFT                  0x19A5
-#define AL_FORMAT_UHJ3CHN16_SOFT                 0x19A6
-#define AL_FORMAT_UHJ3CHN_FLOAT32_SOFT           0x19A7
-#define AL_FORMAT_UHJ4CHN8_SOFT                  0x19A8
-#define AL_FORMAT_UHJ4CHN16_SOFT                 0x19A9
-#define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
-#define AL_STEREO_MODE_SOFT                      0x19B0
-#define AL_NORMAL_SOFT                           0x0000
-#define AL_SUPER_STEREO_SOFT                     0x0001
-#define AL_SUPER_STEREO_WIDTH_SOFT               0x19B1
-#endif
-#endif /* ALLOW_EXPERIMENTAL_EXTS */
-}
 
 namespace {
 
@@ -2067,8 +2041,7 @@ int main(int argc, char *argv[])
         }
         else if(strcmp(argv[fileidx], "-uhj") == 0)
         {
-#ifdef AL_SOFT_UHJ
-            if(!alIsExtensionPresent("AL_SOFTX_UHJ"))
+            if(!alIsExtensionPresent("AL_SOFT_UHJ"))
                 std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
             else
             {
@@ -2077,23 +2050,16 @@ int main(int argc, char *argv[])
                 FormatStereo16 = AL_FORMAT_UHJ2CHN16_SOFT;
                 FormatStereo32F = AL_FORMAT_UHJ2CHN_FLOAT32_SOFT;
             }
-#else
-            std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
-#endif
         }
         else if(strcmp(argv[fileidx], "-superstereo") == 0)
         {
-#ifdef AL_SOFT_UHJ
-            if(!alIsExtensionPresent("AL_SOFTX_UHJ"))
+            if(!alIsExtensionPresent("AL_SOFT_UHJ"))
                 std::cerr<< "AL_SOFT_UHJ not supported for Super Stereo decoding" <<std::endl;
             else
             {
                 std::cout<< "Found AL_SOFT_UHJ (Super Stereo)" <<std::endl;
                 EnableSuperStereo = true;
             }
-#else
-            std::cerr<< "AL_SOFT_UHJ not supported for Super Stereo decoding" <<std::endl;
-#endif
         }
         else if(strcmp(argv[fileidx], "-novideo") == 0)
             DisableVideo = true;

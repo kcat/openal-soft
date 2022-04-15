@@ -64,9 +64,9 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define ALC_STEREO_UHJ_SOFT                      0x19AF
 #define ALC_STEREO_HRTF_SOFT                     0x19B2
 /*#define ALC_QUAD_SOFT                            0x1503*/
-/*#define ALC_5POINT1_SOFT                         0x1504*/
-/*#define ALC_6POINT1_SOFT                         0x1505*/
-/*#define ALC_7POINT1_SOFT                         0x1506*/
+#define ALC_SURROUND_5_1_SOFT                    0x1504
+#define ALC_SURROUND_6_1_SOFT                    0x1505
+#define ALC_SURROUND_7_1_SOFT                    0x1506
 #endif
 
 

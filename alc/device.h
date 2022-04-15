@@ -105,9 +105,9 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
         Uhj2 = ALC_STEREO_UHJ_SOFT,
         Hrtf = ALC_STEREO_HRTF_SOFT,
         Quad = ALC_QUAD_SOFT,
-        X51 = ALC_5POINT1_SOFT,
-        X61 = ALC_6POINT1_SOFT,
-        X71 = ALC_7POINT1_SOFT
+        X51 = ALC_SURROUND_5_1_SOFT,
+        X61 = ALC_SURROUND_6_1_SOFT,
+        X71 = ALC_SURROUND_7_1_SOFT
     };
     OutputMode1 getOutputMode1() const noexcept;
 

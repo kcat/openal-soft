@@ -2703,8 +2703,8 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     auto NumAttrsForDevice = [](ALCdevice *aldev) noexcept
     {
         if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
-            return 35;
-        return 29;
+            return 37;
+        return 31;
     };
     switch(param)
     {
@@ -2778,6 +2778,9 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
 
             values[i++] = ALC_MAX_AMBISONIC_ORDER_SOFT;
             values[i++] = MaxAmbiOrder;
+
+            values[i++] = ALC_OUTPUT_MODE_SOFT;
+            values[i++] = static_cast<ALCenum>(device->getOutputMode1());
 
             values[i++] = 0;
         }
@@ -2945,8 +2948,8 @@ START_API_FUNC
     auto NumAttrsForDevice = [](ALCdevice *aldev) noexcept
     {
         if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
-            return 39;
-        return 33;
+            return 41;
+        return 35;
     };
     std::lock_guard<std::mutex> _{dev->StateLock};
     switch(pname)
@@ -3017,6 +3020,9 @@ START_API_FUNC
 
             values[i++] = ALC_DEVICE_LATENCY_SOFT;
             values[i++] = clock.Latency.count();
+
+            values[i++] = ALC_OUTPUT_MODE_SOFT;
+            values[i++] = static_cast<ALCenum>(device->getOutputMode1());
 
             values[i++] = 0;
         }

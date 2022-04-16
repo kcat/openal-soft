@@ -804,6 +804,12 @@ void EaxReverbEffect::set_eax_defaults()
     eax1_ = EAX1REVERB_PRESETS[EAX_ENVIRONMENT_GENERIC];
     eax1_d_ = eax1_;
     eax_ = EAXREVERB_PRESETS[EAX_ENVIRONMENT_GENERIC];
+    /* HACK: EAX2 has a default room volume of -10,000dB (silence), although
+     * newer versions use -1,000dB. What should be happening is properties for
+     * each EAX version is tracked separately, with the last version used for
+     * the properties to apply (presumably v2 or nothing being the default).
+     */
+    eax_.lRoom = EAXREVERB_MINROOM;
     eax_d_ = eax_;
 }
 

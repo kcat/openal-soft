@@ -519,7 +519,7 @@ al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, c
     return al::nullopt;
 }
 
-int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)
+bool GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, bool def)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return (al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0

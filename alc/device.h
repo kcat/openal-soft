@@ -137,7 +137,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
     void enumerateHrtfs();
 
-    bool getConfigValueBool(const char *block, const char *key, int def)
+    bool getConfigValueBool(const char *block, const char *key, bool def)
     { return GetConfigValueBool(DeviceName.c_str(), block, key, def); }
 
     template<typename T>

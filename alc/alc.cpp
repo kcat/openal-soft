@@ -2102,7 +2102,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             sample_delay += FrontStablizer::DelayLength;
     }
 
-    if(device->getConfigValueBool(nullptr, "dither", 1))
+    if(device->getConfigValueBool(nullptr, "dither", true))
     {
         int depth{device->configValue<int>(nullptr, "dither-depth").value_or(0)};
         if(depth <= 0)

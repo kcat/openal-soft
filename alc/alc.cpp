@@ -967,7 +967,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_loopback "
     "ALC_SOFT_loopback_bformat "
     "ALC_SOFT_output_limiter "
-    "ALC_SOFTX_output_mode "
+    "ALC_SOFT_output_mode "
     "ALC_SOFT_pause_device "
     "ALC_SOFT_reopen_device";
 constexpr int alcMajorVersion{1};

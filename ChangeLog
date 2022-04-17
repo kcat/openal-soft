@@ -3,7 +3,12 @@ openal-soft-1.22.0:
     Implemented the ALC_SOFT_reopen_device extension. This allows for moving
     devices to different outputs without losing object state.
 
+    Implemented the ALC_SOFT_output_mode extension.
+
     Implemented the AL_SOFT_callback_buffer extension.
+
+    Implemented the AL_SOFT_UHJ extension. This supports native UHJ buffer
+    formats and Super Stereo processing.
 
     Implemented the legacy EAX extensions. Enabled by default only on Windows.
 
@@ -38,10 +43,6 @@ openal-soft-1.22.0:
 
     Added utilities to encode and decode UHJ audio files. Files are decoded to
     the .amb format, and are encoded from libsndfile-compatible formats.
-
-    Added an in-progress extension to handle UHJ audio buffers natively.
-
-    Added an in-progress extension to select UHJ output in addition to HRTF.
 
     Added an in-progress extension to hold sources in a playing state when a
     device disconnects. Allows devices to be reset or reopened and have sources

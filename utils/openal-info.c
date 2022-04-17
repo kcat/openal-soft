@@ -181,6 +181,34 @@ static void printHRTFInfo(ALCdevice *device)
     checkALCErrors(device);
 }
 
+static void printModeInfo(ALCdevice *device)
+{
+    if(alcIsExtensionPresent(device, "ALC_SOFT_output_mode"))
+    {
+        const char *modename = "(error)";
+        ALCenum mode = 0;
+
+        alcGetIntegerv(device, ALC_OUTPUT_MODE_SOFT, 1, &mode);
+        checkALCErrors(device);
+        switch(mode)
+        {
+        case ALC_ANY_SOFT: modename = "Unknown / unspecified"; break;
+        case ALC_MONO_SOFT: modename = "Mono"; break;
+        case ALC_STEREO_SOFT: modename = "Stereo (unspecified encoding)"; break;
+        case ALC_STEREO_BASIC_SOFT: modename = "Stereo (basic)"; break;
+        case ALC_STEREO_UHJ_SOFT: modename = "Stereo (UHJ)"; break;
+        case ALC_STEREO_HRTF_SOFT: modename = "Stereo (HRTF)"; break;
+        case ALC_QUAD_SOFT: modename = "Quadraphonic"; break;
+        case ALC_SURROUND_5_1_SOFT: modename = "5.1 Surround"; break;
+        case ALC_SURROUND_6_1_SOFT: modename = "6.1 Surround"; break;
+        case ALC_SURROUND_7_1_SOFT: modename = "7.1 Surround"; break;
+        }
+        printf("Output channel mode: %s\n", modename);
+    }
+    else
+        printf("Output mode extension not available\n");
+}
+
 static void printALInfo(void)
 {
     printf("OpenAL vendor string: %s\n", alGetString(AL_VENDOR));
@@ -397,6 +425,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    printModeInfo(device);
     printALInfo();
     printResamplerInfo();
     printEFXInfo(device);

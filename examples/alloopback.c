@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = (T)alcGetProcAddress(NULL, #x))
+#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alcGetProcAddress(NULL, #x)))
     LOAD_PROC(LPALCLOOPBACKOPENDEVICESOFT, alcLoopbackOpenDeviceSOFT);
     LOAD_PROC(LPALCISRENDERFORMATSUPPORTEDSOFT, alcIsRenderFormatSupportedSOFT);
     LOAD_PROC(LPALCRENDERSAMPLESSOFT, alcRenderSamplesSOFT);

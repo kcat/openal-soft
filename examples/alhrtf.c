@@ -170,7 +170,7 @@ int main(int argc, char **argv)
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(d, T, x)  ((x) = (T)alcGetProcAddress((d), #x))
+#define LOAD_PROC(d, T, x)  ((x) = FUNCTION_CAST(T, alcGetProcAddress((d), #x)))
     LOAD_PROC(device, LPALCGETSTRINGISOFT, alcGetStringiSOFT);
     LOAD_PROC(device, LPALCRESETDEVICESOFT, alcResetDeviceSOFT);
 #undef LOAD_PROC

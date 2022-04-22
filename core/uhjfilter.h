@@ -38,9 +38,6 @@ struct UhjEncoder : public UhjFilterBase {
 
 
 struct UhjDecoder : public UhjFilterBase {
-    static constexpr size_t sLineSize{BufferLineSize+MaxResamplerPadding+sFilterDelay};
-    using BufferLine = std::array<float,sLineSize>;
-
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};

@@ -2004,50 +2004,50 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
 
 void DeviceBase::handleDisconnect(const char *msg, ...)
 {
-    if(!Connected.exchange(false, std::memory_order_acq_rel))
-        return;
-
-    AsyncEvent evt{AsyncEvent::Disconnected};
-
-    va_list args;
-    va_start(args, msg);
-    int msglen{vsnprintf(evt.u.disconnect.msg, sizeof(evt.u.disconnect.msg), msg, args)};
-    va_end(args);
-
-    if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.disconnect.msg))
-        evt.u.disconnect.msg[sizeof(evt.u.disconnect.msg)-1] = 0;
-
     IncrementRef(MixCount);
-    for(ContextBase *ctx : *mContexts.load())
+    if(Connected.exchange(false, std::memory_order_acq_rel))
     {
-        const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
-        if((enabledevt&AsyncEvent::Disconnected))
+        AsyncEvent evt{AsyncEvent::Disconnected};
+
+        va_list args;
+        va_start(args, msg);
+        int msglen{vsnprintf(evt.u.disconnect.msg, sizeof(evt.u.disconnect.msg), msg, args)};
+        va_end(args);
+
+        if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.disconnect.msg))
+            evt.u.disconnect.msg[sizeof(evt.u.disconnect.msg)-1] = 0;
+
+        for(ContextBase *ctx : *mContexts.load())
         {
-            RingBuffer *ring{ctx->mAsyncEvents.get()};
-            auto evt_data = ring->getWriteVector().first;
-            if(evt_data.len > 0)
+            const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
+            if((enabledevt&AsyncEvent::Disconnected))
             {
-                al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
-                ring->writeAdvance(1);
-                ctx->mEventSem.post();
+                RingBuffer *ring{ctx->mAsyncEvents.get()};
+                auto evt_data = ring->getWriteVector().first;
+                if(evt_data.len > 0)
+                {
+                    al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
+                    ring->writeAdvance(1);
+                    ctx->mEventSem.post();
+                }
             }
-        }
 
-        if(!ctx->mStopVoicesOnDisconnect)
-        {
-            ProcessVoiceChanges(ctx);
-            continue;
-        }
+            if(!ctx->mStopVoicesOnDisconnect)
+            {
+                ProcessVoiceChanges(ctx);
+                continue;
+            }
 
-        auto voicelist = ctx->getVoicesSpanAcquired();
-        auto stop_voice = [](Voice *voice) -> void
-        {
-            voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-            voice->mSourceID.store(0u, std::memory_order_relaxed);
-            voice->mPlayState.store(Voice::Stopped, std::memory_order_release);
-        };
-        std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
+            auto voicelist = ctx->getVoicesSpanAcquired();
+            auto stop_voice = [](Voice *voice) -> void
+            {
+                voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
+                voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
+                voice->mSourceID.store(0u, std::memory_order_relaxed);
+                voice->mPlayState.store(Voice::Stopped, std::memory_order_release);
+            };
+            std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
+        }
     }
     IncrementRef(MixCount);
 }

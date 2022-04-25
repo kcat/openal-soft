@@ -135,9 +135,6 @@ float XScale{1.0f};
 float YScale{1.0f};
 float ZScale{1.0f};
 
-} // namespace
-
-namespace {
 
 struct ChanMap {
     Channel channel;
@@ -213,30 +210,30 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
         return Resample_<CubicTag,CTag>;
     case Resampler::BSinc12:
     case Resampler::BSinc24:
-        if(increment <= MixerFracOne)
+        if(increment > MixerFracOne)
         {
-            /* fall-through */
-        case Resampler::FastBSinc12:
-        case Resampler::FastBSinc24:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_<FastBSincTag,NEONTag>;
+                return Resample_<BSincTag,NEONTag>;
 #endif
 #ifdef HAVE_SSE
             if((CPUCapFlags&CPU_CAP_SSE))
-                return Resample_<FastBSincTag,SSETag>;
+                return Resample_<BSincTag,SSETag>;
 #endif
-            return Resample_<FastBSincTag,CTag>;
+            return Resample_<BSincTag,CTag>;
         }
+        /* fall-through */
+    case Resampler::FastBSinc12:
+    case Resampler::FastBSinc24:
 #ifdef HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
-            return Resample_<BSincTag,NEONTag>;
+            return Resample_<FastBSincTag,NEONTag>;
 #endif
 #ifdef HAVE_SSE
         if((CPUCapFlags&CPU_CAP_SSE))
-            return Resample_<BSincTag,SSETag>;
+            return Resample_<FastBSincTag,SSETag>;
 #endif
-        return Resample_<BSincTag,CTag>;
+        return Resample_<FastBSincTag,CTag>;
     }
 
     return Resample_<PointTag,CTag>;

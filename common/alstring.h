@@ -2,6 +2,7 @@
 #define AL_STRING_H
 
 #include <cstddef>
+#include <cstring>
 
 
 namespace al {

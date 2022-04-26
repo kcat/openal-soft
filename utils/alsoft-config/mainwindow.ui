@@ -2110,7 +2110,7 @@ be useful for preventing those extensions from being used.</string>
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>100</y>
+        <y>60</y>
         <width>511</width>
         <height>241</height>
        </rect>
@@ -2515,6 +2515,22 @@ added by the ALC_EXT_DEDICATED extension.</string>
         <string>Psychotic</string>
        </property>
       </item>
+     </widget>
+     <widget class="QCheckBox" name="enableEaxCheck">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>320</y>
+        <width>231</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>Enables legacy EAX API support.</string>
+      </property>
+      <property name="text">
+       <string>Enable EAX API support</string>
+      </property>
      </widget>
     </widget>
    </widget>

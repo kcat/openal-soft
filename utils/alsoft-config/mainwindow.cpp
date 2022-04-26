@@ -349,6 +349,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
 #endif
 
+#ifndef ALSOFT_EAX
+    ui->enableEaxCheck->setChecked(Qt::Unchecked);
+    ui->enableEaxCheck->setEnabled(false);
+    ui->enableEaxCheck->setVisible(false);
+#endif
+
     mPeriodSizeValidator = new QIntValidator{64, 8192, this};
     ui->periodSizeEdit->setValidator(mPeriodSizeValidator);
     mPeriodCountValidator = new QIntValidator{2, 16, this};
@@ -448,6 +454,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->enableDedicatedCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->enablePitchShifterCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->enableVocalMorpherCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableEaxCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->pulseAutospawnCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->pulseAllowMovesCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
@@ -922,6 +929,8 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
     ui->enablePitchShifterCheck->setChecked(!excludefx.contains("pshifter", Qt::CaseInsensitive));
     ui->enableVocalMorpherCheck->setChecked(!excludefx.contains("vmorpher", Qt::CaseInsensitive));
+    if(ui->enableEaxCheck->isEnabled())
+        ui->enableEaxCheck->setChecked(getCheckState(settings.value("eax/enable")) != Qt::Unchecked);
 
     ui->pulseAutospawnCheckBox->setCheckState(getCheckState(settings.value("pulse/spawn-server")));
     ui->pulseAllowMovesCheckBox->setCheckState(getCheckState(settings.value("pulse/allow-moves")));
@@ -1134,6 +1143,9 @@ void MainWindow::saveConfig(const QString &fname) const
     if(!ui->enableVocalMorpherCheck->isChecked())
         strlist.append("vmorpher");
     settings.setValue("excludefx", strlist.join(QChar{','}));
+    settings.setValue("eax/enable",
+        (!ui->enableEaxCheck->isEnabled() || ui->enableEaxCheck->isChecked())
+        ? QString{/*"true"*/} : QString{"false"});
 
     settings.setValue("pulse/spawn-server", getCheckValue(ui->pulseAutospawnCheckBox));
     settings.setValue("pulse/allow-moves", getCheckValue(ui->pulseAllowMovesCheckBox));

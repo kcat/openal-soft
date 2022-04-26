@@ -310,10 +310,10 @@ public:
 
     template<typename U>
     constexpr T value_or(U&& defval) const&
-    { return bool{*this} ? **this : static_cast<T>(std::forward<U>(defval)); }
+    { return bool(*this) ? **this : static_cast<T>(std::forward<U>(defval)); }
     template<typename U>
     constexpr T value_or(U&& defval) &&
-    { return bool{*this} ? std::move(**this) : static_cast<T>(std::forward<U>(defval)); }
+    { return bool(*this) ? std::move(**this) : static_cast<T>(std::forward<U>(defval)); }
 
     template<typename ...Args>
     constexpr T& emplace(Args&& ...args)

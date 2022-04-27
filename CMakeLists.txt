@@ -912,7 +912,7 @@ endif()
 # Check PipeWire backend
 option(ALSOFT_REQUIRE_PIPEWIRE "Require PipeWire backend" OFF)
 if(PkgConfig_FOUND)
-    pkg_check_modules(PIPEWIRE libpipewire-0.3)
+    pkg_check_modules(PIPEWIRE libpipewire-0.3>=0.3.23)
     if(PIPEWIRE_FOUND)
         option(ALSOFT_BACKEND_PIPEWIRE "Enable PipeWire backend" ON)
         if(ALSOFT_BACKEND_PIPEWIRE)

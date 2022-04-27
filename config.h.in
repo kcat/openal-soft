@@ -114,3 +114,6 @@
 
 /* Define if we have pthread_set_name_np() */
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP
+
+/* Define the installation data directory */
+#cmakedefine ALSOFT_INSTALL_DATADIR "@ALSOFT_INSTALL_DATADIR@"

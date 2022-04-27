@@ -97,6 +97,11 @@ option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
 option(ALSOFT_EAX "Enable legacy EAX extensions" ${WIN32})
 
+option(ALSOFT_SEARCH_INSTALL_DATADIR "Search the installation data directory" OFF)
+if(ALSOFT_SEARCH_INSTALL_DATADIR)
+    set(ALSOFT_INSTALL_DATADIR ${CMAKE_INSTALL_FULL_DATADIR})
+endif()
+
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
     set(CMAKE_INSTALL_DATADIR "${SHARE_INSTALL_DIR}")

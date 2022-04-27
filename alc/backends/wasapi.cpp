@@ -926,6 +926,7 @@ HRESULT WasapiPlayback::resetProxy()
         OutputType.dwChannelMask = X6DOT1;
         break;
     case DevFmtX71:
+    case DevFmtX3D71:
         OutputType.Format.nChannels = 8;
         OutputType.dwChannelMask = X7DOT1;
         break;
@@ -1021,6 +1022,7 @@ HRESULT WasapiPlayback::resetProxy()
                 chansok = (chancount >= 7 && (chanmask&X61Mask) == X6DOT1);
                 break;
             case DevFmtX71:
+            case DevFmtX3D71:
                 chansok = (chancount >= 8 && (chanmask&X71Mask) == X7DOT1);
                 break;
             case DevFmtAmbi3D:
@@ -1087,7 +1089,7 @@ HRESULT WasapiPlayback::resetProxy()
     const EndpointFormFactor formfactor{get_device_formfactor(mMMDev.get())};
     mDevice->Flags.set(DirectEar, (formfactor == Headphones || formfactor == Headset));
 
-    setChannelOrderFromWFXMask(OutputType.dwChannelMask);
+    setDefaultWFXChannelOrder();
 
     hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
         buf_time.count(), 0, &OutputType.Format, nullptr);
@@ -1476,6 +1478,7 @@ HRESULT WasapiCapture::resetProxy()
         InputType.dwChannelMask = X7DOT1;
         break;
 
+    case DevFmtX3D71:
     case DevFmtAmbi3D:
         return E_FAIL;
     }
@@ -1556,6 +1559,7 @@ HRESULT WasapiCapture::resetProxy()
             case DevFmtX61:
                 return (chancount == 7 && (chanmask == 0 || (chanmask&X61Mask) == X6DOT1));
             case DevFmtX71:
+            case DevFmtX3D71:
                 return (chancount == 8 && (chanmask == 0 || (chanmask&X71Mask) == X7DOT1));
             case DevFmtAmbi3D:
                 return (chanmask == 0 && chancount == device->channelsFromFmt());

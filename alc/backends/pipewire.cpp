@@ -1181,6 +1181,7 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
         break;
     case DevFmtX61: map = X61Map; break;
     case DevFmtX71: map = X71Map; break;
+    case DevFmtX3D71: map = X71Map; break;
     case DevFmtAmbi3D:
         info.flags |= SPA_AUDIO_FLAG_UNPOSITIONED;
         info.channels = device->channelsFromFmt();

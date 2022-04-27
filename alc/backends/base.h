@@ -41,11 +41,6 @@ protected:
     void setDefaultChannelOrder();
     /** Sets the default channel order used by WaveFormatEx. */
     void setDefaultWFXChannelOrder();
-
-#ifdef _WIN32
-    /** Sets the channel order given the WaveFormatEx mask. */
-    void setChannelOrderFromWFXMask(uint chanmask);
-#endif
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
 

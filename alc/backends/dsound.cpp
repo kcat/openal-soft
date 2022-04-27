@@ -421,6 +421,7 @@ bool DSoundPlayback::reset()
         case DevFmtX51: OutputType.dwChannelMask = X5DOT1; break;
         case DevFmtX61: OutputType.dwChannelMask = X6DOT1; break;
         case DevFmtX71: OutputType.dwChannelMask = X7DOT1; break;
+        case DevFmtX3D71: OutputType.dwChannelMask = X7DOT1; break;
         }
 
 retry_open:
@@ -514,7 +515,7 @@ retry_open:
     }
 
     ResetEvent(mNotifyEvent);
-    setChannelOrderFromWFXMask(OutputType.dwChannelMask);
+    setDefaultWFXChannelOrder();
 
     return true;
 }
@@ -635,6 +636,7 @@ void DSoundCapture::open(const char *name)
     case DevFmtX51: InputType.dwChannelMask = X5DOT1; break;
     case DevFmtX61: InputType.dwChannelMask = X6DOT1; break;
     case DevFmtX71: InputType.dwChannelMask = X7DOT1; break;
+    case DevFmtX3D71:
     case DevFmtAmbi3D:
         WARN("%s capture not supported\n", DevFmtChannelsString(mDevice->FmtChans));
         throw al::backend_exception{al::backend_error::DeviceError, "%s capture not supported",
@@ -689,7 +691,7 @@ void DSoundCapture::open(const char *name)
     }
 
     mBufferBytes = DSCBDescription.dwBufferBytes;
-    setChannelOrderFromWFXMask(InputType.dwChannelMask);
+    setDefaultWFXChannelOrder();
 
     mDevice->DeviceName = name;
 }

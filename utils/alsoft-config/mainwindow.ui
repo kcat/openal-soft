@@ -668,9 +668,9 @@ configuration file.</string>
       <property name="geometry">
        <rect>
         <x>-10</x>
-        <y>160</y>
+        <y>140</y>
         <width>551</width>
-        <height>161</height>
+        <height>231</height>
        </rect>
       </property>
       <property name="title">
@@ -682,10 +682,10 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoderQuadLineEdit">
        <property name="geometry">
         <rect>
-         <x>120</x>
+         <x>130</x>
          <y>30</y>
-         <width>311</width>
-         <height>21</height>
+         <width>301</width>
+         <height>25</height>
         </rect>
        </property>
       </widget>
@@ -694,8 +694,8 @@ configuration file.</string>
         <rect>
          <x>20</x>
          <y>30</y>
-         <width>91</width>
-         <height>21</height>
+         <width>101</width>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -711,7 +711,7 @@ configuration file.</string>
          <x>440</x>
          <y>30</y>
          <width>91</width>
-         <height>21</height>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -721,10 +721,10 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoder51LineEdit">
        <property name="geometry">
         <rect>
-         <x>120</x>
-         <y>60</y>
-         <width>311</width>
-         <height>21</height>
+         <x>130</x>
+         <y>70</y>
+         <width>301</width>
+         <height>25</height>
         </rect>
        </property>
       </widget>
@@ -732,9 +732,9 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>440</x>
-         <y>60</y>
+         <y>70</y>
          <width>91</width>
-         <height>21</height>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -745,9 +745,9 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>60</y>
-         <width>91</width>
-         <height>21</height>
+         <y>70</y>
+         <width>101</width>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -761,9 +761,9 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>90</y>
-         <width>91</width>
-         <height>21</height>
+         <y>110</y>
+         <width>101</width>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -776,10 +776,10 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoder61LineEdit">
        <property name="geometry">
         <rect>
-         <x>120</x>
-         <y>90</y>
-         <width>311</width>
-         <height>21</height>
+         <x>130</x>
+         <y>110</y>
+         <width>301</width>
+         <height>25</height>
         </rect>
        </property>
       </widget>
@@ -787,9 +787,9 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>440</x>
-         <y>90</y>
+         <y>110</y>
          <width>91</width>
-         <height>21</height>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -800,9 +800,9 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>440</x>
-         <y>120</y>
+         <y>150</y>
          <width>91</width>
-         <height>21</height>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -812,10 +812,10 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoder71LineEdit">
        <property name="geometry">
         <rect>
-         <x>120</x>
-         <y>120</y>
-         <width>311</width>
-         <height>21</height>
+         <x>130</x>
+         <y>150</y>
+         <width>301</width>
+         <height>25</height>
         </rect>
        </property>
       </widget>
@@ -823,9 +823,9 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>120</y>
-         <width>91</width>
-         <height>21</height>
+         <y>150</y>
+         <width>101</width>
+         <height>25</height>
         </rect>
        </property>
        <property name="text">
@@ -833,6 +833,45 @@ configuration file.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_33">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>190</y>
+         <width>101</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>3D7.1 Surround:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="decoder3D71LineEdit">
+       <property name="geometry">
+        <rect>
+         <x>130</x>
+         <y>190</y>
+         <width>301</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="decoder3D71Button">
+       <property name="geometry">
+        <rect>
+         <x>440</x>
+         <y>190</y>
+         <width>91</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Browse...</string>
        </property>
       </widget>
      </widget>

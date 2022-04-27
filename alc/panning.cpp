@@ -89,6 +89,23 @@ inline const char *GetLabelFromChannel(Channel channel)
         case TopBackCenter: return "top-back-center";
         case TopBackRight: return "top-back-right";
 
+        case Aux0: return "Aux0";
+        case Aux1: return "Aux1";
+        case Aux2: return "Aux2";
+        case Aux3: return "Aux3";
+        case Aux4: return "Aux4";
+        case Aux5: return "Aux5";
+        case Aux6: return "Aux6";
+        case Aux7: return "Aux7";
+        case Aux8: return "Aux8";
+        case Aux9: return "Aux9";
+        case Aux10: return "Aux10";
+        case Aux11: return "Aux11";
+        case Aux12: return "Aux12";
+        case Aux13: return "Aux13";
+        case Aux14: return "Aux14";
+        case Aux15: return "Aux15";
+
         case MaxChannels: break;
     }
     return "(unknown)";
@@ -202,6 +219,8 @@ struct DecoderConfig<DualBand, 0> {
         mCoeffsLF = rhs.mCoeffsLF;
         return *this;
     }
+
+    explicit operator bool() const noexcept { return mOrder != 0; }
 };
 using DecoderView = DecoderConfig<DualBand, 0>;
 
@@ -412,8 +431,15 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
             ch = BackCenter;
         else
         {
-            ERR("AmbDec speaker label \"%s\" not recognized\n", speaker.Name.c_str());
-            continue;
+            int idx{};
+            char c{};
+            if(sscanf(speaker.Name.c_str(), "AUX%d%c", &idx, &c) != 1 || idx < 0
+                || idx >= MaxChannels-Aux0)
+            {
+                ERR("AmbDec speaker label \"%s\" not recognized\n", speaker.Name.c_str());
+                continue;
+            }
+            ch = static_cast<Channel>(Aux0+idx);
         }
 
         decoder.mChannels[chan_count] = ch;
@@ -537,11 +563,33 @@ constexpr DecoderConfig<DualBand, 6> X71Config{
         {{1.66666667e-1f, -9.62250449e-2f, -1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f, -7.96819073e-2f, 0.00000000e+0f}},
     }}
 };
+constexpr DecoderConfig<DualBand, 6> X3D71Config{
+    1, true, {{Aux0, SideLeft, FrontLeft, FrontRight, SideRight, Aux1}},
+    DevAmbiScaling::N3D,
+    /*HF*/{{1.73205081e+0f, 1.00000000e+0f}},
+    {{
+        {{1.66669447e-1f,  0.00000000e+0f,  2.36070520e-1f, -1.66153012e-1f}},
+        {{1.66669447e-1f,  2.04127551e-1f, -1.17487922e-1f, -1.66927066e-1f}},
+        {{1.66669447e-1f,  2.04127551e-1f,  1.17487922e-1f,  1.66927066e-1f}},
+        {{1.66669447e-1f, -2.04127551e-1f,  1.17487922e-1f,  1.66927066e-1f}},
+        {{1.66669447e-1f, -2.04127551e-1f, -1.17487922e-1f, -1.66927066e-1f}},
+        {{1.66669447e-1f,  0.00000000e+0f, -2.36070520e-1f,  1.66153012e-1f}},
+    }},
+    /*LF*/{{1.00000000e+0f, 1.00000000e+0f}},
+    {{
+        {{1.66669447e-1f,  0.00000000e+0f,  2.36070520e-1f, -1.66153012e-1f}},
+        {{1.66669447e-1f,  2.04127551e-1f, -1.17487922e-1f, -1.66927066e-1f}},
+        {{1.66669447e-1f,  2.04127551e-1f,  1.17487922e-1f,  1.66927066e-1f}},
+        {{1.66669447e-1f, -2.04127551e-1f,  1.17487922e-1f,  1.66927066e-1f}},
+        {{1.66669447e-1f, -2.04127551e-1f, -1.17487922e-1f, -1.66927066e-1f}},
+        {{1.66669447e-1f,  0.00000000e+0f, -2.36070520e-1f,  1.66153012e-1f}},
+    }}
+};
 
 void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=false,
     DecoderView decoder={})
 {
-    if(!decoder.mOrder)
+    if(!decoder)
     {
         switch(device->FmtChans)
         {
@@ -551,6 +599,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         case DevFmtX51: decoder = X51Config; break;
         case DevFmtX61: decoder = X61Config; break;
         case DevFmtX71: decoder = X71Config; break;
+        case DevFmtX3D71: decoder = X3D71Config; break;
         case DevFmtAmbi3D:
             auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
             auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
@@ -906,6 +955,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
         case DevFmtX51: layout = "surround51"; break;
         case DevFmtX61: layout = "surround61"; break;
         case DevFmtX71: layout = "surround71"; break;
+        case DevFmtX3D71: layout = "surround3d71"; break;
         /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
         case DevFmtMono:
         case DevFmtStereo:
@@ -915,7 +965,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
 
         std::unique_ptr<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>> decoder_store;
         DecoderView decoder{};
-        float speakerdists[MaxChannels]{};
+        float speakerdists[MAX_OUTPUT_CHANNELS]{};
         auto load_config = [device,&decoder_store,&decoder,&speakerdists](const char *config)
         {
             AmbDecConf conf{};

@@ -39,6 +39,7 @@ private slots:
     void select51DecoderFile();
     void select61DecoderFile();
     void select71DecoderFile();
+    void select3D71DecoderFile();
 
     void updateJackBufferSizeEdit(int size);
     void updateJackBufferSizeSlider();

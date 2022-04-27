@@ -301,23 +301,16 @@ bool WinMMPlayback::reset()
         return false;
     }
 
-    uint chanmask{};
     if(mFormat.nChannels >= 2)
-    {
         mDevice->FmtChans = DevFmtStereo;
-        chanmask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-    }
     else if(mFormat.nChannels == 1)
-    {
         mDevice->FmtChans = DevFmtMono;
-        chanmask = SPEAKER_FRONT_CENTER;
-    }
     else
     {
         ERR("Unhandled channel count: %d\n", mFormat.nChannels);
         return false;
     }
-    setChannelOrderFromWFXMask(chanmask);
+    setDefaultWFXChannelOrder();
 
     uint BufferSize{mDevice->UpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
 
@@ -476,6 +469,7 @@ void WinMMCapture::open(const char *name)
     case DevFmtX51:
     case DevFmtX61:
     case DevFmtX71:
+    case DevFmtX3D71:
     case DevFmtAmbi3D:
         throw al::backend_exception{al::backend_error::DeviceError, "%s capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};

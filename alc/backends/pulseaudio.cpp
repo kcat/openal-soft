@@ -893,6 +893,7 @@ bool PulsePlayback::reset()
         chanmap = X61ChanMap;
         break;
     case DevFmtX71:
+    case DevFmtX3D71:
         chanmap = X71ChanMap;
         break;
     }
@@ -1173,6 +1174,7 @@ void PulseCapture::open(const char *name)
     case DevFmtX71:
         chanmap = X71ChanMap;
         break;
+    case DevFmtX3D71:
     case DevFmtAmbi3D:
         throw al::backend_exception{al::backend_error::DeviceError, "%s capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};

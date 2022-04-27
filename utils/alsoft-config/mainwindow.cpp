@@ -86,6 +86,7 @@ static const struct NameValuePair {
     { "5.1 Surround", "surround51" },
     { "6.1 Surround", "surround61" },
     { "7.1 Surround", "surround71" },
+    { "3D7.1 Surround", "surround3d71" },
 
     { "Ambisonic, 1st Order", "ambi1" },
     { "Ambisonic, 2nd Order", "ambi2" },
@@ -412,6 +413,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoder61Button, &QPushButton::clicked, this, &MainWindow::select61DecoderFile);
     connect(ui->decoder71LineEdit, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->decoder71Button, &QPushButton::clicked, this, &MainWindow::select71DecoderFile);
+    connect(ui->decoder3D71LineEdit, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->decoder3D71Button, &QPushButton::clicked, this, &MainWindow::select3D71DecoderFile);
 
     connect(ui->preferredHrtfComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->hrtfStateComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
@@ -1252,6 +1255,8 @@ void MainWindow::select61DecoderFile()
 { selectDecoderFile(ui->decoder61LineEdit, "Select 6.1 Surround Decoder");}
 void MainWindow::select71DecoderFile()
 { selectDecoderFile(ui->decoder71LineEdit, "Select 7.1 Surround Decoder");}
+void MainWindow::select3D71DecoderFile()
+{ selectDecoderFile(ui->decoder3D71LineEdit, "Select 3D7.1 Surround Decoder");}
 void MainWindow::selectDecoderFile(QLineEdit *line, const char *caption)
 {
     QString dir{line->text()};

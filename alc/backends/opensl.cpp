@@ -613,6 +613,8 @@ void OpenSLPlayback::stop()
             result = VCALL(bufferQueue,GetState)(&state);
         } while(SL_RESULT_SUCCESS == result && state.count > 0);
         PRINTERR(result, "bufferQueue->GetState");
+
+        mRing.reset();
     }
 }
 

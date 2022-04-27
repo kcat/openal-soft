@@ -625,9 +625,7 @@ quantization with low-level whitenoise.</string>
        <string>Enables high-quality ambisonic rendering. This mode is
 capable of frequency-dependent processing, creating a
 better reproduction of 3D sound rendering over
-surround sound speakers. Enabling this also requires
-specifying decoder configuration files for the
-appropriate speaker configuration you intend to use.</string>
+surround sound speakers.</string>
       </property>
       <property name="layoutDirection">
        <enum>Qt::RightToLeft</enum>

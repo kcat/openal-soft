@@ -55,10 +55,10 @@
 ## channels:
 #  Sets the output channel configuration. If left unspecified, one will try to
 #  be detected from the system, and defaulting to stereo. The available values
-#  are: mono, stereo, quad, surround51, surround61, surround71, ambi1, ambi2,
-#  ambi3. Note that the ambi* configurations provide ambisonic channels of the
-#  given order (using ACN ordering and SN3D normalization by default), which
-#  need to be decoded to play correctly on speakers.
+#  are: mono, stereo, quad, surround51, surround61, surround71, surround3d71,
+#  ambi1, ambi2, ambi3. Note that the ambi* configurations provide ambisonic
+#  channels of the given order (using ACN ordering and SN3D normalization by
+#  default), which need to be decoded to play correctly on speakers.
 #channels =
 
 ## sample-type:
@@ -339,10 +339,14 @@
 
 ## surround71:
 #  Decoder configuration file for 7.1 Surround channel output. See
-#  docs/ambdec.txt for a description of the file format. Note: This can be used
-#  to enable 3D7.1 with the appropriate configuration and speaker placement,
-#  see docs/3D7.1.txt.
+#  docs/ambdec.txt for a description of the file format.
 #surround71 =
+
+## surround3d71:
+#  Decoder configuration file for 3D7.1 Surround channel output. See
+#  docs/ambdec.txt for a description of the file format. See also
+#  docs/3D7.1.txt for information about 3D7.1.
+#surround3d71 =
 
 ##
 ## Reverb effect stuff (includes EAX reverb)

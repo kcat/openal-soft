@@ -51,6 +51,8 @@ namespace {
 #define CAN_ENUMERATE 1
 #endif
 
+constexpr auto OutputElement = 1;
+constexpr auto InputElement = 1;
 
 #if CAN_ENUMERATE
 struct DeviceEntry {
@@ -354,7 +356,7 @@ void CoreAudioPlayback::open(const char *name)
 #if CAN_ENUMERATE
     if(audioDevice != kAudioDeviceUnknown)
         AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, sizeof(AudioDeviceID));
+            kAudioUnitScope_Global, OutputElement, &audioDevice, sizeof(AudioDeviceID));
 #endif
 
     err = AudioUnitInitialize(audioUnit);
@@ -380,7 +382,7 @@ void CoreAudioPlayback::open(const char *name)
         UInt32 propSize{sizeof(audioDevice)};
         audioDevice = kAudioDeviceUnknown;
         AudioUnitGetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, &propSize);
+            kAudioUnitScope_Global, OutputElement, &audioDevice, &propSize);
 
         std::string devname{GetDeviceName(audioDevice)};
         if(!devname.empty()) mDevice->DeviceName = std::move(devname);
@@ -401,7 +403,7 @@ bool CoreAudioPlayback::reset()
     AudioStreamBasicDescription streamFormat{};
     UInt32 size{sizeof(streamFormat)};
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-        0, &streamFormat, &size);
+        OutputElement, &streamFormat, &size);
     if(err != noErr || size != sizeof(streamFormat))
     {
         ERR("AudioUnitGetProperty failed\n");
@@ -468,7 +470,7 @@ bool CoreAudioPlayback::reset()
     streamFormat.mBytesPerPacket = streamFormat.mBytesPerFrame*streamFormat.mFramesPerPacket;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-        0, &streamFormat, sizeof(streamFormat));
+        OutputElement, &streamFormat, sizeof(streamFormat));
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
@@ -484,7 +486,7 @@ bool CoreAudioPlayback::reset()
     input.inputProcRefCon = this;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_SetRenderCallback,
-        kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
+        kAudioUnitScope_Input, OutputElement, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
         ERR("AudioUnitSetProperty failed\n");
@@ -658,16 +660,10 @@ void CoreAudioCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not create component instance: %u", err};
 
-#if CAN_ENUMERATE
-    if(audioDevice != kAudioDeviceUnknown)
-        AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, sizeof(AudioDeviceID));
-#endif
-
     // Turn off AudioUnit output
     UInt32 enableIO{0};
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Output, 0, &enableIO, sizeof(enableIO));
+        kAudioUnitScope_Output, OutputElement, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not disable audio unit output property: %u", err};
@@ -675,10 +671,16 @@ void CoreAudioCapture::open(const char *name)
     // Turn on AudioUnit input
     enableIO = 1;
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Input, 1, &enableIO, sizeof(enableIO));
+        kAudioUnitScope_Input, InputElement, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not enable audio unit input property: %u", err};
+
+#if CAN_ENUMERATE
+    if(audioDevice != kAudioDeviceUnknown)
+        AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, InputElement, &audioDevice, sizeof(AudioDeviceID));
+#endif
 
     // set capture callback
     AURenderCallbackStruct input{};
@@ -686,7 +688,7 @@ void CoreAudioCapture::open(const char *name)
     input.inputProcRefCon = this;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_SetInputCallback,
-        kAudioUnitScope_Global, 0, &input, sizeof(AURenderCallbackStruct));
+        kAudioUnitScope_Global, InputElement, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not set capture callback: %u", err};
@@ -694,7 +696,7 @@ void CoreAudioCapture::open(const char *name)
     // Disable buffer allocation for capture
     UInt32 flag{0};
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_ShouldAllocateBuffer,
-        kAudioUnitScope_Output, 1, &flag, sizeof(flag));
+        kAudioUnitScope_Output, InputElement, &flag, sizeof(flag));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not disable buffer allocation property: %u", err};
@@ -709,7 +711,7 @@ void CoreAudioCapture::open(const char *name)
     AudioStreamBasicDescription hardwareFormat{};
     UInt32 propertySize{sizeof(hardwareFormat)};
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-        1, &hardwareFormat, &propertySize);
+        InputElement, &hardwareFormat, &propertySize);
     if(err != noErr || propertySize != sizeof(hardwareFormat))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not get input format: %u", err};
@@ -789,7 +791,7 @@ void CoreAudioCapture::open(const char *name)
     // The output format should be the requested format, but using the hardware sample rate
     // This is because the AudioUnit will automatically scale other properties, except for sample rate
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-        1, &outputFormat, sizeof(outputFormat));
+        InputElement, &outputFormat, sizeof(outputFormat));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not set input format: %u", err};
@@ -808,7 +810,7 @@ void CoreAudioCapture::open(const char *name)
     UInt32 outputFrameCount{};
     propertySize = sizeof(outputFrameCount);
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
-        kAudioUnitScope_Global, 0, &outputFrameCount, &propertySize);
+        kAudioUnitScope_Global, OutputElement, &outputFrameCount, &propertySize);
     if(err != noErr || propertySize != sizeof(outputFrameCount))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not get input frame count: %u", err};
@@ -830,7 +832,7 @@ void CoreAudioCapture::open(const char *name)
         UInt32 propSize{sizeof(audioDevice)};
         audioDevice = kAudioDeviceUnknown;
         AudioUnitGetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, &propSize);
+            kAudioUnitScope_Global, InputElement, &audioDevice, &propSize);
 
         std::string devname{GetDeviceName(audioDevice)};
         if(!devname.empty()) mDevice->DeviceName = std::move(devname);

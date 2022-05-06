@@ -134,7 +134,6 @@ constexpr char pwireInput[] = "PipeWire Input";
     MAGIC(pw_stream_dequeue_buffer)                                           \
     MAGIC(pw_stream_destroy)                                                  \
     MAGIC(pw_stream_get_state)                                                \
-    MAGIC(pw_stream_get_time)                                                 \
     MAGIC(pw_stream_new)                                                      \
     MAGIC(pw_stream_queue_buffer)                                             \
     MAGIC(pw_stream_set_active)                                               \
@@ -146,11 +145,19 @@ constexpr char pwireInput[] = "PipeWire Input";
     MAGIC(pw_thread_loop_lock)                                                \
     MAGIC(pw_thread_loop_wait)                                                \
     MAGIC(pw_thread_loop_signal)                                              \
-    MAGIC(pw_thread_loop_unlock)                                              \
+    MAGIC(pw_thread_loop_unlock)
+#if PW_CHECK_VERSION(0,3,50)
+#define PWIRE_FUNCS2(MAGIC)                                                   \
+    MAGIC(pw_stream_get_time_n)
+#else
+#define PWIRE_FUNCS2(MAGIC)                                                   \
+    MAGIC(pw_stream_get_time)
+#endif
 
 void *pwire_handle;
 #define MAKE_FUNC(f) decltype(f) * p##f;
 PWIRE_FUNCS(MAKE_FUNC)
+PWIRE_FUNCS2(MAKE_FUNC)
 #undef MAKE_FUNC
 
 bool pwire_load()
@@ -173,6 +180,7 @@ bool pwire_load()
     if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0);
     PWIRE_FUNCS(LOAD_FUNC)
+    PWIRE_FUNCS2(LOAD_FUNC)
 #undef LOAD_FUNC
 
     if(!missing_funcs.empty())
@@ -204,7 +212,6 @@ bool pwire_load()
 #define pw_stream_dequeue_buffer ppw_stream_dequeue_buffer
 #define pw_stream_destroy ppw_stream_destroy
 #define pw_stream_get_state ppw_stream_get_state
-#define pw_stream_get_time ppw_stream_get_time
 #define pw_stream_new ppw_stream_new
 #define pw_stream_queue_buffer ppw_stream_queue_buffer
 #define pw_stream_set_active ppw_stream_set_active
@@ -217,6 +224,12 @@ bool pwire_load()
 #define pw_thread_loop_stop ppw_thread_loop_stop
 #define pw_thread_loop_unlock ppw_thread_loop_unlock
 #define pw_thread_loop_wait ppw_thread_loop_wait
+#if PW_CHECK_VERSION(0,3,50)
+#define pw_stream_get_time_n ppw_stream_get_time_n
+#else
+inline auto pw_stream_get_time_n(pw_stream *stream, pw_time *ptime, size_t /*size*/)
+{ return ppw_stream_get_time(stream, ptime); }
+#endif
 #endif
 
 #else
@@ -1561,7 +1574,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
     if(mStream)
     {
         MainloopLockGuard _{mLoop};
-        if(int res{pw_stream_get_time(mStream.get(), &ptime)})
+        if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
             ERR("Failed to get PipeWire stream time (res: %d)\n", res);
     }
 

@@ -4,6 +4,7 @@
 #include <array>
 
 #include "almalloc.h"
+#include "alspan.h"
 #include "bufferline.h"
 #include "resampler_limits.h"
 
@@ -30,7 +31,7 @@ struct UhjEncoder : public UhjFilterBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(float *LeftOut, float *RightOut, const FloatBufferLine *InSamples,
+    void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
         const size_t SamplesToDo);
 
     DEF_NEWDEL(UhjEncoder)

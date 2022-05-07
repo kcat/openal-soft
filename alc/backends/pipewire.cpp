@@ -115,12 +115,26 @@ constexpr char pwireDevice[] = "PipeWire Output";
 constexpr char pwireInput[] = "PipeWire Input";
 
 
+bool check_version(const char *version)
+{
+    /* There doesn't seem to be a function to get the version as an integer, so
+     * instead we have to parse the string, which hopefully won't break in the
+     * future.
+     */
+    int major{0}, minor{0}, revision{0};
+    int ret{sscanf(version, "%d.%d.%d", &major, &minor, &revision)};
+    if(ret == 3 && PW_CHECK_VERSION(major, minor, revision))
+        return true;
+    return false;
+}
+
 #ifdef HAVE_DYNLOAD
 #define PWIRE_FUNCS(MAGIC)                                                    \
     MAGIC(pw_context_connect)                                                 \
     MAGIC(pw_context_destroy)                                                 \
     MAGIC(pw_context_new)                                                     \
     MAGIC(pw_core_disconnect)                                                 \
+    MAGIC(pw_get_library_version)                                             \
     MAGIC(pw_init)                                                            \
     MAGIC(pw_properties_free)                                                 \
     MAGIC(pw_properties_new)                                                  \
@@ -199,6 +213,7 @@ bool pwire_load()
 #define pw_context_destroy ppw_context_destroy
 #define pw_context_new ppw_context_new
 #define pw_core_disconnect ppw_core_disconnect
+#define pw_get_library_version ppw_get_library_version
 #define pw_init ppw_init
 #define pw_properties_free ppw_properties_free
 #define pw_properties_new ppw_properties_new
@@ -1929,6 +1944,15 @@ bool PipeWireBackendFactory::init()
 {
     if(!pwire_load())
         return false;
+
+    const char *version{pw_get_library_version()};
+    if(!check_version(version))
+    {
+        WARN("PipeWire version \"%s\" too old (%s or newer required)\n", version,
+            pw_get_headers_version());
+        return false;
+    }
+    TRACE("Found PipeWire version \"%s\" (%s or newer)\n", version, pw_get_headers_version());
 
     pw_init(0, nullptr);
     if(!gEventHandler.init())

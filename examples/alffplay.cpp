@@ -1299,19 +1299,28 @@ int AudioState::handler()
 
     while(1)
     {
+        if(mMovie.mQuit.load(std::memory_order_relaxed))
+        {
+            /* If mQuit is set, drain frames until we can't get more audio,
+             * indicating we've reached the flush packet and the packet sender
+             * will also quit.
+             */
+            do {
+                mSamplesLen = decodeFrame();
+                mSamplesPos = mSamplesLen;
+            } while(mSamplesLen > 0);
+            goto finish;
+        }
+
         ALenum state;
         if(mBufferDataSize > 0)
         {
             alGetSourcei(mSource, AL_SOURCE_STATE, &state);
-            /* If mQuit is set, don't actually quit until we can't get more
-             * audio, indicating we've reached the flush packet and the packet
-             * sender will also quit.
-             *
-             * If mQuit is not set, don't quit even if there's no more audio,
+
+            /* If mQuit is not set, don't quit even if there's no more audio,
              * so what's buffered has a chance to play to the real end.
              */
-            if(!readAudio(getSync()) && mMovie.mQuit.load(std::memory_order_relaxed))
-                goto finish;
+            readAudio(getSync());
         }
         else
         {

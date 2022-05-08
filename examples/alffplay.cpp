@@ -89,6 +89,7 @@ const std::string AppName{"alffplay"};
 
 ALenum DirectOutMode{AL_FALSE};
 bool EnableWideStereo{false};
+bool EnableUhj{false};
 bool EnableSuperStereo{false};
 bool DisableVideo{false};
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
@@ -97,9 +98,6 @@ LPALEVENTCONTROLSOFT alEventControlSOFT;
 LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
 
 LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
-ALenum FormatStereo8{AL_FORMAT_STEREO8};
-ALenum FormatStereo16{AL_FORMAT_STEREO16};
-ALenum FormatStereo32F{AL_FORMAT_STEREO_FLOAT32};
 
 const seconds AVNoSyncThreshold{10};
 
@@ -714,6 +712,17 @@ static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t fra
     }
 }
 
+static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
+{
+    if((frame_size&7) == 0)
+        sample_dup<uint64_t>(out, in, count, frame_size);
+    else if((frame_size&3) == 0)
+        sample_dup<uint32_t>(out, in, count, frame_size);
+    else if((frame_size&1) == 0)
+        sample_dup<uint16_t>(out, in, count, frame_size);
+    else
+        sample_dup<uint8_t>(out, in, count, frame_size);
+}
 
 bool AudioState::readAudio(uint8_t *samples, unsigned int length, int &sample_skip)
 {
@@ -737,14 +746,7 @@ bool AudioState::readAudio(uint8_t *samples, unsigned int length, int &sample_sk
             rem = std::min(rem, static_cast<unsigned int>(-mSamplesPos));
 
             /* Add samples by copying the first sample */
-            if((mFrameSize&7) == 0)
-                sample_dup<uint64_t>(samples, mSamples, rem, mFrameSize);
-            else if((mFrameSize&3) == 0)
-                sample_dup<uint32_t>(samples, mSamples, rem, mFrameSize);
-            else if((mFrameSize&1) == 0)
-                sample_dup<uint16_t>(samples, mSamples, rem, mFrameSize);
-            else
-                sample_dup<uint8_t>(samples, mSamples, rem, mFrameSize);
+            sample_dup(samples, mSamples, rem, mFrameSize);
         }
 
         mSamplesPos += rem;
@@ -766,7 +768,6 @@ bool AudioState::readAudio(uint8_t *samples, unsigned int length, int &sample_sk
             auto skip = nanoseconds{seconds{mSamplesPos}} / mCodecCtx->sample_rate;
             mDeviceStartTime -= skip;
             mCurrentPts += skip;
-            continue;
         }
     }
     if(audio_size <= 0)
@@ -785,71 +786,42 @@ bool AudioState::readAudio(uint8_t *samples, unsigned int length, int &sample_sk
 bool AudioState::readAudio(int sample_skip)
 {
     size_t woffset{mWritePos.load(std::memory_order_acquire)};
+    const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
     while(mSamplesLen > 0)
     {
-        const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
+        const size_t nsamples{((roffset > woffset) ? roffset-woffset-1
+            : (roffset == 0) ? (mBufferDataSize-woffset-1)
+            : (mBufferDataSize-woffset)) / mFrameSize};
+        if(!nsamples) break;
 
         if(mSamplesPos < 0)
         {
-            size_t rem{(((roffset > woffset) ? roffset-1
-                : ((roffset == 0) ? mBufferDataSize-1
-                : mBufferDataSize)) - woffset) / mFrameSize};
-            rem = std::min<size_t>(rem, static_cast<ALuint>(-mSamplesPos));
-            if(rem == 0) break;
+            const size_t rem{std::min<size_t>(nsamples, static_cast<ALuint>(-mSamplesPos))};
 
-            auto *splout{&mBufferData[woffset]};
-            if((mFrameSize&7) == 0)
-                sample_dup<uint64_t>(splout, mSamples, rem, mFrameSize);
-            else if((mFrameSize&3) == 0)
-                sample_dup<uint32_t>(splout, mSamples, rem, mFrameSize);
-            else if((mFrameSize&1) == 0)
-                sample_dup<uint16_t>(splout, mSamples, rem, mFrameSize);
-            else
-                sample_dup<uint8_t>(splout, mSamples, rem, mFrameSize);
+            sample_dup(&mBufferData[woffset], mSamples, rem, mFrameSize);
             woffset += rem * mFrameSize;
-            if(woffset == mBufferDataSize)
-                woffset = 0;
+            if(woffset == mBufferDataSize) woffset = 0;
             mWritePos.store(woffset, std::memory_order_release);
-            mSamplesPos += static_cast<int>(rem);
+
             mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
+            mSamplesPos += static_cast<int>(rem);
             continue;
         }
 
+        const size_t rem{std::min<size_t>(nsamples, static_cast<ALuint>(mSamplesLen-mSamplesPos))};
         const size_t boffset{static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize}};
-        const size_t nbytes{static_cast<ALuint>(mSamplesLen)*size_t{mFrameSize} -
-            boffset};
-        if(roffset > woffset)
-        {
-            const size_t writable{roffset-woffset-1};
-            if(writable < nbytes) break;
+        const size_t nbytes{rem * mFrameSize};
 
-            memcpy(&mBufferData[woffset], mSamples+boffset, nbytes);
-            woffset += nbytes;
-        }
-        else
-        {
-            const size_t writable{mBufferDataSize+roffset-woffset-1};
-            if(writable < nbytes) break;
-
-            const size_t todo1{std::min<size_t>(nbytes, mBufferDataSize-woffset)};
-            const size_t todo2{nbytes - todo1};
-
-            memcpy(&mBufferData[woffset], mSamples+boffset, todo1);
-            woffset += todo1;
-            if(woffset == mBufferDataSize)
-            {
-                woffset = 0;
-                if(todo2 > 0)
-                {
-                    memcpy(&mBufferData[woffset], mSamples+boffset+todo1, todo2);
-                    woffset += todo2;
-                }
-            }
-        }
+        memcpy(&mBufferData[woffset], mSamples + boffset, nbytes);
+        woffset += nbytes;
+        if(woffset == mBufferDataSize) woffset = 0;
         mWritePos.store(woffset, std::memory_order_release);
-        mCurrentPts += nanoseconds{seconds{mSamplesLen-mSamplesPos}} / mCodecCtx->sample_rate;
 
-        do {
+        mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
+        mSamplesPos += static_cast<int>(rem);
+
+        while(mSamplesPos >= mSamplesLen)
+        {
             mSamplesLen = decodeFrame();
             mSamplesPos = std::min(mSamplesLen, sample_skip);
             if(mSamplesLen <= 0) return false;
@@ -859,7 +831,7 @@ bool AudioState::readAudio(int sample_skip)
             auto skip = nanoseconds{seconds{mSamplesPos}} / mCodecCtx->sample_rate;
             mDeviceStartTime -= skip;
             mCurrentPts += skip;
-        } while(mSamplesPos >= mSamplesLen);
+        }
     }
 
     return true;
@@ -1040,7 +1012,7 @@ int AudioState::handler()
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
-            mFormat = FormatStereo32F;
+            mFormat = EnableUhj ? AL_FORMAT_UHJ2CHN_FLOAT32_SOFT : AL_FORMAT_STEREO_FLOAT32;
         }
     }
     if(mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8 || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8P)
@@ -1090,7 +1062,7 @@ int AudioState::handler()
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
-            mFormat = FormatStereo8;
+            mFormat = EnableUhj ? AL_FORMAT_UHJ2CHN8_SOFT : AL_FORMAT_STEREO8;
         }
     }
     if(!mFormat || mFormat == -1)
@@ -1140,7 +1112,7 @@ int AudioState::handler()
         {
             mDstChanLayout = AV_CH_LAYOUT_STEREO;
             mFrameSize *= 2;
-            mFormat = FormatStereo16;
+            mFormat = EnableUhj ? AL_FORMAT_UHJ2CHN16_SOFT : AL_FORMAT_STEREO16;
         }
     }
 
@@ -1343,14 +1315,8 @@ int AudioState::handler()
                 /* Read the next chunk of data, filling the buffer, and queue
                  * it on the source.
                  */
-                const bool got_audio{readAudio(samples.get(), static_cast<ALuint>(buffer_len),
-                    sync_skip)};
-                if(!got_audio)
-                {
-                    if(mMovie.mQuit.load(std::memory_order_relaxed))
-                        goto finish;
+                if(!readAudio(samples.get(), static_cast<ALuint>(buffer_len), sync_skip))
                     break;
-                }
 
                 const ALuint bufid{mBuffers[mBufferIdx]};
                 mBufferIdx = static_cast<ALuint>((mBufferIdx+1) % mBuffers.size());
@@ -2055,9 +2021,7 @@ int main(int argc, char *argv[])
             else
             {
                 std::cout<< "Found AL_SOFT_UHJ" <<std::endl;
-                FormatStereo8 = AL_FORMAT_UHJ2CHN8_SOFT;
-                FormatStereo16 = AL_FORMAT_UHJ2CHN16_SOFT;
-                FormatStereo32F = AL_FORMAT_UHJ2CHN_FLOAT32_SOFT;
+                EnableUhj = true;
             }
         }
         else if(strcmp(argv[fileidx], "-superstereo") == 0)

@@ -32,7 +32,10 @@
 #include "core/device.h"
 #include "core/logging.h"
 
-#include <SDL2/SDL.h>
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+#include "SDL.h"
+_Pragma("GCC diagnostic pop")
 
 
 namespace {

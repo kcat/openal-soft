@@ -28,12 +28,12 @@
 #include <mutex>
 #include <ratio>
 
-extern "C" {
 #ifdef __GNUC__
 _Pragma("GCC diagnostic push")
 _Pragma("GCC diagnostic ignored \"-Wconversion\"")
 _Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 #endif
+extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavformat/avio.h"
@@ -55,12 +55,12 @@ constexpr auto AVNoPtsValue = AV_NOPTS_VALUE;
 constexpr auto AVErrorEOF = AVERROR_EOF;
 
 struct SwsContext;
-#ifdef __GNUC__
-_Pragma("GCC diagnostic pop")
-#endif
 }
 
 #include "SDL.h"
+#ifdef __GNUC__
+_Pragma("GCC diagnostic pop")
+#endif
 
 #include "AL/alc.h"
 #include "AL/al.h"

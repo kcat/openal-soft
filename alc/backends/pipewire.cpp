@@ -50,8 +50,20 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 
-/* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). */
+/* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). GCC
+ * doesn't support ignoring -Weverything, so we have the list the individual
+ * warnings to ignore (and ignoring -Winline doesn't seem to work).
+ */
 _Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wpedantic\"")
+_Pragma("GCC diagnostic ignored \"-Wconversion\"")
+_Pragma("GCC diagnostic ignored \"-Wfloat-conversion\"")
+_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
+_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+_Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
+_Pragma("GCC diagnostic ignored \"-Winline\"")
+_Pragma("GCC diagnostic ignored \"-Wpragmas\"")
 _Pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "pipewire/pipewire.h"
 #include "pipewire/extensions/metadata.h"

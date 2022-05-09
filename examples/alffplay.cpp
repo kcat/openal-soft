@@ -694,21 +694,15 @@ static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t fra
 {
     auto *sample = reinterpret_cast<const T*>(in);
     auto *dst = reinterpret_cast<T*>(out);
-    if(frame_size == sizeof(T))
+
+    /* NOTE: frame_size is a multiple of sizeof(T). */
+    size_t type_mult{frame_size / sizeof(T)};
+    if(type_mult == 1)
         std::fill_n(dst, count, *sample);
-    else
+    else for(size_t i{0};i < count;++i)
     {
-        /* NOTE: frame_size is a multiple of sizeof(T). */
-        size_t type_mult{frame_size / sizeof(T)};
-        size_t i{0};
-        std::generate_n(dst, count*type_mult,
-            [sample,type_mult,&i]() -> T
-            {
-                T ret = sample[i];
-                i = (i+1)%type_mult;
-                return ret;
-            }
-        );
+        for(size_t j{0};j < type_mult;++j)
+            dst[i*type_mult + j] = sample[j];
     }
 }
 

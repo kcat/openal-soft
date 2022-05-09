@@ -461,6 +461,17 @@ bool SetRTPriorityRTKit(int prio)
     /* Don't stupidly exit if the connection dies while doing this. */
     dbus_connection_set_exit_on_disconnect(conn.get(), false);
 
+    int nicemin{};
+    int err{rtkit_get_min_nice_level(conn.get(), &nicemin)};
+    if(err == -ENOENT)
+    {
+        err = std::abs(err);
+        ERR("Could not query RTKit: %s (%d)\n", std::strerror(err), err);
+        return false;
+    }
+    int rtmax{rtkit_get_max_realtime_priority(conn.get())};
+    TRACE("Maximum real-time priority: %d, minimum niceness: %d\n", rtmax, nicemin);
+
     auto limit_rttime = [](DBusConnection *c) -> int
     {
         using ulonglong = unsigned long long;
@@ -483,18 +494,6 @@ bool SetRTPriorityRTKit(int prio)
         }
         return 0;
     };
-
-    int nicemin{};
-    int err{rtkit_get_min_nice_level(conn.get(), &nicemin)};
-    if(err == -ENOENT)
-    {
-        err = std::abs(err);
-        ERR("Could not query RTKit: %s (%d)\n", std::strerror(err), err);
-        return false;
-    }
-    int rtmax{rtkit_get_max_realtime_priority(conn.get())};
-    TRACE("Maximum real-time priority: %d, minimum niceness: %d\n", rtmax, nicemin);
-
     if(rtmax > 0)
     {
         if(AllowRTTimeLimit)

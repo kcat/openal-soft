@@ -51,7 +51,7 @@ namespace {
 #define CAN_ENUMERATE 1
 #endif
 
-constexpr auto OutputElement = 1;
+constexpr auto OutputElement = 0;
 constexpr auto InputElement = 1;
 
 #if CAN_ENUMERATE

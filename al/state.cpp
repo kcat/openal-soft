@@ -943,6 +943,7 @@ void UpdateContextProps(ALCcontext *context)
     props->Gain = listener.Gain;
     props->MetersPerUnit = listener.mMetersPerUnit;
 
+    props->AirAbsorptionGainHF = context->mAirAbsorptionGainHF;
     props->DopplerFactor = context->mDopplerFactor;
     props->DopplerVelocity = context->mDopplerVelocity;
     props->SpeedOfSound = context->mSpeedOfSound;

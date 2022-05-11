@@ -22,7 +22,7 @@
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "eax/eax_call.h"
+#include "eax/call.h"
 #include "eax/fx_slot_index.h"
 #include "eax/utils.h"
 #endif // ALSOFT_EAX
@@ -216,8 +216,8 @@ public:
     void eax_initialize(ALCcontext *context) noexcept;
 
 
-    void eax_dispatch(const EaxEaxCall& eax_call)
-    { eax_call.is_get() ? eax_get(eax_call) : eax_set(eax_call); }
+    void eax_dispatch(const EaxCall& call)
+    { call.is_get() ? eax_get(call) : eax_set(call); }
 
 
     void eax_update_filters();
@@ -308,7 +308,7 @@ private:
 
 
     void eax_defer_active_fx_slots(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
 
     static const char* eax_get_exclusion_name() noexcept;
@@ -421,16 +421,16 @@ private:
 
 
     void eax_defer_send(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_send_exclusion_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_send_occlusion_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_send_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
 
     static void eax_validate_source_direct(
@@ -609,79 +609,79 @@ private:
 
 
     void eax_defer_source_direct(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_direct_hf(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_room(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_room_hf(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_obstruction(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_obstruction_lf_ratio(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_occlusion(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_occlusion_lf_ratio(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_occlusion_room_ratio(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_occlusion_direct_ratio(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_exclusion(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_exclusion_lf_ratio(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_outside_volume_hf(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_doppler_factor(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_rolloff_factor(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_room_rolloff_factor(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_air_absorption_factor(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_flags(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_macro_fx_factor(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_2d_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_obstruction_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_exclusion_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_occlusion_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_defer_source_speaker_level_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
 
     void eax_set_outside_volume_hf();
@@ -708,15 +708,16 @@ private:
 
     void eax_set_speaker_levels();
 
+    static ALuint eax2_translate_property_id(const EaxCall& call);
 
     void eax1_set_efx();
-    void eax1_set_reverb_mix(const EaxEaxCall& eax_call);
-    void eax1_set(const EaxEaxCall& eax_call);
+    void eax1_set_reverb_mix(const EaxCall& call);
+    void eax1_set(const EaxCall& call);
 
     void eax_apply_deferred();
 
     void eax_set(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
 
     static const GUID& eax_get_send_fx_slot_guid(
@@ -744,10 +745,10 @@ private:
         typename TSrcSend
     >
     void eax_api_get_send_properties(
-        const EaxEaxCall& eax_call) const
+        const EaxCall& call) const
     {
-        const auto eax_version = eax_call.get_version();
-        const auto dst_sends = eax_call.get_values<TException, TSrcSend>();
+        const auto eax_version = call.get_version();
+        const auto dst_sends = call.get_values<TException, TSrcSend>();
         const auto send_count = dst_sends.size();
 
         for (auto fx_slot_index = EaxFxSlotIndexValue{}; fx_slot_index < send_count; ++fx_slot_index)
@@ -762,40 +763,40 @@ private:
     }
 
 
-    void eax1_get(const EaxEaxCall& eax_call);
+    void eax1_get(const EaxCall& call);
 
     void eax_api_get_source_all_v2(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all_v3(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all_v5(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all_obstruction(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all_occlusion(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all_exclusion(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_active_fx_slot_id(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_all_2d(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_api_get_source_speaker_level_all(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
     void eax_get(
-        const EaxEaxCall& eax_call);
+        const EaxCall& call);
 
 
     // `alSource3i(source, AL_AUXILIARY_SEND_FILTER, ...)`

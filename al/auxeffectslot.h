@@ -19,7 +19,7 @@
 #ifdef ALSOFT_EAX
 #include <memory>
 
-#include "eax/eax_call.h"
+#include "eax/call.h"
 #include "eax/effect.h"
 #include "eax/fx_slot_index.h"
 #endif // ALSOFT_EAX
@@ -81,8 +81,8 @@ public:
 
 
     // [[nodiscard]]
-    bool eax_dispatch(const EaxEaxCall& eax_call)
-    { return eax_call.is_get() ? eax_get(eax_call) : eax_set(eax_call); }
+    bool eax_dispatch()
+    { return eax_call_->is_get() ? eax_get() : eax_set(); }
 
 
     void eax_unlock_legacy() noexcept;
@@ -91,6 +91,7 @@ public:
 
 private:
     ALCcontext* eax_al_context_{};
+    const EaxCall* eax_call_{};
 
     EaxFxSlotIndexValue eax_fx_slot_index_{};
 
@@ -118,15 +119,12 @@ private:
     void eax_initialize_effects();
 
 
-    void eax_get_fx_slot_all(
-        const EaxEaxCall& eax_call) const;
+    void eax_get_fx_slot_all() const;
 
-    void eax_get_fx_slot(
-        const EaxEaxCall& eax_call) const;
+    void eax_get_fx_slot() const;
 
     // [[nodiscard]]
-    bool eax_get(
-        const EaxEaxCall& eax_call);
+    bool eax_get();
 
 
     void eax_set_fx_slot_effect(
@@ -158,8 +156,7 @@ private:
         long eax_lock);
 
     void eax_validate_fx_slot_flags(
-        unsigned long eax_flags,
-        int eax_version);
+        unsigned long eax_flags);
 
     void eax_validate_fx_slot_occlusion(
         long eax_occlusion);
@@ -168,12 +165,10 @@ private:
         float eax_occlusion_lf_ratio);
 
     void eax_validate_fx_slot_all(
-        const EAX40FXSLOTPROPERTIES& fx_slot,
-        int eax_version);
+        const EAX40FXSLOTPROPERTIES& fx_slot);
 
     void eax_validate_fx_slot_all(
-        const EAX50FXSLOTPROPERTIES& fx_slot,
-        int eax_version);
+        const EAX50FXSLOTPROPERTIES& fx_slot);
 
 
     void eax_set_fx_slot_effect(
@@ -204,42 +199,32 @@ private:
         const EAX50FXSLOTPROPERTIES& eax_fx_slot);
 
 
-    void eax_set_fx_slot_effect(
-        const EaxEaxCall& eax_call);
+    void eax_defer_fx_slot_effect();
 
-    void eax_set_fx_slot_volume(
-        const EaxEaxCall& eax_call);
+    void eax_defer_fx_slot_volume();
 
-    void eax_set_fx_slot_lock(
-        const EaxEaxCall& eax_call);
+    void eax_defer_fx_slot_lock();
 
-    void eax_set_fx_slot_flags(
-        const EaxEaxCall& eax_call);
+    void eax_defer_fx_slot_flags();
 
     // [[nodiscard]]
-    bool eax_set_fx_slot_occlusion(
-        const EaxEaxCall& eax_call);
+    bool eax_defer_fx_slot_occlusion();
 
     // [[nodiscard]]
-    bool eax_set_fx_slot_occlusion_lf_ratio(
-        const EaxEaxCall& eax_call);
+    bool eax_defer_fx_slot_occlusion_lf_ratio();
 
     // [[nodiscard]]
-    bool eax_set_fx_slot_all(
-        const EaxEaxCall& eax_call);
+    bool eax_defer_fx_slot_all();
 
-    bool eax_set_fx_slot(
-        const EaxEaxCall& eax_call);
+    bool eax_set_fx_slot();
 
     void eax_apply_deferred();
 
     // [[nodiscard]]
-    bool eax_set(
-        const EaxEaxCall& eax_call);
+    bool eax_set();
 
 
-    void eax_dispatch_effect(
-        const EaxEaxCall& eax_call);
+    void eax_dispatch_effect();
 
 
     // `alAuxiliaryEffectSloti(effect_slot, AL_EFFECTSLOT_EFFECT, effect)`

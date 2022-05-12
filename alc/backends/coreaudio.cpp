@@ -425,8 +425,8 @@ bool CoreAudioPlayback::reset()
      */
     if(mDevice->Frequency != streamFormat.mSampleRate)
     {
-        mDevice->BufferSize = static_cast<uint>(uint64_t{mDevice->BufferSize} *
-            streamFormat.mSampleRate / mDevice->Frequency);
+        mDevice->BufferSize = static_cast<uint>(mDevice->BufferSize*streamFormat.mSampleRate/
+            mDevice->Frequency + 0.5);
         mDevice->Frequency = static_cast<uint>(streamFormat.mSampleRate);
     }
 
@@ -799,7 +799,7 @@ void CoreAudioCapture::open(const char *name)
     /* Calculate the minimum AudioUnit output format frame count for the pre-
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
-    double srateScale{double{outputFormat.mSampleRate} / mDevice->Frequency};
+    double srateScale{outputFormat.mSampleRate / mDevice->Frequency};
     auto FrameCount64 = maxu64(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
         static_cast<UInt32>(outputFormat.mSampleRate)/10);
     FrameCount64 += MaxResamplerPadding;

@@ -1533,11 +1533,10 @@ bool PipeWirePlayback::reset()
             "Error connecting PipeWire stream (res: %d)", res};
 
     /* Wait for the stream to become paused (ready to start streaming). */
-    pw_stream_state state{};
-    const char *error{};
-    plock.wait([stream=mStream.get(),&state,&error]()
+    plock.wait([stream=mStream.get()]()
     {
-        state = pw_stream_get_state(stream, &error);
+        const char *error{};
+        pw_stream_state state{pw_stream_get_state(stream, &error)};
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Error connecting PipeWire stream: \"%s\"", error};
@@ -1568,18 +1567,17 @@ void PipeWirePlayback::start()
     /* Wait for the stream to start playing (would be nice to not, but we need
      * the actual update size which is only available after starting).
      */
-    pw_stream_state state{};
-    const char *error{};
-    plock.wait([stream=mStream.get(),&state,&error]()
+    plock.wait([stream=mStream.get()]()
     {
-        state = pw_stream_get_state(stream, &error);
-        return state != PW_STREAM_STATE_PAUSED;
+        const char *error{};
+        pw_stream_state state{pw_stream_get_state(stream, &error)};
+        if(state == PW_STREAM_STATE_ERROR)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "PipeWire stream error: %s", error ? error : "(unknown)"};
+        return state == PW_STREAM_STATE_STREAMING;
     });
 
-    if(state == PW_STREAM_STATE_ERROR)
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "PipeWire stream error: %s", error ? error : "(unknown)"};
-    if(state == PW_STREAM_STATE_STREAMING && mRateMatch && mRateMatch->size)
+    if(mRateMatch && mRateMatch->size)
     {
         mDevice->UpdateSize = mRateMatch->size;
         mDevice->BufferSize = mDevice->UpdateSize * 2;
@@ -1902,11 +1900,10 @@ void PipeWireCapture::open(const char *name)
             "Error connecting PipeWire stream (res: %d)", res};
 
     /* Wait for the stream to become paused (ready to start streaming). */
-    pw_stream_state state{};
-    const char *error{};
-    plock.wait([stream=mStream.get(),&state,&error]()
+    plock.wait([stream=mStream.get()]()
     {
-        state = pw_stream_get_state(stream, &error);
+        const char *error{};
+        pw_stream_state state{pw_stream_get_state(stream, &error)};
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Error connecting PipeWire stream: \"%s\"", error};
@@ -1929,17 +1926,15 @@ void PipeWireCapture::start()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start PipeWire stream (res: %d)", res};
 
-    pw_stream_state state{};
-    const char *error{};
-    plock.wait([stream=mStream.get(),&state,&error]()
+    plock.wait([stream=mStream.get()]()
     {
-        state = pw_stream_get_state(stream, &error);
-        return state != PW_STREAM_STATE_PAUSED;
+        const char *error{};
+        pw_stream_state state{pw_stream_get_state(stream, &error)};
+        if(state == PW_STREAM_STATE_ERROR)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "PipeWire stream error: %s", error ? error : "(unknown)"};
+        return state == PW_STREAM_STATE_STREAMING;
     });
-
-    if(state == PW_STREAM_STATE_ERROR)
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "PipeWire stream error: %s", error ? error : "(unknown)"};
 }
 
 void PipeWireCapture::stop()

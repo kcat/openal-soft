@@ -408,6 +408,20 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
         DirectorySearch(path.c_str(), ext, &results);
     }
 
+#ifdef ALSOFT_INSTALL_DATADIR
+    // Search the installation data directory
+    {
+        std::string path{ALSOFT_INSTALL_DATADIR};
+        if(!path.empty())
+        {
+            if(path.back() != '/')
+                path += '/';
+            path += subdir;
+            DirectorySearch(path.c_str(), ext, &results);
+        }
+    }
+#endif
+
     return results;
 }
 

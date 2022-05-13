@@ -7,7 +7,7 @@
 
 
 bool LoadDefInput(std::istream &istream, const char *startbytes, std::streamsize startbytecount,
-    const char *filename, const uint fftSize, const uint truncSize, const ChannelModeT chanMode,
-    HrirDataT *hData);
+    const char *filename, const uint fftSize, const uint truncSize, const uint outRate,
+    const ChannelModeT chanMode, HrirDataT *hData);
 
 #endif /* LOADDEF_H */

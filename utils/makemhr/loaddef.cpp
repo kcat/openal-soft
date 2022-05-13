@@ -37,8 +37,11 @@
 #include <vector>
 
 #include "alfstream.h"
+#include "aloptional.h"
+#include "alspan.h"
 #include "alstring.h"
 #include "makemhr.h"
+#include "polyphase_resampler.h"
 
 #include "mysofa.h"
 
@@ -1707,14 +1710,11 @@ static int MatchTargetEar(const char *ident)
 
 // Calculate the onset time of an HRIR and average it with any existing
 // timing for its field, elevation, azimuth, and ear.
-static double AverageHrirOnset(const uint rate, const uint n, const double *hrir, const double f, const double onset)
+static constexpr int OnsetRateMultiple{10};
+static double AverageHrirOnset(PPhaseResampler &rs, al::span<double> upsampled, const uint rate,
+    const uint n, const double *hrir, const double f, const double onset)
 {
-    std::vector<double> upsampled(10 * n);
-    {
-        PPhaseResampler rs;
-        rs.init(rate, 10 * rate);
-        rs.process(n, hrir, 10 * n, upsampled.data());
-    }
+    rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
 
     auto abs_lt = [](const double &lhs, const double &rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
@@ -1731,9 +1731,9 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
     std::vector<double> r(n);
 
     for(i = 0;i < points;i++)
-        h[i] = complex_d{hrir[i], 0.0};
+        h[i] = hrir[i];
     for(;i < n;i++)
-        h[i] = complex_d{0.0, 0.0};
+        h[i] = 0.0;
     FftForward(n, h.data());
     MagnitudeResponse(n, h.data(), r.data());
     for(i = 0;i < m;i++)
@@ -1741,14 +1741,26 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
 }
 
 // Process the list of sources in the data set definition.
-static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
+static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
     double *hrirs = hData->mHrirsBase.data();
-    std::vector<double> hrir(hData->mIrPoints);
+    auto hrir = std::make_unique<double[]>(hData->mIrSize);
     uint line, col, fi, ei, ai;
     int count;
+
+    std::vector<double> onsetSamples(OnsetRateMultiple * hData->mIrPoints);
+    PPhaseResampler onsetResampler;
+    onsetResampler.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
+
+    al::optional<PPhaseResampler> resampler;
+    if(outRate && outRate != hData->mIrRate)
+        resampler.emplace().init(hData->mIrRate, outRate);
+    const double rateScale{outRate ? static_cast<double>(outRate) / hData->mIrRate : 1.0};
+    const uint irPoints{outRate
+        ? std::min(static_cast<uint>(std::ceil(hData->mIrPoints*rateScale)), hData->mIrPoints)
+        : hData->mIrPoints};
 
     printf("Loading sources...");
     fflush(stdout);
@@ -1862,17 +1874,24 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
                     return 0;
                 }
 
-                ExtractSofaHrir(sofa, si, 0, src.mOffset, hData->mIrPoints, hrir.data());
+                ExtractSofaHrir(sofa, si, 0, src.mOffset, hData->mIrPoints, hrir.get());
                 azd->mIrs[0] = &hrirs[hData->mIrSize * azd->mIndex];
-                azd->mDelays[0] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
-                AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[0]);
+                azd->mDelays[0] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
+                    hData->mIrPoints, hrir.get(), 1.0, azd->mDelays[0]);
+                if(resampler)
+                    resampler->process(hData->mIrPoints, hrir.get(), hData->mIrSize, hrir.get());
+                AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.get(), 1.0, azd->mIrs[0]);
 
                 if(src.mChannel == 1)
                 {
-                    ExtractSofaHrir(sofa, si, 1, src.mOffset, hData->mIrPoints, hrir.data());
+                    ExtractSofaHrir(sofa, si, 1, src.mOffset, hData->mIrPoints, hrir.get());
                     azd->mIrs[1] = &hrirs[hData->mIrSize * (hData->mIrCount + azd->mIndex)];
-                    azd->mDelays[1] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
-                    AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[1]);
+                    azd->mDelays[1] = AverageHrirOnset(onsetResampler, onsetSamples,
+                        hData->mIrRate, hData->mIrPoints, hrir.get(), 1.0, azd->mDelays[1]);
+                    if(resampler)
+                        resampler->process(hData->mIrPoints, hrir.get(), hData->mIrSize,
+                            hrir.get());
+                    AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.get(), 1.0, azd->mIrs[1]);
                 }
 
                 // TODO: Since some SOFA files contain minimum phase HRIRs,
@@ -1911,7 +1930,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
             printf("\rLoading sources... %d file%s", count, (count==1)?"":"s");
             fflush(stdout);
 
-            if(!LoadSource(&src, hData->mIrRate, hData->mIrPoints, hrir.data()))
+            if(!LoadSource(&src, hData->mIrRate, hData->mIrPoints, hrir.get()))
                 return 0;
 
             uint ti{0};
@@ -1929,8 +1948,12 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
                 }
             }
             azd->mIrs[ti] = &hrirs[hData->mIrSize * (ti * hData->mIrCount + azd->mIndex)];
-            azd->mDelays[ti] = AverageHrirOnset(hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0 / factor[ti], azd->mDelays[ti]);
-            AverageHrirMagnitude(hData->mIrPoints, hData->mFftSize, hrir.data(), 1.0 / factor[ti], azd->mIrs[ti]);
+            azd->mDelays[ti] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
+                hData->mIrPoints, hrir.get(), 1.0 / factor[ti], azd->mDelays[ti]);
+            if(resampler)
+                resampler->process(hData->mIrPoints, hrir.get(), hData->mIrSize, hrir.get());
+            AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.get(), 1.0 / factor[ti],
+                azd->mIrs[ti]);
             factor[ti] += 1.0;
             if(!TrIsOperator(tr, "+"))
                 break;
@@ -1951,6 +1974,13 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
         }
     }
     printf("\n");
+    hrir = nullptr;
+    if(resampler)
+    {
+        hData->mIrRate = outRate;
+        hData->mIrPoints = irPoints;
+        resampler.reset();
+    }
     for(fi = 0;fi < hData->mFdCount;fi++)
     {
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
@@ -2012,14 +2042,14 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData)
 
 
 bool LoadDefInput(std::istream &istream, const char *startbytes, std::streamsize startbytecount,
-    const char *filename, const uint fftSize, const uint truncSize, const ChannelModeT chanMode,
-    HrirDataT *hData)
+    const char *filename, const uint fftSize, const uint truncSize, const uint outRate,
+    const ChannelModeT chanMode, HrirDataT *hData)
 {
     TokenReaderT tr{istream};
 
     TrSetup(startbytes, startbytecount, filename, &tr);
     if(!ProcessMetrics(&tr, fftSize, truncSize, chanMode, hData)
-        || !ProcessSources(&tr, hData))
+        || !ProcessSources(&tr, hData, outRate))
         return false;
 
     return true;

@@ -37,6 +37,8 @@
 #include <thread>
 #include <vector>
 
+#include "aloptional.h"
+#include "alspan.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -234,7 +236,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
 /* Calculate the onset time of a HRIR. */
 static constexpr int OnsetRateMultiple{10};
 static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
-    std::vector<double> &upsampled, const double *hrir)
+    al::span<double> upsampled, const double *hrir)
 {
     rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
 
@@ -246,8 +248,7 @@ static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
 }
 
 /* Calculate the magnitude response of a HRIR. */
-static void CalcHrirMagnitude(const uint points, const uint n, std::vector<complex_d> &h,
-    double *hrir)
+static void CalcHrirMagnitude(const uint points, const uint n, al::span<complex_d> h, double *hrir)
 {
     auto iter = std::copy_n(hrir, points, h.begin());
     std::fill(iter, h.end(), complex_d{0.0, 0.0});
@@ -256,15 +257,23 @@ static void CalcHrirMagnitude(const uint points, const uint n, std::vector<compl
     MagnitudeResponse(n, h.data(), hrir);
 }
 
-static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
+static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const uint outRate)
 {
     std::atomic<uint> loaded_count{0u};
 
-    auto load_proc = [sofaHrtf,hData,&loaded_count]() -> bool
+    auto load_proc = [sofaHrtf,hData,outRate,&loaded_count]() -> bool
     {
         const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
         hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize, 0.0);
         double *hrirs = hData->mHrirsBase.data();
+
+        std::unique_ptr<double[]> restmp;
+        al::optional<PPhaseResampler> resampler;
+        if(outRate && outRate != hData->mIrRate)
+        {
+            resampler.emplace().init(hData->mIrRate, outRate);
+            restmp = std::make_unique<double[]>(sofaHrtf->N);
+        }
 
         for(uint si{0u};si < sofaHrtf->M;++si)
         {
@@ -313,14 +322,29 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
             for(uint ti{0u};ti < channels;++ti)
             {
                 azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
-                std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
-                    hData->mIrPoints, azd->mIrs[ti]);
+                if(!resampler)
+                    std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                        sofaHrtf->N, azd->mIrs[ti]);
+                else
+                {
+                    std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                        sofaHrtf->N, restmp.get());
+                    resampler->process(sofaHrtf->N, restmp.get(), hData->mIrSize, azd->mIrs[ti]);
+                }
             }
 
             /* TODO: Since some SOFA files contain minimum phase HRIRs,
              * it would be beneficial to check for per-measurement delays
              * (when available) to reconstruct the HRTDs.
              */
+        }
+
+        if(outRate && outRate != hData->mIrRate)
+        {
+            const double scale{static_cast<double>(outRate) / hData->mIrRate};
+            hData->mIrRate = outRate;
+            hData->mIrPoints = std::min(static_cast<uint>(std::ceil(hData->mIrPoints*scale)),
+                hData->mIrSize);
         }
         return true;
     };
@@ -376,7 +400,7 @@ struct MagCalculator {
 };
 
 bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSize,
-    const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
+    const uint truncSize, const uint outRate, const ChannelModeT chanMode, HrirDataT *hData)
 {
     int err;
     MySofaHrtfPtr sofaHrtf{mysofa_load(filename, &err)};
@@ -435,7 +459,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     if(!PrepareLayout(sofaHrtf->M, sofaHrtf->SourcePosition.values, hData))
         return false;
 
-    if(!LoadResponses(sofaHrtf.get(), hData))
+    if(!LoadResponses(sofaHrtf.get(), hData, outRate))
         return false;
     sofaHrtf = nullptr;
 

@@ -1392,7 +1392,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     {
         inName = "stdin";
         fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, chanMode, &hData))
+        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, outRate, chanMode, &hData))
             return 0;
     }
     else
@@ -1418,13 +1418,13 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         {
             input = nullptr;
             fprintf(stdout, "Reading HRTF data from %s...\n", inName);
-            if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, chanMode, &hData))
+            if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, outRate, chanMode, &hData))
                 return 0;
         }
         else
         {
             fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-            if(!LoadDefInput(*input, startbytes, startbytecount, inName, fftSize, truncSize, chanMode, &hData))
+            if(!LoadDefInput(*input, startbytes, startbytecount, inName, fftSize, truncSize, outRate, chanMode, &hData))
                 return 0;
         }
     }

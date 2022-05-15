@@ -9,6 +9,16 @@
 #include "resampler_limits.h"
 
 
+struct DecoderBase {
+    virtual ~DecoderBase() = default;
+
+    virtual void setWidth(float width) noexcept = 0;
+
+    virtual void decode(const al::span<float*> samples, const size_t samplesToDo,
+        const size_t forwardSamples) = 0;
+};
+
+
 struct UhjFilterBase {
     /* The filter delay is half it's effective size, so a delay of 128 has a
      * FIR length of 256.
@@ -38,7 +48,7 @@ struct UhjEncoder : public UhjFilterBase {
 };
 
 
-struct UhjDecoder : public UhjFilterBase {
+struct UhjDecoder : public DecoderBase, public UhjFilterBase {
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};
@@ -48,13 +58,7 @@ struct UhjDecoder : public UhjFilterBase {
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay*2> mTemp{};
 
-    float mCurrentWidth{-1.0f};
-
-    /**
-     * The width factor for Super Stereo processing. Can be changed in between
-     * calls to decodeStereo, with valid values being between 0...0.7.
-     */
-    float mWidthControl{0.593f};
+    void setWidth(float) noexcept override { }
 
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
@@ -65,7 +69,22 @@ struct UhjDecoder : public UhjFilterBase {
      * B-Format decoder, as it needs different shelf filters.
      */
     void decode(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples);
+        const size_t forwardSamples) override;
+
+    DEF_NEWDEL(UhjDecoder)
+};
+
+struct UhjStereoDecoder : public UhjDecoder {
+    float mCurrentWidth{-1.0f};
+
+    /**
+     * The width factor for Super Stereo processing. Can be changed in between
+     * calls to decodeStereo, with valid values being between 0...0.7.
+     */
+    float mWidthControl{0.593f};
+
+    void setWidth(float width) noexcept override
+    { mWidthControl = width; }
 
     /**
      * Applies Super Stereo processing on a stereo signal to create a B-Format
@@ -73,13 +92,10 @@ struct UhjDecoder : public UhjFilterBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decodeStereo(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples);
+    void decode(const al::span<float*> samples, const size_t samplesToDo,
+        const size_t forwardSamples) override;
 
-    using DecoderFunc = void (UhjDecoder::*)(const al::span<float*> samples,
-        const size_t samplesToDo, const size_t forwardSamples);
-
-    DEF_NEWDEL(UhjDecoder)
+    DEF_NEWDEL(UhjStereoDecoder)
 };
 
 #endif /* CORE_UHJFILTER_H */

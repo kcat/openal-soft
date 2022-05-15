@@ -637,8 +637,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
             if(mDecoder)
             {
                 SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
-                ((*mDecoder).*mDecoderFunc)(MixingSamples, SrcBufferSize,
-                    srcOffset * likely(vstate == Playing));
+                mDecoder->decode(MixingSamples, SrcBufferSize,
+                    likely(vstate == Playing) ? srcOffset : 0.0f);
             }
             /* Store the last source samples used for next time. */
             if(likely(vstate == Playing))
@@ -853,17 +853,12 @@ void Voice::prepare(DeviceBase *device)
     mPrevSamples.reserve(maxu(2, num_channels));
     mPrevSamples.resize(num_channels);
 
-    if(IsUHJ(mFmtChannels))
-    {
+    if(mFmtChannels == FmtSuperStereo)
+        mDecoder = std::make_unique<UhjStereoDecoder>();
+    else if(IsUHJ(mFmtChannels))
         mDecoder = std::make_unique<UhjDecoder>();
-        mDecoderFunc = (mFmtChannels == FmtSuperStereo) ? &UhjDecoder::decodeStereo
-            : &UhjDecoder::decode;
-    }
     else
-    {
         mDecoder = nullptr;
-        mDecoderFunc = nullptr;
-    }
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
      * until the update gets applied.

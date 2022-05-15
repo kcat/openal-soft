@@ -174,7 +174,7 @@ void UhjDecoder::decode(const al::span<float*> samples, const size_t samplesToDo
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
  */
-void UhjDecoder::decodeStereo(const al::span<float*> samples, const size_t samplesToDo,
+void UhjStereoDecoder::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
     ASSUME(samplesToDo > 0);

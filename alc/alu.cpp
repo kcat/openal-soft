@@ -765,7 +765,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
     voice->mFlags.reset(VoiceHasHrtf).reset(VoiceHasNfc);
     if(auto *decoder{voice->mDecoder.get()})
-        decoder->mWidthControl = minf(props->EnhWidth, 0.7f);
+        decoder->setWidth(minf(props->EnhWidth, 0.7f));
 
     if(IsAmbisonic(voice->mFmtChannels))
     {

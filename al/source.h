@@ -22,9 +22,9 @@
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "eax_eax_call.h"
-#include "eax_fx_slot_index.h"
-#include "eax_utils.h"
+#include "eax/eax_call.h"
+#include "eax/fx_slot_index.h"
+#include "eax/utils.h"
 #endif // ALSOFT_EAX
 
 struct ALbuffer;

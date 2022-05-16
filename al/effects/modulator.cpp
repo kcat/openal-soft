@@ -15,8 +15,8 @@
 
 #include "alnumeric.h"
 
-#include "al/eax_exception.h"
-#include "al/eax_utils.h"
+#include "al/eax/exception.h"
+#include "al/eax/utils.h"
 #endif // ALSOFT_EAX
 
 

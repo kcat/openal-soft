@@ -51,8 +51,8 @@
 #include "opthelpers.h"
 
 #ifdef ALSOFT_EAX
-#include "eax_exception.h"
-#include "eax_utils.h"
+#include "eax/exception.h"
+#include "eax/utils.h"
 #endif // ALSOFT_EAX
 
 namespace {

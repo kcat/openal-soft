@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include "eax_globals.h"
+#include "globals.h"
 
 
 bool eax_g_is_enabled = true;

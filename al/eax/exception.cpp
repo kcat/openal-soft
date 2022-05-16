@@ -1,9 +1,8 @@
 #include "config.h"
 
-#include "eax_exception.h"
+#include "exception.h"
 
 #include <cassert>
-
 #include <string>
 
 

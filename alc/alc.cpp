@@ -156,8 +156,8 @@
 #endif
 
 #ifdef ALSOFT_EAX
-#include "al/eax_globals.h"
-#include "al/eax_x_ram.h"
+#include "al/eax/globals.h"
+#include "al/eax/x_ram.h"
 #endif // ALSOFT_EAX
 
 

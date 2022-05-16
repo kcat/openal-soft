@@ -20,10 +20,10 @@
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "al/eax_eax_call.h"
-#include "al/eax_fx_slot_index.h"
-#include "al/eax_fx_slots.h"
-#include "al/eax_utils.h"
+#include "al/eax/eax_call.h"
+#include "al/eax/fx_slot_index.h"
+#include "al/eax/fx_slots.h"
+#include "al/eax/utils.h"
 
 
 using EaxContextSharedDirtyFlagsValue = std::uint_least8_t;

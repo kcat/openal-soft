@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include "eax_utils.h"
+#include "utils.h"
 
 #include <cassert>
 #include <exception>

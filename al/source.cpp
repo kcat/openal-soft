@@ -73,7 +73,7 @@
 #include "threads.h"
 
 #ifdef ALSOFT_EAX
-#include "eax_exception.h"
+#include "eax/exception.h"
 #endif // ALSOFT_EAX
 
 namespace {

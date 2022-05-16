@@ -6,9 +6,8 @@
 
 #include "al/auxeffectslot.h"
 
-#include "eax_api.h"
-
-#include "eax_fx_slot_index.h"
+#include "api.h"
+#include "fx_slot_index.h"
 
 
 class EaxFxSlots

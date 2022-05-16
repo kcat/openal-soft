@@ -54,7 +54,7 @@
 #ifdef ALSOFT_EAX
 #include <cassert>
 
-#include "eax_exception.h"
+#include "eax/exception.h"
 #endif // ALSOFT_EAX
 
 const EffectList gEffectList[16]{

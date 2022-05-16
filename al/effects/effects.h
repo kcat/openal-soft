@@ -6,7 +6,7 @@
 #include "core/except.h"
 
 #ifdef ALSOFT_EAX
-#include "al/eax_effect.h"
+#include "al/eax/effect.h"
 #endif // ALSOFT_EAX
 
 union EffectProps;

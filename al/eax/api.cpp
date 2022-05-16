@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-#include "al/eax_api.h"
+#include "api.h"
 
 
 const GUID DSPROPSETID_EAX_ReverbProperties =

@@ -34,8 +34,8 @@
 #include <cstring>
 
 #include "alstring.h"
-#include "al/eax_exception.h"
-#include "al/eax_globals.h"
+#include "al/eax/exception.h"
+#include "al/eax/globals.h"
 #endif // ALSOFT_EAX
 
 namespace {

@@ -13,7 +13,7 @@
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "eax_x_ram.h"
+#include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
 /* User formats */

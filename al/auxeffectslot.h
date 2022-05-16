@@ -19,9 +19,9 @@
 #ifdef ALSOFT_EAX
 #include <memory>
 
-#include "eax_eax_call.h"
-#include "eax_effect.h"
-#include "eax_fx_slot_index.h"
+#include "eax/eax_call.h"
+#include "eax/effect.h"
+#include "eax/fx_slot_index.h"
 #endif // ALSOFT_EAX
 
 struct ALbuffer;

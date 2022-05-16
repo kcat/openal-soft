@@ -1,12 +1,11 @@
 #include "config.h"
 
-#include "eax_fx_slots.h"
+#include "fx_slots.h"
 
 #include <array>
 
-#include "eax_exception.h"
-
-#include "eax_api.h"
+#include "api.h"
+#include "exception.h"
 
 
 namespace

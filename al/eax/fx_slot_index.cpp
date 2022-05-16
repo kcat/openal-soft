@@ -1,8 +1,8 @@
 #include "config.h"
 
-#include "eax_fx_slot_index.h"
+#include "fx_slot_index.h"
 
-#include "eax_exception.h"
+#include "exception.h"
 
 
 namespace

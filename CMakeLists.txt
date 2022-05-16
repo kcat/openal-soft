@@ -798,24 +798,24 @@ set(ALC_OBJS
 if (ALSOFT_EAX)
     set(OPENAL_OBJS
         ${OPENAL_OBJS}
-        al/eax_api.cpp
-        al/eax_api.h
-        al/eax_eax_call.cpp
-        al/eax_eax_call.h
-        al/eax_effect.cpp
-        al/eax_effect.h
-        al/eax_exception.cpp
-        al/eax_exception.h
-        al/eax_fx_slot_index.cpp
-        al/eax_fx_slot_index.h
-        al/eax_fx_slots.cpp
-        al/eax_fx_slots.h
-        al/eax_globals.cpp
-        al/eax_globals.h
-        al/eax_utils.cpp
-        al/eax_utils.h
-        al/eax_x_ram.cpp
-        al/eax_x_ram.h
+        al/eax/api.cpp
+        al/eax/api.h
+        al/eax/eax_call.cpp
+        al/eax/eax_call.h
+        al/eax/effect.cpp
+        al/eax/effect.h
+        al/eax/exception.cpp
+        al/eax/exception.h
+        al/eax/fx_slot_index.cpp
+        al/eax/fx_slot_index.h
+        al/eax/fx_slots.cpp
+        al/eax/fx_slots.h
+        al/eax/globals.cpp
+        al/eax/globals.h
+        al/eax/utils.cpp
+        al/eax/utils.h
+        al/eax/x_ram.cpp
+        al/eax/x_ram.h
 )
 endif ()
 

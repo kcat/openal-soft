@@ -57,8 +57,8 @@
 #include "opthelpers.h"
 
 #ifdef ALSOFT_EAX
-#include "eax_globals.h"
-#include "eax_x_ram.h"
+#include "eax/globals.h"
+#include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
 

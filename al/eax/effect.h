@@ -6,7 +6,7 @@
 
 #include "AL/al.h"
 #include "core/effects/base.h"
-#include "eax_eax_call.h"
+#include "eax_call.h"
 
 class EaxEffect
 {

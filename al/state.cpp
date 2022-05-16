@@ -49,8 +49,8 @@
 #ifdef ALSOFT_EAX
 #include "alc/device.h"
 
-#include "eax_globals.h"
-#include "eax_x_ram.h"
+#include "eax/globals.h"
+#include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
 

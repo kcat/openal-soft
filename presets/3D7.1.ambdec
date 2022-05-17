@@ -6,8 +6,9 @@
 /description     3D7-noCenter_1h1v_pinv_even_energy_rV_max_rE_2_band
 
 # In OpenAL Soft, 3D7.1 is a distinct configuration that uses the standard 5.1
-# channels (FL, FR, FC, SL, SR), plus two auxiliary channels (AUX0, AUX1) in
-# place of the rear speakers.
+# channels (LF, RF, CE, LS, RS), plus two auxiliary channels (AUX0, AUX1) in
+# place of the rear speakers. AUX0 corresponds to the LB speaker (upper back
+# center), and AUX1 corresponds to the RB speaker (lower front center).
 
 # Similar to the the ITU-5.1-nocenter configuration, the front-center is
 # declared here so that an appropriate distance may be set (for proper delaying
@@ -31,13 +32,13 @@
 /speakers/{
 #       	id  	 dist    	 azim      	 elev     	conn
 #-----------------------------------------------------------------------
-add_spkr 	FL		 1.828800	  51.000000	 24.000000
-add_spkr 	FR		 1.828800	 -51.000000	 24.000000
-add_spkr 	FC		 1.828800	   0.000000	  0.000000
+add_spkr 	LF  	 1.828800	  51.000000	 24.000000
+add_spkr 	RF  	 1.828800	 -51.000000	 24.000000
+add_spkr 	CE  	 1.828800	   0.000000	  0.000000
 add_spkr 	AUX0	 1.828800	 180.000000	 55.000000
 add_spkr 	AUX1	 1.828800	   0.000000	-55.000000
-add_spkr 	SL		 1.828800	 129.000000	-24.000000
-add_spkr 	SR		 1.828800	-129.000000	-24.000000
+add_spkr 	LS  	 1.828800	 129.000000	-24.000000
+add_spkr 	RS  	 1.828800	-129.000000	-24.000000
 /}
 
 /lfmatrix/{

@@ -514,8 +514,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
     std::transform(Device->mSampleData.end() - mChans.size(), Device->mSampleData.end(),
         MixingSamples.begin(), offset_bufferline);
 
-    const uint PostPadding{MaxResamplerEdge +
-        (mDecoder ? uint{UhjDecoder::sFilterDelay} : 0u)};
+    const uint PostPadding{MaxResamplerEdge + mDecoderPadding};
     uint buffers_done{0u};
     uint OutPos{0u};
     do {
@@ -854,11 +853,20 @@ void Voice::prepare(DeviceBase *device)
     mPrevSamples.resize(num_channels);
 
     if(mFmtChannels == FmtSuperStereo)
+    {
         mDecoder = std::make_unique<UhjStereoDecoder>();
+        mDecoderPadding = UhjStereoDecoder::sFilterDelay;
+    }
     else if(IsUHJ(mFmtChannels))
+    {
         mDecoder = std::make_unique<UhjDecoder>();
+        mDecoderPadding = UhjDecoder::sFilterDelay;
+    }
     else
+    {
         mDecoder = nullptr;
+        mDecoderPadding = 0;
+    }
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
      * until the update gets applied.

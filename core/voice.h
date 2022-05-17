@@ -220,6 +220,7 @@ struct Voice {
     uint mAmbiOrder;
 
     std::unique_ptr<DecoderBase> mDecoder;
+    uint mDecoderPadding{};
 
     /** Current target parameters used for mixing. */
     uint mStep{0};

@@ -29,9 +29,11 @@ void *al_calloc(size_t alignment, size_t size);
 #define DEF_NEWDEL(T)                                                         \
     void *operator new(size_t size)                                           \
     {                                                                         \
-        void *ret = al_malloc(alignof(T), size);                              \
-        if(!ret) throw std::bad_alloc();                                      \
-        return ret;                                                           \
+        static_assert(&operator new == &T::operator new,                      \
+            "Incorrect container type specified");                            \
+        if(void *ret{al_malloc(alignof(T), size)})                            \
+            return ret;                                                       \
+        throw std::bad_alloc();                                               \
     }                                                                         \
     void *operator new[](size_t size) { return operator new(size); }          \
     void operator delete(void *block) noexcept { al_free(block); }            \
@@ -50,6 +52,8 @@ enum FamCount : size_t { };
 #define DEF_FAM_NEWDEL(T, FamMem)                                             \
     static constexpr size_t Sizeof(size_t count) noexcept                     \
     {                                                                         \
+        static_assert(&Sizeof == &T::Sizeof,                                  \
+            "Incorrect container type specified");                            \
         return std::max(decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)), \
             sizeof(T));                                                       \
     }                                                                         \

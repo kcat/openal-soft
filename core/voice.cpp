@@ -900,9 +900,9 @@ void Voice::prepare(DeviceBase *device)
          */
         if(mFmtChannels == FmtUHJ2)
         {
-            mChans[0].mAmbiLFScale = 0.661f;
-            mChans[1].mAmbiLFScale = 1.293f;
-            mChans[2].mAmbiLFScale = 1.293f;
+            mChans[0].mAmbiLFScale = UhjDecoder::sWLFScale;
+            mChans[1].mAmbiLFScale = UhjDecoder::sXYLFScale;
+            mChans[2].mAmbiLFScale = UhjDecoder::sXYLFScale;
         }
         mFlags.set(VoiceIsAmbisonic);
     }
@@ -922,9 +922,9 @@ void Voice::prepare(DeviceBase *device)
             chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
-        mChans[0].mAmbiLFScale = 0.661f;
-        mChans[1].mAmbiLFScale = 1.293f;
-        mChans[2].mAmbiLFScale = 1.293f;
+        mChans[0].mAmbiLFScale = UhjDecoder::sWLFScale;
+        mChans[1].mAmbiLFScale = UhjDecoder::sXYLFScale;
+        mChans[2].mAmbiLFScale = UhjDecoder::sXYLFScale;
         mFlags.set(VoiceIsAmbisonic);
     }
     else

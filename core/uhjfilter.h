@@ -49,6 +49,10 @@ struct UhjEncoder : public UhjFilterBase {
 
 
 struct UhjDecoder : public DecoderBase, public UhjFilterBase {
+    /* For 2-channel UHJ, shelf filters should use these LF responses. */
+    static constexpr float sWLFScale{0.661f};
+    static constexpr float sXYLFScale{1.293f};
+
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};

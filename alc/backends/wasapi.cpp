@@ -1515,8 +1515,13 @@ HRESULT WasapiCapture::resetProxy()
     InputType.Format.cbSize = sizeof(InputType) - sizeof(InputType.Format);
 
     TraceFormat("Requesting capture format", &InputType.Format);
-    WAVEFORMATEX *wfx;
+    WAVEFORMATEX *wfx{};
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &InputType.Format, &wfx);
+    if(FAILED(hr))
+    {
+        WARN("Failed to check format support: 0x%08lx\n", hr);
+        hr = mClient->GetMixFormat(&wfx);
+    }
     if(FAILED(hr))
     {
         ERR("Failed to check format support: 0x%08lx\n", hr);

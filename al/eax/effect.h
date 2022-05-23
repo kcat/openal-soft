@@ -24,7 +24,7 @@ public:
     const ALenum al_effect_type_;
     EffectProps al_effect_props_{};
 
-    virtual void dispatch() = 0;
+    virtual void dispatch(const EaxCall& call) = 0;
 
     // Returns "true" if any immediated property was changed.
     /*[[nodiscard]]*/ virtual bool commit() = 0;
@@ -36,7 +36,7 @@ class EaxEffect4 : public EaxEffect
 {
 public:
     EaxEffect4(ALenum type, const EaxCall& call)
-        : EaxEffect{type}, call_{call}, version_{clamp(call_.get_version(), 4, 5)}
+        : EaxEffect{type}, version_{clamp(call.get_version(), 4, 5)}
     {}
 
     void initialize()
@@ -45,10 +45,10 @@ public:
         set_efx_defaults();
     }
 
-    void dispatch() override
+    void dispatch(const EaxCall& call) override
     {
-        call_.is_get() ? get() : set();
-        version_ = call_.get_version();
+        call.is_get() ? get(call) : set(call);
+        version_ = call.get_version();
     }
 
     bool commit() final
@@ -70,16 +70,15 @@ protected:
         Props d; // Deferred.
     }; // State
 
-    const EaxCall& call_;
     int version_;
     Props props_;
     State state4_;
     State state5_;
 
     template<typename TValidator, typename TProperty>
-    void defer(TProperty& property)
+    static void defer(const EaxCall& call, TProperty& property)
     {
-        const auto& value = call_.get_value<Exception, const TProperty>();
+        const auto& value = call.get_value<Exception, const TProperty>();
         TValidator{}(value);
         property = value;
     }
@@ -87,8 +86,8 @@ protected:
     virtual void set_defaults(Props& props) = 0;
     virtual void set_efx_defaults() = 0;
 
-    virtual void get(const Props& props) = 0;
-    virtual void set(Props& props) = 0;
+    virtual void get(const EaxCall& call, const Props& props) = 0;
+    virtual void set(const EaxCall& call, Props& props) = 0;
 
     virtual bool commit_props(const Props& props) = 0;
 
@@ -117,22 +116,22 @@ private:
         state5_.d = props_;
     }
 
-    void get()
+    void get(const EaxCall& call)
     {
-        switch (call_.get_version())
+        switch (call.get_version())
         {
-            case 4: get(state4_.i); break;
-            case 5: get(state5_.i); break;
+            case 4: get(call, state4_.i); break;
+            case 5: get(call, state5_.i); break;
             default: fail_unknown_version();
         }
     }
 
-    void set()
+    void set(const EaxCall& call)
     {
-        switch (call_.get_version())
+        switch (call.get_version())
         {
-            case 4: set(state4_.d); break;
-            case 5: set(state5_.d); break;
+            case 4: set(call, state4_.d); break;
+            case 5: set(call, state5_.d); break;
             default: fail_unknown_version();
         }
     }
@@ -157,7 +156,7 @@ EaxEffectUPtr eax_create_eax4_effect(const EaxCall& call)
     return effect;
 }
 
-EaxEffectUPtr eax_create_eax_null_effect(const EaxCall& call);
+EaxEffectUPtr eax_create_eax_null_effect();
 EaxEffectUPtr eax_create_eax_chorus_effect(const EaxCall& call);
 EaxEffectUPtr eax_create_eax_distortion_effect(const EaxCall& call);
 EaxEffectUPtr eax_create_eax_echo_effect(const EaxCall& call);

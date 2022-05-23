@@ -358,8 +358,8 @@ private:
     void set_efx_rate() noexcept;
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& props) override;
 }; // EaxVocalMorpherEffect
 
@@ -445,39 +445,39 @@ void EaxVocalMorpherEffect::set_efx_defaults()
     set_efx_rate();
 }
 
-void EaxVocalMorpherEffect::get(const Props& props)
+void EaxVocalMorpherEffect::get(const EaxCall& call, const Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXVOCALMORPHER_NONE:
             break;
 
         case EAXVOCALMORPHER_ALLPARAMETERS:
-            call_.set_value<Exception>(props);
+            call.set_value<Exception>(props);
             break;
 
         case EAXVOCALMORPHER_PHONEMEA:
-            call_.set_value<Exception>(props.ulPhonemeA);
+            call.set_value<Exception>(props.ulPhonemeA);
             break;
 
         case EAXVOCALMORPHER_PHONEMEACOARSETUNING:
-            call_.set_value<Exception>(props.lPhonemeACoarseTuning);
+            call.set_value<Exception>(props.lPhonemeACoarseTuning);
             break;
 
         case EAXVOCALMORPHER_PHONEMEB:
-            call_.set_value<Exception>(props.ulPhonemeB);
+            call.set_value<Exception>(props.ulPhonemeB);
             break;
 
         case EAXVOCALMORPHER_PHONEMEBCOARSETUNING:
-            call_.set_value<Exception>(props.lPhonemeBCoarseTuning);
+            call.set_value<Exception>(props.lPhonemeBCoarseTuning);
             break;
 
         case EAXVOCALMORPHER_WAVEFORM:
-            call_.set_value<Exception>(props.ulWaveform);
+            call.set_value<Exception>(props.ulWaveform);
             break;
 
         case EAXVOCALMORPHER_RATE:
-            call_.set_value<Exception>(props.flRate);
+            call.set_value<Exception>(props.flRate);
             break;
 
         default:
@@ -485,39 +485,39 @@ void EaxVocalMorpherEffect::get(const Props& props)
     }
 }
 
-void EaxVocalMorpherEffect::set(Props& props)
+void EaxVocalMorpherEffect::set(const EaxCall& call, Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXVOCALMORPHER_NONE:
             break;
 
         case EAXVOCALMORPHER_ALLPARAMETERS:
-            defer<AllValidator>(props);
+            defer<AllValidator>(call, props);
             break;
 
         case EAXVOCALMORPHER_PHONEMEA:
-            defer<PhonemeAValidator>(props.ulPhonemeA);
+            defer<PhonemeAValidator>(call, props.ulPhonemeA);
             break;
 
         case EAXVOCALMORPHER_PHONEMEACOARSETUNING:
-            defer<PhonemeACoarseTuningValidator>(props.lPhonemeACoarseTuning);
+            defer<PhonemeACoarseTuningValidator>(call, props.lPhonemeACoarseTuning);
             break;
 
         case EAXVOCALMORPHER_PHONEMEB:
-            defer<PhonemeBValidator>(props.ulPhonemeB);
+            defer<PhonemeBValidator>(call, props.ulPhonemeB);
             break;
 
         case EAXVOCALMORPHER_PHONEMEBCOARSETUNING:
-            defer<PhonemeBCoarseTuningValidator>(props.lPhonemeBCoarseTuning);
+            defer<PhonemeBCoarseTuningValidator>(call, props.lPhonemeBCoarseTuning);
             break;
 
         case EAXVOCALMORPHER_WAVEFORM:
-            defer<WaveformValidator>(props.ulWaveform);
+            defer<WaveformValidator>(call, props.ulWaveform);
             break;
 
         case EAXVOCALMORPHER_RATE:
-            defer<RateValidator>(props.flRate);
+            defer<RateValidator>(call, props.flRate);
             break;
 
         default:

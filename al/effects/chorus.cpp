@@ -587,39 +587,39 @@ private:
         set_efx_delay();
     }
 
-    void get(const Props& props) override
+    void get(const EaxCall& call, const Props& props) override
     {
-        switch(Base::call_.get_property_id())
+        switch(call.get_property_id())
         {
             case Traits::eax_none_param_id():
                 break;
 
             case Traits::eax_allparameters_param_id():
-                Base::call_.template set_value<Exception>(props);
+                call.template set_value<Exception>(props);
                 break;
 
             case Traits::eax_waveform_param_id():
-                Base::call_.template set_value<Exception>(props.ulWaveform);
+                call.template set_value<Exception>(props.ulWaveform);
                 break;
 
             case Traits::eax_phase_param_id():
-                Base::call_.template set_value<Exception>(props.lPhase);
+                call.template set_value<Exception>(props.lPhase);
                 break;
 
             case Traits::eax_rate_param_id():
-                Base::call_.template set_value<Exception>(props.flRate);
+                call.template set_value<Exception>(props.flRate);
                 break;
 
             case Traits::eax_depth_param_id():
-                Base::call_.template set_value<Exception>(props.flDepth);
+                call.template set_value<Exception>(props.flDepth);
                 break;
 
             case Traits::eax_feedback_param_id():
-                Base::call_.template set_value<Exception>(props.flFeedback);
+                call.template set_value<Exception>(props.flFeedback);
                 break;
 
             case Traits::eax_delay_param_id():
-                Base::call_.template set_value<Exception>(props.flDelay);
+                call.template set_value<Exception>(props.flDelay);
                 break;
 
             default:
@@ -627,39 +627,39 @@ private:
         }
     }
 
-    void set(Props& props) override
+    void set(const EaxCall& call, Props& props) override
     {
-        switch(Base::call_.get_property_id())
+        switch(call.get_property_id())
         {
             case Traits::eax_none_param_id():
                 break;
 
             case Traits::eax_allparameters_param_id():
-                Base::template defer<AllValidator>(props);
+                Base::template defer<AllValidator>(call, props);
                 break;
 
             case Traits::eax_waveform_param_id():
-                Base::template defer<WaveformValidator>(props.ulWaveform);
+                Base::template defer<WaveformValidator>(call, props.ulWaveform);
                 break;
 
             case Traits::eax_phase_param_id():
-                Base::template defer<PhaseValidator>(props.lPhase);
+                Base::template defer<PhaseValidator>(call, props.lPhase);
                 break;
 
             case Traits::eax_rate_param_id():
-                Base::template defer<RateValidator>(props.flRate);
+                Base::template defer<RateValidator>(call, props.flRate);
                 break;
 
             case Traits::eax_depth_param_id():
-                Base::template defer<DepthValidator>(props.flDepth);
+                Base::template defer<DepthValidator>(call, props.flDepth);
                 break;
 
             case Traits::eax_feedback_param_id():
-                Base::template defer<FeedbackValidator>(props.flFeedback);
+                Base::template defer<FeedbackValidator>(call, props.flFeedback);
                 break;
 
             case Traits::eax_delay_param_id():
-                Base::template defer<DelayValidator>(props.flDelay);
+                Base::template defer<DelayValidator>(call, props.flDelay);
                 break;
 
             default:

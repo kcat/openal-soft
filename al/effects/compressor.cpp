@@ -117,8 +117,8 @@ private:
     void set_efx_on_off() noexcept;
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& props) override;
 }; // EaxCompressorEffect
 
@@ -145,24 +145,24 @@ void EaxCompressorEffect::set_efx_defaults()
     set_efx_on_off();
 }
 
-void EaxCompressorEffect::get(const Props& props)
+void EaxCompressorEffect::get(const EaxCall& call, const Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXAGCCOMPRESSOR_NONE: break;
-        case EAXAGCCOMPRESSOR_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXAGCCOMPRESSOR_ONOFF: call_.set_value<Exception>(props.ulOnOff); break;
+        case EAXAGCCOMPRESSOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXAGCCOMPRESSOR_ONOFF: call.set_value<Exception>(props.ulOnOff); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxCompressorEffect::set(Props& props)
+void EaxCompressorEffect::set(const EaxCall& call, Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXAGCCOMPRESSOR_NONE: break;
-        case EAXAGCCOMPRESSOR_ALLPARAMETERS: defer<AllValidator>(props); break;
-        case EAXAGCCOMPRESSOR_ONOFF: defer<OnOffValidator>(props.ulOnOff); break;
+        case EAXAGCCOMPRESSOR_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+        case EAXAGCCOMPRESSOR_ONOFF: defer<OnOffValidator>(call, props.ulOnOff); break;
         default: fail_unknown_property_id();
     }
 }

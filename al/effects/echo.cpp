@@ -208,8 +208,8 @@ private:
     void set_efx_spread() noexcept;
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& props) override;
 }; // EaxEchoEffect
 
@@ -275,32 +275,32 @@ void EaxEchoEffect::set_efx_defaults()
     set_efx_spread();
 }
 
-void EaxEchoEffect::get(const Props& props)
+void EaxEchoEffect::get(const EaxCall& call, const Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXECHO_NONE: break;
-        case EAXECHO_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXECHO_DELAY: call_.set_value<Exception>(props.flDelay); break;
-        case EAXECHO_LRDELAY: call_.set_value<Exception>(props.flLRDelay); break;
-        case EAXECHO_DAMPING: call_.set_value<Exception>(props.flDamping); break;
-        case EAXECHO_FEEDBACK: call_.set_value<Exception>(props.flFeedback); break;
-        case EAXECHO_SPREAD: call_.set_value<Exception>(props.flSpread); break;
+        case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXECHO_DELAY: call.set_value<Exception>(props.flDelay); break;
+        case EAXECHO_LRDELAY: call.set_value<Exception>(props.flLRDelay); break;
+        case EAXECHO_DAMPING: call.set_value<Exception>(props.flDamping); break;
+        case EAXECHO_FEEDBACK: call.set_value<Exception>(props.flFeedback); break;
+        case EAXECHO_SPREAD: call.set_value<Exception>(props.flSpread); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxEchoEffect::set(Props& props)
+void EaxEchoEffect::set(const EaxCall& call, Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXECHO_NONE: break;
-        case EAXECHO_ALLPARAMETERS: defer<AllValidator>(props); break;
-        case EAXECHO_DELAY: defer<DelayValidator>(props.flDelay); break;
-        case EAXECHO_LRDELAY: defer<LrDelayValidator>(props.flLRDelay); break;
-        case EAXECHO_DAMPING: defer<DampingValidator>(props.flDamping); break;
-        case EAXECHO_FEEDBACK: defer<FeedbackValidator>(props.flFeedback); break;
-        case EAXECHO_SPREAD: defer<SpreadValidator>(props.flSpread); break;
+        case EAXECHO_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+        case EAXECHO_DELAY: defer<DelayValidator>(call, props.flDelay); break;
+        case EAXECHO_LRDELAY: defer<LrDelayValidator>(call, props.flLRDelay); break;
+        case EAXECHO_DAMPING: defer<DampingValidator>(call, props.flDamping); break;
+        case EAXECHO_FEEDBACK: defer<FeedbackValidator>(call, props.flFeedback); break;
+        case EAXECHO_SPREAD: defer<SpreadValidator>(call, props.flSpread); break;
         default: fail_unknown_property_id();
     }
 }

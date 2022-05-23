@@ -102,13 +102,10 @@ namespace {
 
 class EaxNullEffect final : public EaxEffect {
 public:
-    EaxNullEffect(const EaxCall& call) noexcept;
+    EaxNullEffect() noexcept;
 
-    void dispatch() override;
+    void dispatch(const EaxCall& call) override;
     /*[[nodiscard]]*/ bool commit() override;
-
-private:
-    const EaxCall& call_;
 }; // EaxNullEffect
 
 
@@ -120,13 +117,13 @@ public:
     {}
 }; // EaxNullEffectException
 
-EaxNullEffect::EaxNullEffect(const EaxCall& call) noexcept
-    : EaxEffect{AL_EFFECT_NULL}, call_{call}
+EaxNullEffect::EaxNullEffect() noexcept
+    : EaxEffect{AL_EFFECT_NULL}
 {}
 
-void EaxNullEffect::dispatch()
+void EaxNullEffect::dispatch(const EaxCall& call)
 {
-    if(call_.get_property_id() != 0)
+    if(call.get_property_id() != 0)
         throw EaxNullEffectException{"Unsupported property id."};
 }
 
@@ -137,9 +134,9 @@ bool EaxNullEffect::commit()
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_null_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_null_effect()
 {
-    return std::make_unique<EaxNullEffect>(call);
+    return std::make_unique<EaxNullEffect>();
 }
 
 #endif // ALSOFT_EAX

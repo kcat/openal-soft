@@ -22,9 +22,6 @@ enum class EaxCallPropertySetId {
 
 class EaxCall {
 public:
-    EaxCall() noexcept;
-    EaxCall& operator=(const EaxCall& rhs) noexcept;
-
     EaxCall(
         EaxCallType type,
         const GUID& property_set_guid,
@@ -45,7 +42,7 @@ public:
     {
         if (property_size_ < static_cast<ALuint>(sizeof(TValue)))
         {
-            throw TException{"Property buffer too small."};
+            fail_too_small();
         }
 
         return *static_cast<TValue*>(property_buffer_);
@@ -56,7 +53,7 @@ public:
     {
         if (property_size_ < static_cast<ALuint>(sizeof(TValue)))
         {
-            throw TException{"Property buffer too small."};
+            fail_too_small();
         }
 
         const auto count = property_size_ / sizeof(TValue);
@@ -81,6 +78,7 @@ private:
     ALuint property_size_;
 
     [[noreturn]] static void fail(const char* message);
+    [[noreturn]] static void fail_too_small();
 }; // EaxCall
 
 EaxCall create_eax_call(

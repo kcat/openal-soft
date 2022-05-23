@@ -9,36 +9,11 @@ constexpr auto deferred_flag = 0x80000000U;
 class EaxCallException : public EaxException {
 public:
     explicit EaxCallException(const char* message)
-        :
-        EaxException{"EAX_CALL", message}
+        : EaxException{"EAX_CALL", message}
     {}
 }; // EaxCallException
 
 } // namespace
-
-EaxCall::EaxCall() noexcept
-    :
-    type_{EaxCallType::none},
-    version_{},
-    property_set_id_{EaxCallPropertySetId::none},
-    property_id_{},
-    property_source_id_{},
-    property_buffer_{},
-    property_size_{}
-{}
-
-EaxCall& EaxCall::operator=(const EaxCall& rhs) noexcept
-{
-    type_ = rhs.type_;
-    version_ = rhs.version_;
-    fx_slot_index_ = rhs.fx_slot_index_;
-    property_set_id_ = rhs.property_set_id_;
-    property_id_ = rhs.property_id_;
-    property_source_id_ = rhs.property_source_id_;
-    property_buffer_ = rhs.property_buffer_;
-    property_size_ = rhs.property_size_;
-    return *this;
-}
 
 EaxCall::EaxCall(
     EaxCallType type,
@@ -208,6 +183,11 @@ EaxCall::EaxCall(
 [[noreturn]] void EaxCall::fail(const char* message)
 {
     throw EaxCallException{message};
+}
+
+[[noreturn]] void EaxCall::fail_too_small()
+{
+    fail("Property buffer too small.");
 }
 
 EaxCall create_eax_call(

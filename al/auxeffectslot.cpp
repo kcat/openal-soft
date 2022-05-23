@@ -1076,11 +1076,11 @@ public:
 
 
 void ALeffectslot::eax_initialize(
+    const EaxCall& call,
     ALCcontext& al_context,
     EaxFxSlotIndexValue index)
 {
     eax_al_context_ = &al_context;
-    eax_call_ = &eax_al_context_->get_call();
 
     if (index >= EAX_MAX_FXSLOTS)
     {
@@ -1091,7 +1091,7 @@ void ALeffectslot::eax_initialize(
 
     eax_initialize_eax();
     eax_initialize_lock();
-    eax_initialize_effects();
+    eax_initialize_effects(call);
 }
 
 const EAX50FXSLOTPROPERTIES& ALeffectslot::eax_get_eax_fx_slot() const noexcept
@@ -1105,8 +1105,7 @@ void ALeffectslot::eax_ensure_is_unlocked() const
         eax_fail("Locked.");
 }
 
-void ALeffectslot::eax_validate_fx_slot_effect(
-    const GUID& eax_effect_id)
+void ALeffectslot::eax_validate_fx_slot_effect(const GUID& eax_effect_id)
 {
     eax_ensure_is_unlocked();
 
@@ -1128,8 +1127,7 @@ void ALeffectslot::eax_validate_fx_slot_effect(
     }
 }
 
-void ALeffectslot::eax_validate_fx_slot_volume(
-    long eax_volume)
+void ALeffectslot::eax_validate_fx_slot_volume(long eax_volume)
 {
     eax_validate_range<EaxFxSlotException>(
         "Volume",
@@ -1138,8 +1136,7 @@ void ALeffectslot::eax_validate_fx_slot_volume(
         EAXFXSLOT_MAXVOLUME);
 }
 
-void ALeffectslot::eax_validate_fx_slot_lock(
-    long eax_lock)
+void ALeffectslot::eax_validate_fx_slot_lock(long eax_lock)
 {
     eax_ensure_is_unlocked();
 
@@ -1150,18 +1147,16 @@ void ALeffectslot::eax_validate_fx_slot_lock(
         EAXFXSLOT_MAXLOCK);
 }
 
-void ALeffectslot::eax_validate_fx_slot_flags(
-    unsigned long eax_flags)
+void ALeffectslot::eax_validate_fx_slot_flags(const EaxCall& call, unsigned long eax_flags)
 {
     eax_validate_range<EaxFxSlotException>(
         "Flags",
         eax_flags,
         0UL,
-        ~(eax_call_->get_version() == 4 ? EAX40FXSLOTFLAGS_RESERVED : EAX50FXSLOTFLAGS_RESERVED));
+        ~(call.get_version() == 4 ? EAX40FXSLOTFLAGS_RESERVED : EAX50FXSLOTFLAGS_RESERVED));
 }
 
-void ALeffectslot::eax_validate_fx_slot_occlusion(
-    long eax_occlusion)
+void ALeffectslot::eax_validate_fx_slot_occlusion(long eax_occlusion)
 {
     eax_validate_range<EaxFxSlotException>(
         "Occlusion",
@@ -1170,8 +1165,7 @@ void ALeffectslot::eax_validate_fx_slot_occlusion(
         EAXFXSLOT_MAXOCCLUSION);
 }
 
-void ALeffectslot::eax_validate_fx_slot_occlusion_lf_ratio(
-    float eax_occlusion_lf_ratio)
+void ALeffectslot::eax_validate_fx_slot_occlusion_lf_ratio(float eax_occlusion_lf_ratio)
 {
     eax_validate_range<EaxFxSlotException>(
         "Occlusion LF Ratio",
@@ -1180,25 +1174,22 @@ void ALeffectslot::eax_validate_fx_slot_occlusion_lf_ratio(
         EAXFXSLOT_MAXOCCLUSIONLFRATIO);
 }
 
-void ALeffectslot::eax_validate_fx_slot_all(
-    const EAX40FXSLOTPROPERTIES& fx_slot)
+void ALeffectslot::eax_validate_fx_slot_all(const EaxCall& call, const EAX40FXSLOTPROPERTIES& fx_slot)
 {
     eax_validate_fx_slot_effect(fx_slot.guidLoadEffect);
     eax_validate_fx_slot_volume(fx_slot.lVolume);
     eax_validate_fx_slot_lock(fx_slot.lLock);
-    eax_validate_fx_slot_flags(fx_slot.ulFlags);
+    eax_validate_fx_slot_flags(call, fx_slot.ulFlags);
 }
 
-void ALeffectslot::eax_validate_fx_slot_all(
-    const EAX50FXSLOTPROPERTIES& fx_slot)
+void ALeffectslot::eax_validate_fx_slot_all(const EaxCall& call, const EAX50FXSLOTPROPERTIES& fx_slot)
 {
-    eax_validate_fx_slot_all(static_cast<const EAX40FXSLOTPROPERTIES&>(fx_slot));
+    eax_validate_fx_slot_all(call, static_cast<const EAX40FXSLOTPROPERTIES&>(fx_slot));
     eax_validate_fx_slot_occlusion(fx_slot.lOcclusion);
     eax_validate_fx_slot_occlusion_lf_ratio(fx_slot.flOcclusionLFRatio);
 }
 
-void ALeffectslot::eax_set_fx_slot_effect(
-    const GUID& eax_effect_id)
+void ALeffectslot::eax_set_fx_slot_effect(const EaxCall& call, const GUID& eax_effect_id)
 {
     if (eax_eax_fx_slot_.guidLoadEffect == eax_effect_id)
     {
@@ -1207,7 +1198,7 @@ void ALeffectslot::eax_set_fx_slot_effect(
 
     eax_eax_fx_slot_.guidLoadEffect = eax_effect_id;
 
-    eax_set_fx_slot_effect();
+    eax_set_fx_slot_effect(call);
 }
 
 void ALeffectslot::eax_set_fx_slot_volume(
@@ -1275,20 +1266,18 @@ bool ALeffectslot::eax_set_fx_slot_occlusion_lf_ratio(
     return true;
 }
 
-void ALeffectslot::eax_set_fx_slot_all(
-    const EAX40FXSLOTPROPERTIES& eax_fx_slot)
+void ALeffectslot::eax_set_fx_slot_all(const EaxCall& call, const EAX40FXSLOTPROPERTIES& eax_fx_slot)
 {
-    eax_set_fx_slot_effect(eax_fx_slot.guidLoadEffect);
+    eax_set_fx_slot_effect(call, eax_fx_slot.guidLoadEffect);
     eax_set_fx_slot_volume(eax_fx_slot.lVolume);
     eax_set_fx_slot_lock(eax_fx_slot.lLock);
     eax_set_fx_slot_flags(eax_fx_slot.ulFlags);
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_set_fx_slot_all(
-    const EAX50FXSLOTPROPERTIES& eax_fx_slot)
+bool ALeffectslot::eax_set_fx_slot_all(const EaxCall& call, const EAX50FXSLOTPROPERTIES& eax_fx_slot)
 {
-    eax_set_fx_slot_all(static_cast<const EAX40FXSLOTPROPERTIES&>(eax_fx_slot));
+    eax_set_fx_slot_all(call, static_cast<const EAX40FXSLOTPROPERTIES&>(eax_fx_slot));
 
     const auto is_occlusion_modified = eax_set_fx_slot_occlusion(eax_fx_slot.lOcclusion);
     const auto is_occlusion_lf_ratio_modified = eax_set_fx_slot_occlusion_lf_ratio(eax_fx_slot.flOcclusionLFRatio);
@@ -1345,21 +1334,21 @@ void ALeffectslot::eax_initialize_lock()
     eax_is_locked_ = (eax_fx_slot_index_ < 2);
 }
 
-void ALeffectslot::eax_initialize_effects()
+void ALeffectslot::eax_initialize_effects(const EaxCall& call)
 {
-    eax_set_fx_slot_effect();
+    eax_set_fx_slot_effect(call);
 }
 
-void ALeffectslot::eax_get_fx_slot_all() const
+void ALeffectslot::eax_get_fx_slot_all(const EaxCall& call) const
 {
-    switch (eax_call_->get_version())
+    switch (call.get_version())
     {
         case 4:
-            eax_call_->set_value<EaxFxSlotException, EAX40FXSLOTPROPERTIES>(eax_eax_fx_slot_);
+            call.set_value<EaxFxSlotException, EAX40FXSLOTPROPERTIES>(eax_eax_fx_slot_);
             break;
 
         case 5:
-            eax_call_->set_value<EaxFxSlotException, EAX50FXSLOTPROPERTIES>(eax_eax_fx_slot_);
+            call.set_value<EaxFxSlotException, EAX50FXSLOTPROPERTIES>(eax_eax_fx_slot_);
             break;
 
         default:
@@ -1367,36 +1356,36 @@ void ALeffectslot::eax_get_fx_slot_all() const
     }
 }
 
-void ALeffectslot::eax_get_fx_slot() const
+void ALeffectslot::eax_get_fx_slot(const EaxCall& call) const
 {
-    switch (eax_call_->get_property_id())
+    switch (call.get_property_id())
     {
         case EAXFXSLOT_ALLPARAMETERS:
-            eax_get_fx_slot_all();
+            eax_get_fx_slot_all(call);
             break;
 
         case EAXFXSLOT_LOADEFFECT:
-            eax_call_->set_value<EaxFxSlotException>(eax_eax_fx_slot_.guidLoadEffect);
+            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.guidLoadEffect);
             break;
 
         case EAXFXSLOT_VOLUME:
-            eax_call_->set_value<EaxFxSlotException>(eax_eax_fx_slot_.lVolume);
+            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.lVolume);
             break;
 
         case EAXFXSLOT_LOCK:
-            eax_call_->set_value<EaxFxSlotException>(eax_eax_fx_slot_.lLock);
+            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.lLock);
             break;
 
         case EAXFXSLOT_FLAGS:
-            eax_call_->set_value<EaxFxSlotException>(eax_eax_fx_slot_.ulFlags);
+            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.ulFlags);
             break;
 
         case EAXFXSLOT_OCCLUSION:
-            eax_call_->set_value<EaxFxSlotException>(eax_eax_fx_slot_.lOcclusion);
+            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.lOcclusion);
             break;
 
         case EAXFXSLOT_OCCLUSIONLFRATIO:
-            eax_call_->set_value<EaxFxSlotException>(eax_eax_fx_slot_.flOcclusionLFRatio);
+            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.flOcclusionLFRatio);
             break;
 
         default:
@@ -1405,16 +1394,16 @@ void ALeffectslot::eax_get_fx_slot() const
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_get()
+bool ALeffectslot::eax_get(const EaxCall& call)
 {
-    switch (eax_call_->get_property_set_id())
+    switch (call.get_property_set_id())
     {
         case EaxCallPropertySetId::fx_slot:
-            eax_get_fx_slot();
+            eax_get_fx_slot(call);
             break;
 
         case EaxCallPropertySetId::fx_slot_effect:
-            eax_dispatch_effect();
+            eax_dispatch_effect(call);
             break;
 
         default:
@@ -1424,19 +1413,18 @@ bool ALeffectslot::eax_get()
     return false;
 }
 
-void ALeffectslot::eax_set_fx_slot_effect(
-    ALenum al_effect_type)
+void ALeffectslot::eax_set_fx_slot_effect(const EaxCall& call, ALenum al_effect_type)
 {
     if(!IsValidEffectType(al_effect_type))
         eax_fail("Unsupported effect.");
 
     eax_effect_ = nullptr;
-    eax_effect_ = eax_create_eax_effect(al_effect_type, *eax_call_);
+    eax_effect_ = eax_create_eax_effect(al_effect_type, call);
 
     eax_set_effect_slot_effect(*eax_effect_);
 }
 
-void ALeffectslot::eax_set_fx_slot_effect()
+void ALeffectslot::eax_set_fx_slot_effect(const EaxCall& call)
 {
     auto al_effect_type = ALenum{};
 
@@ -1500,7 +1488,7 @@ void ALeffectslot::eax_set_fx_slot_effect()
         eax_fail("Unsupported effect.");
     }
 
-    eax_set_fx_slot_effect(al_effect_type);
+    eax_set_fx_slot_effect(call, al_effect_type);
 }
 
 void ALeffectslot::eax_set_efx_effect_slot_gain()
@@ -1529,47 +1517,47 @@ void ALeffectslot::eax_set_fx_slot_flags()
     eax_set_effect_slot_send_auto();
 }
 
-void ALeffectslot::eax_defer_fx_slot_effect()
+void ALeffectslot::eax_defer_fx_slot_effect(const EaxCall& call)
 {
     const auto& eax_effect_id =
-        eax_call_->get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::guidLoadEffect)>();
+        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::guidLoadEffect)>();
 
     eax_validate_fx_slot_effect(eax_effect_id);
-    eax_set_fx_slot_effect(eax_effect_id);
+    eax_set_fx_slot_effect(call, eax_effect_id);
 }
 
-void ALeffectslot::eax_defer_fx_slot_volume()
+void ALeffectslot::eax_defer_fx_slot_volume(const EaxCall& call)
 {
     const auto& eax_volume =
-        eax_call_->get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::lVolume)>();
+        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::lVolume)>();
 
     eax_validate_fx_slot_volume(eax_volume);
     eax_set_fx_slot_volume(eax_volume);
 }
 
-void ALeffectslot::eax_defer_fx_slot_lock()
+void ALeffectslot::eax_defer_fx_slot_lock(const EaxCall& call)
 {
     const auto& eax_lock =
-        eax_call_->get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::lLock)>();
+        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::lLock)>();
 
     eax_validate_fx_slot_lock(eax_lock);
     eax_set_fx_slot_lock(eax_lock);
 }
 
-void ALeffectslot::eax_defer_fx_slot_flags()
+void ALeffectslot::eax_defer_fx_slot_flags(const EaxCall& call)
 {
     const auto& eax_flags =
-        eax_call_->get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::ulFlags)>();
+        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::ulFlags)>();
 
-    eax_validate_fx_slot_flags(eax_flags);
+    eax_validate_fx_slot_flags(call, eax_flags);
     eax_set_fx_slot_flags(eax_flags);
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_defer_fx_slot_occlusion()
+bool ALeffectslot::eax_defer_fx_slot_occlusion(const EaxCall& call)
 {
     const auto& eax_occlusion =
-        eax_call_->get_value<EaxFxSlotException, const decltype(EAX50FXSLOTPROPERTIES::lOcclusion)>();
+        call.get_value<EaxFxSlotException, const decltype(EAX50FXSLOTPROPERTIES::lOcclusion)>();
 
     eax_validate_fx_slot_occlusion(eax_occlusion);
 
@@ -1577,10 +1565,10 @@ bool ALeffectslot::eax_defer_fx_slot_occlusion()
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_defer_fx_slot_occlusion_lf_ratio()
+bool ALeffectslot::eax_defer_fx_slot_occlusion_lf_ratio(const EaxCall& call)
 {
     const auto& eax_occlusion_lf_ratio =
-        eax_call_->get_value<EaxFxSlotException, const decltype(EAX50FXSLOTPROPERTIES::flOcclusionLFRatio)>();
+        call.get_value<EaxFxSlotException, const decltype(EAX50FXSLOTPROPERTIES::flOcclusionLFRatio)>();
 
     eax_validate_fx_slot_occlusion_lf_ratio(eax_occlusion_lf_ratio);
 
@@ -1588,17 +1576,17 @@ bool ALeffectslot::eax_defer_fx_slot_occlusion_lf_ratio()
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_defer_fx_slot_all()
+bool ALeffectslot::eax_defer_fx_slot_all(const EaxCall& call)
 {
-    switch (eax_call_->get_version())
+    switch (call.get_version())
     {
         case 4:
             {
                 const auto& eax_all =
-                    eax_call_->get_value<EaxFxSlotException, const EAX40FXSLOTPROPERTIES>();
+                    call.get_value<EaxFxSlotException, const EAX40FXSLOTPROPERTIES>();
 
-                eax_validate_fx_slot_all(eax_all);
-                eax_set_fx_slot_all(eax_all);
+                eax_validate_fx_slot_all(call, eax_all);
+                eax_set_fx_slot_all(call, eax_all);
 
                 return false;
             }
@@ -1606,10 +1594,10 @@ bool ALeffectslot::eax_defer_fx_slot_all()
         case 5:
             {
                 const auto& eax_all =
-                    eax_call_->get_value<EaxFxSlotException, const EAX50FXSLOTPROPERTIES>();
+                    call.get_value<EaxFxSlotException, const EAX50FXSLOTPROPERTIES>();
 
-                eax_validate_fx_slot_all(eax_all);
-                return eax_set_fx_slot_all(eax_all);
+                eax_validate_fx_slot_all(call, eax_all);
+                return eax_set_fx_slot_all(call, eax_all);
             }
 
         default:
@@ -1617,37 +1605,37 @@ bool ALeffectslot::eax_defer_fx_slot_all()
     }
 }
 
-bool ALeffectslot::eax_set_fx_slot()
+bool ALeffectslot::eax_set_fx_slot(const EaxCall& call)
 {
-    switch (eax_call_->get_property_id())
+    switch (call.get_property_id())
     {
         case EAXFXSLOT_NONE:
             return false;
 
         case EAXFXSLOT_ALLPARAMETERS:
-            return eax_defer_fx_slot_all();
+            return eax_defer_fx_slot_all(call);
 
         case EAXFXSLOT_LOADEFFECT:
-            eax_defer_fx_slot_effect();
+            eax_defer_fx_slot_effect(call);
             return false;
 
         case EAXFXSLOT_VOLUME:
-            eax_defer_fx_slot_volume();
+            eax_defer_fx_slot_volume(call);
             return false;
 
         case EAXFXSLOT_LOCK:
-            eax_defer_fx_slot_lock();
+            eax_defer_fx_slot_lock(call);
             return false;
 
         case EAXFXSLOT_FLAGS:
-            eax_defer_fx_slot_flags();
+            eax_defer_fx_slot_flags(call);
             return false;
 
         case EAXFXSLOT_OCCLUSION:
-            return eax_defer_fx_slot_occlusion();
+            return eax_defer_fx_slot_occlusion(call);
 
         case EAXFXSLOT_OCCLUSIONLFRATIO:
-            return eax_defer_fx_slot_occlusion_lf_ratio();
+            return eax_defer_fx_slot_occlusion_lf_ratio(call);
 
 
         default:
@@ -1656,15 +1644,15 @@ bool ALeffectslot::eax_set_fx_slot()
 }
 
 // [[nodiscard]]
-bool ALeffectslot::eax_set()
+bool ALeffectslot::eax_set(const EaxCall& call)
 {
-    switch(eax_call_->get_property_set_id())
+    switch(call.get_property_set_id())
     {
         case EaxCallPropertySetId::fx_slot:
-            return eax_set_fx_slot();
+            return eax_set_fx_slot(call);
 
         case EaxCallPropertySetId::fx_slot_effect:
-            eax_dispatch_effect();
+            eax_dispatch_effect(call);
             break;
 
         default:
@@ -1674,8 +1662,8 @@ bool ALeffectslot::eax_set()
     return false;
 }
 
-void ALeffectslot::eax_dispatch_effect()
-{ if(eax_effect_) eax_effect_->dispatch(); }
+void ALeffectslot::eax_dispatch_effect(const EaxCall& call)
+{ if(eax_effect_) eax_effect_->dispatch(call); }
 
 void ALeffectslot::eax_apply_deferred()
 {

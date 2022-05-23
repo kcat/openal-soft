@@ -141,8 +141,8 @@ private:
     void set_efx_fine_tune() noexcept;
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& old_i) override;
 }; // EaxPitchShifterEffect
 
@@ -178,26 +178,26 @@ void EaxPitchShifterEffect::set_efx_defaults()
     set_efx_fine_tune();
 }
 
-void EaxPitchShifterEffect::get(const Props& props)
+void EaxPitchShifterEffect::get(const EaxCall& call, const Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXPITCHSHIFTER_NONE: break;
-        case EAXPITCHSHIFTER_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXPITCHSHIFTER_COARSETUNE: call_.set_value<Exception>(props.lCoarseTune); break;
-        case EAXPITCHSHIFTER_FINETUNE: call_.set_value<Exception>(props.lFineTune); break;
+        case EAXPITCHSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXPITCHSHIFTER_COARSETUNE: call.set_value<Exception>(props.lCoarseTune); break;
+        case EAXPITCHSHIFTER_FINETUNE: call.set_value<Exception>(props.lFineTune); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxPitchShifterEffect::set(Props& props)
+void EaxPitchShifterEffect::set(const EaxCall& call, Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXPITCHSHIFTER_NONE: break;
-        case EAXPITCHSHIFTER_ALLPARAMETERS: defer<AllValidator>(props); break;
-        case EAXPITCHSHIFTER_COARSETUNE: defer<CoarseTuneValidator>(props.lCoarseTune); break;
-        case EAXPITCHSHIFTER_FINETUNE: defer<FineTuneValidator>(props.lFineTune); break;
+        case EAXPITCHSHIFTER_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+        case EAXPITCHSHIFTER_COARSETUNE: defer<CoarseTuneValidator>(call, props.lCoarseTune); break;
+        case EAXPITCHSHIFTER_FINETUNE: defer<FineTuneValidator>(call, props.lFineTune); break;
         default: fail_unknown_property_id();
     }
 }

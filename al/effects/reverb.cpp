@@ -579,7 +579,7 @@ class EaxReverbEffect final : public EaxEffect
 public:
     EaxReverbEffect(const EaxCall& call) noexcept;
 
-    void dispatch() override;
+    void dispatch(const EaxCall& call) override;
     /*[[nodiscard]]*/ bool commit() override;
 
 private:
@@ -1108,8 +1108,7 @@ private:
         }
     }; // EnvironmentSizeDeferrer3
 
-    const EaxCall& call_;
-    int commit_version_;
+    int version_;
     Props3 props_{};
     State1 state1_{};
     State2 state2_{};
@@ -1153,31 +1152,31 @@ private:
     void set_efx_flags() noexcept;
     void set_efx_defaults() noexcept;
 
-    void get1(const Props1& props) const;
-    void get2(const Props2& props) const;
-    void get3(const Props3& props) const;
-    void get();
+    static void get1(const EaxCall& call, const Props1& props);
+    static void get2(const EaxCall& call, const Props2& props);
+    static void get3(const EaxCall& call, const Props3& props);
+    void get(const EaxCall& call);
 
     template<typename TValidator, typename TProperty>
-    void defer(TProperty& property)
+    static void defer(const EaxCall& call, TProperty& property)
     {
-        const auto& value = call_.get_value<Exception, const TProperty>();
+        const auto& value = call.get_value<Exception, const TProperty>();
         TValidator{}(value);
         property = value;
     }
 
     template<typename TValidator, typename TDeferrer, typename TProperties, typename TProperty>
-    void defer(TProperties& properties, TProperty&)
+    static void defer(const EaxCall& call, TProperties& properties, TProperty&)
     {
-        const auto& value = call_.get_value<Exception, const TProperty>();
+        const auto& value = call.get_value<Exception, const TProperty>();
         TValidator{}(value);
         TDeferrer{}(properties, value);
     }
 
     template<typename TValidator, typename TProperty>
-    void defer3(Props3& properties, TProperty& property)
+    static void defer3(const EaxCall& call, Props3& properties, TProperty& property)
     {
-        const auto& value = call_.get_value<Exception, const TProperty>();
+        const auto& value = call.get_value<Exception, const TProperty>();
         TValidator{}(value);
         if (value == property)
             return;
@@ -1185,26 +1184,26 @@ private:
         properties.ulEnvironment = EAX_ENVIRONMENT_UNDEFINED;
     }
 
-    void set1(Props1& props);
-    void set2(Props2& props);
-    void set3(Props3& props);
-    void set();
+    static void set1(const EaxCall& call, Props1& props);
+    static void set2(const EaxCall& call, Props2& props);
+    static void set3(const EaxCall& call, Props3& props);
+    void set(const EaxCall& call);
 
     static void translate(const Props1& src, Props3& dst) noexcept;
     static void translate(const Props2& src, Props3& dst) noexcept;
 }; // EaxReverbEffect
 
 EaxReverbEffect::EaxReverbEffect(const EaxCall& call) noexcept
-    : EaxEffect{AL_EFFECT_EAXREVERB}, call_{call}, commit_version_{call_.get_version()}
+    : EaxEffect{AL_EFFECT_EAXREVERB}, version_{call.get_version()}
 {
     set_defaults();
     set_current_defaults();
     set_efx_defaults();
 }
 
-void EaxReverbEffect::dispatch()
+void EaxReverbEffect::dispatch(const EaxCall& call)
 {
-    call_.is_get() ? get() : set();
+    call.is_get() ? get(call) : set(call);
 }
 
 [[noreturn]] void EaxReverbEffect::fail(const char* message)
@@ -1252,7 +1251,7 @@ void EaxReverbEffect::set_defaults() noexcept
 
 void EaxReverbEffect::set_current_defaults()
 {
-    switch (commit_version_)
+    switch (version_)
     {
         case 1: translate(state1_.i, props_); break;
         case 2: translate(state2_.i, props_); break;
@@ -1471,105 +1470,105 @@ void EaxReverbEffect::set_efx_defaults() noexcept
     set_efx_flags();
 }
 
-void EaxReverbEffect::get1(const Props1& props) const
+void EaxReverbEffect::get1(const EaxCall& call, const Props1& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
-        case DSPROPERTY_EAX_ALL: call_.set_value<Exception>(props); break;
-        case DSPROPERTY_EAX_ENVIRONMENT: call_.set_value<Exception>(props.environment); break;
-        case DSPROPERTY_EAX_VOLUME: call_.set_value<Exception>(props.fVolume); break;
-        case DSPROPERTY_EAX_DECAYTIME: call_.set_value<Exception>(props.fDecayTime_sec); break;
-        case DSPROPERTY_EAX_DAMPING: call_.set_value<Exception>(props.fDamping); break;
+        case DSPROPERTY_EAX_ALL: call.set_value<Exception>(props); break;
+        case DSPROPERTY_EAX_ENVIRONMENT: call.set_value<Exception>(props.environment); break;
+        case DSPROPERTY_EAX_VOLUME: call.set_value<Exception>(props.fVolume); break;
+        case DSPROPERTY_EAX_DECAYTIME: call.set_value<Exception>(props.fDecayTime_sec); break;
+        case DSPROPERTY_EAX_DAMPING: call.set_value<Exception>(props.fDamping); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxReverbEffect::get2(const Props2& props) const
+void EaxReverbEffect::get2(const EaxCall& call, const Props2& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case DSPROPERTY_EAX20LISTENER_NONE: break;
-        case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case DSPROPERTY_EAX20LISTENER_ROOM: call_.set_value<Exception>(props.lRoom); break;
-        case DSPROPERTY_EAX20LISTENER_ROOMHF: call_.set_value<Exception>(props.lRoomHF); break;
-        case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR: call_.set_value<Exception>(props.flRoomRolloffFactor); break;
-        case DSPROPERTY_EAX20LISTENER_DECAYTIME: call_.set_value<Exception>(props.flDecayTime); break;
-        case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO: call_.set_value<Exception>(props.flDecayHFRatio); break;
-        case DSPROPERTY_EAX20LISTENER_REFLECTIONS: call_.set_value<Exception>(props.lReflections); break;
-        case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY: call_.set_value<Exception>(props.flReverbDelay); break;
-        case DSPROPERTY_EAX20LISTENER_REVERB: call_.set_value<Exception>(props.lReverb); break;
-        case DSPROPERTY_EAX20LISTENER_REVERBDELAY: call_.set_value<Exception>(props.flReverbDelay); break;
-        case DSPROPERTY_EAX20LISTENER_ENVIRONMENT: call_.set_value<Exception>(props.dwEnvironment); break;
-        case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE: call_.set_value<Exception>(props.flEnvironmentSize); break;
-        case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION: call_.set_value<Exception>(props.flEnvironmentDiffusion); break;
-        case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF: call_.set_value<Exception>(props.flAirAbsorptionHF); break;
-        case DSPROPERTY_EAX20LISTENER_FLAGS: call_.set_value<Exception>(props.dwFlags); break;
+        case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case DSPROPERTY_EAX20LISTENER_ROOM: call.set_value<Exception>(props.lRoom); break;
+        case DSPROPERTY_EAX20LISTENER_ROOMHF: call.set_value<Exception>(props.lRoomHF); break;
+        case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR: call.set_value<Exception>(props.flRoomRolloffFactor); break;
+        case DSPROPERTY_EAX20LISTENER_DECAYTIME: call.set_value<Exception>(props.flDecayTime); break;
+        case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO: call.set_value<Exception>(props.flDecayHFRatio); break;
+        case DSPROPERTY_EAX20LISTENER_REFLECTIONS: call.set_value<Exception>(props.lReflections); break;
+        case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY: call.set_value<Exception>(props.flReverbDelay); break;
+        case DSPROPERTY_EAX20LISTENER_REVERB: call.set_value<Exception>(props.lReverb); break;
+        case DSPROPERTY_EAX20LISTENER_REVERBDELAY: call.set_value<Exception>(props.flReverbDelay); break;
+        case DSPROPERTY_EAX20LISTENER_ENVIRONMENT: call.set_value<Exception>(props.dwEnvironment); break;
+        case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE: call.set_value<Exception>(props.flEnvironmentSize); break;
+        case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION: call.set_value<Exception>(props.flEnvironmentDiffusion); break;
+        case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF: call.set_value<Exception>(props.flAirAbsorptionHF); break;
+        case DSPROPERTY_EAX20LISTENER_FLAGS: call.set_value<Exception>(props.dwFlags); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxReverbEffect::get3(const Props3& props) const
+void EaxReverbEffect::get3(const EaxCall& call, const Props3& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXREVERB_NONE: break;
-        case EAXREVERB_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXREVERB_ENVIRONMENT: call_.set_value<Exception>(props.ulEnvironment); break;
-        case EAXREVERB_ENVIRONMENTSIZE: call_.set_value<Exception>(props.flEnvironmentSize); break;
-        case EAXREVERB_ENVIRONMENTDIFFUSION: call_.set_value<Exception>(props.flEnvironmentDiffusion); break;
-        case EAXREVERB_ROOM: call_.set_value<Exception>(props.lRoom); break;
-        case EAXREVERB_ROOMHF: call_.set_value<Exception>(props.lRoomHF); break;
-        case EAXREVERB_ROOMLF: call_.set_value<Exception>(props.lRoomLF); break;
-        case EAXREVERB_DECAYTIME: call_.set_value<Exception>(props.flDecayTime); break;
-        case EAXREVERB_DECAYHFRATIO: call_.set_value<Exception>(props.flDecayHFRatio); break;
-        case EAXREVERB_DECAYLFRATIO: call_.set_value<Exception>(props.flDecayLFRatio); break;
-        case EAXREVERB_REFLECTIONS: call_.set_value<Exception>(props.lReflections); break;
-        case EAXREVERB_REFLECTIONSDELAY: call_.set_value<Exception>(props.flReflectionsDelay); break;
-        case EAXREVERB_REFLECTIONSPAN: call_.set_value<Exception>(props.vReflectionsPan); break;
-        case EAXREVERB_REVERB: call_.set_value<Exception>(props.lReverb); break;
-        case EAXREVERB_REVERBDELAY: call_.set_value<Exception>(props.flReverbDelay); break;
-        case EAXREVERB_REVERBPAN: call_.set_value<Exception>(props.vReverbPan); break;
-        case EAXREVERB_ECHOTIME: call_.set_value<Exception>(props.flEchoTime); break;
-        case EAXREVERB_ECHODEPTH: call_.set_value<Exception>(props.flEchoDepth); break;
-        case EAXREVERB_MODULATIONTIME: call_.set_value<Exception>(props.flModulationTime); break;
-        case EAXREVERB_MODULATIONDEPTH: call_.set_value<Exception>(props.flModulationDepth); break;
-        case EAXREVERB_AIRABSORPTIONHF: call_.set_value<Exception>(props.flAirAbsorptionHF); break;
-        case EAXREVERB_HFREFERENCE: call_.set_value<Exception>(props.flHFReference); break;
-        case EAXREVERB_LFREFERENCE: call_.set_value<Exception>(props.flLFReference); break;
-        case EAXREVERB_ROOMROLLOFFFACTOR: call_.set_value<Exception>(props.flRoomRolloffFactor); break;
-        case EAXREVERB_FLAGS: call_.set_value<Exception>(props.ulFlags); break;
+        case EAXREVERB_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXREVERB_ENVIRONMENT: call.set_value<Exception>(props.ulEnvironment); break;
+        case EAXREVERB_ENVIRONMENTSIZE: call.set_value<Exception>(props.flEnvironmentSize); break;
+        case EAXREVERB_ENVIRONMENTDIFFUSION: call.set_value<Exception>(props.flEnvironmentDiffusion); break;
+        case EAXREVERB_ROOM: call.set_value<Exception>(props.lRoom); break;
+        case EAXREVERB_ROOMHF: call.set_value<Exception>(props.lRoomHF); break;
+        case EAXREVERB_ROOMLF: call.set_value<Exception>(props.lRoomLF); break;
+        case EAXREVERB_DECAYTIME: call.set_value<Exception>(props.flDecayTime); break;
+        case EAXREVERB_DECAYHFRATIO: call.set_value<Exception>(props.flDecayHFRatio); break;
+        case EAXREVERB_DECAYLFRATIO: call.set_value<Exception>(props.flDecayLFRatio); break;
+        case EAXREVERB_REFLECTIONS: call.set_value<Exception>(props.lReflections); break;
+        case EAXREVERB_REFLECTIONSDELAY: call.set_value<Exception>(props.flReflectionsDelay); break;
+        case EAXREVERB_REFLECTIONSPAN: call.set_value<Exception>(props.vReflectionsPan); break;
+        case EAXREVERB_REVERB: call.set_value<Exception>(props.lReverb); break;
+        case EAXREVERB_REVERBDELAY: call.set_value<Exception>(props.flReverbDelay); break;
+        case EAXREVERB_REVERBPAN: call.set_value<Exception>(props.vReverbPan); break;
+        case EAXREVERB_ECHOTIME: call.set_value<Exception>(props.flEchoTime); break;
+        case EAXREVERB_ECHODEPTH: call.set_value<Exception>(props.flEchoDepth); break;
+        case EAXREVERB_MODULATIONTIME: call.set_value<Exception>(props.flModulationTime); break;
+        case EAXREVERB_MODULATIONDEPTH: call.set_value<Exception>(props.flModulationDepth); break;
+        case EAXREVERB_AIRABSORPTIONHF: call.set_value<Exception>(props.flAirAbsorptionHF); break;
+        case EAXREVERB_HFREFERENCE: call.set_value<Exception>(props.flHFReference); break;
+        case EAXREVERB_LFREFERENCE: call.set_value<Exception>(props.flLFReference); break;
+        case EAXREVERB_ROOMROLLOFFFACTOR: call.set_value<Exception>(props.flRoomRolloffFactor); break;
+        case EAXREVERB_FLAGS: call.set_value<Exception>(props.ulFlags); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxReverbEffect::get()
+void EaxReverbEffect::get(const EaxCall& call)
 {
-    const auto version = call_.get_version();
+    const auto version = call.get_version();
 
     switch (version)
     {
-        case 1: get1(state1_.i); break;
-        case 2: get2(state2_.i); break;
-        case 3: get3(state3_.i); break;
-        case 4: get3(state4_.i); break;
-        case 5: get3(state5_.i); break;
+        case 1: get1(call, state1_.i); break;
+        case 2: get2(call, state2_.i); break;
+        case 3: get3(call, state3_.i); break;
+        case 4: get3(call, state4_.i); break;
+        case 5: get3(call, state5_.i); break;
         default: fail_unknown_version();
     }
 
-    commit_version_ = version;
+    version_ = version;
 }
 
 /*[[nodiscard]]*/ bool EaxReverbEffect::commit()
 {
-    if ((commit_version_ == 1 && state1_.i == state1_.d) ||
-        (commit_version_ == 2 && state2_.i == state2_.d))
+    if ((version_ == 1 && state1_.i == state1_.d) ||
+        (version_ == 2 && state2_.i == state2_.d))
     {
         return false;
     }
 
     const auto props = props_;
 
-    switch (commit_version_)
+    switch (version_)
     {
         case 1:
             state1_.i = state1_.d;
@@ -1743,84 +1742,84 @@ void EaxReverbEffect::get()
     return is_dirty;
 }
 
-void EaxReverbEffect::set1(Props1& props)
+void EaxReverbEffect::set1(const EaxCall& call, Props1& props)
 {
-    switch (call_.get_property_id())
+    switch (call.get_property_id())
     {
-        case DSPROPERTY_EAX_ALL: defer<AllValidator1>(props); break;
-        case DSPROPERTY_EAX_ENVIRONMENT: defer<EnvironmentValidator1>(props.environment); break;
-        case DSPROPERTY_EAX_VOLUME: defer<VolumeValidator>(props.fVolume); break;
-        case DSPROPERTY_EAX_DECAYTIME: defer<DecayTimeValidator>(props.fDecayTime_sec); break;
-        case DSPROPERTY_EAX_DAMPING: defer<DampingValidator>(props.fDamping); break;
+        case DSPROPERTY_EAX_ALL: defer<AllValidator1>(call, props); break;
+        case DSPROPERTY_EAX_ENVIRONMENT: defer<EnvironmentValidator1>(call, props.environment); break;
+        case DSPROPERTY_EAX_VOLUME: defer<VolumeValidator>(call, props.fVolume); break;
+        case DSPROPERTY_EAX_DECAYTIME: defer<DecayTimeValidator>(call, props.fDecayTime_sec); break;
+        case DSPROPERTY_EAX_DAMPING: defer<DampingValidator>(call, props.fDamping); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxReverbEffect::set2(Props2& props)
+void EaxReverbEffect::set2(const EaxCall& call, Props2& props)
 {
-    switch (call_.get_property_id())
+    switch (call.get_property_id())
     {
         case DSPROPERTY_EAX20LISTENER_NONE:
             break;
 
         case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS:
-            defer<AllValidator2>(props);
+            defer<AllValidator2>(call, props);
             break;
 
         case DSPROPERTY_EAX20LISTENER_ROOM:
-            defer<RoomValidator>(props.lRoom);
+            defer<RoomValidator>(call, props.lRoom);
             break;
 
         case DSPROPERTY_EAX20LISTENER_ROOMHF:
-            defer<RoomHFValidator>(props.lRoomHF);
+            defer<RoomHFValidator>(call, props.lRoomHF);
             break;
 
         case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR:
-            defer<RoomRolloffFactorValidator>(props.flRoomRolloffFactor);
+            defer<RoomRolloffFactorValidator>(call, props.flRoomRolloffFactor);
             break;
 
         case DSPROPERTY_EAX20LISTENER_DECAYTIME:
-            defer<DecayTimeValidator>(props.flDecayTime);
+            defer<DecayTimeValidator>(call, props.flDecayTime);
             break;
 
         case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO:
-            defer<DecayHFRatioValidator>(props.flDecayHFRatio);
+            defer<DecayHFRatioValidator>(call, props.flDecayHFRatio);
             break;
 
         case DSPROPERTY_EAX20LISTENER_REFLECTIONS:
-            defer<ReflectionsValidator>(props.lReflections);
+            defer<ReflectionsValidator>(call, props.lReflections);
             break;
 
         case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY:
-            defer<ReflectionsDelayValidator>(props.flReverbDelay);
+            defer<ReflectionsDelayValidator>(call, props.flReverbDelay);
             break;
 
         case DSPROPERTY_EAX20LISTENER_REVERB:
-            defer<ReverbValidator>(props.lReverb);
+            defer<ReverbValidator>(call, props.lReverb);
             break;
 
         case DSPROPERTY_EAX20LISTENER_REVERBDELAY:
-            defer<ReverbDelayValidator>(props.flReverbDelay);
+            defer<ReverbDelayValidator>(call, props.flReverbDelay);
             break;
 
         case DSPROPERTY_EAX20LISTENER_ENVIRONMENT:
-            defer<EnvironmentValidator1, EnvironmentDeferrer2>(props, props.dwEnvironment);
+            defer<EnvironmentValidator1, EnvironmentDeferrer2>(call, props, props.dwEnvironment);
             break;
 
         case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE:
-            defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer2>(props, props.flEnvironmentSize);
+            defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer2>(call, props, props.flEnvironmentSize);
             break;
 
         case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION:
-            defer<EnvironmentDiffusionValidator>(props.flEnvironmentDiffusion);
+            defer<EnvironmentDiffusionValidator>(call, props.flEnvironmentDiffusion);
             break;
 
         case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF:
-            defer<AirAbsorptionHFValidator>(props.flAirAbsorptionHF);
+            defer<AirAbsorptionHFValidator>(call, props.flAirAbsorptionHF);
             break;
 
         case DSPROPERTY_EAX20LISTENER_FLAGS:
-            defer<FlagsValidator2>(props.dwFlags);
+            defer<FlagsValidator2>(call, props.dwFlags);
             break;
 
         default:
@@ -1828,111 +1827,111 @@ void EaxReverbEffect::set2(Props2& props)
     }
 }
 
-void EaxReverbEffect::set3(Props3& props)
+void EaxReverbEffect::set3(const EaxCall& call, Props3& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXREVERB_NONE:
             break;
 
         case EAXREVERB_ALLPARAMETERS:
-            defer<AllValidator3>(props);
+            defer<AllValidator3>(call, props);
             break;
 
         case EAXREVERB_ENVIRONMENT:
-            defer<EnvironmentValidator3, EnvironmentDeferrer3>(props, props.ulEnvironment);
+            defer<EnvironmentValidator3, EnvironmentDeferrer3>(call, props, props.ulEnvironment);
             break;
 
         case EAXREVERB_ENVIRONMENTSIZE:
-            defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer3>(props, props.flEnvironmentSize);
+            defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer3>(call, props, props.flEnvironmentSize);
             break;
 
         case EAXREVERB_ENVIRONMENTDIFFUSION:
-            defer3<EnvironmentDiffusionValidator>(props, props.flEnvironmentDiffusion);
+            defer3<EnvironmentDiffusionValidator>(call, props, props.flEnvironmentDiffusion);
             break;
 
         case EAXREVERB_ROOM:
-            defer3<RoomValidator>(props, props.lRoom);
+            defer3<RoomValidator>(call, props, props.lRoom);
             break;
 
         case EAXREVERB_ROOMHF:
-            defer3<RoomHFValidator>(props, props.lRoomHF);
+            defer3<RoomHFValidator>(call, props, props.lRoomHF);
             break;
 
         case EAXREVERB_ROOMLF:
-            defer3<RoomLFValidator>(props, props.lRoomLF);
+            defer3<RoomLFValidator>(call, props, props.lRoomLF);
             break;
 
         case EAXREVERB_DECAYTIME:
-            defer3<DecayTimeValidator>(props, props.flDecayTime);
+            defer3<DecayTimeValidator>(call, props, props.flDecayTime);
             break;
 
         case EAXREVERB_DECAYHFRATIO:
-            defer3<DecayHFRatioValidator>(props, props.flDecayHFRatio);
+            defer3<DecayHFRatioValidator>(call, props, props.flDecayHFRatio);
             break;
 
         case EAXREVERB_DECAYLFRATIO:
-            defer3<DecayLFRatioValidator>(props, props.flDecayLFRatio);
+            defer3<DecayLFRatioValidator>(call, props, props.flDecayLFRatio);
             break;
 
         case EAXREVERB_REFLECTIONS:
-            defer3<ReflectionsValidator>(props, props.lReflections);
+            defer3<ReflectionsValidator>(call, props, props.lReflections);
             break;
 
         case EAXREVERB_REFLECTIONSDELAY:
-            defer3<ReflectionsDelayValidator>(props, props.flReflectionsDelay);
+            defer3<ReflectionsDelayValidator>(call, props, props.flReflectionsDelay);
             break;
 
         case EAXREVERB_REFLECTIONSPAN:
-            defer3<VectorValidator>(props, props.vReflectionsPan);
+            defer3<VectorValidator>(call, props, props.vReflectionsPan);
             break;
 
         case EAXREVERB_REVERB:
-            defer3<ReverbValidator>(props, props.lReverb);
+            defer3<ReverbValidator>(call, props, props.lReverb);
             break;
 
         case EAXREVERB_REVERBDELAY:
-            defer3<ReverbDelayValidator>(props, props.flReverbDelay);
+            defer3<ReverbDelayValidator>(call, props, props.flReverbDelay);
             break;
 
         case EAXREVERB_REVERBPAN:
-            defer3<VectorValidator>(props, props.vReverbPan);
+            defer3<VectorValidator>(call, props, props.vReverbPan);
             break;
 
         case EAXREVERB_ECHOTIME:
-            defer3<EchoTimeValidator>(props, props.flEchoTime);
+            defer3<EchoTimeValidator>(call, props, props.flEchoTime);
             break;
 
         case EAXREVERB_ECHODEPTH:
-            defer3<EchoDepthValidator>(props, props.flEchoDepth);
+            defer3<EchoDepthValidator>(call, props, props.flEchoDepth);
             break;
 
         case EAXREVERB_MODULATIONTIME:
-            defer3<ModulationTimeValidator>(props, props.flModulationTime);
+            defer3<ModulationTimeValidator>(call, props, props.flModulationTime);
             break;
 
         case EAXREVERB_MODULATIONDEPTH:
-            defer3<ModulationDepthValidator>(props, props.flModulationDepth);
+            defer3<ModulationDepthValidator>(call, props, props.flModulationDepth);
             break;
 
         case EAXREVERB_AIRABSORPTIONHF:
-            defer3<AirAbsorptionHFValidator>(props, props.flAirAbsorptionHF);
+            defer3<AirAbsorptionHFValidator>(call, props, props.flAirAbsorptionHF);
             break;
 
         case EAXREVERB_HFREFERENCE:
-            defer3<HFReferenceValidator>(props, props.flHFReference);
+            defer3<HFReferenceValidator>(call, props, props.flHFReference);
             break;
 
         case EAXREVERB_LFREFERENCE:
-            defer3<LFReferenceValidator>(props, props.flLFReference);
+            defer3<LFReferenceValidator>(call, props, props.flLFReference);
             break;
 
         case EAXREVERB_ROOMROLLOFFFACTOR:
-            defer3<RoomRolloffFactorValidator>(props, props.flRoomRolloffFactor);
+            defer3<RoomRolloffFactorValidator>(call, props, props.flRoomRolloffFactor);
             break;
 
         case EAXREVERB_FLAGS:
-            defer3<FlagsValidator3>(props, props.ulFlags);
+            defer3<FlagsValidator3>(call, props, props.ulFlags);
             break;
 
         default:
@@ -1940,21 +1939,21 @@ void EaxReverbEffect::set3(Props3& props)
     }
 }
 
-void EaxReverbEffect::set()
+void EaxReverbEffect::set(const EaxCall& call)
 {
-    const auto version = call_.get_version();
+    const auto version = call.get_version();
 
     switch (version)
     {
-        case 1: set1(state1_.d); break;
-        case 2: set2(state2_.d); break;
-        case 3: set3(state3_.d); break;
-        case 4: set3(state4_.d); break;
-        case 5: set3(state5_.d); break;
+        case 1: set1(call, state1_.d); break;
+        case 2: set2(call, state2_.d); break;
+        case 3: set3(call, state3_.d); break;
+        case 4: set3(call, state4_.d); break;
+        case 5: set3(call, state5_.d); break;
         default: fail_unknown_version();
     }
 
-    commit_version_ = version;
+    version_ = version;
 }
 
 void EaxReverbEffect::translate(const Props1& src, Props3& dst) noexcept

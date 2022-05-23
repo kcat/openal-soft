@@ -192,8 +192,8 @@ private:
     void set_efx_peak_gain() noexcept;
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& props) override;
 }; // EaxAutoWahEffect
 
@@ -249,30 +249,30 @@ void EaxAutoWahEffect::set_efx_defaults()
     set_efx_peak_gain();
 }
 
-void EaxAutoWahEffect::get(const Props& props)
+void EaxAutoWahEffect::get(const EaxCall& call, const Props& props)
 {
-    switch (call_.get_property_id())
+    switch (call.get_property_id())
     {
         case EAXAUTOWAH_NONE: break;
-        case EAXAUTOWAH_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXAUTOWAH_ATTACKTIME: call_.set_value<Exception>(props.flAttackTime); break;
-        case EAXAUTOWAH_RELEASETIME: call_.set_value<Exception>(props.flReleaseTime); break;
-        case EAXAUTOWAH_RESONANCE: call_.set_value<Exception>(props.lResonance); break;
-        case EAXAUTOWAH_PEAKLEVEL: call_.set_value<Exception>(props.lPeakLevel); break;
+        case EAXAUTOWAH_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXAUTOWAH_ATTACKTIME: call.set_value<Exception>(props.flAttackTime); break;
+        case EAXAUTOWAH_RELEASETIME: call.set_value<Exception>(props.flReleaseTime); break;
+        case EAXAUTOWAH_RESONANCE: call.set_value<Exception>(props.lResonance); break;
+        case EAXAUTOWAH_PEAKLEVEL: call.set_value<Exception>(props.lPeakLevel); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxAutoWahEffect::set(Props& props)
+void EaxAutoWahEffect::set(const EaxCall& call, Props& props)
 {
-    switch (call_.get_property_id())
+    switch (call.get_property_id())
     {
         case EAXAUTOWAH_NONE: break;
-        case EAXAUTOWAH_ALLPARAMETERS: defer<AllValidator>(props); break;
-        case EAXAUTOWAH_ATTACKTIME: defer<AttackTimeValidator>(props.flAttackTime); break;
-        case EAXAUTOWAH_RELEASETIME: defer<ReleaseTimeValidator>(props.flReleaseTime); break;
-        case EAXAUTOWAH_RESONANCE: defer<ResonanceValidator>(props.lResonance); break;
-        case EAXAUTOWAH_PEAKLEVEL: defer<PeakLevelValidator>(props.lPeakLevel); break;
+        case EAXAUTOWAH_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+        case EAXAUTOWAH_ATTACKTIME: defer<AttackTimeValidator>(call, props.flAttackTime); break;
+        case EAXAUTOWAH_RELEASETIME: defer<ReleaseTimeValidator>(call, props.flReleaseTime); break;
+        case EAXAUTOWAH_RESONANCE: defer<ResonanceValidator>(call, props.lResonance); break;
+        case EAXAUTOWAH_PEAKLEVEL: defer<PeakLevelValidator>(call, props.lPeakLevel); break;
         default: fail_unknown_property_id();
     }
 }

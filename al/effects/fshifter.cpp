@@ -201,8 +201,8 @@ private:
     void set_efx_right_direction();
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& props) override;
 }; // EaxFrequencyShifterEffect
 
@@ -255,28 +255,28 @@ void EaxFrequencyShifterEffect::set_efx_defaults()
     set_efx_right_direction();
 }
 
-void EaxFrequencyShifterEffect::get(const Props& props)
+void EaxFrequencyShifterEffect::get(const EaxCall& call, const Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXFREQUENCYSHIFTER_NONE: break;
-        case EAXFREQUENCYSHIFTER_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXFREQUENCYSHIFTER_FREQUENCY: call_.set_value<Exception>(props.flFrequency); break;
-        case EAXFREQUENCYSHIFTER_LEFTDIRECTION: call_.set_value<Exception>(props.ulLeftDirection); break;
-        case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: call_.set_value<Exception>(props.ulRightDirection); break;
+        case EAXFREQUENCYSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXFREQUENCYSHIFTER_FREQUENCY: call.set_value<Exception>(props.flFrequency); break;
+        case EAXFREQUENCYSHIFTER_LEFTDIRECTION: call.set_value<Exception>(props.ulLeftDirection); break;
+        case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: call.set_value<Exception>(props.ulRightDirection); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxFrequencyShifterEffect::set(Props& props)
+void EaxFrequencyShifterEffect::set(const EaxCall& call, Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXFREQUENCYSHIFTER_NONE: break;
-        case EAXFREQUENCYSHIFTER_ALLPARAMETERS: defer<AllValidator>(props); break;
-        case EAXFREQUENCYSHIFTER_FREQUENCY: defer<FrequencyValidator>(props.flFrequency); break;
-        case EAXFREQUENCYSHIFTER_LEFTDIRECTION: defer<LeftDirectionValidator>(props.ulLeftDirection); break;
-        case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: defer<RightDirectionValidator>(props.ulRightDirection); break;
+        case EAXFREQUENCYSHIFTER_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+        case EAXFREQUENCYSHIFTER_FREQUENCY: defer<FrequencyValidator>(call, props.flFrequency); break;
+        case EAXFREQUENCYSHIFTER_LEFTDIRECTION: defer<LeftDirectionValidator>(call, props.ulLeftDirection); break;
+        case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: defer<RightDirectionValidator>(call, props.ulRightDirection); break;
         default: fail_unknown_property_id();
     }
 }

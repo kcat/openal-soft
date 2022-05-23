@@ -208,8 +208,8 @@ private:
     void set_efx_waveform();
     void set_efx_defaults() override;
 
-    void get(const Props& props) override;
-    void set(Props& props) override;
+    void get(const EaxCall& call, const Props& props) override;
+    void set(const EaxCall& call, Props& props) override;
     bool commit_props(const Props& props) override;
 }; // EaxRingModulatorEffect
 
@@ -258,28 +258,28 @@ void EaxRingModulatorEffect::set_efx_defaults()
     set_efx_waveform();
 }
 
-void EaxRingModulatorEffect::get(const Props& props)
+void EaxRingModulatorEffect::get(const EaxCall& call, const Props& props)
 {
-    switch(call_.get_property_id())
+    switch(call.get_property_id())
     {
         case EAXRINGMODULATOR_NONE: break;
-        case EAXRINGMODULATOR_ALLPARAMETERS: call_.set_value<Exception>(props); break;
-        case EAXRINGMODULATOR_FREQUENCY: call_.set_value<Exception>(props.flFrequency); break;
-        case EAXRINGMODULATOR_HIGHPASSCUTOFF: call_.set_value<Exception>(props.flHighPassCutOff); break;
-        case EAXRINGMODULATOR_WAVEFORM: call_.set_value<Exception>(props.ulWaveform); break;
+        case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
+        case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.flFrequency); break;
+        case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.flHighPassCutOff); break;
+        case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.ulWaveform); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxRingModulatorEffect::set(Props& props)
+void EaxRingModulatorEffect::set(const EaxCall& call, Props& props)
 {
-    switch (call_.get_property_id())
+    switch (call.get_property_id())
     {
         case EAXRINGMODULATOR_NONE: break;
-        case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(props); break;
-        case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(props.flFrequency); break;
-        case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(props.flHighPassCutOff); break;
-        case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(props.ulWaveform); break;
+        case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+        case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(call, props.flFrequency); break;
+        case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(call, props.flHighPassCutOff); break;
+        case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(call, props.ulWaveform); break;
         default: fail_unknown_property_id();
     }
 }

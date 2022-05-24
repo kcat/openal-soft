@@ -10,7 +10,7 @@
 #include "AL/efx.h"
 
 
-EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type)
+EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type, const EaxCall& call)
 {
 #define EAX_PREFIX "[EAX_MAKE_EAX_EFFECT] "
 
@@ -20,40 +20,40 @@ EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type)
             return eax_create_eax_null_effect();
 
         case AL_EFFECT_CHORUS:
-            return eax_create_eax_chorus_effect();
+            return eax_create_eax_chorus_effect(call);
 
         case AL_EFFECT_DISTORTION:
-            return eax_create_eax_distortion_effect();
+            return eax_create_eax_distortion_effect(call);
 
         case AL_EFFECT_ECHO:
-            return eax_create_eax_echo_effect();
+            return eax_create_eax_echo_effect(call);
 
         case AL_EFFECT_FLANGER:
-            return eax_create_eax_flanger_effect();
+            return eax_create_eax_flanger_effect(call);
 
         case AL_EFFECT_FREQUENCY_SHIFTER:
-            return eax_create_eax_frequency_shifter_effect();
+            return eax_create_eax_frequency_shifter_effect(call);
 
         case AL_EFFECT_VOCAL_MORPHER:
-            return eax_create_eax_vocal_morpher_effect();
+            return eax_create_eax_vocal_morpher_effect(call);
 
         case AL_EFFECT_PITCH_SHIFTER:
-            return eax_create_eax_pitch_shifter_effect();
+            return eax_create_eax_pitch_shifter_effect(call);
 
         case AL_EFFECT_RING_MODULATOR:
-            return eax_create_eax_ring_modulator_effect();
+            return eax_create_eax_ring_modulator_effect(call);
 
         case AL_EFFECT_AUTOWAH:
-            return eax_create_eax_auto_wah_effect();
+            return eax_create_eax_auto_wah_effect(call);
 
         case AL_EFFECT_COMPRESSOR:
-            return eax_create_eax_compressor_effect();
+            return eax_create_eax_compressor_effect(call);
 
         case AL_EFFECT_EQUALIZER:
-            return eax_create_eax_equalizer_effect();
+            return eax_create_eax_equalizer_effect(call);
 
         case AL_EFFECT_EAXREVERB:
-            return eax_create_eax_reverb_effect();
+            return eax_create_eax_reverb_effect(call);
 
         default:
             assert(false && "Unsupported AL effect type.");

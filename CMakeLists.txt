@@ -800,9 +800,8 @@ if (ALSOFT_EAX)
         ${OPENAL_OBJS}
         al/eax/api.cpp
         al/eax/api.h
-        al/eax/eax_call.cpp
-        al/eax/eax_call.h
-        al/eax/effect.cpp
+        al/eax/call.cpp
+        al/eax/call.h
         al/eax/effect.h
         al/eax/exception.cpp
         al/eax/exception.h
@@ -814,7 +813,6 @@ if (ALSOFT_EAX)
         al/eax/globals.h
         al/eax/utils.cpp
         al/eax/utils.h
-        al/eax/x_ram.cpp
         al/eax/x_ram.h
 )
 endif ()

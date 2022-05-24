@@ -100,44 +100,34 @@ const EffectProps NullEffectProps{genDefaultProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxNullEffect final :
-    public EaxEffect
-{
+class EaxNullEffect final : public EaxEffect {
 public:
-    EaxNullEffect();
+    EaxNullEffect() noexcept;
 
-    void dispatch(const EaxEaxCall& eax_call) override;
-
-    // [[nodiscard]]
-    bool apply_deferred() override;
+    void dispatch(const EaxCall& call) override;
+    /*[[nodiscard]]*/ bool commit() override;
 }; // EaxNullEffect
 
 
-class EaxNullEffectException :
-    public EaxException
+class EaxNullEffectException : public EaxException
 {
 public:
-    explicit EaxNullEffectException(
-        const char* message)
-        :
-        EaxException{"EAX_NULL_EFFECT", message}
-    {
-    }
+    explicit EaxNullEffectException(const char* message)
+        : EaxException{"EAX_NULL_EFFECT", message}
+    {}
 }; // EaxNullEffectException
 
-
-EaxNullEffect::EaxNullEffect()
+EaxNullEffect::EaxNullEffect() noexcept
     : EaxEffect{AL_EFFECT_NULL}
-{
-}
+{}
 
-void EaxNullEffect::dispatch(const EaxEaxCall& eax_call)
+void EaxNullEffect::dispatch(const EaxCall& call)
 {
-    if(eax_call.get_property_id() != 0)
+    if(call.get_property_id() != 0)
         throw EaxNullEffectException{"Unsupported property id."};
 }
 
-bool EaxNullEffect::apply_deferred()
+bool EaxNullEffect::commit()
 {
     return false;
 }

@@ -20,7 +20,7 @@
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "al/eax/eax_call.h"
+#include "al/eax/call.h"
 #include "al/eax/fx_slot_index.h"
 #include "al/eax/fx_slots.h"
 #include "al/eax/utils.h"
@@ -297,7 +297,7 @@ private:
 
     void eax_initialize_extensions();
 
-    void eax_initialize();
+    void eax_initialize(const EaxCall& call);
 
 
     bool eax_has_no_default_effect_slot() const noexcept;
@@ -326,45 +326,33 @@ private:
     void eax_initialize_sources();
 
 
-    void eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept;
+    void eax_unlock_legacy_fx_slots(const EaxCall& call) noexcept;
 
 
-    void eax_dispatch_fx_slot(
-        const EaxEaxCall& eax_call);
+    void eax_dispatch_fx_slot(const EaxCall& call);
 
-    void eax_dispatch_source(
-        const EaxEaxCall& eax_call);
+    void eax_dispatch_source(const EaxCall& call);
 
 
-    void eax_get_primary_fx_slot_id(
-        const EaxEaxCall& eax_call);
+    void eax_get_primary_fx_slot_id(const EaxCall& call);
 
-    void eax_get_distance_factor(
-        const EaxEaxCall& eax_call);
+    void eax_get_distance_factor(const EaxCall& call);
 
-    void eax_get_air_absorption_hf(
-        const EaxEaxCall& eax_call);
+    void eax_get_air_absorption_hf(const EaxCall& call);
 
-    void eax_get_hf_reference(
-        const EaxEaxCall& eax_call);
+    void eax_get_hf_reference(const EaxCall& call);
 
-    void eax_get_last_error(
-        const EaxEaxCall& eax_call);
+    void eax_get_last_error(const EaxCall& call);
 
-    void eax_get_speaker_config(
-        const EaxEaxCall& eax_call);
+    void eax_get_speaker_config(const EaxCall& call);
 
-    void eax_get_session(
-        const EaxEaxCall& eax_call);
+    void eax_get_session(const EaxCall& call);
 
-    void eax_get_macro_fx_factor(
-        const EaxEaxCall& eax_call);
+    void eax_get_macro_fx_factor(const EaxCall& call);
 
-    void eax_get_context_all(
-        const EaxEaxCall& eax_call);
+    void eax_get_context_all(const EaxCall& call);
 
-    void eax_get(
-        const EaxEaxCall& eax_call);
+    void eax_get(const EaxCall& call);
 
 
     void eax_set_primary_fx_slot_id();
@@ -379,7 +367,7 @@ private:
 
     void eax_set_context();
 
-    void eax_initialize_fx_slots();
+    void eax_initialize_fx_slots(const EaxCall& call);
 
 
     void eax_update_sources();
@@ -441,29 +429,21 @@ private:
         const EAX50CONTEXTPROPERTIES& context_all);
 
 
-    void eax_defer_context_all(
-        const EaxEaxCall& eax_call);
+    void eax_defer_context_all(const EaxCall& call);
 
-    void eax_defer_primary_fx_slot_id(
-        const EaxEaxCall& eax_call);
+    void eax_defer_primary_fx_slot_id(const EaxCall& call);
 
-    void eax_defer_distance_factor(
-        const EaxEaxCall& eax_call);
+    void eax_defer_distance_factor(const EaxCall& call);
 
-    void eax_defer_air_absorption_hf(
-        const EaxEaxCall& eax_call);
+    void eax_defer_air_absorption_hf(const EaxCall& call);
 
-    void eax_defer_hf_reference(
-        const EaxEaxCall& eax_call);
+    void eax_defer_hf_reference(const EaxCall& call);
 
-    void eax_set_session(
-        const EaxEaxCall& eax_call);
+    void eax_set_session(const EaxCall& call);
 
-    void eax_defer_macro_fx_factor(
-        const EaxEaxCall& eax_call);
+    void eax_defer_macro_fx_factor(const EaxCall& call);
 
-    void eax_set(
-        const EaxEaxCall& eax_call);
+    void eax_set(const EaxCall& call);
 
     void eax_apply_deferred();
 #endif // ALSOFT_EAX

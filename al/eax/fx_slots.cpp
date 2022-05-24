@@ -29,9 +29,10 @@ public:
 
 
 void EaxFxSlots::initialize(
+    const EaxCall& call,
     ALCcontext& al_context)
 {
-    initialize_fx_slots(al_context);
+    initialize_fx_slots(call, al_context);
 }
 
 void EaxFxSlots::uninitialize() noexcept
@@ -70,6 +71,7 @@ void EaxFxSlots::fail(
 }
 
 void EaxFxSlots::initialize_fx_slots(
+    const EaxCall& call,
     ALCcontext& al_context)
 {
     auto fx_slot_index = EaxFxSlotIndexValue{};
@@ -77,7 +79,7 @@ void EaxFxSlots::initialize_fx_slots(
     for (auto& fx_slot : fx_slots_)
     {
         fx_slot = eax_create_al_effect_slot(al_context);
-        fx_slot->eax_initialize(al_context, fx_slot_index);
+        fx_slot->eax_initialize(call, al_context, fx_slot_index);
         fx_slot_index += 1;
     }
 }

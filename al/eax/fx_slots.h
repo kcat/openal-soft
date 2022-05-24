@@ -7,6 +7,7 @@
 #include "al/auxeffectslot.h"
 
 #include "api.h"
+#include "call.h"
 #include "fx_slot_index.h"
 
 
@@ -14,6 +15,7 @@ class EaxFxSlots
 {
 public:
     void initialize(
+        const EaxCall& call,
         ALCcontext& al_context);
 
     void uninitialize() noexcept;
@@ -46,6 +48,7 @@ private:
         const char* message);
 
     void initialize_fx_slots(
+        const EaxCall& call,
         ALCcontext& al_context);
 }; // EaxFxSlots
 

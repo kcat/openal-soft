@@ -1427,14 +1427,14 @@ void ReverbState::earlyFaded(const size_t offset, const size_t todo, const float
 
 void Modulation::calcDelays(size_t todo)
 {
-    constexpr float inv_scale{MOD_FRACONE / al::numbers::pi_v<float> / 2.0f};
+    constexpr float mod_scale{al::numbers::pi_v<float> * 2.0f / MOD_FRACONE};
     uint idx{Index};
     const uint step{Step};
     const float depth{Depth[0]};
     for(size_t i{0};i < todo;++i)
     {
         idx += step;
-        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) / inv_scale)};
+        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) * mod_scale)};
         ModDelays[i] = (lfo+1.0f) * depth;
     }
     Index = idx;
@@ -1442,7 +1442,7 @@ void Modulation::calcDelays(size_t todo)
 
 void Modulation::calcFadedDelays(size_t todo, float fadeCount, float fadeStep)
 {
-    constexpr float inv_scale{MOD_FRACONE / al::numbers::pi_v<float> / 2.0f};
+    constexpr float mod_scale{al::numbers::pi_v<float> * 2.0f / MOD_FRACONE};
     uint idx{Index};
     const uint step{Step};
     const float depth{Depth[0]};
@@ -1451,7 +1451,7 @@ void Modulation::calcFadedDelays(size_t todo, float fadeCount, float fadeStep)
     {
         fadeCount += 1.0f;
         idx += step;
-        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) / inv_scale)};
+        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) * mod_scale)};
         ModDelays[i] = (lfo+1.0f) * (depth + depthStep*fadeCount);
     }
     Index = idx;

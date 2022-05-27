@@ -3399,6 +3399,13 @@ START_API_FUNC
             deviceName = nullptr;
     }
 
+    const uint DefaultSends{
+#ifdef ALSOFT_EAX
+        eax_g_is_enabled ? uint{EAX_MAX_FXSLOTS} :
+#endif // ALSOFT_EAX
+        DEFAULT_SENDS
+    };
+
     DeviceRef device{new ALCdevice{DeviceType::Playback}};
 
     /* Set output format */
@@ -3410,11 +3417,7 @@ START_API_FUNC
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
-    device->NumAuxSends = DEFAULT_SENDS;
-#ifdef ALSOFT_EAX
-    if(eax_g_is_enabled)
-        device->NumAuxSends = EAX_MAX_FXSLOTS;
-#endif // ALSOFT_EAX
+    device->NumAuxSends = DefaultSends;
 
     try {
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
@@ -3451,8 +3454,10 @@ START_API_FUNC
         device->AuxiliaryEffectSlotMax = minu(slotsmax, INT_MAX);
 
     if(auto sendsopt = device->configValue<int>(nullptr, "sends"))
-        device->NumAuxSends = minu(DEFAULT_SENDS,
-            static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
+    {
+        const int max_sends{clampi(*sendsopt, 0, MAX_SENDS)};
+        device->NumAuxSends = minu(DefaultSends, static_cast<uint>(max_sends));
+    }
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -3717,11 +3722,18 @@ START_API_FUNC
         return nullptr;
     }
 
+    const uint DefaultSends{
+#ifdef ALSOFT_EAX
+        eax_g_is_enabled ? uint{EAX_MAX_FXSLOTS} :
+#endif // ALSOFT_EAX
+        DEFAULT_SENDS
+    };
+
     DeviceRef device{new ALCdevice{DeviceType::Loopback}};
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
-    device->NumAuxSends = DEFAULT_SENDS;
+    device->NumAuxSends = DefaultSends;
 
     //Set output format
     device->BufferSize = 0;
@@ -3738,8 +3750,10 @@ START_API_FUNC
         device->AuxiliaryEffectSlotMax = minu(slotsmax, INT_MAX);
 
     if(auto sendsopt = ConfigValueInt(nullptr, nullptr, "sends"))
-        device->NumAuxSends = minu(DEFAULT_SENDS,
-            static_cast<uint>(clampi(*sendsopt, 0, MAX_SENDS)));
+    {
+        const int max_sends{clampi(*sendsopt, 0, MAX_SENDS)};
+        device->NumAuxSends = minu(DefaultSends, static_cast<uint>(max_sends));
+    }
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;

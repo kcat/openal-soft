@@ -1,3 +1,16 @@
+openal-soft-1.22.1:
+
+    Fixed CoreAudio capture.
+
+    Fixed air absorption strength.
+
+    Fixed some compilation issues on MinGW.
+
+    Added checks for the runtime PipeWire version. The same or newer version
+    than is used for building is needed at runtime.
+
+    Separated 3D7.1 into its own speaker configuration.
+
 openal-soft-1.22.0:
 
     Implemented the ALC_SOFT_reopen_device extension. This allows for moving

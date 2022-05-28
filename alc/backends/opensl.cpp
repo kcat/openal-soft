@@ -881,7 +881,6 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 {
     const uint update_size{mDevice->UpdateSize};
     const uint chunk_size{update_size * mFrameSize};
-    const auto silence = (mDevice->FmtType == DevFmtUByte) ? al::byte{0x80} : al::byte{0};
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
@@ -910,39 +909,52 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 
         i += rem;
     }
-    mRing->readAdvance(adv_count);
 
     SLAndroidSimpleBufferQueueItf bufferQueue{};
-    if LIKELY(mDevice->Connected.load(std::memory_order_acquire))
+    if(likely(mDevice->Connected.load(std::memory_order_acquire)))
     {
         const SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
             &bufferQueue)};
         PRINTERR(result, "recordObj->GetInterface");
-        if UNLIKELY(SL_RESULT_SUCCESS != result)
+        if(unlikely(SL_RESULT_SUCCESS != result))
         {
             mDevice->handleDisconnect("Failed to get capture buffer queue: 0x%08x", result);
             bufferQueue = nullptr;
         }
     }
+    if(unlikely(!bufferQueue) || adv_count == 0)
+        return;
 
-    if LIKELY(bufferQueue)
+    /* For each buffer chunk that was fully read, queue another writable buffer
+     * chunk to keep the OpenSL queue full. This is rather convulated, as a
+     * result of the ring buffer holding more elements than are writable at a
+     * given time. The end of the write vector increments when the read pointer
+     * advances, which will "expose" a previously unwritable element. So for
+     * every element that we've finished reading, we queue that many elements
+     * from the end of the write vector.
+     */
+    mRing->readAdvance(adv_count);
+
+    SLresult result{SL_RESULT_SUCCESS};
+    auto wdata = mRing->getWriteVector();
+    if(likely(adv_count > wdata.second.len))
     {
-        SLresult result{SL_RESULT_SUCCESS};
-        auto wdata = mRing->getWriteVector();
-        std::fill_n(wdata.first.buf, wdata.first.len*chunk_size, silence);
-        for(size_t i{0u};i < wdata.first.len && SL_RESULT_SUCCESS == result;i++)
+        auto len1 = std::min(wdata.first.len, adv_count-wdata.second.len);
+        auto buf1 = wdata.first.buf + chunk_size*(wdata.first.len-len1);
+        for(size_t i{0u};i < len1 && SL_RESULT_SUCCESS == result;i++)
         {
-            result = VCALL(bufferQueue,Enqueue)(wdata.first.buf + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(buf1 + chunk_size*i, chunk_size);
             PRINTERR(result, "bufferQueue->Enqueue");
         }
-        if(wdata.second.len > 0)
+    }
+    if(wdata.second.len > 0)
+    {
+        auto len2 = std::min(wdata.second.len, adv_count);
+        auto buf2 = wdata.second.buf + chunk_size*(wdata.second.len-len2);
+        for(size_t i{0u};i < len2 && SL_RESULT_SUCCESS == result;i++)
         {
-            std::fill_n(wdata.second.buf, wdata.second.len*chunk_size, silence);
-            for(size_t i{0u};i < wdata.second.len && SL_RESULT_SUCCESS == result;i++)
-            {
-                result = VCALL(bufferQueue,Enqueue)(wdata.second.buf + chunk_size*i, chunk_size);
-                PRINTERR(result, "bufferQueue->Enqueue");
-            }
+            result = VCALL(bufferQueue,Enqueue)(buf2 + chunk_size*i, chunk_size);
+            PRINTERR(result, "bufferQueue->Enqueue");
         }
     }
 }

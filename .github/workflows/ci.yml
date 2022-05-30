@@ -11,7 +11,17 @@ jobs:
       matrix:
         config:
         - {
-            name: "Visual Studio 64-bit",
+            name: "Win32",
+            os: windows-latest,
+            cmake_opts: "-A Win32 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Release"
+          }
+        - {
+            name: "Win64",
             os: windows-latest,
             cmake_opts: "-A x64 \
               -DALSOFT_BUILD_ROUTER=ON \
@@ -64,3 +74,11 @@ jobs:
       shell: bash
       run: |
         cmake --build build --config ${{matrix.config.build_type}}
+
+    - name: Upload Archive
+      # Upload package as an artifact of this workflow.
+      uses: actions/upload-artifact@v2
+      if: ${{ matrix.config.os == 'windows-latest' }}
+      with:
+        name: soft_oal-${{matrix.config.name}}
+        path: ${{github.workspace}}/build/${{matrix.config.build_type}}/soft_oal.dll

@@ -223,14 +223,14 @@ BackendInfo BackendList[] = {
 #ifdef HAVE_OPENSL
     { "opensl", OSLBackendFactory::getFactory },
 #endif
+#ifdef HAVE_ALSA
+    { "alsa", AlsaBackendFactory::getFactory },
+#endif
 #ifdef HAVE_SOLARIS
     { "solaris", SolarisBackendFactory::getFactory },
 #endif
 #ifdef HAVE_SNDIO
     { "sndio", SndIOBackendFactory::getFactory },
-#endif
-#ifdef HAVE_ALSA
-    { "alsa", AlsaBackendFactory::getFactory },
 #endif
 #ifdef HAVE_OSS
     { "oss", OSSBackendFactory::getFactory },

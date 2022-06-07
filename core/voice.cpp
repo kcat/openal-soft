@@ -637,7 +637,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
             {
                 SrcBufferSize = SrcBufferSize - PostPadding + MaxResamplerEdge;
                 mDecoder->decode(MixingSamples, SrcBufferSize,
-                    likely(vstate == Playing) ? srcOffset : 0.0f);
+                    likely(vstate == Playing) ? srcOffset : 0);
             }
             /* Store the last source samples used for next time. */
             if(likely(vstate == Playing))

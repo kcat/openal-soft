@@ -875,6 +875,7 @@ HRESULT WasapiPlayback::resetProxy()
 
     const ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
     const ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
+    bool isRear51{false};
 
     if(!mDevice->Flags.test(FrequencyRequest))
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
@@ -886,9 +887,13 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
             mDevice->FmtChans = DevFmtX61;
-        else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
-            || (chanmask&X51RearMask) == X5DOT1REAR))
+        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
             mDevice->FmtChans = DevFmtX51;
+        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
+        {
+            mDevice->FmtChans = DevFmtX51;
+            isRear51 = true;
+        }
         else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
             mDevice->FmtChans = DevFmtQuad;
         else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
@@ -897,6 +902,12 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->FmtChans = DevFmtMono;
         else
             ERR("Unhandled channel config: %d -- 0x%08lx\n", chancount, chanmask);
+    }
+    else
+    {
+        const uint32_t chancount{OutputType.Format.nChannels};
+        const DWORD chanmask{OutputType.dwChannelMask};
+        isRear51 = (chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR);
     }
 
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -919,7 +930,7 @@ HRESULT WasapiPlayback::resetProxy()
         break;
     case DevFmtX51:
         OutputType.Format.nChannels = 6;
-        OutputType.dwChannelMask = X5DOT1;
+        OutputType.dwChannelMask = isRear51 ? X5DOT1REAR : X5DOT1;
         break;
     case DevFmtX61:
         OutputType.Format.nChannels = 7;

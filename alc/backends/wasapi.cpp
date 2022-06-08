@@ -863,6 +863,7 @@ HRESULT WasapiPlayback::resetProxy()
         ERR("Failed to get mix format: 0x%08lx\n", hr);
         return hr;
     }
+    TraceFormat("Device mix format", wfx);
 
     WAVEFORMATEXTENSIBLE OutputType;
     if(!MakeExtensible(&OutputType, wfx))

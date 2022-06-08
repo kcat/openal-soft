@@ -389,53 +389,55 @@ bool DSoundPlayback::reset()
     }
 
     WAVEFORMATEXTENSIBLE OutputType{};
-    DWORD speakers;
+    DWORD speakers{};
     HRESULT hr{mDS->GetSpeakerConfig(&speakers)};
-    if(SUCCEEDED(hr))
-    {
-        speakers = DSSPEAKER_CONFIG(speakers);
-        if(!mDevice->Flags.test(ChannelsRequest))
-        {
-            if(speakers == DSSPEAKER_MONO)
-                mDevice->FmtChans = DevFmtMono;
-            else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
-                mDevice->FmtChans = DevFmtStereo;
-            else if(speakers == DSSPEAKER_QUAD)
-                mDevice->FmtChans = DevFmtQuad;
-            else if(speakers == DSSPEAKER_5POINT1_SURROUND || speakers == DSSPEAKER_5POINT1_BACK)
-                mDevice->FmtChans = DevFmtX51;
-            else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
-                mDevice->FmtChans = DevFmtX71;
-            else
-                ERR("Unknown system speaker config: 0x%lx\n", speakers);
-        }
-        mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
+    if(FAILED(hr))
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to get speaker config: 0x%08lx", hr};
 
-        switch(mDevice->FmtChans)
-        {
-        case DevFmtMono: OutputType.dwChannelMask = MONO; break;
-        case DevFmtAmbi3D: mDevice->FmtChans = DevFmtStereo;
-            /*fall-through*/
-        case DevFmtStereo: OutputType.dwChannelMask = STEREO; break;
-        case DevFmtQuad: OutputType.dwChannelMask = QUAD; break;
-        case DevFmtX51: OutputType.dwChannelMask = X5DOT1; break;
-        case DevFmtX61: OutputType.dwChannelMask = X6DOT1; break;
-        case DevFmtX71: OutputType.dwChannelMask = X7DOT1; break;
-        case DevFmtX3D71: OutputType.dwChannelMask = X7DOT1; break;
-        }
+    speakers = DSSPEAKER_CONFIG(speakers);
+    if(!mDevice->Flags.test(ChannelsRequest))
+    {
+        if(speakers == DSSPEAKER_MONO)
+            mDevice->FmtChans = DevFmtMono;
+        else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
+            mDevice->FmtChans = DevFmtStereo;
+        else if(speakers == DSSPEAKER_QUAD)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(speakers == DSSPEAKER_5POINT1_SURROUND || speakers == DSSPEAKER_5POINT1_BACK)
+            mDevice->FmtChans = DevFmtX51;
+        else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
+            mDevice->FmtChans = DevFmtX71;
+        else
+            ERR("Unknown system speaker config: 0x%lx\n", speakers);
+    }
+    mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
+    const bool isRear51{speakers == DSSPEAKER_5POINT1_BACK};
+
+    switch(mDevice->FmtChans)
+    {
+    case DevFmtMono: OutputType.dwChannelMask = MONO; break;
+    case DevFmtAmbi3D: mDevice->FmtChans = DevFmtStereo;
+        /* fall-through */
+    case DevFmtStereo: OutputType.dwChannelMask = STEREO; break;
+    case DevFmtQuad: OutputType.dwChannelMask = QUAD; break;
+    case DevFmtX51: OutputType.dwChannelMask = isRear51 ? X5DOT1REAR : X5DOT1; break;
+    case DevFmtX61: OutputType.dwChannelMask = X6DOT1; break;
+    case DevFmtX71: OutputType.dwChannelMask = X7DOT1; break;
+    case DevFmtX3D71: OutputType.dwChannelMask = X7DOT1; break;
+    }
 
 retry_open:
-        hr = S_OK;
-        OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
-        OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
-        OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
-            OutputType.Format.wBitsPerSample / 8);
-        OutputType.Format.nSamplesPerSec = mDevice->Frequency;
-        OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
-            OutputType.Format.nBlockAlign;
-        OutputType.Format.cbSize = 0;
-    }
+    hr = S_OK;
+    OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
+    OutputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
+    OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
+    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
+        OutputType.Format.wBitsPerSample / 8);
+    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
+    OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
+        OutputType.Format.nBlockAlign;
+    OutputType.Format.cbSize = 0;
 
     if(OutputType.Format.nChannels > 2 || mDevice->FmtType == DevFmtFloat)
     {

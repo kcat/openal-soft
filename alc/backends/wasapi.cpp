@@ -1457,11 +1457,32 @@ HRESULT WasapiCapture::resetProxy()
     }
     mClient = ComPtr<IAudioClient>{static_cast<IAudioClient*>(ptr)};
 
+    WAVEFORMATEX *wfx;
+    hr = mClient->GetMixFormat(&wfx);
+    if(FAILED(hr))
+    {
+        ERR("Failed to get capture format: 0x%08lx\n", hr);
+        return hr;
+    }
+    TraceFormat("Device capture format", wfx);
+
+    WAVEFORMATEXTENSIBLE InputType{};
+    if(!MakeExtensible(&InputType, wfx))
+    {
+        CoTaskMemFree(wfx);
+        return E_FAIL;
+    }
+    CoTaskMemFree(wfx);
+    wfx = nullptr;
+
+    const bool isRear51{InputType.Format.nChannels >= 6
+        && (InputType.dwChannelMask&X51RearMask) == X5DOT1REAR};
+
     // Make sure buffer is at least 100ms in size
     ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
     buf_time = std::max(buf_time, ReferenceTime{milliseconds{100}});
 
-    WAVEFORMATEXTENSIBLE InputType{};
+    InputType = {};
     InputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     switch(mDevice->FmtChans)
     {
@@ -1479,7 +1500,7 @@ HRESULT WasapiCapture::resetProxy()
         break;
     case DevFmtX51:
         InputType.Format.nChannels = 6;
-        InputType.dwChannelMask = X5DOT1;
+        InputType.dwChannelMask = isRear51 ? X5DOT1REAR : X5DOT1;
         break;
     case DevFmtX61:
         InputType.Format.nChannels = 7;
@@ -1527,7 +1548,6 @@ HRESULT WasapiCapture::resetProxy()
     InputType.Format.cbSize = sizeof(InputType) - sizeof(InputType.Format);
 
     TraceFormat("Requesting capture format", &InputType.Format);
-    WAVEFORMATEX *wfx{};
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &InputType.Format, &wfx);
     if(FAILED(hr))
     {

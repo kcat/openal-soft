@@ -1299,10 +1299,15 @@ void alc_initconfig(void)
         else
             eax_g_is_enabled = true;
 
-        if(eax_g_is_enabled && DisabledEffects[EAXREVERB_EFFECT])
+        if((DisabledEffects[EAXREVERB_EFFECT] || DisabledEffects[CHORUS_EFFECT])
+            && eax_g_is_enabled)
         {
             eax_g_is_enabled = false;
-            TRACE("%s\n", "EAX disabled because EAXReverb is disabled.");
+            TRACE("EAX disabled because %s disabled.\n",
+                (DisabledEffects[EAXREVERB_EFFECT] && DisabledEffects[CHORUS_EFFECT])
+                    ? "EAXReverb and Chorus are" :
+                DisabledEffects[EAXREVERB_EFFECT] ? "EAXReverb is" :
+                DisabledEffects[CHORUS_EFFECT] ? "Chorus is" : "");
         }
     }
 #endif // ALSOFT_EAX

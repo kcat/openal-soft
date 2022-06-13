@@ -1312,7 +1312,8 @@ void alc_initconfig(void)
     }
 #endif // ALSOFT_EAX
 }
-#define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
+inline void InitConfig()
+{ std::call_once(alc_config_once, [](){alc_initconfig();}); }
 
 
 /************************************************
@@ -1320,7 +1321,7 @@ void alc_initconfig(void)
  ************************************************/
 void ProbeAllDevicesList()
 {
-    DO_INITCONFIG();
+    InitConfig();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
     if(!PlaybackFactory)
@@ -1334,7 +1335,7 @@ void ProbeAllDevicesList()
 }
 void ProbeCaptureDeviceList()
 {
-    DO_INITCONFIG();
+    InitConfig();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
     if(!CaptureFactory)
@@ -3375,7 +3376,7 @@ END_API_FUNC
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 START_API_FUNC
 {
-    DO_INITCONFIG();
+    InitConfig();
 
     if(!PlaybackFactory)
     {
@@ -3535,7 +3536,7 @@ END_API_FUNC
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples)
 START_API_FUNC
 {
-    DO_INITCONFIG();
+    InitConfig();
 
     if(!CaptureFactory)
     {
@@ -3718,7 +3719,7 @@ END_API_FUNC
 ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName)
 START_API_FUNC
 {
-    DO_INITCONFIG();
+    InitConfig();
 
     /* Make sure the device name, if specified, is us. */
     if(deviceName && strcmp(deviceName, alcDefaultName) != 0)

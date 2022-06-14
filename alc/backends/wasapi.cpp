@@ -882,6 +882,10 @@ HRESULT WasapiPlayback::resetProxy()
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
     if(!mDevice->Flags.test(ChannelsRequest))
     {
+        /* If not requesting a channel configuration, auto-select given what
+         * fits the mask's lsb (to ensure no gaps in the output channels). If
+         * there's no mask, we can only assume mono or stereo.
+         */
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
         if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
@@ -897,9 +901,9 @@ HRESULT WasapiPlayback::resetProxy()
         }
         else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
             mDevice->FmtChans = DevFmtQuad;
-        else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
+        else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
             mDevice->FmtChans = DevFmtStereo;
-        else if(chancount >= 1 && (chanmask&MonoMask) == MONO)
+        else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
             mDevice->FmtChans = DevFmtMono;
         else
             ERR("Unhandled channel config: %d -- 0x%08lx\n", chancount, chanmask);
@@ -1015,27 +1019,31 @@ HRESULT WasapiPlayback::resetProxy()
         bool chansok{false};
         if(mDevice->Flags.test(ChannelsRequest))
         {
+            /* When requesting a channel configuration, make sure it fits the
+             * mask's lsb (to ensure no gaps in the output channels). If
+             * there's no mask, assume the request fits with enough channels.
+             */
             switch(mDevice->FmtChans)
             {
             case DevFmtMono:
-                chansok = (chancount >= 1 && (chanmask&MonoMask) == MONO);
+                chansok = (chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask));
                 break;
             case DevFmtStereo:
-                chansok = (chancount >= 2 && (chanmask&StereoMask) == STEREO);
+                chansok = (chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask));
                 break;
             case DevFmtQuad:
-                chansok = (chancount >= 4 && (chanmask&QuadMask) == QUAD);
+                chansok = (chancount >= 4 && ((chanmask&QuadMask) == QUAD || !chanmask));
                 break;
             case DevFmtX51:
                 chansok = (chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
-                        || (chanmask&X51RearMask) == X5DOT1REAR));
+                        || (chanmask&X51RearMask) == X5DOT1REAR || !chanmask));
                 break;
             case DevFmtX61:
-                chansok = (chancount >= 7 && (chanmask&X61Mask) == X6DOT1);
+                chansok = (chancount >= 7 && ((chanmask&X61Mask) == X6DOT1 || !chanmask));
                 break;
             case DevFmtX71:
             case DevFmtX3D71:
-                chansok = (chancount >= 8 && (chanmask&X71Mask) == X7DOT1);
+                chansok = (chancount >= 8 && ((chanmask&X71Mask) == X7DOT1 || !chanmask));
                 break;
             case DevFmtAmbi3D:
                 break;
@@ -1052,9 +1060,9 @@ HRESULT WasapiPlayback::resetProxy()
                 mDevice->FmtChans = DevFmtX51;
             else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
                 mDevice->FmtChans = DevFmtQuad;
-            else if(chancount >= 2 && (chanmask&StereoMask) == STEREO)
+            else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
                 mDevice->FmtChans = DevFmtStereo;
-            else if(chancount >= 1 && (chanmask&MonoMask) == MONO)
+            else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
                 mDevice->FmtChans = DevFmtMono;
             else
             {

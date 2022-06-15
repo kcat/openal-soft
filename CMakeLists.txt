@@ -30,8 +30,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     endif()
 endif()
 
-project(OpenAL)
-
 if(COMMAND CMAKE_POLICY)
     cmake_policy(SET CMP0003 NEW)
     cmake_policy(SET CMP0005 NEW)
@@ -47,7 +45,15 @@ if(COMMAND CMAKE_POLICY)
     if(POLICY CMP0075)
         cmake_policy(SET CMP0075 NEW)
     endif(POLICY CMP0075)
+    if(POLICY CMP0092)
+        cmake_policy(SET CMP0092 NEW)
+    endif(POLICY CMP0092)
+    if(POLICY CMP0117)
+        cmake_policy(SET CMP0117 NEW)
+    endif(POLICY CMP0117)
 endif(COMMAND CMAKE_POLICY)
+
+project(OpenAL)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
@@ -225,13 +231,6 @@ if(MSVC)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
     endif()
     set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4127 /wd4268 /wd4324 /wd5030)
-    # Remove /W3, which is added by default, since we set /W4. Some build
-    # generators with MSVC complain about both /W3 and /W4 being specified.
-    foreach(flag_var  CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-        if(${flag_var} MATCHES "/W3")
-            string(REGEX REPLACE "/W3" "" ${flag_var} "${${flag_var}}")
-        endif()
-    endforeach()
 
     if(NOT DXSDK_DIR)
         string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")

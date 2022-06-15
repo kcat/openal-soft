@@ -275,6 +275,10 @@ struct EAX20BUFFERPROPERTIES
     unsigned long dwFlags; // modifies the behavior of properties
 }; // EAX20BUFFERPROPERTIES
 
+inline bool operator==(const EAX20BUFFERPROPERTIES& lhs, const EAX20BUFFERPROPERTIES& rhs) noexcept
+{
+    return std::memcmp(&lhs, &rhs, sizeof(EAX20BUFFERPROPERTIES)) == 0;
+}
 
 extern const GUID DSPROPSETID_EAX30_ListenerProperties;
 
@@ -707,11 +711,20 @@ struct EAX30SOURCEPROPERTIES
     unsigned long ulFlags; // modifies the behavior of properties
 }; // EAX30SOURCEPROPERTIES
 
-struct EAX50SOURCEPROPERTIES :
-    public EAX30SOURCEPROPERTIES
+inline bool operator==(const EAX30SOURCEPROPERTIES& lhs, const EAX30SOURCEPROPERTIES& rhs) noexcept
+{
+    return std::memcmp(&lhs, &rhs, sizeof(EAX30SOURCEPROPERTIES)) == 0;
+}
+
+struct EAX50SOURCEPROPERTIES : public EAX30SOURCEPROPERTIES
 {
     float flMacroFXFactor;
 }; // EAX50SOURCEPROPERTIES
+
+inline bool operator==(const EAX50SOURCEPROPERTIES& lhs, const EAX50SOURCEPROPERTIES& rhs) noexcept
+{
+    return std::memcmp(&lhs, &rhs, sizeof(EAX50SOURCEPROPERTIES)) == 0;
+}
 
 struct EAXSOURCEALLSENDPROPERTIES
 {
@@ -808,7 +821,7 @@ struct EAXSOURCEEXCLUSIONSENDPROPERTIES
     float flExclusionLFRatio;
 }; // EAXSOURCEEXCLUSIONSENDPROPERTIES
 
-extern const EAX50ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID;
+extern const EAX40ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID;
 
 extern const EAX50ACTIVEFXSLOTS EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID;
 

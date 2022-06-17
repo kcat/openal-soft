@@ -11,11 +11,10 @@
 #endif
 #endif
 
-#ifdef HAVE_INTRIN_H
-#include <intrin.h>
-#endif
-#ifdef HAVE_CPUID_H
+#if defined(HAVE_CPUID_H)
 #include <cpuid.h>
+#elif defined(HAVE_INTRIN_H)
+#include <intrin.h>
 #endif
 
 #include <array>

@@ -912,7 +912,7 @@ HRESULT WasapiPlayback::resetProxy()
     {
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
-        isRear51 = (chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR);
+        isRear51 = (chancount == 6 && (chanmask&X51RearMask) == X5DOT1REAR);
     }
 
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -1483,7 +1483,7 @@ HRESULT WasapiCapture::resetProxy()
     CoTaskMemFree(wfx);
     wfx = nullptr;
 
-    const bool isRear51{InputType.Format.nChannels >= 6
+    const bool isRear51{InputType.Format.nChannels == 6
         && (InputType.dwChannelMask&X51RearMask) == X5DOT1REAR};
 
     // Make sure buffer is at least 100ms in size

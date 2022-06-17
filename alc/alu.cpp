@@ -1391,7 +1391,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
          */
         for(uint i{props->WetGainAuto ? 0u : NumSends};i < NumSends;++i)
         {
-            if(!SendSlots[i])
+            if(!SendSlots[i] || !(SendSlots[i]->DecayTime > 0.0f))
                 continue;
 
             auto calc_attenuation = [](float distance, float refdist, float rolloff) noexcept

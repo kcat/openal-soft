@@ -161,7 +161,7 @@ struct ALsource {
 public:
     void eax_initialize(ALCcontext *context) noexcept;
     void eax_dispatch(const EaxCall& call);
-    void eax_commit();
+    void eax_commit() { eax_commit(EaxCommitType::normal); }
     void eax_commit_and_update();
     bool eax_is_initialized() const noexcept { return eax_al_context_ != nullptr; }
 

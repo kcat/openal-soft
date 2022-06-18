@@ -3709,11 +3709,6 @@ void ALsource::eax_dispatch(const EaxCall& call)
     call.is_get() ? eax_get(call) : eax_set(call);
 }
 
-void ALsource::eax_commit()
-{
-    eax_commit(EaxCommitType::normal);
-}
-
 void ALsource::eax_commit_and_update()
 {
     eax_commit();
@@ -4897,7 +4892,7 @@ void ALsource::eax_commit_filters()
 void ALsource::eax_commit(EaxCommitType commit_type)
 {
     const auto primary_fx_slot_id = eax_al_context_->eax_get_primary_fx_slot_index();
-    const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ == primary_fx_slot_id);
+    const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ != primary_fx_slot_id);
 
     const auto is_forced = (
         eax_is_version_changed_ ||

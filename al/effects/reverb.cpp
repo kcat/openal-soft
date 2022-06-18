@@ -593,18 +593,21 @@ private:
 
     struct State1
     {
+        bool changed{false};
         Props1 i; // Immediate.
         Props1 d; // Deferred.
     }; // State1
 
     struct State2
     {
+        bool changed{false};
         Props2 i; // Immediate.
         Props2 d; // Deferred.
     }; // State2
 
     struct State3
     {
+        bool changed{false};
         Props3 i; // Immediate.
         Props3 d; // Deferred.
     }; // State3
@@ -1560,8 +1563,11 @@ void EaxReverbEffect::get(const EaxCall& call)
 
 /*[[nodiscard]]*/ bool EaxReverbEffect::commit()
 {
-    if ((version_ == 1 && state1_.i == state1_.d) ||
-        (version_ == 2 && state2_.i == state2_.d))
+    if((version_ == 1 && !state1_.changed)
+        || (version_ == 2 && !state2_.changed)
+        || (version_ == 3 && !state3_.changed)
+        || (version_ == 4 && !state4_.changed)
+        || (version_ == 5 && !state5_.changed))
     {
         return false;
     }
@@ -1571,26 +1577,31 @@ void EaxReverbEffect::get(const EaxCall& call)
     switch (version_)
     {
         case 1:
+            state1_.changed = false;
             state1_.i = state1_.d;
             translate(state1_.d, props_);
             break;
 
         case 2:
+            state2_.changed = false;
             state2_.i = state2_.d;
             translate(state2_.d, props_);
             break;
 
         case 3:
+            state3_.changed = false;
             state3_.i = state3_.d;
             props_ = state3_.d;
             break;
 
         case 4:
+            state4_.changed = false;
             state4_.i = state4_.d;
             props_ = state4_.d;
             break;
 
         case 5:
+            state5_.changed = false;
             state5_.i = state5_.d;
             props_ = state5_.d;
             break;
@@ -1945,11 +1956,11 @@ void EaxReverbEffect::set(const EaxCall& call)
 
     switch (version)
     {
-        case 1: set1(call, state1_.d); break;
-        case 2: set2(call, state2_.d); break;
-        case 3: set3(call, state3_.d); break;
-        case 4: set3(call, state4_.d); break;
-        case 5: set3(call, state5_.d); break;
+        case 1: set1(call, state1_.d); state1_.changed = true; break;
+        case 2: set2(call, state2_.d); state2_.changed = true; break;
+        case 3: set3(call, state3_.d); state3_.changed = true; break;
+        case 4: set3(call, state4_.d); state4_.changed = true; break;
+        case 5: set3(call, state5_.d); state5_.changed = true; break;
         default: fail_unknown_version();
     }
 

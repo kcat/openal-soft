@@ -3703,9 +3703,6 @@ void ALsource::eax_initialize(ALCcontext *context) noexcept
 
 void ALsource::eax_dispatch(const EaxCall& call)
 {
-    const auto eax_version = call.get_version();
-    eax_is_version_changed_ |= (eax_version_ == eax_version);
-    eax_version_ = eax_version;
     call.is_get() ? eax_get(call) : eax_set(call);
 }
 
@@ -4475,7 +4472,11 @@ void ALsource::eax5_set(const EaxCall& call, Eax5Props& props)
 
 void ALsource::eax_set(const EaxCall& call)
 {
-    switch(call.get_version())
+    const auto eax_version = call.get_version();
+    eax_is_version_changed_ |= (eax_version_ == eax_version);
+    eax_version_ = eax_version;
+
+    switch(eax_version)
     {
         case 1: eax1_set(call, eax1_.d); break;
         case 2: eax2_set(call, eax2_.d); eax2_.changed = true; break;

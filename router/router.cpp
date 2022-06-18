@@ -17,7 +17,7 @@
 #include "version.h"
 
 
-std::vector<DriverIface> DriverList;
+std::vector<DriverIfacePtr> DriverList;
 
 thread_local DriverIface *ThreadCtxDriver;
 
@@ -84,13 +84,13 @@ static void AddModule(HMODULE module, const WCHAR *name)
 {
     for(auto &drv : DriverList)
     {
-        if(drv.Module == module)
+        if(drv->Module == module)
         {
             TRACE("Skipping already-loaded module %p\n", decltype(std::declval<void*>()){module});
             FreeLibrary(module);
             return;
         }
-        if(drv.Name == name)
+        if(drv->Name == name)
         {
             TRACE("Skipping similarly-named module %ls\n", name);
             FreeLibrary(module);
@@ -98,8 +98,8 @@ static void AddModule(HMODULE module, const WCHAR *name)
         }
     }
 
-    DriverList.emplace_back(name, module);
-    DriverIface &newdrv = DriverList.back();
+    DriverList.emplace_back(std::make_unique<DriverIface>(name, module));
+    DriverIface &newdrv = *DriverList.back();
 
     /* Load required functions. */
     int err = 0;

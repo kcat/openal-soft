@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -24,6 +25,7 @@ struct DriverIface {
     std::wstring Name;
     HMODULE Module{nullptr};
     int ALCVer{0};
+    std::once_flag InitOnceCtx{};
 
     LPALCCREATECONTEXT alcCreateContext{nullptr};
     LPALCMAKECONTEXTCURRENT alcMakeContextCurrent{nullptr};
@@ -123,6 +125,41 @@ struct DriverIface {
     LPALSPEEDOFSOUND alSpeedOfSound{nullptr};
     LPALDISTANCEMODEL alDistanceModel{nullptr};
 
+    /* Functions to load after first context creation. */
+    LPALGENFILTERS alGenFilters{nullptr};
+    LPALDELETEFILTERS alDeleteFilters{nullptr};
+    LPALISFILTER alIsFilter{nullptr};
+    LPALFILTERF alFilterf{nullptr};
+    LPALFILTERFV alFilterfv{nullptr};
+    LPALFILTERI alFilteri{nullptr};
+    LPALFILTERIV alFilteriv{nullptr};
+    LPALGETFILTERF alGetFilterf{nullptr};
+    LPALGETFILTERFV alGetFilterfv{nullptr};
+    LPALGETFILTERI alGetFilteri{nullptr};
+    LPALGETFILTERIV alGetFilteriv{nullptr};
+    LPALGENEFFECTS alGenEffects{nullptr};
+    LPALDELETEEFFECTS alDeleteEffects{nullptr};
+    LPALISEFFECT alIsEffect{nullptr};
+    LPALEFFECTF alEffectf{nullptr};
+    LPALEFFECTFV alEffectfv{nullptr};
+    LPALEFFECTI alEffecti{nullptr};
+    LPALEFFECTIV alEffectiv{nullptr};
+    LPALGETEFFECTF alGetEffectf{nullptr};
+    LPALGETEFFECTFV alGetEffectfv{nullptr};
+    LPALGETEFFECTI alGetEffecti{nullptr};
+    LPALGETEFFECTIV alGetEffectiv{nullptr};
+    LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots{nullptr};
+    LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots{nullptr};
+    LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot{nullptr};
+    LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf{nullptr};
+    LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv{nullptr};
+    LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti{nullptr};
+    LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv{nullptr};
+    LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf{nullptr};
+    LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv{nullptr};
+    LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti{nullptr};
+    LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv{nullptr};
+
     template<typename T>
     DriverIface(T&& name, HMODULE mod)
       : Name(std::forward<T>(name)), Module(mod)
@@ -134,8 +171,9 @@ struct DriverIface {
         Module = nullptr;
     }
 };
+using DriverIfacePtr = std::unique_ptr<DriverIface>;
 
-extern std::vector<DriverIface> DriverList;
+extern std::vector<DriverIfacePtr> DriverList;
 
 extern thread_local DriverIface *ThreadCtxDriver;
 extern std::atomic<DriverIface*> CurrentCtxDriver;

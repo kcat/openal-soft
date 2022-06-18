@@ -4473,9 +4473,6 @@ void ALsource::eax5_set(const EaxCall& call, Eax5Props& props)
 void ALsource::eax_set(const EaxCall& call)
 {
     const auto eax_version = call.get_version();
-    eax_is_version_changed_ |= (eax_version_ == eax_version);
-    eax_version_ = eax_version;
-
     switch(eax_version)
     {
         case 1: eax1_set(call, eax1_.d); break;
@@ -4485,6 +4482,8 @@ void ALsource::eax_set(const EaxCall& call)
         case 5: eax5_set(call, eax5_.d); eax5_.changed = true; break;
         default: eax_fail_unknown_property_id();
     }
+    eax_is_version_changed_ |= (eax_version_ == eax_version);
+    eax_version_ = eax_version;
 }
 
 void ALsource::eax1_get(const EaxCall& call, const Eax1Props& props)

@@ -712,14 +712,11 @@ private:
     // Active FX slot ID validators
 
     struct Eax4ActiveFxSlotIdValidator {
-        void operator()(const GUID& id) const
+        void operator()(const GUID &guid) const
         {
-            if (id != EAX_NULL_GUID &&
-                id != EAX_PrimaryFXSlotID &&
-                id != EAXPROPERTYID_EAX40_FXSlot0 &&
-                id != EAXPROPERTYID_EAX40_FXSlot1 &&
-                id != EAXPROPERTYID_EAX40_FXSlot2 &&
-                id != EAXPROPERTYID_EAX40_FXSlot3)
+            if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
+                && guid != EAXPROPERTYID_EAX40_FXSlot0 && guid != EAXPROPERTYID_EAX40_FXSlot1
+                && guid != EAXPROPERTYID_EAX40_FXSlot2 && guid != EAXPROPERTYID_EAX40_FXSlot3)
             {
                 eax_fail_unknown_active_fx_slot_id();
             }
@@ -727,14 +724,11 @@ private:
     };
 
     struct Eax5ActiveFxSlotIdValidator {
-        void operator()(const GUID& id) const
+        void operator()(const GUID &guid) const
         {
-            if (id != EAX_NULL_GUID &&
-                id != EAX_PrimaryFXSlotID &&
-                id != EAXPROPERTYID_EAX50_FXSlot0 &&
-                id != EAXPROPERTYID_EAX50_FXSlot1 &&
-                id != EAXPROPERTYID_EAX50_FXSlot2 &&
-                id != EAXPROPERTYID_EAX50_FXSlot3)
+            if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
+                && guid != EAXPROPERTYID_EAX50_FXSlot0 && guid != EAXPROPERTYID_EAX50_FXSlot1
+                && guid != EAXPROPERTYID_EAX50_FXSlot2 && guid != EAXPROPERTYID_EAX50_FXSlot3)
             {
                 eax_fail_unknown_active_fx_slot_id();
             }
@@ -787,30 +781,30 @@ private:
     // ----------------------------------------------------------------------
 
     struct Eax4SendIndexGetter {
-        EaxFxSlotIndexValue operator()(const GUID& id) const
+        EaxFxSlotIndexValue operator()(const GUID &guid) const
         {
-            if (id == EAXPROPERTYID_EAX40_FXSlot0)
+            if(guid == EAXPROPERTYID_EAX40_FXSlot0)
                 return 0;
-            if (id == EAXPROPERTYID_EAX40_FXSlot1)
+            if(guid == EAXPROPERTYID_EAX40_FXSlot1)
                 return 1;
-            if (id == EAXPROPERTYID_EAX40_FXSlot2)
+            if(guid == EAXPROPERTYID_EAX40_FXSlot2)
                 return 2;
-            if (id == EAXPROPERTYID_EAX40_FXSlot3)
+            if(guid == EAXPROPERTYID_EAX40_FXSlot3)
                 return 3;
             eax_fail_unknown_receiving_fx_slot_id();
         }
     };
 
     struct Eax5SendIndexGetter {
-        EaxFxSlotIndexValue operator()(const GUID& id) const
+        EaxFxSlotIndexValue operator()(const GUID &guid) const
         {
-            if (id == EAXPROPERTYID_EAX50_FXSlot0)
+            if(guid == EAXPROPERTYID_EAX50_FXSlot0)
                 return 0;
-            if (id == EAXPROPERTYID_EAX50_FXSlot1)
+            if(guid == EAXPROPERTYID_EAX50_FXSlot1)
                 return 1;
-            if (id == EAXPROPERTYID_EAX50_FXSlot2)
+            if(guid == EAXPROPERTYID_EAX50_FXSlot2)
                 return 2;
-            if (id == EAXPROPERTYID_EAX50_FXSlot3)
+            if(guid == EAXPROPERTYID_EAX50_FXSlot3)
                 return 3;
             eax_fail_unknown_receiving_fx_slot_id();
         }

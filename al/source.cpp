@@ -4913,7 +4913,7 @@ void ALsource::eax_commit(EaxCommitType commit_type)
             break;
 
         case 2:
-            if(!is_forced && eax2_.changed)
+            if(!is_forced && !eax2_.changed)
                 return;
             eax2_.changed = false;
             eax2_.i = eax2_.d;
@@ -4921,7 +4921,7 @@ void ALsource::eax_commit(EaxCommitType commit_type)
             break;
 
         case 3:
-            if(!is_forced && eax3_.changed)
+            if(!is_forced && !eax3_.changed)
                 return;
             eax3_.changed = false;
             eax3_.i = eax3_.d;
@@ -4929,7 +4929,7 @@ void ALsource::eax_commit(EaxCommitType commit_type)
             break;
 
         case 4:
-            if(!is_forced && eax4_.changed)
+            if(!is_forced && !eax4_.changed)
                 return;
             eax4_.changed = false;
             eax4_.i = eax4_.d;
@@ -4937,7 +4937,7 @@ void ALsource::eax_commit(EaxCommitType commit_type)
             break;
 
         case 5:
-            if(!is_forced && eax5_.changed)
+            if(!is_forced && !eax5_.changed)
                 return;
             eax5_.changed = false;
             eax5_.i = eax5_.d;
